@@ -1,4 +1,4 @@
-package slashingprotection
+package historycmd
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	export "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
 	"github.com/urfave/cli/v2"
 )
 
@@ -19,7 +19,7 @@ const (
 	jsonExportFileName = "slashing_protection.json"
 )
 
-// ExportSlashingProtectionJSONCli extracts a validator's slashing protection
+// Extracts a validator's slashing protection
 // history from their database and formats it into an EIP-3076 standard JSON
 // file via a CLI entrypoint to make it easy to migrate machines or Ethereum consensus clients.
 //
@@ -29,7 +29,7 @@ const (
 // 3. Call the function which actually exports the data from
 // from the validator's db into an EIP standard slashing protection format
 // 4. Format and save the JSON file to a user's specified output directory.
-func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
+func exportSlashingProtectionJSON(cliCtx *cli.Context) error {
 	log.Info(
 		"This command exports your validator's attestation and proposal history into " +
 			"a file that can then be imported into any other Prysm setup across computers",
@@ -63,7 +63,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 			log.WithError(err).Errorf("Could not close validator DB")
 		}
 	}()
-	eipJSON, err := export.ExportStandardProtectionJSON(cliCtx.Context, validatorDB)
+	eipJSON, err := slashingprotection.ExportStandardProtectionJSON(cliCtx.Context, validatorDB)
 	if err != nil {
 		return errors.Wrap(err, "could not export slashing protection history")
 	}
@@ -98,7 +98,7 @@ func ExportSlashingProtectionJSONCli(cliCtx *cli.Context) error {
 	}
 	log.Infof(
 		"Successfully wrote %s. You can import this file using Prysm's "+
-			"validator slashing-protection import command in another machine",
+			"validator slashing-protection-history import command in another machine",
 		outputFilePath,
 	)
 	return nil
