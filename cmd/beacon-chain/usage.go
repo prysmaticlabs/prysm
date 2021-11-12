@@ -122,10 +122,15 @@ var appHelpFlagGroups = []flagGroup{
 			flags.Eth1HeaderReqLimit,
 			flags.GenesisStatePath,
 			flags.MinPeersPerSubnet,
+		},
+	},
+	{
+		Name: "merge",
+		Flags: []cli.Flag{
 			flags.TerminalTotalDifficultyOverride,
 			flags.TerminalBlockHashOverride,
 			flags.TerminalBlockHashActivationEpochOverride,
-			flags.FeeRecipient,
+			flags.Coinbase,
 		},
 	},
 	{

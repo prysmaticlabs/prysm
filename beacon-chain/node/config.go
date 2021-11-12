@@ -113,9 +113,9 @@ func configureExecutionSetting(cliCtx *cli.Context) {
 		c.TerminalBlockHashActivationEpoch = types.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
 		params.OverrideBeaconConfig(c)
 	}
-	if cliCtx.IsSet(flags.FeeRecipient.Name) {
+	if cliCtx.IsSet(flags.Coinbase.Name) {
 		c := params.BeaconConfig()
-		c.FeeRecipient = common.HexToAddress(cliCtx.String(flags.FeeRecipient.Name))
+		c.Coinbase = common.HexToAddress(cliCtx.String(flags.Coinbase.Name))
 		params.OverrideBeaconConfig(c)
 	}
 }
