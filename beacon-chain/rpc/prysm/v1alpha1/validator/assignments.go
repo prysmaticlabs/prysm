@@ -118,10 +118,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
-	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
 	epochStartSlot, err := slots.EpochStart(req.Epoch)
@@ -130,6 +126,10 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	}
 	if s.Slot() < epochStartSlot {
 		if features.Get().EnableNextSlotStateCache {
+			headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+			}
 			s, err = transition.ProcessSlotsUsingNextSlotCache(ctx, s, headRoot, epochStartSlot)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
