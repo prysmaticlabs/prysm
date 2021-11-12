@@ -14,22 +14,35 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 		return nil
 	}
 
-	bRoots := make([][]byte, len(b.blockRoots))
-	for i, r := range b.blockRoots {
-		bRoots[i] = r[:]
+	var bRoots [][]byte
+	if b.blockRoots != nil {
+		bRoots = make([][]byte, len(b.blockRoots))
+		for i, r := range b.blockRoots {
+			bRoots[i] = r[:]
+		}
 	}
-	sRoots := make([][]byte, len(b.stateRoots))
-	for i, r := range b.stateRoots {
-		sRoots[i] = r[:]
+	var sRoots [][]byte
+	if b.stateRoots != nil {
+		sRoots = make([][]byte, len(b.stateRoots))
+		for i, r := range b.stateRoots {
+			sRoots[i] = r[:]
+		}
 	}
-	hRoots := make([][]byte, len(b.historicalRoots))
-	for i, r := range b.historicalRoots {
-		hRoots[i] = r[:]
+	var hRoots [][]byte
+	if b.historicalRoots != nil {
+		hRoots = make([][]byte, len(b.historicalRoots))
+		for i, r := range b.historicalRoots {
+			hRoots[i] = r[:]
+		}
 	}
-	mixes := make([][]byte, len(b.randaoMixes))
-	for i, m := range b.randaoMixes {
-		mixes[i] = m[:]
+	var mixes [][]byte
+	if b.randaoMixes != nil {
+		mixes = make([][]byte, len(b.randaoMixes))
+		for i, m := range b.randaoMixes {
+			mixes[i] = m[:]
+		}
 	}
+
 	return &ethpb.BeaconState{
 		GenesisTime:                 b.genesisTime,
 		GenesisValidatorsRoot:       b.genesisValidatorsRoot[:],
