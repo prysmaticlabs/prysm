@@ -467,19 +467,23 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 	gvr := state.GenesisValidatorRoot()
 	bRoots := make([][]byte, len(state.BlockRoots()))
 	for i, r := range state.BlockRoots() {
-		bRoots[i] = r[:]
+		tmp := r
+		bRoots[i] = tmp[:]
 	}
 	sRoots := make([][]byte, len(state.StateRoots()))
 	for i, r := range state.StateRoots() {
-		sRoots[i] = r[:]
+		tmp := r
+		sRoots[i] = tmp[:]
 	}
 	hRoots := make([][]byte, len(state.HistoricalRoots()))
 	for i, r := range state.HistoricalRoots() {
-		hRoots[i] = r[:]
+		tmp := r
+		hRoots[i] = tmp[:]
 	}
 	mixes := make([][]byte, len(state.RandaoMixes()))
 	for i, m := range state.RandaoMixes() {
-		mixes[i] = m[:]
+		tmp := m
+		mixes[i] = tmp[:]
 	}
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
@@ -587,19 +591,23 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 	gvr := altairState.GenesisValidatorRoot()
 	bRoots := make([][]byte, len(altairState.BlockRoots()))
 	for i, r := range altairState.BlockRoots() {
-		bRoots[i] = r[:]
+		tmp := r
+		bRoots[i] = tmp[:]
 	}
 	sRoots := make([][]byte, len(altairState.StateRoots()))
 	for i, r := range altairState.StateRoots() {
-		sRoots[i] = r[:]
+		tmp := r
+		sRoots[i] = tmp[:]
 	}
 	hRoots := make([][]byte, len(altairState.HistoricalRoots()))
 	for i, r := range altairState.HistoricalRoots() {
-		hRoots[i] = r[:]
+		tmp := r
+		hRoots[i] = tmp[:]
 	}
 	mixes := make([][]byte, len(altairState.RandaoMixes()))
 	for i, m := range altairState.RandaoMixes() {
-		mixes[i] = m[:]
+		tmp := m
+		mixes[i] = tmp[:]
 	}
 	result := &ethpbv2.BeaconStateV2{
 		GenesisTime:           altairState.GenesisTime(),

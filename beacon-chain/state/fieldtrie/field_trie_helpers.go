@@ -41,7 +41,8 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 		}
 		roots := make([][]byte, len(val))
 		for i, r := range val {
-			roots[i] = r[:]
+			tmp := r
+			roots[i] = tmp[:]
 		}
 		return stateutil.HandleByteArrays(roots, indices, convertAll)
 	case types.RandaoMixes:
@@ -51,8 +52,9 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
 		}
 		mixes := make([][]byte, len(val))
-		for i, r := range val {
-			mixes[i] = r[:]
+		for i, m := range val {
+			tmp := m
+			mixes[i] = tmp[:]
 		}
 		return stateutil.HandleByteArrays(mixes, indices, convertAll)
 	case types.Eth1DataVotes:

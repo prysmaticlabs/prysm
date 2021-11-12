@@ -334,21 +334,24 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		blockRoots := st.BlockRoots()
 		bRoots := make([][]byte, len(blockRoots))
 		for i := range bRoots {
-			bRoots[i] = blockRoots[i][:]
+			tmp := blockRoots[i]
+			bRoots[i] = tmp[:]
 		}
 		size, count := sizeAndCountOfByteList(bRoots)
 		log.Infof("block_roots                   : size = %s, count =  %d", humanize.Bytes(size), count)
 		stateRoots := st.StateRoots()
 		sRoots := make([][]byte, len(stateRoots))
 		for i := range sRoots {
-			sRoots[i] = stateRoots[i][:]
+			tmp := stateRoots[i]
+			sRoots[i] = tmp[:]
 		}
 		size, count = sizeAndCountOfByteList(sRoots)
 		log.Infof("state_roots                   : size = %s, count = %d", humanize.Bytes(size), count)
 		historicalRoots := st.HistoricalRoots()
 		hRoots := make([][]byte, len(historicalRoots))
 		for i := range hRoots {
-			hRoots[i] = historicalRoots[i][:]
+			tmp := historicalRoots[i]
+			hRoots[i] = tmp[:]
 		}
 		size, count = sizeAndCountOfByteList(hRoots)
 		log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
@@ -363,7 +366,8 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		randaoMixes := st.RandaoMixes()
 		mixes := make([][]byte, len(randaoMixes))
 		for i := range mixes {
-			mixes[i] = randaoMixes[i][:]
+			tmp := randaoMixes[i]
+			mixes[i] = tmp[:]
 		}
 		size, count = sizeAndCountOfByteList(mixes)
 		log.Infof("randao_mixes                  : size = %s, count = %d", humanize.Bytes(size), count)

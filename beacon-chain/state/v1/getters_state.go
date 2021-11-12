@@ -18,28 +18,32 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 	if b.blockRoots != nil {
 		bRoots = make([][]byte, len(b.blockRoots))
 		for i, r := range b.blockRoots {
-			bRoots[i] = r[:]
+			tmp := r
+			bRoots[i] = tmp[:]
 		}
 	}
 	var sRoots [][]byte
 	if b.stateRoots != nil {
 		sRoots = make([][]byte, len(b.stateRoots))
 		for i, r := range b.stateRoots {
-			sRoots[i] = r[:]
+			tmp := r
+			sRoots[i] = tmp[:]
 		}
 	}
 	var hRoots [][]byte
 	if b.historicalRoots != nil {
 		hRoots = make([][]byte, len(b.historicalRoots))
 		for i, r := range b.historicalRoots {
-			hRoots[i] = r[:]
+			tmp := r
+			hRoots[i] = tmp[:]
 		}
 	}
 	var mixes [][]byte
 	if b.randaoMixes != nil {
 		mixes = make([][]byte, len(b.randaoMixes))
 		for i, m := range b.randaoMixes {
-			mixes[i] = m[:]
+			tmp := m
+			mixes[i] = tmp[:]
 		}
 	}
 
@@ -82,28 +86,32 @@ func (b *BeaconState) ToProto() interface{} {
 	if b.blockRoots != nil {
 		bRoots = make([][]byte, len(b.blockRootsInternal()))
 		for i, r := range b.blockRootsInternal() {
-			bRoots[i] = r[:]
+			tmp := r
+			bRoots[i] = tmp[:]
 		}
 	}
 	var sRoots [][]byte
 	if b.stateRoots != nil {
 		sRoots = make([][]byte, len(b.stateRootsInternal()))
 		for i, r := range b.stateRootsInternal() {
-			sRoots[i] = r[:]
+			tmp := r
+			sRoots[i] = tmp[:]
 		}
 	}
 	var hRoots [][]byte
 	if b.historicalRoots != nil {
 		hRoots = make([][]byte, len(b.historicalRootsInternal()))
 		for i, r := range b.historicalRootsInternal() {
-			hRoots[i] = r[:]
+			tmp := r
+			hRoots[i] = tmp[:]
 		}
 	}
 	var mixes [][]byte
 	if b.randaoMixes != nil {
 		mixes = make([][]byte, len(b.randaoMixesInternal()))
 		for i, m := range b.randaoMixesInternal() {
-			mixes[i] = m[:]
+			tmp := m
+			mixes[i] = tmp[:]
 		}
 	}
 

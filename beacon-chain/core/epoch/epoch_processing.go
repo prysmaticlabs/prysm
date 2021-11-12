@@ -385,12 +385,14 @@ func ProcessHistoricalRootsUpdate(state state.BeaconState) (state.BeaconState, e
 		blockRoots := state.BlockRoots()
 		bRoots := make([][]byte, len(blockRoots))
 		for i := range bRoots {
-			bRoots[i] = blockRoots[i][:]
+			tmp := blockRoots[i]
+			bRoots[i] = tmp[:]
 		}
 		stateRoots := state.StateRoots()
 		sRoots := make([][]byte, len(stateRoots))
 		for i := range sRoots {
-			sRoots[i] = stateRoots[i][:]
+			tmp := stateRoots[i]
+			sRoots[i] = tmp[:]
 		}
 		historicalBatch := &ethpb.HistoricalBatch{
 			BlockRoots: bRoots,

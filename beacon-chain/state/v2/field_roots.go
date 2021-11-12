@@ -95,7 +95,8 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	// BlockRoots array root.
 	bRoots := make([][]byte, len(state.BlockRoots()))
 	for i := range bRoots {
-		bRoots[i] = state.BlockRoots()[i][:]
+		tmp := state.BlockRoots()[i]
+		bRoots[i] = tmp[:]
 	}
 	blockRootsRoot, err := h.arraysRoot(bRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
 	if err != nil {
@@ -106,7 +107,8 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	// StateRoots array root.
 	sRoots := make([][]byte, len(state.StateRoots()))
 	for i := range sRoots {
-		sRoots[i] = state.StateRoots()[i][:]
+		tmp := state.StateRoots()[i]
+		sRoots[i] = tmp[:]
 	}
 	stateRootsRoot, err := h.arraysRoot(sRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	if err != nil {
@@ -117,7 +119,8 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	// HistoricalRoots slice root.
 	hRoots := make([][]byte, len(state.HistoricalRoots()))
 	for i := range hRoots {
-		hRoots[i] = state.HistoricalRoots()[i][:]
+		tmp := state.HistoricalRoots()[i]
+		hRoots[i] = tmp[:]
 	}
 	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(hRoots, params.BeaconConfig().HistoricalRootsLimit)
 	if err != nil {
@@ -162,7 +165,8 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state
 	// RandaoMixes array root.
 	mixes := make([][]byte, len(state.RandaoMixes()))
 	for i := range mixes {
-		mixes[i] = state.RandaoMixes()[i][:]
+		tmp := state.RandaoMixes()[i]
+		mixes[i] = tmp[:]
 	}
 	randaoRootsRoot, err := h.arraysRoot(mixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
 	if err != nil {

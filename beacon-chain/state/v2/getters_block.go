@@ -99,7 +99,8 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
 	}
 	bRoots := make([][]byte, len(b.blockRoots))
 	for i := range bRoots {
-		bRoots[i] = b.blockRoots[i][:]
+		tmp := b.blockRoots[i]
+		bRoots[i] = tmp[:]
 	}
 	root, err := bytesutil.SafeCopyRootAtIndex(bRoots, idx)
 	if err != nil {
