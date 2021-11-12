@@ -16,7 +16,7 @@ There are two modes, one for deterministic and another non-deterministic randomn
    However given that we only seed this 63 bits from crypto/rand and use math/rand to generate the outputs,
    this method is not cryptographically secure. This is directly stated in the math/rand package,
    https://github.com/golang/go/blob/release-branch.go1.17/src/math/rand/rand.go#L15. For any security
-   sensitive work this particular generator is insecure.
+   sensitive work this particular generator is NOT to be used.
 
 2. For cryptographically secure non-deterministic mode (CSPRNG), use:
 
