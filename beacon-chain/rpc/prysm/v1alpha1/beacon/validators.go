@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -674,11 +675,23 @@ func (bs *Server) GetValidatorPerformance(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
 
-	if bs.GenesisTimeFetcher.CurrentSlot() > headState.Slot() {
-		headState, err = transition.ProcessSlots(ctx, headState, bs.GenesisTimeFetcher.CurrentSlot())
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
+	if currSlot > headState.Slot() {
+		if features.Get().EnableNextSlotStateCache {
+			headRoot, err := bs.HeadFetcher.HeadRoot(ctx)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+			}
+			headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, currSlot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", currSlot, err)
+			}
+		} else {
+			headState, err = transition.ProcessSlots(ctx, headState, currSlot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
+			}
 		}
 	}
 	var validatorSummary []*precompute.Validator
