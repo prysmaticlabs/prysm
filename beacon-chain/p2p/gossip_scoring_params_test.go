@@ -68,11 +68,9 @@ func TestLoggingParameters(t *testing.T) {
 	logGossipParameters("testing", &pubsub.TopicScoreParams{})
 	// Test out actual gossip parameters.
 	logGossipParameters("testing", defaultBlockTopicParams())
-	p, err := defaultAggregateSubnetTopicParams(10000)
-	assert.NoError(t, err)
+	p := defaultAggregateSubnetTopicParams(10000)
 	logGossipParameters("testing", p)
-	p, err = defaultAggregateTopicParams(10000)
-	assert.NoError(t, err)
+	p = defaultAggregateTopicParams(10000)
 	logGossipParameters("testing", p)
 	logGossipParameters("testing", defaultAttesterSlashingTopicParams())
 	logGossipParameters("testing", defaultProposerSlashingTopicParams())
