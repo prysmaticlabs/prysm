@@ -9,8 +9,6 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/pkg/errors"
 )
@@ -22,9 +20,9 @@ var errSyncing = errors.New("syncing")
 // ExecutionEngineCaller defines methods that wraps around execution engine API calls to enable other prysm services to interact with.
 type ExecutionEngineCaller interface {
 	// PreparePayload is a wrapper on top of `CatalystClient` to abstract out `types.AssembleBlockParams`.
-	PreparePayload(ctx context.Context, forkchoiceState catalyst.ForkchoiceStateV1, payloadAttributes catalyst.PayloadAttributesV1) (uint64, error)
+	PreparePayload(ctx context.Context, forkchoiceState catalyst.ForkchoiceStateV1, payloadAttributes catalyst.PayloadAttributesV1) (string, error)
 	// GetPayload is a wrapper on top of `CatalystClient`.
-	GetPayload(ctx context.Context, payloadID uint64) (*catalyst.ExecutableDataV1, error)
+	GetPayload(ctx context.Context, payloadID string) (*catalyst.ExecutableDataV1, error)
 	// NotifyForkChoiceValidated is the wrapper on top of `CatalystClient` to abstract out `types.ConsensusValidatedParams`.
 	NotifyForkChoiceValidated(ctx context.Context, forkchoiceState catalyst.ForkchoiceStateV1) error
 	// ExecutePayload is the wrapper on top of `CatalystClient` to abstract out `types.ForkChoiceParams`.
@@ -123,11 +121,11 @@ type ExecutionBlock struct {
 //call to `PreparePayload` method. It returns the `ExecutionPayload` object.
 //Engine API definition:
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#engine_getpayloadv1
-func (s *Service) GetPayload(ctx context.Context, payloadID uint64) (*catalyst.ExecutableDataV1, error) {
+func (s *Service) GetPayload(ctx context.Context, payloadID string) (*catalyst.ExecutableDataV1, error) {
 	reqBody := &EngineRequest{
 		JsonRPC: "2.0",
 		Method:  "engine_getPayloadV1",
-		Params:  []interface{}{hexutil.EncodeUint64(payloadID)},
+		Params:  []interface{}{payloadID},
 	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
@@ -269,7 +267,7 @@ func (s *Service) NotifyForkChoiceValidated(ctx context.Context, forkchoiceState
 // It reuses `engine_forkchoiceUpdatedV1` end point to prepare payload.
 // Engine API definition:
 // https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#engine_forkchoiceupdatedv1
-func (s *Service) PreparePayload(ctx context.Context, forkchoiceState catalyst.ForkchoiceStateV1, payloadAttributes catalyst.PayloadAttributesV1) (uint64, error) {
+func (s *Service) PreparePayload(ctx context.Context, forkchoiceState catalyst.ForkchoiceStateV1, payloadAttributes catalyst.PayloadAttributesV1) (string, error) {
 	reqBody := &EngineRequest{
 		JsonRPC: "2.0",
 		Method:  "engine_forkchoiceUpdatedV1",
@@ -277,17 +275,17 @@ func (s *Service) PreparePayload(ctx context.Context, forkchoiceState catalyst.F
 	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	req, err := http.NewRequest("POST", s.cfg.currHttpEndpoint.Url, bytes.NewBuffer(enc))
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
@@ -297,24 +295,20 @@ func (s *Service) PreparePayload(ctx context.Context, forkchoiceState catalyst.F
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	var respond ForkchoiceUpdatedRespond
 	if err := json.Unmarshal(body, &respond); err != nil {
-		return 0, err
+		return "", err
 	}
 	if respond.Error.Code != 0 {
-		return 0, fmt.Errorf("could not call engine_forkchoiceUpdatedV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
+		return "", fmt.Errorf("could not call engine_forkchoiceUpdatedV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
 	}
 	if respond.Result.Status == catalyst.SYNCING.Status {
-		return 0, errSyncing
-	}
-	id, ok := math.ParseUint64(respond.Result.PayloadID)
-	if !ok {
-		return 0, errors.New("could not parse hex to uint64")
+		return "", errSyncing
 	}
 
-	return id, nil
+	return respond.Result.PayloadID, nil
 }
 
 func (s *Service) LatestExecutionBlock() (*ExecutionBlock, error) {

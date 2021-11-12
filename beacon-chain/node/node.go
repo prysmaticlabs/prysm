@@ -857,6 +857,13 @@ func (b *BeaconNode) registerDeterminsticGenesisService() error {
 			GenesisPath:   genesisStatePath,
 		})
 
+		st, err := b.db.GenesisState(b.ctx)
+		if err != nil {
+			return err
+		}
+
+		b.finalizedStateAtStartUp = st
+
 		return b.services.RegisterService(svc)
 	}
 	return nil
