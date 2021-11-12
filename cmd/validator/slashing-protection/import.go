@@ -1,4 +1,4 @@
-package slashingprotection
+package historycmd
 
 import (
 	"bytes"
@@ -10,11 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	slashingProtectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
 	"github.com/urfave/cli/v2"
 )
 
-// ImportSlashingProtectionCLI reads an input slashing protection EIP-3076
+// Reads an input slashing protection EIP-3076
 // standard JSON file and attempts to insert its data into our validator DB.
 //
 // Steps:
@@ -23,7 +23,7 @@ import (
 // 3. Read the JSON file from user input.
 // 4. Call the function which actually imports the data from
 // from the standard slashing protection JSON file into our database.
-func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
+func importSlashingProtectionJSON(cliCtx *cli.Context) error {
 	var err error
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	if !cliCtx.IsSet(cmd.DataDirFlag.Name) {
@@ -71,7 +71,7 @@ func ImportSlashingProtectionCLI(cliCtx *cli.Context) error {
 	}
 	log.Infof("Starting import of slashing protection file %s", protectionFilePath)
 	buf := bytes.NewBuffer(enc)
-	if err := slashingProtectionFormat.ImportStandardProtectionJSON(
+	if err := slashingprotection.ImportStandardProtectionJSON(
 		cliCtx.Context, valDB, buf,
 	); err != nil {
 		return err
