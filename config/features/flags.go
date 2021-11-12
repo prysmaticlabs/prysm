@@ -98,7 +98,7 @@ var (
 		Usage: "Disable max-cover algorithm when selecting attestations for proposer",
 	}
 	enableSlashingProtectionPruning = &cli.BoolFlag{
-		Name:  "enable-slashing-protection-pruning",
+		Name:  "enable-slashing-protection-history-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protection database",
 	}
 	disableOptimizedBalanceUpdate = &cli.BoolFlag{
