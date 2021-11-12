@@ -18,7 +18,7 @@ import (
 func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	length := f.length
 	if f.dataType == types.CompressedArray {
-		comLength, err := f.field.CompressedLength()
+		comLength, err := f.field.ElemsInChunk()
 		if err != nil {
 			return err
 		}
@@ -34,7 +34,7 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 
 func validateElements(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) error {
 	if dataType == types.CompressedArray {
-		comLength, err := field.CompressedLength()
+		comLength, err := field.ElemsInChunk()
 		if err != nil {
 			return err
 		}
@@ -249,7 +249,7 @@ func handleBalanceSlice(val []uint64, indices []uint64, convertAll bool) ([][32]
 		return balancesChunks, nil
 	}
 	if len(val) > 0 {
-		numOfElems, err := types.Balances.CompressedLength()
+		numOfElems, err := types.Balances.ElemsInChunk()
 		if err != nil {
 			return nil, err
 		}

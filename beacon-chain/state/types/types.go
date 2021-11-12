@@ -87,9 +87,9 @@ func (f FieldIndex) String(stateVersion int) string {
 	}
 }
 
-// CompressedLength returns the compressed length of the type (number of
+// ElemsInChunk returns the number of elements in the chunk (number of
 // elements that are able to be packed).
-func (f FieldIndex) CompressedLength() (uint64, error) {
+func (f FieldIndex) ElemsInChunk() (uint64, error) {
 	switch f {
 	case Balances:
 		return 4, nil

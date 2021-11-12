@@ -106,7 +106,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		f.numOfElems = reflect.ValueOf(elements).Len()
 		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	case types.CompressedArray:
-		numOfElems, err := f.field.CompressedLength()
+		numOfElems, err := f.field.ElemsInChunk()
 		if err != nil {
 			return [32]byte{}, err
 		}
