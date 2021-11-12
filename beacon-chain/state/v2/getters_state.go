@@ -68,22 +68,35 @@ func (b *BeaconState) ToProto() interface{} {
 	defer b.lock.RUnlock()
 
 	gvr := b.genesisValidatorRootInternal()
-	bRoots := make([][]byte, len(b.blockRootsInternal()))
-	for i, r := range b.blockRootsInternal() {
-		bRoots[i] = r[:]
+	var bRoots [][]byte
+	if b.blockRoots != nil {
+		bRoots = make([][]byte, len(b.blockRootsInternal()))
+		for i, r := range b.blockRootsInternal() {
+			bRoots[i] = r[:]
+		}
 	}
-	sRoots := make([][]byte, len(b.stateRootsInternal()))
-	for i, r := range b.stateRootsInternal() {
-		sRoots[i] = r[:]
+	var sRoots [][]byte
+	if b.stateRoots != nil {
+		sRoots = make([][]byte, len(b.stateRootsInternal()))
+		for i, r := range b.stateRootsInternal() {
+			sRoots[i] = r[:]
+		}
 	}
-	hRoots := make([][]byte, len(b.historicalRootsInternal()))
-	for i, r := range b.historicalRootsInternal() {
-		hRoots[i] = r[:]
+	var hRoots [][]byte
+	if b.historicalRoots != nil {
+		hRoots = make([][]byte, len(b.historicalRootsInternal()))
+		for i, r := range b.historicalRootsInternal() {
+			hRoots[i] = r[:]
+		}
 	}
-	mixes := make([][]byte, len(b.randaoMixesInternal()))
-	for i, m := range b.randaoMixesInternal() {
-		mixes[i] = m[:]
+	var mixes [][]byte
+	if b.randaoMixes != nil {
+		mixes = make([][]byte, len(b.randaoMixesInternal()))
+		for i, m := range b.randaoMixesInternal() {
+			mixes[i] = m[:]
+		}
 	}
+
 	return &ethpb.BeaconStateAltair{
 		GenesisTime:                 b.genesisTimeInternal(),
 		GenesisValidatorsRoot:       gvr[:],
