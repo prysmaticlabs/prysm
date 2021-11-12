@@ -194,7 +194,7 @@ var (
 	TerminalTotalDifficultyOverride = &cli.Uint64Flag{
 		Name: "terminal-total-difficulty-override",
 		Usage: "Sets the total difficulty to manual overrides the default TERMINAL_TOTAL_DIFFICULTY value." +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal difficulty." +
+			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal difficulty. " +
 			"Incorrect usage will result in your node experience consensus failure.",
 	}
 	// TerminalBlockHashOverride specifies the terminal block hash to manual overrides the `TERMINAL_BLOCK_HASH` parameter.
