@@ -356,24 +356,24 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return stateutil.BlockHeaderRoot(b.latestBlockHeader)
 	case blockRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.blockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+			err := b.resetFieldTrie(field, *b.blockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 			if err != nil {
 				return [32]byte{}, err
 			}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(blockRoots, b.blockRoots)
+		return b.recomputeFieldTrie(blockRoots, *b.blockRoots)
 	case stateRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.stateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+			err := b.resetFieldTrie(field, *b.stateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 			if err != nil {
 				return [32]byte{}, err
 			}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(stateRoots, b.stateRoots)
+		return b.recomputeFieldTrie(stateRoots, *b.stateRoots)
 	case historicalRoots:
 		hRoots := make([][]byte, len(b.historicalRoots))
 		for i := range hRoots {
@@ -410,14 +410,14 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.randaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+			err := b.resetFieldTrie(field, *b.randaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 			if err != nil {
 				return [32]byte{}, err
 			}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(randaoMixes, b.randaoMixes)
+		return b.recomputeFieldTrie(randaoMixes, *b.randaoMixes)
 	case slashings:
 		return ssz.SlashingsRoot(b.slashings)
 	case previousEpochAttestations:

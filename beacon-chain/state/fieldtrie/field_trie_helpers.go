@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -32,13 +33,28 @@ func validateElements(field types.FieldIndex, elements interface{}, length uint6
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
-	case types.BlockRoots, types.StateRoots, types.RandaoMixes:
-		val, ok := elements.([][]byte)
+	case types.BlockRoots, types.StateRoots:
+		val, ok := elements.(customtypes.StateRoots)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return stateutil.HandleByteArrays(val, indices, convertAll)
+		roots := make([][]byte, len(val))
+		for i, r := range val {
+			roots[i] = r[:]
+		}
+		return stateutil.HandleByteArrays(roots, indices, convertAll)
+	case types.RandaoMixes:
+		val, ok := elements.(customtypes.RandaoMixes)
+		if !ok {
+			return nil, errors.Errorf("Wanted type of %v but got %v",
+				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
+		}
+		mixes := make([][]byte, len(val))
+		for i, r := range val {
+			mixes[i] = r[:]
+		}
+		return stateutil.HandleByteArrays(mixes, indices, convertAll)
 	case types.Eth1DataVotes:
 		val, ok := elements.([]*ethpb.Eth1Data)
 		if !ok {
