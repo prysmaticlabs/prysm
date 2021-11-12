@@ -104,6 +104,7 @@ go_test(
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "//time/slots:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
