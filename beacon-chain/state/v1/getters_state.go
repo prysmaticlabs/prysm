@@ -7,31 +7,110 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// InnerStateUnsafe returns the pointer value of the underlying
+// ToProtoUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
-func (b *BeaconState) InnerStateUnsafe() interface{} {
+func (b *BeaconState) ToProtoUnsafe() interface{} {
 	if b == nil {
 		return nil
 	}
-	return b.state
+
+	bRoots := make([][]byte, len(b.blockRoots))
+	for i, r := range b.blockRoots {
+		bRoots[i] = r[:]
+	}
+	sRoots := make([][]byte, len(b.stateRoots))
+	for i, r := range b.stateRoots {
+		sRoots[i] = r[:]
+	}
+	hRoots := make([][]byte, len(b.historicalRoots))
+	for i, r := range b.historicalRoots {
+		hRoots[i] = r[:]
+	}
+	mixes := make([][]byte, len(b.randaoMixes))
+	for i, m := range b.randaoMixes {
+		mixes[i] = m[:]
+	}
+	return &ethpb.BeaconState{
+		GenesisTime:                 b.genesisTime,
+		GenesisValidatorsRoot:       b.genesisValidatorsRoot[:],
+		Slot:                        b.slot,
+		Fork:                        b.fork,
+		LatestBlockHeader:           b.latestBlockHeader,
+		BlockRoots:                  bRoots,
+		StateRoots:                  sRoots,
+		HistoricalRoots:             hRoots,
+		Eth1Data:                    b.eth1Data,
+		Eth1DataVotes:               b.eth1DataVotes,
+		Eth1DepositIndex:            b.eth1DepositIndex,
+		Validators:                  b.validators,
+		Balances:                    b.balances,
+		RandaoMixes:                 mixes,
+		Slashings:                   b.slashings,
+		PreviousEpochAttestations:   b.previousEpochAttestations,
+		CurrentEpochAttestations:    b.currentEpochAttestations,
+		JustificationBits:           b.justificationBits,
+		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint,
+		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint,
+		FinalizedCheckpoint:         b.finalizedCheckpoint,
+	}
 }
 
-// CloneInnerState the beacon state into a protobuf for usage.
-func (b *BeaconState) CloneInnerState() interface{} {
-	if b == nil || b.state == nil {
+// ToProto the beacon state into a protobuf for usage.
+func (b *BeaconState) ToProto() interface{} {
+	if b == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return &ethpb.BeaconState{}
+	gvr := b.genesisValidatorRootInternal()
+	bRoots := make([][]byte, len(b.blockRootsInternal()))
+	for i, r := range b.blockRootsInternal() {
+		bRoots[i] = r[:]
+	}
+	sRoots := make([][]byte, len(b.stateRootsInternal()))
+	for i, r := range b.stateRootsInternal() {
+		sRoots[i] = r[:]
+	}
+	hRoots := make([][]byte, len(b.historicalRootsInternal()))
+	for i, r := range b.historicalRootsInternal() {
+		hRoots[i] = r[:]
+	}
+	mixes := make([][]byte, len(b.randaoMixesInternal()))
+	for i, m := range b.randaoMixesInternal() {
+		mixes[i] = m[:]
+	}
+	return &ethpb.BeaconState{
+		GenesisTime:                 b.genesisTimeInternal(),
+		GenesisValidatorsRoot:       gvr[:],
+		Slot:                        b.slotInternal(),
+		Fork:                        b.forkInternal(),
+		LatestBlockHeader:           b.latestBlockHeaderInternal(),
+		BlockRoots:                  bRoots,
+		StateRoots:                  sRoots,
+		HistoricalRoots:             hRoots,
+		Eth1Data:                    b.eth1DataInternal(),
+		Eth1DataVotes:               b.eth1DataVotesInternal(),
+		Eth1DepositIndex:            b.eth1DepositIndexInternal(),
+		Validators:                  b.validatorsInternal(),
+		Balances:                    b.balancesInternal(),
+		RandaoMixes:                 mixes,
+		Slashings:                   b.slashingsInternal(),
+		PreviousEpochAttestations:   b.previousEpochAttestationsInternal(),
+		CurrentEpochAttestations:    b.currentEpochAttestationsInternal(),
+		JustificationBits:           b.justificationBitsInternal(),
+		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpointInternal(),
+		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpointInternal(),
+		FinalizedCheckpoint:         b.finalizedCheckpointInternal(),
+	}
 }
 
 // hasInnerState detects if the internal reference to the state data structure
 // is populated correctly. Returns false if nil.
 func (b *BeaconState) hasInnerState() bool {
-	return b != nil && b.state != nil
+	// TODO: Remove this function entirely
+	return true
 }
 
 // StateRoots kept track of in the beacon state.
@@ -98,7 +177,8 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, errors.New("nil beacon state")
 	}
-	return b.state.MarshalSSZ()
+	// TODO: Fix
+	return []byte{}, nil
 }
 
 // ProtobufBeaconState transforms an input into beacon state in the form of protobuf.

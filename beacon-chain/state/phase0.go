@@ -30,8 +30,8 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyBalances
 	ReadOnlyCheckpoint
 	ReadOnlyAttestations
-	InnerStateUnsafe() interface{}
-	CloneInnerState() interface{}
+	ToProtoUnsafe() interface{}
+	ToProto() interface{}
 	GenesisTime() uint64
 	GenesisValidatorRoot() [32]byte
 	Slot() types.Slot

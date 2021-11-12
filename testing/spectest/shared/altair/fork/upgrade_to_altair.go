@@ -40,7 +40,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			require.NoError(t, err)
 			postState, err := altair.UpgradeToAltair(context.Background(), preState)
 			require.NoError(t, err)
-			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.InnerStateUnsafe())
+			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.ToProtoUnsafe())
 			require.NoError(t, err)
 
 			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))

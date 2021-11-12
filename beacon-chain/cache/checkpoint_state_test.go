@@ -33,9 +33,9 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	s, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 
-	pbState1, err := v1.ProtobufBeaconState(s.InnerStateUnsafe())
+	pbState1, err := v1.ProtobufBeaconState(s.ToProtoUnsafe())
 	require.NoError(t, err)
-	pbstate, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+	pbstate, err := v1.ProtobufBeaconState(st.ToProtoUnsafe())
 	require.NoError(t, err)
 	if !proto.Equal(pbState1, pbstate) {
 		t.Error("incorrectly cached state")
@@ -50,11 +50,11 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 
 	s, err = cache.StateByCheckpoint(cp2)
 	require.NoError(t, err)
-	assert.DeepEqual(t, st2.CloneInnerState(), s.CloneInnerState(), "incorrectly cached state")
+	assert.DeepEqual(t, st2.ToProto(), s.ToProto(), "incorrectly cached state")
 
 	s, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
-	assert.DeepEqual(t, st.CloneInnerState(), s.CloneInnerState(), "incorrectly cached state")
+	assert.DeepEqual(t, st.ToProto(), s.ToProto(), "incorrectly cached state")
 }
 
 func TestCheckpointStateCache_MaxSize(t *testing.T) {

@@ -147,15 +147,15 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 	validatorKeys := make([][]byte, len(states))           // For every state, this stores a compressed list of validator keys.
 	for i, st := range states {
 		var validators []*ethpb.Validator
-		switch st.InnerStateUnsafe().(type) {
+		switch st.ToProtoUnsafe().(type) {
 		case *ethpb.BeaconState:
-			pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+			pbState, err := v1.ProtobufBeaconState(st.ToProtoUnsafe())
 			if err != nil {
 				return err
 			}
 			validators = pbState.Validators
 		case *ethpb.BeaconStateAltair:
-			pbState, err := v2.ProtobufBeaconState(st.InnerStateUnsafe())
+			pbState, err := v2.ProtobufBeaconState(st.ToProtoUnsafe())
 			if err != nil {
 				return err
 			}
@@ -194,7 +194,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 			// validator entries.To bring the gap closer, we empty the validators
 			// just before Put() and repopulate that state with original validators.
 			// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
-			switch rawType := states[i].InnerStateUnsafe().(type) {
+			switch rawType := states[i].ToProtoUnsafe().(type) {
 			case *ethpb.BeaconState:
 				pbState, err := v1.ProtobufBeaconState(rawType)
 				if err != nil {
@@ -418,15 +418,15 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 
 // marshal versioned state from struct type down to bytes.
 func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, error) {
-	switch st.InnerStateUnsafe().(type) {
+	switch st.ToProtoUnsafe().(type) {
 	case *ethpb.BeaconState:
-		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconState)
+		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconState)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
 		return encode(ctx, rState)
 	case *ethpb.BeaconStateAltair:
-		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
+		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateAltair)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
