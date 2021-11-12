@@ -1,5 +1,5 @@
 /*
-Package rand defines methods of obtaining cryptographically secure random number generators.
+Package rand defines methods of obtaining random number generators.
 
 One is expected to use randomness from this package only, without introducing any other packages.
 This limits the scope of code that needs to be hardened.
@@ -13,9 +13,10 @@ There are two modes, one for deterministic and another non-deterministic randomn
 
    In this mode, only seed is generated using cryptographically secure source (crypto/rand). So,
    once seed is obtained, and generator is seeded, the next generations are deterministic, thus fast.
-   This method is still better than using unix time for source of randomness - since time is not a
-   good source of seed randomness, when you have many concurrent servers using it (and they have
-   coinciding random generators' start times).
+   However given that we only seed this 63 bits from crypto/rand and use math/rand to generate the outputs,
+   this method is not cryptographically secure. This is directly stated in the math/rand package,
+   https://github.com/golang/go/blob/release-branch.go1.17/src/math/rand/rand.go#L15. For any security
+   sensitive work this particular generator is insecure.
 
 2. For cryptographically secure non-deterministic mode (CSPRNG), use:
 
@@ -77,7 +78,8 @@ func NewGenerator() *Rand {
 // but is deterministic otherwise (given seed, produces given results, deterministically).
 // Panics if crypto/rand input cannot be read.
 // Use this method for performance, where deterministic pseudo-random behaviour is enough.
-// Otherwise, rely on NewGenerator().
+// Otherwise, rely on NewGenerator(). This method is not cryptographically secure as outputs
+// can be potentially predicted even without knowledge of the underlying seed.
 func NewDeterministicGenerator() *Rand {
 	randGen := NewGenerator()
 	return mrand.New(mrand.NewSource(randGen.Int63())) /* #nosec G404 */
