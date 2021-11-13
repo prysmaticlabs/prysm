@@ -1,0 +1,192 @@
+package monitor
+
+import (
+	"fmt"
+
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
+)
+
+// getAttestingIndices returns the indices of validators that appear in the
+// given aggregated atestation.
+func (s *Service) getAttestingIndices(state state.BeaconState, att *ethpb.Attestation) ([]uint64, error) {
+	committee, err := helpers.BeaconCommitteeFromState(s.ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+	return attestation.AttestingIndices(att.AggregationBits, committee)
+}
+
+// logMessageTimelyFlagsForIndex returns the log message with the basic
+// performance indicators for the attestation (head, source, target)
+func logMessageTimelyFlagsForIndex(idx uint64, data *ethpb.AttestationData) logrus.Fields {
+	return logrus.Fields{
+		"ValidatorIndex": idx,
+		"Slot":           data.Slot,
+		"Source":         fmt.Sprintf("%#x", bytesutil.Trunc(data.Source.Root)),
+		"Target":         fmt.Sprintf("%#x", bytesutil.Trunc(data.Target.Root)),
+		"Head":           fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot)),
+	}
+}
+
+// processAttestations logs the event that one of our tracked validators'
+// attestations was included in a block
+func (s *Service) processAttestations(state state.BeaconState, blk block.BeaconBlock) {
+	for _, attestation := range blk.Body().Attestations() {
+		s.processIncludedAttestation(state, attestation)
+	}
+}
+
+// processIncludedAttestation logs in the event that one of our tracked validators'
+// appears in the attesting indices and this included attestation was not included
+// before.
+func (s *Service) processIncludedAttestation(state state.BeaconState, att *ethpb.Attestation) {
+	attestingIndices, err := s.getAttestingIndices(state, att)
+	if err != nil {
+		log.WithError(err).Error("Could not get attesting indices")
+		return
+	}
+	for _, idx := range attestingIndices {
+		if s.TrackedIndex(types.ValidatorIndex(idx)) &&
+			s.latestPerformance[types.ValidatorIndex(idx)].attestedSlot != att.Data.Slot {
+			logFields := logMessageTimelyFlagsForIndex(idx, att.Data)
+			balance, err := state.BalanceAtIndex(types.ValidatorIndex(idx))
+			if err != nil {
+				log.WithError(err).Error("Could not get balance")
+				return
+			}
+
+			aggregatedPerf := s.aggregatedPerformance[types.ValidatorIndex(idx)]
+			aggregatedPerf.totalAttestedCount++
+			aggregatedPerf.totalRequestedCount++
+
+			latestPerf := s.latestPerformance[types.ValidatorIndex(idx)]
+			balanceChg := balance - latestPerf.balance
+			latestPerf.balanceChange = balanceChg
+			latestPerf.balance = balance
+			latestPerf.attestedSlot = att.Data.Slot
+			latestPerf.inclusionSlot = state.Slot()
+			aggregatedPerf.totalDistance += uint64(latestPerf.inclusionSlot - latestPerf.attestedSlot)
+
+			if state.Version() == version.Altair {
+				targetIdx := params.BeaconConfig().TimelyTargetFlagIndex
+				sourceIdx := params.BeaconConfig().TimelySourceFlagIndex
+				headIdx := params.BeaconConfig().TimelyHeadFlagIndex
+
+				var participation []byte
+				if slots.ToEpoch(latestPerf.inclusionSlot) ==
+					slots.ToEpoch(latestPerf.attestedSlot) {
+					participation, err = state.CurrentEpochParticipation()
+					if err != nil {
+						log.WithError(err).Error("Could not get current epoch participation")
+						return
+					}
+				} else {
+					participation, err = state.PreviousEpochParticipation()
+					if err != nil {
+						log.WithError(err).Error("Could not get previous epoch participation")
+						return
+					}
+				}
+				flags := participation[idx]
+				latestPerf.timelySource = ((flags >> sourceIdx) & 1) == 1
+				latestPerf.timelyHead = ((flags >> headIdx) & 1) == 1
+				latestPerf.timelyTarget = ((flags >> targetIdx) & 1) == 1
+
+				if latestPerf.timelySource {
+					aggregatedPerf.totalCorrectSource++
+				}
+				if latestPerf.timelyHead {
+					aggregatedPerf.totalCorrectHead++
+				}
+				if latestPerf.timelyTarget {
+					aggregatedPerf.totalCorrectTarget++
+				}
+			}
+			logFields["CorrectHead"] = latestPerf.timelyHead
+			logFields["CorrectSource"] = latestPerf.timelySource
+			logFields["CorrectTarget"] = latestPerf.timelyTarget
+			logFields["Inclusion Slot"] = latestPerf.inclusionSlot
+			logFields["NewBalance"] = balance
+			logFields["BalanceChange"] = balanceChg
+
+			s.latestPerformance[types.ValidatorIndex(idx)] = latestPerf
+			s.aggregatedPerformance[types.ValidatorIndex(idx)] = aggregatedPerf
+			log.WithFields(logFields).Info("Attestation included")
+		}
+	}
+}
+
+// processUnaggregatedAttestation logs when the beacon node sees an unaggregated attestation from one of our
+// tracked validators
+func (s *Service) processUnaggregatedAttestation(att *ethpb.Attestation) {
+	var root [32]byte
+	copy(root[:], att.Data.BeaconBlockRoot)
+	state, err := s.config.StateGen.StateByRootIfCached(s.ctx, root)
+	if err != nil {
+		log.WithError(err).Error("Could not query cache for state")
+		return
+	}
+	if state == nil {
+		log.Debug("Skipping unnagregated attestation due to state not found in cache")
+		return
+	}
+	attestingIndices, err := s.getAttestingIndices(state, att)
+	if err != nil {
+		log.WithError(err).Error("Could not get attesting indices")
+		return
+	}
+	for _, idx := range attestingIndices {
+		if s.TrackedIndex(types.ValidatorIndex(idx)) &&
+			s.latestPerformance[types.ValidatorIndex(idx)].attestedSlot != att.Data.Slot {
+			logFields := logMessageTimelyFlagsForIndex(idx, att.Data)
+			log.WithFields(logFields).Info("Processed unaggregated attestation")
+		}
+	}
+}
+
+// processAggregatedAttestation logs when we see an aggregation from one of our tracked validators or an aggregated
+// attestation from one of our tracked validators
+func (s *Service) processAggregatedAttestation(att *ethpb.AggregateAttestationAndProof) {
+	if s.TrackedIndex(att.AggregatorIndex) {
+		log.WithFields(logrus.Fields{
+			"ValidatorIndex": att.AggregatorIndex,
+		}).Info("Processed attestation aggregation")
+		aggregatedPerf := s.aggregatedPerformance[att.AggregatorIndex]
+		aggregatedPerf.totalAggregations++
+		s.aggregatedPerformance[att.AggregatorIndex] = aggregatedPerf
+	}
+
+	var root [32]byte
+	copy(root[:], att.Aggregate.Data.BeaconBlockRoot)
+	state, err := s.config.StateGen.StateByRootIfCached(s.ctx, root)
+	if err != nil {
+		log.WithError(err).Error("Could not query cache for state")
+		return
+	}
+	if state == nil {
+		log.Debug("Skipping agregated attestation due to state not found in cache")
+		return
+	}
+	attestingIndices, err := s.getAttestingIndices(state, att.Aggregate)
+	if err != nil {
+		log.WithError(err).Error("Could not get attesting indices")
+		return
+	}
+	for _, idx := range attestingIndices {
+		if s.TrackedIndex(types.ValidatorIndex(idx)) &&
+			s.latestPerformance[types.ValidatorIndex(idx)].attestedSlot != att.Aggregate.Data.Slot {
+			logFields := logMessageTimelyFlagsForIndex(idx, att.Aggregate.Data)
+			log.WithFields(logFields).Info("Processed aggregated attestation")
+		}
+	}
+}
