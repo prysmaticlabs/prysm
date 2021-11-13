@@ -84,14 +84,6 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 	}
 }
 
-// processAttestations logs the event that one of our tracked validators'
-// attestations was included in a block
-func (s *Service) processAttestations(state state.BeaconState, blk block.BeaconBlock) {
-	for _, attestation := range blk.Body().Attestations() {
-		s.processAttestation(state, attestation, true)
-	}
-}
-
 // processSlashings logs the event of one of our tracked validators was slashed
 func (s *Service) processSlashings(blk block.BeaconBlock) {
 	for _, slashing := range blk.Body().ProposerSlashings() {
