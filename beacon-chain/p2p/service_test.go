@@ -99,8 +99,9 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	cfg := &flagConfig{
-		TCPPort: 2000,
-		UDPPort: 2000,
+		TCPPort:       2000,
+		UDPPort:       2000,
+		stateNotifier: &mock.MockStateNotifier{},
 	}
 	s, err := NewService(context.Background(), WithStateNotifier(&mock.MockStateNotifier{}))
 	require.NoError(t, err)
