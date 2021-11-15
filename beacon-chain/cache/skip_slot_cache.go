@@ -129,7 +129,6 @@ func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) {
 	defer c.lock.Unlock()
 
 	delete(c.inProgress, r)
-	return
 }
 
 // Put the response in the cache.
@@ -139,5 +138,4 @@ func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state state.BeaconSta
 	}
 	// Copy state so cached value is not mutated.
 	c.cache.Add(r, state.Copy())
-	return
 }
