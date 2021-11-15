@@ -120,26 +120,24 @@ func (c *SkipSlotCache) MarkInProgress(r [32]byte) error {
 
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
-func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) error {
+func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) {
 	if c.disabled {
-		return nil
+		return
 	}
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	delete(c.inProgress, r)
-	return nil
+	return
 }
 
 // Put the response in the cache.
-func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state state.BeaconState) error {
+func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state state.BeaconState) {
 	if c.disabled {
-		return nil
+		return
 	}
-
 	// Copy state so cached value is not mutated.
 	c.cache.Add(r, state.Copy())
-
-	return nil
+	return
 }
