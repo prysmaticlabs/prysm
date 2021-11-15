@@ -232,7 +232,7 @@ message BeaconStateMerge {
   SyncCommittee next_sync_committee = 9003; // [New in Altair]
 
   // Merge fields
-  ExecutionPayloadHeader latest_execution_payload_header = 10000; // [New in Merge]
+  ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Merge]
 }
 
 message ExecutionPayloadHeader {
