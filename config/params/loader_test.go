@@ -14,11 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var placeholderFields = []string{
-	"TERMINAL_TOTAL_DIFFICULTY",
-	"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH",
-	"TERMINAL_BLOCK_HASH",
-}
+var placeholderFields []string
 
 func TestLoadConfigFileMainnet(t *testing.T) {
 	// See https://media.githubusercontent.com/media/ethereum/consensus-spec-tests/master/tests/minimal/config/phase0.yaml
