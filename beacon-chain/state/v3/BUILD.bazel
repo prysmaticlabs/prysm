@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["types.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v3",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__pkg__"],
     deps = [
         "//beacon-chain/state/fieldtrie:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
