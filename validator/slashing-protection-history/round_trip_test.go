@@ -162,9 +162,6 @@ func TestImportExport_FilterKeys(t *testing.T) {
 
 	// We compare the metadata fields from import to export.
 	require.Equal(t, wanted.Metadata, eipStandard.Metadata)
-
-	// The values in the data field of the EIP struct are not guaranteed to be sorted,
-	// so we create a map to verify we have the data we expected.
 	require.Equal(t, len(rawKeys), len(eipStandard.Data))
 }
 
