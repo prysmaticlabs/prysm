@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
+	history "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	slashtest "github.com/prysmaticlabs/prysm/validator/testing"
 )
