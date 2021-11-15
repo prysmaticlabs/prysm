@@ -23,7 +23,7 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 }
 
 func validateElements(field types.FieldIndex, elements interface{}, length uint64) error {
-	val := reflect.ValueOf(elements)
+	val := reflect.Indirect(reflect.ValueOf(elements))
 	if val.Len() > int(length) {
 		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), val.Len(), length)
 	}
@@ -34,7 +34,7 @@ func validateElements(field types.FieldIndex, elements interface{}, length uint6
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots, types.StateRoots:
-		val, ok := elements.(customtypes.StateRoots)
+		val, ok := elements.(*customtypes.StateRoots)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
@@ -46,7 +46,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 		}
 		return stateutil.HandleByteArrays(roots, indices, convertAll)
 	case types.RandaoMixes:
-		val, ok := elements.(customtypes.RandaoMixes)
+		val, ok := elements.(*customtypes.RandaoMixes)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
