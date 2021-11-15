@@ -131,11 +131,7 @@ func (s *Service) processIncludedAttestation(state state.BeaconState, att *ethpb
 func (s *Service) processUnaggregatedAttestation(att *ethpb.Attestation) {
 	var root [32]byte
 	copy(root[:], att.Data.BeaconBlockRoot)
-	state, err := s.config.StateGen.StateByRootIfCached(s.ctx, root)
-	if err != nil {
-		log.WithError(err).Error("Could not query cache for state")
-		return
-	}
+	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if state == nil {
 		log.Debug("Skipping unnagregated attestation due to state not found in cache")
 		return
@@ -168,11 +164,7 @@ func (s *Service) processAggregatedAttestation(att *ethpb.AggregateAttestationAn
 
 	var root [32]byte
 	copy(root[:], att.Aggregate.Data.BeaconBlockRoot)
-	state, err := s.config.StateGen.StateByRootIfCached(s.ctx, root)
-	if err != nil {
-		log.WithError(err).Error("Could not query cache for state")
-		return
-	}
+	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if state == nil {
 		log.Debug("Skipping agregated attestation due to state not found in cache")
 		return

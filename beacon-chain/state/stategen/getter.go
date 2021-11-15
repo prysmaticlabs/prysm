@@ -38,19 +38,12 @@ func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, 
 }
 
 // StateByRootIfCached retrieves a state using the input block root only if the state is already in the cache
-func (s *State) StateByRootIfCached(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
-	ok, err := s.HasStateInCache(ctx, blockRoot)
-	if err != nil {
-		return nil, err
+func (s *State) StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState {
+	if !s.hotStateCache.has(blockRoot) {
+		return nil
 	}
-	if !ok {
-		return nil, nil
-	}
-	state, err := s.StateByRoot(ctx, blockRoot)
-	if err != nil {
-		return nil, err
-	}
-	return state, nil
+	state := s.hotStateCache.getWithoutCopy(blockRoot)
+	return state
 }
 
 // StateByRoot retrieves the state using input block root.
