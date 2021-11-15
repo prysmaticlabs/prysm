@@ -13,7 +13,7 @@ var (
 // monitor service tracks, as well as the event feed notifier that the
 // monitor needs to subscribe.
 type ValidatorMonitorConfig struct {
-	TrackedValidators []types.ValidatorIndex
+	TrackedValidators map[types.ValidatorIndex]interface{}
 }
 
 // Service is the main structure that tracks validators and reports logs and
@@ -25,10 +25,6 @@ type Service struct {
 // TrackedIndex returns if the given validator index corresponds to one of the
 // validators we follow
 func (s *Service) TrackedIndex(idx types.ValidatorIndex) bool {
-	for _, tracked := range s.config.TrackedValidators {
-		if tracked == idx {
-			return true
-		}
-	}
-	return false
+	_, ok := s.config.TrackedValidators[idx]
+	return ok
 }

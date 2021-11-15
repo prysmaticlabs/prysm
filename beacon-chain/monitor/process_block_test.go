@@ -114,7 +114,10 @@ func TestProcessSlashings(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := &Service{
 				config: &ValidatorMonitorConfig{
-					TrackedValidators: []types.ValidatorIndex{types.ValidatorIndex(1), types.ValidatorIndex(2)},
+					TrackedValidators: map[types.ValidatorIndex]interface{}{
+						1: nil,
+						2: nil,
+					},
 				},
 			}
 			s.processSlashings(wrapper.WrappedPhase0BeaconBlock(tt.block))
