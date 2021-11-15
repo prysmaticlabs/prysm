@@ -39,14 +39,6 @@ type ReadOnlyDatabase interface {
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]state.ReadOnlyBeaconState, error)
-	// Slashing operations.
-	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
-	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.AttesterSlashing, error)
-	HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) bool
-	HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool
-	// Block operations.
-	VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*eth.VoluntaryExit, error)
-	HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool
 	// Checkpoint operations.
 	JustifiedCheckpoint(ctx context.Context) (*eth.Checkpoint, error)
 	FinalizedCheckpoint(ctx context.Context) (*eth.Checkpoint, error)
@@ -75,11 +67,6 @@ type NoHeadAccessDatabase interface {
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error
 	SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error
-	// Slashing operations.
-	SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error
-	SaveAttesterSlashing(ctx context.Context, slashing *eth.AttesterSlashing) error
-	// Block operations.
-	SaveVoluntaryExit(ctx context.Context, exit *eth.VoluntaryExit) error
 	// Checkpoint operations.
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error

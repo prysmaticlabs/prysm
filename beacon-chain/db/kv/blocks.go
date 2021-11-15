@@ -150,11 +150,7 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []bloc
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 
-		keys, err := blockRootsBySlot(ctx, tx, slot)
-		if err != nil {
-			return err
-		}
-
+		keys := blockRootsBySlot(ctx, tx, slot)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			blk, err := unmarshalBlock(ctx, encoded)
@@ -174,11 +170,7 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, []
 	defer span.End()
 	blockRoots := make([][32]byte, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
-		keys, err := blockRootsBySlot(ctx, tx, slot)
-		if err != nil {
-			return err
-		}
-
+		keys := blockRootsBySlot(ctx, tx, slot)
 		for i := 0; i < len(keys); i++ {
 			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}
@@ -519,7 +511,7 @@ func blockRootsBySlotRange(
 }
 
 // blockRootsBySlot retrieves the block roots by slot
-func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][]byte, error) {
+func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) [][]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlot")
 	defer span.End()
 
@@ -533,7 +525,7 @@ func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][]by
 			roots = append(roots, v[i:i+32])
 		}
 	}
-	return roots, nil
+	return roots
 }
 
 // createBlockIndicesFromBlock takes in a beacon block and returns
