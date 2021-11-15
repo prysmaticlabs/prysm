@@ -47,7 +47,7 @@ func validateStateHTR(s *v1.BeaconState) {
 	if !ok {
 		panic("non valid type assertion")
 	}
-	rt, err := s.HashTreeRoot(context.Background())
+	rt, err := s.HTR(context.Background())
 	nxtRt, err2 := rawState.HashTreeRoot()
 
 	if err == nil && err2 != nil {

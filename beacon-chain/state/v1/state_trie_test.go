@@ -151,7 +151,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testState, err = tt.stateModify(testState)
 			assert.NoError(t, err)
-			root, err := testState.HashTreeRoot(context.Background())
+			root, err := testState.HTR(context.Background())
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
@@ -220,7 +220,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testState, err = tt.stateModify(testState)
 			assert.NoError(t, err)
-			root, err := testState.HashTreeRoot(context.Background())
+			root, err := testState.HTR(context.Background())
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}

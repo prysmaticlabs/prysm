@@ -38,12 +38,12 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 		RandaoMixes:                mockrandaoMixes,
 	})
 	require.NoError(t, err)
-	_, err = st.HashTreeRoot(context.Background())
+	_, err = st.HTR(context.Background())
 	require.NoError(t, err)
 	for i := stateTypes.FieldIndex(0); i < stateTypes.FieldIndex(params.BeaconConfig().BeaconStateAltairFieldCount); i++ {
 		st.dirtyFields[i] = true
 	}
-	_, err = st.HashTreeRoot(context.Background())
+	_, err = st.HTR(context.Background())
 	require.NoError(t, err)
 	for i := 0; i < 10; i++ {
 		assert.NoError(t, st.AppendValidator(&eth.Validator{}))

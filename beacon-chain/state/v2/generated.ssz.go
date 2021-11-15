@@ -135,7 +135,7 @@ func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (21) 'inactivityScores'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.inactivityScores) * 8
+	//offset += len(b.inactivityScores) * 8
 
 	// Field (22) 'currentSyncCommittee'
 	if b.currentSyncCommittee == nil {
@@ -505,9 +505,9 @@ func (b *BeaconState) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the BeaconState object
-/*func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
+func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
-}*/
+}
 
 // HashTreeRootWith ssz hashes the BeaconState object with a hasher
 func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {

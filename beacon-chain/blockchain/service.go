@@ -134,7 +134,7 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not retrieve genesis state: %v", err)
 		}
-		gRoot, err := gState.HashTreeRoot(s.ctx)
+		gRoot, err := gState.HTR(s.ctx)
 		if err != nil {
 			log.Fatalf("Could not hash tree root genesis state: %v", err)
 		}
@@ -237,7 +237,7 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	// We start a counter to genesis, if needed.
-	gRoot, err := initializedState.HashTreeRoot(s.ctx)
+	gRoot, err := initializedState.HTR(s.ctx)
 	if err != nil {
 		log.Fatalf("Could not hash tree root genesis state: %v", err)
 	}

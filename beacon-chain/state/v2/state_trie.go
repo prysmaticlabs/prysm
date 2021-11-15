@@ -285,10 +285,10 @@ func (b *BeaconState) Copy() state.BeaconState {
 	return dst
 }
 
-// HashTreeRoot of the beacon state retrieves the Merkle root of the trie
+// HTR of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
-func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "beaconStateAltair.HashTreeRoot")
+func (b *BeaconState) HTR(ctx context.Context) ([32]byte, error) {
+	_, span := trace.StartSpan(ctx, "beaconStateAltair.HTR")
 	defer span.End()
 
 	b.lock.Lock()

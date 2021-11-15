@@ -324,7 +324,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	require.NoError(t, err)
 
 	header := beaconState.LatestBlockHeader()
-	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
+	prevStateRoot, err := beaconState.HTR(context.Background())
 	require.NoError(t, err)
 	header.StateRoot = prevStateRoot[:]
 	require.NoError(t, beaconState.SetLatestBlockHeader(header))

@@ -16,7 +16,7 @@ type BeaconState interface {
 	ReadOnlyBeaconState
 	WriteOnlyBeaconState
 	Copy() BeaconState
-	HashTreeRoot(ctx context.Context) ([32]byte, error)
+	HTR(ctx context.Context) ([32]byte, error)
 	FutureForkStub
 }
 

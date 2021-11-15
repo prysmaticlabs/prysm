@@ -298,7 +298,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		bsRoot, err := beaconState.HTR(ctx)
 		require.NoError(t, err)
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -337,7 +337,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		bsRoot, err := beaconState.HTR(ctx)
 		require.NoError(t, err)
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err)

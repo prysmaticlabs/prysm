@@ -556,7 +556,7 @@ func TestProduceBlock(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
-	stateRoot, err := beaconState.HashTreeRoot(ctx)
+	stateRoot, err := beaconState.HTR(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
@@ -646,7 +646,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 		beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
-		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		stateRoot, err := beaconState.HTR(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
 
 		genesis := blocks.NewGenesisBlock(stateRoot[:])
@@ -748,7 +748,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
 
-		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		stateRoot, err := beaconState.HTR(ctx)
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]

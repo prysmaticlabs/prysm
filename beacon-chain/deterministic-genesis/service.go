@@ -88,7 +88,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		// Generated genesis time; fetch it
 		s.cfg.GenesisTime = genesisTrie.GenesisTime()
 	}
-	gRoot, err := genesisTrie.HashTreeRoot(s.ctx)
+	gRoot, err := genesisTrie.HTR(s.ctx)
 	if err != nil {
 		log.Fatalf("Could not hash tree root genesis state: %v", err)
 	}

@@ -24,10 +24,10 @@ func TestNewBeaconState(t *testing.T) {
 func TestNewBeaconState_HashTreeRoot(t *testing.T) {
 	st, err := NewBeaconState()
 	require.NoError(t, err)
-	_, err = st.HashTreeRoot(context.Background())
+	_, err = st.HTR(context.Background())
 	require.NoError(t, err)
 	st, err = NewBeaconState()
 	require.NoError(t, err)
-	_, err = st.HashTreeRoot(context.Background())
+	_, err = st.HTR(context.Background())
 	require.NoError(t, err)
 }

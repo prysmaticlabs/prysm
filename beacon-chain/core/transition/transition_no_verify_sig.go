@@ -79,7 +79,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	}
 
 	// State root validation.
-	postStateRoot, err := state.HashTreeRoot(ctx)
+	postStateRoot, err := state.HTR(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -163,7 +163,7 @@ func CalculateStateRoot(
 		}
 	}
 
-	return state.HashTreeRoot(ctx)
+	return state.HTR(ctx)
 }
 
 // ProcessBlockNoVerifyAnySig creates a new, modified beacon state by applying block operation

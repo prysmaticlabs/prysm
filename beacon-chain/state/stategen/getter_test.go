@@ -202,7 +202,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	service.finalizedInfo.slot = service.slotsPerArchivedPoint + 1
 
 	beaconState, pks := util.DeterministicGenesisState(t, 32)
-	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
+	genesisStateRoot, err := beaconState.HTR(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))
@@ -235,7 +235,7 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	service := New(beaconDB)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
+	genesisStateRoot, err := beaconState.HTR(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))
@@ -271,7 +271,7 @@ func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
 	service := New(beaconDB)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
+	genesisStateRoot, err := beaconState.HTR(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))
@@ -366,7 +366,7 @@ func TestLoadeStateBySlot_CanReplayBlock(t *testing.T) {
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
-	stateRoot, err := genesis.HashTreeRoot(ctx)
+	stateRoot, err := genesis.HTR(ctx)
 	require.NoError(t, err)
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
@@ -394,7 +394,7 @@ func TestLoadeStateBySlot_DoesntReplayBlockOnRequestedSlot(t *testing.T) {
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
-	stateRoot, err := genesis.HashTreeRoot(ctx)
+	stateRoot, err := genesis.HTR(ctx)
 	require.NoError(t, err)
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))

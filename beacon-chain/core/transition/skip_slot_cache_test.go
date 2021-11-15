@@ -86,9 +86,9 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		require.NoError(t, err, "Could not run state transition")
 	}
 
-	r1, err := s1.HashTreeRoot(context.Background())
+	r1, err := s1.HTR(context.Background())
 	require.NoError(t, err)
-	r2, err := s0.HashTreeRoot(context.Background())
+	r2, err := s0.HTR(context.Background())
 	require.NoError(t, err)
 	if r1 == r2 {
 		t.Fatalf("need different starting states, got: %x", r1)
@@ -113,7 +113,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	problemSlot := s1.Slot() + 2
 	expected1, err := transition.ProcessSlots(context.Background(), s1.Copy(), problemSlot)
 	require.NoError(t, err)
-	expectedRoot1, err := expected1.HashTreeRoot(context.Background())
+	expectedRoot1, err := expected1.HTR(context.Background())
 	require.NoError(t, err)
 	t.Logf("chain 1 (even i) expected root %x at slot %d", expectedRoot1[:], problemSlot)
 
@@ -124,7 +124,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 
 	expected2, err := transition.ProcessSlots(context.Background(), s0.Copy(), problemSlot)
 	require.NoError(t, err)
-	expectedRoot2, err := expected2.HashTreeRoot(context.Background())
+	expectedRoot2, err := expected2.HTR(context.Background())
 	require.NoError(t, err)
 	t.Logf("chain 2 (odd i) expected root %x at slot %d", expectedRoot2[:], problemSlot)
 

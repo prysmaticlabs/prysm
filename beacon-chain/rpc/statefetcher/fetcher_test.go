@@ -31,7 +31,7 @@ func TestGetState(t *testing.T) {
 	}
 	state, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
 	require.NoError(t, err)
-	stateRoot, err := state.HashTreeRoot(ctx)
+	stateRoot, err := state.HTR(ctx)
 	require.NoError(t, err)
 
 	t.Run("head", func(t *testing.T) {
@@ -41,7 +41,7 @@ func TestGetState(t *testing.T) {
 
 		s, err := p.State(ctx, []byte("head"))
 		require.NoError(t, err)
-		sRoot, err := s.HashTreeRoot(ctx)
+		sRoot, err := s.HTR(ctx)
 		require.NoError(t, err)
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
@@ -64,7 +64,7 @@ func TestGetState(t *testing.T) {
 			return nil
 		})
 		require.NoError(t, err)
-		stateRoot, err := state.HashTreeRoot(ctx)
+		stateRoot, err := state.HTR(ctx)
 		require.NoError(t, err)
 
 		require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
@@ -77,7 +77,7 @@ func TestGetState(t *testing.T) {
 
 		s, err := p.State(ctx, []byte("genesis"))
 		require.NoError(t, err)
-		sRoot, err := s.HashTreeRoot(ctx)
+		sRoot, err := s.HTR(ctx)
 		require.NoError(t, err)
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
@@ -97,7 +97,7 @@ func TestGetState(t *testing.T) {
 
 		s, err := p.State(ctx, []byte("finalized"))
 		require.NoError(t, err)
-		sRoot, err := s.HashTreeRoot(ctx)
+		sRoot, err := s.HTR(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, stateRoot, sRoot)
 	})
@@ -117,7 +117,7 @@ func TestGetState(t *testing.T) {
 
 		s, err := p.State(ctx, []byte("justified"))
 		require.NoError(t, err)
-		sRoot, err := s.HashTreeRoot(ctx)
+		sRoot, err := s.HTR(ctx)
 		require.NoError(t, err)
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
@@ -135,7 +135,7 @@ func TestGetState(t *testing.T) {
 
 		s, err := p.State(ctx, stateId)
 		require.NoError(t, err)
-		sRoot, err := s.HashTreeRoot(ctx)
+		sRoot, err := s.HTR(ctx)
 		require.NoError(t, err)
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
@@ -161,7 +161,7 @@ func TestGetState(t *testing.T) {
 
 		s, err := p.State(ctx, []byte(strconv.FormatUint(uint64(headSlot), 10)))
 		require.NoError(t, err)
-		sRoot, err := s.HashTreeRoot(ctx)
+		sRoot, err := s.HTR(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, stateRoot, sRoot)
 	})
@@ -193,7 +193,7 @@ func TestGetStateRoot(t *testing.T) {
 	}
 	state, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
 	require.NoError(t, err)
-	stateRoot, err := state.HashTreeRoot(ctx)
+	stateRoot, err := state.HTR(ctx)
 	require.NoError(t, err)
 
 	t.Run("head", func(t *testing.T) {

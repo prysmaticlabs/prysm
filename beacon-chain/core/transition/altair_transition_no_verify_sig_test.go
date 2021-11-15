@@ -70,7 +70,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
 	h := ethpb.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
-	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
+	prevStateRoot, err := beaconState.HTR(context.Background())
 	require.NoError(t, err)
 	h.StateRoot = prevStateRoot[:]
 	pbr, err := h.HashTreeRoot()
@@ -157,7 +157,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	indices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
 	require.NoError(t, err)
 	h := ethpb.CopyBeaconBlockHeader(beaconState.LatestBlockHeader())
-	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
+	prevStateRoot, err := beaconState.HTR(context.Background())
 	require.NoError(t, err)
 	h.StateRoot = prevStateRoot[:]
 	pbr, err := h.HashTreeRoot()

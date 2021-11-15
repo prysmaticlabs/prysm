@@ -493,9 +493,9 @@ func (b *BeaconState) SizeSSZ() (size int) {
 }
 
 // HashTreeRoot ssz hashes the BeaconState object
-/*func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
+func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
-}*/
+}
 
 // HashTreeRootWith ssz hashes the BeaconState object with a hasher
 func (b *BeaconState) HashTreeRootWith(hh *ssz.Hasher) (err error) {

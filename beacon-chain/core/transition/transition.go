@@ -93,7 +93,7 @@ func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconStat
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot())))
 
-	prevStateRoot, err := state.HashTreeRoot(ctx)
+	prevStateRoot, err := state.HTR(ctx)
 	if err != nil {
 		return nil, err
 	}
