@@ -231,8 +231,8 @@ message BeaconStateMerge {
   SyncCommittee current_sync_committee = 9002; // [New in Altair]
   SyncCommittee next_sync_committee = 9003; // [New in Altair]
 
-  // New Merge fields
-  ExecutionPayloadHeader latest_execution_payload_header = 10000;
+  // Merge fields [10001-11000]
+  ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Merge]
 }
 
 message ExecutionPayloadHeader {
@@ -247,7 +247,7 @@ message ExecutionPayloadHeader {
   uint64 gas_used = 9;
   uint64 timestamp = 10;
   bytes extra_data = 11 [(ethereum.eth.ext.ssz_max) = "32"];
-  bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"]; //base fee introduced in EIP-1559, little-endian serialized
+  bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"];
   bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"];
   bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
 }
