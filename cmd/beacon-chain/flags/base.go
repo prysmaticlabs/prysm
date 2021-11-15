@@ -190,36 +190,30 @@ var (
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
 	}
-	// EnableMerge enables necessary features to run merge testnet.
-	EnableMerge = &cli.BoolFlag{
-		Name:  "merge",
-		Usage: "enables necessary features to run merge testnet, this is unstable and is for developers only",
-		Value: false,
-	}
 	// TerminalTotalDifficultyOverride specifies the total difficulty to manual overrides the `TERMINAL_TOTAL_DIFFICULTY` parameter.
 	TerminalTotalDifficultyOverride = &cli.Uint64Flag{
 		Name: "terminal-total-difficulty-override",
-		Usage: "Sets the total difficulty to manual overrides the default TERMINAL_TOTAL_DIFFICULTY value." +
-			"Warning: This flag should be used only if you have a clear understanding that community has decided to override the terminal difficulty." +
-			"Incorrect usage will result in your node experience consensus value.",
+		Usage: "Sets the total difficulty to manual overrides the default TERMINAL_TOTAL_DIFFICULTY value. " +
+			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal difficulty. " +
+			"Incorrect usage will result in your node experience consensus failure.",
 	}
 	// TerminalBlockHashOverride specifies the terminal block hash to manual overrides the `TERMINAL_BLOCK_HASH` parameter.
 	TerminalBlockHashOverride = &cli.StringFlag{
 		Name: "terminal-block-hash-override",
-		Usage: "Sets the block hash to manual overrides the default TERMINAL_BLOCK_HASH value." +
-			"Warning: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash." +
-			"Incorrect usage will result in your node experience consensus value.",
+		Usage: "Sets the block hash to manual overrides the default TERMINAL_BLOCK_HASH value. " +
+			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash. " +
+			"Incorrect usage will result in your node experience consensus failure.",
 	}
 	// TerminalBlockHashActivationEpochOverride specifies the terminal block hash epoch to manual overrides the `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` parameter.
-	TerminalBlockHashActivationEpochOverride = &cli.StringFlag{
-		Name: "terminal-block-hash-epoch-override`",
-		Usage: "Sets the block hash epoch to manual overrides the default TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH value." +
-			"Warning: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch." +
-			"Incorrect usage will result in your node experience consensus value.",
+	TerminalBlockHashActivationEpochOverride = &cli.Uint64Flag{
+		Name: "terminal-block-hash-epoch-override",
+		Usage: "Sets the block hash epoch to manual overrides the default TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH value. " +
+			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch. " +
+			"Incorrect usage will result in your node experience consensus failure.",
 	}
-	// FeeRecipient specifies the fee recipient for the transaction fees.
-	FeeRecipient = &cli.StringFlag{
-		Name:  "fee-recipient",
+	// Coinbase specifies the fee recipient for the transaction fees.
+	Coinbase = &cli.StringFlag{
+		Name:  "coinbase",
 		Usage: "Post merge, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst merge is in development state.",
 		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
 	}

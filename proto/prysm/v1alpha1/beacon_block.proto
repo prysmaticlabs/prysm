@@ -318,7 +318,7 @@ message BeaconBlockMerge {
     // 32 byte root of the resulting state after processing this block.
     bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
 
-    // The  beacon block body.
+    // The beacon block body.
     BeaconBlockBodyMerge body = 5;
 }
 
@@ -351,27 +351,27 @@ message BeaconBlockBodyMerge {
     // At most MAX_VOLUNTARY_EXITS.
     repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
 
+    // Sync aggregate object for the beacon chain to track sync committee votes. New in Altair network upgrade.
     SyncAggregate sync_aggregate = 9;
 
-    // Execution payload. [New in merge]
+    // Execution payload from the execution chain. New in Merge network upgrade.
     ExecutionPayload execution_payload = 10;
 }
 
-// The execution payload in a `BeaconBlockBody`.
 message ExecutionPayload {
-    // Execution block header fields
     bytes parent_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-    bytes coinbase = 2 [(ethereum.eth.ext.ssz_size) = "20"]; //'beneficiary' in the yellow paper
+    bytes coinbase = 2 [(ethereum.eth.ext.ssz_size) = "20"]; // 'beneficiary' in the yellow paper
     bytes state_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-    bytes receipt_root = 4 [(ethereum.eth.ext.ssz_size) = "32"]; //'receipts root' in the yellow paper
+    bytes receipt_root = 4 [(ethereum.eth.ext.ssz_size) = "32"]; // 'receipts root' in the yellow paper
     bytes logs_bloom = 5 [(ethereum.eth.ext.ssz_size) = "256"];
-    bytes random = 6 [(ethereum.eth.ext.ssz_size) = "32"]; //'difficulty' in the yellow paper
-    uint64 block_number = 7; //'number' in the yellow paper
+    bytes random = 6 [(ethereum.eth.ext.ssz_size) = "32"]; // 'difficulty' in the yellow paper
+    uint64 block_number = 7; // 'number' in the yellow paper
     uint64 gas_limit = 8;
     uint64 gas_used = 9;
     uint64 timestamp = 10;
     bytes extra_data = 11 [(ethereum.eth.ext.ssz_max) = "32"];
     bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"]; //base fee introduced in EIP-1559, little-endian serialized
     bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"]; // Hash of execution block
+    // Transactions are encoded with RLP, and so to software that only understands SSZ they are presented as opaque byte arrays.
     repeated bytes transactions = 14  [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 }

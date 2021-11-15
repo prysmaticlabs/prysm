@@ -97,12 +97,8 @@ func configureInteropConfig(cliCtx *cli.Context) {
 	}
 }
 
-func configureExecutionMode(cliCtx *cli.Context) {
-	if cliCtx.IsSet(flags.EnableMerge.Name) {
-		c := params.BeaconConfig()
-		c.EnabledMerge = cliCtx.Bool(flags.EnableMerge.Name)
-		params.OverrideBeaconConfig(c)
-	}
+
+func configureExecutionSetting(cliCtx *cli.Context) {
 	if cliCtx.IsSet(flags.TerminalTotalDifficultyOverride.Name) {
 		c := params.BeaconConfig()
 		c.TerminalTotalDifficulty = cliCtx.Uint64(flags.TerminalTotalDifficultyOverride.Name)
@@ -118,9 +114,9 @@ func configureExecutionMode(cliCtx *cli.Context) {
 		c.TerminalBlockHashActivationEpoch = types.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
 		params.OverrideBeaconConfig(c)
 	}
-	if cliCtx.IsSet(flags.FeeRecipient.Name) {
+	if cliCtx.IsSet(flags.Coinbase.Name) {
 		c := params.BeaconConfig()
-		c.FeeRecipient = common.HexToAddress(cliCtx.String(flags.FeeRecipient.Name))
+		c.Coinbase = common.HexToAddress(cliCtx.String(flags.Coinbase.Name))
 		params.OverrideBeaconConfig(c)
 	}
 }

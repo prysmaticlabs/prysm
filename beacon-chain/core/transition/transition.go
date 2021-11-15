@@ -215,10 +215,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		return nil, err
 	}
 	defer func() {
-		if err := SkipSlotCache.MarkNotInProgress(key); err != nil {
-			tracing.AnnotateError(span, err)
-			log.WithError(err).Error("Failed to mark skip slot no longer in progress")
-		}
+		SkipSlotCache.MarkNotInProgress(key)
 	}()
 
 	for state.Slot() < slot {
@@ -226,7 +223,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			tracing.AnnotateError(span, ctx.Err())
 			// Cache last best value.
 			if highestSlot < state.Slot() {
-				if err := SkipSlotCache.Put(ctx, key, state); err != nil {
+				if SkipSlotCache.Put(ctx, key, state); err != nil {
 					log.WithError(err).Error("Failed to put skip slot cache value")
 				}
 			}
@@ -284,10 +281,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	}
 
 	if highestSlot < state.Slot() {
-		if err := SkipSlotCache.Put(ctx, key, state); err != nil {
-			log.WithError(err).Error("Failed to put skip slot cache value")
-			tracing.AnnotateError(span, err)
-		}
+		SkipSlotCache.Put(ctx, key, state)
 	}
 
 	return state, nil
