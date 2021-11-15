@@ -240,7 +240,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxTransactionsPerPayload:        1 << 20,
 	MaxBytesPerTransaction:           1 << 30,
 	TerminalBlockHash:                [32]byte{},
-	TerminalBlockHashActivationEpoch: 1<<64 - 1,
+	TerminalBlockHashActivationEpoch: math.MaxUint64,
 
 	// Updated Merge penalty values.
 	InactivityPenaltyQuotientMerge:      1 << 24,
@@ -250,6 +250,4 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Light client
 	MinSyncCommitteeParticipants: 1,
 
-	// Merge
-	TerminalBlockHashActivationEpoch: math.MaxUint64,
 }

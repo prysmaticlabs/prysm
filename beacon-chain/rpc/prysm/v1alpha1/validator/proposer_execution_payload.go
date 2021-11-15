@@ -129,7 +129,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 	p := catalyst.PayloadAttributesV1{
 		Timestamp:    uint64(t.Unix()),
 		Random:       common.BytesToHash(random),
-		FeeRecipient: params.BeaconConfig().FeeRecipient,
+		FeeRecipient: params.BeaconConfig().Coinbase,
 	}
 	id, err := vs.ExecutionEngineCaller.PreparePayload(ctx, f, p)
 	if err != nil {

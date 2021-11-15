@@ -97,7 +97,6 @@ func configureInteropConfig(cliCtx *cli.Context) {
 	}
 }
 
-
 func configureExecutionSetting(cliCtx *cli.Context) {
 	if cliCtx.IsSet(flags.TerminalTotalDifficultyOverride.Name) {
 		c := params.BeaconConfig()
