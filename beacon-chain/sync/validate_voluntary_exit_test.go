@@ -11,6 +11,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -75,13 +77,14 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	exit, s := setupValidExit(t)
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p,
+			chain: &mock.ChainService{
 				State:   s,
 				Genesis: time.Now(),
 			},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+			initialSync:       &mockSync.Sync{IsSyncing: false},
+			operationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenExitCache: lruwrpr.New(10),
 	}
@@ -99,11 +102,33 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 			Topic: &topic,
 		},
 	}
+
+	// Subscribe to operation notifications.
+	opChannel := make(chan *feed.Event, 1)
+	opSub := r.cfg.operationNotifier.OperationFeed().Subscribe(opChannel)
+	defer opSub.Unsubscribe()
+
 	res, err := r.validateVoluntaryExit(ctx, "", m)
 	assert.NoError(t, err)
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, true, valid, "Failed validation")
 	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
+
+	// Ensure the state notification was broadcast.
+	notificationFound := false
+	for !notificationFound {
+		select {
+		case event := <-opChannel:
+			if event.Type == opfeed.ExitReceived {
+				notificationFound = true
+				_, ok := event.Data.(*opfeed.ExitReceivedData)
+				assert.Equal(t, true, ok, "Entity is not of type *opfeed.ExitReceivedData")
+			}
+		case <-opSub.Err():
+			t.Error("Subscription to state notifier failed")
+			return
+		}
+	}
 }
 
 func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
@@ -114,12 +139,12 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 	// Set state slot to 1 to cause exit object fail to verify.
 	require.NoError(t, s.SetSlot(1))
 	r := &Service{
-		cfg: &Config{
-			P2P: p,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p,
+			chain: &mock.ChainService{
 				State: s,
 			},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenExitCache: lruwrpr.New(10),
 	}
@@ -147,12 +172,12 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 	exit, s := setupValidExit(t)
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p,
+			chain: &mock.ChainService{
 				State: s,
 			},
-			InitialSync: &mockSync.Sync{IsSyncing: true},
+			initialSync: &mockSync.Sync{IsSyncing: true},
 		},
 	}
 	buf := new(bytes.Buffer)

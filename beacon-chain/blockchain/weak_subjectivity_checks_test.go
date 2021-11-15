@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -23,59 +24,57 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 	require.NoError(t, err)
 	tests := []struct {
 		wsVerified     bool
-		wantErr        bool
+		wantErr        error
 		checkpt        *ethpb.Checkpoint
 		finalizedEpoch types.Epoch
-		errString      string
 		name           string
 	}{
 		{
-			name:    "nil root and epoch",
-			wantErr: false,
+			name: "nil root and epoch",
 		},
 		{
 			name:           "already verified",
 			checkpt:        &ethpb.Checkpoint{Epoch: 2},
 			finalizedEpoch: 2,
 			wsVerified:     true,
-			wantErr:        false,
 		},
 		{
 			name:           "not yet to verify, ws epoch higher than finalized epoch",
 			checkpt:        &ethpb.Checkpoint{Epoch: 2},
 			finalizedEpoch: 1,
-			wantErr:        false,
 		},
 		{
 			name:           "can't find the block in DB",
 			checkpt:        &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'a'}, 32), Epoch: 1},
 			finalizedEpoch: 3,
-			wantErr:        true,
-			errString:      "node does not have root in DB",
+			wantErr:        errWSBlockNotFound,
 		},
 		{
 			name:           "can't find the block corresponds to ws epoch in DB",
 			checkpt:        &ethpb.Checkpoint{Root: r[:], Epoch: 2}, // Root belongs in epoch 1.
 			finalizedEpoch: 3,
-			wantErr:        true,
-			errString:      "node does not have root in db corresponding to epoch",
+			wantErr:        errWSBlockNotFoundInEpoch,
 		},
 		{
 			name:           "can verify and pass",
 			checkpt:        &ethpb.Checkpoint{Root: r[:], Epoch: 1},
 			finalizedEpoch: 3,
-			wantErr:        false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			wv, err := NewWeakSubjectivityVerifier(tt.checkpt, beaconDB)
+			require.NoError(t, err)
 			s := &Service{
 				cfg:              &config{BeaconDB: beaconDB, WeakSubjectivityCheckpt: tt.checkpt},
-				wsVerified:       tt.wsVerified,
 				finalizedCheckpt: &ethpb.Checkpoint{Epoch: tt.finalizedEpoch},
+				wsVerifier:       wv,
 			}
-			if err := s.VerifyWeakSubjectivityRoot(context.Background()); (err != nil) != tt.wantErr {
-				require.ErrorContains(t, tt.errString, err)
+			err = s.wsVerifier.VerifyWeakSubjectivity(context.Background(), s.finalizedCheckpt.Epoch)
+			if tt.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.Equal(t, true, errors.Is(err, tt.wantErr))
 			}
 		})
 	}

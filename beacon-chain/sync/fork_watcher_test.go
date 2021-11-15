@@ -37,11 +37,11 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 				r := &Service{
 					ctx:    ctx,
 					cancel: cancel,
-					cfg: &Config{
-						P2P:           p2p,
-						Chain:         chainService,
-						StateNotifier: chainService.StateNotifier(),
-						InitialSync:   &mockSync.Sync{IsSyncing: false},
+					cfg: &config{
+						p2p:           p2p,
+						chain:         chainService,
+						stateNotifier: chainService.StateNotifier(),
+						initialSync:   &mockSync.Sync{IsSyncing: false},
 					},
 					chainStarted: abool.New(),
 					subHandler:   newSubTopicHandler(),
@@ -70,11 +70,11 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 				r := &Service{
 					ctx:    ctx,
 					cancel: cancel,
-					cfg: &Config{
-						P2P:           p2p,
-						Chain:         chainService,
-						StateNotifier: chainService.StateNotifier(),
-						InitialSync:   &mockSync.Sync{IsSyncing: false},
+					cfg: &config{
+						p2p:           p2p,
+						chain:         chainService,
+						stateNotifier: chainService.StateNotifier(),
+						initialSync:   &mockSync.Sync{IsSyncing: false},
 					},
 					chainStarted: abool.New(),
 					subHandler:   newSubTopicHandler(),
@@ -84,17 +84,17 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 			currEpoch: 4,
 			wantErr:   false,
 			postSvcCheck: func(t *testing.T, s *Service) {
-				genRoot := s.cfg.Chain.GenesisValidatorRoot()
+				genRoot := s.cfg.chain.GenesisValidatorRoot()
 				digest, err := forks.ForkDigestFromEpoch(5, genRoot[:])
 				assert.NoError(t, err)
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
 				rpcMap := make(map[string]bool)
-				for _, p := range s.cfg.P2P.Host().Mux().Protocols() {
+				for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
 					rpcMap[p] = true
 				}
-				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRangeTopicV2+s.cfg.P2P.Encoding().ProtocolSuffix()], "topic doesn't exist")
-				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRootTopicV2+s.cfg.P2P.Encoding().ProtocolSuffix()], "topic doesn't exist")
-				assert.Equal(t, true, rpcMap[p2p.RPCMetaDataTopicV2+s.cfg.P2P.Encoding().ProtocolSuffix()], "topic doesn't exist")
+				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRangeTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()], "topic doesn't exist")
+				assert.Equal(t, true, rpcMap[p2p.RPCBlocksByRootTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()], "topic doesn't exist")
+				assert.Equal(t, true, rpcMap[p2p.RPCMetaDataTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()], "topic doesn't exist")
 			},
 		},
 	}
@@ -130,11 +130,11 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				r := &Service{
 					ctx:    ctx,
 					cancel: cancel,
-					cfg: &Config{
-						P2P:           p2p,
-						Chain:         chainService,
-						StateNotifier: chainService.StateNotifier(),
-						InitialSync:   &mockSync.Sync{IsSyncing: false},
+					cfg: &config{
+						p2p:           p2p,
+						chain:         chainService,
+						stateNotifier: chainService.StateNotifier(),
+						initialSync:   &mockSync.Sync{IsSyncing: false},
 					},
 					chainStarted: abool.New(),
 					subHandler:   newSubTopicHandler(),
@@ -145,17 +145,17 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 			currEpoch: 10,
 			wantErr:   false,
 			postSvcCheck: func(t *testing.T, s *Service) {
-				ptcls := s.cfg.P2P.Host().Mux().Protocols()
+				ptcls := s.cfg.p2p.Host().Mux().Protocols()
 				pMap := make(map[string]bool)
 				for _, p := range ptcls {
 					pMap[p] = true
 				}
-				assert.Equal(t, true, pMap[p2p.RPCGoodByeTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCStatusTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCPingTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCMetaDataTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCBlocksByRangeTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCBlocksByRootTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCGoodByeTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCStatusTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCPingTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCMetaDataTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCBlocksByRangeTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCBlocksByRootTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
 			},
 		},
 		{
@@ -174,11 +174,11 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				r := &Service{
 					ctx:    ctx,
 					cancel: cancel,
-					cfg: &Config{
-						P2P:           p2p,
-						Chain:         chainService,
-						StateNotifier: chainService.StateNotifier(),
-						InitialSync:   &mockSync.Sync{IsSyncing: false},
+					cfg: &config{
+						p2p:           p2p,
+						chain:         chainService,
+						stateNotifier: chainService.StateNotifier(),
+						initialSync:   &mockSync.Sync{IsSyncing: false},
 					},
 					chainStarted: abool.New(),
 					subHandler:   newSubTopicHandler(),
@@ -191,7 +191,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				chainService.Genesis = prevGenesis
 				r.registerRPCHandlersAltair()
 
-				genRoot := r.cfg.Chain.GenesisValidatorRoot()
+				genRoot := r.cfg.chain.GenesisValidatorRoot()
 				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
 				assert.NoError(t, err)
 				r.registerSubscribers(0, digest)
@@ -207,7 +207,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 			currEpoch: 4,
 			wantErr:   false,
 			postSvcCheck: func(t *testing.T, s *Service) {
-				genRoot := s.cfg.Chain.GenesisValidatorRoot()
+				genRoot := s.cfg.chain.GenesisValidatorRoot()
 				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
 				assert.NoError(t, err)
 				assert.Equal(t, false, s.subHandler.digestExists(digest))
@@ -215,21 +215,21 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
 
-				ptcls := s.cfg.P2P.Host().Mux().Protocols()
+				ptcls := s.cfg.p2p.Host().Mux().Protocols()
 				pMap := make(map[string]bool)
 				for _, p := range ptcls {
 					pMap[p] = true
 				}
-				assert.Equal(t, true, pMap[p2p.RPCGoodByeTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCStatusTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCPingTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCMetaDataTopicV2+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCBlocksByRangeTopicV2+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, true, pMap[p2p.RPCBlocksByRootTopicV2+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCGoodByeTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCStatusTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCPingTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCMetaDataTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCBlocksByRangeTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, true, pMap[p2p.RPCBlocksByRootTopicV2+s.cfg.p2p.Encoding().ProtocolSuffix()])
 
-				assert.Equal(t, false, pMap[p2p.RPCMetaDataTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, false, pMap[p2p.RPCBlocksByRangeTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
-				assert.Equal(t, false, pMap[p2p.RPCBlocksByRootTopicV1+s.cfg.P2P.Encoding().ProtocolSuffix()])
+				assert.Equal(t, false, pMap[p2p.RPCMetaDataTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, false, pMap[p2p.RPCBlocksByRangeTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
+				assert.Equal(t, false, pMap[p2p.RPCBlocksByRootTopicV1+s.cfg.p2p.Encoding().ProtocolSuffix()])
 			},
 		},
 	}

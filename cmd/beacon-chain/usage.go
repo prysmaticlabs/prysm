@@ -126,6 +126,15 @@ var appHelpFlagGroups = []flagGroup{
 		},
 	},
 	{
+		Name: "merge",
+		Flags: []cli.Flag{
+			flags.TerminalTotalDifficultyOverride,
+			flags.TerminalBlockHashOverride,
+			flags.TerminalBlockHashActivationEpochOverride,
+			flags.Coinbase,
+		},
+	},
+	{
 		Name: "p2p",
 		Flags: []cli.Flag{
 			p2pcmd.P2PIP,

@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -674,11 +675,23 @@ func (bs *Server) GetValidatorPerformance(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
 
-	if bs.GenesisTimeFetcher.CurrentSlot() > headState.Slot() {
-		headState, err = transition.ProcessSlots(ctx, headState, bs.GenesisTimeFetcher.CurrentSlot())
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
+	if currSlot > headState.Slot() {
+		if features.Get().EnableNextSlotStateCache {
+			headRoot, err := bs.HeadFetcher.HeadRoot(ctx)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+			}
+			headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, currSlot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", currSlot, err)
+			}
+		} else {
+			headState, err = transition.ProcessSlots(ctx, headState, currSlot)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
+			}
 		}
 	}
 	var validatorSummary []*precompute.Validator
@@ -788,14 +801,15 @@ func (bs *Server) GetValidatorPerformance(
 		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
 		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
 		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
-		correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
 		correctlyVotedTarget = append(correctlyVotedTarget, summary.IsPrevEpochTargetAttester)
 		correctlyVotedHead = append(correctlyVotedHead, summary.IsPrevEpochHeadAttester)
 
 		if headState.Version() == version.Phase0 {
+			correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
 			inclusionSlots = append(inclusionSlots, summary.InclusionSlot)
 			inclusionDistances = append(inclusionDistances, summary.InclusionDistance)
 		} else {
+			correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochSourceAttester)
 			inactivityScores = append(inactivityScores, summary.InactivityScore)
 		}
 	}
@@ -830,7 +844,7 @@ func (bs *Server) GetIndividualVotes(
 		)
 	}
 
-	s, err := slots.EpochStart(req.Epoch)
+	s, err := slots.EpochEnd(req.Epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -862,14 +876,31 @@ func (bs *Server) GetIndividualVotes(
 		return filteredIndices[i] < filteredIndices[j]
 	})
 
-	v, bal, err := precompute.New(ctx, requestedState)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
+	var v []*precompute.Validator
+	var bal *precompute.Balance
+	switch requestedState.Version() {
+	case version.Phase0:
+		v, bal, err = precompute.New(ctx, requestedState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
+		}
+		v, _, err = precompute.ProcessAttestations(ctx, requestedState, v, bal)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
+		}
+	case version.Altair:
+		v, bal, err = altair.InitializePrecomputeValidators(ctx, requestedState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
+		}
+		v, _, err = altair.ProcessEpochParticipation(ctx, requestedState, bal, v)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
+		}
+	default:
+		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", requestedState.Version())
 	}
-	v, _, err = precompute.ProcessAttestations(ctx, requestedState, v, bal)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
-	}
+
 	for _, index := range filteredIndices {
 		if uint64(index) >= uint64(len(v)) {
 			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})

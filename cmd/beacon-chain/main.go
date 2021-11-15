@@ -17,6 +17,7 @@ import (
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	p2pcmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/p2p"
+	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/logs"
@@ -66,6 +67,10 @@ var appFlags = []cli.Flag{
 	flags.GenesisStatePath,
 	flags.MinPeersPerSubnet,
 	flags.P2PMaxPeers,
+	flags.TerminalTotalDifficultyOverride,
+	flags.TerminalBlockHashOverride,
+	flags.TerminalBlockHashActivationEpochOverride,
+	flags.Coinbase,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
@@ -234,9 +239,14 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return nil
 	}
+	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
+	if err != nil {
+		return nil
+	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
 		node.WithP2PFlagOptions(p2pFlagOpts),
+		node.WithPowchainFlagOptions(powchainFlagOpts),
 	}
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {

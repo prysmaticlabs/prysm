@@ -41,22 +41,18 @@ func init() {
 	if err := p.Connect(info); err != nil {
 		panic(errors.Wrap(err, "could not connect to peer"))
 	}
-	regularsync.NewService(context.Background(), &regularsync.Config{
-		P2P:          p,
-		DB:           nil,
-		AttPool:      nil,
-		ExitPool:     nil,
-		SlashingPool: nil,
-		Chain: &mock.ChainService{
-			Root:                bytesutil.PadTo([]byte("root"), 32),
-			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
-			Fork:                &ethpb.Fork{CurrentVersion: []byte("foo")},
-		},
-		StateNotifier:     (&mock.ChainService{}).StateNotifier(),
-		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
-		InitialSync:       &mockSync.Sync{IsSyncing: false},
-		BlockNotifier:     nil,
-	})
+	regularsync.NewService(context.Background(),
+		regularsync.WithP2P(p),
+		regularsync.WithChainService(
+			&mock.ChainService{
+				Root:                bytesutil.PadTo([]byte("root"), 32),
+				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 4, Root: make([]byte, 32)},
+				Fork:                &ethpb.Fork{CurrentVersion: []byte("foo")},
+			}),
+		regularsync.WithStateNotifier((&mock.ChainService{}).StateNotifier()),
+		regularsync.WithOperationNotifier((&mock.ChainService{}).OperationNotifier()),
+		regularsync.WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+	)
 }
 
 // FuzzP2PRPCStatus wraps BeaconFuzzP2PRPCStatus in a go-fuzz compatible interface

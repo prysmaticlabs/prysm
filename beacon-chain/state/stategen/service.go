@@ -23,7 +23,7 @@ var defaultHotStateDBInterval types.Slot = 128
 // StateManager represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type StateManager interface {
-	Resume(ctx context.Context) (state.BeaconState, error)
+	Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error)
 	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
 	ReplayBlocks(ctx context.Context, state state.BeaconState, signed []block.SignedBeaconBlock, targetSlot types.Slot) (state.BeaconState, error)
@@ -84,7 +84,7 @@ func New(beaconDB db.NoHeadAccessDatabase) *State {
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.
-func (s *State) Resume(ctx context.Context) (state.BeaconState, error) {
+func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()
 
@@ -97,12 +97,9 @@ func (s *State) Resume(ctx context.Context) (state.BeaconState, error) {
 	if fRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.GenesisState(ctx)
 	}
-	fState, err := s.StateByRoot(ctx, fRoot)
-	if err != nil {
-		return nil, err
-	}
+
 	if fState == nil || fState.IsNil() {
-		return nil, errors.New("finalized state not found in disk")
+		return nil, errors.New("finalized state is nil")
 	}
 
 	go func() {

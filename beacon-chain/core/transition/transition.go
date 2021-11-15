@@ -51,8 +51,8 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
-		return nil, errors.New("nil block")
+	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+		return nil, err
 	}
 
 	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransition")
@@ -214,10 +214,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		return nil, err
 	}
 	defer func() {
-		if err := SkipSlotCache.MarkNotInProgress(key); err != nil {
-			tracing.AnnotateError(span, err)
-			log.WithError(err).Error("Failed to mark skip slot no longer in progress")
-		}
+		SkipSlotCache.MarkNotInProgress(key)
 	}()
 
 	for state.Slot() < slot {
@@ -225,7 +222,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			tracing.AnnotateError(span, ctx.Err())
 			// Cache last best value.
 			if highestSlot < state.Slot() {
-				if err := SkipSlotCache.Put(ctx, key, state); err != nil {
+				if SkipSlotCache.Put(ctx, key, state); err != nil {
 					log.WithError(err).Error("Failed to put skip slot cache value")
 				}
 			}
@@ -269,10 +266,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	}
 
 	if highestSlot < state.Slot() {
-		if err := SkipSlotCache.Put(ctx, key, state); err != nil {
-			log.WithError(err).Error("Failed to put skip slot cache value")
-			tracing.AnnotateError(span, err)
-		}
+		SkipSlotCache.Put(ctx, key, state)
 	}
 
 	return state, nil
@@ -280,7 +274,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
 func VerifyOperationLengths(_ context.Context, state state.BeaconState, b block.SignedBeaconBlock) (state.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	body := b.Block().Body()

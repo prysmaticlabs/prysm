@@ -36,11 +36,11 @@ func TestSyncCommitteeContributionCache_RoundTrip(t *testing.T) {
 
 	conts, err := store.SyncCommitteeContributions(1)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution(nil), conts)
+	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution{}, conts)
 
 	conts, err = store.SyncCommitteeContributions(2)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution(nil), conts)
+	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution{}, conts)
 
 	conts, err = store.SyncCommitteeContributions(3)
 	require.NoError(t, err)
@@ -73,10 +73,10 @@ func TestSyncCommitteeContributionCache_RoundTrip(t *testing.T) {
 	// All the contributions should persist after get.
 	conts, err = store.SyncCommitteeContributions(1)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution(nil), conts)
+	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution{}, conts)
 	conts, err = store.SyncCommitteeContributions(2)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution(nil), conts)
+	require.DeepSSZEqual(t, []*ethpb.SyncCommitteeContribution{}, conts)
 
 	conts, err = store.SyncCommitteeContributions(3)
 	require.NoError(t, err)

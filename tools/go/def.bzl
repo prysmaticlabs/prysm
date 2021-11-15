@@ -9,13 +9,15 @@ def _go_test_transition_impl(settings, attr):
     if attr.eth_network == "minimal":
         settings["//proto:network"] = "minimal"
         settings["@io_bazel_rules_go//go/config:tags"] += ["minimal"]
-    elif attr.eth_network == "mainnet": # Default / optional
+    elif attr.eth_network == "mainnet":  # Default / optional
         settings["//proto:network"] = "mainnet"
         settings["@io_bazel_rules_go//go/config:tags"] += ["mainnet"]
 
     if attr.gotags:
         settings["@io_bazel_rules_go//go/config:tags"] += attr.gotags
 
+    if str(settings["//command_line_option:compilation_mode"]) == "dbg":
+        settings["@io_bazel_rules_go//go/config:debug"] = True
     return settings
 
 go_test_transition = transition(
@@ -23,10 +25,14 @@ go_test_transition = transition(
     inputs = [
         "@io_bazel_rules_go//go/config:tags",
         "//proto:network",
+        "//command_line_option:compilation_mode",
+        "@io_bazel_rules_go//go/config:debug",
     ],
     outputs = [
         "@io_bazel_rules_go//go/config:tags",
         "//proto:network",
+        "//command_line_option:compilation_mode",
+        "@io_bazel_rules_go//go/config:debug",
     ],
 )
 

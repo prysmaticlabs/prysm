@@ -85,7 +85,7 @@ func (km *Keymanager) attemptDecryptKeystore(
 	var privKeyBytes []byte
 	var err error
 	privKeyBytes, err = enc.Decrypt(keystore.Crypto, password)
-	doesNotDecrypt := err != nil && strings.Contains(err.Error(), "invalid checksum")
+	doesNotDecrypt := err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg)
 	for doesNotDecrypt {
 		password, err = prompt.PasswordPrompt(
 			fmt.Sprintf("Password incorrect for key 0x%s, input correct password", keystore.Pubkey), prompt.NotEmpty,
@@ -94,12 +94,12 @@ func (km *Keymanager) attemptDecryptKeystore(
 			return nil, nil, "", fmt.Errorf("could not read keystore password: %w", err)
 		}
 		privKeyBytes, err = enc.Decrypt(keystore.Crypto, password)
-		doesNotDecrypt = err != nil && strings.Contains(err.Error(), "invalid checksum")
-		if err != nil && !strings.Contains(err.Error(), "invalid checksum") {
+		doesNotDecrypt = err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg)
+		if err != nil && !strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
 			return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
 		}
 	}
-	if err != nil && !strings.Contains(err.Error(), "invalid checksum") {
+	if err != nil && !strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
 		return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
 	}
 	var pubKeyBytes []byte

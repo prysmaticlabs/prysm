@@ -69,14 +69,17 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	}
 	committeesAtSlot := helpers.SlotCommitteeCount(activeValidatorCount)
 
-	duties := make([]*ethpbv1.AttesterDuty, len(req.Index))
-	for i, index := range req.Index {
+	duties := make([]*ethpbv1.AttesterDuty, 0, len(req.Index))
+	for _, index := range req.Index {
 		pubkey := s.PubkeyAtIndex(index)
 		zeroPubkey := [48]byte{}
 		if bytes.Equal(pubkey[:], zeroPubkey[:]) {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index")
 		}
 		committee := committeeAssignments[index]
+		if committee == nil {
+			continue
+		}
 		var valIndexInCommittee types.CommitteeIndex
 		// valIndexInCommittee will be 0 in case we don't get a match. This is a potential false positive,
 		// however it's an impossible condition because every validator must be assigned to a committee.
@@ -86,7 +89,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 				break
 			}
 		}
-		duties[i] = &ethpbv1.AttesterDuty{
+		duties = append(duties, &ethpbv1.AttesterDuty{
 			Pubkey:                  pubkey[:],
 			ValidatorIndex:          index,
 			CommitteeIndex:          committee.CommitteeIndex,
@@ -94,7 +97,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 			CommitteesAtSlot:        committeesAtSlot,
 			ValidatorCommitteeIndex: valIndexInCommittee,
 			Slot:                    committee.AttesterSlot,
-		}
+		})
 	}
 
 	root, err := attestationDependentRoot(s, req.Epoch)
@@ -509,20 +512,22 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		validators[i] = val
 	}
 
-	currPeriod := slots.SyncCommitteePeriod(currEpoch)
-	startEpoch := types.Epoch(currPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
+	startEpoch, err := slots.SyncCommitteePeriodStartEpoch(currEpoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync committee period start epoch: %v.", err)
+	}
 
 	for i, sub := range req.Data {
 		if sub.UntilEpoch <= currEpoch {
 			return nil, status.Errorf(codes.InvalidArgument, "Epoch for subscription at index %d is in the past. It must be at least %d", i, currEpoch+1)
 		}
-		maxValidEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
-		if sub.UntilEpoch > maxValidEpoch+1 {
+		maxValidUntilEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod*2
+		if sub.UntilEpoch > maxValidUntilEpoch {
 			return nil, status.Errorf(
 				codes.InvalidArgument,
 				"Epoch for subscription at index %d is too far in the future. It can be at most %d",
 				i,
-				maxValidEpoch+1,
+				maxValidUntilEpoch,
 			)
 		}
 	}
