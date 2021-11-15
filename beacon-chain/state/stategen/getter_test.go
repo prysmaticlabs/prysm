@@ -56,7 +56,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 }
 
-func TestStateByRootIfCached_HotState(t *testing.T) {
+func TestStateByRootIfCachedNoCopy_HotState(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -67,12 +67,11 @@ func TestStateByRootIfCached_HotState(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	service.hotStateCache.put(r, beaconState)
 
-	loadedState, err := service.StateByRootIfCached(ctx, r)
-	require.NoError(t, err)
+	loadedState := service.StateByRootIfCachedNoCopy(r)
 	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 }
 
-func TestStateByRootIfCached_ColdState(t *testing.T) {
+func TestStateByRootIfCachedNoCopy_ColdState(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -90,7 +89,7 @@ func TestStateByRootIfCached_ColdState(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, bRoot))
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
-	loadedState, err := service.StateByRootIfCached(ctx, bRoot)
+	loadedState := service.StateByRootIfCachedNoCopy(bRoot)
 	require.NoError(t, err)
 	require.Equal(t, loadedState, nil)
 }
