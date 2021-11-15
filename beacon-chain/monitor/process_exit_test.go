@@ -14,7 +14,10 @@ func TestProcessExitsFromBlockTrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
 		config: &ValidatorMonitorConfig{
-			TrackedValidators: []types.ValidatorIndex{types.ValidatorIndex(1), types.ValidatorIndex(2)},
+			TrackedValidators: map[types.ValidatorIndex]interface{}{
+				1: nil,
+				2: nil,
+			},
 		},
 	}
 
@@ -47,7 +50,10 @@ func TestProcessExitsFromBlockUntrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
 		config: &ValidatorMonitorConfig{
-			TrackedValidators: []types.ValidatorIndex{types.ValidatorIndex(1), types.ValidatorIndex(2)},
+			TrackedValidators: map[types.ValidatorIndex]interface{}{
+				1: nil,
+				2: nil,
+			},
 		},
 	}
 
@@ -80,7 +86,10 @@ func TestProcessExitP2PTrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
 		config: &ValidatorMonitorConfig{
-			TrackedValidators: []types.ValidatorIndex{types.ValidatorIndex(1), types.ValidatorIndex(2)},
+			TrackedValidators: map[types.ValidatorIndex]interface{}{
+				1: nil,
+				2: nil,
+			},
 		},
 	}
 
@@ -99,7 +108,10 @@ func TestProcessExitP2PUntrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
 		config: &ValidatorMonitorConfig{
-			TrackedValidators: []types.ValidatorIndex{types.ValidatorIndex(1), types.ValidatorIndex(2)},
+			TrackedValidators: map[types.ValidatorIndex]interface{}{
+				1: nil,
+				2: nil,
+			},
 		},
 	}
 
