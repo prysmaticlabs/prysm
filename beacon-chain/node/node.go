@@ -833,6 +833,14 @@ func (b *BeaconNode) registerDeterminsticGenesisService() error {
 			GenesisPath:   genesisStatePath,
 		})
 
+		// Register genesis state as start-up state when interop mode.
+		// The start-up state gets reused across services.
+		st, err := b.db.GenesisState(b.ctx)
+		if err != nil {
+			return err
+		}
+		b.finalizedStateAtStartUp = st
+
 		return b.services.RegisterService(svc)
 	}
 	return nil
