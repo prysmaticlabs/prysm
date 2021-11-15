@@ -33,11 +33,11 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
 		cfg: &flagConfig{
-			UDPPort: uint(port),
+			UDPPort:       uint(port),
+			stateNotifier: &mock.MockStateNotifier{},
 		},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
-		stateNotifier:         &mock.MockStateNotifier{},
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -64,8 +64,8 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
 			genesisValidatorsRoot: root,
-			stateNotifier:         &mock.MockStateNotifier{},
 		}
+		s.cfg.stateNotifier = &mock.MockStateNotifier{}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
 		listeners = append(listeners, listener)
@@ -121,10 +121,12 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &flagConfig{UDPPort: uint(port)},
+		cfg: &flagConfig{
+			UDPPort:       uint(port),
+			stateNotifier: &mock.MockStateNotifier{},
+		},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
-		stateNotifier:         &mock.MockStateNotifier{},
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -155,8 +157,8 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
 			genesisValidatorsRoot: genesisValidatorsRoot,
-			stateNotifier:         &mock.MockStateNotifier{},
 		}
+		s.cfg.stateNotifier = &mock.MockStateNotifier{}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
 		listeners = append(listeners, listener)
@@ -183,10 +185,10 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
 	cfg.MaxPeers = 30
+	cfg.stateNotifier = &mock.MockStateNotifier{}
 	s, err = NewService(context.Background())
 	require.NoError(t, err)
 	s.cfg = cfg
-	s.stateNotifier = &mock.MockStateNotifier{}
 
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)

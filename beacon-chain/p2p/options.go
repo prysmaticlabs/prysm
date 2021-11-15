@@ -22,7 +22,7 @@ type Option func(s *Service) error
 // WithDatabase for beacon chain db access.
 func WithDatabase(beaconDB db.ReadOnlyDatabase) Option {
 	return func(s *Service) error {
-		s.db = beaconDB
+		s.cfg.db = beaconDB
 		return nil
 	}
 }
@@ -30,7 +30,7 @@ func WithDatabase(beaconDB db.ReadOnlyDatabase) Option {
 // WithStateNotifier for subscribing to beacon state events.
 func WithStateNotifier(notifier statefeed.Notifier) Option {
 	return func(s *Service) error {
-		s.stateNotifier = notifier
+		s.cfg.stateNotifier = notifier
 		return nil
 	}
 }

@@ -90,10 +90,10 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		MaxPeers:            30,
 		UDPPort:             uint(port),
+		stateNotifier:       &mock.MockStateNotifier{},
 	}
 	s, err = NewService(context.Background())
 	s.cfg = cfg
-	s.stateNotifier = &mock.MockStateNotifier{}
 	require.NoError(t, err)
 	exitRoutine := make(chan bool)
 	go func() {
@@ -103,7 +103,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
-		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+		sent = s.cfg.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
 				StartTime:             time.Now(),

@@ -18,12 +18,12 @@ import (
 func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 	s, err := NewService(context.Background())
 	require.NoError(t, err)
-	s.stateNotifier = &mock.MockStateNotifier{}
+	s.cfg.stateNotifier = &mock.MockStateNotifier{}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	go s.awaitStateInitialized()
-	fd := initializeStateWithForkDigest(ctx, t, s.stateNotifier.StateFeed())
+	fd := initializeStateWithForkDigest(ctx, t, s.cfg.stateNotifier.StateFeed())
 
 	if !s.isInitialized() {
 		t.Fatal("service was not initialized")

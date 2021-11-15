@@ -78,6 +78,8 @@ type flagConfig struct {
 	MaxPeers            uint
 	AllowListCIDR       string
 	DenyListCIDR        []string
+	db                  db.ReadOnlyDatabase
+	stateNotifier       statefeed.Notifier
 }
 
 // Service for managing peer to peer (p2p) networking.
@@ -100,13 +102,11 @@ type Service struct {
 	initializationLock    sync.Mutex
 	dv5Listener           Listener
 	startupErr            error
-	stateNotifier         statefeed.Notifier
 	ctx                   context.Context
 	host                  host.Host
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
 	activeValidatorCount  uint64
-	db                    db.ReadOnlyDatabase
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -429,7 +429,7 @@ func (s *Service) awaitStateInitialized() {
 	}
 
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	cleanup := stateSub.Unsubscribe
 	defer cleanup()
 	for {
