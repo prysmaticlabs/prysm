@@ -148,6 +148,7 @@ type WriteOnlyBlockRoots interface {
 
 // WriteOnlyStateRoots defines a struct which only has write access to state roots methods.
 type WriteOnlyStateRoots interface {
+	SetStateRoots(val *[8192][32]byte) error
 	UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error
 }
 
