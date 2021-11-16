@@ -104,3 +104,13 @@ func BenchmarkHashProto(b *testing.B) {
 		}
 	}
 }
+
+func TestCustomHash(t *testing.T) {
+	hash0 := make([]byte, 64)
+	root := make([]byte, 32)
+
+	hashOf1 := [32]byte{245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169, 39, 89, 251, 75}
+
+	hash.PotuzHasherShani(root, hash0, 1)
+	assert.DeepEqual(t, hashOf1[:], root)
+}

@@ -1,6 +1,8 @@
 // Package hashutil includes all hash-function related helpers for Prysm.
 package hash
 
+// #include "custom_hasher/hasher.h"
+import "C"
 import (
 	"errors"
 	"hash"
@@ -132,4 +134,8 @@ func FastSum64(data []byte) uint64 {
 // may be used as a quick identifier for objects where collisions are acceptable.
 func FastSum256(data []byte) [32]byte {
 	return highwayhash.Sum(data, fastSumHashKey[:])
+}
+
+func PotuzHasherShani(dst []byte, inp []byte, count uint64) {
+	C.sha256_shani((*C.uchar)(&dst[0]), (*C.uchar)(&inp[0]), C.ulong(count))
 }

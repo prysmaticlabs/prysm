@@ -1,8 +1,13 @@
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+load("@prysm//crypto/hash:yasm.bzl", "yasm_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["hash.go"],
+    srcs = [
+	"hash.go",
+	"custom_hasher/hasher.h",
+    ],
+    cgo = True,
     importpath = "github.com/prysmaticlabs/prysm/crypto/hash",
     visibility = ["//visibility:public"],
     deps = [
@@ -13,6 +18,7 @@ go_library(
         "@org_golang_google_protobuf//proto:go_default_library",
         "@org_golang_x_crypto//sha3:go_default_library",
     ],
+    cdeps = [":custom_hasher"],
 )
 
 go_test(
@@ -28,5 +34,27 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
+    ],
+)
+
+cc_library(
+	name = "custom_hasher", 
+	srcs = [ 
+		"custom_hasher/hasher.h",
+	],
+	hdrs = [ "custom_hasher/hasher.h" ],
+	visibility = ["//visibility:public"],
+	deps = [ ":asm" ],
+)
+
+yasm_library(
+    name = "asm",
+    srcs = [
+	"custom_hasher/assembly/reg_sizes.asm",
+	"custom_hasher/assembly/sha256_avx_one_block.asm",
+	"custom_hasher/assembly/sha256_avx.asm",
+	"custom_hasher/assembly/sha256_avx2.asm", 
+	"custom_hasher/assembly/sha256_shani.asm",
+	"custom_hasher/assembly/transpose_avx2.asm",
     ],
 )
