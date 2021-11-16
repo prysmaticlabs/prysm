@@ -25,9 +25,10 @@ func (km *Keymanager) DeleteKeystores(
 	var err error
 	deletedKeys := make([][]byte, 0, len(publicKeys))
 	for _, publicKey := range publicKeys {
-		if _, ok := trackedPublicKeys[bytesutil.ToBytes48(publicKey)]; !ok {
+		// Check if the key in the request is a duplicate.
+		if _, ok := trackedPublicKeys[bytesutil.ToBytes48(publicKey)]; ok {
 			statuses = append(statuses, &ethpbservice.DeletedKeystoreStatus{
-				Status: ethpbservice.DeletedKeystoreStatus_NOT_FOUND,
+				Status: ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
 			})
 			continue
 		}
@@ -64,14 +65,17 @@ func (km *Keymanager) DeleteKeystores(
 	}
 	var deletedKeysStr string
 	for i, k := range deletedKeys {
-		if i == len(deletedKeys)-1 {
+		if i == 0 {
 			deletedKeysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
+		} else if i == len(deletedKeys)-1 {
+			deletedKeysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
+		} else {
+			deletedKeysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
 		}
-		deletedKeysStr += fmt.Sprintf("%#x, ", bytesutil.Trunc(k))
 	}
 	log.WithFields(logrus.Fields{
 		"publicKeys": deletedKeysStr,
-	}).Info("Successfully deleted validator keys(s)")
+	}).Info("Successfully deleted validator key(s)")
 
 	// Write the encoded keystore.
 	encoded, err := json.MarshalIndent(store, "", "\t")
@@ -83,7 +87,7 @@ func (km *Keymanager) DeleteKeystores(
 	}
 	err = km.initializeKeysCachesFromKeystore()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize keys caches")
+		return nil, errors.Wrap(err, "failed to initialize key caches")
 	}
 	return statuses, nil
 }

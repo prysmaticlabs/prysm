@@ -77,6 +77,50 @@ func TestImportedKeymanager_DeleteKeystores(t *testing.T) {
 		require.Equal(t, numAccounts-1, len(store.PublicKeys))
 		require.Equal(t, numAccounts-1, len(store.PrivateKeys))
 		require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
-		require.LogsContain(t, hook, "Successfully deleted validator account")
+		require.LogsContain(t, hook, "Successfully deleted validator key(s)")
+	})
+	t.Run("returns NOT_ACTIVE status for duplicate public key in request", func(t *testing.T) {
+		accountToRemove := uint64(3)
+		accountPubKey := accounts[accountToRemove]
+		statuses, err := dr.DeleteKeystores(ctx, [][]byte{
+			accountPubKey[:],
+			accountPubKey[:], // Add in the same key a few more times.
+			accountPubKey[:],
+			accountPubKey[:],
+		})
+		require.NoError(t, err)
+
+		require.Equal(t, 4, len(statuses))
+		for i, st := range statuses {
+			if i == 0 {
+				require.Equal(t, ethpbservice.DeletedKeystoreStatus_DELETED, st.Status)
+			} else {
+				require.Equal(t, ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE, st.Status)
+			}
+		}
+
+		// Ensure the keystore file was written to the wallet
+		// and ensure we can decrypt it using the EIP-2335 standard.
+		var encodedKeystore []byte
+		for k, v := range wallet.Files[AccountsPath] {
+			if strings.Contains(k, "keystore") {
+				encodedKeystore = v
+			}
+		}
+		require.NotNil(t, encodedKeystore, "could not find keystore file")
+		keystoreFile := &keymanager.Keystore{}
+		require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+
+		// We extract the accounts from the keystore.
+		decryptor := keystorev4.New()
+		encodedAccounts, err := decryptor.Decrypt(keystoreFile.Crypto, password)
+		require.NoError(t, err, "Could not decrypt validator accounts")
+		store := &accountStore{}
+		require.NoError(t, json.Unmarshal(encodedAccounts, store))
+
+		require.Equal(t, numAccounts-2, len(store.PublicKeys))
+		require.Equal(t, numAccounts-2, len(store.PrivateKeys))
+		require.LogsContain(t, hook, fmt.Sprintf("%#x", bytesutil.Trunc(accountPubKey[:])))
+		require.LogsContain(t, hook, "Successfully deleted validator key(s)")
 	})
 }
