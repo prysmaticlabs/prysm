@@ -53,7 +53,7 @@ type DepositCache struct {
 	pendingDeposits   []*dbpb.DepositContainer
 	deposits          []*dbpb.DepositContainer
 	finalizedDeposits *FinalizedDeposits
-	depositMap        map[[48]byte][]*dbpb.DepositContainer
+	depositsByKey     map[[48]byte][]*dbpb.DepositContainer
 	depositsLock      sync.RWMutex
 }
 
@@ -69,7 +69,7 @@ func New() (*DepositCache, error) {
 	return &DepositCache{
 		pendingDeposits:   []*dbpb.DepositContainer{},
 		deposits:          []*dbpb.DepositContainer{},
-		depositMap:        map[[48]byte][]*ethpb.DepositContainer{},
+		depositsByKey:     map[[48]byte][]*ethpb.DepositContainer{},
 		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 	}, nil
 }
@@ -104,7 +104,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	// Append the deposit to our map, in the event no deposits
 	// exist for the pubkey , it is simply added to the map.
 	pubkey := bytesutil.ToBytes48(d.Data.PublicKey)
-	dc.depositMap[pubkey] = append(dc.depositMap[pubkey], depCtr)
+	dc.depositsByKey[pubkey] = append(dc.depositsByKey[pubkey], depCtr)
 	historicalDepositsCount.Inc()
 	return nil
 }
@@ -123,7 +123,7 @@ func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*dbp
 		// of c changes in the next iteration.
 		newPtr := c
 		pKey := bytesutil.ToBytes48(newPtr.Deposit.Data.PublicKey)
-		dc.depositMap[pKey] = append(dc.depositMap[pKey], newPtr)
+		dc.depositsByKey[pKey] = append(dc.depositsByKey[pKey], newPtr)
 	}
 	historicalDepositsCount.Add(float64(len(ctrs)))
 }
@@ -215,7 +215,7 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 
 	var deposit *ethpb.Deposit
 	var blockNum *big.Int
-	deps, ok := dc.depositMap[bytesutil.ToBytes48(pubKey)]
+	deps, ok := dc.depositsByKey[bytesutil.ToBytes48(pubKey)]
 	if !ok || len(deps) == 0 {
 		return deposit, blockNum
 	}
