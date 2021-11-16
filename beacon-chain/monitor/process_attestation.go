@@ -1,9 +1,11 @@
 package monitor
 
 import (
+	"context"
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -16,10 +18,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// getAttestingIndices returns the indices of validators that appear in the
+// newerSlotFromTrackedVal returns true if the validator is tracked and if the
+// given slot is different than the last attested slot from this validator.
+func (s *Service) newerSlotFromTrackedVal(idx types.ValidatorIndex, slot types.Slot) bool {
+	return s.TrackedIndex(types.ValidatorIndex(idx)) &&
+		s.latestPerformance[types.ValidatorIndex(idx)].attestedSlot != slot
+}
+
+// attestingIndices returns the indices of validators that appear in the
 // given aggregated atestation.
-func (s *Service) getAttestingIndices(state state.BeaconState, att *ethpb.Attestation) ([]uint64, error) {
-	committee, err := helpers.BeaconCommitteeFromState(s.ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
+func attestingIndices(ctx context.Context, state state.BeaconState, att *ethpb.Attestation) ([]uint64, error) {
+	committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +37,7 @@ func (s *Service) getAttestingIndices(state state.BeaconState, att *ethpb.Attest
 
 // logMessageTimelyFlagsForIndex returns the log message with the basic
 // performance indicators for the attestation (head, source, target)
-func logMessageTimelyFlagsForIndex(idx uint64, data *ethpb.AttestationData) logrus.Fields {
+func logMessageTimelyFlagsForIndex(idx types.ValidatorIndex, data *ethpb.AttestationData) logrus.Fields {
 	return logrus.Fields{
 		"ValidatorIndex": idx,
 		"Slot":           data.Slot,
@@ -50,15 +59,14 @@ func (s *Service) processAttestations(state state.BeaconState, blk block.BeaconB
 // appears in the attesting indices and this included attestation was not included
 // before.
 func (s *Service) processIncludedAttestation(state state.BeaconState, att *ethpb.Attestation) {
-	attestingIndices, err := s.getAttestingIndices(state, att)
+	attestingIndices, err := attestingIndices(s.ctx, state, att)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")
 		return
 	}
 	for _, idx := range attestingIndices {
-		if s.TrackedIndex(types.ValidatorIndex(idx)) &&
-			s.latestPerformance[types.ValidatorIndex(idx)].attestedSlot != att.Data.Slot {
-			logFields := logMessageTimelyFlagsForIndex(idx, att.Data)
+		if s.newerSlotFromTrackedVal(types.ValidatorIndex(idx), att.Data.Slot) {
+			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Data)
 			balance, err := state.BalanceAtIndex(types.ValidatorIndex(idx))
 			if err != nil {
 				log.WithError(err).Error("Could not get balance")
@@ -98,9 +106,24 @@ func (s *Service) processIncludedAttestation(state state.BeaconState, att *ethpb
 					}
 				}
 				flags := participation[idx]
-				latestPerf.timelySource = ((flags >> sourceIdx) & 1) == 1
-				latestPerf.timelyHead = ((flags >> headIdx) & 1) == 1
-				latestPerf.timelyTarget = ((flags >> targetIdx) & 1) == 1
+				hasFlag, err := altair.HasValidatorFlag(flags, sourceIdx)
+				if err != nil {
+					log.WithError(err).Error("Could not get timely Source flag")
+					return
+				}
+				latestPerf.timelySource = hasFlag
+				hasFlag, err = altair.HasValidatorFlag(flags, headIdx)
+				if err != nil {
+					log.WithError(err).Error("Could not get timely Head flag")
+					return
+				}
+				latestPerf.timelyHead = hasFlag
+				hasFlag, err = altair.HasValidatorFlag(flags, targetIdx)
+				if err != nil {
+					log.WithError(err).Error("Could not get timely Target flag")
+					return
+				}
+				latestPerf.timelyTarget = hasFlag
 
 				if latestPerf.timelySource {
 					aggregatedPerf.totalCorrectSource++
@@ -136,15 +159,14 @@ func (s *Service) processUnaggregatedAttestation(att *ethpb.Attestation) {
 		log.Debug("Skipping unnagregated attestation due to state not found in cache")
 		return
 	}
-	attestingIndices, err := s.getAttestingIndices(state, att)
+	attestingIndices, err := attestingIndices(s.ctx, state, att)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")
 		return
 	}
 	for _, idx := range attestingIndices {
-		if s.TrackedIndex(types.ValidatorIndex(idx)) &&
-			s.latestPerformance[types.ValidatorIndex(idx)].attestedSlot != att.Data.Slot {
-			logFields := logMessageTimelyFlagsForIndex(idx, att.Data)
+		if s.newerSlotFromTrackedVal(types.ValidatorIndex(idx), att.Data.Slot) {
+			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Data)
 			log.WithFields(logFields).Info("Processed unaggregated attestation")
 		}
 	}
@@ -169,15 +191,14 @@ func (s *Service) processAggregatedAttestation(att *ethpb.AggregateAttestationAn
 		log.Debug("Skipping agregated attestation due to state not found in cache")
 		return
 	}
-	attestingIndices, err := s.getAttestingIndices(state, att.Aggregate)
+	attestingIndices, err := attestingIndices(s.ctx, state, att.Aggregate)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")
 		return
 	}
 	for _, idx := range attestingIndices {
-		if s.TrackedIndex(types.ValidatorIndex(idx)) &&
-			s.latestPerformance[types.ValidatorIndex(idx)].attestedSlot != att.Aggregate.Data.Slot {
-			logFields := logMessageTimelyFlagsForIndex(idx, att.Aggregate.Data)
+		if s.newerSlotFromTrackedVal(types.ValidatorIndex(idx), att.Aggregate.Data.Slot) {
+			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Aggregate.Data)
 			log.WithFields(logFields).Info("Processed aggregated attestation")
 		}
 	}

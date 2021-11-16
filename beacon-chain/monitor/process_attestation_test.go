@@ -65,7 +65,7 @@ func TestGetAttestingIndices(t *testing.T) {
 		},
 		AggregationBits: bitfield.Bitlist{0b11, 0b1},
 	}
-	attestingIndices, err := s.getAttestingIndices(beaconState, att)
+	attestingIndices, err := attestingIndices(s.ctx, beaconState, att)
 	require.NoError(t, err)
 	require.DeepEqual(t, attestingIndices, []uint64{0xc, 0x2})
 
