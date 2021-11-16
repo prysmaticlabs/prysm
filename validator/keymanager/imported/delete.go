@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,53 +18,72 @@ import (
 func (km *Keymanager) DeleteKeystores(
 	ctx context.Context, publicKeys [][]byte,
 ) ([]*ethpbservice.DeletedKeystoreStatus, error) {
-	statuses := make([]*ethpbservice.DeletedKeystoreStatus, len(publicKeys))
-	for i, publicKey := range publicKeys {
+	// Check for duplicate keys and filter them out.
+	trackedPublicKeys := make(map[[48]byte]bool)
+	statuses := make([]*ethpbservice.DeletedKeystoreStatus, 0, len(publicKeys))
+	var store *AccountsKeystoreRepresentation
+	var err error
+	deletedKeys := make([][]byte, 0, len(publicKeys))
+	for _, publicKey := range publicKeys {
+		if _, ok := trackedPublicKeys[bytesutil.ToBytes48(publicKey)]; !ok {
+			statuses = append(statuses, &ethpbservice.DeletedKeystoreStatus{
+				Status: ethpbservice.DeletedKeystoreStatus_NOT_FOUND,
+			})
+			continue
+		}
 		var index int
 		var found bool
 		for j, pubKey := range km.accountsStore.PublicKeys {
-			if bytes.Equal(pubKey, publicKey) {
+			if bytes.Equal(pubKey, publicKey[:]) {
 				index = j
 				found = true
 				break
 			}
 		}
 		if !found {
-			statuses[i] = &ethpbservice.DeletedKeystoreStatus{
+			statuses = append(statuses, &ethpbservice.DeletedKeystoreStatus{
 				Status: ethpbservice.DeletedKeystoreStatus_NOT_FOUND,
-			}
+			})
 			continue
 		}
 		deletedPublicKey := km.accountsStore.PublicKeys[index]
-		accountName := petnames.DeterministicName(deletedPublicKey, "-")
+		deletedKeys = append(deletedKeys, deletedPublicKey)
 		km.accountsStore.PrivateKeys = append(km.accountsStore.PrivateKeys[:index], km.accountsStore.PrivateKeys[index+1:]...)
 		km.accountsStore.PublicKeys = append(km.accountsStore.PublicKeys[:index], km.accountsStore.PublicKeys[index+1:]...)
-
-		newStore, err := km.CreateAccountsKeystore(ctx, km.accountsStore.PrivateKeys, km.accountsStore.PublicKeys)
+		store, err = km.CreateAccountsKeystore(ctx, km.accountsStore.PrivateKeys, km.accountsStore.PublicKeys)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not rewrite accounts keystore")
 		}
-
-		// Write the encoded keystore.
-		encoded, err := json.MarshalIndent(newStore, "", "\t")
-		if err != nil {
-			return nil, err
-		}
-		if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
-			return nil, errors.Wrap(err, "could not write keystore file for accounts")
-		}
-
-		log.WithFields(logrus.Fields{
-			"name":      accountName,
-			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
-		}).Info("Successfully deleted validator account")
-		err = km.initializeKeysCachesFromKeystore()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to initialize keys caches")
-		}
-		statuses[i] = &ethpbservice.DeletedKeystoreStatus{
+		statuses = append(statuses, &ethpbservice.DeletedKeystoreStatus{
 			Status: ethpbservice.DeletedKeystoreStatus_DELETED,
+		})
+		trackedPublicKeys[bytesutil.ToBytes48(publicKey)] = true
+	}
+	if len(deletedKeys) == 0 {
+		return statuses, nil
+	}
+	var deletedKeysStr string
+	for i, k := range deletedKeys {
+		if i == len(deletedKeys)-1 {
+			deletedKeysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
 		}
+		deletedKeysStr += fmt.Sprintf("%#x, ", bytesutil.Trunc(k))
+	}
+	log.WithFields(logrus.Fields{
+		"publicKeys": deletedKeysStr,
+	}).Info("Successfully deleted validator keys(s)")
+
+	// Write the encoded keystore.
+	encoded, err := json.MarshalIndent(store, "", "\t")
+	if err != nil {
+		return nil, err
+	}
+	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
+		return nil, errors.Wrap(err, "could not write keystore file for accounts")
+	}
+	err = km.initializeKeysCachesFromKeystore()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize keys caches")
 	}
 	return statuses, nil
 }
