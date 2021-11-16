@@ -128,7 +128,7 @@ go_test(
         "//validator/graffiti:go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/remote:go_default_library",
-        "//validator/slashing-protection/local/standard-protection-format:go_default_library",
+        "//validator/slashing-protection-history:go_default_library",
         "//validator/testing:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

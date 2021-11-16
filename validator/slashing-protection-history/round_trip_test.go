@@ -1,4 +1,4 @@
-package interchangeformat_test
+package history_test
 
 import (
 	"bytes"
@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	protectionFormat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	history "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	slashtest "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -37,12 +37,12 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
-	eipStandard, err := protectionFormat.ExportStandardProtectionJSON(ctx, validatorDB)
+	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB)
 	require.NoError(t, err)
 
 	// We compare the metadata fields from import to export.
@@ -111,12 +111,12 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
-	eipStandard, err := protectionFormat.ExportStandardProtectionJSON(ctx, validatorDB)
+	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB)
 	require.NoError(t, err)
 
 	// We compare the metadata fields from import to export.
@@ -148,7 +148,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
@@ -256,7 +256,7 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
 	// Assert the three slashable keys in the imported JSON were saved to the database.
@@ -299,7 +299,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 
 	// Next, we attempt to import it into our validator database and check that
 	// we obtain an error during the import process.
-	err = protectionFormat.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	assert.NotNil(t, err)
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
