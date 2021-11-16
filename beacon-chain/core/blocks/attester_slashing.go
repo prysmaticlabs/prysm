@@ -62,7 +62,7 @@ func ProcessAttesterSlashing(
 	if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 		return nil, errors.Wrap(err, "could not verify attester slashing")
 	}
-	slashableIndices := slashableAttesterIndices(slashing)
+	slashableIndices := SlashableAttesterIndices(slashing)
 	sort.SliceStable(slashableIndices, func(i, j int) bool {
 		return slashableIndices[i] < slashableIndices[j]
 	})
@@ -152,7 +152,8 @@ func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 	return isDoubleVote || isSurroundVote
 }
 
-func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
+// SlashableAttesterIndices returns the intersection of attester indices from both attestations in this slashing.
+func SlashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
 		return nil
 	}
