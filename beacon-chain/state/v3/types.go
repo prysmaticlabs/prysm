@@ -24,34 +24,7 @@ func init() {
 	fieldMap[types.Validators] = types.CompositeArray
 }
 
-// Field Aliases for values from the types package.
-const (
-	genesisTime                    = types.GenesisTime
-	genesisValidatorRoot           = types.GenesisValidatorRoot
-	slot                           = types.Slot
-	fork                           = types.Fork
-	latestBlockHeader              = types.LatestBlockHeader
-	blockRoots                     = types.BlockRoots
-	stateRoots                     = types.StateRoots
-	historicalRoots                = types.HistoricalRoots
-	eth1Data                       = types.Eth1Data
-	eth1DataVotes                  = types.Eth1DataVotes
-	eth1DepositIndex               = types.Eth1DepositIndex
-	validators                     = types.Validators
-	balances                       = types.Balances
-	randaoMixes                    = types.RandaoMixes
-	slashings                      = types.Slashings
-	previousEpochParticipationBits = types.PreviousEpochParticipationBits
-	currentEpochParticipationBits  = types.CurrentEpochParticipationBits
-	justificationBits              = types.JustificationBits
-	previousJustifiedCheckpoint    = types.PreviousJustifiedCheckpoint
-	currentJustifiedCheckpoint     = types.CurrentJustifiedCheckpoint
-	finalizedCheckpoint            = types.FinalizedCheckpoint
-	inactivityScores               = types.InactivityScores
-	currentSyncCommittee           = types.CurrentSyncCommittee
-	nextSyncCommittee              = types.NextSyncCommittee
-	latestExecutionPayloadHeader   = types.LatestExecutionPayloadHeader
-)
+// TODO: Add field Aliases for values from the types package. It'll come in part 2.
 
 // fieldMap keeps track of each field
 // to its corresponding data type.
@@ -66,7 +39,7 @@ var ErrNilInnerState = errors.New("nil inner state")
 type BeaconState struct {
 	state                 *ethpb.BeaconStateMerge
 	lock                  sync.RWMutex
-	dirtyFields           map[types.FieldIndex]interface{}
+	dirtyFields           map[types.FieldIndex]bool
 	dirtyIndices          map[types.FieldIndex][]uint64
 	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
 	rebuildTrie           map[types.FieldIndex]bool
@@ -74,3 +47,4 @@ type BeaconState struct {
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }
+
