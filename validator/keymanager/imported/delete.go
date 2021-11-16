@@ -35,7 +35,7 @@ func (km *Keymanager) DeleteKeystores(
 		var index int
 		var found bool
 		for j, pubKey := range km.accountsStore.PublicKeys {
-			if bytes.Equal(pubKey, publicKey[:]) {
+			if bytes.Equal(pubKey, publicKey) {
 				index = j
 				found = true
 				break
