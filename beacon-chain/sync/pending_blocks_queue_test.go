@@ -84,9 +84,13 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wrapper.WrappedPhase0SignedBeaconBlock(b1), b1Root))
 	require.NoError(t, r.cfg.beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b1)))
 
-	// Insert bad b1 in the cache to verify the good one doesn't get replaced.
-	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()), [32]byte{}))
+	nBlock := util.NewBeaconBlock()
+	nBlock.Block.Slot = b1.Block.Slot
+	nRoot, err := nBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
 
+	// Insert bad b1 in the cache to verify the good one doesn't get replaced.
+	require.NoError(t, r.insertBlockToPendingQueue(nBlock.Block.Slot, wrapper.WrappedPhase0SignedBeaconBlock(nBlock), nRoot))
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
 
