@@ -21,8 +21,14 @@ import (
 // newerSlotFromTrackedVal returns true if the validator is tracked and if the
 // given slot is different than the last attested slot from this validator.
 func (s *Service) newerSlotFromTrackedVal(idx types.ValidatorIndex, slot types.Slot) bool {
-	return s.TrackedIndex(types.ValidatorIndex(idx)) &&
-		s.latestPerformance[types.ValidatorIndex(idx)].attestedSlot != slot
+	if !s.TrackedIndex(types.ValidatorIndex(idx)) {
+		return false
+	}
+
+	if lp, ok := s.latestPerformance[types.ValidatorIndex(idx)]; ok {
+		return lp.attestedSlot != slot
+	}
+	return false
 }
 
 // attestingIndices returns the indices of validators that appear in the
@@ -49,17 +55,20 @@ func logMessageTimelyFlagsForIndex(idx types.ValidatorIndex, data *ethpb.Attesta
 
 // processAttestations logs the event that one of our tracked validators'
 // attestations was included in a block
-func (s *Service) processAttestations(state state.BeaconState, blk block.BeaconBlock) {
+func (s *Service) processAttestations(ctx context.Context, state state.BeaconState, blk block.BeaconBlock) {
+	if blk == nil || blk.Body() == nil {
+		return
+	}
 	for _, attestation := range blk.Body().Attestations() {
-		s.processIncludedAttestation(state, attestation)
+		s.processIncludedAttestation(ctx, state, attestation)
 	}
 }
 
 // processIncludedAttestation logs in the event that one of our tracked validators'
 // appears in the attesting indices and this included attestation was not included
 // before.
-func (s *Service) processIncludedAttestation(state state.BeaconState, att *ethpb.Attestation) {
-	attestingIndices, err := attestingIndices(s.ctx, state, att)
+func (s *Service) processIncludedAttestation(ctx context.Context, state state.BeaconState, att *ethpb.Attestation) {
+	attestingIndices, err := attestingIndices(ctx, state, att)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")
 		return
@@ -151,7 +160,7 @@ func (s *Service) processIncludedAttestation(state state.BeaconState, att *ethpb
 
 // processUnaggregatedAttestation logs when the beacon node sees an unaggregated attestation from one of our
 // tracked validators
-func (s *Service) processUnaggregatedAttestation(att *ethpb.Attestation) {
+func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb.Attestation) {
 	var root [32]byte
 	copy(root[:], att.Data.BeaconBlockRoot)
 	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
@@ -159,7 +168,7 @@ func (s *Service) processUnaggregatedAttestation(att *ethpb.Attestation) {
 		log.Debug("Skipping unnagregated attestation due to state not found in cache")
 		return
 	}
-	attestingIndices, err := attestingIndices(s.ctx, state, att)
+	attestingIndices, err := attestingIndices(ctx, state, att)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")
 		return
@@ -174,7 +183,7 @@ func (s *Service) processUnaggregatedAttestation(att *ethpb.Attestation) {
 
 // processAggregatedAttestation logs when we see an aggregation from one of our tracked validators or an aggregated
 // attestation from one of our tracked validators
-func (s *Service) processAggregatedAttestation(att *ethpb.AggregateAttestationAndProof) {
+func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.AggregateAttestationAndProof) {
 	if s.TrackedIndex(att.AggregatorIndex) {
 		log.WithFields(logrus.Fields{
 			"ValidatorIndex": att.AggregatorIndex,
@@ -191,7 +200,7 @@ func (s *Service) processAggregatedAttestation(att *ethpb.AggregateAttestationAn
 		log.Debug("Skipping agregated attestation due to state not found in cache")
 		return
 	}
-	attestingIndices, err := attestingIndices(s.ctx, state, att.Aggregate)
+	attestingIndices, err := attestingIndices(ctx, state, att.Aggregate)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")
 		return

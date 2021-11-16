@@ -1,8 +1,6 @@
 package monitor
 
 import (
-	"context"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/sirupsen/logrus"
@@ -47,7 +45,6 @@ type ValidatorMonitorConfig struct {
 // metrics of their performances throughout their lifetime.
 type Service struct {
 	config                *ValidatorMonitorConfig
-	ctx                   context.Context
 	latestPerformance     map[types.ValidatorIndex]ValidatorLatestPerformance
 	aggregatedPerformance map[types.ValidatorIndex]ValidatorAggregatedPerformance
 }
