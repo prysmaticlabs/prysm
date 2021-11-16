@@ -35,7 +35,7 @@ func (km *Keymanager) DeleteKeystores(
 		var index int
 		var found bool
 		for j, pubKey := range km.accountsStore.PublicKeys {
-			if bytes.Equal(pubKey, publicKey) {
+			if bytes.Equal(pubKey, publicKey[:]) {
 				index = j
 				found = true
 				break
@@ -72,10 +72,11 @@ func (km *Keymanager) DeleteKeystores(
 		} else {
 			deletedKeysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
 		}
+		deletedKeysStr += fmt.Sprintf("%#x, ", bytesutil.Trunc(k))
 	}
 	log.WithFields(logrus.Fields{
 		"publicKeys": deletedKeysStr,
-	}).Info("Successfully deleted validator key(s)")
+	}).Info("Successfully deleted validator keys(s)")
 
 	// Write the encoded keystore.
 	encoded, err := json.MarshalIndent(store, "", "\t")
@@ -87,7 +88,10 @@ func (km *Keymanager) DeleteKeystores(
 	}
 	err = km.initializeKeysCachesFromKeystore()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize key caches")
+		return nil, errors.Wrap(err, "failed to initialize keys caches")
 	}
+	log.WithFields(logrus.Fields{
+		"publicKeys": deletedKeysStr,
+	}).Info("Successfully deleted validator key(s)")
 	return statuses, nil
 }

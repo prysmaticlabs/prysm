@@ -101,7 +101,6 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
 func DeleteAccount(ctx context.Context, cfg *Config) error {
-<<<<<<< HEAD
 	deleter, ok := cfg.Keymanager.(keymanager.Deleter)
 	if !ok {
 		return errors.New("keymanager does not implement Deleter interface")
@@ -123,36 +122,6 @@ func DeleteAccount(ctx context.Context, cfg *Config) error {
 			log.Warnf("Duplicate key %#x found in delete request", bytesutil.Trunc(cfg.DeletePublicKeys[i]))
 		case ethpbservice.DeletedKeystoreStatus_NOT_FOUND:
 			log.Warnf("Could not find keystore for %#x", bytesutil.Trunc(cfg.DeletePublicKeys[i]))
-=======
-	switch cfg.Wallet.KeymanagerKind() {
-	case keymanager.Remote:
-		return errors.New("cannot delete accounts for a remote keymanager")
-	case keymanager.Imported:
-		km, ok := cfg.Keymanager.(*imported.Keymanager)
-		if !ok {
-			return errors.New("not a imported keymanager")
-		}
-		if len(cfg.DeletePublicKeys) == 1 {
-			log.Info("Deleting account...")
-		} else {
-			log.Info("Deleting accounts...")
-		}
-		if _, err := km.DeleteKeystores(ctx, cfg.DeletePublicKeys); err != nil {
-			return errors.Wrap(err, "could not delete accounts")
-		}
-	case keymanager.Derived:
-		km, ok := cfg.Keymanager.(*derived.Keymanager)
-		if !ok {
-			return errors.New("not a derived keymanager")
-		}
-		if len(cfg.DeletePublicKeys) == 1 {
-			log.Info("Deleting account...")
-		} else {
-			log.Info("Deleting accounts...")
-		}
-		if _, err := km.DeleteKeystores(ctx, cfg.DeletePublicKeys); err != nil {
-			return errors.Wrap(err, "could not delete accounts")
->>>>>>> 1994c6051 (delete keystores all tests)
 		}
 	}
 	return nil
