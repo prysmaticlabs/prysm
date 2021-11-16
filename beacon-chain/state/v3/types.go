@@ -47,4 +47,3 @@ type BeaconState struct {
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }
-
