@@ -101,6 +101,8 @@ func main() {
 		default:
 			log.Fatal("Oops, given bucket is supported for now.")
 		}
+	case "growth":
+		printBucketGrowth(dbNameWithPath, *bucketName)
 	case "migration-check":
 		destDbNameWithPath := filepath.Join(*destDatadir, *dbName)
 		if _, err := os.Stat(destDbNameWithPath); os.IsNotExist(err) {
@@ -444,6 +446,49 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 	}
 	log.Infof("number of state that did not match: %d", failCount)
 }
+
+func printBucketGrowth(dbNameWithPath, bucketName string) {
+	// open the raw database file. If the file is busy, then exit.
+	db, openErr := bolt.Open(dbNameWithPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if openErr != nil {
+		log.Fatalf("could not open db while getting keys of a bucket, %v", openErr)
+	}
+
+	// make sure we close the database before ejecting out of this function.
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			log.Fatalf("could not close db while getting keys of a bucket, %v", closeErr)
+		}
+	}()
+
+	// get all the keys of the given bucket.
+	var keys [][]byte
+	var sizes []uint64
+	if viewErr := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucketName))
+		c := b.Cursor()
+		count := uint64(0)
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			actualKey := make([]byte, len(k))
+			actualSizes := make([]byte, len(v))
+			copy(actualKey, k)
+			copy(actualSizes, v)
+			keys = append(keys, actualKey)
+			sizes = append(sizes, uint64(len(v)))
+			count++
+
+			if count%25000 == 0 {
+				log.Infof(" row = %d, vale sizes = %d", count, sizes)
+			}
+
+		}
+		return nil
+	}); viewErr != nil {
+		log.Fatalf("could not read keys of bucket from db: %v", viewErr)
+	}
+}
+
 
 func keysOfBucket(dbNameWithPath string, bucketName []byte, rowLimit uint64) ([][]byte, []uint64) {
 	// open the raw database file. If the file is busy, then exit.
