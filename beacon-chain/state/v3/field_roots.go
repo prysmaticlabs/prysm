@@ -47,6 +47,7 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
+//nolint:deadcode
 func computeFieldRoots(state *ethpb.BeaconStateMerge) ([][]byte, error) {
 	if features.Get().EnableSSZCache {
 		return cachedHasher.computeFieldRootsWithHasher(state)
