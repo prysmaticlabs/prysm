@@ -131,11 +131,11 @@ var (
 		Help: "The number of sync head state requests that are present in the cache.",
 	})
 	stateBalanceCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "balance_cache_hit",
+		Name: "state_balance_cache_hit",
 		Help: "Count the number of state balance cache hits.",
 	})
 	stateBalanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "balance_cache_miss",
+		Name: "state_balance_cache_miss",
 		Help: "Count the number of state balance cache hits.",
 	})
 )
