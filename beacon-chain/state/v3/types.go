@@ -66,7 +66,7 @@ var ErrNilInnerState = errors.New("nil inner state")
 type BeaconState struct {
 	state                 *ethpb.BeaconStateMerge
 	lock                  sync.RWMutex
-	dirtyFields           map[types.FieldIndex]interface{}
+	dirtyFields           map[types.FieldIndex]bool
 	dirtyIndices          map[types.FieldIndex][]uint64
 	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
 	rebuildTrie           map[types.FieldIndex]bool

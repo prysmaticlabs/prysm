@@ -119,6 +119,9 @@ func recomputeRoot(idx int, chunks [][32]byte, fieldName string, hasher func([]b
 
 func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 	fieldName string, hasher func([]byte) [32]byte) ([32]byte, error) {
+	if len(leaves) == 0 {
+		return [32]byte{}, errors.New("zero leaves provided")
+	}
 	if len(leaves) == 1 {
 		return leaves[0], nil
 	}
