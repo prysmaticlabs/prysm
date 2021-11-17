@@ -39,6 +39,34 @@ func (s *Server) ListKeystores(
 	}, nil
 }
 
+func (s *Server) ImportKeystoresStandard(
+	ctx context.Context, req *ethpbservice.ImportKeystoresRequest,
+) (*ethpbservice.ImportKeystoresResponse, error) {
+	if !s.walletInitialized {
+		return nil, status.Error(codes.Internal, "Wallet not ready")
+	}
+	importer, ok := s.keymanager.(keymanager.Importer)
+	if !ok {
+		return nil, status.Error(codes.Internal, "Keymanager kind cannot import keystores")
+
+	}
+	keystores := make([]*keymanager.Keystore, len(req.Keystores))
+	for i := 0; i < len(req.Keystores); i++ {
+		k := &keymanager.Keystore{}
+		if err := json.Unmarshal([]byte(req.Keystores[i]), k); err != nil {
+			return nil, err
+		}
+		keystores[i] = k
+	}
+	statuses, err := importer.ImportKeystores(ctx, keystores, req.Passwords)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpbservice.ImportKeystoresResponse{
+		Statuses: statuses,
+	}, nil
+}
+
 // DeleteKeystores allows for deleting specified public keys from Prysm.
 func (s *Server) DeleteKeystores(
 	ctx context.Context, req *ethpbservice.DeleteKeystoresRequest,
