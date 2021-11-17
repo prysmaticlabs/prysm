@@ -143,3 +143,7 @@ func PotuzHasherShani(dst []byte, inp []byte, count uint64) {
 func PotuzHasherAVX2(dst []byte, inp []byte, count uint64) {
 	C.sha256_8_avx2((*C.uchar)(&dst[0]), (*C.uchar)(&inp[0]), C.ulong(count))
 }
+
+func PotuzHasher2Chunks(dst []byte, inp []byte) {
+	C.sha256_1_avx((*C.uchar)(&dst[0]), (*C.uchar)(&inp[0]))
+}
