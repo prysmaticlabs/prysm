@@ -308,6 +308,16 @@ func TestCopyPendingAttestationSlice(t *testing.T) {
 	}
 }
 
+func TestCopyPayloadHeader(t *testing.T) {
+	p := genPayloadHeader()
+
+	got := v1alpha1.CopyExecutionPayloadHeader(p)
+	if !reflect.DeepEqual(got, p) {
+		t.Errorf("CopyExecutionPayloadHeader() = %v, want %v", got, p)
+	}
+	assert.NotEmpty(t, got, "Copied sync aggregate has empty fields")
+}
+
 func bytes() []byte {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
@@ -570,5 +580,24 @@ func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 		BlockRoot:      bytes(),
 		ValidatorIndex: 5443,
 		Signature:      bytes(),
+	}
+}
+
+func genPayloadHeader() *v1alpha1.ExecutionPayloadHeader {
+	return &v1alpha1.ExecutionPayloadHeader{
+		ParentHash:       bytes(),
+		Coinbase:         bytes(),
+		StateRoot:        bytes(),
+		ReceiptRoot:      bytes(),
+		LogsBloom:        bytes(),
+		Random:           bytes(),
+		BlockNumber:      1,
+		GasLimit:         2,
+		GasUsed:          3,
+		Timestamp:        4,
+		ExtraData:        bytes(),
+		BaseFeePerGas:    bytes(),
+		BlockHash:        bytes(),
+		TransactionsRoot: bytes(),
 	}
 }

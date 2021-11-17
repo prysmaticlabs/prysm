@@ -24,7 +24,9 @@ func init() {
 	fieldMap[types.Validators] = types.CompositeArray
 }
 
-// TODO: Add field Aliases for values from the types package. It'll come in part 2.
+const (
+	latestExecutionPayloadHeader = types.LatestExecutionPayloadHeader
+)
 
 // fieldMap keeps track of each field
 // to its corresponding data type.
