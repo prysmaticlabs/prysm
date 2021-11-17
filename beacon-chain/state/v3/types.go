@@ -50,7 +50,6 @@ const (
 	inactivityScores               = types.InactivityScores
 	currentSyncCommittee           = types.CurrentSyncCommittee
 	nextSyncCommittee              = types.NextSyncCommittee
-	latestExecutionPayloadHeader   = types.LatestExecutionPayloadHeader
 )
 
 // fieldMap keeps track of each field
