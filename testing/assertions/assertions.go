@@ -87,7 +87,8 @@ func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
 	}
 }
 
-// ErrorIs asserts that errors.Is succeeds, meaning the target error was wrapped in the chain
+// ErrorIs uses Errors.Is to recursively unwrap err looking for target in the chain.
+// If any error in the chain matches target, the assertion will pass.
 func ErrorIs(loggerFn assertionLoggerFn, err, target error, msg ...interface{}) {
 	if !errors.Is(err, target) {
 		errMsg := parseMsg(fmt.Sprintf("error %s not in chain", target), msg...)
