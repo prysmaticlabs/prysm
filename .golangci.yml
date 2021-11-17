@@ -59,6 +59,7 @@ run:
   skip-dirs:
     - proto/
     - ^contracts/
+    - beacon-chain/state/v3/
   deadline: 10m
 
 # golangci.com configuration
