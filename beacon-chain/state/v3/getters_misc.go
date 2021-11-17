@@ -112,7 +112,7 @@ func (b *BeaconState) parentRoot() [32]byte {
 // is strictly meant to be used without a lock
 // internally.
 func (b *BeaconState) Version() int {
-	return version.Altair
+	return version.Merge
 }
 
 // Slot of the current beacon chain state.
