@@ -179,10 +179,10 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 			if err != nil {
 				log.WithError(err).Fatal("Could not generate block headers for slot")
 			}
-			log.WithFields(logrus.Fields{
-				"numBlocks":    len(blockHeaders),
-				"numSlashable": len(propSlashings),
-			}).Infof("Producing blocks for slot %d", slot)
+			//log.WithFields(logrus.Fields{
+			//	"numBlocks":    len(blockHeaders),
+			//	"numSlashable": len(propSlashings),
+			//}).Infof("Producing blocks for slot %d", slot)
 			for _, sl := range propSlashings {
 				slashingRoot, err := sl.HashTreeRoot()
 				if err != nil {
@@ -198,10 +198,10 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 			if err != nil {
 				log.WithError(err).Fatal("Could not generate block headers for slot")
 			}
-			log.WithFields(logrus.Fields{
-				"numAtts":      len(atts),
-				"numSlashable": len(propSlashings),
-			}).Infof("Producing attestations for slot %d", slot)
+			//log.WithFields(logrus.Fields{
+			//	"numAtts":      len(atts),
+			//	"numSlashable": len(propSlashings),
+			//}).Infof("Producing attestations for slot %d", slot)
 			for _, sl := range attSlashings {
 				slashingRoot, err := sl.HashTreeRoot()
 				if err != nil {
