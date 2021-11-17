@@ -99,6 +99,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			if inDB {
 				s.pendingQueueLock.Lock()
 				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+					s.pendingQueueLock.Unlock()
 					return err
 				}
 				s.pendingQueueLock.Unlock()
@@ -179,6 +180,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			s.pendingQueueLock.Lock()
 			if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+				s.pendingQueueLock.Unlock()
 				return err
 			}
 			s.pendingQueueLock.Unlock()
