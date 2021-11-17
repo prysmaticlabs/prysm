@@ -88,7 +88,7 @@ func (s *Service) Start() {
 
 func (s *Service) run() {
 	s.waitForChainInitialization()
-	s.waitForSync(s.genesisTime)
+	// s.waitForSync(s.genesisTime)
 
 	log.Info("Completed chain sync, starting slashing detection")
 
@@ -184,6 +184,7 @@ func (s *Service) waitForChainInitialization() {
 				log.WithField("genesisTime", s.genesisTime).Info(
 					"Slasher received chain start event",
 				)
+				return
 			} else if stateEvent.Type == statefeed.Initialized {
 				// Alternatively, if the chain has already started, we then read the genesis
 				// time value from this data.
@@ -198,6 +199,7 @@ func (s *Service) waitForChainInitialization() {
 				log.WithField("genesisTime", s.genesisTime).Info(
 					"Slasher received chain initialization event",
 				)
+				return
 			}
 		case err := <-stateSub.Err():
 			log.WithError(err).Error(
@@ -212,7 +214,7 @@ func (s *Service) waitForChainInitialization() {
 }
 
 func (s *Service) waitForSync(genesisTime time.Time) {
-	if slots.SinceGenesis(genesisTime) == 0 || !s.serviceCfg.SyncChecker.Syncing() {
+	if slots.SinceGenesis(genesisTime) < params.BeaconConfig().SlotsPerEpoch || !s.serviceCfg.SyncChecker.Syncing() {
 		return
 	}
 	slotTicker := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
