@@ -139,3 +139,7 @@ func FastSum256(data []byte) [32]byte {
 func PotuzHasherShani(dst []byte, inp []byte, count uint64) {
 	C.sha256_shani((*C.uchar)(&dst[0]), (*C.uchar)(&inp[0]), C.ulong(count))
 }
+
+func PotuzHasherAVX2(dst []byte, inp []byte, count uint64) {
+	C.sha256_8_avx2((*C.uchar)(&dst[0]), (*C.uchar)(&inp[0]), C.ulong(count))
+}
