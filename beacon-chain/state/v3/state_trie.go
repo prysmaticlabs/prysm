@@ -35,7 +35,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
 	b := &BeaconState{
 		state:                 st,
-		dirtyFields:           make(map[types.FieldIndex]interface{}, fieldCount),
+		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
@@ -115,7 +115,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			NextSyncCommittee:            b.nextSyncCommittee(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader(),
 		},
-		dirtyFields:           make(map[types.FieldIndex]interface{}, fieldCount),
+		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
 		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
 		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
@@ -196,7 +196,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := stateutil.Merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]interface{}, params.BeaconConfig().BeaconStateMergeFieldCount)
+		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateMergeFieldCount)
 	}
 
 	for field := range b.dirtyFields {
