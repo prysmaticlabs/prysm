@@ -88,7 +88,7 @@ func (s *Service) Start() {
 
 func (s *Service) run() {
 	s.waitForChainInitialization()
-	// s.waitForSync(s.genesisTime)
+	s.waitForSync(s.genesisTime)
 
 	log.Info("Completed chain sync, starting slashing detection")
 
