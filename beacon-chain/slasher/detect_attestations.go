@@ -148,7 +148,6 @@ func (s *Service) checkDoubleVotes(
 	defer span.End()
 	// We check if there are any slashable double votes in the input list
 	// of attestations with respect to each other.
-	log.Info("Checking double votes for atts", len(attestations))
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 	existingAtts := make(map[string]*slashertypes.IndexedAttestationWrapper)
 	for _, att := range attestations {
@@ -159,7 +158,6 @@ func (s *Service) checkDoubleVotes(
 				existingAtts[key] = att
 				continue
 			}
-			log.Infof("Checking att signing root %#x vs existing signing root %#x\n", att.SigningRoot, existingAtt.SigningRoot)
 			if att.SigningRoot != existingAtt.SigningRoot {
 				doubleVotesTotal.Inc()
 				slashings = append(slashings, &ethpb.AttesterSlashing{

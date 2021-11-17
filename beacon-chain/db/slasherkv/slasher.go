@@ -121,7 +121,6 @@ func (s *Store) CheckAttesterDoubleVotes(
 						continue
 					}
 					existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
-					log.Infof("On disk: Checking att signing root %#x vs existing signing root %#x\n", attToProcess.SigningRoot, existingSigningRoot)
 					if existingSigningRoot != attToProcess.SigningRoot {
 						existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
 						if err != nil {
