@@ -2,6 +2,7 @@ package simulator
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -263,6 +264,8 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 				"prevTargetEpoch": slashing.Attestation_2.Data.Target.Epoch,
 				"sourceEpoch":     slashing.Attestation_1.Data.Source.Epoch,
 				"prevSourceEpoch": slashing.Attestation_2.Data.Source.Epoch,
+				"prevData":        fmt.Sprintf("%#x", slashing.Attestation_1.Data.BeaconBlockRoot),
+				"newData":         fmt.Sprintf("%#x", slashing.Attestation_2.Data.BeaconBlockRoot),
 			}).Errorf("Did not detect simulated attester slashing")
 			continue
 		}
