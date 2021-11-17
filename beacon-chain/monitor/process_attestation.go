@@ -161,8 +161,7 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 // processUnaggregatedAttestation logs when the beacon node sees an unaggregated attestation from one of our
 // tracked validators
 func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb.Attestation) {
-	var root [32]byte
-	copy(root[:], att.Data.BeaconBlockRoot)
+	root := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if state == nil {
 		log.Debug("Skipping unnagregated attestation due to state not found in cache")
