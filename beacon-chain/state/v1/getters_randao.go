@@ -1,8 +1,9 @@
 package v1
 
 import (
+	"fmt"
+
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // RandaoMixes of block proposers on the beacon chain.
@@ -54,16 +55,10 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
 		return [32]byte{}, ErrNilInnerState
 	}
-
-	mixes := make([][]byte, len(b.randaoMixes))
-	for i := range mixes {
-		mixes[i] = b.randaoMixes[i][:]
+	if uint64(len(b.randaoMixes)) <= idx {
+		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}
-	root, err := bytesutil.SafeCopyRootAtIndex(mixes, idx)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return bytesutil.ToBytes32(root), nil
+	return b.randaoMixes[idx], nil
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.

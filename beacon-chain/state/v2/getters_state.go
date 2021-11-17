@@ -1,9 +1,10 @@
 package v2
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -188,15 +189,11 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
 		return [32]byte{}, ErrNilInnerState
 	}
-	sRoots := make([][]byte, len(b.stateRoots))
-	for i := range sRoots {
-		sRoots[i] = b.stateRoots[i][:]
+	if uint64(len(b.stateRoots)) <= idx {
+		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}
-	root, err := bytesutil.SafeCopyRootAtIndex(sRoots, idx)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return bytesutil.ToBytes32(root), nil
+
+	return b.stateRoots[idx], nil
 }
 
 // ProtobufBeaconState transforms an input into beacon state hard fork 1 in the form of protobuf.

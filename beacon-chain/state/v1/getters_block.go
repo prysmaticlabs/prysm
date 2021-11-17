@@ -1,8 +1,9 @@
 package v1
 
 import (
+	"fmt"
+
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -97,14 +98,8 @@ func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
 		return [32]byte{}, ErrNilInnerState
 	}
-	bRoots := make([][]byte, len(b.blockRoots))
-	for i := range bRoots {
-		tmp := b.blockRoots[i]
-		bRoots[i] = tmp[:]
+	if uint64(len(b.blockRoots)) <= idx {
+		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}
-	root, err := bytesutil.SafeCopyRootAtIndex(bRoots, idx)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return bytesutil.ToBytes32(root), nil
+	return b.blockRoots[idx], nil
 }
