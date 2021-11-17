@@ -25,7 +25,7 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHea
 	return b.latestExecutionPayloadHeader(), nil
 }
 
-// previousEpochAttestations of the  beacon state.
+// latestExecutionPayloadHeader of the beacon state.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) latestExecutionPayloadHeader() *ethpb.ExecutionPayloadHeader {
 	if !b.hasInnerState() {
