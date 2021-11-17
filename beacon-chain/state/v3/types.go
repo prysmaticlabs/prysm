@@ -24,7 +24,34 @@ func init() {
 	fieldMap[types.Validators] = types.CompositeArray
 }
 
-// TODO: Add field Aliases for values from the types package. It'll come in part 2.
+// Field Aliases for values from the types package.
+const (
+	genesisTime                    = types.GenesisTime
+	genesisValidatorRoot           = types.GenesisValidatorRoot
+	slot                           = types.Slot
+	fork                           = types.Fork
+	latestBlockHeader              = types.LatestBlockHeader
+	blockRoots                     = types.BlockRoots
+	stateRoots                     = types.StateRoots
+	historicalRoots                = types.HistoricalRoots
+	eth1Data                       = types.Eth1Data
+	eth1DataVotes                  = types.Eth1DataVotes
+	eth1DepositIndex               = types.Eth1DepositIndex
+	validators                     = types.Validators
+	balances                       = types.Balances
+	randaoMixes                    = types.RandaoMixes
+	slashings                      = types.Slashings
+	previousEpochParticipationBits = types.PreviousEpochParticipationBits
+	currentEpochParticipationBits  = types.CurrentEpochParticipationBits
+	justificationBits              = types.JustificationBits
+	previousJustifiedCheckpoint    = types.PreviousJustifiedCheckpoint
+	currentJustifiedCheckpoint     = types.CurrentJustifiedCheckpoint
+	finalizedCheckpoint            = types.FinalizedCheckpoint
+	inactivityScores               = types.InactivityScores
+	currentSyncCommittee           = types.CurrentSyncCommittee
+	nextSyncCommittee              = types.NextSyncCommittee
+	latestExecutionPayloadHeader   = types.LatestExecutionPayloadHeader
+)
 
 // fieldMap keeps track of each field
 // to its corresponding data type.
