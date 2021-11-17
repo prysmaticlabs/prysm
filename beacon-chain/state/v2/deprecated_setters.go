@@ -30,7 +30,7 @@ func (b *BeaconState) RotateAttestations() error {
 	return errors.New("RotateAttestations is not supported for hard fork 1 beacon state")
 }
 
-// SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state.
+// SetLatestExecutionPayloadHeader is not supported for hard fork 1 beacon state.
 func (b *BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
 	return errors.New("SetLatestExecutionPayloadHeader is not supported for hard fork 1 beacon state")
 }
