@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *Simulator) generateAttestationsForSlot(
@@ -97,12 +98,12 @@ func (s *Simulator) generateAttestationsForSlot(
 		startIdx += valsPerCommittee
 		endIdx += valsPerCommittee
 	}
-	//if len(slashedIndices) > 0 {
-	//	log.WithFields(logrus.Fields{
-	//		"amount":  len(slashedIndices),
-	//		"indices": slashedIndices,
-	//	}).Infof("Slashable attestation made")
-	//}
+	if len(slashedIndices) > 0 {
+		log.WithFields(logrus.Fields{
+			"amount":  len(slashedIndices),
+			"indices": slashedIndices,
+		}).Infof("Slashable attestation made")
+	}
 	return attestations, slashings, nil
 }
 
