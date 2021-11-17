@@ -121,6 +121,7 @@ type BeaconChainConfig struct {
 	GenesisCountdownInterval    time.Duration // How often to log the countdown until the genesis time is reached.
 	BeaconStateFieldCount       int           // BeaconStateFieldCount defines how many fields are in beacon state.
 	BeaconStateAltairFieldCount int           // BeaconStateAltairFieldCount defines how many fields are in beacon state hard fork 1.
+	BeaconStateMergeFieldCount  int           // BeaconStateMergeFieldCount defines how many fields are in beacon state post upgrade to the Merge.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
