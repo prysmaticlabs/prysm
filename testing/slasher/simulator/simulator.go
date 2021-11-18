@@ -136,8 +136,8 @@ func (s *Simulator) Start() {
 	time.Sleep(time.Second)
 	s.genesisTime = time.Now()
 	s.srvConfig.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.ChainStarted,
-		Data: &statefeed.ChainStartedData{StartTime: s.genesisTime},
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{StartTime: s.genesisTime},
 	})
 
 	// We simulate blocks and attestations for N epochs.
