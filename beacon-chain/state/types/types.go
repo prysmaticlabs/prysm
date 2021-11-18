@@ -59,12 +59,12 @@ func (f FieldIndex) String(stateVersion int) string {
 	case Slashings:
 		return "slashings"
 	case PreviousEpochAttestations:
-		if version.Altair == stateVersion {
+		if version.Altair == stateVersion || version.Merge == stateVersion {
 			return "previousEpochParticipationBits"
 		}
 		return "previousEpochAttestations"
 	case CurrentEpochAttestations:
-		if version.Altair == stateVersion {
+		if version.Altair == stateVersion || version.Merge == stateVersion {
 			return "currentEpochParticipationBits"
 		}
 		return "currentEpochAttestations"
@@ -82,6 +82,8 @@ func (f FieldIndex) String(stateVersion int) string {
 		return "currentSyncCommittee"
 	case NextSyncCommittee:
 		return "nextSyncCommittee"
+	case LatestExecutionPayloadHeader:
+		return "latestExecutionPayloadHeader"
 	default:
 		return ""
 	}
@@ -130,12 +132,13 @@ const (
 	InactivityScores
 	CurrentSyncCommittee
 	NextSyncCommittee
+	// State fields added in Merge.
+	LatestExecutionPayloadHeader
 )
 
 // Altair fields which replaced previous phase 0 fields.
 const (
-	// Epoch Attestations is switched with participation bits in
-	// Altair.
+	// Epoch Attestations is switched with participation bits in Altair.
 	PreviousEpochParticipationBits = PreviousEpochAttestations
 	CurrentEpochParticipationBits  = CurrentEpochAttestations
 )
