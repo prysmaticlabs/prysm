@@ -36,6 +36,7 @@ func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (
 	// per 7342, a nil checkpoint, zero-root or zero-epoch should all fail validation
 	// and return an error instead of creating a WeakSubjectivityVerifier that permits any chain history.
 	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
+		log.Warn("no valid weak subjectivity checkpoint specified, running without weak subjectivity verification")
 		return &WeakSubjectivityVerifier{
 			enabled: false,
 		}, nil
@@ -81,6 +82,7 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	}
 	filter := filters.NewFilter().SetStartSlot(v.slot).SetEndSlot(v.slot + params.BeaconConfig().SlotsPerEpoch)
 	// A node should have the weak subjectivity block corresponds to the correct epoch in the DB.
+	log.Infof("searching block roots index for weak subjectivity root=%#x", v.root)
 	roots, err := v.db.BlockRoots(ctx, filter)
 	if err != nil {
 		return errors.Wrap(err, "error while retrieving block roots to verify weak subjectivity")

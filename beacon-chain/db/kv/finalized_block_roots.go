@@ -46,6 +46,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	root := checkpoint.Root
 	var previousRoot []byte
 	genesisRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
+	initCheckpointRoot := tx.Bucket(blocksBucket).Get(originBlockRootKey)
 
 	// De-index recent finalized block roots, to be re-indexed.
 	previousFinalizedCheckpoint := &ethpb.Checkpoint{}
@@ -74,7 +75,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	// Walk up the ancestry chain until we reach a block root present in the finalized block roots
 	// index bucket or genesis block root.
 	for {
-		if bytes.Equal(root, genesisRoot) {
+		if bytes.Equal(root, genesisRoot) || bytes.Equal(root, initCheckpointRoot) {
 			break
 		}
 
