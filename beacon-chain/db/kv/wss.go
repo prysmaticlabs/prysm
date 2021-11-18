@@ -38,15 +38,17 @@ func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Read
 	}
 
 	// save block
-	if err := s.SaveBlock(ctx, wblk); err != nil {
-		return errors.Wrap(err, "could not save checkpoint block")
-	}
 	blockRoot, err := blk.Block.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
+	log.Infof("saving checkpoint block to db, w/ root=%#x", blockRoot)
+	if err := s.SaveBlock(ctx, wblk); err != nil {
+		return errors.Wrap(err, "could not save checkpoint block")
+	}
 
 	// save state
+	log.Infof("calling SaveState w/ blockRoot=%x", blockRoot)
 	if err = s.SaveState(ctx, bs, blockRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}

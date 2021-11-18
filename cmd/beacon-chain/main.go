@@ -8,6 +8,8 @@ import (
 	"runtime"
 	runtimeDebug "runtime/debug"
 
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
+
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
@@ -61,7 +63,7 @@ var appFlags = []cli.Flag{
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
-	flags.WeakSubjectivityCheckpt,
+	flags.WeakSubjectivityCheckpoint,
 	flags.Eth1HeaderReqLimit,
 	flags.GenesisStatePath,
 	flags.MinPeersPerSubnet,
@@ -119,6 +121,8 @@ var appFlags = []cli.Flag{
 	cmd.RestoreTargetDirFlag,
 	cmd.BoltMMapInitialSizeFlag,
 	cmd.ValidatorMonitorIndicesFlag,
+	checkpoint.BlockPath,
+	checkpoint.StatePath,
 }
 
 func init() {
@@ -242,6 +246,13 @@ func startNode(ctx *cli.Context) error {
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
 		node.WithPowchainFlagOptions(powchainFlagOpts),
+	}
+	cptOpts, err := checkpoint.BeaconNodeOptions(ctx)
+	if err != nil {
+		return err
+	}
+	if cptOpts != nil {
+		opts = append(opts, cptOpts)
 	}
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {
