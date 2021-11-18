@@ -172,20 +172,7 @@ func (s *Service) waitForChainInitialization() {
 		select {
 		case stateEvent := <-stateChannel:
 			// Wait for us to receive the genesis time via a chain started notification.
-			if stateEvent.Type == statefeed.ChainStarted {
-				data, ok := stateEvent.Data.(*statefeed.ChainStartedData)
-				if !ok {
-					log.Error(
-						"Could not receive chain start notification, want *statefeed.ChainStartedData",
-					)
-					return
-				}
-				s.genesisTime = data.StartTime
-				log.WithField("genesisTime", s.genesisTime).Info(
-					"Slasher received chain start event",
-				)
-				return
-			} else if stateEvent.Type == statefeed.Initialized {
+			if stateEvent.Type == statefeed.Initialized {
 				// Alternatively, if the chain has already started, we then read the genesis
 				// time value from this data.
 				data, ok := stateEvent.Data.(*statefeed.InitializedData)
