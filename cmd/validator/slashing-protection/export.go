@@ -72,7 +72,7 @@ func exportSlashingProtectionJSON(cliCtx *cli.Context) error {
 	if eipJSON == nil || len(eipJSON.Data) == 0 {
 		log.Fatal(
 			"No slashing protection data was found in your database. This is likely because an older version of " +
-				"of Prysm would place your validator database in your wallet directory as a validator.db file. Now, " +
+				"Prysm would place your validator database in your wallet directory as a validator.db file. Now, " +
 				"Prysm keeps its validator database inside the direct/ or derived/ folder in your wallet directory. " +
 				"Try running this command again, but add direct/ or derived/ to the path where your wallet " +
 				"directory is in and you should obtain your slashing protection history",
