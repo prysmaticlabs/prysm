@@ -147,7 +147,7 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 			logFields["CorrectHead"] = latestPerf.timelyHead
 			logFields["CorrectSource"] = latestPerf.timelySource
 			logFields["CorrectTarget"] = latestPerf.timelyTarget
-			logFields["Inclusion Slot"] = latestPerf.inclusionSlot
+			logFields["InclusionSlot"] = latestPerf.inclusionSlot
 			logFields["NewBalance"] = balance
 			logFields["BalanceChange"] = balanceChg
 
