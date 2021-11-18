@@ -129,7 +129,7 @@ func TestProcessUnaggregatedAttestationStateNotCached(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0b11, 0b1},
 	}
 	s.processUnaggregatedAttestation(ctx, att)
-	require.LogsContain(t, hook, "Skipping unnagregated attestation due to state not found in cache")
+	require.LogsContain(t, hook, "Skipping unaggregated attestation due to state not found in cache")
 	logrus.SetLevel(logrus.InfoLevel)
 }
 

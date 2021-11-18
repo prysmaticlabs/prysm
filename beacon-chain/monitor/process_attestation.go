@@ -18,9 +18,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// newerSlotFromTrackedVal returns true if the validator is tracked and if the
+// updatedPerformanceFromTrackedVal returns true if the validator is tracked and if the
 // given slot is different than the last attested slot from this validator.
-func (s *Service) newerSlotFromTrackedVal(idx types.ValidatorIndex, slot types.Slot) bool {
+func (s *Service) updatedPerformanceFromTrackedVal(idx types.ValidatorIndex, slot types.Slot) bool {
 	if !s.TrackedIndex(types.ValidatorIndex(idx)) {
 		return false
 	}
@@ -74,7 +74,7 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 		return
 	}
 	for _, idx := range attestingIndices {
-		if s.newerSlotFromTrackedVal(types.ValidatorIndex(idx), att.Data.Slot) {
+		if s.updatedPerformanceFromTrackedVal(types.ValidatorIndex(idx), att.Data.Slot) {
 			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Data)
 			balance, err := state.BalanceAtIndex(types.ValidatorIndex(idx))
 			if err != nil {
@@ -164,7 +164,7 @@ func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb
 	root := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if state == nil {
-		log.Debug("Skipping unnagregated attestation due to state not found in cache")
+		log.Debug("Skipping unaggregated attestation due to state not found in cache")
 		return
 	}
 	attestingIndices, err := attestingIndices(ctx, state, att)
@@ -173,7 +173,7 @@ func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb
 		return
 	}
 	for _, idx := range attestingIndices {
-		if s.newerSlotFromTrackedVal(types.ValidatorIndex(idx), att.Data.Slot) {
+		if s.updatedPerformanceFromTrackedVal(types.ValidatorIndex(idx), att.Data.Slot) {
 			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Data)
 			log.WithFields(logFields).Info("Processed unaggregated attestation")
 		}
@@ -205,7 +205,7 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 		return
 	}
 	for _, idx := range attestingIndices {
-		if s.newerSlotFromTrackedVal(types.ValidatorIndex(idx), att.Aggregate.Data.Slot) {
+		if s.updatedPerformanceFromTrackedVal(types.ValidatorIndex(idx), att.Aggregate.Data.Slot) {
 			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Aggregate.Data)
 			log.WithFields(logFields).Info("Processed aggregated attestation")
 		}
