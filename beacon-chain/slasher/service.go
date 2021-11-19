@@ -152,7 +152,8 @@ func (s *Service) Stop() error {
 	// Flush the latest epoch written map to disk.
 	start := time.Now()
 	// New context as the service context has already been canceled.
-	ctx, _ := context.WithTimeout(context.Background(), shutdownTimeout)
+	ctx, innerCancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer innerCancel()
 	log.Info("Flushing last epoch written for each validator to disk, please wait")
 	if err := s.serviceCfg.Database.SaveLastEpochsWrittenForValidators(
 		ctx, s.latestEpochWrittenForValidator,
