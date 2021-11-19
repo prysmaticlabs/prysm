@@ -37,6 +37,15 @@ func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, 
 	return has, nil
 }
 
+// StateByRootIfCached retrieves a state using the input block root only if the state is already in the cache
+func (s *State) StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState {
+	if !s.hotStateCache.has(blockRoot) {
+		return nil
+	}
+	state := s.hotStateCache.getWithoutCopy(blockRoot)
+	return state
+}
+
 // StateByRoot retrieves the state using input block root.
 func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
