@@ -56,6 +56,44 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 }
 
+func TestStateByRootIfCachedNoCopy_HotState(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	service := New(beaconDB)
+
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	r := [32]byte{'A'}
+	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
+	service.hotStateCache.put(r, beaconState)
+
+	loadedState := service.StateByRootIfCachedNoCopy(r)
+	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
+}
+
+func TestStateByRootIfCachedNoCopy_ColdState(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	service := New(beaconDB)
+	service.finalizedInfo.slot = 2
+	service.slotsPerArchivedPoint = 1
+
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 1
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	bRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, beaconState.SetSlot(1))
+	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
+	loadedState := service.StateByRootIfCachedNoCopy(bRoot)
+	require.NoError(t, err)
+	require.Equal(t, loadedState, nil)
+}
+
 func TestStateByRoot_HotStateUsingEpochBoundaryCacheNoReplay(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
