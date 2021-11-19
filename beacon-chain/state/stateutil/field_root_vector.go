@@ -6,11 +6,11 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 )
 
-func (h *StateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
+func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
 	lock.Lock()
 	defer lock.Unlock()
 	hashFunc := hash.CustomSHA256Hasher()
-	if _, ok := layersCache[fieldName]; !ok && h.RootsCache != nil {
+	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
 		depth := ssz.Depth(length)
 		layersCache[fieldName] = make([][][32]byte, depth+1)
 	}
@@ -22,19 +22,19 @@ func (h *StateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
 	prevLeaves, ok := leavesCache[fieldName]
-	if len(prevLeaves) == 0 || h.RootsCache == nil {
+	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
 
 	for i := 0; i < len(leaves); i++ {
 		// We check if any items changed since the roots were last recomputed.
 		notEqual := leaves[i] != prevLeaves[i]
-		if ok && h.RootsCache != nil && notEqual {
+		if ok && h.rootsCache != nil && notEqual {
 			changedIndices = append(changedIndices, i)
 		}
 		bytesProcessed += 32
 	}
-	if len(changedIndices) > 0 && h.RootsCache != nil {
+	if len(changedIndices) > 0 && h.rootsCache != nil {
 		var rt [32]byte
 		var err error
 		// If indices did change since last computation, we only recompute
@@ -62,7 +62,7 @@ func (h *StateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	if err != nil {
 		return [32]byte{}, err
 	}
-	if h.RootsCache != nil {
+	if h.rootsCache != nil {
 		leavesCache[fieldName] = leaves
 	}
 	return res, nil
@@ -116,7 +116,7 @@ func recomputeRoot(idx int, chunks [][32]byte, fieldName string, hasher func([]b
 	return root, nil
 }
 
-func (h *StateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
+func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 	fieldName string, hasher func([]byte) [32]byte) ([32]byte, error) {
 	if len(leaves) == 0 {
 		return [32]byte{}, errors.New("zero leaves provided")
@@ -126,7 +126,7 @@ func (h *StateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 	}
 	hashLayer := leaves
 	layers := make([][][32]byte, ssz.Depth(length)+1)
-	if items, ok := layersCache[fieldName]; ok && h.RootsCache != nil {
+	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
 		if len(items[0]) == len(leaves) {
 			layers = items
 		}
@@ -138,7 +138,7 @@ func (h *StateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		return [32]byte{}, err
 	}
 	root := hashLayer[0]
-	if h.RootsCache != nil {
+	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
 	}
 	return root, nil

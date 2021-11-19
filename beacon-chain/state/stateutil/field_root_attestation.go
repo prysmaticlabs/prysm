@@ -22,7 +22,7 @@ func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32
 	return NocachedHasher.arraysRoot(vals, length, fieldName)
 }
 
-func (h *StateRootHasher) epochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
+func (h *stateRootHasher) epochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
 	max := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().MaxAttestations
 	if uint64(len(atts)) > max {
 		return [32]byte{}, fmt.Errorf("epoch attestation exceeds max length %d", max)
@@ -58,7 +58,7 @@ func (h *StateRootHasher) epochAttestationsRoot(atts []*ethpb.PendingAttestation
 	return res, nil
 }
 
-func (h *StateRootHasher) pendingAttestationRoot(hasher ssz.HashFn, att *ethpb.PendingAttestation) ([32]byte, error) {
+func (h *stateRootHasher) pendingAttestationRoot(hasher ssz.HashFn, att *ethpb.PendingAttestation) ([32]byte, error) {
 	if att == nil {
 		return [32]byte{}, errors.New("nil pending attestation")
 	}
@@ -66,8 +66,8 @@ func (h *StateRootHasher) pendingAttestationRoot(hasher ssz.HashFn, att *ethpb.P
 	enc := PendingAttEncKey(att)
 
 	// Check if it exists in cache:
-	if h.RootsCache != nil {
-		if found, ok := h.RootsCache.Get(string(enc)); found != nil && ok {
+	if h.rootsCache != nil {
+		if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
@@ -76,8 +76,8 @@ func (h *StateRootHasher) pendingAttestationRoot(hasher ssz.HashFn, att *ethpb.P
 	if err != nil {
 		return [32]byte{}, err
 	}
-	if h.RootsCache != nil {
-		h.RootsCache.Set(string(enc), res, 32)
+	if h.rootsCache != nil {
+		h.rootsCache.Set(string(enc), res, 32)
 	}
 	return res, nil
 }

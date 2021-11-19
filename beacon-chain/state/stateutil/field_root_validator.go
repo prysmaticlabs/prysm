@@ -22,7 +22,7 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 	return CachedHasher.validatorRegistryRoot(vals)
 }
 
-func (h *StateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
+func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
 	roots := make([][32]byte, len(validators))
 	emptyKey := hash.FastSum256(hashKeyElements)
@@ -39,8 +39,8 @@ func (h *StateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	}
 
 	hashKey := hash.FastSum256(hashKeyElements)
-	if hashKey != emptyKey && h.RootsCache != nil {
-		if found, ok := h.RootsCache.Get(string(hashKey[:])); found != nil && ok {
+	if hashKey != emptyKey && h.rootsCache != nil {
+		if found, ok := h.rootsCache.Get(string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
@@ -57,21 +57,21 @@ func (h *StateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	var validatorsRootsBufRoot [32]byte
 	copy(validatorsRootsBufRoot[:], validatorsRootsBuf.Bytes())
 	res := ssz.MixInLength(validatorsRootsRoot, validatorsRootsBufRoot[:])
-	if hashKey != emptyKey && h.RootsCache != nil {
-		h.RootsCache.Set(string(hashKey[:]), res, 32)
+	if hashKey != emptyKey && h.rootsCache != nil {
+		h.rootsCache.Set(string(hashKey[:]), res, 32)
 	}
 	return res, nil
 }
 
-func (h *StateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
+func (h *stateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
 	if validator == nil {
 		return [32]byte{}, errors.New("nil validator")
 	}
 
 	enc := ValidatorEncKey(validator)
 	// Check if it exists in cache:
-	if h.RootsCache != nil {
-		if found, ok := h.RootsCache.Get(string(enc)); found != nil && ok {
+	if h.rootsCache != nil {
+		if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
@@ -81,8 +81,8 @@ func (h *StateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Vali
 		return [32]byte{}, err
 	}
 
-	if h.RootsCache != nil {
-		h.RootsCache.Set(string(enc), valRoot, 32)
+	if h.rootsCache != nil {
+		h.rootsCache.Set(string(enc), valRoot, 32)
 	}
 	return valRoot, nil
 }

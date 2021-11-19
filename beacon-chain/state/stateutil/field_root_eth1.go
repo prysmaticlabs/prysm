@@ -17,7 +17,7 @@ func Eth1Root(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 
 	enc := Eth1DataEncKey(eth1Data)
 	if features.Get().EnableSSZCache {
-		if found, ok := CachedHasher.RootsCache.Get(string(enc)); ok && found != nil {
+		if found, ok := CachedHasher.rootsCache.Get(string(enc)); ok && found != nil {
 			return found.([32]byte), nil
 		}
 	}
@@ -28,7 +28,7 @@ func Eth1Root(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	}
 
 	if features.Get().EnableSSZCache {
-		CachedHasher.RootsCache.Set(string(enc), root, 32)
+		CachedHasher.rootsCache.Set(string(enc), root, 32)
 	}
 	return root, nil
 }
@@ -43,7 +43,7 @@ func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	}
 
 	if features.Get().EnableSSZCache {
-		if found, ok := CachedHasher.RootsCache.Get(string(hashKey[:])); ok && found != nil {
+		if found, ok := CachedHasher.rootsCache.Get(string(hashKey[:])); ok && found != nil {
 			return found.([32]byte), nil
 		}
 	}
@@ -52,7 +52,7 @@ func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	if features.Get().EnableSSZCache {
-		CachedHasher.RootsCache.Set(string(hashKey[:]), root, 32)
+		CachedHasher.rootsCache.Set(string(hashKey[:]), root, 32)
 	}
 	return root, nil
 }

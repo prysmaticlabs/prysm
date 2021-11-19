@@ -24,10 +24,10 @@ var (
 const cacheSize = 100000
 
 // NocachedHasher references a hasher that will not utilize a cache.
-var NocachedHasher *StateRootHasher
+var NocachedHasher *stateRootHasher
 
 // CachedHasher references a hasher that will utilize a roots cache.
-var CachedHasher *StateRootHasher
+var CachedHasher *stateRootHasher
 
 func init() {
 	rootsCache, err := ristretto.NewCache(&ristretto.Config{
@@ -40,17 +40,18 @@ func init() {
 		panic(err)
 	}
 	// Temporarily disable roots cache until cache issues can be resolved.
-	CachedHasher = &StateRootHasher{RootsCache: rootsCache}
-	NocachedHasher = &StateRootHasher{}
+	CachedHasher = &stateRootHasher{rootsCache: rootsCache}
+	NocachedHasher = &stateRootHasher{}
 }
 
-// StateRootHasher defines an object through which we can
+// stateRootHasher defines an object through which we can
 // hash the different fields in the state with a few cached layers.
-type StateRootHasher struct {
-	RootsCache *ristretto.Cache
+type stateRootHasher struct {
+	rootsCache *ristretto.Cache
 }
 
-func (h *StateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
+// ComputeFieldRootsWithHasherPhase0 hashes the provided phase 0 state and returns its respective field roots.
+func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherPhase0")
 	defer span.End()
 
@@ -197,7 +198,8 @@ func (h *StateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 	return fieldRoots, nil
 }
 
-func (h *StateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
+// ComputeFieldRootsWithHasherAltair hashes the provided altair state and returns its respective field roots.
+func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherAltair")
 	defer span.End()
 
@@ -366,7 +368,8 @@ func (h *StateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	return fieldRoots, nil
 }
 
-func (h *StateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, state *ethpb.BeaconStateMerge) ([][]byte, error) {
+// ComputeFieldRootsWithHasherMerge hashes the provided merge state and returns its respective field roots.
+func (h *stateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, state *ethpb.BeaconStateMerge) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherMerge")
 	defer span.End()
 
