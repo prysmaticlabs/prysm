@@ -1,11 +1,8 @@
-load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
     srcs = [
-        "field_root_eth1.go",
-        "field_root_validator.go",
-        "field_root_vector.go",
         "field_roots.go",
         "types.go",
     ],
@@ -17,18 +14,7 @@ go_library(
         "//beacon-chain/state/types:go_default_library",
         "//config/features:go_default_library",
         "//config/params:go_default_library",
-        "//crypto/hash:go_default_library",
-        "//encoding/bytesutil:go_default_library",
-        "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
-)
-
-go_test(
-    name = "go_default_test",
-    srcs = ["field_root_test.go"],
-    embed = [":go_default_library"],
-    deps = ["//testing/assert:go_default_library"],
 )

@@ -1,18 +1,28 @@
-package v2
+package stateutil
 
 import (
 	"bytes"
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
+// ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
+// a list of validator structs according to the Ethereum
+// Simple Serialize specification.
+func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
+	if features.Get().EnableSSZCache {
+		return CachedHasher.validatorRegistryRoot(vals)
+	}
+	return CachedHasher.validatorRegistryRoot(vals)
+}
+
+func (h *StateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
 	roots := make([][32]byte, len(validators))
 	emptyKey := hash.FastSum256(hashKeyElements)
@@ -29,8 +39,8 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	}
 
 	hashKey := hash.FastSum256(hashKeyElements)
-	if hashKey != emptyKey && h.rootsCache != nil {
-		if found, ok := h.rootsCache.Get(string(hashKey[:])); found != nil && ok {
+	if hashKey != emptyKey && h.RootsCache != nil {
+		if found, ok := h.RootsCache.Get(string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
@@ -47,32 +57,32 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	var validatorsRootsBufRoot [32]byte
 	copy(validatorsRootsBufRoot[:], validatorsRootsBuf.Bytes())
 	res := ssz.MixInLength(validatorsRootsRoot, validatorsRootsBufRoot[:])
-	if hashKey != emptyKey && h.rootsCache != nil {
-		h.rootsCache.Set(string(hashKey[:]), res, 32)
+	if hashKey != emptyKey && h.RootsCache != nil {
+		h.RootsCache.Set(string(hashKey[:]), res, 32)
 	}
 	return res, nil
 }
 
-func (h *stateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
+func (h *StateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
 	if validator == nil {
 		return [32]byte{}, errors.New("nil validator")
 	}
 
-	enc := stateutil.ValidatorEncKey(validator)
+	enc := ValidatorEncKey(validator)
 	// Check if it exists in cache:
-	if h.rootsCache != nil {
-		if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
+	if h.RootsCache != nil {
+		if found, ok := h.RootsCache.Get(string(enc)); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
 
-	valRoot, err := stateutil.ValidatorRootWithHasher(hasher, validator)
+	valRoot, err := ValidatorRootWithHasher(hasher, validator)
 	if err != nil {
 		return [32]byte{}, err
 	}
 
-	if h.rootsCache != nil {
-		h.rootsCache.Set(string(enc), valRoot, 32)
+	if h.RootsCache != nil {
+		h.RootsCache.Set(string(enc), valRoot, 32)
 	}
 	return valRoot, nil
 }
