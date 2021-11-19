@@ -265,7 +265,7 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 				"sourceEpoch":         slashing.Attestation_1.Data.Source.Epoch,
 				"prevSourceEpoch":     slashing.Attestation_2.Data.Source.Epoch,
 				"prevBeaconBlockRoot": fmt.Sprintf("%#x", slashing.Attestation_1.Data.BeaconBlockRoot),
-				"newData":             fmt.Sprintf("%#x", slashing.Attestation_2.Data.BeaconBlockRoot),
+				"newBeaconBlockRoot":  fmt.Sprintf("%#x", slashing.Attestation_2.Data.BeaconBlockRoot),
 			}).Errorf("Did not detect simulated attester slashing")
 			continue
 		}
