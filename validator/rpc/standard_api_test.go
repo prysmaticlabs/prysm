@@ -76,6 +76,46 @@ func TestServer_ListKeystores(t *testing.T) {
 	})
 }
 
+func TestServer_ImportKeystores(t *testing.T) {
+	t.Run("wallet not ready", func(t *testing.T) {
+		s := Server{}
+		_, err := s.ImportKeystoresStandard(context.Background(), nil)
+		require.ErrorContains(t, "Wallet not ready", err)
+	})
+
+	ctx := context.Background()
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+
+	s := &Server{
+		keymanager:        km,
+		walletInitialized: true,
+		wallet:            w,
+	}
+
+	t.Run("prevents importing if faulty keystore in request", func(t *testing.T) {
+		_, err := s.ImportKeystoresStandard(context.Background(), &ethpbservice.ImportKeystoresRequest{
+			Keystores: []string{"hi"},
+			Passwords: []string{"hi"},
+		})
+		require.NoError(t, err)
+	})
+	t.Run("returns proper statuses for keystores in request", func(t *testing.T) {
+
+	})
+}
+
 func TestServer_DeleteKeystores(t *testing.T) {
 	ctx := context.Background()
 	t.Run("wallet not ready", func(t *testing.T) {
