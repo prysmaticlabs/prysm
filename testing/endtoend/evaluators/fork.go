@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	coreHelper "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -53,8 +54,8 @@ func forkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	if blk == nil || blk.IsNil() {
-		return errors.New("nil altair block received from stream")
+	if err := coreHelper.BeaconBlockIsNil(blk); err != nil {
+		return err
 	}
 	if blk.Block().Slot() < fSlot {
 		return errors.Errorf("wanted a block >= %d but received %d", fSlot, blk.Block().Slot())

@@ -243,6 +243,8 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				data = &eventFinalizedCheckpointJson{}
 			case events.ChainReorgTopic:
 				data = &eventChainReorgJson{}
+			case events.SyncCommitteeContributionTopic:
+				data = &signedContributionAndProofJson{}
 			case "error":
 				data = &eventErrorJson{}
 			default:

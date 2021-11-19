@@ -43,7 +43,7 @@ func ProcessBlockHeader(
 	beaconState state.BeaconState,
 	block block.SignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(block); err != nil {
+	if err := helpers.BeaconBlockIsNil(block); err != nil {
 		return nil, err
 	}
 	bodyRoot, err := block.Block().Body().HashTreeRoot()

@@ -11,10 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// VerifyNilBeaconBlock checks if any composite field of input signed beacon block is nil.
+// BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
-func VerifyNilBeaconBlock(b block.SignedBeaconBlock) error {
+func BeaconBlockIsNil(b block.SignedBeaconBlock) error {
 	if b == nil || b.IsNil() {
 		return errors.New("signed beacon block can't be nil")
 	}

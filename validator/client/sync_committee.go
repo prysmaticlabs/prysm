@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	fssz "github.com/ferranbt/fastssz"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -56,6 +54,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
+		Object:          &validatorpb.SignRequest_SyncMessageBlockRoot{SyncMessageBlockRoot: res.Root},
 	})
 	if err != nil {
 		log.WithError(err).Error("Could not sign sync committee message")
@@ -199,7 +198,16 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 		Slot:              slot,
 		SubcommitteeIndex: index,
 	}
-	sig, err := v.computeAndSign(ctx, data, pubKey, domain.SignatureDomain)
+	root, err := signing.ComputeSigningRoot(data, domain.SignatureDomain)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     root[:],
+		SignatureDomain: domain.SignatureDomain,
+		Object:          &validatorpb.SignRequest_SyncAggregatorSelectionData{SyncAggregatorSelectionData: data},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -212,22 +220,18 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byt
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.computeAndSign(ctx, c, pubKey, d.SignatureDomain)
+	root, err := signing.ComputeSigningRoot(c, d.SignatureDomain)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     root[:],
+		SignatureDomain: d.SignatureDomain,
+		Object:          &validatorpb.SignRequest_ContributionAndProof{ContributionAndProof: c},
+	})
 	if err != nil {
 		return nil, err
 	}
 	return sig.Marshal(), nil
-}
-
-// This computes the signing root of hash tree root capable object `obj` and signs it using public key `pubKey` along with the signature domain `sigDomain`.
-func (v *validator) computeAndSign(ctx context.Context, obj fssz.HashRoot, pubKey [48]byte, sigDomain []byte) (bls.Signature, error) {
-	root, err := signing.ComputeSigningRoot(obj, sigDomain)
-	if err != nil {
-		return nil, err
-	}
-	return v.keyManager.Sign(ctx, &validatorpb.SignRequest{
-		PublicKey:       pubKey[:],
-		SigningRoot:     root[:],
-		SignatureDomain: sigDomain,
-	})
 }

@@ -689,3 +689,34 @@ func TestBeaconStateToV1(t *testing.T) {
 	assert.Equal(t, types.Epoch(32), resultFinalizedCheckpoint.Epoch)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("fcroot"), 32), resultFinalizedCheckpoint.Root)
 }
+
+func TestV1Alpha1SignedContributionAndProofToV2(t *testing.T) {
+	alphaContribution := &ethpbalpha.SignedContributionAndProof{
+		Message: &ethpbalpha.ContributionAndProof{
+			AggregatorIndex: validatorIndex,
+			Contribution: &ethpbalpha.SyncCommitteeContribution{
+				Slot:              slot,
+				BlockRoot:         blockHash,
+				SubcommitteeIndex: 1,
+				AggregationBits:   bitfield.NewBitvector128(),
+				Signature:         signature,
+			},
+			SelectionProof: signature,
+		},
+		Signature: signature,
+	}
+	v2Contribution := V1Alpha1SignedContributionAndProofToV2(alphaContribution)
+	require.NotNil(t, v2Contribution)
+	require.NotNil(t, v2Contribution.Message)
+	require.NotNil(t, v2Contribution.Message.Contribution)
+	assert.DeepEqual(t, signature, v2Contribution.Signature)
+	msg := v2Contribution.Message
+	assert.Equal(t, validatorIndex, msg.AggregatorIndex)
+	assert.DeepEqual(t, signature, msg.SelectionProof)
+	contrib := msg.Contribution
+	assert.Equal(t, slot, contrib.Slot)
+	assert.DeepEqual(t, blockHash, contrib.BeaconBlockRoot)
+	assert.Equal(t, uint64(1), contrib.SubcommitteeIndex)
+	assert.DeepEqual(t, bitfield.NewBitvector128(), contrib.AggregationBits)
+	assert.DeepEqual(t, signature, contrib.Signature)
+}

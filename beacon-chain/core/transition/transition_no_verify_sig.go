@@ -185,7 +185,7 @@ func ProcessBlockNoVerifyAnySig(
 ) (*bls.SignatureSet, state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
-	if err := helpers.VerifyNilBeaconBlock(signed); err != nil {
+	if err := helpers.BeaconBlockIsNil(signed); err != nil {
 		return nil, nil, err
 	}
 
@@ -258,7 +258,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	signedBeaconBlock block.SignedBeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
-	if err := helpers.VerifyNilBeaconBlock(signedBeaconBlock); err != nil {
+	if err := helpers.BeaconBlockIsNil(signedBeaconBlock); err != nil {
 		return nil, err
 	}
 
@@ -294,7 +294,7 @@ func ProcessBlockForStateRoot(
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
-	if err := helpers.VerifyNilBeaconBlock(signed); err != nil {
+	if err := helpers.BeaconBlockIsNil(signed); err != nil {
 		return nil, err
 	}
 

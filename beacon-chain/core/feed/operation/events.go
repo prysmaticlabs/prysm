@@ -1,6 +1,4 @@
-// Package operation contains types for block operation-specific events fired
-// during the runtime of a beacon node such as attestations, voluntary
-// exits, and slashings.
+// Package operation contains types for block operation-specific events fired during the runtime of a beacon node.
 package operation
 
 import (
@@ -18,6 +16,9 @@ const (
 
 	// ExitReceived is sent after an voluntary exit object has been received from the outside world (eg in RPC or sync)
 	ExitReceived
+
+	// SyncCommitteeContributionReceived is sent after a sync committee contribution object has been received.
+	SyncCommitteeContributionReceived
 )
 
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
@@ -36,4 +37,10 @@ type AggregatedAttReceivedData struct {
 type ExitReceivedData struct {
 	// Exit is the voluntary exit object.
 	Exit *ethpb.SignedVoluntaryExit
+}
+
+// SyncCommitteeContributionReceivedData is the data sent with SyncCommitteeContributionReceived objects.
+type SyncCommitteeContributionReceivedData struct {
+	// Contribution is the sync committee contribution object.
+	Contribution *ethpb.SignedContributionAndProof
 }

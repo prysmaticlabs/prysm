@@ -11,4 +11,11 @@ var (
 	_ = keymanager.IKeymanager(&imported.Keymanager{})
 	_ = keymanager.IKeymanager(&derived.Keymanager{})
 	_ = keymanager.IKeymanager(&remote.Keymanager{})
+
+	// More granular assertions.
+	_ = keymanager.KeysFetcher(&imported.Keymanager{})
+	_ = keymanager.KeysFetcher(&derived.Keymanager{})
+	_ = keymanager.Importer(&imported.Keymanager{})
+	_ = keymanager.Deleter(&imported.Keymanager{})
+	_ = keymanager.Deleter(&derived.Keymanager{})
 )

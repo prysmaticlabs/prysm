@@ -13,6 +13,7 @@ go_library(
         "fuzz_exports.go",  # keep
         "log.go",
         "metrics.go",
+        "options.go",
         "pending_attestations_queue.go",
         "pending_blocks_queue.go",
         "rate_limiter.go",
@@ -167,6 +168,7 @@ go_test(
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
+        "//beacon-chain/core/feed/operation:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/signing:go_default_library",

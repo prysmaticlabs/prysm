@@ -532,14 +532,6 @@ func request_SlashingProtection_ExportSlashingProtection_0(ctx context.Context, 
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
-	newReader, berr := utilities.IOReaderFactory(req.Body)
-	if berr != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
-	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
 	msg, err := client.ExportSlashingProtection(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
@@ -548,14 +540,6 @@ func request_SlashingProtection_ExportSlashingProtection_0(ctx context.Context, 
 func local_request_SlashingProtection_ExportSlashingProtection_0(ctx context.Context, marshaler runtime.Marshaler, server SlashingProtectionServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
-
-	newReader, berr := utilities.IOReaderFactory(req.Body)
-	if berr != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
-	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
 
 	msg, err := server.ExportSlashingProtection(ctx, &protoReq)
 	return msg, metadata, err
@@ -1103,7 +1087,7 @@ func RegisterBeaconHandlerServer(ctx context.Context, mux *runtime.ServeMux, ser
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterSlashingProtectionHandlerFromEndpoint instead.
 func RegisterSlashingProtectionHandlerServer(ctx context.Context, mux *runtime.ServeMux, server SlashingProtectionServer) error {
 
-	mux.Handle("POST", pattern_SlashingProtection_ExportSlashingProtection_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_SlashingProtection_ExportSlashingProtection_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -1768,7 +1752,7 @@ var (
 
 	pattern_Beacon_GetValidatorParticipation_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "beacon", "participation"}, ""))
 
-	pattern_Beacon_GetValidatorPerformance_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "beacon", "performance"}, ""))
+	pattern_Beacon_GetValidatorPerformance_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "beacon", "summary"}, ""))
 
 	pattern_Beacon_GetValidators_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "validator", "beacon", "validators"}, ""))
 
@@ -1833,7 +1817,7 @@ func RegisterSlashingProtectionHandler(ctx context.Context, mux *runtime.ServeMu
 // "SlashingProtectionClient" to call the correct interceptors.
 func RegisterSlashingProtectionHandlerClient(ctx context.Context, mux *runtime.ServeMux, client SlashingProtectionClient) error {
 
-	mux.Handle("POST", pattern_SlashingProtection_ExportSlashingProtection_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_SlashingProtection_ExportSlashingProtection_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)

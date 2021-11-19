@@ -30,7 +30,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	}
 	s.rateLimiter.add(stream, 1)
 
-	if s.cfg.P2P.Metadata() == nil || s.cfg.P2P.Metadata().IsNil() {
+	if s.cfg.p2p.Metadata() == nil || s.cfg.p2p.Metadata().IsNil() {
 		nilErr := errors.New("nil metadata stored for host")
 		resp, err := s.generateErrorResponse(responseCodeServerError, types.ErrGeneric.Error())
 		if err != nil {
@@ -50,7 +50,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		}
 		return err
 	}
-	currMd := s.cfg.P2P.Metadata()
+	currMd := s.cfg.p2p.Metadata()
 	switch streamVersion {
 	case p2p.SchemaVersionV1:
 		// We have a v1 metadata object saved locally, so we
@@ -77,7 +77,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err = s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, currMd)
+	_, err = s.cfg.p2p.Encoding().EncodeWithMaxLength(stream, currMd)
 	if err != nil {
 		return err
 	}
@@ -89,29 +89,29 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, slots.ToEpoch(s.cfg.Chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
-	stream, err := s.cfg.P2P.Send(ctx, new(interface{}), topic, id)
+	stream, err := s.cfg.p2p.Send(ctx, new(interface{}), topic, id)
 	if err != nil {
 		return nil, err
 	}
 	defer closeStream(stream, log)
-	code, errMsg, err := ReadStatusCode(stream, s.cfg.P2P.Encoding())
+	code, errMsg, err := ReadStatusCode(stream, s.cfg.p2p.Encoding())
 	if err != nil {
 		return nil, err
 	}
 	if code != 0 {
-		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
-	valRoot := s.cfg.Chain.GenesisValidatorRoot()
-	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.Chain.CurrentSlot()), valRoot[:])
+	valRoot := s.cfg.chain.GenesisValidatorRoot()
+	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.chain.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err
 	}
-	msg, err := extractMetaDataType(rpcCtx[:], s.cfg.Chain)
+	msg, err := extractMetaDataType(rpcCtx[:], s.cfg.chain)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	if err := validateVersion(topicVersion, stream); err != nil {
 		return nil, err
 	}
-	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
 	return msg, nil

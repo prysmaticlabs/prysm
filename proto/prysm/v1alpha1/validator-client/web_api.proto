@@ -89,7 +89,7 @@ service Beacon {
         ethereum.eth.v1alpha1.ValidatorPerformanceRequest
     ) returns (ethereum.eth.v1alpha1.ValidatorPerformanceResponse) {
         option (google.api.http) = {
-            get: "/v2/validator/beacon/performance"
+            get: "/v2/validator/beacon/summary"
         };
     }
     rpc GetValidators(
@@ -121,8 +121,7 @@ service Beacon {
 service SlashingProtection {
     rpc ExportSlashingProtection(google.protobuf.Empty) returns (ExportSlashingProtectionResponse) {
         option (google.api.http) = {
-            post: "/v2/validator/slashing-protection/export"
-            body: "*"
+            get: "/v2/validator/slashing-protection/export"
         };
     }
     rpc ImportSlashingProtection(ImportSlashingProtectionRequest) returns (google.protobuf.Empty) {

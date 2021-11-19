@@ -625,3 +625,21 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 
 	return result, nil
 }
+
+func V1Alpha1SignedContributionAndProofToV2(alphaContribution *ethpbalpha.SignedContributionAndProof) *ethpbv2.SignedContributionAndProof {
+	result := &ethpbv2.SignedContributionAndProof{
+		Message: &ethpbv2.ContributionAndProof{
+			AggregatorIndex: alphaContribution.Message.AggregatorIndex,
+			Contribution: &ethpbv2.SyncCommitteeContribution{
+				Slot:              alphaContribution.Message.Contribution.Slot,
+				BeaconBlockRoot:   alphaContribution.Message.Contribution.BlockRoot,
+				SubcommitteeIndex: alphaContribution.Message.Contribution.SubcommitteeIndex,
+				AggregationBits:   alphaContribution.Message.Contribution.AggregationBits,
+				Signature:         alphaContribution.Message.Contribution.Signature,
+			},
+			SelectionProof: alphaContribution.Message.SelectionProof,
+		},
+		Signature: alphaContribution.Signature,
+	}
+	return result
+}
