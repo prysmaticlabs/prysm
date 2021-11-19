@@ -69,6 +69,9 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 	encodedIndices := make([][]byte, 0, len(epochByValidator))
 	encodedEpochs := make([][]byte, 0, len(epochByValidator))
 	for valIdx, epoch := range epochByValidator {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		encodedEpoch, err := epoch.MarshalSSZ()
 		if err != nil {
 			return err
@@ -81,7 +84,7 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 	batchSize := 10000
 	for i := 0; i < len(encodedIndices); i += batchSize {
 		if ctx.Err() != nil {
-			return nil
+			return ctx.Err()
 		}
 		if err := s.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(attestedEpochsByValidator)
@@ -90,6 +93,9 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 				min = len(encodedIndices)
 			}
 			for j, encodedIndex := range encodedIndices[i:min] {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
 				if err := bkt.Put(encodedIndex, encodedEpochs[j]); err != nil {
 					return err
 				}
