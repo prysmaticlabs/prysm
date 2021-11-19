@@ -22,6 +22,10 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
+const (
+	shutdownTimeout = time.Minute * 5
+)
+
 // ServiceConfig for the slasher service in the beacon node.
 // This struct allows us to specify required dependencies and
 // parameters for slasher to function as needed.
@@ -135,6 +139,7 @@ func (s *Service) run() {
 
 // Stop the slasher service.
 func (s *Service) Stop() error {
+	s.cancel()
 	if s.attsSlotTicker != nil {
 		s.attsSlotTicker.Done()
 	}
@@ -146,16 +151,17 @@ func (s *Service) Stop() error {
 	}
 	// Flush the latest epoch written map to disk.
 	start := time.Now()
+	// New context as the service context has already been canceled.
+	ctx, _ := context.WithTimeout(context.Background(), shutdownTimeout)
 	log.Info("Flushing last epoch written for each validator to disk, please wait")
 	if err := s.serviceCfg.Database.SaveLastEpochsWrittenForValidators(
-		s.ctx, s.latestEpochWrittenForValidator,
+		ctx, s.latestEpochWrittenForValidator,
 	); err != nil {
 		log.Error(err)
 	}
 	log.WithField("elapsed", time.Since(start)).Debug(
 		"Finished saving last epoch written per validator",
 	)
-	s.cancel()
 	return nil
 }
 

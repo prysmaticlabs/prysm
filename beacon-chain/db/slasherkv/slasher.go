@@ -76,15 +76,30 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 		encodedIndices = append(encodedIndices, encodeValidatorIndex(valIdx))
 		encodedEpochs = append(encodedEpochs, encodedEpoch)
 	}
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestedEpochsByValidator)
-		for i, encodedIndex := range encodedIndices {
-			if err := bkt.Put(encodedIndex, encodedEpochs[i]); err != nil {
-				return err
-			}
+	// The list of validators might be too massive for boltdb to handle in a single transaction,
+	// so instead we split it into batches and write each batch.
+	batchSize := 10000
+	for i := 0; i < len(encodedIndices); i += batchSize {
+		if ctx.Err() != nil {
+			return nil
 		}
-		return nil
-	})
+		if err := s.db.Update(func(tx *bolt.Tx) error {
+			bkt := tx.Bucket(attestedEpochsByValidator)
+			min := i + batchSize
+			if min > len(encodedIndices) {
+				min = len(encodedIndices)
+			}
+			for j, encodedIndex := range encodedIndices[i:min] {
+				if err := bkt.Put(encodedIndex, encodedEpochs[j]); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // CheckAttesterDoubleVotes retries any slashable double votes that exist
