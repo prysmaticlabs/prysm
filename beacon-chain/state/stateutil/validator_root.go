@@ -54,6 +54,123 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 	}
 	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
+func merkleizeFlatArrayAVX(vec [][32]byte,
+	depth uint8,
+	hasher func([][32]byte, [][32]byte, uint64),
+	zero_hash_array [][32]byte) [32]byte {
+
+	if depth == 0 && len(vec) == 1 {
+		return vec[0]
+	}
+	if len(vec) == 0 {
+		panic("Can't have empty vec")
+	}
+
+	// allocate size for the buffer (everything hardcoded cause
+	layer := (len(vec) + 1) / 2
+	length := 0
+	for {
+		length += layer - 1
+		if layer == 1 {
+			break
+		}
+		layer = (layer + 1) / 2
+	}
+	length += int(depth)
+	hash_tree := make([][32]byte, length)
+
+	first := uint64(0)
+	height := uint8(1)
+	last := uint64(len(vec)+1) / 2
+	if len(vec) > 1 {
+		hasher(hash_tree, vec, last)
+	}
+	if len(vec)%2 == 1 {
+		hash_tree[last-1] = hash.Hash2ChunksAVX(vec[len(vec)-1], zero_hash_array[0])
+	}
+	for {
+		dist := last - first
+		if dist < 2 {
+			break
+		}
+		hasher(hash_tree[last:], hash_tree[first:], dist/2)
+		first = last
+		last += (dist + 1) / 2
+
+		if dist%2 != 0 {
+			hash_tree[last-1] = hash.Hash2ChunksAVX(hash_tree[first-1], zero_hash_array[height])
+		}
+		height++
+	}
+	for {
+		if height >= depth {
+			break
+		}
+		hash_tree[last] = hash.Hash2ChunksAVX(hash_tree[last-1], zero_hash_array[height])
+		last++
+		height++
+	}
+	return hash_tree[last-1]
+}
+
+func merkleizeFlatArrayAVX2(vec [][32]byte,
+	depth uint8,
+	hasher func([][32]byte, [][32]byte, uint64),
+	zero_hash_array [][32]byte) [32]byte {
+
+	if depth == 0 && len(vec) == 1 {
+		return vec[0]
+	}
+	if len(vec) == 0 {
+		panic("Can't have empty vec")
+	}
+
+	// allocate size for the buffer (everything hardcoded cause
+	layer := (len(vec) + 1) / 2
+	length := 0
+	for {
+		length += layer - 1
+		if layer == 1 {
+			break
+		}
+		layer = (layer + 1) / 2
+	}
+	length += int(depth)
+	hash_tree := make([][32]byte, length)
+
+	first := uint64(0)
+	height := uint8(1)
+	last := uint64(len(vec)+1) / 2
+	if len(vec) > 1 {
+		hasher(hash_tree, vec, last)
+	}
+	if len(vec)%2 == 1 {
+		hash_tree[last-1] = hash.Hash2ChunksAVX2(vec[len(vec)-1], zero_hash_array[0])
+	}
+	for {
+		dist := last - first
+		if dist < 2 {
+			break
+		}
+		hasher(hash_tree[last:], hash_tree[first:], dist/2)
+		first = last
+		last += (dist + 1) / 2
+
+		if dist%2 != 0 {
+			hash_tree[last-1] = hash.Hash2ChunksAVX2(hash_tree[first-1], zero_hash_array[height])
+		}
+		height++
+	}
+	for {
+		if height >= depth {
+			break
+		}
+		hash_tree[last] = hash.Hash2ChunksAVX2(hash_tree[last-1], zero_hash_array[height])
+		last++
+		height++
+	}
+	return hash_tree[last-1]
+}
 
 func merkleizeFlatArray(vec [][32]byte,
 	depth uint8,
@@ -130,6 +247,42 @@ func Uint64ListRootWithRegistryLimitShani(balances []uint64, zero_hash_array [][
 	balancesRootsRoot := merkleizeFlatArray(balancesChunks, 38, hash.PotuzHasherShaniChunks, zero_hash_array)
 
 	return hash.MixinLengthShani(balancesRootsRoot, uint64(len(balances))), nil
+}
+
+// Uint64ListRootWithRegistryLimitAVX computes the HashTreeRoot Merkleization of
+// a list of uint64 and mixed with registry limit. Flat array implementation
+// using Shani extensions
+func Uint64ListRootWithRegistryLimitAVX(balances []uint64, zero_hash_array [][32]byte) ([32]byte, error) {
+	// assume len(balances) is multiple of 4 for this benchmark
+	lenChunks := len(balances) / 4
+	balancesChunks := make([][32]byte, lenChunks)
+	for i := 0; i < lenChunks; i++ {
+		binary.LittleEndian.PutUint64(balancesChunks[i][:], balances[4*i])
+		binary.LittleEndian.PutUint64(balancesChunks[i][8:], balances[4*i+1])
+		binary.LittleEndian.PutUint64(balancesChunks[i][16:], balances[4*i+2])
+		binary.LittleEndian.PutUint64(balancesChunks[i][24:], balances[4*i+3])
+	}
+	balancesRootsRoot := merkleizeFlatArrayAVX(balancesChunks, 38, hash.PotuzHasherAVXChunks, zero_hash_array)
+
+	return hash.MixinLengthAVX(balancesRootsRoot, uint64(len(balances))), nil
+}
+
+// Uint64ListRootWithRegistryLimitAVX2 computes the HashTreeRoot Merkleization of
+// a list of uint64 and mixed with registry limit. Flat array implementation
+// using Shani extensions
+func Uint64ListRootWithRegistryLimitAVX2(balances []uint64, zero_hash_array [][32]byte) ([32]byte, error) {
+	// assume len(balances) is multiple of 4 for this benchmark
+	lenChunks := len(balances) / 4
+	balancesChunks := make([][32]byte, lenChunks)
+	for i := 0; i < lenChunks; i++ {
+		binary.LittleEndian.PutUint64(balancesChunks[i][:], balances[4*i])
+		binary.LittleEndian.PutUint64(balancesChunks[i][8:], balances[4*i+1])
+		binary.LittleEndian.PutUint64(balancesChunks[i][16:], balances[4*i+2])
+		binary.LittleEndian.PutUint64(balancesChunks[i][24:], balances[4*i+3])
+	}
+	balancesRootsRoot := merkleizeFlatArrayAVX2(balancesChunks, 38, hash.PotuzHasherAVX2Chunks, zero_hash_array)
+
+	return hash.MixinLengthAVX2(balancesRootsRoot, uint64(len(balances))), nil
 }
 
 // Uint64ListRootWithRegistryLimit computes the HashTreeRoot Merkleization of

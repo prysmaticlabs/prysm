@@ -110,7 +110,7 @@ func BenchmarkHashProto(b *testing.B) {
 // -------------------------------------------------------------
 // Remove tests that give illegal instructions in your CPU if you want to run
 // the benchmarks
-
+/*
 func TestCustomHash_Shani(t *testing.T) {
 	hash0 := make([]byte, 64)
 	root := make([]byte, 32)
@@ -120,7 +120,7 @@ func TestCustomHash_Shani(t *testing.T) {
 	hash.PotuzHasherShani(root, hash0, 1)
 	assert.DeepEqual(t, hashOf1[:], root)
 }
-
+*/
 func TestCustomHash_Avx2(t *testing.T) {
 	hash0 := make([]byte, 64)
 	root := make([]byte, 32)
@@ -141,6 +141,40 @@ func TestCustomHash_SSE(t *testing.T) {
 	assert.DeepEqual(t, hashOf1[:], root)
 }
 
+/*
+func BenchmarkHashBalanceAVX2(b *testing.B) {
+	zero_hash_array := make([][32]byte, 40)
+	for i := 1; i < 40; i++ {
+		zero_hash_array[i] = hash.Hash2ChunksAVX2(zero_hash_array[i-1], zero_hash_array[i-1])
+	}
+	balances := make([]uint64, 400000)
+	for i := 0; i < len(balances); i++ {
+		balances[i] = rand.Uint64()
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := stateutil.Uint64ListRootWithRegistryLimitAVX2(balances, zero_hash_array)
+		require.NoError(b, err)
+	}
+}
+*/
+func BenchmarkHashBalanceAVX(b *testing.B) {
+	zero_hash_array := make([][32]byte, 40)
+	for i := 1; i < 40; i++ {
+		zero_hash_array[i] = hash.Hash2ChunksAVX(zero_hash_array[i-1], zero_hash_array[i-1])
+	}
+	balances := make([]uint64, 400000)
+	for i := 0; i < len(balances); i++ {
+		balances[i] = rand.Uint64()
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := stateutil.Uint64ListRootWithRegistryLimitAVX(balances, zero_hash_array)
+		require.NoError(b, err)
+	}
+}
+
+/*
 func BenchmarkHashBalanceShani(b *testing.B) {
 	zero_hash_array := make([][32]byte, 40)
 	for i := 1; i < 40; i++ {
@@ -156,11 +190,11 @@ func BenchmarkHashBalanceShani(b *testing.B) {
 		require.NoError(b, err)
 	}
 }
-
-func BenchmarkHashBalanceShaniPrysm(b *testing.B) {
+*/
+func BenchmarkHashBalancePrysm(b *testing.B) {
 	zero_hash_array := make([][32]byte, 40)
 	for i := 1; i < 40; i++ {
-		zero_hash_array[i] = hash.Hash2ChunksShani(zero_hash_array[i-1], zero_hash_array[i-1])
+		zero_hash_array[i] = hash.Hash2ChunksAVX(zero_hash_array[i-1], zero_hash_array[i-1])
 	}
 	balances := make([]uint64, 400000)
 	for i := 0; i < len(balances); i++ {
@@ -173,6 +207,7 @@ func BenchmarkHashBalanceShaniPrysm(b *testing.B) {
 	}
 }
 
+/*
 func TestHashBalancesShani(t *testing.T) {
 	zero_hash_array := make([][32]byte, 45)
 	for i := 1; i < 45; i++ {
@@ -189,3 +224,4 @@ func TestHashBalancesShani(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, root1, root2)
 }
+*/
