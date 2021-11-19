@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "array_root.go",
         "block_header_root.go",
         "eth1_root.go",
         "field_root_attestation.go",
@@ -58,7 +57,6 @@ go_test(
         "state_root_test.go",
         "stateutil_test.go",
         "trie_helpers_test.go",
-        "validator_root_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
