@@ -19,7 +19,7 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 	if features.Get().EnableSSZCache {
 		return CachedHasher.validatorRegistryRoot(vals)
 	}
-	return CachedHasher.validatorRegistryRoot(vals)
+	return NocachedHasher.validatorRegistryRoot(vals)
 }
 
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
