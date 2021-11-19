@@ -136,6 +136,10 @@ func FastSum256(data []byte) [32]byte {
 	return highwayhash.Sum(data, fastSumHashKey[:])
 }
 
+func PotuzHasherShaniChunks(dst [][32]byte, inp [][32]byte, count uint64) {
+	C.sha256_shani((*C.uchar)(&dst[0][0]), (*C.uchar)(&inp[0][0]), C.ulong(count))
+}
+
 func PotuzHasherShani(dst []byte, inp []byte, count uint64) {
 	C.sha256_shani((*C.uchar)(&dst[0]), (*C.uchar)(&inp[0]), C.ulong(count))
 }
@@ -146,4 +150,15 @@ func PotuzHasherAVX2(dst []byte, inp []byte, count uint64) {
 
 func PotuzHasher2Chunks(dst []byte, inp []byte) {
 	C.sha256_1_avx((*C.uchar)(&dst[0]), (*C.uchar)(&inp[0]))
+}
+
+// no check of the chunks length!
+func Hash2ChunksShani(first [32]byte, second [32]byte) [32]byte {
+	buf := [32]byte{}
+	chunks := make([]byte, 64)
+	copy(chunks, first[:])
+	copy(chunks[32:], second[:])
+
+	C.sha256_shani((*C.uchar)(&buf[0]), (*C.uchar)(&chunks[0]), C.ulong(1))
+	return buf
 }

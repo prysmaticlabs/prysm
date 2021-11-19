@@ -55,6 +55,82 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
+func merkleizeFlatArray(vec [][32]byte,
+	depth uint8,
+	hasher func([][32]byte, [][32]byte, uint64),
+	zero_hash_array [][32]byte) [32]byte {
+
+	if depth == 0 && len(vec) == 1 {
+		return vec[0]
+	}
+	if len(vec) == 0 {
+		panic("Can't have empty vec")
+	}
+
+	first := uint64(0)
+	height := uint8(1)
+	last := uint64(len(vec)) / 2
+	if len(vec) > 1 {
+		hasher(hash_tree, vec, last)
+	}
+	if len(vec)%2 == 1 {
+		hash_tree[last] = hash.Hash2ChunksShani(vec[len(vec)-1], zero_hash_array[0])
+		last++
+	}
+	for {
+		dist := last - first
+		if dist < 2 {
+			break
+		}
+		hasher(hash_tree[last:], hash_tree[first:], dist/2)
+		first = last
+		last += dist / 2
+
+		if dist%2 != 0 {
+			hash_tree[last] = hash.Hash2ChunksShani(hash_tree[first-1], zero_hash_array[height])
+			last++
+		}
+		height++
+	}
+	for {
+		if height < depth {
+			break
+		}
+		hash_tree[last] = hash.Hash2ChunksShani(hash_tree[last-1], zero_hash_array[height])
+		last++
+		height++
+	}
+	return hash_tree[last-1]
+}
+
+// Uint64ListRootWithRegistryLimitShani computes the HashTreeRoot Merkleization of
+// a list of uint64 and mixed with registry limit. Flat array implementation
+// using Shani extensions
+func Uint64ListRootWithRegistryLimitShani(balances []uint64) ([32]byte, error) {
+	balancesChunks := make([][32]byte, len(balances))
+	for i := 0; i < len(balances); i++ {
+		binary.LittleEndian.PutUint64(balancesChunks[i][:], balances[i])
+	}
+	maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
+	elemSize := uint64(8)
+	balLimit := (maxBalCap*elemSize + 31) / 32
+	if balLimit == 0 {
+		if len(balances) == 0 {
+			balLimit = 1
+		} else {
+			balLimit = uint64(len(balances))
+		}
+	}
+	balancesRootsRoot, err := ssz.BitwiseMerkleize(hasher, balancesChunks, uint64(len(balancesChunks)), balLimit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
+	}
+
+	balancesLengthRoot := make([]byte, 32)
+	binary.LittleEndian.PutUint64(balancesLengthRoot, uint64(len(balances)))
+	return ssz.MixInLength(balancesRootsRoot, balancesLengthRoot), nil
+}
+
 // Uint64ListRootWithRegistryLimit computes the HashTreeRoot Merkleization of
 // a list of uint64 and mixed with registry limit.
 func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
