@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -39,6 +40,7 @@ func (s *Server) ListKeystores(
 	}, nil
 }
 
+// ImportKeystoresStandard allows for importing keystores into Prysm with their slashing protection history.
 func (s *Server) ImportKeystoresStandard(
 	ctx context.Context, req *ethpbservice.ImportKeystoresRequest,
 ) (*ethpbservice.ImportKeystoresResponse, error) {
@@ -47,24 +49,30 @@ func (s *Server) ImportKeystoresStandard(
 	}
 	importer, ok := s.keymanager.(keymanager.Importer)
 	if !ok {
-		return nil, status.Error(codes.Internal, "Keymanager kind cannot import keystores")
-
+		return nil, status.Error(codes.Internal, "Keymanager kind cannot import keys")
 	}
 	keystores := make([]*keymanager.Keystore, len(req.Keystores))
 	for i := 0; i < len(req.Keystores); i++ {
 		k := &keymanager.Keystore{}
 		if err := json.Unmarshal([]byte(req.Keystores[i]), k); err != nil {
-			return nil, err
+			return nil, status.Errorf(
+				codes.Internal, "Invalid keystore at index %d in request: %v", i, err,
+			)
 		}
 		keystores[i] = k
 	}
+	if req.SlashingProtection != "" {
+		if err := slashingprotection.ImportStandardProtectionJSON(
+			ctx, s.valDB, bytes.NewBuffer([]byte(req.SlashingProtection)),
+		); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not import slashing protection JSON: %v", err)
+		}
+	}
 	statuses, err := importer.ImportKeystores(ctx, keystores, req.Passwords)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not import keystores: %v", err)
 	}
-	return &ethpbservice.ImportKeystoresResponse{
-		Statuses: statuses,
-	}, nil
+	return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
 }
 
 // DeleteKeystores allows for deleting specified public keys from Prysm.

@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/io/prompt"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -20,26 +21,59 @@ import (
 func (km *Keymanager) ImportKeystores(
 	ctx context.Context,
 	keystores []*keymanager.Keystore,
-	importsPassword string,
-) error {
+	passwords []string,
+) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+
+	var singlePasswordForAll string
+	if len(passwords) == 0 {
+		return nil, errors.New("no passwords provided for keystores")
+	} else if len(passwords) == 1 {
+		singlePasswordForAll = passwords[0]
+	} else {
+		if len(passwords) != len(keystores) {
+			return nil, errors.New("number of passwords does not match number of keystores")
+		}
+	}
+
 	decryptor := keystorev4.New()
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
 	keys := map[string]string{}
+	statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(keystores))
 	var err error
+
 	for i := 0; i < len(keystores); i++ {
 		var privKeyBytes []byte
 		var pubKeyBytes []byte
-		privKeyBytes, pubKeyBytes, importsPassword, err = km.attemptDecryptKeystore(decryptor, keystores[i], importsPassword)
+		var passwordToUse string
+		if singlePasswordForAll != "" {
+			passwordToUse = singlePasswordForAll
+		} else {
+			passwordToUse = passwords[i]
+		}
+		privKeyBytes, pubKeyBytes, _, err = km.attemptDecryptKeystore(decryptor, keystores[i], passwordToUse)
 		if err != nil {
-			return err
+			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
+				Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
+				Message: err.Error(),
+			}
 		}
 		// if key exists prior to being added then output log that duplicate key was found
+		if err := bar.Add(1); err != nil {
+			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
+				Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
+				Message: err.Error(),
+			}
+		}
 		if _, ok := keys[string(pubKeyBytes)]; ok {
-			log.Warnf("Duplicate key in import folder will be ignored: %#x", pubKeyBytes)
+			log.Warnf("Duplicate key in import will be ignored: %#x", pubKeyBytes)
+			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
+				Status: ethpbservice.ImportedKeystoreStatus_DUPLICATE,
+			}
+			continue
 		}
 		keys[string(pubKeyBytes)] = string(privKeyBytes)
-		if err := bar.Add(1); err != nil {
-			return errors.Wrap(err, "could not add to progress bar")
+		statuses[i] = &ethpbservice.ImportedKeystoreStatus{
+			Status: ethpbservice.ImportedKeystoreStatus_IMPORTED,
 		}
 	}
 	privKeys := make([][]byte, 0)
@@ -52,13 +86,16 @@ func (km *Keymanager) ImportKeystores(
 	// Write the accounts to disk into a single keystore.
 	accountsKeystore, err := km.CreateAccountsKeystore(ctx, privKeys, pubKeys)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts)
+	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts); err != nil {
+		return nil, err
+	}
+	return statuses, nil
 }
 
 // ImportKeypairs directly into the keymanager.

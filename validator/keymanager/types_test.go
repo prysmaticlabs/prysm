@@ -16,6 +16,7 @@ var (
 	_ = keymanager.KeysFetcher(&imported.Keymanager{})
 	_ = keymanager.KeysFetcher(&derived.Keymanager{})
 	_ = keymanager.Importer(&imported.Keymanager{})
+	_ = keymanager.Importer(&derived.Keymanager{})
 	_ = keymanager.Deleter(&imported.Keymanager{})
 	_ = keymanager.Deleter(&derived.Keymanager{})
 )
