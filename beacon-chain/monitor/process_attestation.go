@@ -92,6 +92,7 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 			latestPerf.balance = balance
 			latestPerf.attestedSlot = att.Data.Slot
 			latestPerf.inclusionSlot = state.Slot()
+			inclusionSlotGauge.WithLabelValues(fmt.Sprintf("%d", idx)).Set(float64(latestPerf.inclusionSlot))
 			aggregatedPerf.totalDistance += uint64(latestPerf.inclusionSlot - latestPerf.attestedSlot)
 
 			if state.Version() == version.Altair {
@@ -135,12 +136,15 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 				latestPerf.timelyTarget = hasFlag
 
 				if latestPerf.timelySource {
+					timelySourceCounter.WithLabelValues(fmt.Sprintf("%d", idx)).Inc()
 					aggregatedPerf.totalCorrectSource++
 				}
 				if latestPerf.timelyHead {
+					timelyHeadCounter.WithLabelValues(fmt.Sprintf("%d", idx)).Inc()
 					aggregatedPerf.totalCorrectHead++
 				}
 				if latestPerf.timelyTarget {
+					timelyTargetCounter.WithLabelValues(fmt.Sprintf("%d", idx)).Inc()
 					aggregatedPerf.totalCorrectTarget++
 				}
 			}
@@ -190,6 +194,7 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 		aggregatedPerf := s.aggregatedPerformance[att.AggregatorIndex]
 		aggregatedPerf.totalAggregations++
 		s.aggregatedPerformance[att.AggregatorIndex] = aggregatedPerf
+		aggregationCounter.WithLabelValues(fmt.Sprintf("%d", att.AggregatorIndex)).Inc()
 	}
 
 	var root [32]byte
