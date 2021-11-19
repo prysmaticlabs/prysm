@@ -199,6 +199,7 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 		// attempt to prune at all.
 		return nil
 	}
+	start := time.Now()
 	log.WithFields(logrus.Fields{
 		"currentEpoch":          currentEpoch,
 		"pruningAllBeforeEpoch": maxPruningEpoch,
@@ -218,6 +219,7 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 	log.WithFields(logrus.Fields{
 		"prunedAttestationRecords": numPrunedAtts,
 		"prunedProposalRecords":    numPrunedProposals,
+		"elapsed":                  time.Since(start),
 	}).Info("Successfully ran slasher data pruning")
 	return nil
 }
