@@ -4,6 +4,7 @@ package hash
 // #include "custom_hasher/hasher.h"
 import "C"
 import (
+	"encoding/binary"
 	"errors"
 	"hash"
 	"reflect"
@@ -136,6 +137,10 @@ func FastSum256(data []byte) [32]byte {
 	return highwayhash.Sum(data, fastSumHashKey[:])
 }
 
+// ------------------------------------
+// No abstraction in these functions, just for playing until we get a feeling if
+// it's worth pursuing.
+
 func PotuzHasherShaniChunks(dst [][32]byte, inp [][32]byte, count uint64) {
 	C.sha256_shani((*C.uchar)(&dst[0][0]), (*C.uchar)(&inp[0][0]), C.ulong(count))
 }
@@ -161,4 +166,10 @@ func Hash2ChunksShani(first [32]byte, second [32]byte) [32]byte {
 
 	C.sha256_shani((*C.uchar)(&buf[0]), (*C.uchar)(&chunks[0]), C.ulong(1))
 	return buf
+}
+
+func MixinLengthShani(root [32]byte, length uint64) [32]byte {
+	val := [32]byte{}
+	binary.LittleEndian.PutUint64(val[:], length)
+	return Hash2ChunksShani(root, val)
 }
