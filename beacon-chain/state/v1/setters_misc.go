@@ -83,7 +83,7 @@ func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 	if !ok {
 		return errors.New("proto.Clone did not return a fork proto")
 	}
-	b.state.Fork = fk
+	b.fork = fk
 	b.markFieldAsDirty(fork)
 	return nil
 }

@@ -5,24 +5,24 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// currentSyncCommittee of the current sync committee in beacon chain state.
+// currentSyncCommitteeInternal of the current sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentSyncCommittee() *ethpb.SyncCommittee {
+func (b *BeaconState) currentSyncCommitteeInternal() *ethpb.SyncCommittee {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return CopySyncCommittee(b.state.CurrentSyncCommittee)
+	return CopySyncCommittee(b.currentSyncCommittee)
 }
 
-// nextSyncCommittee of the next sync committee in beacon chain state.
+// nextSyncCommitteeInternal of the next sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) nextSyncCommittee() *ethpb.SyncCommittee {
+func (b *BeaconState) nextSyncCommitteeInternal() *ethpb.SyncCommittee {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return CopySyncCommittee(b.state.NextSyncCommittee)
+	return CopySyncCommittee(b.nextSyncCommittee)
 }
 
 // CurrentSyncCommittee of the current sync committee in beacon chain state.
@@ -34,11 +34,11 @@ func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.state.CurrentSyncCommittee == nil {
+	if b.currentSyncCommittee == nil {
 		return nil, nil
 	}
 
-	return b.currentSyncCommittee(), nil
+	return b.currentSyncCommitteeInternal(), nil
 }
 
 // NextSyncCommittee of the next sync committee in beacon chain state.
@@ -50,11 +50,11 @@ func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.state.NextSyncCommittee == nil {
+	if b.nextSyncCommittee == nil {
 		return nil, nil
 	}
 
-	return b.nextSyncCommittee(), nil
+	return b.nextSyncCommitteeInternal(), nil
 }
 
 // CopySyncCommittee copies the provided sync committee object.

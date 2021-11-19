@@ -131,35 +131,6 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		return nil, err
 	}
 
-	st := &ethpb.BeaconStateAltair{
-		Fork: &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			Epoch:           0,
-		},
-
-		// Validator registry fields.
-		Validators: preState.Validators(),
-
-		// Finality.
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  params.BeaconConfig().ZeroHash[:],
-		},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  params.BeaconConfig().ZeroHash[:],
-		},
-		FinalizedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  params.BeaconConfig().ZeroHash[:],
-		},
-
-		// Eth1 data.
-		Eth1Data:      eth1Data,
-		Eth1DataVotes: []*ethpb.Eth1Data{},
-	}
-
 	bodyRoot, err := (&ethpb.BeaconBlockBodyAltair{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
@@ -176,26 +147,12 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
 	}
 
-	st.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		ParentRoot: zeroHash,
-		StateRoot:  zeroHash,
-		BodyRoot:   bodyRoot[:],
-	}
-
 	var pubKeys [][]byte
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
-	st.CurrentSyncCommittee = &ethpb.SyncCommittee{
-		Pubkeys:         pubKeys,
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
-	}
-	st.NextSyncCommittee = &ethpb.SyncCommittee{
-		Pubkeys:         bytesutil.SafeCopy2dBytes(pubKeys),
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
-	}
 
-	s, err := stateAltair.InitializeFromProto(st)
+	s, err := stateAltair.Initialize(preState.Validators())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize state from proto state")
 	}
@@ -209,6 +166,20 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	if err = s.SetSlot(0); err != nil {
 		return nil, errors.Wrap(err, "could not set slot")
 	}
+	if err = s.SetFork(&ethpb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		Epoch:           0,
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set fork")
+	}
+	if err = s.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		ParentRoot: zeroHash,
+		StateRoot:  zeroHash,
+		BodyRoot:   bodyRoot[:],
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set latest block header")
+	}
 	if err = s.SetBlockRoots(&blockRoots); err != nil {
 		return nil, errors.Wrap(err, "could not set block roots")
 	}
@@ -217,6 +188,21 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	}
 	if err = s.SetHistoricalRoots([][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set historical roots")
+	}
+	if err = s.SetEth1Data(eth1Data); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 data")
+	}
+	if err = s.SetEth1DataVotes([]*ethpb.Eth1Data{}); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 data votes")
+	}
+	if err = s.SetEth1Data(eth1Data); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 data")
+	}
+	if err = s.SetEth1DepositIndex(preState.Eth1DepositIndex()); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 deposit index")
+	}
+	if err = s.SetValidators(preState.Validators()); err != nil {
+		return nil, errors.Wrap(err, "could not set validators")
 	}
 	if err = s.SetBalances(preState.Balances()); err != nil {
 		return nil, errors.Wrap(err, "could not set balances")
@@ -239,31 +225,42 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	if err = s.SetJustificationBits([]byte{0}); err != nil {
 		return nil, errors.Wrap(err, "could not set justification bits")
 	}
-	if err = s.SetEth1DepositIndex(preState.Eth1DepositIndex()); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 deposit index")
+	if err = s.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{
+		Epoch: 0,
+		Root:  params.BeaconConfig().ZeroHash[:],
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set previous justified checkpoint")
+	}
+	if err = s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+		Epoch: 0,
+		Root:  params.BeaconConfig().ZeroHash[:],
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set current justified checkpoint")
+	}
+	if err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Epoch: 0,
+		Root:  params.BeaconConfig().ZeroHash[:],
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set finalized checkpoint")
+	}
+	if err = s.SetCurrentSyncCommittee(&ethpb.SyncCommittee{
+		Pubkeys:         pubKeys,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set current sync committee")
+	}
+	if err = s.SetNextSyncCommittee(&ethpb.SyncCommittee{
+		Pubkeys:         bytesutil.SafeCopy2dBytes(pubKeys),
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set next sync committee")
 	}
 
 	return s, nil
 }
 
 func emptyGenesisState() (state.BeaconStateAltair, error) {
-	st := &ethpb.BeaconStateAltair{
-		// Misc fields.
-		Fork: &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
-			Epoch:           0,
-		},
-
-		// Validator registry fields.
-		Validators: []*ethpb.Validator{},
-
-		// Eth1 data.
-		Eth1Data:      &ethpb.Eth1Data{},
-		Eth1DataVotes: []*ethpb.Eth1Data{},
-	}
-
-	s, err := stateAltair.InitializeFromProto(st)
+	s, err := stateAltair.Initialize([]*ethpb.Validator{})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize state from proto state")
 	}
@@ -271,8 +268,27 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 	if err = s.SetSlot(0); err != nil {
 		return nil, errors.Wrap(err, "could not set slot")
 	}
+	if err = s.SetFork(&ethpb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+		Epoch:           0,
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not set fork")
+	}
 	if err = s.SetHistoricalRoots([][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set historical roots")
+	}
+	if err = s.SetEth1Data(&ethpb.Eth1Data{}); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 data")
+	}
+	if err = s.SetEth1DataVotes([]*ethpb.Eth1Data{}); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 data votes")
+	}
+	if err = s.SetEth1DepositIndex(0); err != nil {
+		return nil, errors.Wrap(err, "could not set eth1 deposit index")
+	}
+	if err = s.SetValidators([]*ethpb.Validator{}); err != nil {
+		return nil, errors.Wrap(err, "could not set validators")
 	}
 	if err = s.SetBalances([]uint64{}); err != nil {
 		return nil, errors.Wrap(err, "could not set balances")
@@ -288,9 +304,6 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 	}
 	if err = s.SetJustificationBits([]byte{0}); err != nil {
 		return nil, errors.Wrap(err, "could not set justification bits")
-	}
-	if err = s.SetEth1DepositIndex(0); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 deposit index")
 	}
 
 	return s, nil

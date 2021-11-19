@@ -36,7 +36,7 @@ func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
 		copy(msg, "invalid")
 		return string(msg)
 	}
-	_, fEpoch, err := forks.RetrieveForkDataFromDigest(digest, genesisValidatorsRoot[:])
+	_, fEpoch, err := forks.RetrieveForkDataFromDigest(digest, genesisValidatorsRoot)
 	if err != nil {
 		// Impossible condition that should
 		// never be hit.

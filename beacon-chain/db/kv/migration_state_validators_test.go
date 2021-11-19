@@ -91,7 +91,7 @@ func Test_migrateStateValidators(t *testing.T) {
 					assert.NoError(t, hashErr)
 					individualHashes = append(individualHashes, hash[:])
 				}
-				pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+				pbState, err := v1.ProtobufBeaconState(st.ToProtoUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {
@@ -137,7 +137,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				blockRoot := [32]byte{'A'}
 				rcvdState, err := dbStore.State(context.Background(), blockRoot)
 				assert.NoError(t, err)
-				require.DeepSSZEqual(t, rcvdState.InnerStateUnsafe(), state.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
+				require.DeepSSZEqual(t, rcvdState.ToProtoUnsafe(), state.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
 
 				// find hashes of the validators that are set as part of the state
 				var hashes []byte
@@ -150,7 +150,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				}
 
 				// check if all the validators that were in the state, are stored properly in the validator bucket
-				pbState, err := v1.ProtobufBeaconState(rcvdState.InnerStateUnsafe())
+				pbState, err := v1.ProtobufBeaconState(rcvdState.ToProtoUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {
@@ -240,7 +240,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				blockRoot := [32]byte{'A'}
 				rcvdState, err := dbStore.State(context.Background(), blockRoot)
 				assert.NoError(t, err)
-				require.DeepSSZEqual(t, rcvdState.InnerStateUnsafe(), state.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
+				require.DeepSSZEqual(t, rcvdState.ToProtoUnsafe(), state.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
 
 				// find hashes of the validators that are set as part of the state
 				var hashes []byte
@@ -253,7 +253,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				}
 
 				// check if all the validators that were in the state, are stored properly in the validator bucket
-				pbState, err := v2.ProtobufBeaconState(rcvdState.InnerStateUnsafe())
+				pbState, err := v2.ProtobufBeaconState(rcvdState.ToProtoUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {

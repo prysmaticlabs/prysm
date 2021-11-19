@@ -43,24 +43,24 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.PreviousJustifiedCheckpoint == nil {
+	if b.previousJustifiedCheckpoint == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.previousJustifiedCheckpoint()
+	return b.previousJustifiedCheckpointInternal()
 }
 
-// previousJustifiedCheckpoint denoting an epoch and block root.
+// previousJustifiedCheckpointInternal denoting an epoch and block root.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousJustifiedCheckpoint() *ethpb.Checkpoint {
+func (b *BeaconState) previousJustifiedCheckpointInternal() *ethpb.Checkpoint {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return ethpb.CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
+	return ethpb.CopyCheckpoint(b.previousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
@@ -68,24 +68,24 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.CurrentJustifiedCheckpoint == nil {
+	if b.currentJustifiedCheckpoint == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.currentJustifiedCheckpoint()
+	return b.currentJustifiedCheckpointInternal()
 }
 
-// currentJustifiedCheckpoint denoting an epoch and block root.
+// currentJustifiedCheckpointInternal denoting an epoch and block root.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
+func (b *BeaconState) currentJustifiedCheckpointInternal() *ethpb.Checkpoint {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return ethpb.CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
+	return ethpb.CopyCheckpoint(b.currentJustifiedCheckpoint)
 }
 
 // MatchCurrentJustifiedCheckpoint returns true if input justified checkpoint matches
@@ -94,14 +94,14 @@ func (b *BeaconState) MatchCurrentJustifiedCheckpoint(c *ethpb.Checkpoint) bool 
 	if !b.hasInnerState() {
 		return false
 	}
-	if b.state.CurrentJustifiedCheckpoint == nil {
+	if b.currentJustifiedCheckpoint == nil {
 		return false
 	}
 
-	if c.Epoch != b.state.CurrentJustifiedCheckpoint.Epoch {
+	if c.Epoch != b.currentJustifiedCheckpoint.Epoch {
 		return false
 	}
-	return bytes.Equal(c.Root, b.state.CurrentJustifiedCheckpoint.Root)
+	return bytes.Equal(c.Root, b.currentJustifiedCheckpoint.Root)
 }
 
 // MatchPreviousJustifiedCheckpoint returns true if the input justified checkpoint matches
@@ -110,14 +110,14 @@ func (b *BeaconState) MatchPreviousJustifiedCheckpoint(c *ethpb.Checkpoint) bool
 	if !b.hasInnerState() {
 		return false
 	}
-	if b.state.PreviousJustifiedCheckpoint == nil {
+	if b.previousJustifiedCheckpoint == nil {
 		return false
 	}
 
-	if c.Epoch != b.state.PreviousJustifiedCheckpoint.Epoch {
+	if c.Epoch != b.previousJustifiedCheckpoint.Epoch {
 		return false
 	}
-	return bytes.Equal(c.Root, b.state.PreviousJustifiedCheckpoint.Root)
+	return bytes.Equal(c.Root, b.previousJustifiedCheckpoint.Root)
 }
 
 // FinalizedCheckpoint denoting an epoch and block root.
@@ -125,24 +125,24 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.FinalizedCheckpoint == nil {
+	if b.finalizedCheckpoint == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.finalizedCheckpoint()
+	return b.finalizedCheckpointInternal()
 }
 
-// finalizedCheckpoint denoting an epoch and block root.
+// finalizedCheckpointInternal denoting an epoch and block root.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
+func (b *BeaconState) finalizedCheckpointInternal() *ethpb.Checkpoint {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return ethpb.CopyCheckpoint(b.state.FinalizedCheckpoint)
+	return ethpb.CopyCheckpoint(b.finalizedCheckpoint)
 }
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
@@ -150,11 +150,11 @@ func (b *BeaconState) FinalizedCheckpointEpoch() types.Epoch {
 	if !b.hasInnerState() {
 		return 0
 	}
-	if b.state.FinalizedCheckpoint == nil {
+	if b.finalizedCheckpoint == nil {
 		return 0
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.state.FinalizedCheckpoint.Epoch
+	return b.finalizedCheckpoint.Epoch
 }

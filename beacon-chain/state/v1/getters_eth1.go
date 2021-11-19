@@ -13,27 +13,27 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Eth1Data == nil {
+	if b.eth1Data == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.eth1Data()
+	return b.eth1DataInternal()
 }
 
-// eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
+// eth1DataInternal corresponding to the proof-of-work chain information stored in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) eth1Data() *ethpb.Eth1Data {
+func (b *BeaconState) eth1DataInternal() *ethpb.Eth1Data {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Eth1Data == nil {
+	if b.eth1Data == nil {
 		return nil
 	}
 
-	return ethpb.CopyETH1Data(b.state.Eth1Data)
+	return ethpb.CopyETH1Data(b.eth1Data)
 }
 
 // Eth1DataVotes corresponds to votes from Ethereum on the canonical proof-of-work chain
@@ -42,30 +42,30 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Eth1DataVotes == nil {
+	if b.eth1DataVotes == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.eth1DataVotes()
+	return b.eth1DataVotesInternal()
 }
 
-// eth1DataVotes corresponds to votes from Ethereum on the canonical proof-of-work chain
+// eth1DataVotesInternal corresponds to votes from Ethereum on the canonical proof-of-work chain
 // data retrieved from eth1.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) eth1DataVotes() []*ethpb.Eth1Data {
+func (b *BeaconState) eth1DataVotesInternal() []*ethpb.Eth1Data {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Eth1DataVotes == nil {
+	if b.eth1DataVotes == nil {
 		return nil
 	}
 
-	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
+	res := make([]*ethpb.Eth1Data, len(b.eth1DataVotes))
 	for i := 0; i < len(res); i++ {
-		res[i] = ethpb.CopyETH1Data(b.state.Eth1DataVotes[i])
+		res[i] = ethpb.CopyETH1Data(b.eth1DataVotes[i])
 	}
 	return res
 }

@@ -18,24 +18,24 @@ func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, 
 	if !b.hasInnerState() {
 		return nil, nil
 	}
-	if b.state.PreviousEpochAttestations == nil {
+	if b.previousEpochAttestations == nil {
 		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.previousEpochAttestations(), nil
+	return b.previousEpochAttestationsInternal(), nil
 }
 
-// previousEpochAttestations corresponding to blocks on the beacon chain.
+// previousEpochAttestationsInternal corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochAttestations() []*ethpb.PendingAttestation {
+func (b *BeaconState) previousEpochAttestationsInternal() []*ethpb.PendingAttestation {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return ethpb.CopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
+	return ethpb.CopyPendingAttestationSlice(b.previousEpochAttestations)
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
@@ -43,24 +43,24 @@ func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, e
 	if !b.hasInnerState() {
 		return nil, nil
 	}
-	if b.state.CurrentEpochAttestations == nil {
+	if b.currentEpochAttestations == nil {
 		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.currentEpochAttestations(), nil
+	return b.currentEpochAttestationsInternal(), nil
 }
 
 // currentEpochAttestations corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochAttestations() []*ethpb.PendingAttestation {
+func (b *BeaconState) currentEpochAttestationsInternal() []*ethpb.PendingAttestation {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return ethpb.CopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
+	return ethpb.CopyPendingAttestationSlice(b.currentEpochAttestations)
 }
 
 func (h *stateRootHasher) epochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {

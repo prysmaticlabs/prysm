@@ -16,7 +16,7 @@ func TestNewBeaconState(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconState{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	if !reflect.DeepEqual(st.InnerStateUnsafe(), got) {
+	if !reflect.DeepEqual(st.ToProtoUnsafe(), got) {
 		t.Fatal("State did not match after round trip marshal")
 	}
 }

@@ -43,7 +43,7 @@ func BeaconStateFuzz(input []byte) {
 }
 
 func validateStateHTR(s *v1.BeaconState) {
-	rawState, ok := s.InnerStateUnsafe().(*ethpb.BeaconState)
+	rawState, ok := s.ToProtoUnsafe().(*ethpb.BeaconState)
 	if !ok {
 		panic("non valid type assertion")
 	}
@@ -51,15 +51,15 @@ func validateStateHTR(s *v1.BeaconState) {
 	nxtRt, err2 := rawState.HashTreeRoot()
 
 	if err == nil && err2 != nil {
-		panic("HTR from state had only and error from cached state HTR method")
+		panic("HashTreeRoot from state had only and error from cached state HashTreeRoot method")
 	}
 	if err != nil && err2 == nil {
-		panic("HTR from state had only and error from fast-ssz HTR method")
+		panic("HashTreeRoot from state had only and error from fast-ssz HashTreeRoot method")
 	}
 	if err != nil && err2 != nil {
 		return
 	}
 	if rt != nxtRt {
-		panic(fmt.Sprintf("cached HTR gave a root of %#x while fast-ssz gave a root of %#x", rt, nxtRt))
+		panic(fmt.Sprintf("cached HashTreeRoot gave a root of %#x while fast-ssz gave a root of %#x", rt, nxtRt))
 	}
 }

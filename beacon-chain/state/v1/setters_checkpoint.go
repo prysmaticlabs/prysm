@@ -26,7 +26,7 @@ func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) erro
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.PreviousJustifiedCheckpoint = val
+	b.previousJustifiedCheckpoint = val
 	b.markFieldAsDirty(previousJustifiedCheckpoint)
 	return nil
 }
@@ -39,7 +39,7 @@ func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.CurrentJustifiedCheckpoint = val
+	b.currentJustifiedCheckpoint = val
 	b.markFieldAsDirty(currentJustifiedCheckpoint)
 	return nil
 }
@@ -52,7 +52,7 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.FinalizedCheckpoint = val
+	b.finalizedCheckpoint = val
 	b.markFieldAsDirty(finalizedCheckpoint)
 	return nil
 }

@@ -1,10 +1,13 @@
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
+load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
         "field_roots.go",
+        "generated.ssz.go",
         "getters_attestation.go",
         "getters_block.go",
         "getters_checkpoint.go",
@@ -58,6 +61,7 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
@@ -101,3 +105,18 @@ go_test(
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )
+
+#ssz_gen_marshal(
+#    name = "ssz_generated_files",
+#    srcs = [
+#        "types.go",
+#    ],
+#    includes = [
+#        "//beacon-chain/state/custom-types:go_default_library",
+#        "//proto/prysm/v1alpha1:go_default_library",
+#        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+#    ],
+#    objs = [
+#        "BeaconState",
+#    ],
+#)

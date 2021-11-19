@@ -215,7 +215,7 @@ func TestHydrateSignedBeaconBlockAltair_NoError(t *testing.T) {
 	b := &ethpbalpha.SignedBeaconBlockAltair{}
 	b = HydrateSignedBeaconBlockAltair(b)
 
-	// HTR should not error. It errors with incorrect field length sizes.
+	// HashTreeRoot should not error. It errors with incorrect field length sizes.
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	_, err = b.Block.HashTreeRoot()
