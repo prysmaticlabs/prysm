@@ -10,7 +10,6 @@ import (
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/io/prompt"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
@@ -56,6 +55,7 @@ func (km *Keymanager) ImportKeystores(
 				Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
 				Message: err.Error(),
 			}
+			continue
 		}
 		// if key exists prior to being added then output log that duplicate key was found
 		if err := bar.Add(1); err != nil {
@@ -63,6 +63,7 @@ func (km *Keymanager) ImportKeystores(
 				Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
 				Message: err.Error(),
 			}
+			continue
 		}
 		if _, ok := keys[string(pubKeyBytes)]; ok {
 			log.Warnf("Duplicate key in import will be ignored: %#x", pubKeyBytes)
@@ -123,18 +124,11 @@ func (km *Keymanager) attemptDecryptKeystore(
 	var err error
 	privKeyBytes, err = enc.Decrypt(keystore.Crypto, password)
 	doesNotDecrypt := err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg)
-	for doesNotDecrypt {
-		password, err = prompt.PasswordPrompt(
-			fmt.Sprintf("Password incorrect for key 0x%s, input correct password", keystore.Pubkey), prompt.NotEmpty,
+	if doesNotDecrypt {
+		return nil, nil, "", fmt.Errorf(
+			"incorrect password for key 0x%s",
+			keystore.Pubkey,
 		)
-		if err != nil {
-			return nil, nil, "", fmt.Errorf("could not read keystore password: %w", err)
-		}
-		privKeyBytes, err = enc.Decrypt(keystore.Crypto, password)
-		doesNotDecrypt = err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg)
-		if err != nil && !strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
-			return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
-		}
 	}
 	if err != nil && !strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
 		return nil, nil, "", errors.Wrap(err, "could not decrypt keystore")
