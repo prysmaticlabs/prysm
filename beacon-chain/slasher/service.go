@@ -95,7 +95,7 @@ func (s *Service) run() {
 	// Get the latest eopch written for each validator from disk on startup.
 	headState, err := s.serviceCfg.HeadStateFetcher.HeadState(s.ctx)
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failed to fetch head state")
 		return
 	}
 	numVals := headState.NumValidators()
