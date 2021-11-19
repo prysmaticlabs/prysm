@@ -17,6 +17,7 @@ go_library(
         "//crypto/bls:go_default_library",
         "//crypto/rand:go_default_library",
         "//io/prompt:go_default_library",
+        "//proto/eth/service:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//validator/accounts/iface:go_default_library",
         "//validator/keymanager:go_default_library",
