@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -179,6 +180,7 @@ func TestProcessProposedBlock(t *testing.T) {
 
 func TestProcessBlock_ProposerAndSlashedTrackedVals(t *testing.T) {
 	hook := logTest.NewGlobal()
+	ctx := context.Background()
 	s := setupService(t)
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	genConfig := util.DefaultBlockGenConfig()
@@ -196,11 +198,11 @@ func TestProcessBlock_ProposerAndSlashedTrackedVals(t *testing.T) {
 	require.NoError(t, err)
 	root, err := b.GetBlock().HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, s.config.StateGen.SaveState(s.ctx, root, genesis))
+	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
 	wanted1 := fmt.Sprintf("\"Proposed block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0x67a9fe4d0d8d ProposerIndex=15 Slot=1 Version=0 prefix=monitor", bytesutil.Trunc(root[:]))
 	wanted2 := fmt.Sprintf("\"Proposer slashing was included\" ProposerIndex=%d Root1=0x000100000000 Root2=0x000200000000 SlashingSlot=0 Slot:=1 prefix=monitor", idx)
 	wrapped := wrapper.WrappedPhase0SignedBeaconBlock(b)
-	s.processBlock(wrapped)
+	s.processBlock(ctx, wrapped)
 	require.LogsContain(t, hook, wanted1)
 	require.LogsContain(t, hook, wanted2)
 }

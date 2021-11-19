@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"context"
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -17,8 +18,15 @@ import (
 // 3) An Exit by one of our validators was included
 // 4) A Slashing by one of our tracked validators was included
 // 5) A Sync Committe Contribution by one of our tracked validators was included
-func (s *Service) processBlock(b block.SignedBeaconBlock) {
+func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
+	if b == nil {
+		return
+	}
+
 	blk := b.Block()
+	if blk == nil {
+		return
+	}
 
 	s.processSlashings(blk)
 	s.processExitsFromBlock(blk)
@@ -35,7 +43,7 @@ func (s *Service) processBlock(b block.SignedBeaconBlock) {
 	}
 
 	s.processProposedBlock(state, root, blk)
-	s.processAttestations(state, blk)
+	s.processAttestations(ctx, state, blk)
 }
 
 // processProposedBlock logs the event that one of our tracked validators proposed a block that was included
@@ -45,7 +53,6 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 		proposedSlotsCounter.WithLabelValues(fmt.Sprintf("%d", blk.ProposerIndex())).Inc()
 
 		// update the performance map
-		// TODO: check if reassignment of structures is a performance hit
 		balance, err := state.BalanceAtIndex(blk.ProposerIndex())
 		if err != nil {
 			log.Error("Could not get balance")
