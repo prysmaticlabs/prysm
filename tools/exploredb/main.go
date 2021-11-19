@@ -455,11 +455,11 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 		if len(sourceState.Validators()) != len(destinationState.Validators()) {
 			log.Fatalf("validator mismatch : source = %d, dest = %d", len(sourceState.Validators()), len(destinationState.Validators()))
 		}
-		sourceStateHash, err := sourceState.HTR(ctx)
+		sourceStateHash, err := sourceState.HashTreeRoot(ctx)
 		if err != nil {
 			log.Fatalf("could not find hash of source state: %v", err)
 		}
-		destinationSatteHash, err := destinationState.HTR(ctx)
+		destinationSatteHash, err := destinationState.HashTreeRoot(ctx)
 		if err != nil {
 			log.Fatalf("could not find hash of destination state: %v", err)
 		}

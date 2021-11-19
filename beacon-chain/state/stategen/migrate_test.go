@@ -70,7 +70,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
 	beaconState, pks := util.DeterministicGenesisState(t, 32)
-	genesisStateRoot, err := beaconState.HTR(ctx)
+	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))

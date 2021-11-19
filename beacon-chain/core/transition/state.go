@@ -123,7 +123,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
 	}
 
-	s, err := v1.Initialize(preState.Validators())
+	s, err := v1.Initialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize state from proto state")
 	}
@@ -208,7 +208,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 // EmptyGenesisState returns an empty beacon state object.
 func EmptyGenesisState() (state.BeaconState, error) {
-	s, err := v1.Initialize([]*ethpb.Validator{})
+	s, err := v1.Initialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize state from proto state")
 	}

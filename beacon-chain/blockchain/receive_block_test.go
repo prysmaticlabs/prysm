@@ -248,7 +248,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := testDB.SetupDB(t)
-			genesisBlockRoot, err := genesis.HTR(ctx)
+			genesisBlockRoot, err := genesis.HashTreeRoot(ctx)
 			require.NoError(t, err)
 			cfg := &config{
 				BeaconDB: beaconDB,

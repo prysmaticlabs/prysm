@@ -51,7 +51,7 @@ func FillRootsNaturalOpt(state state.BeaconState) error {
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
 func NewBeaconState(options ...func(state *v1.BeaconState) error) (*v1.BeaconState, error) {
-	var st, err = v1.Initialize(make([]*ethpb.Validator, 0))
+	var st, err = v1.Initialize()
 	if err != nil {
 		return nil, err
 	}

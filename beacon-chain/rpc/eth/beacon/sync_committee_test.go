@@ -119,7 +119,7 @@ func TestListSyncCommittees(t *testing.T) {
 		Pubkeys:         syncCommittee,
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}))
-	stRoot, err := st.HTR(ctx)
+	stRoot, err := st.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
 	s := &Server{

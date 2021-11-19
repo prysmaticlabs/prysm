@@ -51,7 +51,7 @@ func RunSSZStaticTests(t *testing.T, config string) {
 					htr = func(s interface{}) ([32]byte, error) {
 						beaconState, err := v1.InitializeFromProto(s.(*ethpb.BeaconState))
 						require.NoError(t, err)
-						return beaconState.HTR(context.Background())
+						return beaconState.HashTreeRoot(context.Background())
 					}
 				} else {
 					htr = func(s interface{}) ([32]byte, error) {

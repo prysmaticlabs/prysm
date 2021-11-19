@@ -19,7 +19,7 @@ import (
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
 func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
-	stateRoot, err := genesisState.HTR(ctx)
+	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	if err != nil {
 		return err
 	}
@@ -71,11 +71,11 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 	// If some different genesis state existed already, return an error. The same genesis state is
 	// considered a no-op.
 	if existing != nil && !existing.IsNil() {
-		a, err := existing.HTR(ctx)
+		a, err := existing.HashTreeRoot(ctx)
 		if err != nil {
 			return err
 		}
-		b, err := gs.HTR(ctx)
+		b, err := gs.HashTreeRoot(ctx)
 		if err != nil {
 			return err
 		}

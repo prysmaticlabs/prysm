@@ -28,11 +28,11 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	custom := customState.ToProto()
 	assert.DeepSSZEqual(t, cloned, custom)
 
-	r1, err := customState.HTR(ctx)
+	r1, err := customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	beaconState, err := v1.InitializeFromProto(genesis)
 	require.NoError(t, err)
-	r2, err := beaconState.HTR(context.Background())
+	r2, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, r1, r2, "Mismatched roots")
 
@@ -40,12 +40,12 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	balances := genesis.Balances
 	balances[0] = 3823
 	require.NoError(t, customState.SetBalances(balances))
-	r1, err = customState.HTR(ctx)
+	r1, err = customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis.Balances = balances
 	beaconState, err = v1.InitializeFromProto(genesis)
 	require.NoError(t, err)
-	r2, err = beaconState.HTR(context.Background())
+	r2, err = beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, r1, r2, "Mismatched roots")
 }

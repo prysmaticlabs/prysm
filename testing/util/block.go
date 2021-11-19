@@ -132,7 +132,7 @@ func GenerateFullBlock(
 	}
 
 	newHeader := bState.LatestBlockHeader()
-	prevStateRoot, err := bState.HTR(ctx)
+	prevStateRoot, err := bState.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, err
 	}

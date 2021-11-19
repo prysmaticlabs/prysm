@@ -163,7 +163,7 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
-				preStateRoot, err := stateObj.HTR(context.Background())
+				preStateRoot, err := stateObj.HashTreeRoot(context.Background())
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -179,7 +179,7 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
-				postRoot, err := postState.HTR(context.Background())
+				postRoot, err := postState.HashTreeRoot(context.Background())
 				if err != nil {
 					log.Fatal(err)
 				}

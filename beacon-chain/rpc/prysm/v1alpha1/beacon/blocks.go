@@ -569,7 +569,7 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state")
 	}
-	stateRoot, err := wsState.HTR(ctx)
+	stateRoot, err := wsState.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state root")
 	}

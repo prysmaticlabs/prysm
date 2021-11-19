@@ -50,7 +50,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
-	stateRoot, err := beaconState.HTR(ctx)
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
@@ -131,7 +131,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := util.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
-	stateRoot, err := beaconState.HTR(ctx)
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
@@ -220,7 +220,7 @@ func TestProposer_ProposeBlock_Phase0_OK(t *testing.T) {
 
 	numDeposits := uint64(64)
 	beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-	bsRoot, err := beaconState.HTR(ctx)
+	bsRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestProposer_ProposeBlock_Altair_OK(t *testing.T) {
 
 	numDeposits := uint64(64)
 	beaconState, _ := util.DeterministicGenesisStateAltair(t, numDeposits)
-	bsRoot, err := beaconState.HTR(ctx)
+	bsRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -291,7 +291,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 
-	stateRoot, err := beaconState.HTR(ctx)
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
@@ -2017,7 +2017,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
-	stateRoot, err := beaconState.HTR(ctx)
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
@@ -2122,7 +2122,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
-	stateRoot, err := beaconState.HTR(ctx)
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
@@ -2321,7 +2321,7 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := util.DeterministicGenesisState(bm, 64)
 
-	stateRoot, err := beaconState.HTR(ctx)
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(bm, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])

@@ -787,7 +787,7 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 	require.Equal(t, e, c.Epoch)
 	wsState, err := server.StateGen.StateBySlot(ctx, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(e)))
 	require.NoError(t, err)
-	sRoot, err := wsState.HTR(ctx)
+	sRoot, err := wsState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	require.DeepEqual(t, sRoot[:], c.StateRoot)
 }

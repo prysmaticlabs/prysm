@@ -87,7 +87,7 @@ func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := beaconState.HTR(context.Background())
+		_, err := beaconState.HashTreeRoot(context.Background())
 		require.NoError(b, err)
 	}
 }
@@ -99,12 +99,12 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 	ctx := context.Background()
 
 	// Hydrate the HashTreeRootState cache.
-	_, err = beaconState.HTR(ctx)
+	_, err = beaconState.HashTreeRoot(ctx)
 	require.NoError(b, err)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := beaconState.HTR(ctx)
+		_, err := beaconState.HashTreeRoot(ctx)
 		require.NoError(b, err)
 	}
 }

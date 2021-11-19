@@ -74,7 +74,7 @@ func TestGetStateRoot(t *testing.T) {
 	ctx := context.Background()
 	fakeState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	stateRoot, err := fakeState.HTR(ctx)
+	stateRoot, err := fakeState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{

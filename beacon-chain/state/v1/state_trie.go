@@ -118,11 +118,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 	return b, nil
 }
 
-func Initialize(vals []*ethpb.Validator) (*BeaconState, error) {
-	if vals == nil {
-		return nil, errors.New("received nil validators")
-	}
-
+func Initialize() (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	b := &BeaconState{
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
@@ -130,7 +126,6 @@ func Initialize(vals []*ethpb.Validator) (*BeaconState, error) {
 		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 10),
 		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler(vals),
 	}
 
 	var err error
@@ -278,10 +273,10 @@ func (b *BeaconState) Copy() state.BeaconState {
 	return dst
 }
 
-// HTR of the beacon state retrieves the Merkle root of the trie
+// HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the Ethereum Simple Serialize specification.
-func (b *BeaconState) HTR(ctx context.Context) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconState.HTR")
+func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
 	defer span.End()
 
 	b.lock.Lock()
