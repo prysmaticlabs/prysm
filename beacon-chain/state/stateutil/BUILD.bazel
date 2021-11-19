@@ -62,7 +62,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state/v1:go_default_library",
         "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//crypto/hash:go_default_library",
