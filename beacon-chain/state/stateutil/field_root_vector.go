@@ -25,7 +25,18 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
-
+	// Exit early if our previous leaves length don't match with the current set.
+	// This should never happen but better to be defensive here.
+	if len(prevLeaves) != len(leaves) {
+		res, err := h.merkleizeWithCache(leaves, length, fieldName, hashFunc)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		if h.rootsCache != nil {
+			leavesCache[fieldName] = leaves
+		}
+		return res, nil
+	}
 	for i := 0; i < len(leaves); i++ {
 		// We check if any items changed since the roots were last recomputed.
 		notEqual := leaves[i] != prevLeaves[i]
