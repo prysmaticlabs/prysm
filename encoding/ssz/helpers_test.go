@@ -94,6 +94,22 @@ func TestPack(t *testing.T) {
 	}
 }
 
+func TestPackByChunk(t *testing.T) {
+	byteSlice2D := [][]byte{
+		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 2, 5, 2, 6, 2, 7},
+		{1, 1, 2, 3, 5, 8, 13, 21, 34},
+	}
+	expected := [][32]byte{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 2, 5, 2, 6, 2, 7, 1, 1},
+		{2, 3, 5, 8, 13, 21, 34, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
+
+	result, err := ssz.PackByChunk(byteSlice2D)
+	require.NoError(t, err)
+	assert.Equal(t, len(expected), len(result))
+	for i, v := range expected {
+		assert.DeepEqual(t, v, result[i])
+	}
+}
+
 func TestMixInLength(t *testing.T) {
 	byteSlice := [32]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
 	length := []byte{1, 2, 3}
