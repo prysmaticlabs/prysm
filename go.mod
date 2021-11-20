@@ -18,7 +18,7 @@ require (
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v1.10.10
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20211018035740-242d997118b9
+	github.com/ferranbt/fastssz v0.0.0-20210905181407-59cf6761a7d5
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
@@ -79,7 +79,6 @@ require (
 	github.com/prometheus/procfs v0.7.0 // indirect
 	github.com/prometheus/prom2json v1.3.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
-	github.com/protolambda/ztyp v0.1.9 // indirect
 	github.com/prysmaticlabs/eth2-types v0.0.0-20210303084904-c9735a06829d
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
