@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -15,12 +14,12 @@ var (
 	ValidatorType = view.ContainerType("Validator", []view.FieldDef{
 		{"pubkey", BLSPubkeyType},
 		{"withdrawal_credentials", view.RootType},
-		{"effective_balance", view.Uint64Type}, // Balance at stake
+		{"effective_balance", view.Uint64Type},
 		{"slashed", view.BoolType},
-		{"activation_eligibility_epoch", view.Uint64Type}, // When criteria for activation were met
+		{"activation_eligibility_epoch", view.Uint64Type},
 		{"activation_epoch", view.Uint64Type},
 		{"exit_epoch", view.Uint64Type},
-		{"withdrawable_epoch", view.Uint64Type}, // When validator can withdraw funds
+		{"withdrawable_epoch", view.Uint64Type},
 	})
 	ForkType = view.ContainerType("Fork", []view.FieldDef{
 		{"previous_version", view.Bytes4Type},
@@ -91,16 +90,12 @@ func VerifyProof(root [32]byte, proof [][]byte, leaf tree.Root, generalizedIndex
 	h := leaf
 	hFn := tree.GetHashFn()
 	idx := generalizedIndex
-	fmt.Println("")
 	for _, elem := range proof {
 		if idx%2 == 0 {
-			fmt.Printf("Combi (H, elem) %s and %#x\n", h.String(), bytesutil.ToBytes32(elem))
 			h = hFn(h, bytesutil.ToBytes32(elem))
 		} else {
-			fmt.Printf("Combi (elem, H) %#x and %s\n", bytesutil.ToBytes32(elem), h.String())
 			h = hFn(bytesutil.ToBytes32(elem), h)
 		}
-		fmt.Printf("Got %s\n", h.String())
 		idx = idx / 2
 	}
 	return h == root
@@ -120,7 +115,6 @@ func Proof(
 	if err != nil {
 		return
 	}
-	fmt.Println(depth, generalizedIdx)
 	leaves := make(map[tree.Gindex64]struct{})
 	leaves[generalizedIdx] = struct{}{}
 	leavesSorted := make([]tree.Gindex64, 0, len(leaves))
@@ -165,19 +159,8 @@ func Proof(
 
 	node := state.Backing()
 	hFn := tree.GetHashFn()
-	root := state.HashTreeRoot(hFn)
-	fmt.Printf("Root %s\n", root.String())
 	proof = make([][]byte, 0, len(witnessSorted))
-	leaf, err2 := node.Getter(generalizedIdx)
-	if err2 != nil {
-		err = err2
-		return
-	}
-	topRoot := node.MerkleRoot(hFn)
-	fmt.Printf("Top root %s\n", topRoot.String())
-	curr := leaf.MerkleRoot(hFn)
-	fmt.Printf("%s\n", curr.String())
-	for i := len(witnessSorted) - 1; i > 0; i-- {
+	for i := len(witnessSorted) - 1; i >= 0; i-- {
 		g := witnessSorted[i]
 		n, err2 := node.Getter(g)
 		if err2 != nil {
@@ -185,15 +168,6 @@ func Proof(
 			return
 		}
 		root := n.MerkleRoot(hFn)
-		fmt.Printf("sibling idx %d\n", g^1)
-		sibling, err3 := node.Getter(g ^ 1)
-		if err3 != nil {
-			err = err3
-			return
-		}
-		siblingRoot := sibling.MerkleRoot(hFn)
-		fmt.Printf("%d witness index with proof (left %s, right %s)\n", g, siblingRoot.String(), root.String())
-		fmt.Printf("Got %s\n", hFn(siblingRoot, root).String())
 		proof = append(proof, root[:])
 	}
 	return
