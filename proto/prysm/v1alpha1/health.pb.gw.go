@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
@@ -34,6 +35,7 @@ var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 var _ = github_com_prysmaticlabs_eth2_types.Epoch(0)
 var _ = emptypb.Empty{}
+var _ = empty.Empty{}
 
 func request_Health_StreamBeaconLogs_0(ctx context.Context, marshaler runtime.Marshaler, client HealthClient, req *http.Request, pathParams map[string]string) (Health_StreamBeaconLogsClient, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty

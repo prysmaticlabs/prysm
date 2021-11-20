@@ -1,65 +1,204 @@
+##############################################################################
+# Common
+##############################################################################
+
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
-load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
+##############################################################################
+# Go
+##############################################################################
 # gazelle:ignore
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
+load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
+
+##############################################################################
+# OpenAPI (Swagger) V2
+##############################################################################
+load("@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2:defs.bzl", "protoc_gen_openapiv2")
+
+proto_library(
+    name = "proto",
+    srcs = [
+        "node.proto",
+        "beacon_chain.proto",
+        "debug.proto",
+        "finalized_block_root_container.proto",
+        "health.proto",
+        "powchain.proto",
+        "slasher.proto",
+        "validator.proto",
+        "p2p_messages.proto",
+        ":ssz_proto_files",
+        #        ":generated_swagger_proto",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/eth/ext:proto",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_proto",
+        "@com_google_protobuf//:any_proto",
+        "@com_google_protobuf//:descriptor_proto",
+        "@com_google_protobuf//:empty_proto",
+        "@com_google_protobuf//:timestamp_proto",
+        "@go_googleapis//google/api:annotations_proto",
+    ],
+)
+
+##############################################################################
+# Go
+##############################################################################
+ssz_gen_marshal(
+    name = "ssz_generated_files",
+    go_proto = ":go_proto",
+    includes = [
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+    ],
+    objs = [
+        "BeaconBlockAltair",
+        "BeaconBlockBodyAltair",
+        "SignedBeaconBlockAltair",
+        "SyncAggregate",
+        "SyncCommitteeMessage",
+        "SyncCommitteeContribution",
+        "ContributionAndProof",
+        "SignedContributionAndProof",
+        "BeaconBlocksByRangeRequest",
+        "ENRForkID",
+        "MetaDataV0",
+        "MetaDataV1",
+        "Status",
+        "AggregateAttestationAndProof",
+        "Attestation",
+        "AttestationData",
+        "AttesterSlashing",
+        "BeaconBlock",
+        "BeaconBlockHeader",
+        "Checkpoint",
+        "Deposit",
+        "Eth1Data",
+        "IndexedAttestation",
+        "ProposerSlashing",
+        "SignedAggregateAttestationAndProof",
+        "SignedBeaconBlock",
+        "SignedBeaconBlockHeader",
+        "SignedVoluntaryExit",
+        "Validator",
+        "VoluntaryExit",
+        "ContributionAndProof",
+        "SignedContributionAndProof",
+        "DepositMessage",
+        "Fork",
+        "ForkData",
+        "HistoricalBatch",
+        "Status",
+        "BeaconState",
+        "BeaconStateAltair",
+        "SigningData",
+        "SyncCommittee",
+        "SyncAggregatorSelectionData",
+    ],
+)
+
+go_proto_library(
+    name = "go_proto",
+    compilers = [
+        "@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1",
+    proto = ":proto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/eth/ext:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@go_googleapis//google/api:annotations_go_proto",
+        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
+        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
+        "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+        "@org_golang_google_protobuf//types/known/timestamppb:go_default_library",
+    ],
+)
+
+go_proto_library(
+    name = "go_grpc_gateway_library",
+    compilers = [
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+    ],
+    embed = [":go_proto"],
+    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1",
+    protos = [":proto"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "//proto/eth/ext:go_default_library",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@go_googleapis//google/api:annotations_go_proto",
+        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
+        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
+        "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
+    ],
+)
+
 go_library(
     name = "go_default_library",
     srcs = [
-        "attestation.pb.go",
-        "beacon_block.pb.go",
-        "beacon_chain.pb.go",
-        "beacon_chain.pb.gw.go",
-        "beacon_state.pb.go",
-        "finalized_block_root_container.pb.go",
         "cloners.go",
-        "debug.pb.go",
-        "debug.pb.gw.go",
-        "generated.ssz.go",
-        "generated.ssz.tree.go",
-        "health.pb.go",
-        "health.pb.gw.go",
-        "light_client.pb.go",
-        "light_client.pb.gw.go",
-        "node.pb.go",
-        "node.pb.gw.go",
-        "p2p_messages.pb.go",
-        "powchain.pb.go",
-        "sync_committee.pb.go",
-        "slasher.pb.go",
-        "slasher.pb.gw.go",
         "sync_committee_mainnet.go",
-        "validator.pb.go",
-        "validator.pb.gw.go",
+        "sync_committee_minimal.go",  # keep
+        ":ssz_generated_files",  # keep
+    ],
+    embed = [
+        ":go_grpc_gateway_library",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1",
     visibility = ["//visibility:public"],
-    deps = [
-        "//encoding/bytesutil:go_default_library",
+    deps = SSZ_DEPS + [
         "//proto/eth/ext:go_default_library",
-        "@com_github_ferranbt_fastssz//:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:go_default_library",
-        "@go_googleapis//google/api:annotations_go_proto",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@org_golang_google_grpc//:go_default_library",
-	"@org_golang_google_protobuf//proto:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//grpclog:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
-	"@com_github_golang_protobuf//proto:go_default_library",
-	"@com_github_golang_protobuf//ptypes/timestamp:go_default_library",
-	"@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",  # keep
+        "@go_googleapis//google/api:annotations_go_proto",
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
     ],
+)
+
+ssz_proto_files(
+    name = "ssz_proto_files",
+    srcs = [
+        "attestation.proto",
+        "beacon_block.proto",
+        "beacon_state.proto",
+        "sync_committee.proto",
+    ],
+    config = select({
+        "//conditions:default": "mainnet",
+        "//proto:ssz_mainnet": "mainnet",
+        "//proto:ssz_minimal": "minimal",
+    }),
 )
 
 go_test(
     name = "go_default_test",
     srcs = ["cloners_test.go"],
-    deps = ["//testing/assert:go_default_library"],
+    embed = [":go_default_library"],
+    deps = [
+        "//testing/assert:go_default_library",
+    ],
 )
