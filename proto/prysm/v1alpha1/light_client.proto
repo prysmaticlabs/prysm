@@ -1,0 +1,91 @@
+// Copyright 2021 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "proto/eth/ext/options.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+import "proto/prysm/v1alpha1/attestation.proto";
+import "proto/prysm/v1alpha1/beacon_state.proto";
+import "proto/prysm/v1alpha1/beacon_block.proto";
+import "proto/prysm/v1alpha1/sync_committee.proto";
+
+
+option csharp_namespace = "Ethereum.Eth.V1alpha1";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
+option java_multiple_files = true;
+option java_outer_classname = "LightClient";
+option java_package = "org.ethereum.eth.v1alpha1";
+option php_namespace = "Ethereum\\Eth\\v1alpha1";
+
+service LightClient {
+  rpc BestUpdates(BestUpdatesRequest) returns (BestUpdatesResponse) {
+    option (google.api.http) = {
+      post: "/eth/v1alpha1/lightclient/best_update",
+      body: "*"
+    };
+  }
+  rpc LatestUpdateFinalized(google.protobuf.Empty) returns (LightClientUpdate) {
+    option (google.api.http) = {
+      get: "/eth/v1alpha1/lightclient/latest_update_finalized",
+    };
+  }
+  rpc LatestUpdateNonFinalized(google.protobuf.Empty) returns (LightClientUpdate) {
+    option (google.api.http) = {
+      get: "/eth/v1alpha1/lightclient/latest_update_nonfinalized",
+    };
+  }
+}
+
+message BestUpdatesRequest {
+  repeated uint64 sync_committee_periods = 1;
+}
+
+message BestUpdatesResponse {
+  repeated LightClientUpdate updates = 1;
+}
+
+message LightClientUpdate {
+  ethereum.eth.v1alpha1.BeaconBlockHeader header = 1;
+  ethereum.eth.v1alpha1.SyncCommittee next_sync_committee = 2;
+  repeated bytes next_sync_committee_branch = 3 [(ethereum.eth.ext.ssz_size) = "5,32"];
+  ethereum.eth.v1alpha1.BeaconBlockHeader finality_header = 4;
+  repeated bytes finality_branch = 5 [(ethereum.eth.ext.ssz_size) = "6,32"];
+  bytes sync_committee_bits = 6 [(ethereum.eth.ext.ssz_size) = "sync_committee_aggregate_bytes.size", (ethereum.eth.ext.cast_type) = "sync_committee_aggregate_bits.type"];
+  bytes sync_committee_signature = 7 [(ethereum.eth.ext.ssz_size) = "96"];
+  bytes fork_version = 8 [(ethereum.eth.ext.ssz_size) = "4"];
+}
+
+message ClientSnapshot {
+  ethereum.eth.v1alpha1.BeaconBlockHeader header = 1;
+  ethereum.eth.v1alpha1.SyncCommittee current_sync_committee = 2;
+  ethereum.eth.v1alpha1.SyncCommittee next_sync_committee = 3;
+}
+
+message SyncAttestedData {
+  ethereum.eth.v1alpha1.BeaconBlockHeader header = 1;
+  ethereum.eth.v1alpha1.Checkpoint finality_checkpoint = 2;
+  repeated bytes finality_branch = 3 [(ethereum.eth.ext.ssz_size) = "6,32"];
+  ethereum.eth.v1alpha1.SyncCommittee next_sync_committee = 4;
+  repeated bytes next_sync_committee_branch = 5 [(ethereum.eth.ext.ssz_size) = "5,32"];
+}
+
+message LightClientFinalizedCheckpoint {
+  ethereum.eth.v1alpha1.BeaconBlockHeader header = 1;
+  ethereum.eth.v1alpha1.SyncCommittee next_sync_committee = 2;
+  repeated bytes next_sync_committee_branch = 3 [(ethereum.eth.ext.ssz_size) = "5,32"];
+}
