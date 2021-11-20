@@ -183,12 +183,14 @@ func ProcessEpochParticipation(
 		}
 		if has && vals[i].IsActivePrevEpoch {
 			vals[i].IsPrevEpochAttester = true
+			vals[i].IsPrevEpochSourceAttester = true
 		}
 		has, err = HasValidatorFlag(b, targetIdx)
 		if err != nil {
 			return nil, nil, err
 		}
 		if has && vals[i].IsActivePrevEpoch {
+			vals[i].IsPrevEpochAttester = true
 			vals[i].IsPrevEpochTargetAttester = true
 		}
 		has, err = HasValidatorFlag(b, headIdx)
@@ -199,7 +201,7 @@ func ProcessEpochParticipation(
 			vals[i].IsPrevEpochHeadAttester = true
 		}
 	}
-	bal = precompute.UpdateBalance(vals, bal)
+	bal = precompute.UpdateBalance(vals, bal, beaconState.Version())
 	return vals, bal, nil
 }
 
@@ -298,7 +300,7 @@ func attestationDelta(
 	headWeight := cfg.TimelyHeadWeight
 	reward, penalty = uint64(0), uint64(0)
 	// Process source reward / penalty
-	if val.IsPrevEpochAttester && !val.IsSlashed {
+	if val.IsPrevEpochSourceAttester && !val.IsSlashed {
 		if !inactivityLeak {
 			n := baseReward * srcWeight * (bal.PrevEpochAttested / increment)
 			reward += n / (activeIncrement * weightDenominator)

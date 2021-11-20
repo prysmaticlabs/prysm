@@ -9,9 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -42,12 +40,10 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 
 func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
+	opts := testServiceOptsWithDB(t)
 
-	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx)
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg = cfg
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
@@ -71,12 +67,10 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
 
-	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx)
+	opts := testServiceOptsWithDB(t)
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg = cfg
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
@@ -101,18 +95,12 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 func TestProcessAttestations_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
+	opts := testServiceOptsWithDB(t)
+	opts = append(opts, WithAttestationPool(attestations.NewPool()))
 
-	cfg := &config{
-		BeaconDB:        beaconDB,
-		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
-		StateGen:        stategen.New(beaconDB),
-		AttPool:         attestations.NewPool(),
-	}
-	service, err := NewService(ctx)
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-	service.cfg = cfg
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))

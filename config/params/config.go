@@ -4,6 +4,7 @@ package params
 import (
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -120,6 +121,7 @@ type BeaconChainConfig struct {
 	GenesisCountdownInterval    time.Duration // How often to log the countdown until the genesis time is reached.
 	BeaconStateFieldCount       int           // BeaconStateFieldCount defines how many fields are in beacon state.
 	BeaconStateAltairFieldCount int           // BeaconStateAltairFieldCount defines how many fields are in beacon state hard fork 1.
+	BeaconStateMergeFieldCount  int           // BeaconStateMergeFieldCount defines how many fields are in beacon state post upgrade to the Merge.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -175,6 +177,12 @@ type BeaconChainConfig struct {
 
 	// Light client
 	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.
+
+	// Merge
+	TerminalBlockHash                common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`                  // TerminalBlockHash of beacon chain.
+	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
+	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of the experimental merge spec. This value is type is currently TBD: https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/beacon-chain.md#transition-settings
+	Coinbase                         common.Address // Coinbase where the transaction fee goes to.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.

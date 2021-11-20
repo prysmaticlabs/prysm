@@ -50,7 +50,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	r := &Service{
 		ctx:         context.Background(),
-		cfg:         &Config{P2P: p2p},
+		cfg:         &config{p2p: p2p},
 		rateLimiter: newRateLimiter(p2p),
 	}
 

@@ -17,12 +17,12 @@ import (
 func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
-	if pid == s.cfg.P2P.PeerID() {
+	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
 
 	// The head state will be too far away to validate any slashing.
-	if s.cfg.InitialSync.Syncing() {
+	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
 
@@ -46,7 +46,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationIgnore, nil
 	}
 
-	headState, err := s.cfg.Chain.HeadState(ctx)
+	headState, err := s.cfg.chain.HeadState(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}

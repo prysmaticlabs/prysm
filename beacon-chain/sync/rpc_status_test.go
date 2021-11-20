@@ -43,9 +43,9 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	root := [32]byte{'C'}
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				Fork: &ethpb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -71,7 +71,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, stream)
 		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.DeepEqual(t, root[:], out.FinalizedRoot)
 		assert.NoError(t, stream.Close())
 	})
@@ -84,7 +84,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl2, func(stream network.Stream) {
 		defer wg2.Done()
 		msg := new(types.SSZUint64)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg))
 		assert.Equal(t, p2ptypes.GoodbyeCodeWrongNetwork, *msg)
 		assert.NoError(t, stream.Close())
 	})
@@ -111,9 +111,9 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 	root := [32]byte{}
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				Fork: &ethpb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -139,7 +139,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, stream)
 		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.DeepEqual(t, root[:], out.FinalizedRoot)
 	})
 
@@ -189,9 +189,9 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	genTime := time.Now().Unix() - totalSec
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -202,7 +202,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 				ValidatorsRoot: [32]byte{'A'},
 				Genesis:        time.Unix(genTime, 0),
 			},
-			DB: db,
+			beaconDB: db,
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -219,7 +219,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, stream)
 		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		expected := &pb.Status{
 			ForkDigest:     digest[:],
 			HeadSlot:       genesisState.Slot(),
@@ -274,9 +274,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               st,
 				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
 				Fork: &ethpb.Fork{
@@ -287,7 +287,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 				ValidatorsRoot: [32]byte{'A'},
 				Root:           make([]byte, 32),
 			},
-			DB: db,
+			beaconDB: db,
 		},
 		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
@@ -296,11 +296,11 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	require.NoError(t, err)
 
 	r2 := &Service{
-		cfg: &Config{
-			Chain: &mock.ChainService{
+		cfg: &config{
+			chain: &mock.ChainService{
 				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
 			},
-			P2P: p2,
+			p2p: p2,
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
@@ -318,13 +318,13 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		log.WithField("status", out).Warn("received status")
 		resp := &pb.Status{HeadSlot: 100, HeadRoot: make([]byte, 32), ForkDigest: p2.Digest[:],
 			FinalizedRoot: finalizedRoot[:], FinalizedEpoch: 0}
 		_, err := stream.Write([]byte{responseCodeSuccess})
 		assert.NoError(t, err)
-		_, err = r.cfg.P2P.Encoding().EncodeWithMaxLength(stream, resp)
+		_, err = r.cfg.p2p.Encoding().EncodeWithMaxLength(stream, resp)
 		assert.NoError(t, err)
 		log.WithField("status", out).Warn("sending status")
 		if err := stream.Close(); err != nil {
@@ -340,7 +340,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg2.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
 		assert.NoError(t, stream.Close())
@@ -408,9 +408,9 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	}
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -435,7 +435,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		digest, err := r.currentForkDigest()
 		assert.NoError(t, err)
 		expected := &pb.Status{
@@ -490,9 +490,9 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	totalSec := int64(params.BeaconConfig().SlotsPerEpoch.Mul(5 * params.BeaconConfig().SecondsPerSlot))
 	genTime := time.Now().Unix() - totalSec
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -509,9 +509,9 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	}
 
 	r2 := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -522,7 +522,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 				Genesis:        time.Unix(genTime, 0),
 				ValidatorsRoot: [32]byte{'A'},
 			},
-			DB: db,
+			beaconDB: db,
 		},
 		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
@@ -537,7 +537,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.NoError(t, r2.validateStatusMessage(context.Background(), out))
 	})
 
@@ -663,9 +663,9 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		totalSec := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch) * params.BeaconConfig().SecondsPerSlot))
 		genTime := time.Now().Unix() - int64(totalSec)
 		r := &Service{
-			cfg: &Config{
-				P2P: p1,
-				Chain: &mock.ChainService{
+			cfg: &config{
+				p2p: p1,
+				chain: &mock.ChainService{
 					State:               nState,
 					FinalizedCheckPoint: remoteFinalizedChkpt,
 					Root:                rHeadRoot[:],
@@ -682,9 +682,9 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 
 		r2 := &Service{
-			cfg: &Config{
-				P2P: p2,
-				Chain: &mock.ChainService{
+			cfg: &config{
+				p2p: p2,
+				chain: &mock.ChainService{
 					State:               nState,
 					FinalizedCheckPoint: finalizedCheckpt,
 					Root:                headRoot[:],
@@ -695,7 +695,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 					Genesis:        time.Unix(genTime, 0),
 					ValidatorsRoot: [32]byte{'A'},
 				},
-				DB: db,
+				beaconDB: db,
 			},
 
 			ctx:         context.Background(),
@@ -711,7 +711,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 			defer wg.Done()
 			out := &pb.Status{}
-			assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 			assert.Equal(t, tt.expectError, r2.validateStatusMessage(context.Background(), out) != nil)
 		})
 
@@ -750,9 +750,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	}
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -780,7 +780,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		expected := &pb.Status{
 			ForkDigest:     []byte{1, 1, 1, 1},
 			HeadSlot:       genesisState.Slot(),
@@ -791,7 +791,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			log.WithError(err).Debug("Could not write to stream")
 		}
-		_, err := r.cfg.P2P.Encoding().EncodeWithMaxLength(stream, expected)
+		_, err := r.cfg.p2p.Encoding().EncodeWithMaxLength(stream, expected)
 		assert.NoError(t, err)
 	})
 
@@ -830,8 +830,8 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 		Root:  finalizedRoot[:],
 	}
 	r := &Service{
-		cfg: &Config{
-			Chain: &mock.ChainService{
+		cfg: &config{
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -912,12 +912,12 @@ func TestShouldResync(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, headState.SetSlot(tt.args.headSlot))
 		r := &Service{
-			cfg: &Config{
-				Chain: &mock.ChainService{
+			cfg: &config{
+				chain: &mock.ChainService{
 					State:   headState,
 					Genesis: tt.args.genesis,
 				},
-				InitialSync: &mockSync.Sync{IsSyncing: tt.args.syncing},
+				initialSync: &mockSync.Sync{IsSyncing: tt.args.syncing},
 			},
 			ctx: context.Background(),
 		}

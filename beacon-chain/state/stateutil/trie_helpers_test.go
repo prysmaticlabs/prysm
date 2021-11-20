@@ -24,7 +24,8 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 	for _, rt := range blockRts {
 		roots = append(roots, bytesutil.ToBytes32(rt))
 	}
-	layers := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
+	layers, err := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
+	assert.NoError(t, err)
 	newRoot := *layers[len(layers)-1][0]
 	assert.Equal(t, root, newRoot)
 }
@@ -55,7 +56,8 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 	for _, rt := range blockRts {
 		roots = append(roots, bytesutil.ToBytes32(rt))
 	}
-	layers := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
+	layers, err := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
+	require.NoError(t, err)
 
 	changedIdx := []uint64{24, 41}
 	changedRoots := [][32]byte{{'A', 'B', 'C'}, {'D', 'E', 'F'}}

@@ -12,7 +12,7 @@ import (
 // Is a background routine that observes for new incoming forks. Depending on the epoch
 // it will be in charge of subscribing/unsubscribing the relevant topics at the fork boundaries.
 func (s *Service) forkWatcher() {
-	slotTicker := slots.NewSlotTicker(s.cfg.Chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
+	slotTicker := slots.NewSlotTicker(s.cfg.chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		// In the event of a node restart, we will still end up subscribing to the correct
@@ -39,8 +39,8 @@ func (s *Service) forkWatcher() {
 // Checks if there is a fork in the next epoch and if there is
 // it registers the appropriate gossip and rpc topics.
 func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
-	genRoot := s.cfg.Chain.GenesisValidatorRoot()
-	isNextForkEpoch, err := forks.IsForkNextEpoch(s.cfg.Chain.GenesisTime(), genRoot[:])
+	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	isNextForkEpoch, err := forks.IsForkNextEpoch(s.cfg.chain.GenesisTime(), genRoot[:])
 	if err != nil {
 		return errors.Wrap(err, "Could not retrieve next fork epoch")
 	}
@@ -67,7 +67,7 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 // Checks if there was a fork in the previous epoch, and if there
 // was then we deregister the topics from that particular fork.
 func (s *Service) deregisterFromPastFork(currEpoch types.Epoch) error {
-	genRoot := s.cfg.Chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorRoot()
 	// This method takes care of the de-registration of
 	// old gossip pubsub handlers. Once we are at the epoch
 	// after the fork, we de-register from all the outdated topics.

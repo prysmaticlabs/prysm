@@ -17,7 +17,6 @@ type BeaconState interface {
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
-	Version() int
 	FutureForkStub
 }
 
@@ -43,6 +42,7 @@ type ReadOnlyBeaconState interface {
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
+	Version() int
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
@@ -148,7 +148,6 @@ type WriteOnlyBlockRoots interface {
 
 // WriteOnlyStateRoots defines a struct which only has write access to state roots methods.
 type WriteOnlyStateRoots interface {
-	SetStateRoots(val [][]byte) error
 	UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error
 }
 

@@ -65,8 +65,8 @@ var mainnetNetworkConfig = &NetworkConfig{
 
 var mainnetBeaconConfig = &BeaconChainConfig{
 	// Constants (Non-configurable)
-	FarFutureEpoch:           1<<64 - 1,
-	FarFutureSlot:            1<<64 - 1,
+	FarFutureEpoch:           math.MaxUint64,
+	FarFutureSlot:            math.MaxUint64,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
 	GenesisDelay:             604800, // 1 week.
@@ -178,6 +178,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	PresetBase:                  "mainnet",
 	BeaconStateFieldCount:       21,
 	BeaconStateAltairFieldCount: 24,
+	BeaconStateMergeFieldCount:  25,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -233,4 +234,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
+
+	// Merge
+	TerminalBlockHashActivationEpoch: math.MaxUint64,
 }

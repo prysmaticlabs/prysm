@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -42,9 +41,6 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	// ensure head gets its best justified info.
 	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
 		s.justifiedCheckpt = s.bestJustifiedCheckpt
-		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-			return err
-		}
 	}
 
 	// Get head from the fork choice service.
@@ -271,57 +267,6 @@ func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOn
 // This is the lock free version.
 func (s *Service) hasHeadState() bool {
 	return s.head != nil && s.head.state != nil
-}
-
-// This caches justified state balances to be used for fork choice.
-func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot [32]byte) error {
-	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-		return err
-	}
-
-	s.clearInitSyncBlocks()
-
-	var justifiedState state.BeaconState
-	var err error
-	if justifiedRoot == s.genesisRoot {
-		justifiedState, err = s.cfg.BeaconDB.GenesisState(ctx)
-		if err != nil {
-			return err
-		}
-	} else {
-		justifiedState, err = s.cfg.StateGen.StateByRoot(ctx, justifiedRoot)
-		if err != nil {
-			return err
-		}
-	}
-	if justifiedState == nil || justifiedState.IsNil() {
-		return errors.New("justified state can't be nil")
-	}
-
-	epoch := time.CurrentEpoch(justifiedState)
-
-	justifiedBalances := make([]uint64, justifiedState.NumValidators())
-	if err := justifiedState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
-		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
-			justifiedBalances[idx] = val.EffectiveBalance()
-		} else {
-			justifiedBalances[idx] = 0
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	s.justifiedBalancesLock.Lock()
-	defer s.justifiedBalancesLock.Unlock()
-	s.justifiedBalances = justifiedBalances
-	return nil
-}
-
-func (s *Service) getJustifiedBalances() []uint64 {
-	s.justifiedBalancesLock.RLock()
-	defer s.justifiedBalancesLock.RUnlock()
-	return s.justifiedBalances
 }
 
 // Notifies a common event feed of a new chain head event. Called right after a new

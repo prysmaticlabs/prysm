@@ -135,7 +135,24 @@ func (s *Service) verifyBlkFinalizedSlot(b block.BeaconBlock) error {
 // shouldUpdateCurrentJustified prevents bouncing attack, by only update conflicting justified
 // checkpoints in the fork choice if in the early slots of the epoch.
 // Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
-// See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
+//
+// Spec code:
+// def should_update_justified_checkpoint(store: Store, new_justified_checkpoint: Checkpoint) -> bool:
+//    """
+//    To address the bouncing attack, only update conflicting justified
+//    checkpoints in the fork choice if in the early slots of the epoch.
+//    Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
+//
+//    See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
+//    """
+//    if compute_slots_since_epoch_start(get_current_slot(store)) < SAFE_SLOTS_TO_UPDATE_JUSTIFIED:
+//        return True
+//
+//    justified_slot = compute_start_slot_at_epoch(store.justified_checkpoint.epoch)
+//    if not get_ancestor(store, new_justified_checkpoint.root, justified_slot) == store.justified_checkpoint.root:
+//        return False
+//
+//    return True
 func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.shouldUpdateCurrentJustified")
 	defer span.End()
@@ -143,51 +160,20 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if slots.SinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-	var newJustifiedBlockSigned block.SignedBeaconBlock
-	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
-	var err error
-	if s.hasInitSyncBlock(justifiedRoot) {
-		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
-	} else {
-		newJustifiedBlockSigned, err = s.cfg.BeaconDB.Block(ctx, justifiedRoot)
-		if err != nil {
-			return false, err
-		}
-	}
-	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.IsNil() || newJustifiedBlockSigned.Block().IsNil() {
-		return false, errors.New("nil new justified block")
-	}
 
-	newJustifiedBlock := newJustifiedBlockSigned.Block()
 	jSlot, err := slots.EpochStart(s.justifiedCheckpt.Epoch)
 	if err != nil {
 		return false, err
 	}
-	if newJustifiedBlock.Slot() <= jSlot {
-		return false, nil
-	}
-	var justifiedBlockSigned block.SignedBeaconBlock
-	cachedJustifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
-	if s.hasInitSyncBlock(cachedJustifiedRoot) {
-		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
-	} else {
-		justifiedBlockSigned, err = s.cfg.BeaconDB.Block(ctx, cachedJustifiedRoot)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	if justifiedBlockSigned == nil || justifiedBlockSigned.IsNil() || justifiedBlockSigned.Block().IsNil() {
-		return false, errors.New("nil justified block")
-	}
-	justifiedBlock := justifiedBlockSigned.Block()
-	b, err := s.ancestor(ctx, justifiedRoot[:], justifiedBlock.Slot())
+	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
+	b, err := s.ancestor(ctx, justifiedRoot[:], jSlot)
 	if err != nil {
 		return false, err
 	}
 	if !bytes.Equal(b, s.justifiedCheckpt.Root) {
 		return false, nil
 	}
+
 	return true, nil
 }
 
@@ -207,9 +193,6 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 	if canUpdate {
 		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
-		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -220,12 +203,13 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 // This method does not have defense against fork choice bouncing attack, which is why it's only recommend to be used during initial syncing.
 func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpoint) error {
 	s.prevJustifiedCheckpt = s.justifiedCheckpt
-	s.justifiedCheckpt = cp
-	if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+
+	if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
+	s.justifiedCheckpt = cp
 
-	return s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cp)
+	return nil
 }
 
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
@@ -344,7 +328,9 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state state.
 	if !attestation.CheckPointIsEqual(s.justifiedCheckpt, state.CurrentJustifiedCheckpoint()) {
 		if state.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-			return s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+			// we don't need to check if the previous justified checkpoint was an ancestor since the new
+			// finalized checkpoint is overriding it.
+			return nil
 		}
 
 		// Update justified if store justified is not in chain with finalized check point.
@@ -359,9 +345,6 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state state.
 		}
 		if !bytes.Equal(anc, s.finalizedCheckpt.Root) {
 			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-			if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-				return err
-			}
 		}
 	}
 	return nil

@@ -37,6 +37,15 @@ func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, 
 	return has, nil
 }
 
+// StateByRootIfCached retrieves a state using the input block root only if the state is already in the cache
+func (s *State) StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState {
+	if !s.hotStateCache.has(blockRoot) {
+		return nil
+	}
+	state := s.hotStateCache.getWithoutCopy(blockRoot)
+	return state
+}
+
 // StateByRoot retrieves the state using input block root.
 func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
@@ -44,7 +53,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 
 	// Genesis case. If block root is zero hash, short circuit to use genesis cachedState stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
-		return s.beaconDB.State(ctx, blockRoot)
+		return s.beaconDB.GenesisState(ctx)
 	}
 	return s.loadStateByRoot(ctx, blockRoot)
 }
@@ -57,7 +66,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
-		return s.beaconDB.State(ctx, blockRoot)
+		return s.beaconDB.GenesisState(ctx)
 	}
 
 	// To invalidate cache for parent root because pre state will get mutated.
