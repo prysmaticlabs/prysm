@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -14,7 +15,6 @@ import (
 	syncSrv "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -31,17 +31,24 @@ type Config struct {
 }
 
 type Service struct {
-	cfg          *Config
-	cancelFunc   context.CancelFunc
-	prevHeadData map[[32]byte]*ethpb.SyncAttestedData
-	lock         sync.RWMutex
+	cfg                      *Config
+	cancelFunc               context.CancelFunc
+	prevHeadData             map[[32]byte]*ethpb.SyncAttestedData
+	lock                     sync.RWMutex
+	genesisTime              time.Time
+	finalizedByEpoch         map[types.Epoch]*ethpb.LightClientFinalizedCheckpoint
+	bestUpdateByPeriod       map[uint64]*ethpb.LightClientUpdate
+	latestFinalizedUpdate    *ethpb.LightClientUpdate
+	latestNonFinalizedUpdate *ethpb.LightClientUpdate
 }
 
 // New --
 func New(ctx context.Context, cfg *Config) *Service {
 	return &Service{
-		cfg:          cfg,
-		prevHeadData: make(map[[32]byte]*ethpb.SyncAttestedData),
+		cfg:                cfg,
+		prevHeadData:       make(map[[32]byte]*ethpb.SyncAttestedData),
+		finalizedByEpoch:   make(map[types.Epoch]*ethpb.LightClientFinalizedCheckpoint),
+		bestUpdateByPeriod: make(map[uint64]*ethpb.LightClientUpdate),
 	}
 }
 
@@ -61,142 +68,46 @@ func (s *Service) Status() error {
 func (s *Service) run() {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancelFunc = cancel
-
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	stateEvent := <-stateChannel
-
-	var genesisTime time.Time
-	// Wait for us to receive the genesis time via a chain started notification.
-	if stateEvent.Type == statefeed.ChainStarted {
-		data, ok := stateEvent.Data.(*statefeed.ChainStartedData)
-		if !ok {
-			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
-			stateSub.Unsubscribe()
-			return
-		}
-		genesisTime = data.StartTime
-		log.WithField("genesisTime", genesisTime).Info("Starting, received chain start event")
-	} else if stateEvent.Type == statefeed.Initialized {
-		// Alternatively, if the chain has already started, we then read the genesis
-		// time value from this data.
-		data, ok := stateEvent.Data.(*statefeed.InitializedData)
-		if !ok {
-			log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
-			stateSub.Unsubscribe()
-			return
-		}
-		genesisTime = data.StartTime
-		log.WithField("genesisTime", genesisTime).Info("Starting, chain already initialized")
-	} else {
-		// This should not happen.
-		log.Error("Could start slasher, could not receive chain start event")
-		stateSub.Unsubscribe()
-		return
-	}
-	stateSub.Unsubscribe()
-
-	s.waitForSync(ctx, genesisTime)
-	cpt, err := s.cfg.Database.FinalizedCheckpoint(ctx)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	checkpointRoot := bytesutil.ToBytes32(cpt.Root)
-	log.Infof("%#x", checkpointRoot)
-	var block block2.SignedBeaconBlock
-	block, err = s.cfg.Database.Block(ctx, checkpointRoot)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	if block == nil || block.IsNil() {
-		block, err = s.cfg.Database.GenesisBlock(ctx)
-		if err != nil {
-			log.Error(err)
-			return
-		}
-	}
-	var st state.BeaconState
-	st, err = s.cfg.StateGen.StateByRoot(ctx, checkpointRoot)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	if st == nil || st.IsNil() {
-		st, err = s.cfg.Database.GenesisState(ctx)
-		if err != nil {
-			log.Error(err)
-			return
-		}
-	}
-	// Call with finalized checkpoint data.
-	if err := s.onFinalized(ctx, st, block.Block()); err != nil {
+	s.waitForChainInitialization(ctx)
+	s.waitForSync(ctx)
+	// Initialize the service from finalized (state, block) data.
+	if err := s.initializeFromFinalizedData(ctx); err != nil {
 		log.Fatal(err)
 	}
-	go s.listenForNewHead(ctx)
+	// Begin listening for new chain head and finalized checkpoint events.
+	go s.subscribeHeadEvent(ctx)
+	go s.subscribeFinalizedEvent(ctx)
 }
 
-func (s *Service) listenForNewHead(ctx context.Context) {
-	stateChan := make(chan *feed.Event, 1)
-	sub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChan)
-	defer sub.Unsubscribe()
+func (s *Service) waitForChainInitialization(ctx context.Context) {
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	defer close(stateChannel)
 	for {
 		select {
-		case ev := <-stateChan:
-			if ev.Type == statefeed.NewHead {
-				head, err := s.cfg.HeadFetcher.HeadBlock(ctx)
-				if err != nil {
-					log.Error(err)
-					continue
-				}
-				if head == nil || head.IsNil() {
-					log.Error("No head")
-					continue
-				}
-				st, err := s.cfg.HeadFetcher.HeadState(ctx)
-				if err != nil {
-					log.Error(err)
-					continue
-				}
-				if st == nil || st.IsNil() {
-					log.Error("No state")
-					continue
-				}
-				if err := s.onHead(ctx, st, head.Block()); err != nil {
-					log.Error(err)
-					continue
-				}
-			} else if ev.Type == statefeed.FinalizedCheckpoint {
-				finalizedCheckpoint, ok := ev.Data.(*v1.EventFinalizedCheckpoint)
+		case stateEvent := <-stateChannel:
+			// Wait for us to receive the genesis time via a chain started notification.
+			if stateEvent.Type == statefeed.Initialized {
+				// Alternatively, if the chain has already started, we then read the genesis
+				// time value from this data.
+				data, ok := stateEvent.Data.(*statefeed.InitializedData)
 				if !ok {
-					continue
+					log.Error(
+						"Could not receive chain start notification, want *statefeed.ChainStartedData",
+					)
+					return
 				}
-				checkpointRoot := bytesutil.ToBytes32(finalizedCheckpoint.Block)
-				block, err := s.cfg.Database.Block(ctx, checkpointRoot)
-				if err != nil {
-					log.Error(err)
-					continue
-				}
-				if block == nil || block.IsNil() {
-					log.Error("No head")
-					continue
-				}
-				st, err := s.cfg.StateGen.StateByRoot(ctx, checkpointRoot)
-				if err != nil {
-					log.Error(err)
-					continue
-				}
-				if st == nil || st.IsNil() {
-					log.Error("No state")
-					continue
-				}
-				if err := s.onFinalized(ctx, st, block.Block()); err != nil {
-					log.Error(err)
-					continue
-				}
+				s.genesisTime = data.StartTime
+				log.WithField("genesisTime", s.genesisTime).Info(
+					"Received chain initialization event",
+				)
+				return
 			}
-		case <-sub.Err():
+		case err := <-stateSub.Err():
+			log.WithError(err).Error(
+				"Could not subscribe to state events",
+			)
 			return
 		case <-ctx.Done():
 			return
@@ -204,11 +115,11 @@ func (s *Service) listenForNewHead(ctx context.Context) {
 	}
 }
 
-func (s *Service) waitForSync(ctx context.Context, genesisTime time.Time) {
-	if slots.SinceGenesis(genesisTime) == 0 || !s.cfg.SyncChecker.Syncing() {
+func (s *Service) waitForSync(ctx context.Context) {
+	if slots.SinceGenesis(s.genesisTime) == 0 || !s.cfg.SyncChecker.Syncing() {
 		return
 	}
-	slotTicker := slots.NewSlotTicker(genesisTime, params.BeaconConfig().SecondsPerSlot)
+	slotTicker := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	defer slotTicker.Done()
 	for {
 		select {
@@ -222,4 +133,44 @@ func (s *Service) waitForSync(ctx context.Context, genesisTime time.Time) {
 			return
 		}
 	}
+}
+
+func (s *Service) finalizedBlockOrGenesis(ctx context.Context, cpt *ethpb.Checkpoint) (block2.SignedBeaconBlock, error) {
+	checkpointRoot := bytesutil.ToBytes32(cpt.Root)
+	block, err := s.cfg.Database.Block(ctx, checkpointRoot)
+	if err != nil {
+		return nil, err
+	}
+	if block == nil || block.IsNil() {
+		return s.cfg.Database.GenesisBlock(ctx)
+	}
+	return block, nil
+}
+
+func (s *Service) finalizedStateOrGenesis(ctx context.Context, cpt *ethpb.Checkpoint) (state.BeaconState, error) {
+	checkpointRoot := bytesutil.ToBytes32(cpt.Root)
+	st, err := s.cfg.StateGen.StateByRoot(ctx, checkpointRoot)
+	if err != nil {
+		return nil, err
+	}
+	if st == nil || st.IsNil() {
+		return s.cfg.Database.GenesisState(ctx)
+	}
+	return st, nil
+}
+
+func (s *Service) initializeFromFinalizedData(ctx context.Context) error {
+	cpt, err := s.cfg.Database.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return err
+	}
+	finalizedBlock, err := s.finalizedBlockOrGenesis(ctx, cpt)
+	if err != nil {
+		return err
+	}
+	finalizedState, err := s.finalizedStateOrGenesis(ctx, cpt)
+	if err != nil {
+		return err
+	}
+	return s.onFinalized(ctx, finalizedBlock, finalizedState)
 }
