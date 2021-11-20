@@ -130,6 +130,13 @@ func WithSlasherAttestationsFeed(f *event.Feed) Option {
 	}
 }
 
+func withStateBalanceCache(c *stateBalanceCache) Option {
+	return func(s *Service) error {
+		s.justifiedBalances = c
+		return nil
+	}
+}
+
 // WithFinalizedStateAtStartUp to store finalized state at start up.
 func WithFinalizedStateAtStartUp(st state.BeaconState) Option {
 	return func(s *Service) error {

@@ -3,11 +3,6 @@ package monitor
 import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/sirupsen/logrus"
-)
-
-var (
-	log = logrus.WithField("prefix", "monitor")
 )
 
 // ValidatorLatestPerformance keeps track of the latest participation of the validator
