@@ -71,9 +71,11 @@ func (s *Service) run() {
 	s.waitForChainInitialization(ctx)
 	s.waitForSync(ctx)
 	// Initialize the service from finalized (state, block) data.
+	log.Info("Initializing from finalized data")
 	if err := s.initializeFromFinalizedData(ctx); err != nil {
 		log.Fatal(err)
 	}
+	log.Info("Beginning subscriptions")
 	// Begin listening for new chain head and finalized checkpoint events.
 	go s.subscribeHeadEvent(ctx)
 	go s.subscribeFinalizedEvent(ctx)
@@ -116,16 +118,12 @@ func (s *Service) waitForChainInitialization(ctx context.Context) {
 }
 
 func (s *Service) waitForSync(ctx context.Context) {
-	if slots.SinceGenesis(s.genesisTime) == 0 || !s.cfg.SyncChecker.Syncing() {
-		return
-	}
 	slotTicker := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	defer slotTicker.Done()
 	for {
 		select {
 		case <-slotTicker.C():
-			// If node is still syncing, do not operate.
-			if s.cfg.SyncChecker.Syncing() {
+			if slots.ToEpoch(slots.SinceGenesis(s.genesisTime)) < 6 {
 				continue
 			}
 			return
@@ -160,17 +158,21 @@ func (s *Service) finalizedStateOrGenesis(ctx context.Context, cpt *ethpb.Checkp
 }
 
 func (s *Service) initializeFromFinalizedData(ctx context.Context) error {
+	log.Info("Getting finalized checkpoint")
 	cpt, err := s.cfg.Database.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return err
 	}
+	log.Info("Getting finalized block or genesis")
 	finalizedBlock, err := s.finalizedBlockOrGenesis(ctx, cpt)
 	if err != nil {
 		return err
 	}
+	log.Info("Getting finalized state or genesis")
 	finalizedState, err := s.finalizedStateOrGenesis(ctx, cpt)
 	if err != nil {
 		return err
 	}
+	log.Info("Calling onFinalized")
 	return s.onFinalized(ctx, finalizedBlock, finalizedState)
 }

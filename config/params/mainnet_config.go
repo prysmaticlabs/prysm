@@ -22,7 +22,7 @@ const (
 	// Genesis Fork Epoch for the mainnet config.
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
-	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
+	mainnetAltairForkEpoch = 1 // Oct 27, 2021, 10:56:23am UTC
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -97,8 +97,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Time parameter constants.
 	MinAttestationInclusionDelay:     1,
-	SecondsPerSlot:                   12,
-	SlotsPerEpoch:                    32,
+	SecondsPerSlot:                   4,
+	SlotsPerEpoch:                    4,
 	SqrRootSlotsPerEpoch:             5,
 	MinSeedLookahead:                 1,
 	MaxSeedLookahead:                 4,
