@@ -63,6 +63,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not hash tree root: %v", err)
 	}
+	log.Infof("Verifying proof with root %#x, leaf %#x", root, nextSyncCommitteeRoot)
 	validProof := ssz.VerifyProof(root, update.NextSyncCommitteeBranch, nextSyncCommitteeRoot, NextSyncCommitteeIndex)
 	if !validProof {
 		log.Error("could not verify merkle proof")

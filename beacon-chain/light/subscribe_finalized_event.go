@@ -70,34 +70,45 @@ func (s *Service) parseFinalizedEvent(
 func (s *Service) onFinalized(
 	ctx context.Context, signedBlock block.SignedBeaconBlock, postState state.BeaconStateAltair,
 ) error {
-	log.Info("Getting beacon state")
 	if _, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair); !ok {
 		return errors.New("expected an Altair beacon state")
 	}
 	blk := signedBlock.Block()
-	log.Info("Getting beacon block header")
 	header, err := block.BeaconBlockHeaderFromBlockInterface(blk)
 	if err != nil {
 		return err
 	}
-	log.Info("Getting state tree")
 	tb, err := ssz.NewTreeBackedState(postState)
 	if err != nil {
 		return err
 	}
-	log.Info("Getting next sync committee proof")
-	proof, _, err := tb.Proof(nextSyncCommitteeStateIndex)
+	proof, gIndex, err := tb.Proof(nextSyncCommitteeStateIndex)
 	if err != nil {
 		return err
 	}
-	log.Info("Getting next sync committee")
 	nextSyncCommittee, err := postState.NextSyncCommittee()
 	if err != nil {
 		return err
 	}
+	root, err := postState.HashTreeRoot(ctx)
+	if err != nil {
+		return err
+	}
+	nextSyncCommitteeRoot, err := nextSyncCommittee.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	log.Infof("Header state root %#x, state hash tree root %#x", header.StateRoot, root)
+	log.Infof("Generating proof against root %#x with gindex %d and leaf root %#x", root, gIndex, nextSyncCommitteeRoot)
+	log.Info("-----")
+	log.Infof("Proof with length %d", len(proof))
+	for _, elem := range proof {
+		log.Infof("%#x", bytesutil.Trunc(elem))
+	}
+	log.Info("-----")
+
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	log.Info("Writing finalized by epoch")
 	currentEpoch := slots.ToEpoch(blk.Slot())
 	s.finalizedByEpoch[currentEpoch] = &ethpb.LightClientFinalizedCheckpoint{
 		Header:                  header,

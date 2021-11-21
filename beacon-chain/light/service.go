@@ -185,21 +185,17 @@ func (s *Service) finalizedStateOrGenesis(ctx context.Context, cpt *ethpb.Checkp
 }
 
 func (s *Service) initializeFromFinalizedData(ctx context.Context) error {
-	log.Info("Getting finalized checkpoint")
 	cpt, err := s.cfg.Database.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return err
 	}
-	log.Info("Getting finalized block or genesis")
 	finalizedBlock, err := s.finalizedBlockOrGenesis(ctx, cpt)
 	if err != nil {
 		return err
 	}
-	log.Info("Getting finalized state or genesis")
 	finalizedState, err := s.finalizedStateOrGenesis(ctx, cpt)
 	if err != nil {
 		return err
 	}
-	log.Info("Calling onFinalized")
 	return s.onFinalized(ctx, finalizedBlock, finalizedState)
 }
