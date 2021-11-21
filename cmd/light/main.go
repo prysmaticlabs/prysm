@@ -58,66 +58,14 @@ func main() {
 		log.Fatalf("could not get latest update: %v", err)
 	}
 	// Attempt to verify a merkle proof of the next sync committee branch vs. the state root.
-	root := bytesutil.ToBytes32(update.FinalityHeader.StateRoot)
-	nextSyncCommitteeRoot, err := update.NextSyncCommittee.HashTreeRoot()
+	root := bytesutil.ToBytes32(update.Header.StateRoot)
+	leaf, err := update.NextSyncCommittee.HashTreeRoot()
 	if err != nil {
 		log.Fatalf("could not hash tree root: %v", err)
 	}
-	log.Infof("Verifying proof with root %#x, leaf %#x", root, nextSyncCommitteeRoot)
-	validProof := ssz.VerifyProof(root, update.NextSyncCommitteeBranch, nextSyncCommitteeRoot, NextSyncCommitteeIndex)
+	log.Infof("Verifying proof with root %#x, leaf %#x", root, leaf)
+	validProof := ssz.VerifyProof(root, update.NextSyncCommitteeBranch, leaf, NextSyncCommitteeIndex)
 	if !validProof {
 		log.Error("could not verify merkle proof")
 	}
-	//
-	//// Get basic information such as the genesis validators root.
-	//genesis, err := beaconClient.GetGenesis(ctx, &emptypb.Empty{})
-	//if err != nil {
-	//	panic(err)
-	//}
-	//genesisValidatorsRoot := genesis.Data.GenesisValidatorsRoot
-	//genesisTime := uint64(genesis.Data.GenesisTime.AsTime().Unix())
-	//fmt.Printf("%#v\n", genesisValidatorsRoot)
-	//currentState, err := debugClient.GetBeaconStateV2(ctx, &v2.StateRequestV2{StateId: []byte("head")})
-	//if err != nil {
-	//	panic(err)
-	//}
-	//altairState := currentState.Data.GetAltairState()
-	//store := &Store{
-	//	Snapshot: &LightClientSnapshot{
-	//		Header:               nil,
-	//		CurrentSyncCommittee: altairState.CurrentSyncCommittee,
-	//		NextSyncCommittee:    altairState.NextSyncCommittee,
-	//	},
-	//	ValidUpdates: make([]*LightClientUpdate, 0),
-	//}
-	//
-	//events, err := eventsClient.StreamEvents(ctx, &v1.StreamEventsRequest{Topics: []string{"head"}})
-	//if err != nil {
-	//	panic(err)
-	//}
-	//for {
-	//	item, err := events.Recv()
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	evHeader := &v1.EventHead{}
-	//	if err := item.Data.UnmarshalTo(evHeader); err != nil {
-	//		panic(err)
-	//	}
-	//	blockHeader, err := beaconClient.GetBlockHeader(ctx, &v1.BlockRequest{BlockId: evHeader.Block})
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	store.Snapshot.Header = blockHeader.Data.Header.Message
-	//	fmt.Println(store)
-	//	currentSlot := slots.CurrentSlot(genesisTime)
-	//	if err := processLightClientUpdate(
-	//		store,
-	//		&LightClientUpdate{},
-	//		currentSlot,
-	//		bytesutil.ToBytes32(genesisValidatorsRoot),
-	//	); err != nil {
-	//		panic(err)
-	//	}
-	//}
 }

@@ -77,7 +77,11 @@ func (s *Service) onHead(ctx context.Context, head block.SignedBeaconBlock, post
 	if err != nil {
 		return err
 	}
-	nextSyncCommitteeBranch, _, err := tb.Proof(nextSyncCommitteeStateIndex)
+	nextSyncCommitteeBranch, gIndex, err := tb.Proof(nextSyncCommitteeStateIndex)
+	if err != nil {
+		return err
+	}
+	stRoot, err := postState.HashTreeRoot(ctx)
 	if err != nil {
 		return err
 	}
@@ -85,6 +89,7 @@ func (s *Service) onHead(ctx context.Context, head block.SignedBeaconBlock, post
 	if err != nil {
 		return err
 	}
+	log.Infof("On head, generating sync committee proof for root %#x and index %d, block root %#x, header state root %#x", stRoot[:], gIndex, blkRoot, header.StateRoot)
 	nextSyncCommittee, err := postState.NextSyncCommittee()
 	if err != nil {
 		return err
@@ -122,6 +127,7 @@ func (s *Service) onHead(ctx context.Context, head block.SignedBeaconBlock, post
 	syncAttestedData, ok := s.prevHeadData[bytesutil.ToBytes32(syncAttestedBlockRoot)]
 	if !ok {
 		s.lock.Unlock()
+		log.Info("Got useless data, skipping")
 		return nil // Useless data.
 	}
 	s.lock.Unlock()

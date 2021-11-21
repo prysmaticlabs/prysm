@@ -98,6 +98,7 @@ func (s *Service) onFinalized(
 	if err != nil {
 		return err
 	}
+	log.Info("On finalized update")
 	log.Infof("Header state root %#x, state hash tree root %#x", header.StateRoot, root)
 	log.Infof("Generating proof against root %#x with gindex %d and leaf root %#x", root, gIndex, nextSyncCommitteeRoot)
 	log.Info("-----")

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -70,6 +71,19 @@ func (s *Service) persistBestFinalizedUpdate(ctx context.Context, syncAttestedDa
 		s.lock.Lock()
 		s.latestFinalizedUpdate = newUpdate
 		s.lock.Unlock()
+		log.Info("Putting latest best finalized update")
+		rt, err := newUpdate.NextSyncCommittee.HashTreeRoot()
+		if err != nil {
+			return 0, err
+		}
+		log.Infof("Header state root %#x, state hash tree root %#x", newUpdate.Header.StateRoot, newUpdate.Header.StateRoot)
+		log.Infof("Generating proof against root %#x with gindex %d and leaf root %#x", newUpdate.Header.StateRoot, 55, rt)
+		log.Info("-----")
+		log.Infof("Proof with length %d", len(newUpdate.NextSyncCommitteeBranch))
+		for _, elem := range newUpdate.NextSyncCommitteeBranch {
+			log.Infof("%#x", bytesutil.Trunc(elem))
+		}
+		log.Info("-----")
 	}
 	return committeePeriod, nil
 }
