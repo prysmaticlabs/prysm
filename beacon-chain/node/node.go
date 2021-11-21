@@ -686,6 +686,11 @@ func (b *BeaconNode) registerRPCService() error {
 		return err
 	}
 
+	var lightService *light.Service
+	if err := b.services.FetchService(&lightService); err != nil {
+		return err
+	}
+
 	var slasherService *slasher.Service
 	if features.Get().EnableSlasher {
 		if err := b.services.FetchService(&slasherService); err != nil {
@@ -762,6 +767,7 @@ func (b *BeaconNode) registerRPCService() error {
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
+		LightUpdatesFetcher:     lightService,
 	})
 
 	return b.services.RegisterService(rpcService)
