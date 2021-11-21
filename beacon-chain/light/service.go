@@ -2,6 +2,7 @@ package light
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -19,6 +20,12 @@ import (
 	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
+
+type UpdatesFetcher interface {
+	BestUpdateForPeriod(ctx context.Context, period uint64) (*ethpb.LightClientUpdate, error)
+	LatestFinalizedUpdate(ctx context.Context) *ethpb.LightClientUpdate
+	LatestNonFinalizedUpdate(ctx context.Context) *ethpb.LightClientUpdate
+}
 
 type Config struct {
 	StateGen            stategen.StateManager
@@ -63,6 +70,26 @@ func (s *Service) Stop() error {
 
 func (s *Service) Status() error {
 	return nil
+}
+
+func (s *Service) BestUpdateForPeriod(ctx context.Context, period uint64) (*ethpb.LightClientUpdate, error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	update, ok := s.bestUpdateByPeriod[period]
+	if !ok {
+		return nil, fmt.Errorf("no update found for period %d", period)
+	}
+	return update, nil
+}
+
+func (s *Service) LatestFinalizedUpdate(ctx context.Context) *ethpb.LightClientUpdate {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return s.latestFinalizedUpdate
+}
+
+func (s *Service) LatestNonFinalizedUpdate(ctx context.Context) *ethpb.LightClientUpdate {
+	return s.latestNonFinalizedUpdate
 }
 
 func (s *Service) run() {

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -60,12 +61,11 @@ func (s *Service) getChainHeadAndState(ctx context.Context) (block.SignedBeaconB
 }
 
 func (s *Service) onHead(ctx context.Context, head block.SignedBeaconBlock, postState state.BeaconStateAltair) error {
-	innerState, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
-	if !ok {
+	if _, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair); !ok {
 		return errors.New("expected an Altair beacon state")
 	}
 	blk := head.Block()
-	tr, err := innerState.GetTree()
+	tb, err := ssz.NewTreeBackedState(postState)
 	if err != nil {
 		return err
 	}
@@ -73,11 +73,11 @@ func (s *Service) onHead(ctx context.Context, head block.SignedBeaconBlock, post
 	if err != nil {
 		return err
 	}
-	finalityBranch, err := tr.Prove(FinalizedRootIndex)
+	finalityBranch, _, err := tb.Proof(finalizedCheckpointStateIndex)
 	if err != nil {
 		return err
 	}
-	nextSyncCommitteeBranch, err := tr.Prove(NextSyncCommitteeIndex)
+	nextSyncCommitteeBranch, _, err := tb.Proof(nextSyncCommitteeStateIndex)
 	if err != nil {
 		return err
 	}
@@ -85,16 +85,21 @@ func (s *Service) onHead(ctx context.Context, head block.SignedBeaconBlock, post
 	if err != nil {
 		return err
 	}
+	nextSyncCommittee, err := postState.NextSyncCommittee()
+	if err != nil {
+		return err
+	}
+
 	s.lock.Lock()
 	s.prevHeadData[blkRoot] = &ethpb.SyncAttestedData{
 		Header:                  header,
-		FinalityCheckpoint:      innerState.FinalizedCheckpoint,
-		FinalityBranch:          finalityBranch.Hashes,
-		NextSyncCommittee:       innerState.NextSyncCommittee,
-		NextSyncCommitteeBranch: nextSyncCommitteeBranch.Hashes,
+		FinalityCheckpoint:      postState.FinalizedCheckpoint(),
+		FinalityBranch:          finalityBranch,
+		NextSyncCommittee:       nextSyncCommittee,
+		NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 	}
 	s.lock.Unlock()
-	syncAttestedBlockRoot, err := helpers.BlockRootAtSlot(postState, innerState.Slot-1)
+	syncAttestedBlockRoot, err := helpers.BlockRootAtSlot(postState, postState.Slot()-1)
 	if err != nil {
 		return err
 	}
@@ -117,7 +122,7 @@ func (s *Service) onHead(ctx context.Context, head block.SignedBeaconBlock, post
 	syncAttestedData, ok := s.prevHeadData[bytesutil.ToBytes32(syncAttestedBlockRoot)]
 	if !ok {
 		s.lock.Unlock()
-		return errors.New("useless")
+		return nil // Useless data.
 	}
 	s.lock.Unlock()
 	commmitteePeriodWithFinalized, err := s.persistBestFinalizedUpdate(ctx, syncAttestedData, sigData)

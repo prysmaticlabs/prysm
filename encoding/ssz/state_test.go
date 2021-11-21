@@ -1,4 +1,4 @@
-package tree
+package ssz
 
 import (
 	"bytes"

@@ -8,10 +8,16 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
+)
+
+const (
+	finalizedCheckpointStateIndex = 20
+	nextSyncCommitteeStateIndex   = 23
 )
 
 func (s *Service) subscribeFinalizedEvent(ctx context.Context) {
@@ -65,8 +71,7 @@ func (s *Service) onFinalized(
 	ctx context.Context, signedBlock block.SignedBeaconBlock, postState state.BeaconStateAltair,
 ) error {
 	log.Info("Getting beacon state")
-	innerState, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
-	if !ok {
+	if _, ok := postState.InnerStateUnsafe().(*ethpb.BeaconStateAltair); !ok {
 		return errors.New("expected an Altair beacon state")
 	}
 	blk := signedBlock.Block()
@@ -76,12 +81,12 @@ func (s *Service) onFinalized(
 		return err
 	}
 	log.Info("Getting state tree")
-	tr, err := innerState.GetTree()
+	tb, err := ssz.NewTreeBackedState(postState)
 	if err != nil {
 		return err
 	}
 	log.Info("Getting next sync committee proof")
-	nextSyncCommitteeBranch, err := tr.Prove(NextSyncCommitteeIndex)
+	proof, _, err := tb.Proof(nextSyncCommitteeStateIndex)
 	if err != nil {
 		return err
 	}
@@ -97,7 +102,7 @@ func (s *Service) onFinalized(
 	s.finalizedByEpoch[currentEpoch] = &ethpb.LightClientFinalizedCheckpoint{
 		Header:                  header,
 		NextSyncCommittee:       nextSyncCommittee,
-		NextSyncCommitteeBranch: nextSyncCommitteeBranch.Hashes,
+		NextSyncCommitteeBranch: proof,
 	}
 	return nil
 }

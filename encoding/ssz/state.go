@@ -1,11 +1,14 @@
-package tree
+package ssz
 
 import (
+	"bytes"
 	"sort"
 
 	"github.com/pkg/errors"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/protolambda/ztyp/tree"
 	"github.com/protolambda/ztyp/view"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -86,6 +89,23 @@ var (
 	})
 )
 
+type TreeBackedState struct {
+	beaconState view.View
+}
+
+func NewTreeBackedState(beaconState state.BeaconState) (*TreeBackedState, error) {
+	enc, err := beaconState.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	dec := codec.NewDecodingReader(bytes.NewReader(enc), uint64(len(enc)))
+	treeBacked, err := BeaconStateAltairType.Deserialize(dec)
+	if err != nil {
+		return nil, err
+	}
+	return &TreeBackedState{beaconState: treeBacked}, nil
+}
+
 func VerifyProof(root [32]byte, proof [][]byte, leaf tree.Root, generalizedIndex tree.Gindex64) bool {
 	h := leaf
 	hFn := tree.GetHashFn()
@@ -101,17 +121,20 @@ func VerifyProof(root [32]byte, proof [][]byte, leaf tree.Root, generalizedIndex
 	return h == root
 }
 
-func Proof(
-	state view.View,
-	index uint64,
+func (tb *TreeBackedState) View() view.View {
+	return tb.beaconState
+}
+
+func (tb *TreeBackedState) Proof(
+	fieldIndex uint64,
 ) (proof [][]byte, generalizedIdx tree.Gindex64, err error) {
-	cont, ok := state.(*view.ContainerView)
+	cont, ok := tb.beaconState.(*view.ContainerView)
 	if !ok {
 		err = errors.New("not a container")
 		return
 	}
 	depth := tree.CoverDepth(cont.FieldCount())
-	generalizedIdx, err = tree.ToGindex64(index, depth)
+	generalizedIdx, err = tree.ToGindex64(fieldIndex, depth)
 	if err != nil {
 		return
 	}
@@ -157,7 +180,7 @@ func Proof(
 		return witnessSorted[i] < witnessSorted[j]
 	})
 
-	node := state.Backing()
+	node := tb.beaconState.Backing()
 	hFn := tree.GetHashFn()
 	proof = make([][]byte, 0, len(witnessSorted))
 	for i := len(witnessSorted) - 1; i >= 0; i-- {
