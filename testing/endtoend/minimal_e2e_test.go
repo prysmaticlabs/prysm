@@ -62,12 +62,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
-	}
-	// TODO(#9166): remove this block once v2 changes are live.
-	if !usePrysmSh {
-		evals = append(evals, ev.ValidatorSyncParticipation)
-	} else {
-		t.Log("Warning: Skipping v2 specific evaluators for prior release")
+		ev.ValidatorSyncParticipation,
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
