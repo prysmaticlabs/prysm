@@ -25,6 +25,7 @@ func setupService(t *testing.T) *Service {
 		1:  nil,
 		2:  nil,
 		12: nil,
+		15: nil,
 	}
 	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
 		1: {
@@ -36,12 +37,16 @@ func setupService(t *testing.T) *Service {
 		12: {
 			balance: 31900000000,
 		},
+		15: {
+			balance: 31900000000,
+		},
 	}
 
 	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
 		1:  {},
 		2:  {},
 		12: {},
+		15: {},
 	}
 
 	return &Service{
