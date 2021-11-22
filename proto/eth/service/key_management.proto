@@ -81,7 +81,7 @@ service KeyManagement {
   //  - 401: Unauthorized
   //  - 403: Forbidden from accessing the resource
   //  - 500: Validator internal error
-  rpc DeleteKeystores(ImportKeystoresRequest) returns (DeleteKeystoresResponse) {
+  rpc DeleteKeystores(DeleteKeystoresRequest) returns (DeleteKeystoresResponse) {
     option (google.api.http) = {
       delete: "/internal/eth/v1/keystores",
       body: "*"
