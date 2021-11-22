@@ -33,7 +33,7 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 
 	root, err := blk.HashTreeRoot()
 	if err != nil {
-		log.Error("Could not compute block's hash tree root")
+		log.WithError(err).Error("Could not compute block's hash tree root")
 		return
 	}
 	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
@@ -55,7 +55,7 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 		// update the performance map
 		balance, err := state.BalanceAtIndex(blk.ProposerIndex())
 		if err != nil {
-			log.Error("Could not get balance")
+			log.WithError(err).Error("Could not get balance")
 			return
 		}
 

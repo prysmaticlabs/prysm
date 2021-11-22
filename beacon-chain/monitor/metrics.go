@@ -59,7 +59,7 @@ var (
 	proposedSlotsCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "monitor",
-			Name:      "proposed_slots",
+			Name:      "proposed_slots_total",
 			Help:      "Number of proposed blocks included",
 		},
 		[]string{
