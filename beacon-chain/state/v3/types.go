@@ -22,9 +22,35 @@ func init() {
 	// Initialize the composite arrays.
 	fieldMap[types.Eth1DataVotes] = types.CompositeArray
 	fieldMap[types.Validators] = types.CompositeArray
+	fieldMap[types.Balances] = types.CompressedArray
 }
 
+// Field Aliases for values from the types package.
 const (
+	genesisTime                    = types.GenesisTime
+	genesisValidatorRoot           = types.GenesisValidatorRoot
+	slot                           = types.Slot
+	fork                           = types.Fork
+	latestBlockHeader              = types.LatestBlockHeader
+	blockRoots                     = types.BlockRoots
+	stateRoots                     = types.StateRoots
+	historicalRoots                = types.HistoricalRoots
+	eth1Data                       = types.Eth1Data
+	eth1DataVotes                  = types.Eth1DataVotes
+	eth1DepositIndex               = types.Eth1DepositIndex
+	validators                     = types.Validators
+	balances                       = types.Balances
+	randaoMixes                    = types.RandaoMixes
+	slashings                      = types.Slashings
+	previousEpochParticipationBits = types.PreviousEpochParticipationBits
+	currentEpochParticipationBits  = types.CurrentEpochParticipationBits
+	justificationBits              = types.JustificationBits
+	previousJustifiedCheckpoint    = types.PreviousJustifiedCheckpoint
+	currentJustifiedCheckpoint     = types.CurrentJustifiedCheckpoint
+	finalizedCheckpoint            = types.FinalizedCheckpoint
+	inactivityScores               = types.InactivityScores
+	currentSyncCommittee           = types.CurrentSyncCommittee
+	nextSyncCommittee              = types.NextSyncCommittee
 	latestExecutionPayloadHeader = types.LatestExecutionPayloadHeader
 )
 
