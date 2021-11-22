@@ -44,3 +44,8 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 func (b *BeaconState) SetInactivityScores(val []uint64) error {
 	return errors.New("SetInactivityScores is not supported for phase 0 beacon state")
 }
+
+// SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state.
+func (b *BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
+	return errors.New("SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state")
+}
