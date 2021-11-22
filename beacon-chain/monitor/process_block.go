@@ -19,14 +19,10 @@ import (
 // 4) A Slashing by one of our tracked validators was included
 // 5) A Sync Committe Contribution by one of our tracked validators was included
 func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
-	if b == nil {
+	if b == nil || b.Block() == nil {
 		return
 	}
-
 	blk := b.Block()
-	if blk == nil {
-		return
-	}
 
 	s.processSlashings(blk)
 	s.processExitsFromBlock(blk)
