@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -39,6 +40,13 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 		return
 	}
 
+	currEpoch := slots.ToEpoch(blk.Slot())
+	if currEpoch != s.lastSyncedEpoch &&
+		slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(s.lastSyncedEpoch) {
+		s.updateSyncCommitteeTrackedVals(state)
+	}
+
+	s.processSyncAggregate(state, blk)
 	s.processProposedBlock(state, root, blk)
 	s.processAttestations(ctx, state, blk)
 }

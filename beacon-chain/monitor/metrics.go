@@ -55,6 +55,7 @@ var (
 			"validator_index",
 		},
 	)
+
 	// proposedSlotsCounter used to track proposed blocks
 	proposedSlotsCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -72,6 +73,18 @@ var (
 			Namespace: "monitor",
 			Name:      "aggregations",
 			Help:      "Number of aggregation duties performed",
+		},
+		[]string{
+			"validator_index",
+		},
+	)
+	// syncCommitteeContributionCounter used to track sync committee
+	// contributions
+	syncCommitteeContributionCounter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "monitor",
+			Name:      "sync_committee_contributions",
+			Help:      "Number of Sync committee contributions performed",
 		},
 		[]string{
 			"validator_index",
