@@ -4,12 +4,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// hasInnerState detects if the internal reference to the state data structure
-// is populated correctly. Returns false if nil.
-func (b *BeaconState) hasInnerState() bool {
-	return b != nil && b.state != nil
-}
-
 // LatestExecutionPayloadHeader of the beacon state.
 func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
 	if !b.hasInnerState() {
