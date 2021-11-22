@@ -87,6 +87,9 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 			return ctx.Err()
 		}
 		if err := s.db.Update(func(tx *bolt.Tx) error {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			bkt := tx.Bucket(attestedEpochsByValidator)
 			min := i + batchSize
 			if min > len(encodedIndices) {

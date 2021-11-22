@@ -128,6 +128,9 @@ func (s *Store) PruneProposalsAtEpoch(
 		c := proposalBkt.Cursor()
 		// We begin a pruning iteration starting from the first item in the bucket.
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			// We check the slot from the current key in the database.
 			// If we have hit a slot that is greater than the end slot of the pruning process,
 			// we then completely exit the process as we are done.
