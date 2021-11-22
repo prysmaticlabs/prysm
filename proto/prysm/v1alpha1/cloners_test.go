@@ -315,7 +315,7 @@ func TestCopyPayloadHeader(t *testing.T) {
 	if !reflect.DeepEqual(got, p) {
 		t.Errorf("CopyExecutionPayloadHeader() = %v, want %v", got, p)
 	}
-	assert.NotEmpty(t, got, "Copied sync aggregate has empty fields")
+	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
 }
 
 func bytes() []byte {
