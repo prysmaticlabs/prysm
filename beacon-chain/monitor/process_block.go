@@ -34,7 +34,8 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 	}
 	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if state == nil {
-		log.Debug("Skipping block due to state not found in cache")
+		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
+			"Skipping block collection due to state not found in cache")
 		return
 	}
 
