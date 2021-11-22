@@ -14,3 +14,8 @@ func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, 
 func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, error) {
 	return nil, errors.New("CurrentEpochAttestations is not supported for hard fork 1 beacon state")
 }
+
+// LatestExecutionPayloadHeader is not supported for hard fork 1 beacon state.
+func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
+	return nil, errors.New("LatestExecutionPayloadHeader is not supported for hard fork 1 beacon state")
+}
