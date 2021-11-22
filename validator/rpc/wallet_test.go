@@ -47,11 +47,11 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	_, err := s.CreateWallet(ctx, req)
 	require.NoError(t, err)
 
-	importReq := &pb.ImportKeystoresRequest{
+	importReq := &pb.ImportAccountsRequest{
 		KeystoresPassword: strongPass,
 		KeystoresImported: []string{"badjson"},
 	}
-	_, err = s.ImportKeystores(ctx, importReq)
+	_, err = s.ImportAccounts(ctx, importReq)
 	require.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
 
 	encryptor := keystorev4.New()
@@ -76,7 +76,7 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 		keystores[i] = string(encodedFile)
 	}
 	importReq.KeystoresImported = keystores
-	_, err = s.ImportKeystores(ctx, importReq)
+	_, err = s.ImportAccounts(ctx, importReq)
 	require.NoError(t, err)
 }
 
@@ -330,7 +330,7 @@ func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testi
 		wallet:     w,
 		keymanager: km,
 	}
-	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{})
+	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{})
 	assert.ErrorContains(t, "Only imported wallets can import more", err)
 }
 
@@ -352,16 +352,16 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 	ss := &Server{
 		keymanager: km,
 	}
-	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{})
+	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{})
 	assert.ErrorContains(t, "No wallet initialized", err)
 	ss.wallet = w
-	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{})
+	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{})
 	assert.ErrorContains(t, "Password required for keystores", err)
-	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{
 		KeystoresPassword: strongPass,
 	})
 	assert.ErrorContains(t, "No keystores included for import", err)
-	_, err = ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{
 		KeystoresPassword: strongPass,
 		KeystoresImported: []string{"badjson"},
 	})
@@ -421,12 +421,12 @@ func TestServer_ImportKeystores_OK(t *testing.T) {
 	assert.Equal(t, 0, len(keys))
 
 	// Import the 3 keystores and verify the wallet has 3 new accounts.
-	res, err := ss.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+	res, err := ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{
 		KeystoresPassword: strongPass,
 		KeystoresImported: keystores,
 	})
 	require.NoError(t, err)
-	assert.DeepEqual(t, &pb.ImportKeystoresResponse{
+	assert.DeepEqual(t, &pb.ImportAccountsResponse{
 		ImportedPublicKeys: pubKeys,
 	}, res)
 
@@ -510,7 +510,7 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 		keystores[i] = string(encodedFile)
 		pubKeys[i] = privKey.PublicKey().Marshal()
 	}
-	_, err = s.ImportKeystores(ctx, &pb.ImportKeystoresRequest{
+	_, err = s.ImportAccounts(ctx, &pb.ImportAccountsRequest{
 		KeystoresImported: keystores,
 		KeystoresPassword: strongPass,
 	})

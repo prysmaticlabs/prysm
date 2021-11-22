@@ -40,8 +40,8 @@ func (s *Server) ListKeystores(
 	}, nil
 }
 
-// ImportKeystoresStandard allows for importing keystores into Prysm with their slashing protection history.
-func (s *Server) ImportKeystoresStandard(
+// ImportKeystores allows for importing keystores into Prysm with their slashing protection history.
+func (s *Server) ImportKeystores(
 	ctx context.Context, req *ethpbservice.ImportKeystoresRequest,
 ) (*ethpbservice.ImportKeystoresResponse, error) {
 	if !s.walletInitialized {

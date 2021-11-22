@@ -251,11 +251,11 @@ func (s *Server) ValidateKeystores(
 	return &emptypb.Empty{}, nil
 }
 
-// ImportKeystores allows importing new keystores via RPC into the wallet
+// ImportAccounts allows importing new keystores via RPC into the wallet
 // which will be decrypted using the specified password .
-func (s *Server) ImportKeystores(
-	ctx context.Context, req *pb.ImportKeystoresRequest,
-) (*pb.ImportKeystoresResponse, error) {
+func (s *Server) ImportAccounts(
+	ctx context.Context, req *pb.ImportAccountsRequest,
+) (*pb.ImportAccountsResponse, error) {
 	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
 	}
@@ -294,7 +294,7 @@ func (s *Server) ImportKeystores(
 		return nil, err
 	}
 	s.walletInitializedFeed.Send(s.wallet)
-	return &pb.ImportKeystoresResponse{
+	return &pb.ImportAccountsResponse{
 		ImportedPublicKeys: importedPubKeys,
 	}, nil
 }
