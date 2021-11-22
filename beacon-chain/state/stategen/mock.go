@@ -23,6 +23,11 @@ func NewMockService() *MockStateManager {
 	}
 }
 
+// StateByRootIfCached
+func (m *MockStateManager) StateByRootIfCachedNoCopy(_ [32]byte) state.BeaconState { // skipcq: RVV-B0013
+	panic("implement me")
+}
+
 // Resume --
 func (m *MockStateManager) Resume(_ context.Context, _ state.BeaconState) (state.BeaconState, error) {
 	panic("implement me")
