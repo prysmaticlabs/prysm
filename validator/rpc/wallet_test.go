@@ -311,30 +311,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	})
 }
 
-func TestServer_ImportKeystores_FailedPreconditions_WrongKeymanagerKind(t *testing.T) {
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	ctx := context.Background()
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	ss := &Server{
-		wallet:     w,
-		keymanager: km,
-	}
-	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{})
-	assert.ErrorContains(t, "Only imported wallets can import more", err)
-}
-
-func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
+func TestServer_ImportAccounts_FailedPreconditions(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
@@ -368,7 +345,7 @@ func TestServer_ImportKeystores_FailedPreconditions(t *testing.T) {
 	assert.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
 }
 
-func TestServer_ImportKeystores_OK(t *testing.T) {
+func TestServer_ImportAccounts_OK(t *testing.T) {
 	imported.ResetCaches()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
