@@ -14,5 +14,5 @@ func computeFieldRoots(ctx context.Context, state *ethpb.BeaconState) ([][]byte,
 	if features.Get().EnableSSZCache {
 		return stateutil.CachedHasher.ComputeFieldRootsWithHasherPhase0(ctx, state)
 	}
-	return stateutil.CachedHasher.ComputeFieldRootsWithHasherPhase0(ctx, state)
+	return stateutil.NocachedHasher.ComputeFieldRootsWithHasherPhase0(ctx, state)
 }
