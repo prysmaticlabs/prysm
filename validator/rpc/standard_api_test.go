@@ -79,7 +79,7 @@ func TestServer_ListKeystores(t *testing.T) {
 func TestServer_ImportKeystores(t *testing.T) {
 	t.Run("wallet not ready", func(t *testing.T) {
 		s := Server{}
-		_, err := s.ImportKeystoresStandard(context.Background(), nil)
+		_, err := s.ImportKeystores(context.Background(), nil)
 		require.ErrorContains(t, "Wallet not ready", err)
 	})
 
@@ -105,7 +105,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 	}
 
 	t.Run("prevents importing if faulty keystore in request", func(t *testing.T) {
-		_, err := s.ImportKeystoresStandard(context.Background(), &ethpbservice.ImportKeystoresRequest{
+		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
 			Keystores: []string{"hi"},
 			Passwords: []string{"hi"},
 		})
