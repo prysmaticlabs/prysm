@@ -16,6 +16,8 @@ import (
 func (s *Service) processSyncCommitteeContribution(contribution *ethpb.SignedContributionAndProof) {
 	idx := contribution.Message.AggregatorIndex
 	if s.TrackedIndex(idx) {
+		s.monitorLock.Lock()
+		defer s.monitorLock.Unlock()
 		aggPerf := s.aggregatedPerformance[idx]
 		aggPerf.totalSyncComitteeAggregations++
 		s.aggregatedPerformance[idx] = aggPerf
@@ -35,6 +37,8 @@ func (s *Service) processSyncAggregate(state state.BeaconState, blk block.Beacon
 		log.WithError(err).Error("Cannot get SyncAggregate")
 		return
 	}
+	s.monitorLock.Lock()
+	defer s.monitorLock.Unlock()
 	for validatorIdx, committeeIndices := range s.trackedSyncCommitteeIndices {
 		if len(committeeIndices) > 0 {
 			contrib := 0
@@ -51,7 +55,7 @@ func (s *Service) processSyncAggregate(state state.BeaconState, blk block.Beacon
 			}
 
 			latestPerf := s.latestPerformance[validatorIdx]
-			balanceChg := balance - latestPerf.balance
+			balanceChg := int64(balance - latestPerf.balance)
 			latestPerf.balanceChange = balanceChg
 			latestPerf.balance = balance
 			s.latestPerformance[validatorIdx] = latestPerf

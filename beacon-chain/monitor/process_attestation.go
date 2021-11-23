@@ -20,6 +20,7 @@ import (
 
 // updatedPerformanceFromTrackedVal returns true if the validator is tracked and if the
 // given slot is different than the last attested slot from this validator.
+// It assumes that a read lock is held on the monitor service.
 func (s *Service) updatedPerformanceFromTrackedVal(idx types.ValidatorIndex, slot types.Slot) bool {
 	if !s.TrackedIndex(types.ValidatorIndex(idx)) {
 		return false
@@ -73,6 +74,8 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 		log.WithError(err).Error("Could not get attesting indices")
 		return
 	}
+	s.monitorLock.Lock()
+	defer s.monitorLock.Unlock()
 	for _, idx := range attestingIndices {
 		if s.updatedPerformanceFromTrackedVal(types.ValidatorIndex(idx), att.Data.Slot) {
 			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Data)
@@ -87,7 +90,7 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 			aggregatedPerf.totalRequestedCount++
 
 			latestPerf := s.latestPerformance[types.ValidatorIndex(idx)]
-			balanceChg := balance - latestPerf.balance
+			balanceChg := int64(balance - latestPerf.balance)
 			latestPerf.balanceChange = balanceChg
 			latestPerf.balance = balance
 			latestPerf.attestedSlot = att.Data.Slot
@@ -168,7 +171,8 @@ func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb
 	root := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if state == nil {
-		log.Debug("Skipping unaggregated attestation due to state not found in cache")
+		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
+			"Skipping unaggregated attestation due to state not found in cache")
 		return
 	}
 	attestingIndices, err := attestingIndices(ctx, state, att)
@@ -188,6 +192,8 @@ func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb
 // attestation from one of our tracked validators
 func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.AggregateAttestationAndProof) {
 	if s.TrackedIndex(att.AggregatorIndex) {
+		s.monitorLock.Lock()
+		defer s.monitorLock.Unlock()
 		log.WithFields(logrus.Fields{
 			"ValidatorIndex": att.AggregatorIndex,
 		}).Info("Processed attestation aggregation")
@@ -201,7 +207,8 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 	copy(root[:], att.Aggregate.Data.BeaconBlockRoot)
 	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if state == nil {
-		log.Debug("Skipping agregated attestation due to state not found in cache")
+		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
+			"Skipping agregated attestation due to state not found in cache")
 		return
 	}
 	attestingIndices, err := attestingIndices(ctx, state, att.Aggregate)

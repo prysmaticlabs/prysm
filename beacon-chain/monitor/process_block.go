@@ -41,7 +41,11 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 	}
 
 	currEpoch := slots.ToEpoch(blk.Slot())
-	if currEpoch != s.lastSyncedEpoch &&
+	s.monitorLock.RLock()
+	lastSyncedEpoch := s.lastSyncedEpoch
+	s.monitorLock.RUnlock()
+
+	if currEpoch != lastSyncedEpoch &&
 		slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(s.lastSyncedEpoch) {
 		s.updateSyncCommitteeTrackedVals(state)
 	}
@@ -64,8 +68,10 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 			return
 		}
 
+		s.monitorLock.Lock()
+		defer s.monitorLock.Unlock()
 		latestPerf := s.latestPerformance[blk.ProposerIndex()]
-		balanceChg := balance - latestPerf.balance
+		balanceChg := int64(balance - latestPerf.balance)
 		latestPerf.balanceChange = balanceChg
 		latestPerf.balance = balance
 		s.latestPerformance[blk.ProposerIndex()] = latestPerf
