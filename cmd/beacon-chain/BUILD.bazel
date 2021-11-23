@@ -132,6 +132,7 @@ docker_push(
 go_binary(
     name = "beacon-chain",
     embed = [":go_default_library"],
+    linkmode = "pie",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/endtoend:__pkg__",

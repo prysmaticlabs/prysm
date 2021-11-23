@@ -132,6 +132,7 @@ docker_push(
 go_binary(
     name = "validator",
     embed = [":go_default_library"],
+    linkmode = "pie",
     pure = "off",  # Enabled unless there is a valid reason to include cgo dep.
     visibility = [
         "//testing/endtoend:__pkg__",
