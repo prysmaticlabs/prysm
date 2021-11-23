@@ -255,7 +255,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	slashings[ce] = 0
 	require.NoError(t, s.SetSlashings(slashings))
 	mixes := s.RandaoMixes()
-	mixes[ce] = []byte{'A'}
+	mixes[ce] = [32]byte{'A'}
 	require.NoError(t, s.SetRandaoMixes(mixes))
 	newS, err := epoch.ProcessFinalUpdates(s)
 	require.NoError(t, err)
