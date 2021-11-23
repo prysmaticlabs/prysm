@@ -25,6 +25,7 @@ type ValidatorAggregatedPerformance struct {
 	totalCorrectSource  uint64
 	totalCorrectTarget  uint64
 	totalCorrectHead    uint64
+	totalProposedCount  uint64
 	totalAggregations   uint64
 }
 
