@@ -45,14 +45,6 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 		errString string
 	}{
 		{
-			name: "nil state",
-			args: args{
-				state: nil,
-			},
-			wantErr:   true,
-			errString: "nil inner state",
-		},
-		{
 			name: "genesis validator count, epoch 0",
 			args: args{
 				state: getState(t, params.BeaconConfig().MinGenesisActiveValidatorCount),
@@ -156,14 +148,6 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 		wantErr   bool
 		errString string
 	}{
-		{
-			name: "nil state",
-			args: args{
-				state: nil,
-			},
-			wantErr:   true,
-			errString: "nil inner state",
-		},
 		{
 			name: "genesis validator count, epoch 0",
 			args: args{
