@@ -23,20 +23,21 @@ func UseMergeTestConfig() {
 // Merge testnet.
 func MergeTestnetConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
-	cfg.MinGenesisTime = 1634212800
+	cfg.MinGenesisActiveValidatorCount = 15000
+	cfg.MinGenesisTime = 1637593200
 	cfg.GenesisDelay = 300
 	cfg.ConfigName = "Merge"
-	cfg.GenesisForkVersion = []byte{0x10, 0x00, 0x00, 0x69}
-	cfg.AltairForkVersion = []byte{0x11, 0x00, 0x00, 0x70}
+	cfg.GenesisForkVersion = []byte{0x30, 0x00, 0x00, 0x69}
+	cfg.AltairForkVersion = []byte{0x31, 0x00, 0x00, 0x70}
 	cfg.AltairForkEpoch = 4
-	cfg.MergeForkVersion = []byte{0x12, 0x00, 0x00, 0x71}
+	cfg.MergeForkVersion = []byte{0x32, 0x00, 0x00, 0x71}
 	cfg.MergeForkEpoch = 10
-	cfg.TerminalTotalDifficulty = 60000000
+	cfg.TerminalTotalDifficulty = 200000000
 	cfg.ShardingForkVersion = []byte{0x03, 0x00, 0x00, 0x00}
 	cfg.ShardingForkEpoch = math.MaxUint64
 	cfg.SecondsPerETH1Block = 14
-	cfg.DepositChainID = 1337202
-	cfg.DepositNetworkID = 1337202
+	cfg.DepositChainID = 1337402
+	cfg.DepositNetworkID = 1337402
 	cfg.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 	return cfg
 }
