@@ -84,7 +84,7 @@ func (vs *Server) getMergeBeaconBlock(ctx context.Context, req *ethpb.BlockReque
 		"blockNumber":   payload.BlockNumber,
 		"blockHash":     fmt.Sprintf("%#x", payload.BlockHash),
 		"parentHash":    fmt.Sprintf("%#x", payload.ParentHash),
-		"coinBase":      fmt.Sprintf("%#x", payload.Coinbase),
+		"coinBase":      fmt.Sprintf("%#x", payload.FeeRecipient),
 		"gasLimit":      payload.GasLimit,
 		"gasUsed":       payload.GasUsed,
 		"baseFeePerGas": payload.BaseFeePerGas,

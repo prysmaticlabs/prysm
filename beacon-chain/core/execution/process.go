@@ -82,7 +82,7 @@ func Enabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
 //    # Cache execution payload header
 //    state.latest_execution_payload_header = ExecutionPayloadHeader(
 //        parent_hash=payload.parent_hash,
-//        coinbase=payload.coinbase,
+//        FeeRecipient=payload.FeeRecipient,
 //        state_root=payload.state_root,
 //        receipt_root=payload.receipt_root,
 //        logs_bloom=payload.logs_bloom,
@@ -169,7 +169,7 @@ func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 
 	return &ethpb.ExecutionPayloadHeader{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
-		Coinbase:         bytesutil.SafeCopyBytes(payload.Coinbase),
+		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
 		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptRoot),
 		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
@@ -189,7 +189,7 @@ func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 func EmptyPayload() *ethpb.ExecutionPayload {
 	return &ethpb.ExecutionPayload{
 		ParentHash:    make([]byte, 32),
-		Coinbase:      make([]byte, 20),
+		FeeRecipient:  make([]byte, 20),
 		StateRoot:     make([]byte, 32),
 		ReceiptRoot:   make([]byte, 32),
 		LogsBloom:     make([]byte, 256),
@@ -209,7 +209,7 @@ func EmptyPayload() *ethpb.ExecutionPayload {
 func EmptypayloadHeader() *ethpb.ExecutionPayloadHeader {
 	return &ethpb.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, 32),
-		Coinbase:         make([]byte, 20),
+		FeeRecipient:     make([]byte, 20),
 		StateRoot:        make([]byte, 32),
 		ReceiptRoot:      make([]byte, 32),
 		LogsBloom:        make([]byte, 256),

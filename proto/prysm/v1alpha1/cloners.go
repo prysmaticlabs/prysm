@@ -429,7 +429,7 @@ func CopyExecutionPayload(payload *ExecutionPayload) *ExecutionPayload {
 
 	return &ExecutionPayload{
 		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
-		Coinbase:      bytesutil.SafeCopyBytes(payload.Coinbase),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
 		ReceiptRoot:   bytesutil.SafeCopyBytes(payload.ReceiptRoot),
 		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),

@@ -129,7 +129,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 	p := catalyst.PayloadAttributesV1{
 		Timestamp:    uint64(t.Unix()),
 		Random:       common.BytesToHash(random),
-		FeeRecipient: params.BeaconConfig().Coinbase,
+		FeeRecipient: params.BeaconConfig().FeeRecipient,
 	}
 	id, err := vs.ExecutionEngineCaller.PreparePayload(ctx, f, p)
 	if err != nil {
@@ -146,7 +146,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 func executableDataToExecutionPayload(ed *catalyst.ExecutableDataV1) *ethpb.ExecutionPayload {
 	return &ethpb.ExecutionPayload{
 		ParentHash:    bytesutil.PadTo(ed.ParentHash.Bytes(), 32),
-		Coinbase:      bytesutil.PadTo(ed.Coinbase.Bytes(), 20),
+		FeeRecipient:  bytesutil.PadTo(ed.Coinbase.Bytes(), 20),
 		StateRoot:     bytesutil.PadTo(ed.StateRoot.Bytes(), 32),
 		ReceiptRoot:   bytesutil.PadTo(ed.ReceiptRoot.Bytes(), 32),
 		LogsBloom:     bytesutil.PadTo(ed.LogsBloom, 256),

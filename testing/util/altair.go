@@ -463,7 +463,7 @@ func NewBeaconBlockMerge() *ethpb.SignedBeaconBlockMerge {
 				},
 				ExecutionPayload: &ethpb.ExecutionPayload{
 					ParentHash:    make([]byte, 32),
-					Coinbase:      make([]byte, 20),
+					FeeRecipient:  make([]byte, 20),
 					StateRoot:     make([]byte, 32),
 					ReceiptRoot:   make([]byte, 32),
 					LogsBloom:     make([]byte, 256),
