@@ -249,5 +249,4 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
-
 }

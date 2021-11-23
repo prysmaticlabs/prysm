@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
@@ -85,16 +84,6 @@ func GenerateAttestations(
 				return nil, err
 			}
 			genState, err := v2.InitializeFromProtoUnsafe(pbState)
-			if err != nil {
-				return nil, err
-			}
-			headState = state.BeaconState(genState)
-		case version.Merge:
-			pbState, err := v3.ProtobufBeaconState(bState.CloneInnerState())
-			if err != nil {
-				return nil, err
-			}
-			genState, err := v3.InitializeFromProtoUnsafe(pbState)
 			if err != nil {
 				return nil, err
 			}

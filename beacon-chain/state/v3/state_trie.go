@@ -4,6 +4,7 @@ import (
 	"context"
 	"runtime"
 	"sort"
+
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -381,4 +382,3 @@ func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{
 	b.dirtyIndices[index] = []uint64{}
 	return nil
 }
-
