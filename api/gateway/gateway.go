@@ -34,7 +34,12 @@ type PbMux struct {
 type PbHandlerRegistration func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error
 
 // MuxHandler is a function that implements the mux handler functionality.
-type MuxHandler func(http.Handler, http.ResponseWriter, *http.Request)
+type MuxHandler func(
+	apiMiddlewareHandler *apimiddleware.ApiProxyMiddleware,
+	h http.HandlerFunc,
+	w http.ResponseWriter,
+	req *http.Request,
+)
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
 type Gateway struct {
@@ -48,6 +53,7 @@ type Gateway struct {
 	remoteCert                   string
 	gatewayAddr                  string
 	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
+	proxy                        *apimiddleware.ApiProxyMiddleware
 	ctx                          context.Context
 	startFailure                 error
 	remoteAddr                   string
@@ -132,14 +138,14 @@ func (g *Gateway) Start() {
 
 	corsMux := g.corsMiddleware(g.router)
 
-	if g.muxHandler != nil {
-		g.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			g.muxHandler(corsMux, w, r)
-		})
+	if g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
+		g.registerApiMiddleware()
 	}
 
-	if g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
-		go g.registerApiMiddleware()
+	if g.muxHandler != nil {
+		g.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			g.muxHandler(g.proxy, corsMux.ServeHTTP, w, r)
+		})
 	}
 
 	g.server = &http.Server{
@@ -272,10 +278,10 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 }
 
 func (g *Gateway) registerApiMiddleware() {
-	proxy := &apimiddleware.ApiProxyMiddleware{
+	g.proxy = &apimiddleware.ApiProxyMiddleware{
 		GatewayAddress:  g.gatewayAddr,
 		EndpointCreator: g.apiMiddlewareEndpointFactory,
 	}
 	log.Info("Starting API middleware")
-	proxy.Run(g.router)
+	g.proxy.Run(g.router)
 }

@@ -74,97 +74,99 @@ type fieldProcessor struct {
 // Run starts the proxy, registering all proxy endpoints.
 func (m *ApiProxyMiddleware) Run(gatewayRouter *mux.Router) {
 	for _, path := range m.EndpointCreator.Paths() {
-		m.handleApiPath(gatewayRouter, path, m.EndpointCreator)
+		m.handleApiPath(gatewayRouter, path)
 	}
 }
 
-func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path string, endpointFactory EndpointFactory) {
-	gatewayRouter.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
-		endpoint, err := endpointFactory.Create(path)
-		if err != nil {
-			errJson := InternalServerErrorWithMessage(err, "could not create endpoint")
-			WriteError(w, errJson, nil)
+func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path string) {
+	gatewayRouter.HandleFunc(path, m.HandleFunc)
+}
+
+func (m *ApiProxyMiddleware) HandleFunc(w http.ResponseWriter, req *http.Request) {
+	endpoint, err := m.EndpointCreator.Create(req.URL.Path)
+	if err != nil {
+		errJson := InternalServerErrorWithMessage(err, "could not create endpoint")
+		WriteError(w, errJson, nil)
+	}
+
+	for _, handler := range endpoint.CustomHandlers {
+		if handler(m, *endpoint, w, req) {
+			return
 		}
+	}
 
-		for _, handler := range endpoint.CustomHandlers {
-			if handler(m, *endpoint, w, req) {
-				return
-			}
-		}
-
-		if req.Method == "POST" {
-			if errJson := deserializeRequestBodyIntoContainerWrapped(endpoint, req, w); errJson != nil {
-				WriteError(w, errJson, nil)
-				return
-			}
-
-			if errJson := ProcessRequestContainerFields(endpoint.PostRequest); errJson != nil {
-				WriteError(w, errJson, nil)
-				return
-			}
-			if errJson := SetRequestBodyToRequestContainer(endpoint.PostRequest, req); errJson != nil {
-				WriteError(w, errJson, nil)
-				return
-			}
-		}
-
-		if errJson := m.PrepareRequestForProxying(*endpoint, req); errJson != nil {
+	if req.Method == "POST" {
+		if errJson := deserializeRequestBodyIntoContainerWrapped(endpoint, req, w); errJson != nil {
 			WriteError(w, errJson, nil)
 			return
 		}
-		grpcResp, errJson := ProxyRequest(req)
+
+		if errJson := ProcessRequestContainerFields(endpoint.PostRequest); errJson != nil {
+			WriteError(w, errJson, nil)
+			return
+		}
+		if errJson := SetRequestBodyToRequestContainer(endpoint.PostRequest, req); errJson != nil {
+			WriteError(w, errJson, nil)
+			return
+		}
+	}
+
+	if errJson := m.PrepareRequestForProxying(*endpoint, req); errJson != nil {
+		WriteError(w, errJson, nil)
+		return
+	}
+	grpcResp, errJson := ProxyRequest(req)
+	if errJson != nil {
+		WriteError(w, errJson, nil)
+		return
+	}
+	grpcRespBody, errJson := ReadGrpcResponseBody(grpcResp.Body)
+	if errJson != nil {
+		WriteError(w, errJson, nil)
+		return
+	}
+
+	var respJson []byte
+	if !GrpcResponseIsEmpty(grpcRespBody) {
+		respHasError, errJson := HandleGrpcResponseError(endpoint.Err, grpcResp, grpcRespBody, w)
 		if errJson != nil {
 			WriteError(w, errJson, nil)
 			return
 		}
-		grpcRespBody, errJson := ReadGrpcResponseBody(grpcResp.Body)
+		if respHasError {
+			return
+		}
+
+		var resp interface{}
+		if req.Method == "GET" {
+			resp = endpoint.GetResponse
+		} else {
+			resp = endpoint.PostResponse
+		}
+		if errJson := deserializeGrpcResponseBodyIntoContainerWrapped(endpoint, grpcRespBody, resp); errJson != nil {
+			WriteError(w, errJson, nil)
+			return
+		}
+		if errJson := ProcessMiddlewareResponseFields(resp); errJson != nil {
+			WriteError(w, errJson, nil)
+			return
+		}
+
+		respJson, errJson = serializeMiddlewareResponseIntoJsonWrapped(endpoint, respJson, resp)
 		if errJson != nil {
 			WriteError(w, errJson, nil)
 			return
 		}
+	}
 
-		var respJson []byte
-		if !GrpcResponseIsEmpty(grpcRespBody) {
-			respHasError, errJson := HandleGrpcResponseError(endpoint.Err, grpcResp, grpcRespBody, w)
-			if errJson != nil {
-				WriteError(w, errJson, nil)
-				return
-			}
-			if respHasError {
-				return
-			}
-
-			var resp interface{}
-			if req.Method == "GET" {
-				resp = endpoint.GetResponse
-			} else {
-				resp = endpoint.PostResponse
-			}
-			if errJson := deserializeGrpcResponseBodyIntoContainerWrapped(endpoint, grpcRespBody, resp); errJson != nil {
-				WriteError(w, errJson, nil)
-				return
-			}
-			if errJson := ProcessMiddlewareResponseFields(resp); errJson != nil {
-				WriteError(w, errJson, nil)
-				return
-			}
-
-			respJson, errJson = serializeMiddlewareResponseIntoJsonWrapped(endpoint, respJson, resp)
-			if errJson != nil {
-				WriteError(w, errJson, nil)
-				return
-			}
-		}
-
-		if errJson := WriteMiddlewareResponseHeadersAndBody(grpcResp, respJson, w); errJson != nil {
-			WriteError(w, errJson, nil)
-			return
-		}
-		if errJson := Cleanup(grpcResp.Body); errJson != nil {
-			WriteError(w, errJson, nil)
-			return
-		}
-	})
+	if errJson := WriteMiddlewareResponseHeadersAndBody(grpcResp, respJson, w); errJson != nil {
+		WriteError(w, errJson, nil)
+		return
+	}
+	if errJson := Cleanup(grpcResp.Body); errJson != nil {
+		WriteError(w, errJson, nil)
+		return
+	}
 }
 
 func deserializeRequestBodyIntoContainerWrapped(endpoint *Endpoint, req *http.Request, w http.ResponseWriter) ErrorJson {
