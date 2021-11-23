@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// retrieves the signature unit from the raw data, public key,signature and domain provided.
+// retrieves the signature batch from the raw data, public key,signature and domain provided.
 func signatureBatch(signedData, pub, signature, domain []byte) (*bls.SignatureBatch, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
