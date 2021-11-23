@@ -2,7 +2,6 @@ package v2
 
 import (
 	"github.com/pkg/errors"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -31,12 +30,7 @@ func (b *BeaconState) RotateAttestations() error {
 	return errors.New("RotateAttestations is not supported for hard fork 1 beacon state")
 }
 
-// ToProto is not supported for HF1 beacon state.
-func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
-	return nil, errors.New("ToProto is not yet supported for hard fork 1 beacon state")
-}
-
-// SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state.
+// SetLatestExecutionPayloadHeader is not supported for hard fork 1 beacon state.
 func (b *BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
 	return errors.New("SetLatestExecutionPayloadHeader is not supported for hard fork 1 beacon state")
 }

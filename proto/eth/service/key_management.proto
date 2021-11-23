@@ -130,7 +130,8 @@ message DeletedKeystoreStatus {
   enum Status {
     DELETED = 0;
     NOT_FOUND = 1;
-    ERROR = 2;
+    NOT_ACTIVE = 2;
+    ERROR = 3;
   }
   Status status = 1;
   string message = 2;

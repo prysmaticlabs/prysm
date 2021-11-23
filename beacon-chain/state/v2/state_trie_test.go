@@ -6,12 +6,19 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
+
+func TestMain(m *testing.M) {
+	resetCfg := features.InitWithReset(&features.Flags{EnableBalanceTrieComputation: true})
+	defer resetCfg()
+	m.Run()
+}
 
 func TestValidatorMap_DistinctCopy(t *testing.T) {
 	count := uint64(100)
