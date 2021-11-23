@@ -2,12 +2,13 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
+# gazelle:ignore
 go_library(
     name = "go_default_library",
     srcs = [
+        ":ssz_generated_files",
         "doc.go",
         "field_roots.go",
-        "generated.ssz.go",
         "getters_attestation.go",
         "getters_block.go",
         "getters_checkpoint.go",
@@ -106,17 +107,17 @@ go_test(
     ],
 )
 
-#ssz_gen_marshal(
-#    name = "ssz_generated_files",
-#    srcs = [
-#        "types.go",
-#    ],
-#    includes = [
-#        "//beacon-chain/state/custom-types:go_default_library",
-#        "//proto/prysm/v1alpha1:go_default_library",
-#        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-#    ],
-#    objs = [
-#        "BeaconState",
-#    ],
-#)
+ssz_gen_marshal(
+    name = "ssz_generated_files",
+    srcs = [
+        "types.go",
+    ],
+    includes = [
+        "//beacon-chain/state/custom-types:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+    ],
+    objs = [
+        "BeaconState[no-htr]",
+    ],
+)
