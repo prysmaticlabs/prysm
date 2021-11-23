@@ -18,8 +18,8 @@ func TestTrackedIndex(t *testing.T) {
 			},
 		},
 	}
-	require.Equal(t, s.TrackedIndex(types.ValidatorIndex(1)), true)
-	require.Equal(t, s.TrackedIndex(types.ValidatorIndex(3)), false)
+	require.Equal(t, s.trackedIndex(types.ValidatorIndex(1)), true)
+	require.Equal(t, s.trackedIndex(types.ValidatorIndex(3)), false)
 }
 
 func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {

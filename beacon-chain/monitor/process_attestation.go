@@ -22,7 +22,7 @@ import (
 // given slot is different than the last attested slot from this validator.
 // It assumes that a read lock is held on the monitor service.
 func (s *Service) updatedPerformanceFromTrackedVal(idx types.ValidatorIndex, slot types.Slot) bool {
-	if !s.TrackedIndex(types.ValidatorIndex(idx)) {
+	if !s.trackedIndex(types.ValidatorIndex(idx)) {
 		return false
 	}
 
@@ -191,9 +191,9 @@ func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb
 // processAggregatedAttestation logs when we see an aggregation from one of our tracked validators or an aggregated
 // attestation from one of our tracked validators
 func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.AggregateAttestationAndProof) {
-	if s.TrackedIndex(att.AggregatorIndex) {
-		s.monitorLock.Lock()
-		defer s.monitorLock.Unlock()
+	s.monitorLock.Lock()
+	defer s.monitorLock.Unlock()
+	if s.trackedIndex(att.AggregatorIndex) {
 		log.WithFields(logrus.Fields{
 			"ValidatorIndex": att.AggregatorIndex,
 		}).Info("Processed attestation aggregation")

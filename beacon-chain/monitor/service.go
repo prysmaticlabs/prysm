@@ -47,8 +47,12 @@ type ValidatorMonitorConfig struct {
 // Service is the main structure that tracks validators and reports logs and
 // metrics of their performances throughout their lifetime.
 type Service struct {
-	config                      *ValidatorMonitorConfig
-	monitorLock                 sync.RWMutex
+	config *ValidatorMonitorConfig
+
+	// monitorLock Locks access to TrackedValidators, latestPerformance, aggregatedPerformance,
+	// trackedSyncedCommitteeIndices and lastSyncedEpoch
+	monitorLock sync.RWMutex
+
 	latestPerformance           map[types.ValidatorIndex]ValidatorLatestPerformance
 	aggregatedPerformance       map[types.ValidatorIndex]ValidatorAggregatedPerformance
 	trackedSyncCommitteeIndices map[types.ValidatorIndex][]types.CommitteeIndex
@@ -57,7 +61,7 @@ type Service struct {
 
 // TrackedIndex returns if the given validator index corresponds to one of the
 // validators we follow
-func (s *Service) TrackedIndex(idx types.ValidatorIndex) bool {
+func (s *Service) trackedIndex(idx types.ValidatorIndex) bool {
 	_, ok := s.config.TrackedValidators[idx]
 	return ok
 }

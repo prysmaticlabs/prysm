@@ -15,9 +15,9 @@ import (
 // log them when they are included in blocks)
 func (s *Service) processSyncCommitteeContribution(contribution *ethpb.SignedContributionAndProof) {
 	idx := contribution.Message.AggregatorIndex
-	if s.TrackedIndex(idx) {
-		s.monitorLock.Lock()
-		defer s.monitorLock.Unlock()
+	s.monitorLock.Lock()
+	defer s.monitorLock.Unlock()
+	if s.trackedIndex(idx) {
 		aggPerf := s.aggregatedPerformance[idx]
 		aggPerf.totalSyncComitteeAggregations++
 		s.aggregatedPerformance[idx] = aggPerf

@@ -205,13 +205,15 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	require.NoError(t, genesis.SetCurrentSyncCommittee(currentSyncCommittee))
 
 	idx := b.Block.Body.ProposerSlashings[0].Header_1.Header.ProposerIndex
-	if !s.TrackedIndex(idx) {
+	s.monitorLock.RLock()
+	if !s.trackedIndex(idx) {
 		s.config.TrackedValidators[idx] = nil
 		s.latestPerformance[idx] = ValidatorLatestPerformance{
 			balance: 31900000000,
 		}
 		s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{}
 	}
+	s.monitorLock.RUnlock()
 	s.updateSyncCommitteeTrackedVals(genesis)
 
 	root, err := b.GetBlock().HashTreeRoot()

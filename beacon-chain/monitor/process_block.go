@@ -57,7 +57,9 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 
 // processProposedBlock logs the event that one of our tracked validators proposed a block that was included
 func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk block.BeaconBlock) {
-	if s.TrackedIndex(blk.ProposerIndex()) {
+	s.monitorLock.Lock()
+	defer s.monitorLock.Unlock()
+	if s.trackedIndex(blk.ProposerIndex()) {
 		// update metrics
 		proposedSlotsCounter.WithLabelValues(fmt.Sprintf("%d", blk.ProposerIndex())).Inc()
 
@@ -68,8 +70,6 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 			return
 		}
 
-		s.monitorLock.Lock()
-		defer s.monitorLock.Unlock()
 		latestPerf := s.latestPerformance[blk.ProposerIndex()]
 		balanceChg := int64(balance - latestPerf.balance)
 		latestPerf.balanceChange = balanceChg
@@ -96,7 +96,7 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 func (s *Service) processSlashings(blk block.BeaconBlock) {
 	for _, slashing := range blk.Body().ProposerSlashings() {
 		idx := slashing.Header_1.Header.ProposerIndex
-		if s.TrackedIndex(idx) {
+		if s.trackedIndex(idx) {
 			log.WithFields(logrus.Fields{
 				"ProposerIndex": idx,
 				"Slot:":         blk.Slot(),
@@ -109,7 +109,7 @@ func (s *Service) processSlashings(blk block.BeaconBlock) {
 
 	for _, slashing := range blk.Body().AttesterSlashings() {
 		for _, idx := range blocks.SlashableAttesterIndices(slashing) {
-			if s.TrackedIndex(types.ValidatorIndex(idx)) {
+			if s.trackedIndex(types.ValidatorIndex(idx)) {
 				log.WithFields(logrus.Fields{
 					"AttesterIndex": idx,
 					"Slot:":         blk.Slot(),

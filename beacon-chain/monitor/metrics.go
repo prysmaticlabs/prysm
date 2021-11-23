@@ -83,7 +83,7 @@ var (
 	syncCommitteeContributionCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "monitor",
-			Name:      "sync_committee_contributions",
+			Name:      "sync_committee_contributions_total",
 			Help:      "Number of Sync committee contributions performed",
 		},
 		[]string{
