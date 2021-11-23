@@ -94,6 +94,8 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 
 // processSlashings logs the event of one of our tracked validators was slashed
 func (s *Service) processSlashings(blk block.BeaconBlock) {
+	s.monitorLock.RLock()
+	defer s.monitorLock.RUnlock()
 	for _, slashing := range blk.Body().ProposerSlashings() {
 		idx := slashing.Header_1.Header.ProposerIndex
 		if s.trackedIndex(idx) {

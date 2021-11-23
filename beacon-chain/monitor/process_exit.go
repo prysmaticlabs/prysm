@@ -9,6 +9,8 @@ import (
 // processExitsFromBlock logs the event of one of our tracked validators' exit was
 // included in a block
 func (s *Service) processExitsFromBlock(blk block.BeaconBlock) {
+	s.monitorLock.RLock()
+	defer s.monitorLock.RUnlock()
 	for _, exit := range blk.Body().VoluntaryExits() {
 		idx := exit.Exit.ValidatorIndex
 		if s.trackedIndex(idx) {
@@ -23,6 +25,8 @@ func (s *Service) processExitsFromBlock(blk block.BeaconBlock) {
 // processExit logs the event of one of our tracked validators' exit was processed
 func (s *Service) processExit(exit *ethpb.SignedVoluntaryExit) {
 	idx := exit.Exit.ValidatorIndex
+	s.monitorLock.RLock()
+	defer s.monitorLock.RUnlock()
 	if s.trackedIndex(idx) {
 		log.WithFields(logrus.Fields{
 			"ValidatorIndex": idx,

@@ -168,6 +168,8 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 // processUnaggregatedAttestation logs when the beacon node sees an unaggregated attestation from one of our
 // tracked validators
 func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb.Attestation) {
+	s.monitorLock.RLock()
+	defer s.monitorLock.RUnlock()
 	root := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if state == nil {
