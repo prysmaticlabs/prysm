@@ -120,12 +120,19 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 
 func Initialize() (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
+	sRoots := customtypes.StateRoots([8192][32]byte{})
+	bRoots := customtypes.StateRoots([8192][32]byte{})
+	mixes := customtypes.RandaoMixes([65536][32]byte{})
 	b := &BeaconState{
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 10),
 		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:         stateutil.NewValMapHandler([]*ethpb.Validator{}),
+		stateRoots:            &sRoots,
+		blockRoots:            &bRoots,
+		randaoMixes:           &mixes,
 	}
 
 	var err error

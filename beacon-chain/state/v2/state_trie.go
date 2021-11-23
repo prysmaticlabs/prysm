@@ -122,19 +122,21 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (*BeaconState, error
 	return b, nil
 }
 
-func Initialize(vals []*ethpb.Validator) (*BeaconState, error) {
-	if vals == nil {
-		return nil, errors.New("received nil validators")
-	}
-
+func Initialize() (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
+	sRoots := customtypes.StateRoots([8192][32]byte{})
+	bRoots := customtypes.StateRoots([8192][32]byte{})
+	mixes := customtypes.RandaoMixes([65536][32]byte{})
 	b := &BeaconState{
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
 		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler(vals),
+		valMapHandler:         stateutil.NewValMapHandler([]*ethpb.Validator{}),
+		stateRoots:            &sRoots,
+		blockRoots:            &bRoots,
+		randaoMixes:           &mixes,
 	}
 
 	var err error
