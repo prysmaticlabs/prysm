@@ -60,7 +60,8 @@ type Service struct {
 }
 
 // TrackedIndex returns if the given validator index corresponds to one of the
-// validators we follow
+// validators we follow.
+// It assumes the caller holds a Lock on the monitorLock
 func (s *Service) trackedIndex(idx types.ValidatorIndex) bool {
 	_, ok := s.config.TrackedValidators[idx]
 	return ok
