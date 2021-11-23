@@ -26,12 +26,9 @@ func (f *ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint,
 	switch path {
 	case "/eth/v1/keystores":
 		endpoint.GetResponse = &listKeystoresResponseJson{}
-		endpoint.PostRequest = &importKeystoresRequestJson{}
-		endpoint.PostResponse = &importKeystoresResponseJson{}
-		endpoint.Err = &nodeSyncDetailsErrorJson{}
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{
-			{Name: "public_keys", Hex: true},
-		}
+		//endpoint.PostRequest = &importKeystoresRequestJson{}
+		//endpoint.PostResponse = &importKeystoresResponseJson{}
+		//endpoint.Err = &nodeSyncDetailsErrorJson{}
 	default:
 		return nil, errors.New("invalid path")
 	}

@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime"
@@ -40,6 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
+	"github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -487,6 +489,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,
+		ethpbservice.RegisterKeyManagementHandler,
 	}
 	mux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
@@ -513,7 +516,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 
 	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
-		Patterns:      []string{"/accounts/", "/v2/"},
+		Patterns:      []string{"/accounts/", "/v2/", "/internal/eth/v1/"},
 		Mux:           mux,
 	}
 
@@ -524,6 +527,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		rpcAddr,
 		gatewayAddress,
 	).WithAllowedOrigins(allowedOrigins).WithMaxCallRecvMsgSize(maxCallSize)
+	gw.WithApiMiddleware(&apimiddleware.ValidatorEndpointFactory{})
 
 	return c.services.RegisterService(gw)
 }
