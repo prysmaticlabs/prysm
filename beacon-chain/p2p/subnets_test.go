@@ -34,11 +34,9 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
-	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
-		genesisTime:           genesisTime,
-		genesisValidatorsRoot: genesisValidatorsRoot,
+		cfg:         &Config{UDPPort: uint(port)},
+		genesisTime: genesisTime,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -63,9 +61,8 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
-			cfg:                   cfg,
-			genesisTime:           genesisTime,
-			genesisValidatorsRoot: genesisValidatorsRoot,
+			cfg:         cfg,
+			genesisTime: genesisTime,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")

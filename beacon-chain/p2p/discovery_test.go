@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	prysmNetwork "github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -65,7 +64,7 @@ func TestCreateListener(t *testing.T) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	s := &Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: [32]byte{'A'},
 		cfg:                   &Config{UDPPort: uint(port)},
 	}
 	listener, err := s.createListener(ipAddr, pkey)
@@ -88,11 +87,9 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
-	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
-		genesisTime:           genesisTime,
-		genesisValidatorsRoot: genesisValidatorsRoot,
+		cfg:         &Config{UDPPort: uint(port)},
+		genesisTime: genesisTime,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -109,9 +106,8 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
-			cfg:                   cfg,
-			genesisTime:           genesisTime,
-			genesisValidatorsRoot: genesisValidatorsRoot,
+			cfg:         cfg,
+			genesisTime: genesisTime,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
@@ -140,7 +136,7 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	_, pkey := createAddrAndPrivKey(t)
 	s := &Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: [32]byte{'A'},
 	}
 	node, err := s.createLocalNode(pkey, addr, 0, 0)
 	require.NoError(t, err)
@@ -157,7 +153,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 			UDPPort: 0,
 		},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: [32]byte{'A'},
 	}
 	listener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -233,7 +229,7 @@ func TestHostIsResolved(t *testing.T) {
 			HostDNS: exampleHost,
 		},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		genesisValidatorsRoot: [32]byte{'A'},
 	}
 	ip, key := createAddrAndPrivKey(t)
 	list, err := s.createListener(ip, key)
@@ -273,11 +269,9 @@ func TestUDPMultiAddress(t *testing.T) {
 	port := 6500
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
-	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
-		genesisTime:           genesisTime,
-		genesisValidatorsRoot: genesisValidatorsRoot,
+		cfg:         &Config{UDPPort: uint(port)},
+		genesisTime: genesisTime,
 	}
 	listener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -361,7 +355,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now(),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: [32]byte{'A'},
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)
@@ -382,7 +376,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now(),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: [32]byte{'A'},
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)
@@ -404,7 +398,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now().Add(-5 * oneEpochDuration()),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: [32]byte{'A'},
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)
@@ -435,7 +429,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now().Add(-5 * oneEpochDuration()),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: [32]byte{'A'},
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)
@@ -465,7 +459,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				ipAddr, pkey := createAddrAndPrivKey(t)
 				s := &Service{
 					genesisTime:           time.Now().Add(-6 * oneEpochDuration()),
-					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					genesisValidatorsRoot: [32]byte{'A'},
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
 				listener, err := s.createListener(ipAddr, pkey)

@@ -6,6 +6,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -25,7 +26,7 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 		ctx: context.Background(),
 		cfg: &Config{DB: db},
 	}
-	bState, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
+	bState, err := util.NewBeaconState(func(state *v1.BeaconState) error {
 		validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{
@@ -35,7 +36,7 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 				Slashed:               false,
 			}
 		}
-		state.Validators = validators
+		require.NoError(t, state.SetValidators(validators))
 		return nil
 	})
 	require.NoError(t, err)

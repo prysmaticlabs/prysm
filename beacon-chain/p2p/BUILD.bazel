@@ -143,6 +143,7 @@ go_test(
         "//beacon-chain/p2p/peers/scorers:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
         "//config/params:go_default_library",
         "//crypto/hash:go_default_library",
