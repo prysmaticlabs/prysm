@@ -99,7 +99,7 @@ func TestGetSpec(t *testing.T) {
 	config.TerminalBlockHash = common.HexToHash("TerminalBlockHash")
 	config.TerminalBlockHashActivationEpoch = 72
 	config.TerminalTotalDifficulty = 73
-	config.Coinbase = common.HexToAddress("Coinbase")
+	config.FeeRecipient = common.HexToAddress("FeeRecipient")
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -328,8 +328,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, common.HexToHash("TerminalBlockHash"), common.HexToHash(v))
 		case "TERMINAL_TOTAL_DIFFICULTY":
 			assert.Equal(t, "73", v)
-		case "COINBASE":
-			assert.Equal(t, common.HexToAddress("Coinbase"), v)
+		case "FeeRecipient":
+			assert.Equal(t, common.HexToAddress("FeeRecipient"), v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

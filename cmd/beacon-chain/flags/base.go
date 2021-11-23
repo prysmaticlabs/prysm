@@ -211,9 +211,9 @@ var (
 			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch. " +
 			"Incorrect usage will result in your node experience consensus failure.",
 	}
-	// Coinbase specifies the fee recipient for the transaction fees.
-	Coinbase = &cli.StringFlag{
-		Name:  "coinbase",
+	// FeeRecipient specifies the fee recipient for the transaction fees.
+	FeeRecipient = &cli.StringFlag{
+		Name:  "fee-recipient",
 		Usage: "Post merge, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst merge is in development state.",
 		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
 	}
