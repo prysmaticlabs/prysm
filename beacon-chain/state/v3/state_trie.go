@@ -75,7 +75,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-
+	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Merge.
 	stateCount.Inc()
 	return b, nil
 }
