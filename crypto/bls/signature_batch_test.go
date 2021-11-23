@@ -23,17 +23,17 @@ func TestCopySignatureSet(t *testing.T) {
 		sig2 := key2.Sign(message2[:])
 		sig3 := key3.Sign(message3[:])
 
-		set := &SignatureSet{
+		set := &SignatureBatch{
 			Signatures: [][]byte{sig.Marshal()},
 			PublicKeys: []PublicKey{key.PublicKey()},
 			Messages:   [][32]byte{message},
 		}
-		set2 := &SignatureSet{
+		set2 := &SignatureBatch{
 			Signatures: [][]byte{sig2.Marshal()},
 			PublicKeys: []PublicKey{key.PublicKey()},
 			Messages:   [][32]byte{message},
 		}
-		set3 := &SignatureSet{
+		set3 := &SignatureBatch{
 			Signatures: [][]byte{sig3.Marshal()},
 			PublicKeys: []PublicKey{key.PublicKey()},
 			Messages:   [][32]byte{message},
