@@ -76,13 +76,11 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 		tmp := r
 		sRootsA[i] = tmp[:]
 	}
-	blockRootsB := b.BlockRoots()
 	bRootsB := make([][]byte, len(b.BlockRoots()))
 	for i, r := range b.BlockRoots() {
 		tmp := r
 		bRootsB[i] = tmp[:]
 	}
-	stateRootsB := b.StateRoots()
 	sRootsB := make([][]byte, len(b.StateRoots()))
 	for i, r := range b.StateRoots() {
 		tmp := r
@@ -108,13 +106,13 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 		tmp := r
 		sRootsA[i] = tmp[:]
 	}
-	blockRootsB = b.BlockRoots()
+	blockRootsB := b.BlockRoots()
 	bRootsB = make([][]byte, len(b.BlockRoots()))
 	for i, r := range b.BlockRoots() {
 		tmp := r
 		bRootsB[i] = tmp[:]
 	}
-	stateRootsB = b.StateRoots()
+	stateRootsB := b.StateRoots()
 	sRootsB = make([][]byte, len(b.StateRoots()))
 	for i, r := range b.StateRoots() {
 		tmp := r
