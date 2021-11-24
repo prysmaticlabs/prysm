@@ -197,8 +197,8 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 	defer s.Unlock()
 	if s.trackedIndex(att.AggregatorIndex) {
 		log.WithFields(logrus.Fields{
-			"ValidatorIndex": att.AggregatorIndex,
-			"Slot":           att.Aggregate.Data.Slot,
+			"AggregatorIndex": att.AggregatorIndex,
+			"Slot":            att.Aggregate.Data.Slot,
 			"BeaconBlockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
 				att.Aggregate.Data.BeaconBlockRoot)),
 			"SourceRoot:": fmt.Sprintf("%#x", bytesutil.Trunc(
