@@ -114,7 +114,7 @@ func (m *ApiProxyMiddleware) HandleFunc(w http.ResponseWriter, req *http.Request
 	}
 
 	if req.Method == "DELETE" {
-		if errJson := deserializeRequestBodyIntoContainerWrapped(endpoint, req, w); errJson != nil {
+		if errJson := DeserializeRequestBodyIntoContainer(req.Body, endpoint.DeleteRequest); errJson != nil {
 			WriteError(w, errJson, nil)
 			return
 		}
