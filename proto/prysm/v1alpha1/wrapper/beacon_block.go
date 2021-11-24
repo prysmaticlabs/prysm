@@ -269,6 +269,7 @@ func (w Phase0BeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
 
+// ExecutionPayload is a stub.
 func (w Phase0BeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
 	return nil, errors.New("ExecutionPayload is not supported in phase 0 block body")
 }
@@ -547,7 +548,7 @@ func (w altairBeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
 
-// ExecutionPayload returns the Execution payload of the block body.
+// ExecutionPayload is a stub.
 func (w altairBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
 	return nil, errors.New("ExecutionPayload is not supported in altair block body")
 }
@@ -559,8 +560,7 @@ type mergeSignedBeaconBlock struct {
 	b *eth.SignedBeaconBlockMerge
 }
 
-// WrappedMergeSignedBeaconBlock is constructor which wraps a protobuf merge block
-// with the block wrapper.
+// WrappedMergeSignedBeaconBlock is constructor which wraps a protobuf merge block with the block wrapper.
 func WrappedMergeSignedBeaconBlock(b *eth.SignedBeaconBlockMerge) (block.SignedBeaconBlock, error) {
 	w := mergeSignedBeaconBlock{b: b}
 	if w.IsNil() {
@@ -579,20 +579,17 @@ func (w mergeSignedBeaconBlock) Block() block.BeaconBlock {
 	return mergeBeaconBlock{b: w.b.Block}
 }
 
-// IsNil checks if the underlying beacon block is
-// nil.
+// IsNil checks if the underlying beacon block is nil.
 func (w mergeSignedBeaconBlock) IsNil() bool {
 	return w.b == nil || w.b.Block == nil
 }
 
-// Copy performs a deep copy of the signed beacon block
-// object.
+// Copy performs a deep copy of the signed beacon block object.
 func (w mergeSignedBeaconBlock) Copy() block.SignedBeaconBlock {
 	return mergeSignedBeaconBlock{b: eth.CopySignedBeaconBlockMerge(w.b)}
 }
 
-// MarshalSSZ marshals the signed beacon block to its relevant ssz
-// form.
+// MarshalSSZ marshals the signed beacon block to its relevant ssz form.
 func (w mergeSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
@@ -614,8 +611,7 @@ func (w mergeSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return w.b.UnmarshalSSZ(buf)
 }
 
-// Proto returns the block in its underlying protobuf
-// interface.
+// Proto returns the block in its underlying protobuf interface.
 func (w mergeSignedBeaconBlock) Proto() proto.Message {
 	return w.b
 }
