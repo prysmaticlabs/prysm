@@ -212,11 +212,12 @@ func Test_processQueuedAttestations(t *testing.T) {
 			}
 			err = beaconState.SetValidators(validators)
 			require.NoError(t, err)
+			gvr := beaconState.GenesisValidatorRoot()
 			domain, err := signing.Domain(
 				beaconState.Fork(),
 				0,
 				params.BeaconConfig().DomainBeaconAttester,
-				beaconState.GenesisValidatorRoot(),
+				gvr[:],
 			)
 			require.NoError(t, err)
 

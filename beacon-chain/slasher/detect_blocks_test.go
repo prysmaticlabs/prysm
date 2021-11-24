@@ -44,11 +44,12 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	}
 	err = beaconState.SetValidators(validators)
 	require.NoError(t, err)
+	gvr := beaconState.GenesisValidatorRoot()
 	domain, err := signing.Domain(
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
-		beaconState.GenesisValidatorRoot(),
+		gvr[:],
 	)
 	require.NoError(t, err)
 
