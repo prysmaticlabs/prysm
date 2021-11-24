@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -113,14 +114,42 @@ func TestNewService(t *testing.T) {
 func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := setupService(t)
+	state, _ := util.DeterministicGenesisStateAltair(t, 256)
+	root := [32]byte{}
+	copy(root[:], "hello-world")
+	require.NoError(t, s.config.StateGen.SaveState(context.Background(), root, state))
+
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 	s.Start()
 
-	s.config.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: time.Now(),
-		},
-	})
+	go func() {
+		select {
+		case stateEvent := <-stateChannel:
+			if stateEvent.Type == statefeed.Synced {
+				_, ok := stateEvent.Data.(*statefeed.SyncedData)
+				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
+			}
+		case <-s.ctx.Done():
+		}
+		wg.Done()
+	}()
+
+	require.Equal(t, s.isRunning, false)
+
+	for sent := 0; sent == 0; {
+		sent = s.config.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Synced,
+			Data: &statefeed.SyncedData{
+				StartTime: time.Now(),
+			},
+		})
+	}
+
 	require.LogsContain(t, hook, "\"Started service\" ValidatorIndices=\"[1 2 12 15]\"")
 	require.Equal(t, s.isRunning, true, "monitor is not running")
 }

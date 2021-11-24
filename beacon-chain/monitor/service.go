@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -115,15 +116,21 @@ func (s *Service) Start() {
 		"ValidatorIndices": tracked,
 	}).Info("Started service")
 	s.isRunning = false
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 
 	go func() {
-		if err := s.waitForSync(); err != nil {
+		if err := s.waitForSync(stateChannel, stateSub); err != nil {
 			log.WithError(err)
 			return
 		}
 		state, err := s.config.HeadFetcher.HeadState(s.ctx)
 		if err != nil {
 			log.WithError(err).Error("could not get head state")
+			return
+		}
+		if state == nil {
+			log.Error("head state is nil")
 			return
 		}
 		epoch := slots.ToEpoch(state.Slot())
@@ -165,9 +172,7 @@ func (s *Service) Stop() error {
 }
 
 // waitForSync waits until the beacon node is synced to the latest head
-func (s *Service) waitForSync() error {
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
+func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subscription) error {
 	defer stateSub.Unsubscribe()
 	for {
 		select {
