@@ -58,9 +58,9 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	roots[0] = genesisRoot[:]
-	require.NoError(t, bs.SetBlockRoots(roots))
+	var roots [8192][32]byte
+	roots[0] = genesisRoot
+	require.NoError(t, bs.SetBlockRoots(&roots))
 
 	// Deactivate last validator.
 	vals := bs.Validators()
@@ -140,9 +140,9 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.NoError(t, bs.SetSlot(5))
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
-		roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-		roots[0] = genesisRoot[:]
-		require.NoError(t, bs.SetBlockRoots(roots))
+		var roots [8192][32]byte
+		roots[0] = genesisRoot
+		require.NoError(t, bs.SetBlockRoots(&roots))
 
 		pubKeys := make([][]byte, len(deposits))
 		indices := make([]uint64, len(deposits))
@@ -166,7 +166,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
-		assert.DeepEqual(t, bs.BlockRoots()[31], resp.DependentRoot)
+		assert.DeepEqual(t, bs.BlockRoots()[31], bytesutil.ToBytes32(resp.DependentRoot))
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
@@ -235,9 +235,9 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	roots[0] = genesisRoot[:]
-	require.NoError(t, bs.SetBlockRoots(roots))
+	var roots [8192][32]byte
+	roots[0] = genesisRoot
+	require.NoError(t, bs.SetBlockRoots(&roots))
 
 	pubKeys := make([][]byte, len(deposits))
 	for i := 0; i < len(deposits); i++ {
@@ -284,9 +284,9 @@ func TestGetProposerDuties(t *testing.T) {
 		require.NoError(t, bs.SetSlot(5))
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
-		roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-		roots[0] = genesisRoot[:]
-		require.NoError(t, bs.SetBlockRoots(roots))
+		var roots [8192][32]byte
+		roots[0] = genesisRoot
+		require.NoError(t, bs.SetBlockRoots(&roots))
 
 		pubKeys := make([][]byte, len(deposits))
 		indices := make([]uint64, len(deposits))
@@ -309,7 +309,7 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		resp, err := vs.GetProposerDuties(ctx, req)
 		require.NoError(t, err)
-		assert.DeepEqual(t, bs.BlockRoots()[31], resp.DependentRoot)
+		assert.DeepEqual(t, bs.BlockRoots()[31], bytesutil.ToBytes32(resp.DependentRoot))
 		assert.Equal(t, 32, len(resp.Data))
 		// We expect a proposer duty for slot 74.
 		var expectedDuty *ethpbv1.ProposerDuty
@@ -898,9 +898,9 @@ func TestProduceAttestationData(t *testing.T) {
 	require.NoError(t, err)
 
 	blockRoots := beaconState.BlockRoots()
-	blockRoots[1] = blockRoot[:]
-	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
-	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
+	blockRoots[1] = blockRoot
+	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot
+	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	chainService := &mockChain.ChainService{
 		Genesis: time.Now(),
@@ -1116,9 +1116,9 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	roots[0] = genesisRoot[:]
-	require.NoError(t, bs.SetBlockRoots(roots))
+	var roots [8192][32]byte
+	roots[0] = genesisRoot
+	require.NoError(t, bs.SetBlockRoots(&roots))
 
 	pubKeys := make([][]byte, len(deposits))
 	for i := 0; i < len(deposits); i++ {
@@ -1257,9 +1257,9 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 	require.NoError(t, err, "Could not set up genesis state")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	roots[0] = genesisRoot[:]
-	require.NoError(t, bs.SetBlockRoots(roots))
+	var roots [8192][32]byte
+	roots[0] = genesisRoot
+	require.NoError(t, bs.SetBlockRoots(&roots))
 
 	pubkeys := make([][]byte, len(deposits))
 	for i := 0; i < len(deposits); i++ {

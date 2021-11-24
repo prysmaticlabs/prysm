@@ -68,7 +68,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 
 	numValidators := state.NumValidators()
 
-	newState, err := statealtair.Initialize(state.Validators())
+	newState, err := statealtair.Initialize()
 	if err != nil {
 		return nil, err
 	}

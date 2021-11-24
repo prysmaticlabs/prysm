@@ -152,7 +152,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
 
-	s, err := stateAltair.Initialize(preState.Validators())
+	s, err := stateAltair.Initialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize state from proto state")
 	}
@@ -260,7 +260,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 }
 
 func emptyGenesisState() (state.BeaconStateAltair, error) {
-	s, err := stateAltair.Initialize([]*ethpb.Validator{})
+	s, err := stateAltair.Initialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize state from proto state")
 	}

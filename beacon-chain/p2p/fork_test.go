@@ -30,14 +30,12 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
-	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
 		cfg: &Config{
 			UDPPort:       uint(port),
 			StateNotifier: &mock.MockStateNotifier{},
 		},
-		genesisTime:           genesisTime,
-		genesisValidatorsRoot: genesisValidatorsRoot,
+		genesisTime: genesisTime,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -64,7 +62,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 		s = &Service{
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
-			genesisValidatorsRoot: root,
+			genesisValidatorsRoot: bytesutil.ToBytes32(root),
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
@@ -95,7 +93,6 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
 	s.genesisTime = genesisTime
-	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
 	var addrs []ma.Multiaddr
 
@@ -118,12 +115,10 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
-	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
-		genesisTime:           genesisTime,
-		genesisValidatorsRoot: genesisValidatorsRoot,
-		stateNotifier:         &mock.MockStateNotifier{},
+		cfg:           &Config{UDPPort: uint(port)},
+		genesisTime:   genesisTime,
+		stateNotifier: &mock.MockStateNotifier{},
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -151,10 +146,9 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		// will cause each peer to have a different ForkDigest, preventing
 		// them from connecting according to our discovery rules for Ethereum consensus.
 		s = &Service{
-			cfg:                   cfg,
-			genesisTime:           genesisTime,
-			genesisValidatorsRoot: genesisValidatorsRoot,
-			stateNotifier:         &mock.MockStateNotifier{},
+			cfg:           cfg,
+			genesisTime:   genesisTime,
+			stateNotifier: &mock.MockStateNotifier{},
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
@@ -187,7 +181,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	require.NoError(t, err)
 
 	s.genesisTime = genesisTime
-	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
 	var addrs []ma.Multiaddr
 
@@ -269,7 +262,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	params.OverrideBeaconConfig(bCfg)
 
 	localNode := enode.NewLocalNode(db, pkey)
-	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytesutil.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))
+	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), [32]byte{'A', 'B', 'C', 'D'})
 	require.NoError(t, err)
 	forkEntry, err := forkEntry(localNode.Node().Record())
 	require.NoError(t, err)

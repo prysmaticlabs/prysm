@@ -122,7 +122,8 @@ func TestService_HeadSyncCommitteeDomain(t *testing.T) {
 	c := &Service{}
 	c.head = &head{state: s}
 
-	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
+	gvr := s.GenesisValidatorRoot()
+	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommittee, gvr[:])
 	require.NoError(t, err)
 
 	d, err := c.HeadSyncCommitteeDomain(context.Background(), 0)
@@ -136,7 +137,8 @@ func TestService_HeadSyncContributionProofDomain(t *testing.T) {
 	c := &Service{}
 	c.head = &head{state: s}
 
-	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainContributionAndProof, s.GenesisValidatorRoot())
+	gvr := s.GenesisValidatorRoot()
+	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainContributionAndProof, gvr[:])
 	require.NoError(t, err)
 
 	d, err := c.HeadSyncContributionProofDomain(context.Background(), 0)
@@ -150,7 +152,8 @@ func TestService_HeadSyncSelectionProofDomain(t *testing.T) {
 	c := &Service{}
 	c.head = &head{state: s}
 
-	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommitteeSelectionProof, s.GenesisValidatorRoot())
+	gvr := s.GenesisValidatorRoot()
+	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommitteeSelectionProof, gvr[:])
 	require.NoError(t, err)
 
 	d, err := c.HeadSyncSelectionProofDomain(context.Background(), 0)

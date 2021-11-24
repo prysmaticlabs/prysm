@@ -319,7 +319,8 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())
 
-				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				gvr := hState.GenesisValidatorRoot()
+				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, gvr[:])
 				assert.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.chain = &mockChain.ChainService{
@@ -370,7 +371,8 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				numOfVals := hState.NumValidators()
 
 				chosenVal := numOfVals - 10
-				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				gvr := hState.GenesisValidatorRoot()
+				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, gvr[:])
 				assert.NoError(t, err)
 				rawBytes := p2ptypes.SSZBytes(headRoot[:])
 				sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)

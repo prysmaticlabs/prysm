@@ -2,8 +2,7 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -380,7 +379,7 @@ func V1Alpha1BeaconBlockAltairToV2(v1alpha1Block *ethpbalpha.BeaconBlockAltair) 
 	return v2Block, nil
 }
 
-func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
+func BeaconStateToV1(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 	sourceFork := state.Fork()
 	sourceLatestBlockHeader := state.LatestBlockHeader()
 	sourceEth1Data := state.Eth1Data()
@@ -535,7 +534,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 	return result, nil
 }
 
-func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconStateV2, error) {
+func BeaconStateAltairToV2(altairState state.BeaconState) (*ethpbv2.BeaconStateV2, error) {
 	sourceFork := altairState.Fork()
 	sourceLatestBlockHeader := altairState.LatestBlockHeader()
 	sourceEth1Data := altairState.Eth1Data()

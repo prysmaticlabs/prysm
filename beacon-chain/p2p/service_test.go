@@ -155,11 +155,9 @@ func TestListenForNewNodes(t *testing.T) {
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
 	genesisTime := prysmTime.Now()
-	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   cfg,
-		genesisTime:           genesisTime,
-		genesisValidatorsRoot: genesisValidatorsRoot,
+		cfg:         cfg,
+		genesisTime: genesisTime,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -188,9 +186,8 @@ func TestListenForNewNodes(t *testing.T) {
 		cfg.UDPPort = uint(port + i)
 		cfg.TCPPort = uint(port + i)
 		s := &Service{
-			cfg:                   cfg,
-			genesisTime:           genesisTime,
-			genesisValidatorsRoot: genesisValidatorsRoot,
+			cfg:         cfg,
+			genesisTime: genesisTime,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
@@ -229,8 +226,7 @@ func TestListenForNewNodes(t *testing.T) {
 		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
-				StartTime:             genesisTime,
-				GenesisValidatorsRoot: genesisValidatorsRoot,
+				StartTime: genesisTime,
 			},
 		})
 	}
