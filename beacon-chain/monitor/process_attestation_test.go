@@ -211,7 +211,7 @@ func TestProcessAggregatedAttestationStateNotCached(t *testing.T) {
 		},
 	}
 	s.processAggregatedAttestation(ctx, att)
-	require.LogsContain(t, hook, "\"Processed attestation aggregation\" ValidatorIndex=2 prefix=monitor")
+	require.LogsContain(t, hook, "\"Processed attestation aggregation\" AggregatorIndex=2 BeaconBlockRoot=0x000000000000 Slot=1 SourceRoot:=0x68656c6c6f2d TargetRoot:=0x68656c6c6f2d prefix=monitor")
 	require.LogsContain(t, hook, "Skipping agregated attestation due to state not found in cache")
 	logrus.SetLevel(logrus.InfoLevel)
 }
@@ -249,7 +249,7 @@ func TestProcessAggregatedAttestationStateCached(t *testing.T) {
 
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, state))
 	s.processAggregatedAttestation(ctx, att)
-	require.LogsContain(t, hook, "\"Processed attestation aggregation\" ValidatorIndex=2 prefix=monitor")
+	require.LogsContain(t, hook, "\"Processed attestation aggregation\" AggregatorIndex=2 BeaconBlockRoot=0x68656c6c6f2d Slot=1 SourceRoot:=0x68656c6c6f2d TargetRoot:=0x68656c6c6f2d prefix=monitor")
 	require.LogsContain(t, hook, "\"Processed aggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=2 prefix=monitor")
 	require.LogsDoNotContain(t, hook, "\"Processed aggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=12 prefix=monitor")
 }

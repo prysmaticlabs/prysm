@@ -197,7 +197,14 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 	defer s.Unlock()
 	if s.trackedIndex(att.AggregatorIndex) {
 		log.WithFields(logrus.Fields{
-			"ValidatorIndex": att.AggregatorIndex,
+			"AggregatorIndex": att.AggregatorIndex,
+			"Slot":            att.Aggregate.Data.Slot,
+			"BeaconBlockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
+				att.Aggregate.Data.BeaconBlockRoot)),
+			"SourceRoot:": fmt.Sprintf("%#x", bytesutil.Trunc(
+				att.Aggregate.Data.Source.Root)),
+			"TargetRoot:": fmt.Sprintf("%#x", bytesutil.Trunc(
+				att.Aggregate.Data.Target.Root)),
 		}).Info("Processed attestation aggregation")
 		aggregatedPerf := s.aggregatedPerformance[att.AggregatorIndex]
 		aggregatedPerf.totalAggregations++
