@@ -93,6 +93,15 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.New("bad block referenced in attestation data")
 	}
 
+	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
+	seen, err := s.cfg.attPool.HasAggregatedAttestation(m.Message.Aggregate)
+	if err != nil {
+		tracing.AnnotateError(span, err)
+		return pubsub.ValidationIgnore, err
+	}
+	if seen {
+		return pubsub.ValidationIgnore, nil
+	}
 	if !s.validateBlockInAttestation(ctx, m) {
 		return pubsub.ValidationIgnore, nil
 	}
