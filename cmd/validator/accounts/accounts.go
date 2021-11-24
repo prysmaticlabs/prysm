@@ -25,7 +25,6 @@ var Commands = &cli.Command{
 			Description: `deletes the selected accounts from a users wallet.`,
 			Flags: cmd.WrapFlags([]cli.Flag{
 				flags.WalletDirFlag,
-				cmd.DataDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.DeletePublicKeysFlag,
 				features.Mainnet,
