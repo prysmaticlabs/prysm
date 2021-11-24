@@ -7,10 +7,12 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -99,21 +101,21 @@ func (s *Server) DeleteKeystores(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete keys: %v", err)
 	}
-
-	// Mark the keys as deleted in the database.
-	if err := s.valDB.MarkPublicKeysAsDeleted(ctx, req.PublicKeys); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could mark keys as deleted in database: %v", err)
-	}
-
-	keysToFilter := req.PublicKeys
-	exportedHistory, err := slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, keysToFilter...)
-	if err != nil {
+	if len(statuses) != len(req.PublicKeys) {
 		return nil, status.Errorf(
 			codes.Internal,
-			"Could not export slashing protection history: %v",
-			err,
+			"Wanted same amount of statuses %d as public keys %d",
+			len(statuses),
+			len(req.PublicKeys),
 		)
 	}
+
+	statuses, err = s.transformDeletedKeysStatuses(ctx, req.PublicKeys, statuses)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not transform deleted keys statuses: %v", err)
+	}
+
+	exportedHistory, err := s.slashingProtectionHistoryForDeletedKeys(ctx, req.PublicKeys, statuses)
 	jsonHist, err := json.Marshal(exportedHistory)
 	if err != nil {
 		return nil, status.Errorf(
@@ -126,4 +128,60 @@ func (s *Server) DeleteKeystores(
 		Statuses:           statuses,
 		SlashingProtection: string(jsonHist),
 	}, nil
+}
+
+// For a list of deleted keystore statuses, we check if any NOT_FOUND status actually
+// has a corresponding public key in the database. In this case, we transform the status
+// to NOT_ACTIVE, as we do have slashing protection history for it and should not mark it
+// as NOT_FOUND when returning a response to the caller.
+func (s *Server) transformDeletedKeysStatuses(
+	ctx context.Context, pubKeys [][]byte, statuses []*ethpbservice.DeletedKeystoreStatus,
+) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	pubKeysInDB, err := s.publicKeysInDB(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get public keys from DB: %v", err)
+	}
+	if len(pubKeysInDB) > 0 {
+		for i := 0; i < len(pubKeys); i++ {
+			keyExistsInDB := pubKeysInDB[bytesutil.ToBytes48(pubKeys[i])]
+			if keyExistsInDB && statuses[i].Status == ethpbservice.DeletedKeystoreStatus_NOT_FOUND {
+				statuses[i].Status = ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE
+			}
+		}
+	}
+	return statuses, nil
+}
+
+// Gets a map of all public keys in the database, useful for O(1) lookups.
+func (s *Server) publicKeysInDB(ctx context.Context) (map[[48]byte]bool, error) {
+	pubKeysInDB := make(map[[48]byte]bool)
+	attestedPublicKeys, err := s.valDB.AttestedPublicKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attested public keys from DB: %v", err)
+	}
+	proposedPublicKeys, err := s.valDB.ProposedPublicKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get proposed public keys from DB: %v", err)
+	}
+	for _, pk := range append(attestedPublicKeys, proposedPublicKeys...) {
+		pubKeysInDB[pk] = true
+	}
+	return pubKeysInDB, nil
+}
+
+// Exports slashing protection data for a list of DELETED or NOT_ACTIVE keys only to be used
+// as part of the DeleteKeystores endpoint.
+func (s *Server) slashingProtectionHistoryForDeletedKeys(
+	ctx context.Context, pubKeys [][]byte, statuses []*ethpbservice.DeletedKeystoreStatus,
+) (*format.EIPSlashingProtectionFormat, error) {
+	// We select the keys that were DELETED or NOT_ACTIVE from the previous action
+	// and use that to filter our slashing protection export.
+	keysToFilter := make([][]byte, 0, len(pubKeys))
+	for i, pk := range pubKeys {
+		if statuses[i].Status == ethpbservice.DeletedKeystoreStatus_DELETED ||
+			statuses[i].Status == ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE {
+			keysToFilter = append(keysToFilter, pk)
+		}
+	}
+	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, keysToFilter...)
 }

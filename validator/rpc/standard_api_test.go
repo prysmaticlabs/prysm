@@ -309,7 +309,12 @@ func TestServer_DeleteKeystores(t *testing.T) {
 		require.Equal(t, true, len(slashingProtectionData.Data) > 0)
 
 		for i := 0; i < len(tc.keys); i++ {
-			require.Equal(t, tc.wantStatuses[i], resp.Statuses[i].Status)
+			require.Equal(
+				t,
+				tc.wantStatuses[i],
+				resp.Statuses[i].Status,
+				fmt.Sprintf("Checking status for key %s", tc.keys[i].id),
+			)
 			if tc.keys[i].wantProtectionData {
 				// We check that we can find the key in the slashing protection data.
 				var found bool

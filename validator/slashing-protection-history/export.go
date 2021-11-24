@@ -38,25 +38,8 @@ func ExportStandardProtectionJSON(
 	interchangeJSON.Metadata.GenesisValidatorsRoot = genesisRootHex
 	interchangeJSON.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
 
-	// Only export keys that have been deleted from the user's wallet.
-	deletedPublicKeys, err := validatorDB.DeletedPublicKeys(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve deleted public keys")
-	}
-	if len(deletedPublicKeys) == 0 {
-		log.Warn(
-			"Slashing protection can only export history for keys that been marked as " +
-				"marked as deleted from your wallet. Please try to delete the keys from your wallet first and then " +
-				"retry your slashing protection history export",
-		)
-		return interchangeJSON, nil
-	}
+	// Allow for filtering data for the keys we wish to export.
 	keysFilterMap := make(map[string]bool, len(keysToFilter))
-
-	// Additionally, allow for filtering of the keys we wish to export.
-	for _, k := range deletedPublicKeys {
-		keysFilterMap[string(k)] = true
-	}
 	for _, k := range keysToFilter {
 		keysFilterMap[string(k)] = true
 	}

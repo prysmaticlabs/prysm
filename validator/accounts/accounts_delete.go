@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/prompt"
@@ -15,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 )
@@ -41,14 +39,6 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 		return errors.New("wallet is empty, no accounts to delete")
 	}
 
-	dataDir := w.AccountsDir()
-	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
-		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
-	}
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{})
-	if err != nil {
-		return errors.Wrap(err, "could not initialize validator db")
-	}
 	// Allow the user to interactively select the accounts to delete or optionally
 	// provide them via cli flags as a string of comma-separated, hex strings.
 	filteredPubKeys, err := filterPublicKeysFromUserInput(
@@ -102,9 +92,6 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 		DeletePublicKeys: rawPublicKeys,
 	}); err != nil {
 		return err
-	}
-	if err := valDB.MarkPublicKeysAsDeleted(cliCtx.Context, rawPublicKeys); err != nil {
-		return errors.New("could not mark public keys as deleted in your validator database")
 	}
 	log.WithField("publicKeys", allAccountStr).Warn(
 		"Attempted to delete accounts. IMPORTANT: please run `validator accounts list` to ensure " +
