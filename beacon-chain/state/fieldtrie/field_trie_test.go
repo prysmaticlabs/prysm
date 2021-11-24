@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -18,9 +19,14 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 40)
 
 	// 5 represents the enum value of state roots
-	trie, err := fieldtrie.NewFieldTrie(5, stateTypes.BasicArray, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+	sRoots := customtypes.StateRoots(*newState.StateRoots())
+	trie, err := fieldtrie.NewFieldTrie(5, stateTypes.BasicArray, &sRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
-	root, err := v1.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	sRootsSlice := make([][]byte, len(newState.StateRoots()))
+	for i, r := range newState.StateRoots() {
+		sRootsSlice[i] = r[:]
+	}
+	root, err := v1.RootsArrayHashTreeRoot(sRootsSlice, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	require.NoError(t, err)
 	newRoot, err := trie.TrieRoot()
 	require.NoError(t, err)
@@ -58,7 +64,8 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
-	trie, err := fieldtrie.NewFieldTrie(13, stateTypes.BasicArray, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+	mixes := customtypes.RandaoMixes(*newState.RandaoMixes())
+	trie, err := fieldtrie.NewFieldTrie(13, stateTypes.BasicArray, &mixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 
 	newTrie := trie.CopyTrie()
@@ -66,10 +73,11 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	changedIdx := []uint64{2, 29}
 
 	changedVals := [][32]byte{{'A', 'B'}, {'C', 'D'}}
-	require.NoError(t, newState.UpdateRandaoMixesAtIndex(changedIdx[0], changedVals[0][:]))
-	require.NoError(t, newState.UpdateRandaoMixesAtIndex(changedIdx[1], changedVals[1][:]))
+	require.NoError(t, newState.UpdateRandaoMixesAtIndex(changedIdx[0], changedVals[0]))
+	require.NoError(t, newState.UpdateRandaoMixesAtIndex(changedIdx[1], changedVals[1]))
 
-	root, err := trie.RecomputeTrie(changedIdx, newState.RandaoMixes())
+	mixes = customtypes.RandaoMixes(*newState.RandaoMixes())
+	root, err := trie.RecomputeTrie(changedIdx, &mixes)
 	require.NoError(t, err)
 	newRoot, err := newTrie.TrieRoot()
 	require.NoError(t, err)
