@@ -165,4 +165,3 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	}
 	_ = initTests
 }
-
