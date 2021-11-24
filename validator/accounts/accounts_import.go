@@ -142,7 +142,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	}
 	k, ok := km.(keymanager.Importer)
 	if !ok {
-		return errors.New("keymanager cannot import more keystores")
+		return errors.New("keymanager cannot import keystores")
 	}
 
 	// Check if the user wishes to import a one-off, private key directly
@@ -224,7 +224,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	for i, status := range statuses {
 		switch status.Status {
 		case ethpbservice.ImportedKeystoreStatus_DUPLICATE:
-			log.Warnf("Duplicate key %s found in delete request, skipped", keystoresImported[i].Pubkey)
+			log.Warnf("Duplicate key %s found in import request, skipped", keystoresImported[i].Pubkey)
 		case ethpbservice.ImportedKeystoreStatus_ERROR:
 			log.Warnf("Could not import keystore for %s: %s", keystoresImported[i].Pubkey, status.Message)
 		}
@@ -291,9 +291,10 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, impor
 		return errors.Wrap(err, "could not import keystore into wallet")
 	}
 	for _, status := range statuses {
-		switch status.Status {
-		case ethpbservice.ImportedKeystoreStatus_ERROR:
+		if status.Status == ethpbservice.ImportedKeystoreStatus_ERROR {
 			log.Warnf("Could not import keystore for %s: %s", keystore.Pubkey, status.Message)
+		} else if status.Status == ethpbservice.ImportedKeystoreStatus_DUPLICATE {
+			log.Warnf("Duplicate key %s skipped", keystore.Pubkey)
 		}
 	}
 	fmt.Printf(

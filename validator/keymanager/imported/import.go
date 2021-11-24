@@ -57,14 +57,10 @@ func (km *Keymanager) ImportKeystores(
 			}
 			continue
 		}
-		// if key exists prior to being added then output log that duplicate key was found
 		if err := bar.Add(1); err != nil {
-			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-				Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
-				Message: err.Error(),
-			}
-			continue
+			log.Error(err)
 		}
+		// if key exists prior to being added then output log that duplicate key was found
 		if _, ok := keys[string(pubKeyBytes)]; ok {
 			log.Warnf("Duplicate key in import will be ignored: %#x", pubKeyBytes)
 			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
