@@ -51,6 +51,12 @@ func (s *Server) ImportKeystores(
 	if !ok {
 		return nil, status.Error(codes.Internal, "Keymanager kind cannot import keys")
 	}
+	if len(req.Passwords) == 0 {
+		return nil, status.Error(codes.Internal, "No passwords provided for keystores")
+	}
+	if len(req.Passwords) != len(req.Keystores) {
+		return nil, status.Error(codes.Internal, "Number of passwords does not match number of keystores")
+	}
 	keystores := make([]*keymanager.Keystore, len(req.Keystores))
 	for i := 0; i < len(req.Keystores); i++ {
 		k := &keymanager.Keystore{}

@@ -22,16 +22,11 @@ func (km *Keymanager) ImportKeystores(
 	keystores []*keymanager.Keystore,
 	passwords []string,
 ) ([]*ethpbservice.ImportedKeystoreStatus, error) {
-
-	var singlePasswordForAll string
 	if len(passwords) == 0 {
 		return nil, errors.New("no passwords provided for keystores")
-	} else if len(passwords) == 1 {
-		singlePasswordForAll = passwords[0]
-	} else {
-		if len(passwords) != len(keystores) {
-			return nil, errors.New("number of passwords does not match number of keystores")
-		}
+	}
+	if len(passwords) != len(keystores) {
+		return nil, errors.New("number of passwords does not match number of keystores")
 	}
 
 	decryptor := keystorev4.New()
@@ -43,13 +38,7 @@ func (km *Keymanager) ImportKeystores(
 	for i := 0; i < len(keystores); i++ {
 		var privKeyBytes []byte
 		var pubKeyBytes []byte
-		var passwordToUse string
-		if singlePasswordForAll != "" {
-			passwordToUse = singlePasswordForAll
-		} else {
-			passwordToUse = passwords[i]
-		}
-		privKeyBytes, pubKeyBytes, _, err = km.attemptDecryptKeystore(decryptor, keystores[i], passwordToUse)
+		privKeyBytes, pubKeyBytes, _, err = km.attemptDecryptKeystore(decryptor, keystores[i], passwords[i])
 		if err != nil {
 			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
 				Status:  ethpbservice.ImportedKeystoreStatus_ERROR,

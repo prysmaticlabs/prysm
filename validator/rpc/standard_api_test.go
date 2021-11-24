@@ -115,6 +115,20 @@ func TestServer_ImportKeystores(t *testing.T) {
 		})
 		require.NotNil(t, err)
 	})
+	t.Run("error if no passwords in request", func(t *testing.T) {
+		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+			Keystores: []string{"hi"},
+			Passwords: []string{},
+		})
+		require.ErrorContains(t, "No passwords provided", err)
+	})
+	t.Run("error if number of passwords does not match number of keystores", func(t *testing.T) {
+		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+			Keystores: []string{"hi"},
+			Passwords: []string{"hi", "hi"},
+		})
+		require.ErrorContains(t, "Number of passwords does not match", err)
+	})
 	t.Run("prevents importing if faulty slashing protection data", func(t *testing.T) {
 		numKeystores := 5
 		password := "12345678"
@@ -135,12 +149,14 @@ func TestServer_ImportKeystores(t *testing.T) {
 		numKeystores := 5
 		password := "12345678"
 		keystores := make([]*keymanager.Keystore, numKeystores)
+		passwords := make([]string, numKeystores)
 		publicKeys := make([][48]byte, numKeystores)
 		for i := 0; i < numKeystores; i++ {
 			keystores[i] = createRandomKeystore(t, password)
 			pubKey, err := hex.DecodeString(keystores[i].Pubkey)
 			require.NoError(t, err)
 			publicKeys[i] = bytesutil.ToBytes48(pubKey)
+			passwords[i] = password
 		}
 
 		// Create a validator database.
@@ -176,7 +192,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 
 		resp, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
 			Keystores:          encodedKeystores,
-			Passwords:          []string{password},
+			Passwords:          passwords,
 			SlashingProtection: string(encodedSlashingProtection),
 		})
 		require.NoError(t, err)

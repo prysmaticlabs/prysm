@@ -117,16 +117,18 @@ func TestImportedKeymanager_ImportKeystores(t *testing.T) {
 		)
 		require.ErrorContains(t, "number of passwords does not match", err)
 	})
-	t.Run("single password used to decrypt all keystores", func(t *testing.T) {
+	t.Run("same password used to decrypt all keystores", func(t *testing.T) {
 		numKeystores := 5
 		keystores := make([]*keymanager.Keystore, numKeystores)
+		passwords := make([]string, numKeystores)
 		for i := 0; i < numKeystores; i++ {
 			keystores[i] = createRandomKeystore(t, password)
+			passwords[i] = password
 		}
 		statuses, err := dr.ImportKeystores(
 			ctx,
 			keystores,
-			[]string{password},
+			passwords,
 		)
 		require.NoError(t, err)
 		require.Equal(t, numKeystores, len(statuses))
