@@ -19,7 +19,25 @@ import (
 
 func setupService(t *testing.T) *Service {
 	beaconDB := testDB.SetupDB(t)
-	chainService := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+	state, _ := util.DeterministicGenesisStateAltair(t, 256)
+
+	pubKeys := make([][]byte, 3)
+	pubKeys[0] = state.Validators()[0].PublicKey
+	pubKeys[1] = state.Validators()[1].PublicKey
+	pubKeys[2] = state.Validators()[2].PublicKey
+
+	currentSyncCommittee := util.ConvertToCommittee([][]byte{
+		pubKeys[0], pubKeys[1], pubKeys[2], pubKeys[1], pubKeys[1],
+	})
+	require.NoError(t, state.SetCurrentSyncCommittee(currentSyncCommittee))
+
+	chainService := &mock.ChainService{
+		Genesis:        time.Now(),
+		DB:             beaconDB,
+		State:          state,
+		Root:           []byte("hello-world"),
+		ValidatorsRoot: [32]byte{},
+	}
 
 	trackedVals := map[types.ValidatorIndex]interface{}{
 		1:  nil,
@@ -84,16 +102,6 @@ func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
 	s := setupService(t)
 	state, _ := util.DeterministicGenesisStateAltair(t, 1024)
 
-	pubKeys := make([][]byte, 3)
-	pubKeys[0] = state.Validators()[0].PublicKey
-	pubKeys[1] = state.Validators()[1].PublicKey
-	pubKeys[2] = state.Validators()[2].PublicKey
-
-	currentSyncCommittee := util.ConvertToCommittee([][]byte{
-		pubKeys[0], pubKeys[1], pubKeys[2], pubKeys[1], pubKeys[1],
-	})
-	require.NoError(t, state.SetCurrentSyncCommittee(currentSyncCommittee))
-
 	s.updateSyncCommitteeTrackedVals(state)
 	require.LogsDoNotContain(t, hook, "Sync committee assignments will not be reported")
 	newTrackedSyncIndices := map[types.ValidatorIndex][]types.CommitteeIndex{
@@ -114,11 +122,6 @@ func TestNewService(t *testing.T) {
 func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := setupService(t)
-	state, _ := util.DeterministicGenesisStateAltair(t, 256)
-	root := [32]byte{}
-	copy(root[:], "hello-world")
-	require.NoError(t, s.config.StateGen.SaveState(context.Background(), root, state))
-
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
@@ -139,8 +142,6 @@ func TestStart(t *testing.T) {
 		wg.Done()
 	}()
 
-	require.Equal(t, s.isRunning, false)
-
 	for sent := 0; sent == 0; {
 		sent = s.config.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Synced,
@@ -150,6 +151,7 @@ func TestStart(t *testing.T) {
 		})
 	}
 
+	time.Sleep(2000 * time.Millisecond) // wait for updateSyncCommitteeTrackedVals
 	require.LogsContain(t, hook, "\"Started service\" ValidatorIndices=\"[1 2 12 15]\"")
 	require.Equal(t, s.isRunning, true, "monitor is not running")
 }
