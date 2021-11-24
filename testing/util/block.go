@@ -612,3 +612,68 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 	}
 	return b
 }
+
+// HydrateSignedBeaconBlockMerge hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockMerge(b *ethpb.SignedBeaconBlockMerge) *ethpb.SignedBeaconBlockMerge {
+	if b.Signature == nil {
+		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	b.Block = HydrateBeaconBlockMerge(b.Block)
+	return b
+}
+
+// HydrateBeaconBlockMerge hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockMerge(b *ethpb.BeaconBlockMerge) *ethpb.BeaconBlockMerge {
+	if b == nil {
+		b = &ethpb.BeaconBlockMerge{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, 32)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, 32)
+	}
+	b.Body = HydrateBeaconBlockBodyMerge(b.Body)
+	return b
+}
+
+// HydrateBeaconBlockBodyMerge hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockBodyMerge(b *ethpb.BeaconBlockBodyMerge) *ethpb.BeaconBlockBodyMerge {
+	if b == nil {
+		b = &ethpb.BeaconBlockBodyMerge{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, 96),
+		}
+	}
+	if b.ExecutionPayload == nil {
+		b.ExecutionPayload = &ethpb.ExecutionPayload{
+			ParentHash:    make([]byte, 32),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, 32),
+			ReceiptRoot:   make([]byte, 32),
+			LogsBloom:     make([]byte, 256),
+			Random:        make([]byte, 32),
+			BaseFeePerGas: make([]byte, 32),
+			BlockHash:     make([]byte, 32),
+		}
+	}
+	return b
+}
