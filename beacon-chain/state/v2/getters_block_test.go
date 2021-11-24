@@ -3,7 +3,6 @@ package v2
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -30,17 +29,22 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 	s, err := InitializeFromProto(&ethpb.BeaconStateAltair{})
 	require.NoError(t, err)
 	got := s.BlockRoots()
-	require.DeepEqual(t, ([][]byte)(nil), got)
+	require.DeepEqual(t, [8192][32]byte{}, *got)
 
-	want := [][]byte{{'a'}}
-	s, err = InitializeFromProto(&ethpb.BeaconStateAltair{BlockRoots: want})
+	want := [8192][32]byte{{'a'}}
+	bRoots := make([][]byte, len(want))
+	for i, r := range want {
+		tmp := r
+		bRoots[i] = tmp[:]
+	}
+	s, err = InitializeFromProto(&ethpb.BeaconStateAltair{BlockRoots: bRoots})
 	require.NoError(t, err)
 	got = s.BlockRoots()
-	require.DeepEqual(t, want, got)
+	require.DeepEqual(t, want, *got)
 
 	// Test copy does not mutate.
 	got[0][0] = 'b'
-	require.DeepNotEqual(t, want, got)
+	require.DeepNotEqual(t, want, *got)
 }
 
 func TestBeaconState_BlockRootAtIndex(t *testing.T) {
@@ -48,13 +52,18 @@ func TestBeaconState_BlockRootAtIndex(t *testing.T) {
 	require.NoError(t, err)
 	got, err := s.BlockRootAtIndex(0)
 	require.NoError(t, err)
-	require.DeepEqual(t, ([]byte)(nil), got)
+	require.DeepEqual(t, [32]byte{}, got)
 
-	r := [][]byte{{'a'}}
-	s, err = InitializeFromProto(&ethpb.BeaconStateAltair{BlockRoots: r})
+	r := [8192][32]byte{{'a'}}
+	bRoots := make([][]byte, len(r))
+	for i, root := range r {
+		tmp := root
+		bRoots[i] = tmp[:]
+	}
+	s, err = InitializeFromProto(&ethpb.BeaconStateAltair{BlockRoots: bRoots})
 	require.NoError(t, err)
 	got, err = s.BlockRootAtIndex(0)
 	require.NoError(t, err)
-	want := bytesutil.PadTo([]byte{'a'}, 32)
+	want := [32]byte{'a'}
 	require.DeepSSZEqual(t, want, got)
 }

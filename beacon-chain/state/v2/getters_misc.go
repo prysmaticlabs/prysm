@@ -96,6 +96,10 @@ func (b *BeaconState) parentRoot() [32]byte {
 		return [32]byte{}
 	}
 
+	if b.latestBlockHeader == nil {
+		return [32]byte{}
+	}
+
 	parentRoot := [32]byte{}
 	copy(parentRoot[:], b.latestBlockHeader.ParentRoot)
 	return parentRoot
