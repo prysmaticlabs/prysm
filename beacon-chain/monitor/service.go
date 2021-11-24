@@ -49,9 +49,9 @@ type ValidatorMonitorConfig struct {
 type Service struct {
 	config *ValidatorMonitorConfig
 
-	// monitorLock Locks access to TrackedValidators, latestPerformance, aggregatedPerformance,
+	// Locks access to TrackedValidators, latestPerformance, aggregatedPerformance,
 	// trackedSyncedCommitteeIndices and lastSyncedEpoch
-	monitorLock sync.RWMutex
+	sync.RWMutex
 
 	latestPerformance           map[types.ValidatorIndex]ValidatorLatestPerformance
 	aggregatedPerformance       map[types.ValidatorIndex]ValidatorAggregatedPerformance
@@ -61,7 +61,7 @@ type Service struct {
 
 // TrackedIndex returns if the given validator index corresponds to one of the
 // validators we follow.
-// It assumes the caller holds a Lock on the monitorLock
+// It assumes the caller holds a Lock on the Lock
 func (s *Service) trackedIndex(idx types.ValidatorIndex) bool {
 	_, ok := s.config.TrackedValidators[idx]
 	return ok
@@ -70,8 +70,8 @@ func (s *Service) trackedIndex(idx types.ValidatorIndex) bool {
 // updateSyncCommitteeTrackedVals updates the sync committee assignments of our
 // tracked validators. It gets called when we sync a block after the Sync Period changes.
 func (s *Service) updateSyncCommitteeTrackedVals(state state.BeaconState) {
-	s.monitorLock.Lock()
-	defer s.monitorLock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	for idx := range s.config.TrackedValidators {
 		syncIdx, err := helpers.CurrentPeriodSyncSubcommitteeIndices(state, idx)
 		if err != nil {

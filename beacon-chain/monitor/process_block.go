@@ -41,12 +41,12 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 	}
 
 	currEpoch := slots.ToEpoch(blk.Slot())
-	s.monitorLock.RLock()
+	s.RLock()
 	lastSyncedEpoch := s.lastSyncedEpoch
-	s.monitorLock.RUnlock()
+	s.RUnlock()
 
 	if currEpoch != lastSyncedEpoch &&
-		slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(s.lastSyncedEpoch) {
+		slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(lastSyncedEpoch) {
 		s.updateSyncCommitteeTrackedVals(state)
 	}
 
@@ -57,8 +57,8 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 
 // processProposedBlock logs the event that one of our tracked validators proposed a block that was included
 func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk block.BeaconBlock) {
-	s.monitorLock.Lock()
-	defer s.monitorLock.Unlock()
+	s.Lock()
+	defer s.Unlock()
 	if s.trackedIndex(blk.ProposerIndex()) {
 		// update metrics
 		proposedSlotsCounter.WithLabelValues(fmt.Sprintf("%d", blk.ProposerIndex())).Inc()
@@ -94,8 +94,8 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 
 // processSlashings logs the event of one of our tracked validators was slashed
 func (s *Service) processSlashings(blk block.BeaconBlock) {
-	s.monitorLock.RLock()
-	defer s.monitorLock.RUnlock()
+	s.RLock()
+	defer s.RUnlock()
 	for _, slashing := range blk.Body().ProposerSlashings() {
 		idx := slashing.Header_1.Header.ProposerIndex
 		if s.trackedIndex(idx) {
