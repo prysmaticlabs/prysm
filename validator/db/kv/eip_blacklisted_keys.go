@@ -34,7 +34,7 @@ func (s *Store) DeletedPublicKeys(ctx context.Context) ([][]byte, error) {
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			if key != nil {
 				pubKeyBytes := make([]byte, 48)
-				copy(pubKeyBytes[:], key)
+				copy(pubKeyBytes, key)
 				publicKeys = append(publicKeys, pubKeyBytes)
 			}
 			return nil
