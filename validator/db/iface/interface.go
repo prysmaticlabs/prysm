@@ -39,6 +39,8 @@ type ValidatorDB interface {
 	// Attester protection related methods.
 	// Methods to store and read blacklisted public keys from EIP-3076
 	// slashing protection imports.
+	MarkPublicKeysAsDeleted(ctx context.Context, publicKeys [][]byte) error
+	DeletedPublicKeys(ctx context.Context) ([][]byte, error)
 	EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte, error)
 	SaveEIPImportBlacklistedPublicKeys(ctx context.Context, publicKeys [][48]byte) error
 	SigningRootAtTargetEpoch(ctx context.Context, publicKey [48]byte, target types.Epoch) ([32]byte, error)

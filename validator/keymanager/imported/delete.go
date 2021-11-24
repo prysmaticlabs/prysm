@@ -73,6 +73,8 @@ func (km *Keymanager) DeleteKeystores(
 			deletedKeysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
 		}
 	}
+
+	// Mark the keys as deleted in our database.
 	log.WithFields(logrus.Fields{
 		"publicKeys": deletedKeysStr,
 	}).Info("Successfully deleted validator key(s)")

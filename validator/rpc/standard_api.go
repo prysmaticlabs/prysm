@@ -96,6 +96,12 @@ func (s *Server) DeleteKeystores(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete keys: %v", err)
 	}
+
+	// Mark the keys as deleted in the database.
+	if err := s.valDB.MarkPublicKeysAsDeleted(ctx, req.PublicKeys); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could mark keys as deleted in database: %v", err)
+	}
+
 	keysToFilter := req.PublicKeys
 	exportedHistory, err := slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, keysToFilter...)
 	if err != nil {

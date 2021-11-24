@@ -21,7 +21,16 @@ func ExportStandardProtectionJSON(
 	validatorDB db.Database,
 	keysToFilter ...[]byte,
 ) (*format.EIPSlashingProtectionFormat, error) {
+	// Only export keys that have been deleted from the user's wallet.
+	deletedPublicKeys, err := validatorDB.DeletedPublicKeys(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve deleted public keys")
+	}
 	keysFilterMap := make(map[string]bool, len(keysToFilter))
+	// Additionally, allow for filtering of the keys we wish to export.
+	for _, k := range deletedPublicKeys {
+		keysFilterMap[string(k)] = true
+	}
 	for _, k := range keysToFilter {
 		keysFilterMap[string(k)] = true
 	}
