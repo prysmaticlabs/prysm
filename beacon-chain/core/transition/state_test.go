@@ -123,7 +123,7 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	assert.Equal(t, want, got, "The slice underlying array capacity is wrong")
 
 	for _, h := range s.BlockRoots() {
-		assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], h, "Unexpected non-zero hash data")
+		assert.DeepEqual(t, params.BeaconConfig().ZeroHash, h, "Unexpected non-zero hash data")
 	}
 }
 

@@ -115,23 +115,23 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	require.NoError(t, err)
 	expectedRoot1, err := expected1.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	t.Logf("chain 1 (even i) expected root %x at slot %d", expectedRoot1[:], problemSlot)
+	t.Logf("chain 1 (even i) expected root %x at slot %d", expectedRoot1, problemSlot)
 
 	tmp1, err := transition.ProcessSlots(context.Background(), expected1.Copy(), problemSlot+1)
 	require.NoError(t, err)
 	gotRoot := tmp1.StateRoots()[problemSlot]
-	require.DeepEqual(t, expectedRoot1[:], gotRoot, "State roots for chain 1 are bad, expected root doesn't match")
+	require.DeepEqual(t, expectedRoot1, gotRoot, "State roots for chain 1 are bad, expected root doesn't match")
 
 	expected2, err := transition.ProcessSlots(context.Background(), s0.Copy(), problemSlot)
 	require.NoError(t, err)
 	expectedRoot2, err := expected2.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	t.Logf("chain 2 (odd i) expected root %x at slot %d", expectedRoot2[:], problemSlot)
+	t.Logf("chain 2 (odd i) expected root %x at slot %d", expectedRoot2, problemSlot)
 
 	tmp2, err := transition.ProcessSlots(context.Background(), expected2.Copy(), problemSlot+1)
 	require.NoError(t, err)
 	gotRoot = tmp2.StateRoots()[problemSlot]
-	require.DeepEqual(t, expectedRoot2[:], gotRoot, "State roots for chain 2 are bad, expected root doesn't match")
+	require.DeepEqual(t, expectedRoot2, gotRoot, "State roots for chain 2 are bad, expected root doesn't match")
 
 	var wg sync.WaitGroup
 	wg.Add(len(setups))
@@ -143,9 +143,9 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		roots := outState.StateRoots()
 		gotRoot := roots[problemSlot]
 		if i%2 == 0 {
-			assert.DeepEqual(t, expectedRoot1[:], gotRoot, "Unexpected root on chain 1")
+			assert.DeepEqual(t, expectedRoot1, gotRoot, "Unexpected root on chain 1")
 		} else {
-			assert.DeepEqual(t, expectedRoot2[:], gotRoot, "Unexpected root on chain 2")
+			assert.DeepEqual(t, expectedRoot2, gotRoot, "Unexpected root on chain 2")
 		}
 		wg.Done()
 	}
