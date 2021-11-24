@@ -586,7 +586,7 @@ func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 func genPayloadHeader() *v1alpha1.ExecutionPayloadHeader {
 	return &v1alpha1.ExecutionPayloadHeader{
 		ParentHash:       bytes(),
-		Coinbase:         bytes(),
+		FeeRecipient:     bytes(),
 		StateRoot:        bytes(),
 		ReceiptRoot:      bytes(),
 		LogsBloom:        bytes(),

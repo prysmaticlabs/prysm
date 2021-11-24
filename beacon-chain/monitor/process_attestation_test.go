@@ -41,21 +41,26 @@ func setupService(t *testing.T) *Service {
 			balance: 31900000000,
 		},
 	}
-
 	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
 		1:  {},
 		2:  {},
 		12: {},
 		15: {},
 	}
-
+	trackedSyncCommitteeIndices := map[types.ValidatorIndex][]types.CommitteeIndex{
+		1:  {0, 1, 2, 3},
+		12: {4, 5},
+	}
 	return &Service{
 		config: &ValidatorMonitorConfig{
-			StateGen:          stategen.New(beaconDB),
-			TrackedValidators: trackedVals,
+			StateGen: stategen.New(beaconDB),
 		},
-		latestPerformance:     latestPerformance,
-		aggregatedPerformance: aggregatedPerformance,
+
+		TrackedValidators:           trackedVals,
+		latestPerformance:           latestPerformance,
+		aggregatedPerformance:       aggregatedPerformance,
+		trackedSyncCommitteeIndices: trackedSyncCommitteeIndices,
+		lastSyncedEpoch:             0,
 	}
 }
 
