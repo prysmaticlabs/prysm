@@ -276,6 +276,24 @@ func TestServer_DeleteKeystores(t *testing.T) {
 				ethpbservice.DeletedKeystoreStatus_DELETED,
 			},
 		},
+		{
+			keys: []*keyCase{
+				{id: "a", wantProtectionData: true},
+				{id: "c", wantProtectionData: true},
+			},
+			wantStatuses: []ethpbservice.DeletedKeystoreStatus_Status{
+				ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
+				ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
+			},
+		},
+		{
+			keys: []*keyCase{
+				{id: "x"},
+			},
+			wantStatuses: []ethpbservice.DeletedKeystoreStatus_Status{
+				ethpbservice.DeletedKeystoreStatus_NOT_FOUND,
+			},
+		},
 	}
 	for _, tc := range tests {
 		keys := make([][]byte, len(tc.keys))

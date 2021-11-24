@@ -78,6 +78,9 @@ func (s *Server) ImportKeystores(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not import keystores: %v", err)
 	}
+
+	// If any of the keys imported had a slashing protection history before, we
+	// stop marking them as deleted from our validator database.
 	return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
 }
 
