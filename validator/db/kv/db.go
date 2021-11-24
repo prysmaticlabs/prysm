@@ -147,7 +147,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			lowestSignedProposalsBucket,
 			highestSignedProposalsBucket,
 			slashablePublicKeysBucket,
-			deletedPublicKeysBucket,
 			pubKeysBucket,
 			migrationsBucket,
 			graffitiBucket,

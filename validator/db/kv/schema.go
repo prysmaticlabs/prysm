@@ -16,10 +16,8 @@ var (
 	lowestSignedProposalsBucket  = []byte("lowest-signed-proposals-bucket")
 	highestSignedProposalsBucket = []byte("highest-signed-proposals-bucket")
 
-	// Slashable public keys bucket for EIP slashing protection blacklisting.
+	// Slashable public keys bucket.
 	slashablePublicKeysBucket = []byte("slashable-public-keys")
-	// Deleted public keys bucket for EIP slashing protection exports.
-	deletedPublicKeysBucket = []byte("deleted-public-keys")
 
 	// Genesis validators root bucket key.
 	genesisValidatorsRootKey = []byte("genesis-val-root")

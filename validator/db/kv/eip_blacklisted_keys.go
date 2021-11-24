@@ -7,42 +7,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// MarkPublicKeysAsDeleted marks the given keys as deleted from the user's wallet, but should still
-// exist in the database to perform EIP-3076 slashing protection exports if requested.
-func (s *Store) MarkPublicKeysAsDeleted(ctx context.Context, publicKeys [][]byte) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.MarkKeysAsDeleted")
-	defer span.End()
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(deletedPublicKeysBucket)
-		for _, k := range publicKeys {
-			if err := bucket.Put(k, []byte{1}); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-// DeletedPublicKeys fetches the given keys as deleted from the user's wallet, but should still
-// exist in the database to perform EIP-3076 slashing protection exports if requested.
-func (s *Store) DeletedPublicKeys(ctx context.Context) ([][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.DeletedPublicKeys")
-	defer span.End()
-	publicKeys := make([][]byte, 0)
-	err := s.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(deletedPublicKeysBucket)
-		return bucket.ForEach(func(key []byte, _ []byte) error {
-			if key != nil {
-				pubKeyBytes := make([]byte, 48)
-				copy(pubKeyBytes, key)
-				publicKeys = append(publicKeys, pubKeyBytes)
-			}
-			return nil
-		})
-	})
-	return publicKeys, err
-}
-
 // EIPImportBlacklistedPublicKeys returns keys that were marked as blacklisted during EIP-3076 slashing
 // protection imports, ensuring that we can prevent these keys from having duties at runtime.
 func (s *Store) EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte, error) {
