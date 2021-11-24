@@ -3,6 +3,7 @@ package monitor
 import (
 	"context"
 	"errors"
+	"sort"
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -103,41 +104,49 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []t
 
 // Start waits until the beacon is synced and starts the monitoring system
 func (s *Service) Start() {
+	tracked := make([]types.ValidatorIndex, len(s.TrackedValidators))
+	i := 0
+	for idx := range s.TrackedValidators {
+		tracked[i] = idx
+		i++
+	}
+	sort.Slice(tracked, func(i, j int) bool { return tracked[i] < tracked[j] })
 	log.WithFields(logrus.Fields{
-		"ValidatorIndices": s.TrackedValidators,
+		"ValidatorIndices": tracked,
 	}).Info("Started service")
+	s.isRunning = false
 
-	if err := s.waitForSync(); err != nil {
-		log.WithError(err)
-		s.isRunning = false
-		return
-	}
-
-	state, err := s.config.HeadFetcher.HeadState(s.ctx)
-	if err != nil {
-		log.WithError(err).Error("could not get head state")
-		s.isRunning = false
-		return
-	}
-	epoch := slots.ToEpoch(state.Slot())
-
-	for idx := range s.TrackedValidators { // no Lock required
-		balance, err := state.BalanceAtIndex(idx)
+	go func() {
+		if err := s.waitForSync(); err != nil {
+			log.WithError(err)
+			return
+		}
+		state, err := s.config.HeadFetcher.HeadState(s.ctx)
 		if err != nil {
-			log.WithError(err).WithField("ValidatorIndex", idx).Error(
-				"could not fetch starting balance, aggregated report will be wrong")
+			log.WithError(err).Error("could not get head state")
+			return
 		}
-		s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{
-			startEpoch:   epoch,
-			startBalance: balance,
+		epoch := slots.ToEpoch(state.Slot())
+		log.WithField("Epoch", epoch).Debug("Synced to head epoch, starting reporting performance")
+
+		for idx := range s.TrackedValidators { // no Lock required
+			balance, err := state.BalanceAtIndex(idx)
+			if err != nil {
+				log.WithError(err).WithField("ValidatorIndex", idx).Error(
+					"could not fetch starting balance, aggregated report will be wrong")
+			}
+			s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{
+				startEpoch:   epoch,
+				startBalance: balance,
+			}
+			s.latestPerformance[idx] = ValidatorLatestPerformance{
+				balance: balance,
+			}
 		}
-		s.latestPerformance[idx] = ValidatorLatestPerformance{
-			balance: balance,
-		}
-	}
-	s.updateSyncCommitteeTrackedVals(state)
-	s.isRunning = true
-	go s.monitorRoutine()
+		s.updateSyncCommitteeTrackedVals(state)
+		s.isRunning = true
+		go s.monitorRoutine()
+	}()
 }
 
 // Status retrieves the status of the service

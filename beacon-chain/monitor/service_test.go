@@ -113,13 +113,14 @@ func TestNewService(t *testing.T) {
 func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := setupService(t)
+	s.Start()
+
 	s.config.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Synced,
 		Data: &statefeed.SyncedData{
 			StartTime: time.Now(),
 		},
 	})
-	s.Start()
-
-	require.LogsContain(t, hook, "pingo")
+	require.LogsContain(t, hook, "\"Started service\" ValidatorIndices=\"[1 2 12 15]\"")
+	require.Equal(t, s.isRunning, true, "monitor is not running")
 }
