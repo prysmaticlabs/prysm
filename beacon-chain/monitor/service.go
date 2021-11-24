@@ -61,7 +61,7 @@ type Service struct {
 
 // TrackedIndex returns if the given validator index corresponds to one of the
 // validators we follow.
-// It assumes the caller holds a Lock
+// It assumes the caller holds the service Lock
 func (s *Service) trackedIndex(idx types.ValidatorIndex) bool {
 	_, ok := s.TrackedValidators[idx]
 	return ok
