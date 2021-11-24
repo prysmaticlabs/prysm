@@ -117,11 +117,9 @@ func TestProcessSlashings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := &Service{
-				config: &ValidatorMonitorConfig{
-					TrackedValidators: map[types.ValidatorIndex]interface{}{
-						1: nil,
-						2: nil,
-					},
+				TrackedValidators: map[types.ValidatorIndex]interface{}{
+					1: nil,
+					2: nil,
 				},
 			}
 			s.processSlashings(wrapper.WrappedPhase0BeaconBlock(tt.block))
@@ -207,7 +205,7 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	idx := b.Block.Body.ProposerSlashings[0].Header_1.Header.ProposerIndex
 	s.RLock()
 	if !s.trackedIndex(idx) {
-		s.config.TrackedValidators[idx] = nil
+		s.TrackedValidators[idx] = nil
 		s.latestPerformance[idx] = ValidatorLatestPerformance{
 			balance: 31900000000,
 		}

@@ -40,8 +40,7 @@ type ValidatorAggregatedPerformance struct {
 // monitor service tracks, as well as the event feed notifier that the
 // monitor needs to subscribe.
 type ValidatorMonitorConfig struct {
-	StateGen          stategen.StateManager
-	TrackedValidators map[types.ValidatorIndex]interface{}
+	StateGen stategen.StateManager
 }
 
 // Service is the main structure that tracks validators and reports logs and
@@ -53,6 +52,7 @@ type Service struct {
 	// trackedSyncedCommitteeIndices and lastSyncedEpoch
 	sync.RWMutex
 
+	TrackedValidators           map[types.ValidatorIndex]interface{}
 	latestPerformance           map[types.ValidatorIndex]ValidatorLatestPerformance
 	aggregatedPerformance       map[types.ValidatorIndex]ValidatorAggregatedPerformance
 	trackedSyncCommitteeIndices map[types.ValidatorIndex][]types.CommitteeIndex
@@ -61,9 +61,9 @@ type Service struct {
 
 // TrackedIndex returns if the given validator index corresponds to one of the
 // validators we follow.
-// It assumes the caller holds a Lock on the Lock
+// It assumes the caller holds a Lock
 func (s *Service) trackedIndex(idx types.ValidatorIndex) bool {
-	_, ok := s.config.TrackedValidators[idx]
+	_, ok := s.TrackedValidators[idx]
 	return ok
 }
 
@@ -72,7 +72,7 @@ func (s *Service) trackedIndex(idx types.ValidatorIndex) bool {
 func (s *Service) updateSyncCommitteeTrackedVals(state state.BeaconState) {
 	s.Lock()
 	defer s.Unlock()
-	for idx := range s.config.TrackedValidators {
+	for idx := range s.TrackedValidators {
 		syncIdx, err := helpers.CurrentPeriodSyncSubcommitteeIndices(state, idx)
 		if err != nil {
 			log.WithError(err).WithField("ValidatorIndex", idx).Error(

@@ -53,9 +53,10 @@ func setupService(t *testing.T) *Service {
 	}
 	return &Service{
 		config: &ValidatorMonitorConfig{
-			StateGen:          stategen.New(beaconDB),
-			TrackedValidators: trackedVals,
+			StateGen: stategen.New(beaconDB),
 		},
+
+		TrackedValidators:           trackedVals,
 		latestPerformance:           latestPerformance,
 		aggregatedPerformance:       aggregatedPerformance,
 		trackedSyncCommitteeIndices: trackedSyncCommitteeIndices,
