@@ -61,6 +61,7 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 func (s *Service) updateSyncCommitteeTrackedVals(state state.BeaconState) {
 	s.Lock()
 	defer s.Unlock()
+	
 	for idx := range s.trackedValidators {
 		syncIdx, err := helpers.CurrentPeriodSyncSubcommitteeIndices(state, idx)
 		if err != nil {
