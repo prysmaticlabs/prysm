@@ -26,7 +26,7 @@ service Wallet {
             get: "/v2/validator/wallet"
         };
     }
-    rpc ImportKeystores(ImportKeystoresRequest) returns (ImportKeystoresResponse) {
+    rpc ImportAccounts(ImportAccountsRequest) returns (ImportAccountsResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/keystores/import",
             body: "*"
@@ -308,7 +308,7 @@ message HasWalletResponse {
     bool wallet_exists = 1;
 }
 
-message ImportKeystoresRequest {
+message ImportAccountsRequest {
     // JSON-encoded keystore files to import during wallet creation.
     repeated string keystores_imported = 1;
 
@@ -316,7 +316,7 @@ message ImportKeystoresRequest {
     string keystores_password = 2;
 }
 
-message ImportKeystoresResponse {
+message ImportAccountsResponse {
     repeated bytes imported_public_keys = 1;
 }
 

@@ -21,6 +21,10 @@ var Commands = &cli.Command{
 			Flags: cmd.WrapFlags([]cli.Flag{
 				cmd.DataDirFlag,
 				flags.SlashingProtectionExportDirFlag,
+				features.Mainnet,
+				features.PyrmontTestnet,
+				features.PraterTestnet,
+				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {

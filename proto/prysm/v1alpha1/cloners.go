@@ -376,3 +376,26 @@ func CopySyncAggregate(a *SyncAggregate) *SyncAggregate {
 		SyncCommitteeSignature: bytesutil.SafeCopyBytes(a.SyncCommitteeSignature),
 	}
 }
+
+// CopyExecutionPayloadHeader copies the provided execution payload object.
+func CopyExecutionPayloadHeader(payload *ExecutionPayloadHeader) *ExecutionPayloadHeader {
+	if payload == nil {
+		return nil
+	}
+	return &ExecutionPayloadHeader{
+		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptRoot),
+		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+		Random:           bytesutil.SafeCopyBytes(payload.Random),
+		BlockNumber:      payload.BlockNumber,
+		GasLimit:         payload.GasLimit,
+		GasUsed:          payload.GasUsed,
+		Timestamp:        payload.Timestamp,
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+	}
+}
