@@ -133,7 +133,8 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		}
 	}
 	layers[0] = hashLayer
-	layers, hashLayer, err := stateutil.MerkleizeTrieLeaves(layers, hashLayer, hasher)
+	var err error
+	layers, hashLayer, err = stateutil.MerkleizeTrieLeaves(layers, hashLayer, hasher)
 	if err != nil {
 		return [32]byte{}, err
 	}

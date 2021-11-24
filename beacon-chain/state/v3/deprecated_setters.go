@@ -2,7 +2,6 @@ package v3
 
 import (
 	"github.com/pkg/errors"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -29,9 +28,4 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestat
 // RotateAttestations is not supported for HF1 beacon state.
 func (b *BeaconState) RotateAttestations() error {
 	return errors.New("RotateAttestations is not supported for version Merge beacon state")
-}
-
-// ToProto is not supported for HF1 beacon state.
-func (b *BeaconState) ToProto() (*v1.BeaconState, error) {
-	return nil, errors.New("ToProto is not yet supported for Merge beacon state")
 }
