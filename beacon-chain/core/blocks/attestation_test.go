@@ -414,7 +414,8 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 			Slot: 1,
 		},
 	})
-	prevDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch-1, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	gvr := st.GenesisValidatorRoot()
+	prevDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch-1, params.BeaconConfig().DomainBeaconAttester, gvr[:])
 	require.NoError(t, err)
 	root, err := signing.ComputeSigningRoot(att1.Data, prevDomain)
 	require.NoError(t, err)
@@ -434,7 +435,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 			CommitteeIndex: 1,
 		},
 	})
-	currDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	currDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, gvr[:])
 	require.NoError(t, err)
 	root, err = signing.ComputeSigningRoot(att2.Data, currDomain)
 	require.NoError(t, err)
@@ -473,7 +474,8 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 			Slot: 1,
 		},
 	})
-	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	gvr := st.GenesisValidatorRoot()
+	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, gvr[:])
 	require.NoError(t, err)
 	root, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)
@@ -537,7 +539,8 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 			Slot: 1,
 		},
 	})
-	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
+	gvr := st.GenesisValidatorRoot()
+	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, gvr[:])
 	require.NoError(t, err)
 	root, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)

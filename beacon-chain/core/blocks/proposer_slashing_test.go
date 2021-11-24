@@ -329,7 +329,8 @@ func TestVerifyProposerSlashing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			sk := sks[tt.args.slashing.Header_1.Header.ProposerIndex]
-			d, err := signing.Domain(tt.args.beaconState.Fork(), slots.ToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorRoot())
+			gvr := tt.args.beaconState.GenesisValidatorRoot()
+			d, err := signing.Domain(tt.args.beaconState.Fork(), slots.ToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, gvr[:])
 			require.NoError(t, err)
 			if tt.args.slashing.Header_1.Signature == nil {
 				sr, err := signing.ComputeSigningRoot(tt.args.slashing.Header_1.Header, d)

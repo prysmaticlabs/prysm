@@ -74,7 +74,8 @@ func TestFuzzverifyDepositDataSigningRoot_10000(t *testing.T) {
 func TestFuzzProcessEth1DataInBlock_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	e := &eth.Eth1Data{}
-	state := &v1.BeaconState{}
+	state, err := v1.Initialize()
+	require.NoError(t, err)
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(e)
