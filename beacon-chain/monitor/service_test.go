@@ -1,13 +1,71 @@
 package monitor
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func setupService(t *testing.T) *Service {
+	beaconDB := testDB.SetupDB(t)
+	chainService := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+
+	trackedVals := map[types.ValidatorIndex]interface{}{
+		1:  nil,
+		2:  nil,
+		12: nil,
+		15: nil,
+	}
+	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
+		1: {
+			balance: 32000000000,
+		},
+		2: {
+			balance: 32000000000,
+		},
+		12: {
+			balance: 31900000000,
+		},
+		15: {
+			balance: 31900000000,
+		},
+	}
+	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
+		1:  {},
+		2:  {},
+		12: {},
+		15: {},
+	}
+	trackedSyncCommitteeIndices := map[types.ValidatorIndex][]types.CommitteeIndex{
+		1:  {0, 1, 2, 3},
+		12: {4, 5},
+	}
+	return &Service{
+		config: &ValidatorMonitorConfig{
+			StateGen:            stategen.New(beaconDB),
+			StateNotifier:       chainService.StateNotifier(),
+			HeadFetcher:         chainService,
+			AttestationNotifier: chainService.OperationNotifier(),
+		},
+
+		ctx:                         context.Background(),
+		TrackedValidators:           trackedVals,
+		latestPerformance:           latestPerformance,
+		aggregatedPerformance:       aggregatedPerformance,
+		trackedSyncCommitteeIndices: trackedSyncCommitteeIndices,
+		lastSyncedEpoch:             0,
+	}
+}
 
 func TestTrackedIndex(t *testing.T) {
 	s := &Service{
@@ -42,4 +100,26 @@ func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
 		2: {2},
 	}
 	require.DeepEqual(t, s.trackedSyncCommitteeIndices, newTrackedSyncIndices)
+}
+
+func TestNewService(t *testing.T) {
+	config := &ValidatorMonitorConfig{}
+	tracked := []types.ValidatorIndex{}
+	ctx := context.Background()
+	_, err := NewService(ctx, config, tracked)
+	require.NoError(t, err)
+}
+
+func TestStart(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s := setupService(t)
+	s.config.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Synced,
+		Data: &statefeed.SyncedData{
+			StartTime: time.Now(),
+		},
+	})
+	s.Start()
+
+	require.LogsContain(t, hook, "pingo")
 }

@@ -1,13 +1,28 @@
 package monitor
 
 import (
+	"context"
+	"errors"
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
+)
+
+var (
+	// Error when event feed data is not statefeed.SyncedData
+	errorNotSyncedData = errors.New("Event feed data is not of type *statefeed.SyncedData")
+
+	// Error when the context is closed while waiting for sync
+	errorContextClosedWhileWaiting = errors.New("Context closed while waiting for beacon to sync to latest Head")
 )
 
 // ValidatorLatestPerformance keeps track of the latest participation of the validator
@@ -24,6 +39,8 @@ type ValidatorLatestPerformance struct {
 // ValidatorAggregatedPerformance keeps track of the accumulated performance of
 // the validator since launch
 type ValidatorAggregatedPerformance struct {
+	startEpoch                     types.Epoch
+	startBalance                   uint64
 	totalAttestedCount             uint64
 	totalRequestedCount            uint64
 	totalDistance                  uint64
@@ -40,13 +57,19 @@ type ValidatorAggregatedPerformance struct {
 // monitor service tracks, as well as the event feed notifier that the
 // monitor needs to subscribe.
 type ValidatorMonitorConfig struct {
-	StateGen stategen.StateManager
+	StateNotifier       statefeed.Notifier
+	AttestationNotifier operation.Notifier
+	HeadFetcher         blockchain.HeadFetcher
+	StateGen            stategen.StateManager
 }
 
 // Service is the main structure that tracks validators and reports logs and
 // metrics of their performances throughout their lifetime.
 type Service struct {
-	config *ValidatorMonitorConfig
+	config    *ValidatorMonitorConfig
+	ctx       context.Context
+	cancel    context.CancelFunc
+	isRunning bool
 
 	// Locks access to TrackedValidators, latestPerformance, aggregatedPerformance,
 	// trackedSyncedCommitteeIndices and lastSyncedEpoch
@@ -57,6 +80,171 @@ type Service struct {
 	aggregatedPerformance       map[types.ValidatorIndex]ValidatorAggregatedPerformance
 	trackedSyncCommitteeIndices map[types.ValidatorIndex][]types.CommitteeIndex
 	lastSyncedEpoch             types.Epoch
+}
+
+// NewService sets up a new validator monitor instance when given a list of
+// validator indices to track
+func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []types.ValidatorIndex) (*Service, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	r := &Service{
+		config:                      config,
+		ctx:                         ctx,
+		cancel:                      cancel,
+		TrackedValidators:           make(map[types.ValidatorIndex]interface{}, len(tracked)),
+		latestPerformance:           make(map[types.ValidatorIndex]ValidatorLatestPerformance),
+		aggregatedPerformance:       make(map[types.ValidatorIndex]ValidatorAggregatedPerformance),
+		trackedSyncCommitteeIndices: make(map[types.ValidatorIndex][]types.CommitteeIndex),
+	}
+	for _, idx := range tracked {
+		r.TrackedValidators[idx] = nil
+	}
+	return r, nil
+}
+
+// Start waits until the beacon is synced and starts the monitoring system
+func (s *Service) Start() {
+	log.WithFields(logrus.Fields{
+		"ValidatorIndices": s.TrackedValidators,
+	}).Info("Started service")
+
+	if err := s.waitForSync(); err != nil {
+		log.WithError(err)
+		s.isRunning = false
+		return
+	}
+
+	state, err := s.config.HeadFetcher.HeadState(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("could not get head state")
+		s.isRunning = false
+		return
+	}
+	epoch := slots.ToEpoch(state.Slot())
+
+	for idx := range s.TrackedValidators { // no Lock required
+		balance, err := state.BalanceAtIndex(idx)
+		if err != nil {
+			log.WithError(err).WithField("ValidatorIndex", idx).Error(
+				"could not fetch starting balance, aggregated report will be wrong")
+		}
+		s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{
+			startEpoch:   epoch,
+			startBalance: balance,
+		}
+		s.latestPerformance[idx] = ValidatorLatestPerformance{
+			balance: balance,
+		}
+	}
+	s.updateSyncCommitteeTrackedVals(state)
+	s.isRunning = true
+	go s.monitorRoutine()
+}
+
+// Status retrieves the status of the service
+func (s *Service) Status() error {
+	if s.isRunning {
+		return nil
+	}
+	return errors.New("not running")
+}
+
+// Stop stops the service
+func (s *Service) Stop() error {
+	defer s.cancel()
+	s.isRunning = false
+	return nil
+}
+
+// waitForSync waits until the beacon node is synced to the latest head
+func (s *Service) waitForSync() error {
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.Synced {
+				_, ok := event.Data.(*statefeed.SyncedData)
+				if !ok {
+					return errorNotSyncedData
+				}
+				return nil
+			}
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return errorContextClosedWhileWaiting
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("Could not subscribe to state notifier")
+			return err
+		}
+	}
+}
+
+// monitorRoutine is the main dispatcher, it registers event channels for the
+// state feed and the operation feed. It then calls the appropriate function
+// when we get messages after syncing a block or processing attestations/sync
+// committee contributions.
+func (s *Service) monitorRoutine() {
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+
+	opChannel := make(chan *feed.Event, 1)
+	opSub := s.config.AttestationNotifier.OperationFeed().Subscribe(opChannel)
+	defer opSub.Unsubscribe()
+
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.BlockProcessed {
+				data, ok := event.Data.(*statefeed.BlockProcessedData)
+				if !ok {
+					log.Error("Event feed data is not of type *statefeed.BlockProcessedData")
+				} else if data.Verified {
+					// We only process blocks that have been verified
+					s.processBlock(s.ctx, data.SignedBlock)
+				}
+			}
+		case event := <-opChannel:
+			switch event.Type {
+			case operation.UnaggregatedAttReceived:
+				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
+				if !ok {
+					log.Error("Event feed data is not of type *operation.UnAggregatedAttReceivedData")
+				} else {
+					s.processUnaggregatedAttestation(s.ctx, data.Attestation)
+				}
+			case operation.AggregatedAttReceived:
+				data, ok := event.Data.(*operation.AggregatedAttReceivedData)
+				if !ok {
+					log.Error("Event feed data is not of type *operation.AggregatedAttReceivedData")
+				} else {
+					s.processAggregatedAttestation(s.ctx, data.Attestation)
+				}
+			case operation.ExitReceived:
+				data, ok := event.Data.(*operation.ExitReceivedData)
+				if !ok {
+					log.Error("Event feed data is not of type *operation.ExitReceivedData")
+				} else {
+					s.processExit(data.Exit)
+				}
+			case operation.SyncCommitteeContributionReceived:
+				data, ok := event.Data.(*operation.SyncCommitteeContributionReceivedData)
+				if !ok {
+					log.Error("Event feed data is not of type *operation.SyncCommitteeContributionReceivedData")
+				} else {
+					s.processSyncCommitteeContribution(data.Contribution)
+				}
+			}
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("Could not subscribe to state notifier")
+			return
+		}
+	}
+
 }
 
 // TrackedIndex returns if the given validator index corresponds to one of the

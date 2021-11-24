@@ -5,10 +5,7 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -17,52 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-func setupService(t *testing.T) *Service {
-	beaconDB := testDB.SetupDB(t)
-
-	trackedVals := map[types.ValidatorIndex]interface{}{
-		1:  nil,
-		2:  nil,
-		12: nil,
-		15: nil,
-	}
-	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
-		1: {
-			balance: 32000000000,
-		},
-		2: {
-			balance: 32000000000,
-		},
-		12: {
-			balance: 31900000000,
-		},
-		15: {
-			balance: 31900000000,
-		},
-	}
-	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
-		1:  {},
-		2:  {},
-		12: {},
-		15: {},
-	}
-	trackedSyncCommitteeIndices := map[types.ValidatorIndex][]types.CommitteeIndex{
-		1:  {0, 1, 2, 3},
-		12: {4, 5},
-	}
-	return &Service{
-		config: &ValidatorMonitorConfig{
-			StateGen: stategen.New(beaconDB),
-		},
-
-		TrackedValidators:           trackedVals,
-		latestPerformance:           latestPerformance,
-		aggregatedPerformance:       aggregatedPerformance,
-		trackedSyncCommitteeIndices: trackedSyncCommitteeIndices,
-		lastSyncedEpoch:             0,
-	}
-}
 
 func TestGetAttestingIndices(t *testing.T) {
 	ctx := context.Background()
