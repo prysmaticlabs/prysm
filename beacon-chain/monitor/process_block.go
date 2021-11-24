@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -39,13 +40,26 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 		return
 	}
 
+	currEpoch := slots.ToEpoch(blk.Slot())
+	s.RLock()
+	lastSyncedEpoch := s.lastSyncedEpoch
+	s.RUnlock()
+
+	if currEpoch != lastSyncedEpoch &&
+		slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(lastSyncedEpoch) {
+		s.updateSyncCommitteeTrackedVals(state)
+	}
+
+	s.processSyncAggregate(state, blk)
 	s.processProposedBlock(state, root, blk)
 	s.processAttestations(ctx, state, blk)
 }
 
 // processProposedBlock logs the event that one of our tracked validators proposed a block that was included
 func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk block.BeaconBlock) {
-	if s.TrackedIndex(blk.ProposerIndex()) {
+	s.Lock()
+	defer s.Unlock()
+	if s.trackedIndex(blk.ProposerIndex()) {
 		// update metrics
 		proposedSlotsCounter.WithLabelValues(fmt.Sprintf("%d", blk.ProposerIndex())).Inc()
 
@@ -57,7 +71,7 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 		}
 
 		latestPerf := s.latestPerformance[blk.ProposerIndex()]
-		balanceChg := balance - latestPerf.balance
+		balanceChg := int64(balance - latestPerf.balance)
 		latestPerf.balanceChange = balanceChg
 		latestPerf.balance = balance
 		s.latestPerformance[blk.ProposerIndex()] = latestPerf
@@ -80,9 +94,11 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 
 // processSlashings logs the event of one of our tracked validators was slashed
 func (s *Service) processSlashings(blk block.BeaconBlock) {
+	s.RLock()
+	defer s.RUnlock()
 	for _, slashing := range blk.Body().ProposerSlashings() {
 		idx := slashing.Header_1.Header.ProposerIndex
-		if s.TrackedIndex(idx) {
+		if s.trackedIndex(idx) {
 			log.WithFields(logrus.Fields{
 				"ProposerIndex": idx,
 				"Slot:":         blk.Slot(),
@@ -95,7 +111,7 @@ func (s *Service) processSlashings(blk block.BeaconBlock) {
 
 	for _, slashing := range blk.Body().AttesterSlashings() {
 		for _, idx := range blocks.SlashableAttesterIndices(slashing) {
-			if s.TrackedIndex(types.ValidatorIndex(idx)) {
+			if s.trackedIndex(types.ValidatorIndex(idx)) {
 				log.WithFields(logrus.Fields{
 					"AttesterIndex": idx,
 					"Slot:":         blk.Slot(),
