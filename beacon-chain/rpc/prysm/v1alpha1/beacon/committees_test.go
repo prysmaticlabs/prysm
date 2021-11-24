@@ -78,11 +78,8 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, numValidators)
 
-	mixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(mixes); i++ {
-		mixes[i] = make([]byte, 32)
-	}
-	require.NoError(t, headState.SetRandaoMixes(mixes))
+	var mixes [65536][32]byte
+	require.NoError(t, headState.SetRandaoMixes(&mixes))
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	b := util.NewBeaconBlock()
