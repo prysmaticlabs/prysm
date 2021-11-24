@@ -30,8 +30,9 @@ func TestBeaconState_SlotDataRace(t *testing.T) {
 	wg.Wait()
 }
 
-func TestNilState_NoPanic(t *testing.T) {
-	var st *BeaconState
+func TestInitializedState_NoPanic(t *testing.T) {
+	st, err := Initialize()
+	require.NoError(t, err)
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Method panicked when it was not supposed to: %v\n%v\n", r, string(debug.Stack()))
@@ -45,7 +46,7 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.Fork()
 	_ = st.LatestBlockHeader()
 	_ = st.BlockRoots()
-	_, err := st.BlockRootAtIndex(0)
+	_, err = st.BlockRootAtIndex(0)
 	_ = err
 	_ = st.StateRoots()
 	_ = st.HistoricalRoots()
@@ -87,8 +88,6 @@ func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
 	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c1))
 	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
-	beaconState.state = nil
-	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c1))
 }
 
 func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
@@ -101,16 +100,6 @@ func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
 	require.Equal(t, true, beaconState.MatchPreviousJustifiedCheckpoint(c1))
 	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
-	beaconState.state = nil
-	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c1))
-}
-
-func TestBeaconState_MarshalSSZ_NilState(t *testing.T) {
-	s, err := InitializeFromProto(&ethpb.BeaconState{})
-	require.NoError(t, err)
-	s.state = nil
-	_, err = s.MarshalSSZ()
-	require.ErrorContains(t, "nil beacon state", err)
 }
 
 func TestBeaconState_ValidatorByPubkey(t *testing.T) {
