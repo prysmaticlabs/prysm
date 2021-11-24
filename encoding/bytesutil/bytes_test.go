@@ -398,53 +398,6 @@ func TestIsHex(t *testing.T) {
 	}
 }
 
-func TestSafeCopyRootAtIndex(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   [][]byte
-		idx     uint64
-		want    []byte
-		wantErr bool
-	}{
-		{
-			name:    "index out of range in non-empty slice",
-			input:   [][]byte{{0x1}, {0x2}},
-			idx:     2,
-			wantErr: true,
-		},
-		{
-			name:    "index out of range in empty slice",
-			input:   [][]byte{},
-			idx:     0,
-			wantErr: true,
-		},
-		{
-			name:  "nil input",
-			input: nil,
-			idx:   3,
-			want:  nil,
-		},
-		{
-			name:  "correct copy",
-			input: [][]byte{{0x1}, {0x2}},
-			idx:   1,
-			want:  bytesutil.PadTo([]byte{0x2}, 32),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := bytesutil.SafeCopyRootAtIndex(tt.input, tt.idx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("SafeCopyRootAtIndex() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SafeCopyRootAtIndex() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestSafeCopy2dBytes(t *testing.T) {
 	tests := []struct {
 		name  string
