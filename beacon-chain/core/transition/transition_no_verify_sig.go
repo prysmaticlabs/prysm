@@ -45,7 +45,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	state state.BeaconState,
 	signed block.SignedBeaconBlock,
-) (*bls.SignatureSet, state.BeaconState, error) {
+) (*bls.SignatureBatch, state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
@@ -182,7 +182,7 @@ func ProcessBlockNoVerifyAnySig(
 	ctx context.Context,
 	state state.BeaconState,
 	signed block.SignedBeaconBlock,
-) (*bls.SignatureSet, state.BeaconState, error) {
+) (*bls.SignatureBatch, state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
 	if err := helpers.BeaconBlockIsNil(signed); err != nil {
@@ -209,17 +209,17 @@ func ProcessBlockNoVerifyAnySig(
 		}
 	}
 
-	bSet, err := b.BlockSignatureSet(state, blk.ProposerIndex(), signed.Signature(), blk.HashTreeRoot)
+	bSet, err := b.BlockSignatureBatch(state, blk.ProposerIndex(), signed.Signature(), blk.HashTreeRoot)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	rSet, err := b.RandaoSignatureSet(ctx, state, signed.Block().Body().RandaoReveal())
+	rSet, err := b.RandaoSignatureBatch(ctx, state, signed.Block().Body().RandaoReveal())
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
 	}
-	aSet, err := b.AttestationSignatureSet(ctx, state, signed.Block().Body().Attestations())
+	aSet, err := b.AttestationSignatureBatch(ctx, state, signed.Block().Body().Attestations())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
 	}
