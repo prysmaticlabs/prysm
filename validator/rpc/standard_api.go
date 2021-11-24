@@ -116,11 +116,18 @@ func (s *Server) DeleteKeystores(
 	}
 
 	exportedHistory, err := s.slashingProtectionHistoryForDeletedKeys(ctx, req.PublicKeys, statuses)
-	jsonHist, err := json.Marshal(exportedHistory)
 	if err != nil {
 		return nil, status.Errorf(
 			codes.Internal,
 			"Could not export slashing protection history: %v",
+			err,
+		)
+	}
+	jsonHist, err := json.Marshal(exportedHistory)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not JSON marshal slashing protection history: %v",
 			err,
 		)
 	}
