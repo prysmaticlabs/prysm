@@ -23,31 +23,32 @@ func (b *BeaconState) CloneInnerState() interface{} {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	return &ethpb.BeaconStateAltair{
-		GenesisTime:                 b.genesisTime(),
-		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
-		Slot:                        b.slot(),
-		Fork:                        b.fork(),
-		LatestBlockHeader:           b.latestBlockHeader(),
-		BlockRoots:                  b.blockRoots(),
-		StateRoots:                  b.stateRoots(),
-		HistoricalRoots:             b.historicalRoots(),
-		Eth1Data:                    b.eth1Data(),
-		Eth1DataVotes:               b.eth1DataVotes(),
-		Eth1DepositIndex:            b.eth1DepositIndex(),
-		Validators:                  b.validators(),
-		Balances:                    b.balances(),
-		RandaoMixes:                 b.randaoMixes(),
-		Slashings:                   b.slashings(),
-		CurrentEpochParticipation:   b.currentEpochParticipation(),
-		PreviousEpochParticipation:  b.previousEpochParticipation(),
-		JustificationBits:           b.justificationBits(),
-		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
-		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
-		FinalizedCheckpoint:         b.finalizedCheckpoint(),
-		InactivityScores:            b.inactivityScores(),
-		CurrentSyncCommittee:        b.currentSyncCommittee(),
-		NextSyncCommittee:           b.nextSyncCommittee(),
+	return &ethpb.BeaconStateMerge{
+		GenesisTime:                  b.genesisTime(),
+		GenesisValidatorsRoot:        b.genesisValidatorRoot(),
+		Slot:                         b.slot(),
+		Fork:                         b.fork(),
+		LatestBlockHeader:            b.latestBlockHeader(),
+		BlockRoots:                   b.blockRoots(),
+		StateRoots:                   b.stateRoots(),
+		HistoricalRoots:              b.historicalRoots(),
+		Eth1Data:                     b.eth1Data(),
+		Eth1DataVotes:                b.eth1DataVotes(),
+		Eth1DepositIndex:             b.eth1DepositIndex(),
+		Validators:                   b.validators(),
+		Balances:                     b.balances(),
+		RandaoMixes:                  b.randaoMixes(),
+		Slashings:                    b.slashings(),
+		CurrentEpochParticipation:    b.currentEpochParticipation(),
+		PreviousEpochParticipation:   b.previousEpochParticipation(),
+		JustificationBits:            b.justificationBits(),
+		PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint(),
+		FinalizedCheckpoint:          b.finalizedCheckpoint(),
+		InactivityScores:             b.inactivityScores(),
+		CurrentSyncCommittee:         b.currentSyncCommittee(),
+		NextSyncCommittee:            b.nextSyncCommittee(),
+		LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader(),
 	}
 }
 
@@ -112,16 +113,15 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, errors.New("nil beacon state")
 	}
-	//TODO: Blocked by https://github.com/ferranbt/fastssz/pull/65
-	return []byte{}, nil
+	return b.state.MarshalSSZ()
 }
 
-// ProtobufBeaconState transforms an input into beacon state hard fork 1 in the form of protobuf.
+// ProtobufBeaconState transforms an input into beacon state Merge in the form of protobuf.
 // Error is returned if the input is not type protobuf beacon state.
-func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateAltair, error) {
-	pbState, ok := s.(*ethpb.BeaconStateAltair)
+func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateMerge, error) {
+	pbState, ok := s.(*ethpb.BeaconStateMerge)
 	if !ok {
-		return nil, errors.New("input is not type pb.BeaconStateAltair")
+		return nil, errors.New("input is not type pb.BeaconStateMerge")
 	}
 	return pbState, nil
 }

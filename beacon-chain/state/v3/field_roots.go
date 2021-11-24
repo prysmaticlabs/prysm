@@ -47,7 +47,6 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-//nolint:deadcode
 func computeFieldRoots(state *ethpb.BeaconStateMerge) ([][]byte, error) {
 	if features.Get().EnableSSZCache {
 		return cachedHasher.computeFieldRootsWithHasher(state)
@@ -219,8 +218,11 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateMe
 	fieldRoots[23] = nextSyncCommitteeRoot[:]
 
 	// Execution payload root.
-	//TODO: Blocked by https://github.com/ferranbt/fastssz/pull/65
-	fieldRoots[24] = []byte{}
+	executionPayloadRoot, err := state.LatestExecutionPayloadHeader.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	fieldRoots[24] = executionPayloadRoot[:]
 
 	return fieldRoots, nil
 }
