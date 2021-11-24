@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -41,12 +42,12 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 	}
 
 	currEpoch := slots.ToEpoch(blk.Slot())
-	s.monitorLock.RLock()
+	s.RLock()
 	lastSyncedEpoch := s.lastSyncedEpoch
-	s.monitorLock.RUnlock()
+	s.RUnlock()
 
 	if currEpoch != lastSyncedEpoch &&
-		slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(s.lastSyncedEpoch) {
+		slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(lastSyncedEpoch) {
 		s.updateSyncCommitteeTrackedVals(state)
 	}
 
@@ -55,10 +56,32 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 	s.processAttestations(ctx, state, blk)
 }
 
+// updateSyncCommitteeTrackedVals updates the sync committee assignments of our
+// tracked validators. It gets called when we sync a block after the Sync Period changes.
+func (s *Service) updateSyncCommitteeTrackedVals(state state.BeaconState) {
+	s.Lock()
+	defer s.Unlock()
+	for idx := range s.trackedValidators {
+		syncIdx, err := helpers.CurrentPeriodSyncSubcommitteeIndices(state, idx)
+		if err != nil {
+			log.WithError(err).WithField("ValidatorIndex", idx).Error(
+				"Sync committee assignments will not be reported")
+			delete(s.trackedSyncCommitteeIndices, idx)
+		} else if len(syncIdx) == 0 {
+			delete(s.trackedSyncCommitteeIndices, idx)
+		} else {
+			s.trackedSyncCommitteeIndices[idx] = syncIdx
+		}
+	}
+	s.lastSyncedEpoch = slots.ToEpoch(state.Slot())
+}
+
 // processProposedBlock logs the event that one of our tracked validators proposed a block that was included
 func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk block.BeaconBlock) {
-	s.monitorLock.Lock()
-	defer s.monitorLock.Unlock()
+
+	s.Lock()
+	defer s.Unlock()
+
 	if s.trackedIndex(blk.ProposerIndex()) {
 		// update metrics
 		proposedSlotsCounter.WithLabelValues(fmt.Sprintf("%d", blk.ProposerIndex())).Inc()
@@ -94,8 +117,10 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 
 // processSlashings logs the event of one of our tracked validators was slashed
 func (s *Service) processSlashings(blk block.BeaconBlock) {
-	s.monitorLock.RLock()
-	defer s.monitorLock.RUnlock()
+
+	s.RLock()
+	defer s.RUnlock()
+
 	for _, slashing := range blk.Body().ProposerSlashings() {
 		idx := slashing.Header_1.Header.ProposerIndex
 		if s.trackedIndex(idx) {

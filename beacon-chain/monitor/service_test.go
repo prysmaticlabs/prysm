@@ -11,11 +11,9 @@ import (
 
 func TestTrackedIndex(t *testing.T) {
 	s := &Service{
-		config: &ValidatorMonitorConfig{
-			TrackedValidators: map[types.ValidatorIndex]interface{}{
-				1: nil,
-				2: nil,
-			},
+		trackedValidators: map[types.ValidatorIndex]interface{}{
+			1: nil,
+			2: nil,
 		},
 	}
 	require.Equal(t, s.trackedIndex(types.ValidatorIndex(1)), true)

@@ -22,11 +22,11 @@ import (
 // given slot is different than the last attested slot from this validator.
 // It assumes that a read lock is held on the monitor service.
 func (s *Service) updatedPerformanceFromTrackedVal(idx types.ValidatorIndex, slot types.Slot) bool {
-	if !s.trackedIndex(types.ValidatorIndex(idx)) {
+	if !s.trackedIndex(idx) {
 		return false
 	}
 
-	if lp, ok := s.latestPerformance[types.ValidatorIndex(idx)]; ok {
+	if lp, ok := s.latestPerformance[idx]; ok {
 		return lp.attestedSlot != slot
 	}
 	return false
@@ -74,8 +74,10 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 		log.WithError(err).Error("Could not get attesting indices")
 		return
 	}
-	s.monitorLock.Lock()
-	defer s.monitorLock.Unlock()
+
+	s.Lock()
+	defer s.Unlock()
+
 	for _, idx := range attestingIndices {
 		if s.updatedPerformanceFromTrackedVal(types.ValidatorIndex(idx), att.Data.Slot) {
 			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Data)
@@ -168,8 +170,10 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 // processUnaggregatedAttestation logs when the beacon node sees an unaggregated attestation from one of our
 // tracked validators
 func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb.Attestation) {
-	s.monitorLock.RLock()
-	defer s.monitorLock.RUnlock()
+
+	s.RLock()
+	defer s.RUnlock()
+
 	root := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
 	if state == nil {
@@ -193,8 +197,10 @@ func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb
 // processAggregatedAttestation logs when we see an aggregation from one of our tracked validators or an aggregated
 // attestation from one of our tracked validators
 func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.AggregateAttestationAndProof) {
-	s.monitorLock.Lock()
-	defer s.monitorLock.Unlock()
+
+	s.Lock()
+	defer s.Unlock()
+
 	if s.trackedIndex(att.AggregatorIndex) {
 		log.WithFields(logrus.Fields{
 			"ValidatorIndex": att.AggregatorIndex,

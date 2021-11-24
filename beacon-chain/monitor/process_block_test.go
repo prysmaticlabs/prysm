@@ -117,11 +117,9 @@ func TestProcessSlashings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := &Service{
-				config: &ValidatorMonitorConfig{
-					TrackedValidators: map[types.ValidatorIndex]interface{}{
-						1: nil,
-						2: nil,
-					},
+				trackedValidators: map[types.ValidatorIndex]interface{}{
+					1: nil,
+					2: nil,
 				},
 			}
 			s.processSlashings(wrapper.WrappedPhase0BeaconBlock(tt.block))
@@ -205,15 +203,15 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	require.NoError(t, genesis.SetCurrentSyncCommittee(currentSyncCommittee))
 
 	idx := b.Block.Body.ProposerSlashings[0].Header_1.Header.ProposerIndex
-	s.monitorLock.RLock()
+	s.RLock()
 	if !s.trackedIndex(idx) {
-		s.config.TrackedValidators[idx] = nil
+		s.trackedValidators[idx] = nil
 		s.latestPerformance[idx] = ValidatorLatestPerformance{
 			balance: 31900000000,
 		}
 		s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{}
 	}
-	s.monitorLock.RUnlock()
+	s.RUnlock()
 	s.updateSyncCommitteeTrackedVals(genesis)
 
 	root, err := b.GetBlock().HashTreeRoot()
