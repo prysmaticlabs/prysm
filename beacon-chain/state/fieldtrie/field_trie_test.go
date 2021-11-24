@@ -24,7 +24,8 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	require.NoError(t, err)
 	sRootsSlice := make([][]byte, len(newState.StateRoots()))
 	for i, r := range newState.StateRoots() {
-		sRootsSlice[i] = r[:]
+		tmp := r
+		sRootsSlice[i] = tmp[:]
 	}
 	root, err := v1.RootsArrayHashTreeRoot(sRootsSlice, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	require.NoError(t, err)
