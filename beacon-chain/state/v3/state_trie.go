@@ -176,7 +176,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			}
 		}
 	}
-stateCount.Inc()
+	stateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
@@ -184,16 +184,16 @@ stateCount.Inc()
 			if b.stateFieldLeaves[field].FieldReference() != nil {
 				b.stateFieldLeaves[field].FieldReference().MinusRef()
 			}
-                }
-                for i := 0; i < fieldCount; i++ {
-                      field := types.FieldIndex(i)
-                       delete(b.stateFieldLeaves, field)
-                       delete(b.dirtyIndices, field)
-                       delete(b.dirtyFields, field)
-                       delete(b.sharedFieldReferences, field)
-                       delete(b.stateFieldLeaves, field)
-               }
-               stateCount.Sub(1)
+		}
+		for i := 0; i < fieldCount; i++ {
+			field := types.FieldIndex(i)
+			delete(b.stateFieldLeaves, field)
+			delete(b.dirtyIndices, field)
+			delete(b.dirtyFields, field)
+			delete(b.sharedFieldReferences, field)
+			delete(b.stateFieldLeaves, field)
+		}
+		stateCount.Sub(1)
 	})
 
 	return dst
