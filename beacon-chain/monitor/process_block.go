@@ -7,11 +7,15 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
+
+// Number of epochs between aggregate reports
+const AggregateReportingPeriod = 5
 
 // processBlock handles the cases when
 // 1) A block was proposed by one of our tracked validators
@@ -53,6 +57,10 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 	s.processSyncAggregate(state, blk)
 	s.processProposedBlock(state, root, blk)
 	s.processAttestations(ctx, state, blk)
+
+	if blk.Slot()%AggregateReportingPeriod*params.BeaconConfig().SlotsPerEpoch == 0 {
+		s.logAggregatedPerformance()
+	}
 }
 
 // processProposedBlock logs the event that one of our tracked validators proposed a block that was included
@@ -127,5 +135,43 @@ func (s *Service) processSlashings(blk block.BeaconBlock) {
 
 			}
 		}
+	}
+}
+
+// logAggregatedPerformance logs the performance statistics collected since the run started
+func (s *Service) logAggregatedPerformance() {
+	s.RLock()
+	defer s.RUnlock()
+
+	for idx, p := range s.aggregatedPerformance {
+		if p.totalAttestedCount == 0 || p.totalRequestedCount == 0 || p.startBalance == 0 {
+			break
+		}
+		l, ok := s.latestPerformance[idx]
+		if !ok {
+			break
+		}
+		percentAtt := float64(p.totalAttestedCount) / float64(p.totalRequestedCount)
+		percentBal := float64(l.balance-p.startBalance) / float64(p.startBalance)
+		percentDistance := float64(p.totalDistance) / float64(p.totalAttestedCount)
+		percentCorrectSource := float64(p.totalCorrectSource) / float64(p.totalAttestedCount)
+		percentCorrectHead := float64(p.totalCorrectHead) / float64(p.totalAttestedCount)
+		percentCorrectTarget := float64(p.totalCorrectTarget) / float64(p.totalAttestedCount)
+
+		log.WithFields(logrus.Fields{
+			"ValidatorIndex":           idx,
+			"StartEpoch":               p.startEpoch,
+			"StartBalance":             p.startBalance,
+			"TotalRequested":           p.totalRequestedCount,
+			"AttestationInclusion":     fmt.Sprintf("%.2f%%", percentAtt*100),
+			"BalanceChangePct":         fmt.Sprintf("%.2f%%", percentBal*100),
+			"CorrectlyVotedSourcePct":  fmt.Sprintf("%.2f%%", percentCorrectSource*100),
+			"CorrectlyVotedTargetPct":  fmt.Sprintf("%.2f%%", percentCorrectTarget*100),
+			"CorrectlyVotedHeadPct":    fmt.Sprintf("%.2f%%", percentCorrectHead*100),
+			"AverageInclusionDistance": fmt.Sprintf("%.1f", percentDistance),
+			"TotalProposedBlocks":      p.totalProposedCount,
+			"TotalAggregations":        p.totalAggregations,
+			"TotalSyncContributions":   p.totalSyncComitteeContributions,
+		}).Info("Aggregated performance since launch")
 	}
 }
