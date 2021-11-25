@@ -1,6 +1,7 @@
 package v3
 
 import (
+	"context"
 	"encoding/binary"
 	"sync"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -47,15 +49,17 @@ type stateRootHasher struct {
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-//nolint:deadcode
-func computeFieldRoots(state *ethpb.BeaconStateMerge) ([][]byte, error) {
+func computeFieldRoots(ctx context.Context, state *ethpb.BeaconStateMerge) ([][]byte, error) {
 	if features.Get().EnableSSZCache {
-		return cachedHasher.computeFieldRootsWithHasher(state)
+		return cachedHasher.computeFieldRootsWithHasher(ctx, state)
 	}
-	return nocachedHasher.computeFieldRootsWithHasher(state)
+	return nocachedHasher.computeFieldRootsWithHasher(ctx, state)
 }
 
-func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateMerge) ([][]byte, error) {
+func (h *stateRootHasher) computeFieldRootsWithHasher(ctx context.Context, state *ethpb.BeaconStateMerge) ([][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconState.computeFieldRootsWithHasher")
+	defer span.End()
+
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
@@ -219,8 +223,11 @@ func (h *stateRootHasher) computeFieldRootsWithHasher(state *ethpb.BeaconStateMe
 	fieldRoots[23] = nextSyncCommitteeRoot[:]
 
 	// Execution payload root.
-	//TODO: Blocked by https://github.com/ferranbt/fastssz/pull/65
-	fieldRoots[24] = []byte{}
+	executionPayloadRoot, err := state.LatestExecutionPayloadHeader.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	fieldRoots[24] = executionPayloadRoot[:]
 
 	return fieldRoots, nil
 }
