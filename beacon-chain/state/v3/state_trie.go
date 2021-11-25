@@ -184,7 +184,16 @@ stateCount.Inc()
 			if b.stateFieldLeaves[field].FieldReference() != nil {
 				b.stateFieldLeaves[field].FieldReference().MinusRef()
 			}
-		}
+                }
+                for i := 0; i < fieldCount; i++ {
+                      field := types.FieldIndex(i)
+                       delete(b.stateFieldLeaves, field)
+                       delete(b.dirtyIndices, field)
+                       delete(b.dirtyFields, field)
+                       delete(b.sharedFieldReferences, field)
+                       delete(b.stateFieldLeaves, field)
+               }
+               stateCount.Sub(1)
 	})
 
 	return dst
