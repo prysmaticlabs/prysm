@@ -114,6 +114,17 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
+	payload := &ethpb.ExecutionPayloadHeader{
+		ParentHash:       make([]byte, 32),
+		FeeRecipient:     make([]byte, 20),
+		StateRoot:        make([]byte, 32),
+		ReceiptRoot:      make([]byte, 32),
+		LogsBloom:        make([]byte, 256),
+		Random:           make([]byte, 32),
+		BaseFeePerGas:    make([]byte, 32),
+		BlockHash:        make([]byte, 32),
+		TransactionsRoot: make([]byte, 32),
+	}
 	st, err := InitializeFromProto(&ethpb.BeaconStateMerge{
 		Slot:                  1,
 		GenesisValidatorsRoot: make([]byte, 32),
@@ -151,6 +162,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 			Pubkeys:         pubKeys,
 			AggregatePubkey: make([]byte, 48),
 		},
+		LatestExecutionPayloadHeader: payload,
 	})
 	assert.NoError(t, err)
 	_, err = st.HashTreeRoot(context.Background())
