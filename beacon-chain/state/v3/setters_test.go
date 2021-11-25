@@ -32,15 +32,27 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	for i := 0; i < len(mockrandaoMixes); i++ {
 		mockrandaoMixes[i] = zeroHash[:]
 	}
+	payload := &ethpb.ExecutionPayloadHeader{
+		ParentHash:       make([]byte, 32),
+		FeeRecipient:     make([]byte, 20),
+		StateRoot:        make([]byte, 32),
+		ReceiptRoot:      make([]byte, 32),
+		LogsBloom:        make([]byte, 256),
+		Random:           make([]byte, 32),
+		BaseFeePerGas:    make([]byte, 32),
+		BlockHash:        make([]byte, 32),
+		TransactionsRoot: make([]byte, 32),
+	}
 	st, err := InitializeFromProto(&ethpb.BeaconStateMerge{
-		Slot:                       1,
-		CurrentEpochParticipation:  []byte{},
-		PreviousEpochParticipation: []byte{},
-		Validators:                 []*eth.Validator{},
-		Eth1Data:                   &eth.Eth1Data{},
-		BlockRoots:                 mockblockRoots,
-		StateRoots:                 mockstateRoots,
-		RandaoMixes:                mockrandaoMixes,
+		Slot:                         1,
+		CurrentEpochParticipation:    []byte{},
+		PreviousEpochParticipation:   []byte{},
+		Validators:                   []*eth.Validator{},
+		Eth1Data:                     &eth.Eth1Data{},
+		BlockRoots:                   mockblockRoots,
+		StateRoots:                   mockstateRoots,
+		RandaoMixes:                  mockrandaoMixes,
+		LatestExecutionPayloadHeader: payload,
 	})
 	require.NoError(t, err)
 	_, err = st.HashTreeRoot(context.Background())
