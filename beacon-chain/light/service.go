@@ -16,6 +16,7 @@ import (
 	syncSrv "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	block2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -195,6 +196,13 @@ func (s *Service) initializeFromFinalizedData(ctx context.Context) error {
 	}
 	finalizedState, err := s.finalizedStateOrGenesis(ctx, cpt)
 	if err != nil {
+		return err
+	}
+	enc, err := finalizedState.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	if err := file.WriteFile("/tmp/state.ssz", enc); err != nil {
 		return err
 	}
 	return s.onFinalized(ctx, finalizedBlock, finalizedState)
