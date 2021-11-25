@@ -874,6 +874,9 @@ func (b *BeaconNode) registerDeterminsticGenesisService() error {
 }
 
 func (b *BeaconNode) registerValidatorMonitorService() error {
+	if cmd.ValidatorMonitorIndicesFlag.Value == nil {
+		return nil
+	}
 	cliSlice := cmd.ValidatorMonitorIndicesFlag.Value.Value()
 	if cliSlice == nil {
 		return nil
