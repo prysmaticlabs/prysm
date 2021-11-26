@@ -3,7 +3,7 @@ package version
 const (
 	Phase0 = iota
 	Altair
-	Merge // TODO: subject to change, community is deciding on a star name: https://ethereum-magicians.org/t/ethereum-roadmapping-improvements/6653/14
+	Merge
 )
 
 func String(version int) string {

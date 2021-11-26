@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -251,17 +250,17 @@ func (s *Server) ValidateKeystores(
 	return &emptypb.Empty{}, nil
 }
 
-// ImportKeystores allows importing new keystores via RPC into the wallet
+// ImportAccounts allows importing new keystores via RPC into the wallet
 // which will be decrypted using the specified password .
-func (s *Server) ImportKeystores(
-	ctx context.Context, req *pb.ImportKeystoresRequest,
-) (*pb.ImportKeystoresResponse, error) {
+func (s *Server) ImportAccounts(
+	ctx context.Context, req *pb.ImportAccountsRequest,
+) (*pb.ImportAccountsResponse, error) {
 	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
 	}
-	km, ok := s.keymanager.(*imported.Keymanager)
+	km, ok := s.keymanager.(keymanager.Importer)
 	if !ok {
-		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import more keystores")
+		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import keystores")
 	}
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
@@ -286,15 +285,16 @@ func (s *Server) ImportKeystores(
 		importedPubKeys[i] = pubKey
 	}
 	// Import the uploaded accounts.
-	if err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
-		Keymanager:      km,
+	_, err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
+		Importer:        km,
 		Keystores:       keystores,
 		AccountPassword: req.KeystoresPassword,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
 	s.walletInitializedFeed.Send(s.wallet)
-	return &pb.ImportKeystoresResponse{
+	return &pb.ImportAccountsResponse{
 		ImportedPublicKeys: importedPubKeys,
 	}, nil
 }

@@ -1,6 +1,8 @@
 package util
 
 import (
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -13,4 +15,22 @@ func HydrateSyncCommittee(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitteeMes
 		s.BlockRoot = make([]byte, 32)
 	}
 	return s
+}
+
+// ConvertToCommittee takes a list of pubkeys and returns a SyncCommittee with
+// these keys as members. Some keys may appear repeated
+func ConvertToCommittee(inputKeys [][]byte) *ethpb.SyncCommittee {
+	var pubKeys [][]byte
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
+		if i < uint64(len(inputKeys)) {
+			pubKeys = append(pubKeys, bytesutil.PadTo(inputKeys[i], params.BeaconConfig().BLSPubkeyLength))
+		} else {
+			pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
+		}
+	}
+
+	return &ethpb.SyncCommittee{
+		Pubkeys:         pubKeys,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
 }

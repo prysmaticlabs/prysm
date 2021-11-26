@@ -16,7 +16,15 @@ import (
 
 // ExportStandardProtectionJSON extracts all slashing protection data from a validator database
 // and packages it into an EIP-3076 compliant, standard
-func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) (*format.EIPSlashingProtectionFormat, error) {
+func ExportStandardProtectionJSON(
+	ctx context.Context,
+	validatorDB db.Database,
+	keysToFilter ...[]byte,
+) (*format.EIPSlashingProtectionFormat, error) {
+	keysFilterMap := make(map[string]bool, len(keysToFilter))
+	for _, k := range keysToFilter {
+		keysFilterMap[string(k)] = true
+	}
 	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	genesisValidatorsRoot, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
@@ -50,6 +58,9 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		len(proposedPublicKeys), "Extracting signed blocks by validator public key",
 	)
 	for _, pubKey := range proposedPublicKeys {
+		if _, ok := keysFilterMap[string(pubKey[:])]; len(keysToFilter) > 0 && !ok {
+			continue
+		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert public key to hex string")
@@ -73,6 +84,9 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		len(attestedPublicKeys), "Extracting signed attestations by validator public key",
 	)
 	for _, pubKey := range attestedPublicKeys {
+		if _, ok := keysFilterMap[string(pubKey[:])]; len(keysToFilter) > 0 && !ok {
+			continue
+		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert public key to hex string")

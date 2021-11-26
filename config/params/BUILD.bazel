@@ -22,6 +22,7 @@ go_library(
     deps = [
         "//encoding/bytesutil:go_default_library",
         "//math:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//params:go_default_library",
         "@com_github_mohae_deepcopy//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

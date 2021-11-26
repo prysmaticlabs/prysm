@@ -108,25 +108,24 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	cfg := &config{
-		BeaconBlockBuf:    0,
-		BeaconDB:          beaconDB,
-		DepositCache:      depositCache,
-		ChainStartFetcher: web3Service,
-		P2p:               &mockBroadcaster{},
-		StateNotifier:     &mockBeaconNode{},
-		AttPool:           attestations.NewPool(),
-		StateGen:          stategen.New(beaconDB),
-		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
-		AttService:        attService,
+	stateGen := stategen.New(beaconDB)
+	// Safe a state in stategen to purposes of testing a service stop / shutdown.
+	require.NoError(t, stateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
+
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+		WithChainStartFetcher(web3Service),
+		WithAttestationPool(attestations.NewPool()),
+		WithP2PBroadcaster(&mockBroadcaster{}),
+		WithStateNotifier(&mockBeaconNode{}),
+		WithForkChoiceStore(protoarray.New(0, 0, params.BeaconConfig().ZeroHash)),
+		WithAttestationService(attService),
+		WithStateGen(stateGen),
 	}
 
-	// Safe a state in stategen to purposes of testing a service stop / shutdown.
-	require.NoError(t, cfg.StateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
-
-	chainService, err := NewService(ctx)
+	chainService, err := NewService(ctx, opts...)
 	require.NoError(t, err, "Unable to setup chain service")
-	chainService.cfg = cfg
 	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
 	return chainService
