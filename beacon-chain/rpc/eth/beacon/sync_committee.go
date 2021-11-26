@@ -29,7 +29,7 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 	defer span.End()
 
 	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
-	currentPeriod, err := slots.SyncCommitteePeriodStartEpoch(slots.ToEpoch(currentSlot))
+	currentPeriodStartEpoch, err := slots.SyncCommitteePeriodStartEpoch(slots.ToEpoch(currentSlot))
 	if err != nil {
 		return nil, status.Errorf(
 			codes.Internal,
@@ -39,12 +39,12 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		)
 	}
 
-	var reqStartPeriod types.Epoch
+	var reqPeriodStartEpoch types.Epoch
 
 	if req.Epoch == nil {
-		reqStartPeriod = currentPeriod
+		reqPeriodStartEpoch = currentPeriodStartEpoch
 	} else {
-		reqStartPeriod, err = slots.SyncCommitteePeriodStartEpoch(*req.Epoch)
+		reqPeriodStartEpoch, err = slots.SyncCommitteePeriodStartEpoch(*req.Epoch)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -55,7 +55,7 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		}
 	}
 
-	if reqStartPeriod > currentPeriod+params.BeaconConfig().EpochsPerSyncCommitteePeriod {
+	if reqPeriodStartEpoch > currentPeriodStartEpoch+params.BeaconConfig().EpochsPerSyncCommitteePeriod {
 		return nil, status.Errorf(
 			codes.Internal,
 			"Could not fetch sync committee too far in the future. Epoch: %d",
@@ -63,7 +63,7 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		)
 	}
 
-	if reqStartPeriod > currentPeriod {
+	if reqPeriodStartEpoch > currentPeriodStartEpoch {
 		*req.Epoch = slots.ToEpoch(currentSlot)
 	}
 	st, err := bs.stateFromRequest(ctx, &stateRequest{
@@ -77,7 +77,7 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 	var committeeIndices []types.ValidatorIndex
 	var committee *ethpbalpha.SyncCommittee
 
-	if reqStartPeriod > currentPeriod {
+	if reqPeriodStartEpoch > currentPeriodStartEpoch {
 		// Get the next sync committee and sync committee indices from the state.
 		committeeIndices, committee, err = nextCommitteeIndicesFromState(st)
 	} else {

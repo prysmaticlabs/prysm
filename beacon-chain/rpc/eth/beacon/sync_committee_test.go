@@ -209,11 +209,11 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 	req := &ethpbv2.StateSyncCommitteesRequest{}
 	epoch := 2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	req.Epoch = &epoch
-	resp, err := s.ListSyncCommittees(ctx, req)
+	_, err := s.ListSyncCommittees(ctx, req)
 	require.ErrorContains(t, "Could not fetch sync committee too far in the future", err)
 
 	epoch = 2*params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1
-	resp, err = s.ListSyncCommittees(ctx, req)
+	resp, err := s.ListSyncCommittees(ctx, req)
 	require.NoError(t, err)
 
 	require.NotNil(t, resp.Data)
