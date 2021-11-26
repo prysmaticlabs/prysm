@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,6 +28,44 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 	ctx, span := trace.StartSpan(ctx, "beacon.ListSyncCommittees")
 	defer span.End()
 
+	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	currentPeriod, err := slots.SyncCommitteePeriodStartEpoch(slots.ToEpoch(currentSlot))
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not calculate start period for slot %d: %v",
+			currentSlot,
+			err,
+		)
+	}
+
+	var reqStartPeriod types.Epoch
+
+	if req.Epoch == nil {
+		reqStartPeriod = currentPeriod
+	} else {
+		reqStartPeriod, err = slots.SyncCommitteePeriodStartEpoch(*req.Epoch)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not calculate start period for epoch %d: %v",
+				*req.Epoch,
+				err,
+			)
+		}
+	}
+
+	if reqStartPeriod > currentPeriod+params.BeaconConfig().EpochsPerSyncCommitteePeriod {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not fetch sync committee too far in the future. Epoch: %d",
+			*req.Epoch,
+		)
+	}
+
+	if reqStartPeriod > currentPeriod {
+		*req.Epoch = slots.ToEpoch(currentSlot)
+	}
 	st, err := bs.stateFromRequest(ctx, &stateRequest{
 		epoch:   req.Epoch,
 		stateId: req.StateId,
@@ -35,8 +74,16 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		return nil, status.Errorf(codes.Internal, "Could not fetch beacon state using request: %v", err)
 	}
 
-	// Get the current sync committee and sync committee indices from the state.
-	committeeIndices, committee, err := currentCommitteeIndicesFromState(st)
+	var committeeIndices []types.ValidatorIndex
+	var committee *ethpbalpha.SyncCommittee
+
+	if reqStartPeriod > currentPeriod {
+		// Get the next sync committee and sync committee indices from the state.
+		committeeIndices, committee, err = nextCommitteeIndicesFromState(st)
+	} else {
+		// Get the current sync committee and sync committee indices from the state.
+		committeeIndices, committee, err = currentCommitteeIndicesFromState(st)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee indices from state: %v", err)
 	}
@@ -55,6 +102,28 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 
 func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
 	committee, err := st.CurrentSyncCommittee()
+	if err != nil {
+		return nil, nil, fmt.Errorf(
+			"could not get sync committee: %v", err,
+		)
+	}
+
+	committeeIndices := make([]types.ValidatorIndex, len(committee.Pubkeys))
+	for i, key := range committee.Pubkeys {
+		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+		if !ok {
+			return nil, nil, fmt.Errorf(
+				"validator index not found for pubkey %#x",
+				bytesutil.Trunc(key),
+			)
+		}
+		committeeIndices[i] = index
+	}
+	return committeeIndices, committee, nil
+}
+
+func nextCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
+	committee, err := st.NextSyncCommittee()
 	if err != nil {
 		return nil, nil, fmt.Errorf(
 			"could not get sync committee: %v", err,
