@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/grpc"
+	"github.com/prysmaticlabs/prysm/cmd"
 )
 
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
@@ -77,7 +77,9 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *h
 // ProxyRequest proxies the request to grpc-gateway.
 func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
 	// We do not use http.DefaultClient because it does not have any timeout.
-	netClient := &http.Client{Timeout: time.Minute * 2}
+	cliCtx
+	netClient := &http.Client{Timeout: cmd.ApiTimeout.Value}
+
 	grpcResp, err := netClient.Do(req)
 	if err != nil {
 		return nil, InternalServerErrorWithMessage(err, "could not proxy request")

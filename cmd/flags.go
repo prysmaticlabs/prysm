@@ -4,6 +4,7 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
@@ -241,6 +242,12 @@ var (
 		Name:  "bolt-mmap-initial-size",
 		Usage: "Specifies the size in bytes of bolt db's mmap syscall allocation",
 		Value: 536870912, // 512 Mb as a default value.
+	}
+	// ApiTimeout specifies the length of an HTTP request timeout in minutes.
+	ApiTimeout = &cli.DurationFlag{
+		Name:  "api-timeout",
+		Usage: "Specify the length of timeout for API requests in minutes",
+		Value: 2 * time.Minute,
 	}
 )
 

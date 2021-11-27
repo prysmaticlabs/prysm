@@ -101,6 +101,7 @@ var appFlags = []cli.Flag{
 	debug.BlockProfileRateFlag,
 	debug.MutexProfileFractionFlag,
 	cmd.AcceptTosFlag,
+	cmd.ApiTimeout,
 }
 
 func init() {
