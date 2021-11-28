@@ -41,7 +41,6 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 	}
 
 	var reqPeriodStartEpoch types.Epoch
-
 	if req.Epoch == nil {
 		reqPeriodStartEpoch = currentPeriodStartEpoch
 	} else {
@@ -63,12 +62,8 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		}
 	}
 
-	stateEpoch := reqPeriodStartEpoch
-	if stateEpoch > currentPeriodStartEpoch+params.BeaconConfig().EpochsPerSyncCommitteePeriod {
-		stateEpoch = currentEpoch
-	}
 	st, err := bs.stateFromRequest(ctx, &stateRequest{
-		epoch:   &stateEpoch,
+		epoch:   req.Epoch,
 		stateId: req.StateId,
 	})
 	if err != nil {
