@@ -29,7 +29,8 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 	defer span.End()
 
 	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
-	currentPeriodStartEpoch, err := slots.SyncCommitteePeriodStartEpoch(slots.ToEpoch(currentSlot))
+	currentEpoch := slots.ToEpoch(currentSlot)
+	currentPeriodStartEpoch, err := slots.SyncCommitteePeriodStartEpoch(currentEpoch)
 	if err != nil {
 		return nil, status.Errorf(
 			codes.Internal,
@@ -53,21 +54,21 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 				err,
 			)
 		}
+		if reqPeriodStartEpoch > currentPeriodStartEpoch+params.BeaconConfig().EpochsPerSyncCommitteePeriod {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not fetch sync committee too far in the future. Requested epoch: %d, current epoch: %d",
+				*req.Epoch, currentEpoch,
+			)
+		}
 	}
 
-	if reqPeriodStartEpoch > currentPeriodStartEpoch+params.BeaconConfig().EpochsPerSyncCommitteePeriod {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not fetch sync committee too far in the future. Epoch: %d",
-			*req.Epoch,
-		)
-	}
-
-	if reqPeriodStartEpoch > currentPeriodStartEpoch {
-		*req.Epoch = slots.ToEpoch(currentSlot)
+	stateEpoch := reqPeriodStartEpoch
+	if stateEpoch > currentPeriodStartEpoch+params.BeaconConfig().EpochsPerSyncCommitteePeriod {
+		stateEpoch = currentEpoch
 	}
 	st, err := bs.stateFromRequest(ctx, &stateRequest{
-		epoch:   req.Epoch,
+		epoch:   &stateEpoch,
 		stateId: req.StateId,
 	})
 	if err != nil {
@@ -76,16 +77,18 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 
 	var committeeIndices []types.ValidatorIndex
 	var committee *ethpbalpha.SyncCommittee
-
 	if reqPeriodStartEpoch > currentPeriodStartEpoch {
 		// Get the next sync committee and sync committee indices from the state.
 		committeeIndices, committee, err = nextCommitteeIndicesFromState(st)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get next sync committee indices: %v", err)
+		}
 	} else {
 		// Get the current sync committee and sync committee indices from the state.
 		committeeIndices, committee, err = currentCommitteeIndicesFromState(st)
-	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync committee indices from state: %v", err)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get current sync committee indices: %v", err)
+		}
 	}
 	subcommittees, err := extractSyncSubcommittees(st, committee)
 	if err != nil {
