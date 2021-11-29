@@ -130,7 +130,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.TerminalTotalDifficultyOverride,
 			flags.TerminalBlockHashOverride,
 			flags.TerminalBlockHashActivationEpochOverride,
-			flags.Coinbase,
+			flags.FeeRecipient,
 		},
 	},
 	{

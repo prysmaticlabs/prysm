@@ -360,7 +360,7 @@ message BeaconBlockBodyMerge {
 
 message ExecutionPayload {
     bytes parent_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-    bytes coinbase = 2 [(ethereum.eth.ext.ssz_size) = "20"]; // 'beneficiary' in the yellow paper
+    bytes fee_recipient = 2 [(ethereum.eth.ext.ssz_size) = "20"]; // 'beneficiary' in the yellow paper
     bytes state_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
     bytes receipt_root = 4 [(ethereum.eth.ext.ssz_size) = "32"]; // 'receipts root' in the yellow paper
     bytes logs_bloom = 5 [(ethereum.eth.ext.ssz_size) = "256"];

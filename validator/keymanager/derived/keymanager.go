@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -106,9 +107,18 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 	return km.importedKM.FetchValidatingPrivateKeys(ctx)
 }
 
-// DeleteAccounts for a derived keymanager.
-func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
-	return km.importedKM.DeleteAccounts(ctx, publicKeys)
+// ImportKeystores for a derived keymanager.
+func (km *Keymanager) ImportKeystores(
+	ctx context.Context, keystores []*keymanager.Keystore, passwords []string,
+) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+	return km.importedKM.ImportKeystores(ctx, keystores, passwords)
+}
+
+// DeleteKeystores for a derived keymanager.
+func (km *Keymanager) DeleteKeystores(
+	ctx context.Context, publicKeys [][]byte,
+) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return km.importedKM.DeleteKeystores(ctx, publicKeys)
 }
 
 // SubscribeAccountChanges creates an event subscription for a channel

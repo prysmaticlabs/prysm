@@ -243,7 +243,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 		// the signature to a G2 point if batch verification is
 		// enabled.
 		if features.Get().EnableBatchVerification {
-			set := &bls.SignatureSet{
+			set := &bls.SignatureBatch{
 				Messages:   [][32]byte{sigRoot},
 				PublicKeys: []bls.PublicKey{pKey},
 				Signatures: [][]byte{m.Signature},
