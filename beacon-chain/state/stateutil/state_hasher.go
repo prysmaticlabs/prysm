@@ -53,7 +53,7 @@ type stateRootHasher struct {
 
 // ComputeFieldRootsWithHasherPhase0 hashes the provided phase 0 state and returns its respective field roots.
 func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherPhase0")
+	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherPhase0")
 	defer span.End()
 
 	if state == nil {
@@ -201,7 +201,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 
 // ComputeFieldRootsWithHasherAltair hashes the provided altair state and returns its respective field roots.
 func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherAltair")
+	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherAltair")
 	defer span.End()
 
 	if state == nil {
@@ -371,7 +371,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 
 // ComputeFieldRootsWithHasherMerge hashes the provided merge state and returns its respective field roots.
 func (h *stateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, state *ethpb.BeaconStateMerge) ([][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherMerge")
+	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherMerge")
 	defer span.End()
 
 	if state == nil {
