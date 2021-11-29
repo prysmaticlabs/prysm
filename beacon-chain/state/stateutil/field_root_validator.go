@@ -68,7 +68,7 @@ func (h *stateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Vali
 		return [32]byte{}, errors.New("nil validator")
 	}
 
-	enc := ValidatorEncKey(validator)
+	enc := validatorEncKey(validator)
 	// Check if it exists in cache:
 	if h.rootsCache != nil {
 		if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {

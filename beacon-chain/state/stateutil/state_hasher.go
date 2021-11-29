@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	// Set the map size as equal to that of the latest state field count.
 	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateMergeFieldCount)
 	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateMergeFieldCount)
 	lock        sync.RWMutex

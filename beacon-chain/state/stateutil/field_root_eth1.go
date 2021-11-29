@@ -15,7 +15,7 @@ func Eth1Root(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 		return [32]byte{}, errors.New("nil eth1 data")
 	}
 
-	enc := Eth1DataEncKey(eth1Data)
+	enc := eth1DataEncKey(eth1Data)
 	if features.Get().EnableSSZCache {
 		if found, ok := CachedHasher.rootsCache.Get(string(enc)); ok && found != nil {
 			return found.([32]byte), nil

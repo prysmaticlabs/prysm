@@ -63,7 +63,7 @@ func (h *stateRootHasher) pendingAttestationRoot(hasher ssz.HashFn, att *ethpb.P
 		return [32]byte{}, errors.New("nil pending attestation")
 	}
 	// Marshal attestation to determine if it exists in the cache.
-	enc := PendingAttEncKey(att)
+	enc := pendingAttEncKey(att)
 
 	// Check if it exists in cache:
 	if h.rootsCache != nil {
