@@ -1,4 +1,4 @@
-// +build !minimal
+// +build minimal
 
 package customtypes
 
@@ -10,11 +10,11 @@ import (
 
 const (
 	// Number of block roots in the beacon state.
-	BlockRootsSize = 8192
+	BlockRootsSize = 64
 	// Number of state roots in the beacon state.
-	StateRootsSize = 8192
+	StateRootsSize = 64
 	// Number of randao mixes in the beacon state,
-	RandaoMixesSize = 65536
+	RandaoMixesSize = 64
 )
 
 var _ fssz.HashRoot = (Byte32)([32]byte{})
