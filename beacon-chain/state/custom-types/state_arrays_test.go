@@ -70,9 +70,9 @@ func TestByte32_SizeSSZ(t *testing.T) {
 }
 
 func TestStateRoots_Casting(t *testing.T) {
-	var b [stateRootsSize][32]byte
+	var b [StateRootsSize][32]byte
 	d := StateRoots(b)
-	if !reflect.DeepEqual([stateRootsSize][32]byte(d), b) {
+	if !reflect.DeepEqual([StateRootsSize][32]byte(d), b) {
 		t.Errorf("Unequal: %v = %v", d, b)
 	}
 }
@@ -80,10 +80,10 @@ func TestStateRoots_Casting(t *testing.T) {
 func TestStateRoots_UnmarshalSSZ(t *testing.T) {
 	t.Run("Ok", func(t *testing.T) {
 		d := StateRoots{}
-		var b [stateRootsSize][32]byte
+		var b [StateRootsSize][32]byte
 		b[0] = [32]byte{'f', 'o', 'o'}
 		b[1] = [32]byte{'b', 'a', 'r'}
-		bb := make([]byte, stateRootsSize*32)
+		bb := make([]byte, StateRootsSize*32)
 		for i, elem32 := range b {
 			for j, elem := range elem32 {
 				bb[i*32+j] = elem
@@ -93,17 +93,17 @@ func TestStateRoots_UnmarshalSSZ(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
-		if !reflect.DeepEqual(b, [stateRootsSize][32]byte(d)) {
-			t.Errorf("Unequal: %v = %v", b, [stateRootsSize][32]byte(d))
+		if !reflect.DeepEqual(b, [StateRootsSize][32]byte(d)) {
+			t.Errorf("Unequal: %v = %v", b, [StateRootsSize][32]byte(d))
 		}
 	})
 
 	t.Run("Wrong slice length", func(t *testing.T) {
 		d := StateRoots{}
-		var b [stateRootsSize][16]byte
+		var b [StateRootsSize][16]byte
 		b[0] = [16]byte{'f', 'o', 'o'}
 		b[1] = [16]byte{'b', 'a', 'r'}
-		bb := make([]byte, stateRootsSize*16)
+		bb := make([]byte, StateRootsSize*16)
 		for i, elem16 := range b {
 			for j, elem := range elem16 {
 				bb[i*16+j] = elem
@@ -148,15 +148,15 @@ func TestStateRoots_MarshalSSZ(t *testing.T) {
 
 func TestStateRoots_SizeSSZ(t *testing.T) {
 	d := StateRoots{}
-	if d.SizeSSZ() != stateRootsSize*32 {
-		t.Errorf("Wrong SSZ size. Expected %v vs actual %v", stateRootsSize*32, d.SizeSSZ())
+	if d.SizeSSZ() != StateRootsSize*32 {
+		t.Errorf("Wrong SSZ size. Expected %v vs actual %v", StateRootsSize*32, d.SizeSSZ())
 	}
 }
 
 func TestRandaoMixes_Casting(t *testing.T) {
-	var b [randaoMixesSize][32]byte
+	var b [RandaoMixesSize][32]byte
 	d := RandaoMixes(b)
-	if !reflect.DeepEqual([randaoMixesSize][32]byte(d), b) {
+	if !reflect.DeepEqual([RandaoMixesSize][32]byte(d), b) {
 		t.Errorf("Unequal: %v = %v", d, b)
 	}
 }
@@ -164,10 +164,10 @@ func TestRandaoMixes_Casting(t *testing.T) {
 func TestRandaoMixes_UnmarshalSSZ(t *testing.T) {
 	t.Run("Ok", func(t *testing.T) {
 		d := RandaoMixes{}
-		var b [randaoMixesSize][32]byte
+		var b [RandaoMixesSize][32]byte
 		b[0] = [32]byte{'f', 'o', 'o'}
 		b[1] = [32]byte{'b', 'a', 'r'}
-		bb := make([]byte, randaoMixesSize*32)
+		bb := make([]byte, RandaoMixesSize*32)
 		for i, elem32 := range b {
 			for j, elem := range elem32 {
 				bb[i*32+j] = elem
@@ -177,17 +177,17 @@ func TestRandaoMixes_UnmarshalSSZ(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
-		if !reflect.DeepEqual(b, [randaoMixesSize][32]byte(d)) {
-			t.Errorf("Unequal: %v = %v", b, [randaoMixesSize][32]byte(d))
+		if !reflect.DeepEqual(b, [RandaoMixesSize][32]byte(d)) {
+			t.Errorf("Unequal: %v = %v", b, [RandaoMixesSize][32]byte(d))
 		}
 	})
 
 	t.Run("Wrong slice length", func(t *testing.T) {
 		d := RandaoMixes{}
-		var b [randaoMixesSize][16]byte
+		var b [RandaoMixesSize][16]byte
 		b[0] = [16]byte{'f', 'o', 'o'}
 		b[1] = [16]byte{'b', 'a', 'r'}
-		bb := make([]byte, randaoMixesSize*16)
+		bb := make([]byte, RandaoMixesSize*16)
 		for i, elem16 := range b {
 			for j, elem := range elem16 {
 				bb[i*16+j] = elem
@@ -232,8 +232,8 @@ func TestRandaoMixes_MarshalSSZ(t *testing.T) {
 
 func TestRandaoMixes_SizeSSZ(t *testing.T) {
 	d := RandaoMixes{}
-	if d.SizeSSZ() != randaoMixesSize*32 {
-		t.Errorf("Wrong SSZ size. Expected %v vs actual %v", randaoMixesSize*32, d.SizeSSZ())
+	if d.SizeSSZ() != RandaoMixesSize*32 {
+		t.Errorf("Wrong SSZ size. Expected %v vs actual %v", RandaoMixesSize*32, d.SizeSSZ())
 	}
 }
 
