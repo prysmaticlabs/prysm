@@ -7,6 +7,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -79,7 +80,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	var randaoMixes [65536][32]byte
+	var randaoMixes [customtypes.RandaoMixesSize][32]byte
 	for i := 0; i < len(randaoMixes); i++ {
 		var h [32]byte
 		copy(h[:], eth1Data.BlockHash)
@@ -94,12 +95,12 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		activeIndexRoots[i] = zeroHash
 	}
 
-	var blockRoots [8192][32]byte
+	var blockRoots [customtypes.BlockRootsSize][32]byte
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash32
 	}
 
-	var stateRoots [8192][32]byte
+	var stateRoots [customtypes.StateRootsSize][32]byte
 	for i := 0; i < len(stateRoots); i++ {
 		stateRoots[i] = zeroHash32
 	}

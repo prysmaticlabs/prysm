@@ -6,6 +6,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -512,9 +513,9 @@ func TestBeaconStateToV1(t *testing.T) {
 			StateRoot:     bytesutil.PadTo([]byte("lbhstateroot"), 32),
 			BodyRoot:      bytesutil.PadTo([]byte("lbhbodyroot"), 32),
 		}))
-		bRoots := [8192][32]byte{bytesutil.ToBytes32([]byte("blockroots"))}
+		bRoots := [customtypes.BlockRootsSize][32]byte{bytesutil.ToBytes32([]byte("blockroots"))}
 		require.NoError(t, state.SetBlockRoots(&bRoots))
-		sRoots := [8192][32]byte{bytesutil.ToBytes32([]byte("stateroots"))}
+		sRoots := [customtypes.StateRootsSize][32]byte{bytesutil.ToBytes32([]byte("stateroots"))}
 		require.NoError(t, state.SetStateRoots(&sRoots))
 		require.NoError(t, state.SetHistoricalRoots([][32]byte{bytesutil.ToBytes32([]byte("historicalroots"))}))
 		require.NoError(t, state.SetEth1Data(&ethpbalpha.Eth1Data{
@@ -539,7 +540,7 @@ func TestBeaconStateToV1(t *testing.T) {
 			WithdrawableEpoch:          13,
 		}}))
 		require.NoError(t, state.SetBalances([]uint64{14}))
-		mixes := [65536][32]byte{bytesutil.ToBytes32([]byte("randaomixes"))}
+		mixes := [customtypes.RandaoMixesSize][32]byte{bytesutil.ToBytes32([]byte("randaomixes"))}
 		require.NoError(t, state.SetRandaoMixes(&mixes))
 		require.NoError(t, state.SetSlashings([]uint64{15}))
 		require.NoError(t, state.AppendPreviousEpochAttestations(&ethpbalpha.PendingAttestation{

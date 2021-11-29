@@ -7,6 +7,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         ":ssz_generated_files",
+        "beacon_state.go",
+        "beacon_state_minimal.go",
         "doc.go",
         "field_roots.go",
         "getters_attestation.go",
@@ -109,7 +111,7 @@ go_test(
 ssz_gen_marshal(
     name = "ssz_generated_files",
     srcs = [
-        "types.go",
+        "beacon_state.go",
     ],
     includes = [
         "//beacon-chain/state/custom-types:go_default_library",
