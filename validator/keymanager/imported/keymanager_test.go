@@ -99,7 +99,8 @@ func TestImportedKeymanager_Sign(t *testing.T) {
 	for i := 0; i < numAccounts; i++ {
 		keystores[i] = createRandomKeystore(t, password)
 	}
-	require.NoError(t, dr.ImportKeystores(ctx, keystores, password))
+	_, err := dr.ImportKeystores(ctx, keystores, []string{password})
+	require.NoError(t, err)
 
 	var encodedKeystore []byte
 	for k, v := range wallet.Files[AccountsPath] {
