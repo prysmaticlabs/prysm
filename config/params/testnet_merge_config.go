@@ -39,5 +39,6 @@ func MergeTestnetConfig() *BeaconChainConfig {
 	cfg.DepositChainID = 1337402
 	cfg.DepositNetworkID = 1337402
 	cfg.DepositContractAddress = "0x4242424242424242424242424242424242424242"
+	cfg.Eth1FollowDistance = 16
 	return cfg
 }

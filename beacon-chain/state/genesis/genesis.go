@@ -1,6 +1,7 @@
 package genesis
 
 import (
+	"bytes"
 	_ "embed"
 
 	"github.com/golang/snappy"
@@ -16,13 +17,19 @@ var (
 
 // State returns a copy of the genesis state from a hardcoded value.
 func State(name string) (*state.BeaconState, error) {
+	usesPhase0DepositContract := params.BeaconConfig().DepositContractAddress == "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+	usesPhase0ForkVersion := bytes.Equal(params.BeaconConfig().GenesisForkVersion, []byte{0, 0, 0, 0})
 	switch name {
 	case params.ConfigNames[params.Mainnet]:
-		return load(mainnetRawSSZCompressed)
+		// Only return phase0 genesis state if matches phase0 deposit contract and fork version.
+		if usesPhase0DepositContract && usesPhase0ForkVersion {
+			return load(mainnetRawSSZCompressed)
+		}
 	default:
 		// No state found.
 		return nil, nil
 	}
+	return nil, nil
 }
 
 // load a compressed ssz state file into a beacon state struct.
