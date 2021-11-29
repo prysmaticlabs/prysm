@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	ssz "github.com/ferranbt/fastssz"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -102,24 +100,77 @@ const (
 // The code was largely copy/pasted from the code generated to compute the HTR of the entire
 // ExecutionPayload.
 func TransactionsRoot(txs [][]byte) ([32]byte, error) {
-	var root [32]byte
-	hh := ssz.DefaultHasherPool.Get()
-	defer ssz.DefaultHasherPool.Put(hh)
-	idx := hh.Index()
-	num := uint64(len(txs))
-	if num > maxTransactionsPerPayload {
-		return root, ssz.ErrIncorrectListSize
-	}
-	for _, elem := range txs {
-		elemIndx := hh.Index()
-		byteLen := uint64(len(elem))
-		if byteLen > maxBytesPerTransaction {
-			return root, ssz.ErrIncorrectListSize
+	hasher := hash.CustomSHA256Hasher()
+	listMarshaling := make([][]byte, 0)
+	for i := 0; i < len(txs); i++ {
+		rt, err := transactionRoot(txs[i])
+		if err != nil {
+			return [32]byte{}, err
 		}
-		hh.Append(elem)
-		hh.MerkleizeWithMixin(elemIndx, byteLen, (maxBytesPerTransaction+31)/32)
+		listMarshaling = append(listMarshaling, rt[:])
 	}
-	hh.MerkleizeWithMixin(idx, num, maxTransactionsPerPayload)
 
-	return hh.HashRoot()
+	bytesRoot, err := BitwiseMerkleize(hasher, listMarshaling, uint64(len(listMarshaling)), params.BeaconConfig().MaxTransactionsPerPayload)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute  merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(txs))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+func transactionRoot(tx []byte) ([32]byte, error) {
+	hasher := hash.CustomSHA256Hasher()
+	chunkedRoots, err := packChunks(tx)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	maxLength := (params.BeaconConfig().MaxBytesPerTransaction + 31) / 32
+	bytesRoot, err := BitwiseMerkleize(hasher, chunkedRoots, uint64(len(chunkedRoots)), maxLength)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(tx))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+// Pack a given byte array into chunks. It'll pad the last chunk with zero bytes if
+// it does not have length bytes per chunk.
+func packChunks(bytes []byte) ([][]byte, error) {
+	numItems := len(bytes)
+	var chunks [][]byte
+	for i := 0; i < numItems; i += 32 {
+		j := i + 32
+		// We create our upper bound index of the chunk, if it is greater than numItems,
+		// we set it as numItems itself.
+		if j > numItems {
+			j = numItems
+		}
+		// We create chunks from the list of items based on the
+		// indices determined above.
+		chunks = append(chunks, bytes[i:j])
+	}
+
+	if len(chunks) == 0 {
+		return chunks, nil
+	}
+
+	// Right-pad the last chunk with zero bytes if it does not
+	// have length bytes.
+	lastChunk := chunks[len(chunks)-1]
+	for len(lastChunk) < 32 {
+		lastChunk = append(lastChunk, 0)
+	}
+	chunks[len(chunks)-1] = lastChunk
+	return chunks, nil
 }
