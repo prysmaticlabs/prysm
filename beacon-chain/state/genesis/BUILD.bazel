@@ -19,6 +19,8 @@ go_test(
     srcs = ["genesis_test.go"],
     deps = [
         ":go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
         "//config/params:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )
