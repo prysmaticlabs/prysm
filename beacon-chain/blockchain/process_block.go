@@ -644,9 +644,9 @@ func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst
 	return &catalyst.ExecutableDataV1{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
 		ParentHash:    common.BytesToHash(payload.ParentHash),
-		Coinbase:      common.BytesToAddress(payload.FeeRecipient),
+		FeeRecipient:  common.BytesToAddress(payload.FeeRecipient),
 		StateRoot:     common.BytesToHash(payload.StateRoot),
-		ReceiptRoot:   common.BytesToHash(payload.ReceiptRoot),
+		ReceiptsRoot:  common.BytesToHash(payload.ReceiptRoot),
 		LogsBloom:     payload.LogsBloom,
 		Random:        common.BytesToHash(payload.Random),
 		Number:        payload.BlockNumber,
