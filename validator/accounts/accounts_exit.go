@@ -59,18 +59,18 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 		return err
 	}
 	if nodeClient == nil {
-		return errors.New("Could not prepare beacon node client")
+		return errors.New("could not prepare beacon node client")
 	}
 	syncStatus, err := (*nodeClient).GetSyncStatus(cliCtx.Context, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
 	if syncStatus == nil {
-		return errors.New("Could not get sync status")
+		return errors.New("could not get sync status")
 	}
 
 	if (*syncStatus).Syncing {
-		return errors.New("Could not perform exit: beacon node is syncing.")
+		return errors.New("could not perform exit: beacon node is syncing.")
 	}
 
 	cfg := PerformExitCfg{
