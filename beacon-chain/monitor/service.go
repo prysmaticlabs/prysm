@@ -77,7 +77,7 @@ type Service struct {
 	// trackedSyncedCommitteeIndices and lastSyncedEpoch
 	sync.RWMutex
 
-	TrackedValidators           map[types.ValidatorIndex]interface{}
+	TrackedValidators           map[types.ValidatorIndex]bool
 	latestPerformance           map[types.ValidatorIndex]ValidatorLatestPerformance
 	aggregatedPerformance       map[types.ValidatorIndex]ValidatorAggregatedPerformance
 	trackedSyncCommitteeIndices map[types.ValidatorIndex][]types.CommitteeIndex
@@ -92,24 +92,22 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []t
 		config:                      config,
 		ctx:                         ctx,
 		cancel:                      cancel,
-		TrackedValidators:           make(map[types.ValidatorIndex]interface{}, len(tracked)),
+		TrackedValidators:           make(map[types.ValidatorIndex]bool, len(tracked)),
 		latestPerformance:           make(map[types.ValidatorIndex]ValidatorLatestPerformance),
 		aggregatedPerformance:       make(map[types.ValidatorIndex]ValidatorAggregatedPerformance),
 		trackedSyncCommitteeIndices: make(map[types.ValidatorIndex][]types.CommitteeIndex),
 	}
 	for _, idx := range tracked {
-		r.TrackedValidators[idx] = nil
+		r.TrackedValidators[idx] = true
 	}
 	return r, nil
 }
 
 // Start waits until the beacon is synced and starts the monitoring system.
 func (s *Service) Start() {
-	tracked := make([]types.ValidatorIndex, len(s.TrackedValidators))
-	i := 0
+	tracked := make([]types.ValidatorIndex, 0, len(s.TrackedValidators))
 	for idx := range s.TrackedValidators {
-		tracked[i] = idx
-		i++
+		tracked = append(tracked, idx)
 	}
 	sort.Slice(tracked, func(i, j int) bool { return tracked[i] < tracked[j] })
 	log.WithFields(logrus.Fields{

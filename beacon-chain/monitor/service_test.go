@@ -40,11 +40,11 @@ func setupService(t *testing.T) *Service {
 		ValidatorsRoot: [32]byte{},
 	}
 
-	trackedVals := map[types.ValidatorIndex]interface{}{
-		1:  nil,
-		2:  nil,
-		12: nil,
-		15: nil,
+	trackedVals := map[types.ValidatorIndex]bool{
+		1:  true,
+		2:  true,
+		12: true,
+		15: true,
 	}
 	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
 		1: {
@@ -89,9 +89,9 @@ func setupService(t *testing.T) *Service {
 
 func TestTrackedIndex(t *testing.T) {
 	s := &Service{
-		TrackedValidators: map[types.ValidatorIndex]interface{}{
-			1: nil,
-			2: nil,
+		TrackedValidators: map[types.ValidatorIndex]bool{
+			1: true,
+			2: true,
 		},
 	}
 	require.Equal(t, s.trackedIndex(types.ValidatorIndex(1)), true)
