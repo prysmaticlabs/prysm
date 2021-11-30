@@ -3,8 +3,15 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     testonly = True,
-    srcs = ["mock_state_fetcher.go"],
+    srcs = [
+        "mock_genesis_timefetcher.go",
+        "mock_state_fetcher.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil",
     visibility = ["//beacon-chain:__subpackages__"],
-    deps = ["//beacon-chain/state:go_default_library"],
+    deps = [
+        "//beacon-chain/state:go_default_library",
+        "//config/params:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+    ],
 )

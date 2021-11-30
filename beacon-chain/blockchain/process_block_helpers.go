@@ -193,9 +193,6 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 	if canUpdate {
 		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
-		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -206,12 +203,13 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 // This method does not have defense against fork choice bouncing attack, which is why it's only recommend to be used during initial syncing.
 func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpoint) error {
 	s.prevJustifiedCheckpt = s.justifiedCheckpt
-	s.justifiedCheckpt = cp
-	if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+
+	if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
+	s.justifiedCheckpt = cp
 
-	return s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cp)
+	return nil
 }
 
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
@@ -330,7 +328,9 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state state.
 	if !attestation.CheckPointIsEqual(s.justifiedCheckpt, state.CurrentJustifiedCheckpoint()) {
 		if state.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-			return s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+			// we don't need to check if the previous justified checkpoint was an ancestor since the new
+			// finalized checkpoint is overriding it.
+			return nil
 		}
 
 		// Update justified if store justified is not in chain with finalized check point.
@@ -345,9 +345,6 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state state.
 		}
 		if !bytes.Equal(anc, s.finalizedCheckpt.Root) {
 			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-			if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-				return err
-			}
 		}
 	}
 	return nil

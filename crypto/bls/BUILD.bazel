@@ -7,7 +7,7 @@ go_library(
         "constants.go",
         "error.go",
         "interface.go",
-        "signature_set.go",
+        "signature_batch.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/crypto/bls",
     visibility = ["//visibility:public"],
@@ -22,7 +22,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "bls_test.go",
-        "signature_set_test.go",
+        "signature_batch_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

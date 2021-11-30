@@ -82,7 +82,7 @@ func TestRandaoSignatureSet_OK(t *testing.T) {
 		},
 	}
 
-	set, err := blocks.RandaoSignatureSet(context.Background(), beaconState, block.Body.RandaoReveal)
+	set, err := blocks.RandaoSignatureBatch(context.Background(), beaconState, block.Body.RandaoReveal)
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)
