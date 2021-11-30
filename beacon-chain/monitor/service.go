@@ -21,10 +21,10 @@ import (
 
 var (
 	// Error when event feed data is not statefeed.SyncedData
-	errorNotSyncedData = errors.New("Event feed data is not of type *statefeed.SyncedData")
+	errNotSyncedData = errors.New("Event feed data is not of type *statefeed.SyncedData")
 
 	// Error when the context is closed while waiting for sync
-	errorContextClosedWhileWaiting = errors.New("Context closed while waiting for beacon to sync to latest Head")
+	errContextClosedWhileWaiting = errors.New("Context closed while waiting for beacon to sync to latest Head")
 )
 
 // ValidatorLatestPerformance keeps track of the latest participation of the validator
@@ -126,17 +126,18 @@ func (s *Service) Start() {
 		}
 		state, err := s.config.HeadFetcher.HeadState(s.ctx)
 		if err != nil {
-			log.WithError(err).Error("could not get head state")
+			log.WithError(err).Error("Could not get head state")
 			return
 		}
 		if state == nil {
-			log.Error("head state is nil")
+			log.Error("Head state is nil")
 			return
 		}
 		epoch := slots.ToEpoch(state.Slot())
 		log.WithField("Epoch", epoch).Debug("Synced to head epoch, starting reporting performance")
 
-		for idx := range s.TrackedValidators { // no Lock required
+		s.Lock()
+		for idx := range s.TrackedValidators {
 			balance, err := state.BalanceAtIndex(idx)
 			if err != nil {
 				log.WithError(err).WithField("ValidatorIndex", idx).Error(
@@ -150,8 +151,11 @@ func (s *Service) Start() {
 				balance: balance,
 			}
 		}
+		s.Unlock()
 		s.updateSyncCommitteeTrackedVals(state)
+		s.Lock()
 		s.isRunning = true
+		s.Unlock()
 		go s.monitorRoutine()
 	}()
 }
@@ -171,7 +175,7 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// waitForSync waits until the beacon node is synced to the latest head
+// waitForSync waits until the beacon node is synced to the latest head.
 func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subscription) error {
 	defer stateSub.Unsubscribe()
 	for {
@@ -180,13 +184,13 @@ func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subs
 			if event.Type == statefeed.Synced {
 				_, ok := event.Data.(*statefeed.SyncedData)
 				if !ok {
-					return errorNotSyncedData
+					return errNotSyncedData
 				}
 				return nil
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
-			return errorContextClosedWhileWaiting
+			return errContextClosedWhileWaiting
 		case err := <-stateSub.Err():
 			log.WithError(err).Error("Could not subscribe to state notifier")
 			return err
@@ -258,7 +262,6 @@ func (s *Service) monitorRoutine() {
 			return
 		}
 	}
-
 }
 
 // TrackedIndex returns if the given validator index corresponds to one of the
