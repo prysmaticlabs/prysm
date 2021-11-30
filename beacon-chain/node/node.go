@@ -17,6 +17,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -28,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -202,6 +204,10 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerGRPCGateway(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerValidatorMonitorService(); err != nil {
 		return nil, err
 	}
 
@@ -865,4 +871,34 @@ func (b *BeaconNode) registerDeterminsticGenesisService() error {
 		return b.services.RegisterService(svc)
 	}
 	return nil
+}
+
+func (b *BeaconNode) registerValidatorMonitorService() error {
+	if cmd.ValidatorMonitorIndicesFlag.Value == nil {
+		return nil
+	}
+	cliSlice := cmd.ValidatorMonitorIndicesFlag.Value.Value()
+	if cliSlice == nil {
+		return nil
+	}
+	tracked := make([]types.ValidatorIndex, len(cliSlice))
+	for i := range tracked {
+		tracked[i] = types.ValidatorIndex(cliSlice[i])
+	}
+
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+	monitorConfig := &monitor.ValidatorMonitorConfig{
+		StateNotifier:       b,
+		AttestationNotifier: b,
+		StateGen:            b.stateGen,
+		HeadFetcher:         chainService,
+	}
+	svc, err := monitor.NewService(b.ctx, monitorConfig, tracked)
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(svc)
 }
