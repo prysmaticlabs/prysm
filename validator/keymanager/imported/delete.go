@@ -89,5 +89,8 @@ func (km *Keymanager) DeleteKeystores(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize key caches")
 	}
+	log.WithFields(logrus.Fields{
+		"publicKeys": deletedKeysStr,
+	}).Info("Successfully deleted validator key(s)")
 	return statuses, nil
 }

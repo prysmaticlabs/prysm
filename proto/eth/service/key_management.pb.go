@@ -661,7 +661,7 @@ var file_proto_eth_service_key_management_proto_rawDesc = []byte{
 	0x31, 0x2f, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x3a, 0x01, 0x2a, 0x12, 0x95,
 	0x01, 0x0a, 0x0f, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72,
 	0x65, 0x73, 0x12, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
-	0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74,
+	0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
 	0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x1a, 0x2d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
 	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x4b, 0x65,
@@ -716,7 +716,7 @@ var file_proto_eth_service_key_management_proto_depIdxs = []int32{
 	1,  // 4: ethereum.eth.service.DeletedKeystoreStatus.status:type_name -> ethereum.eth.service.DeletedKeystoreStatus.Status
 	10, // 5: ethereum.eth.service.KeyManagement.ListKeystores:input_type -> google.protobuf.Empty
 	3,  // 6: ethereum.eth.service.KeyManagement.ImportKeystores:input_type -> ethereum.eth.service.ImportKeystoresRequest
-	3,  // 7: ethereum.eth.service.KeyManagement.DeleteKeystores:input_type -> ethereum.eth.service.ImportKeystoresRequest
+	5,  // 7: ethereum.eth.service.KeyManagement.DeleteKeystores:input_type -> ethereum.eth.service.DeleteKeystoresRequest
 	2,  // 8: ethereum.eth.service.KeyManagement.ListKeystores:output_type -> ethereum.eth.service.ListKeystoresResponse
 	4,  // 9: ethereum.eth.service.KeyManagement.ImportKeystores:output_type -> ethereum.eth.service.ImportKeystoresResponse
 	6,  // 10: ethereum.eth.service.KeyManagement.DeleteKeystores:output_type -> ethereum.eth.service.DeleteKeystoresResponse
@@ -865,7 +865,7 @@ const _ = grpc.SupportPackageIsVersion6
 type KeyManagementClient interface {
 	ListKeystores(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ListKeystoresResponse, error)
 	ImportKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*ImportKeystoresResponse, error)
-	DeleteKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*DeleteKeystoresResponse, error)
+	DeleteKeystores(ctx context.Context, in *DeleteKeystoresRequest, opts ...grpc.CallOption) (*DeleteKeystoresResponse, error)
 }
 
 type keyManagementClient struct {
@@ -894,7 +894,7 @@ func (c *keyManagementClient) ImportKeystores(ctx context.Context, in *ImportKey
 	return out, nil
 }
 
-func (c *keyManagementClient) DeleteKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*DeleteKeystoresResponse, error) {
+func (c *keyManagementClient) DeleteKeystores(ctx context.Context, in *DeleteKeystoresRequest, opts ...grpc.CallOption) (*DeleteKeystoresResponse, error) {
 	out := new(DeleteKeystoresResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/DeleteKeystores", in, out, opts...)
 	if err != nil {
@@ -907,7 +907,7 @@ func (c *keyManagementClient) DeleteKeystores(ctx context.Context, in *ImportKey
 type KeyManagementServer interface {
 	ListKeystores(context.Context, *empty.Empty) (*ListKeystoresResponse, error)
 	ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error)
-	DeleteKeystores(context.Context, *ImportKeystoresRequest) (*DeleteKeystoresResponse, error)
+	DeleteKeystores(context.Context, *DeleteKeystoresRequest) (*DeleteKeystoresResponse, error)
 }
 
 // UnimplementedKeyManagementServer can be embedded to have forward compatible implementations.
@@ -920,7 +920,7 @@ func (*UnimplementedKeyManagementServer) ListKeystores(context.Context, *empty.E
 func (*UnimplementedKeyManagementServer) ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ImportKeystores not implemented")
 }
-func (*UnimplementedKeyManagementServer) DeleteKeystores(context.Context, *ImportKeystoresRequest) (*DeleteKeystoresResponse, error) {
+func (*UnimplementedKeyManagementServer) DeleteKeystores(context.Context, *DeleteKeystoresRequest) (*DeleteKeystoresResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteKeystores not implemented")
 }
 
@@ -965,7 +965,7 @@ func _KeyManagement_ImportKeystores_Handler(srv interface{}, ctx context.Context
 }
 
 func _KeyManagement_DeleteKeystores_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ImportKeystoresRequest)
+	in := new(DeleteKeystoresRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -977,7 +977,7 @@ func _KeyManagement_DeleteKeystores_Handler(srv interface{}, ctx context.Context
 		FullMethod: "/ethereum.eth.service.KeyManagement/DeleteKeystores",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).DeleteKeystores(ctx, req.(*ImportKeystoresRequest))
+		return srv.(KeyManagementServer).DeleteKeystores(ctx, req.(*DeleteKeystoresRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
