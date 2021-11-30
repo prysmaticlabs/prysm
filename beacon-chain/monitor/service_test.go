@@ -2,16 +2,20 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -152,7 +156,9 @@ func TestStart(t *testing.T) {
 		})
 	}
 
-	time.Sleep(2000 * time.Millisecond) // wait for updateSyncCommitteeTrackedVals
+	// wait for Logrus
+	time.Sleep(1000 * time.Millisecond)
+	require.LogsContain(t, hook, "Synced to head epoch, starting reporting performance")
 	require.LogsContain(t, hook, "\"Starting service\" ValidatorIndices=\"[1 2 12 15]\"")
 	require.Equal(t, s.isLogging, true, "monitor is not running")
 }
@@ -197,4 +203,98 @@ func TestInitializePerformanceStructures(t *testing.T) {
 
 	require.DeepEqual(t, s.latestPerformance, latestPerformance)
 	require.DeepEqual(t, s.aggregatedPerformance, aggregatedPerformance)
+}
+
+func TestMonitorRoutine(t *testing.T) {
+	ctx := context.Background()
+	hook := logTest.NewGlobal()
+	s := setupService(t)
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		s.monitorRoutine(stateChannel, stateSub)
+		wg.Done()
+	}()
+
+	genesis, keys := util.DeterministicGenesisStateAltair(t, 64)
+	c, err := altair.NextSyncCommittee(ctx, genesis)
+	require.NoError(t, err)
+	require.NoError(t, genesis.SetCurrentSyncCommittee(c))
+
+	genConfig := util.DefaultBlockGenConfig()
+	block, err := util.GenerateFullBlockAltair(genesis, keys, genConfig, 1)
+	require.NoError(t, err)
+	root, err := block.GetBlock().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
+
+	wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	require.NoError(t, err)
+
+	stateChannel <- &feed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			Slot:        1,
+			Verified:    true,
+			SignedBlock: wrapped,
+		},
+	}
+
+	// Wait for Logrus
+	time.Sleep(1000 * time.Millisecond)
+	wanted1 := fmt.Sprintf("\"Proposed block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0xf732eaeb7fae ProposerIndex=15 Slot=1 Version=1 prefix=monitor", bytesutil.Trunc(root[:]))
+	require.LogsContain(t, hook, wanted1)
+
+}
+
+func TestWaitForSync(t *testing.T) {
+	s := setupService(t)
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		err := s.waitForSync(stateChannel, stateSub)
+		require.NoError(t, err)
+		wg.Done()
+	}()
+
+	stateChannel <- &feed.Event{
+		Type: statefeed.Synced,
+		Data: &statefeed.SyncedData{
+			StartTime: time.Now(),
+		},
+	}
+}
+
+func TestRun(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s := setupService(t)
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		s.run(stateChannel, stateSub)
+		wg.Done()
+	}()
+
+	stateChannel <- &feed.Event{
+		Type: statefeed.Synced,
+		Data: &statefeed.SyncedData{
+			StartTime: time.Now(),
+		},
+	}
+	//wait for Logrus
+	time.Sleep(1000 * time.Millisecond)
+	require.LogsContain(t, hook, "Synced to head epoch, starting reporting performance")
 }

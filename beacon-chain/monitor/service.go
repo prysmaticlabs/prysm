@@ -103,52 +103,57 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []t
 	return r, nil
 }
 
-// Start waits until the beacon is synced and starts the monitoring system.
-func (s *Service) Start() {
-	tracked := make([]types.ValidatorIndex, 0, len(s.TrackedValidators))
+// run waits until the beacon is synced and starts the monitoring system.
+func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription) {
+	if stateChannel == nil {
+		return
+	}
+
+	if err := s.waitForSync(stateChannel, stateSub); err != nil {
+		log.WithError(err)
+		return
+	}
+	state, err := s.config.HeadFetcher.HeadState(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not get head state")
+		return
+	}
+	if state == nil {
+		log.Error("Head state is nil")
+		return
+	}
+	epoch := slots.ToEpoch(state.Slot())
+	log.WithField("Epoch", epoch).Info("Synced to head epoch, starting reporting performance")
 
 	s.Lock()
 
+	s.initializePerformanceStructures(state, epoch)
+	s.Unlock()
+	s.updateSyncCommitteeTrackedVals(state)
+	s.Lock()
+	s.isLogging = true
+	s.Unlock()
+	s.monitorRoutine(stateChannel, stateSub)
+}
+
+// Start sets up the TrackedValidators map and then calls to wait until the
+// beacon is synced.
+func (s *Service) Start() {
+	s.Lock()
+	defer s.Unlock()
+	var tracked []types.ValidatorIndex
 	for idx := range s.TrackedValidators {
 		tracked = append(tracked, idx)
 	}
 	sort.Slice(tracked, func(i, j int) bool { return tracked[i] < tracked[j] })
-
-	log.WithFields(logrus.Fields{"ValidatorIndices": tracked}).Info("Starting service")
-
+	log.WithFields(logrus.Fields{
+		"ValidatorIndices": tracked,
+	}).Info("Starting service")
 	s.isLogging = false
-	s.Unlock()
-
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 
-	go func() {
-		if err := s.waitForSync(stateChannel, stateSub); err != nil {
-			log.WithError(err)
-			return
-		}
-		state, err := s.config.HeadFetcher.HeadState(s.ctx)
-		if err != nil {
-			log.WithError(err).Error("Could not get head state")
-			return
-		}
-		if state == nil {
-			log.Error("Head state is nil")
-			return
-		}
-		epoch := slots.ToEpoch(state.Slot())
-		log.WithField("Epoch", epoch).Debug("Synced to head epoch, starting reporting performance")
-
-		s.Lock()
-
-		s.initializePerformanceStructures(state, epoch)
-		s.Unlock()
-		s.updateSyncCommitteeTrackedVals(state)
-		s.Lock()
-		s.isLogging = true
-		s.Unlock()
-		s.monitorRoutine()
-	}()
+	go s.run(stateChannel, stateSub)
 }
 
 // initializePerformanceStructures initializes the validatorLatestPerformance
@@ -188,7 +193,6 @@ func (s *Service) Stop() error {
 
 // waitForSync waits until the beacon node is synced to the latest head.
 func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subscription) error {
-	defer stateSub.Unsubscribe()
 	for {
 		select {
 		case event := <-stateChannel:
@@ -213,9 +217,7 @@ func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subs
 // state feed and the operation feed. It then calls the appropriate function
 // when we get messages after syncing a block or processing attestations/sync
 // committee contributions.
-func (s *Service) monitorRoutine() {
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
+func (s *Service) monitorRoutine(stateChannel chan *feed.Event, stateSub event.Subscription) {
 	defer stateSub.Unsubscribe()
 
 	opChannel := make(chan *feed.Event, 1)
