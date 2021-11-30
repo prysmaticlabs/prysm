@@ -141,7 +141,7 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 func (s *Service) Start() {
 	s.Lock()
 	defer s.Unlock()
-	var tracked []types.ValidatorIndex
+	tracked := make([]types.ValidatorIndex, 0, len(s.TrackedValidators))
 	for idx := range s.TrackedValidators {
 		tracked = append(tracked, idx)
 	}
