@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -152,6 +153,48 @@ func TestStart(t *testing.T) {
 	}
 
 	time.Sleep(2000 * time.Millisecond) // wait for updateSyncCommitteeTrackedVals
-	require.LogsContain(t, hook, "\"Started service\" ValidatorIndices=\"[1 2 12 15]\"")
-	require.Equal(t, s.isRunning, true, "monitor is not running")
+	require.LogsContain(t, hook, "\"Starting service\" ValidatorIndices=\"[1 2 12 15]\"")
+	require.Equal(t, s.isLogging, true, "monitor is not running")
+}
+
+func TestInitializePerformanceStructures(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	s := setupService(t)
+	state, err := s.config.HeadFetcher.HeadState(ctx)
+	require.NoError(t, err)
+	epoch := slots.ToEpoch(state.Slot())
+	s.initializePerformanceStructures(state, epoch)
+	require.LogsDoNotContain(t, hook, "Could not fetch starting balance")
+	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
+		1: {
+			balance: 32000000000,
+		},
+		2: {
+			balance: 32000000000,
+		},
+		12: {
+			balance: 32000000000,
+		},
+		15: {
+			balance: 32000000000,
+		},
+	}
+	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
+		1: {
+			startBalance: 32000000000,
+		},
+		2: {
+			startBalance: 32000000000,
+		},
+		12: {
+			startBalance: 32000000000,
+		},
+		15: {
+			startBalance: 32000000000,
+		},
+	}
+
+	require.DeepEqual(t, s.latestPerformance, latestPerformance)
+	require.DeepEqual(t, s.aggregatedPerformance, aggregatedPerformance)
 }

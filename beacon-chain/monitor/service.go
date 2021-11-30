@@ -71,7 +71,7 @@ type Service struct {
 	config    *ValidatorMonitorConfig
 	ctx       context.Context
 	cancel    context.CancelFunc
-	isRunning bool
+	isLogging bool
 
 	// Locks access to TrackedValidators, latestPerformance, aggregatedPerformance,
 	// trackedSyncedCommitteeIndices and lastSyncedEpoch
@@ -114,8 +114,8 @@ func (s *Service) Start() {
 	sort.Slice(tracked, func(i, j int) bool { return tracked[i] < tracked[j] })
 	log.WithFields(logrus.Fields{
 		"ValidatorIndices": tracked,
-	}).Info("Started service")
-	s.isRunning = false
+	}).Info("Starting service")
+	s.isLogging = false
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 
@@ -137,33 +137,40 @@ func (s *Service) Start() {
 		log.WithField("Epoch", epoch).Debug("Synced to head epoch, starting reporting performance")
 
 		s.Lock()
-		for idx := range s.TrackedValidators {
-			balance, err := state.BalanceAtIndex(idx)
-			if err != nil {
-				log.WithError(err).WithField("ValidatorIndex", idx).Error(
-					"Could not fetch starting balance, skipping aggregated logs.")
-				balance = 0
-			}
-			s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{
-				startEpoch:   epoch,
-				startBalance: balance,
-			}
-			s.latestPerformance[idx] = ValidatorLatestPerformance{
-				balance: balance,
-			}
-		}
+
+		s.initializePerformanceStructures(state, epoch)
 		s.Unlock()
 		s.updateSyncCommitteeTrackedVals(state)
 		s.Lock()
-		s.isRunning = true
+		s.isLogging = true
 		s.Unlock()
 		s.monitorRoutine()
 	}()
 }
 
+// initializePerformanceStructures initializes the validatorLatestPerformance
+// and validatorAggregatedPerformance for each tracked validator.
+func (s *Service) initializePerformanceStructures(state state.BeaconState, epoch types.Epoch) {
+	for idx := range s.TrackedValidators {
+		balance, err := state.BalanceAtIndex(idx)
+		if err != nil {
+			log.WithError(err).WithField("ValidatorIndex", idx).Error(
+				"Could not fetch starting balance, skipping aggregated logs.")
+			balance = 0
+		}
+		s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{
+			startEpoch:   epoch,
+			startBalance: balance,
+		}
+		s.latestPerformance[idx] = ValidatorLatestPerformance{
+			balance: balance,
+		}
+	}
+}
+
 // Status retrieves the status of the service.
 func (s *Service) Status() error {
-	if s.isRunning {
+	if s.isLogging {
 		return nil
 	}
 	return errors.New("not running")
@@ -172,7 +179,7 @@ func (s *Service) Status() error {
 // Stop stops the service.
 func (s *Service) Stop() error {
 	defer s.cancel()
-	s.isRunning = false
+	s.isLogging = false
 	return nil
 }
 
