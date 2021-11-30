@@ -146,6 +146,7 @@ func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
 			params.MainnetConfig().SlotsPerEpoch,
 			params.BeaconConfig().SlotsPerEpoch)
 	}
+	require.Equal(t, "devnet", params.BeaconConfig().ConfigName)
 }
 
 func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
