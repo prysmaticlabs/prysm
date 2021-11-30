@@ -2,6 +2,7 @@ package db
 
 import (
 	beacondb "github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/sirupsen/logrus"
@@ -27,6 +28,20 @@ var Commands = &cli.Command{
 			Action: func(cliCtx *cli.Context) error {
 				if err := beacondb.Restore(cliCtx); err != nil {
 					log.Fatalf("Could not restore database: %v", err)
+				}
+				return nil
+			},
+		},
+		{
+			Name:        "migrate-state",
+			Description: `migrate the state database to a new format`,
+			Flags: cmd.WrapFlags([]cli.Flag{
+				cmd.DataDirFlag,
+			}),
+			Before: tos.VerifyTosAcceptedOrPrompt,
+			Action: func(cliCtx *cli.Context) error {
+				if err := kv.MigrateStateDB(cliCtx); err != nil {
+					log.Fatalf("Could not migrate the database: %v", err)
 				}
 				return nil
 			},

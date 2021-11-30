@@ -35,6 +35,7 @@ var (
 	attestationTargetEpochIndicesBucket = []byte("attestation-target-epoch-indices")
 	finalizedBlockRootsIndexBucket      = []byte("finalized-block-roots-index")
 	blockRootValidatorHashesBucket      = []byte("block-root-validator-hashes")
+	stateValidatorHashesBucket          = []byte("state-validator-hashes")
 
 	// Specific item keys.
 	headBlockRootKey          = []byte("head-root")
