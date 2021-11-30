@@ -105,6 +105,7 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []t
 
 // Start waits until the beacon is synced and starts the monitoring system.
 func (s *Service) Start() {
+	s.RLock()
 	tracked := make([]types.ValidatorIndex, len(s.TrackedValidators))
 	i := 0
 	for idx := range s.TrackedValidators {
@@ -115,7 +116,10 @@ func (s *Service) Start() {
 	log.WithFields(logrus.Fields{
 		"ValidatorIndices": tracked,
 	}).Info("Starting service")
+	s.RUnlock()
+	s.Lock()
 	s.isLogging = false
+	s.Unlock()
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 
