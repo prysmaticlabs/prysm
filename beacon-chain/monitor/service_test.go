@@ -103,7 +103,7 @@ func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
 	state, _ := util.DeterministicGenesisStateAltair(t, 1024)
 
 	s.updateSyncCommitteeTrackedVals(state)
-	require.LogsDoNotContain(t, hook, "sync committee assignments will not be reported")
+	require.LogsDoNotContain(t, hook, "Sync committee assignments will not be reported")
 	newTrackedSyncIndices := map[types.ValidatorIndex][]types.CommitteeIndex{
 		1: {1, 3, 4},
 		2: {2},
@@ -135,7 +135,7 @@ func TestStart(t *testing.T) {
 		case stateEvent := <-stateChannel:
 			if stateEvent.Type == statefeed.Synced {
 				_, ok := stateEvent.Data.(*statefeed.SyncedData)
-				require.Equal(t, true, ok, "event feed data is not type *statefeed.SyncedData")
+				require.Equal(t, true, ok, "Event feed data is not type *statefeed.SyncedData")
 			}
 		case <-s.ctx.Done():
 		}

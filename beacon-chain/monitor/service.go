@@ -126,22 +126,22 @@ func (s *Service) Start() {
 		}
 		state, err := s.config.HeadFetcher.HeadState(s.ctx)
 		if err != nil {
-			log.WithError(err).Error("could not get head state")
+			log.WithError(err).Error("Could not get head state")
 			return
 		}
 		if state == nil {
-			log.Error("head state is nil")
+			log.Error("Head state is nil")
 			return
 		}
 		epoch := slots.ToEpoch(state.Slot())
-		log.WithField("Epoch", epoch).Debug("synced to head epoch, starting reporting performance")
+		log.WithField("Epoch", epoch).Debug("Synced to head epoch, starting reporting performance")
 
 		s.Lock()
 		for idx := range s.TrackedValidators {
 			balance, err := state.BalanceAtIndex(idx)
 			if err != nil {
 				log.WithError(err).WithField("ValidatorIndex", idx).Error(
-					"could not fetch starting balance, skipping aggregated logs.")
+					"Could not fetch starting balance, skipping aggregated logs.")
 				balance = 0
 			}
 			s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{
@@ -193,7 +193,7 @@ func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subs
 			log.Debug("Context closed, exiting goroutine")
 			return errContextClosedWhileWaiting
 		case err := <-stateSub.Err():
-			log.WithError(err).Error("could not subscribe to state notifier")
+			log.WithError(err).Error("Could not subscribe to state notifier")
 			return err
 		}
 	}
@@ -218,7 +218,7 @@ func (s *Service) monitorRoutine() {
 			if event.Type == statefeed.BlockProcessed {
 				data, ok := event.Data.(*statefeed.BlockProcessedData)
 				if !ok {
-					log.Error("event feed data is not of type *statefeed.BlockProcessedData")
+					log.Error("Event feed data is not of type *statefeed.BlockProcessedData")
 				} else if data.Verified {
 					// We only process blocks that have been verified
 					s.processBlock(s.ctx, data.SignedBlock)
@@ -229,28 +229,28 @@ func (s *Service) monitorRoutine() {
 			case operation.UnaggregatedAttReceived:
 				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 				if !ok {
-					log.Error("event feed data is not of type *operation.UnAggregatedAttReceivedData")
+					log.Error("Event feed data is not of type *operation.UnAggregatedAttReceivedData")
 				} else {
 					s.processUnaggregatedAttestation(s.ctx, data.Attestation)
 				}
 			case operation.AggregatedAttReceived:
 				data, ok := event.Data.(*operation.AggregatedAttReceivedData)
 				if !ok {
-					log.Error("event feed data is not of type *operation.AggregatedAttReceivedData")
+					log.Error("Event feed data is not of type *operation.AggregatedAttReceivedData")
 				} else {
 					s.processAggregatedAttestation(s.ctx, data.Attestation)
 				}
 			case operation.ExitReceived:
 				data, ok := event.Data.(*operation.ExitReceivedData)
 				if !ok {
-					log.Error("event feed data is not of type *operation.ExitReceivedData")
+					log.Error("Event feed data is not of type *operation.ExitReceivedData")
 				} else {
 					s.processExit(data.Exit)
 				}
 			case operation.SyncCommitteeContributionReceived:
 				data, ok := event.Data.(*operation.SyncCommitteeContributionReceivedData)
 				if !ok {
-					log.Error("event feed data is not of type *operation.SyncCommitteeContributionReceivedData")
+					log.Error("Event feed data is not of type *operation.SyncCommitteeContributionReceivedData")
 				} else {
 					s.processSyncCommitteeContribution(data.Contribution)
 				}
@@ -259,7 +259,7 @@ func (s *Service) monitorRoutine() {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-stateSub.Err():
-			log.WithError(err).Error("could not subscribe to state notifier")
+			log.WithError(err).Error("Could not subscribe to state notifier")
 			return
 		}
 	}
@@ -282,7 +282,7 @@ func (s *Service) updateSyncCommitteeTrackedVals(state state.BeaconState) {
 		syncIdx, err := helpers.CurrentPeriodSyncSubcommitteeIndices(state, idx)
 		if err != nil {
 			log.WithError(err).WithField("ValidatorIndex", idx).Error(
-				"sync committee assignments will not be reported")
+				"Sync committee assignments will not be reported")
 			delete(s.trackedSyncCommitteeIndices, idx)
 		} else if len(syncIdx) == 0 {
 			delete(s.trackedSyncCommitteeIndices, idx)
