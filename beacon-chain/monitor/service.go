@@ -84,8 +84,7 @@ type Service struct {
 	lastSyncedEpoch             types.Epoch
 }
 
-// NewService sets up a new validator monitor instance when given a list of
-// validator indices to track.
+// NewService sets up a new validator monitor instance when given a list of validator indices to track.
 func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []types.ValidatorIndex) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
@@ -103,9 +102,32 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []t
 	return r, nil
 }
 
+// Start sets up the TrackedValidators map and then calls to wait until the beacon is synced.
+func (s *Service) Start() {
+	s.Lock()
+	defer s.Unlock()
+
+	tracked := make([]types.ValidatorIndex, 0, len(s.TrackedValidators))
+	for idx := range s.TrackedValidators {
+		tracked = append(tracked, idx)
+	}
+	sort.Slice(tracked, func(i, j int) bool { return tracked[i] < tracked[j] })
+
+	log.WithFields(logrus.Fields{
+		"ValidatorIndices": tracked,
+	}).Info("Starting service")
+
+	s.isLogging = false
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
+
+	go s.run(stateChannel, stateSub)
+}
+
 // run waits until the beacon is synced and starts the monitoring system.
 func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription) {
 	if stateChannel == nil {
+		log.Error("State state is nil")
 		return
 	}
 
@@ -122,38 +144,21 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 		log.Error("Head state is nil")
 		return
 	}
+
 	epoch := slots.ToEpoch(state.Slot())
 	log.WithField("Epoch", epoch).Info("Synced to head epoch, starting reporting performance")
 
 	s.Lock()
-
 	s.initializePerformanceStructures(state, epoch)
 	s.Unlock()
+
 	s.updateSyncCommitteeTrackedVals(state)
+
 	s.Lock()
 	s.isLogging = true
 	s.Unlock()
+
 	s.monitorRoutine(stateChannel, stateSub)
-}
-
-// Start sets up the TrackedValidators map and then calls to wait until the
-// beacon is synced.
-func (s *Service) Start() {
-	s.Lock()
-	defer s.Unlock()
-	tracked := make([]types.ValidatorIndex, 0, len(s.TrackedValidators))
-	for idx := range s.TrackedValidators {
-		tracked = append(tracked, idx)
-	}
-	sort.Slice(tracked, func(i, j int) bool { return tracked[i] < tracked[j] })
-	log.WithFields(logrus.Fields{
-		"ValidatorIndices": tracked,
-	}).Info("Starting service")
-	s.isLogging = false
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
-
-	go s.run(stateChannel, stateSub)
 }
 
 // initializePerformanceStructures initializes the validatorLatestPerformance
