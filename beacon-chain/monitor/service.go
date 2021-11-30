@@ -20,10 +20,10 @@ import (
 )
 
 var (
-	// Error when event feed data is not statefeed.SyncedData
+	// Error when event feed data is not statefeed.SyncedData.
 	errNotSyncedData = errors.New("Event feed data is not of type *statefeed.SyncedData")
 
-	// Error when the context is closed while waiting for sync
+	// Error when the context is closed while waiting for sync.
 	errContextClosedWhileWaiting = errors.New("Context closed while waiting for beacon to sync to latest Head")
 )
 
@@ -85,7 +85,7 @@ type Service struct {
 }
 
 // NewService sets up a new validator monitor instance when given a list of
-// validator indices to track
+// validator indices to track.
 func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []types.ValidatorIndex) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
@@ -103,7 +103,7 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []t
 	return r, nil
 }
 
-// Start waits until the beacon is synced and starts the monitoring system
+// Start waits until the beacon is synced and starts the monitoring system.
 func (s *Service) Start() {
 	tracked := make([]types.ValidatorIndex, len(s.TrackedValidators))
 	i := 0
@@ -141,7 +141,8 @@ func (s *Service) Start() {
 			balance, err := state.BalanceAtIndex(idx)
 			if err != nil {
 				log.WithError(err).WithField("ValidatorIndex", idx).Error(
-					"could not fetch starting balance, aggregated report will be wrong")
+					"Could not fetch starting balance, skipping aggregated logs.")
+				balance = 0
 			}
 			s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{
 				startEpoch:   epoch,
@@ -156,11 +157,11 @@ func (s *Service) Start() {
 		s.Lock()
 		s.isRunning = true
 		s.Unlock()
-		go s.monitorRoutine()
+		s.monitorRoutine()
 	}()
 }
 
-// Status retrieves the status of the service
+// Status retrieves the status of the service.
 func (s *Service) Status() error {
 	if s.isRunning {
 		return nil
@@ -168,7 +169,7 @@ func (s *Service) Status() error {
 	return errors.New("not running")
 }
 
-// Stop stops the service
+// Stop stops the service.
 func (s *Service) Stop() error {
 	defer s.cancel()
 	s.isRunning = false
