@@ -23,21 +23,21 @@ func UseMergeTestConfig() {
 // Merge testnet.
 func MergeTestnetConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
-	cfg.MinGenesisActiveValidatorCount = 15000
-	cfg.MinGenesisTime = 1637593200
+	cfg.MinGenesisActiveValidatorCount = 25000
+	cfg.MinGenesisTime = 1638288000
 	cfg.GenesisDelay = 300
 	cfg.ConfigName = "Merge"
-	cfg.GenesisForkVersion = []byte{0x30, 0x00, 0x00, 0x69}
-	cfg.AltairForkVersion = []byte{0x31, 0x00, 0x00, 0x70}
+	cfg.GenesisForkVersion = []byte{0x40, 0x00, 0x00, 0x69}
+	cfg.AltairForkVersion = []byte{0x41, 0x00, 0x00, 0x70}
 	cfg.AltairForkEpoch = 4
-	cfg.MergeForkVersion = []byte{0x32, 0x00, 0x00, 0x71}
+	cfg.MergeForkVersion = []byte{0x42, 0x00, 0x00, 0x71}
 	cfg.MergeForkEpoch = 10
-	cfg.TerminalTotalDifficulty = 200000000
+	cfg.TerminalTotalDifficulty = 100000000
 	cfg.ShardingForkVersion = []byte{0x03, 0x00, 0x00, 0x00}
 	cfg.ShardingForkEpoch = math.MaxUint64
 	cfg.SecondsPerETH1Block = 14
-	cfg.DepositChainID = 1337402
-	cfg.DepositNetworkID = 1337402
+	cfg.DepositChainID = 1337502
+	cfg.DepositNetworkID = 1337502
 	cfg.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 	cfg.Eth1FollowDistance = 16
 	return cfg
