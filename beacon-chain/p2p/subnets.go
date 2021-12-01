@@ -33,8 +33,7 @@ const syncLockerVal = 100
 // subscribed to a particular subnet. Then we try to connect
 // with those peers. This method will block until the required amount of
 // peers are found, the method only exits in the event of context timeouts.
-func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
-	index uint64, threshold int) (bool, error) {
+func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, subIndex uint64, threshold uint64) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
