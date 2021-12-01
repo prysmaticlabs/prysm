@@ -375,9 +375,3 @@ message ExecutionPayload {
     // Transactions are encoded with RLP, and so to software that only understands SSZ they are presented as opaque byte arrays.
     repeated bytes transactions = 14  [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 }
-
-message Transaction {
-    oneof transaction_oneof {
-        bytes opaque_transaction = 1 [(ethereum.eth.ext.ssz_max) = "1048576"];
-    }
-}
