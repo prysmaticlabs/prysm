@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -96,6 +97,10 @@ func TestGetSpec(t *testing.T) {
 	config.ProportionalSlashingMultiplierAltair = 69
 	config.InactivityScoreRecoveryRate = 70
 	config.MinSyncCommitteeParticipants = 71
+	config.TerminalBlockHash = common.HexToHash("TerminalBlockHash")
+	config.TerminalBlockHashActivationEpoch = 72
+	config.TerminalTotalDifficulty = 73
+	config.FeeRecipient = common.HexToAddress("FeeRecipient")
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -125,7 +130,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 91, len(resp.Data))
+	assert.Equal(t, 94, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -318,6 +323,14 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x09000000", v)
 		case "TRANSITION_TOTAL_DIFFICULTY":
 			assert.Equal(t, "0", v)
+		case "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH":
+			assert.Equal(t, "72", v)
+		case "TERMINAL_BLOCK_HASH":
+			assert.Equal(t, common.HexToHash("TerminalBlockHash"), common.HexToHash(v))
+		case "TERMINAL_TOTAL_DIFFICULTY":
+			assert.Equal(t, "73", v)
+		case "FeeRecipient":
+			assert.Equal(t, common.HexToAddress("FeeRecipient"), v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

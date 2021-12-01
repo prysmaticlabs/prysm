@@ -224,7 +224,7 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 				tracing.AnnotateError(span, err)
 				return pubsub.ValidationReject, err
 			}
-			set := &bls.SignatureSet{
+			set := &bls.SignatureBatch{
 				Messages:   [][32]byte{root},
 				PublicKeys: []bls.PublicKey{publicKey},
 				Signatures: [][]byte{m.Signature},
@@ -288,7 +288,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 				tracing.AnnotateError(span, err)
 				return pubsub.ValidationIgnore, err
 			}
-			set := &bls.SignatureSet{
+			set := &bls.SignatureBatch{
 				Messages:   [][32]byte{sigRoot},
 				PublicKeys: []bls.PublicKey{aggKey},
 				Signatures: [][]byte{m.Message.Contribution.Signature},
@@ -349,7 +349,7 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 		if err != nil {
 			return err
 		}
-		set := &bls.SignatureSet{
+		set := &bls.SignatureBatch{
 			Messages:   [][32]byte{root},
 			PublicKeys: []bls.PublicKey{publicKey},
 			Signatures: [][]byte{m.SelectionProof},

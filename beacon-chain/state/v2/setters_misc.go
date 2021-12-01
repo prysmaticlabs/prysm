@@ -5,6 +5,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
@@ -169,6 +170,10 @@ func (b *BeaconState) markFieldAsDirty(field stateTypes.FieldIndex) {
 // can be recomputed.
 func (b *BeaconState) addDirtyIndices(index stateTypes.FieldIndex, indices []uint64) {
 	if b.rebuildTrie[index] {
+		return
+	}
+	// Exit early if balance trie computation isn't enabled.
+	if !features.Get().EnableBalanceTrieComputation && index == balances {
 		return
 	}
 	totalIndicesLen := len(b.dirtyIndices[index]) + len(indices)

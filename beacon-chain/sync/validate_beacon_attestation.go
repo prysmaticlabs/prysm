@@ -219,7 +219,7 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 	}
 
 	if features.Get().EnableBatchVerification {
-		set, err := blocks.AttestationSignatureSet(ctx, bs, []*eth.Attestation{a})
+		set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject, err
