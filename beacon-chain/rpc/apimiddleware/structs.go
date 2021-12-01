@@ -325,17 +325,24 @@ type beaconBlockBodyJson struct {
 type signedBeaconBlockContainerV2Json struct {
 	Phase0Block *beaconBlockJson       `json:"phase0_block"`
 	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
+	MergeBlock  *beaconBlockMergeJson  `json:"merge_block"`
 	Signature   string                 `json:"signature" hex:"true"`
 }
 
 type beaconBlockContainerV2Json struct {
 	Phase0Block *beaconBlockJson       `json:"phase0_block"`
 	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
+	MergeBlock  *beaconBlockAltairJson `json:"merge_block"`
 }
 
 type signedBeaconBlockAltairContainerJson struct {
 	Message   *beaconBlockAltairJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
+}
+
+type signedBeaconBlockMergeContainerJson struct {
+	Message   *beaconBlockMergeJson `json:"message"`
+	Signature string                `json:"signature" hex:"true"`
 }
 
 type beaconBlockAltairJson struct {
@@ -344,6 +351,14 @@ type beaconBlockAltairJson struct {
 	ParentRoot    string                     `json:"parent_root" hex:"true"`
 	StateRoot     string                     `json:"state_root" hex:"true"`
 	Body          *beaconBlockBodyAltairJson `json:"body"`
+}
+
+type beaconBlockMergeJson struct {
+	Slot          string                    `json:"slot"`
+	ProposerIndex string                    `json:"proposer_index"`
+	ParentRoot    string                    `json:"parent_root" hex:"true"`
+	StateRoot     string                    `json:"state_root" hex:"true"`
+	Body          *beaconBlockBodyMergeJson `json:"body"`
 }
 
 type beaconBlockBodyAltairJson struct {
@@ -356,6 +371,40 @@ type beaconBlockBodyAltairJson struct {
 	Deposits          []*depositJson             `json:"deposits"`
 	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
 	SyncAggregate     *syncAggregateJson         `json:"sync_aggregate"`
+}
+
+type beaconBlockBodyMergeJson struct {
+	RandaoReveal      string                     `json:"randao_reveal" hex:"true"`
+	Eth1Data          *eth1DataJson              `json:"eth1_data"`
+	Graffiti          string                     `json:"graffiti" hex:"true"`
+	ProposerSlashings []*proposerSlashingJson    `json:"proposer_slashings"`
+	AttesterSlashings []*attesterSlashingJson    `json:"attester_slashings"`
+	Attestations      []*attestationJson         `json:"attestations"`
+	Deposits          []*depositJson             `json:"deposits"`
+	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
+	SyncAggregate     *syncAggregateJson         `json:"sync_aggregate"`
+	ExecutionPayload  *executionPayloadJson      `json:"execution_payload"`
+}
+
+type executionPayloadJson struct {
+	ParentHash    string             `json:"parent_hash" hex:"true"`
+	CoinBase      string             `json:"coinbase" hex:"true"`
+	StateRoot     string             `json:"state_root" hex:"true"`
+	ReceiptRoot   string             `json:"receipt_root" hex:"true"`
+	LogsBloom     string             `json:"logs_bloom" hex:"true"`
+	Random        string             `json:"random" hex:"true"`
+	BlockNumber   string             `json:"block_number"`
+	GasLimit      string             `json:"gas_limit"`
+	GasUsed       string             `json:"gas_used"`
+	TimeStamp     string             `json:"timestamp"`
+	ExtraData     string             `json:"extra_data" hex:"true"`
+	BaseFeePerGas string             `json:"base_fee_per_gas" hex:"true"`
+	BlockHash     string             `json:"block_hash" hex:"true"`
+	Transactions  []*transactionJson `json:"transactions"`
+}
+
+type transactionJson struct {
+	Transaction string `json:"transaction" hex:"true"`
 }
 
 type syncAggregateJson struct {
