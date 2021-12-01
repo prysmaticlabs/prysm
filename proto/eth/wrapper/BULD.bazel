@@ -1,0 +1,32 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+# gazelle:ignore
+proto_library(
+    name = "proto",
+    srcs = ["beacon_wrapper.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/eth/v1:proto",
+        "//proto/eth/v2:proto",
+    ],
+)
+
+go_proto_library(
+    name = "go_proto",
+    importpath = "github.com/prysmaticlabs/prysm/proto/eth/wrapper",
+    proto = ":proto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/eth/v1:go_default_library",
+        "//proto/eth/v2:go_default_library",
+    ],
+)
+
+go_library(
+    name = "go_default_library",
+    embed = [":go_proto"],
+    importpath = "github.com/prysmaticlabs/prysm/proto/eth/wrapper",
+    visibility = ["//visibility:public"],
+)
