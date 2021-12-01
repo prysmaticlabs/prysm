@@ -432,9 +432,18 @@ func (s *Service) dialETH1Nodes(endpoint network.Endpoint) (*ethclient.Client, *
 		closeClients()
 		return nil, nil, err
 	}
+	nID, err := httpClient.NetworkID(s.ctx)
+	if err != nil {
+		closeClients()
+		return nil, nil, err
+	}
 	if cID.Uint64() != params.BeaconConfig().DepositChainID {
 		closeClients()
 		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconConfig().DepositChainID)
+	}
+	if nID.Uint64() != params.BeaconConfig().DepositNetworkID {
+		closeClients()
+		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconConfig().DepositNetworkID)
 	}
 
 	return httpClient, httpRPCClient, nil
