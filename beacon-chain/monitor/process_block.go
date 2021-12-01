@@ -58,7 +58,7 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 	s.processProposedBlock(state, root, blk)
 	s.processAttestations(ctx, state, blk)
 
-	if blk.Slot()%AggregateReportingPeriod*params.BeaconConfig().SlotsPerEpoch == 0 {
+	if blk.Slot()%(AggregateReportingPeriod*params.BeaconConfig().SlotsPerEpoch) == 0 {
 		s.logAggregatedPerformance()
 	}
 }
