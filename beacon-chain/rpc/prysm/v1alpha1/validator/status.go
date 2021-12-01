@@ -24,6 +24,8 @@ import (
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
 var nonExistentIndex = types.ValidatorIndex(^uint64(0))
 
+const numStatesToCheck = 2
+
 // ValidatorStatus returns the validator status of the current epoch.
 // The status response can be one of the following:
 //  DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
@@ -138,13 +140,13 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	}
 	for _, v := range req.ValidatorRequests {
 		// If the validator's last recorded epoch was
-		// less than or equal to 2 epochs ago, this method will not
+		// less than or equal to `numStatesToCheck` epochs ago, this method will not
 		// be able to catch duplicates. This is due to how attestation
 		// inclusion works, where an attestation for the current epoch
 		// is able to included in the current or next epoch. Depending
 		// on which epoch it is included the balance change will be
 		// reflected in the following epoch.
-		if v.Epoch+2 >= currEpoch {
+		if v.Epoch+numStatesToCheck >= currEpoch {
 			resp.Responses = append(resp.Responses,
 				&ethpb.DoppelGangerResponse_ValidatorResponse{
 					PublicKey:       v.PublicKey,
@@ -351,9 +353,12 @@ func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequ
 		// Due to how balances are reflected for individual
 		// validators, we can only effectively determine if a
 		// validator voted or not if we are able to look
-		// back more than 2 epochs into the past.
-		if v.Epoch+2 < headEpoch {
+		// back more than `numStatesToCheck` epochs into the past.
+		if v.Epoch+numStatesToCheck < headEpoch {
 			validatorsAreRecent = false
+			// Zero out response if we encounter non-recent validators to
+			// guard against potential misuse.
+			resp.Responses = []*ethpb.DoppelGangerResponse_ValidatorResponse{}
 			break
 		}
 		resp.Responses = append(resp.Responses,
