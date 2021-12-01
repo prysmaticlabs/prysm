@@ -398,7 +398,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 		saveBlocks(req)
 
-		for i := 0; i < flags.Get().BlockBatchLimitBurstFactor; i++ {
+		for i := uint64(0); i < flags.Get().BlockBatchLimitBurstFactor; i++ {
 			assert.NoError(t, sendRequest(p1, p2, r, req, true, false))
 		}
 

@@ -104,7 +104,7 @@ func TestService_RejectInboundPeersBeyondLimit(t *testing.T) {
 			ScorerParams: &scorers.Config{},
 		}),
 		host: mockp2p.NewTestP2P(t).BHost,
-		cfg:  &Config{MaxPeers: uint(limit)},
+		cfg:  &Config{MaxPeers: uint64(limit)},
 	}
 	var err error
 	s.addrFilter, err = configureFilter(&Config{})
