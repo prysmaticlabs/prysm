@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	bip39 "github.com/prysmaticlabs/bazel-go-ethereum/bazel-bazel-go-ethereum/external/com_github_tyler_smith_go_bip39"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
