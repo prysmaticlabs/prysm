@@ -108,7 +108,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	}
 
 	currEpoch := slots.ToEpoch(headState.Slot())
-	isRecent, resp := vs.checkValidatorsAreRecent(currEpoch, req)
+	isRecent, resp := checkValidatorsAreRecent(currEpoch, req)
 	// If all provided keys are recent we skip this check
 	// as we are unable to effectively determine if a doppelganger
 	// is active.
@@ -342,7 +342,7 @@ func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.
 	return transition.ProcessSlots(ctx, retState, retState.Slot()+1)
 }
 
-func (vs *Server) checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {
+func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {
 	validatorsAreRecent := true
 	resp := &ethpb.DoppelGangerResponse{
 		Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
@@ -352,16 +352,15 @@ func (vs *Server) checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.Dop
 		// validators, we can only effectively determine if a
 		// validator voted or not if we are able to look
 		// back more than 2 epochs into the past.
-		if v.Epoch+2 >= headEpoch {
-			resp.Responses = append(resp.Responses,
-				&ethpb.DoppelGangerResponse_ValidatorResponse{
-					PublicKey:       v.PublicKey,
-					DuplicateExists: false,
-				})
-			continue
+		if v.Epoch+2 < headEpoch {
+			validatorsAreRecent = false
+			break
 		}
-		validatorsAreRecent = false
-		break
+		resp.Responses = append(resp.Responses,
+			&ethpb.DoppelGangerResponse_ValidatorResponse{
+				PublicKey:       v.PublicKey,
+				DuplicateExists: false,
+			})
 	}
 	return validatorsAreRecent, resp
 }
