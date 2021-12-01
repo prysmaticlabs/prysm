@@ -1,5 +1,3 @@
-// +build !minimal
-
 package customtypes
 
 import (
