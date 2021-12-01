@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	iaddr "github.com/ipfs/go-ipfs-addr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -454,11 +453,7 @@ func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 }
 
 func multiAddrFromString(address string) (ma.Multiaddr, error) {
-	addr, err := iaddr.ParseString(address)
-	if err != nil {
-		return nil, err
-	}
-	return addr.Multiaddr(), nil
+	return ma.NewMultiaddr(address)
 }
 
 func udpVersionFromIP(ipAddr net.IP) string {

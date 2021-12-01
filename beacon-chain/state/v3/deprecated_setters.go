@@ -6,17 +6,17 @@ import (
 )
 
 // SetPreviousEpochAttestations is not supported for HF1 beacon state.
-func (b *BeaconState) SetPreviousEpochAttestations(val []*ethpb.PendingAttestation) error {
+func (*BeaconState) SetPreviousEpochAttestations(_ []*ethpb.PendingAttestation) error {
 	return errors.New("SetPreviousEpochAttestations is not supported for version Merge beacon state")
 }
 
 // SetCurrentEpochAttestations is not supported for HF1 beacon state.
-func (b *BeaconState) SetCurrentEpochAttestations(val []*ethpb.PendingAttestation) error {
+func (*BeaconState) SetCurrentEpochAttestations(_ []*ethpb.PendingAttestation) error {
 	return errors.New("SetCurrentEpochAttestations is not supported for version Merge beacon state")
 }
 
 // AppendCurrentEpochAttestations is not supported for HF1 beacon state.
-func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error {
+func (*BeaconState) AppendCurrentEpochAttestations(_ *ethpb.PendingAttestation) error {
 	return errors.New("AppendCurrentEpochAttestations is not supported for version Merge beacon state")
 }
 

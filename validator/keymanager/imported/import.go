@@ -28,10 +28,8 @@ func (km *Keymanager) ImportKeystores(
 		return nil, errors.New("no passwords provided for keystores")
 	} else if len(passwords) == 1 {
 		singlePasswordForAll = passwords[0]
-	} else {
-		if len(passwords) != len(keystores) {
-			return nil, errors.New("number of passwords does not match number of keystores")
-		}
+	} else if len(passwords) != len(keystores) {
+		return nil, errors.New("number of passwords does not match number of keystores")
 	}
 
 	decryptor := keystorev4.New()
