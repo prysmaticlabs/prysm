@@ -65,7 +65,19 @@ func setupService(t *testing.T) *Service {
 		},
 	}
 	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
-		1:  {},
+		1: {
+			startEpoch:                     0,
+			startBalance:                   31700000000,
+			totalAttestedCount:             12,
+			totalRequestedCount:            15,
+			totalDistance:                  14,
+			totalCorrectHead:               8,
+			totalCorrectSource:             11,
+			totalCorrectTarget:             12,
+			totalProposedCount:             1,
+			totalSyncComitteeContributions: 0,
+			totalSyncComitteeAggregations:  0,
+		},
 		2:  {},
 		12: {},
 		15: {},
