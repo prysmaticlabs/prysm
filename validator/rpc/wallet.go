@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	bip39 "github.com/prysmaticlabs/bazel-go-ethereum/bazel-bazel-go-ethereum/external/com_github_tyler_smith_go_bip39"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
@@ -216,7 +217,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 // we return an empty response with no error. If the password is incorrect for a single keystore,
 // we return an appropriate error.
 func (s *Server) ValidateKeystores(
-	ctx context.Context, req *pb.ValidateKeystoresRequest,
+	_ context.Context, req *pb.ValidateKeystoresRequest,
 ) (*emptypb.Empty, error) {
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
