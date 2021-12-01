@@ -103,7 +103,6 @@ require (
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/go-logr/logr v0.2.1 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
-	github.com/ipfs/go-ipfs-addr v0.0.1
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	golang.org/x/sys v0.0.0-20211015200801-69063c4bb744 // indirect
