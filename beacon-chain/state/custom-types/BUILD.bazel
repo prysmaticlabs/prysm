@@ -4,8 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = [
         "state_arrays.go",
-        "state_arrays_minimal.go" # keep
-    ],
+    ] + select({
+        "//config:mainnet": ["sizes.go"],
+        "//config:minimal": ["sizes_minimal.go"],
+    }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types",
     visibility = ["//visibility:public"],
     deps = ["@com_github_ferranbt_fastssz//:go_default_library"],

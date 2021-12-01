@@ -8,15 +8,6 @@ import (
 	fssz "github.com/ferranbt/fastssz"
 )
 
-const (
-	// Number of block roots in the beacon state.
-	BlockRootsSize = 8192
-	// Number of state roots in the beacon state.
-	StateRootsSize = 8192
-	// Number of randao mixes in the beacon state,
-	RandaoMixesSize = 65536
-)
-
 var _ fssz.HashRoot = (Byte32)([32]byte{})
 var _ fssz.Marshaler = (*Byte32)(nil)
 var _ fssz.Unmarshaler = (*Byte32)(nil)

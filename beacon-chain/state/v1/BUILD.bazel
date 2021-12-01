@@ -8,7 +8,7 @@ go_library(
     srcs = [
         ":ssz_generated_files",
         "beacon_state.go",
-        "beacon_state_minimal.go",
+        "beacon_state_minimal.go", # keep
         "doc.go",
         "field_roots.go",
         "getters_attestation.go",
