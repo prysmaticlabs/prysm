@@ -17,7 +17,7 @@ func TestScorers_Service_Init(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 
 	t.Run("default config", func(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
@@ -82,7 +82,7 @@ func TestScorers_Service_Score(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 
 	peerScores := func(s *scorers.Service, pids []peer.ID) map[string]float64 {
 		scores := make(map[string]float64, len(pids))

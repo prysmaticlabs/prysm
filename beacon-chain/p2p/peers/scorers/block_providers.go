@@ -85,7 +85,7 @@ func newBlockProviderScorer(store *peerdata.Store, config *BlockProviderScorerCo
 	if scorer.config.StalePeerRefreshInterval == 0 {
 		scorer.config.StalePeerRefreshInterval = DefaultBlockProviderStalePeerRefreshInterval
 	}
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 	scorer.maxScore = 1.0
 	if batchSize > 0 {
 		totalBatches := float64(scorer.config.ProcessedBlocksCap / batchSize)
@@ -110,7 +110,7 @@ func (s *BlockProviderScorer) score(pid peer.ID) float64 {
 	if !ok || time.Since(peerData.BlockProviderUpdated) >= s.config.StalePeerRefreshInterval {
 		return s.maxScore
 	}
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 	if batchSize > 0 {
 		processedBatches := float64(peerData.ProcessedBlocks / batchSize)
 		score += processedBatches * s.config.ProcessedBatchWeight

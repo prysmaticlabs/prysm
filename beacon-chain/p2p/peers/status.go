@@ -696,7 +696,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch types.Epoch) (typ
 
 // BestNonFinalized returns the highest known epoch, higher than ours,
 // and is shared by at least minPeers.
-func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types.Epoch, []peer.ID) {
+func (p *Status) BestNonFinalized(minPeers uint64, ourHeadEpoch types.Epoch) (types.Epoch, []peer.ID) {
 	connected := p.Connected()
 	epochVotes := make(map[types.Epoch]uint64)
 	pidEpoch := make(map[peer.ID]types.Epoch, len(connected))

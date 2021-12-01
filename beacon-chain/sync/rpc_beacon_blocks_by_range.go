@@ -43,7 +43,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 	// The initial count for the first batch to be returned back.
 	count := m.Count
-	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
+	allowedBlocksPerSecond := flags.Get().BlockBatchLimit
 	if count > allowedBlocksPerSecond {
 		count = allowedBlocksPerSecond
 	}

@@ -21,7 +21,7 @@ func TestScorers_BlockProvider_Score(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 	tests := []struct {
 		name   string
 		update func(scorer *scorers.BlockProviderScorer)
@@ -160,7 +160,7 @@ func TestScorers_BlockProvider_WeightSorted(t *testing.T) {
 		},
 	})
 	scorer := peerStatuses.Scorers().BlockProviderScorer()
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 	r := rand.NewDeterministicGenerator()
 
 	reverse := func(pids []peer.ID) []peer.ID {
@@ -214,7 +214,7 @@ func TestScorers_BlockProvider_WeightSorted(t *testing.T) {
 }
 
 func TestScorers_BlockProvider_Sorted(t *testing.T) {
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 	tests := []struct {
 		name   string
 		update func(s *scorers.BlockProviderScorer)
@@ -309,7 +309,7 @@ func TestScorers_BlockProvider_Sorted(t *testing.T) {
 func TestScorers_BlockProvider_MaxScore(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 
 	tests := []struct {
 		name string
@@ -347,7 +347,7 @@ func TestScorers_BlockProvider_MaxScore(t *testing.T) {
 func TestScorers_BlockProvider_FormatScorePretty(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 	format := "[%0.1f%%, raw: %0.2f,  blocks: %d/1280]"
 
 	tests := []struct {
