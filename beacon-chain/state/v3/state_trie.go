@@ -219,7 +219,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	}
 
 	for field := range b.dirtyFields {
-		root, err := b.rootSelector(ctx, field)
+		root, err := b.rootSelector(field)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -256,7 +256,7 @@ func (b *BeaconState) IsNil() bool {
 	return b == nil || b.state == nil
 }
 
-func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
+func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
