@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "enums.go",
         "v1alpha1_to_v1.go",
+        "v1alpha1_to_v2.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/migration",
     visibility = ["//visibility:public"],
