@@ -106,9 +106,17 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
+
+	currEpoch := slots.ToEpoch(headState.Slot())
+	isRecent, resp := vs.checkValidatorsAreRecent(currEpoch, req)
+	// If all provided keys are recent we skip this check
+	// as we are unable to effectively determine if a doppelganger
+	// is active.
+	if isRecent {
+		return resp, nil
+	}
 	// We walk back from the current head state to the state at the beginning of the previous 2 epochs.
 	// Where S_i , i := 0,1,2. i = 0 would signify the current head state in this epoch.
-	currEpoch := slots.ToEpoch(headState.Slot())
 	previousEpoch, err := currEpoch.SafeSub(1)
 	if err != nil {
 		previousEpoch = currEpoch
@@ -125,7 +133,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get older state")
 	}
-	resp := &ethpb.DoppelGangerResponse{
+	resp = &ethpb.DoppelGangerResponse{
 		Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
 	}
 	for _, v := range req.ValidatorRequests {
@@ -322,6 +330,42 @@ func (vs *Server) validatorStatus(
 	}
 }
 
+func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.Epoch) (state.BeaconState, error) {
+	endSlot, err := slots.EpochEnd(epoch)
+	if err != nil {
+		return nil, err
+	}
+	retState, err := vs.StateGen.StateBySlot(ctx, endSlot)
+	if err != nil {
+		return nil, err
+	}
+	return transition.ProcessSlots(ctx, retState, retState.Slot()+1)
+}
+
+func (vs *Server) checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {
+	validatorsAreRecent := true
+	resp := &ethpb.DoppelGangerResponse{
+		Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
+	}
+	for _, v := range req.ValidatorRequests {
+		// Due to how balances are reflected for individual
+		// validators, we can only effectively determine if a
+		// validator voted or not if we are able to look
+		// back more than 2 epochs into the past.
+		if v.Epoch+2 >= headEpoch {
+			resp.Responses = append(resp.Responses,
+				&ethpb.DoppelGangerResponse_ValidatorResponse{
+					PublicKey:       v.PublicKey,
+					DuplicateExists: false,
+				})
+			continue
+		}
+		validatorsAreRecent = false
+		break
+	}
+	return validatorsAreRecent, resp
+}
+
 func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, types.ValidatorIndex, error) {
 	if headState == nil || headState.IsNil() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
@@ -370,16 +414,4 @@ func depositStatus(depositOrBalance uint64) ethpb.ValidatorStatus {
 		return ethpb.ValidatorStatus_PARTIALLY_DEPOSITED
 	}
 	return ethpb.ValidatorStatus_DEPOSITED
-}
-
-func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.Epoch) (state.BeaconState, error) {
-	endSlot, err := slots.EpochEnd(epoch)
-	if err != nil {
-		return nil, err
-	}
-	retState, err := vs.StateGen.StateBySlot(ctx, endSlot)
-	if err != nil {
-		return nil, err
-	}
-	return transition.ProcessSlots(ctx, retState, retState.Slot()+1)
 }
