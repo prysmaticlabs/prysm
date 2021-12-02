@@ -18,7 +18,12 @@ import (
 )
 
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MinimalSpecConfig()
+	cfg.SlotsPerHistoricalRoot = 8192
+	cfg.EpochsPerHistoricalVector = 65536
+	params.OverrideBeaconConfig(cfg)
+
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
 	customState, err := v1.InitializeFromProto(genesis)
