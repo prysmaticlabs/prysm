@@ -19,10 +19,10 @@ import (
 func ExportStandardProtectionJSON(
 	ctx context.Context,
 	validatorDB db.Database,
-	keysToFilter ...[]byte,
+	filteredKeys ...[]byte,
 ) (*format.EIPSlashingProtectionFormat, error) {
-	keysFilterMap := make(map[string]bool, len(keysToFilter))
-	for _, k := range keysToFilter {
+	keysFilterMap := make(map[string]bool, len(filteredKeys))
+	for _, k := range filteredKeys {
 		keysFilterMap[string(k)] = true
 	}
 	interchangeJSON := &format.EIPSlashingProtectionFormat{}
@@ -58,7 +58,7 @@ func ExportStandardProtectionJSON(
 		len(proposedPublicKeys), "Extracting signed blocks by validator public key",
 	)
 	for _, pubKey := range proposedPublicKeys {
-		if _, ok := keysFilterMap[string(pubKey[:])]; len(keysToFilter) > 0 && !ok {
+		if _, ok := keysFilterMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
@@ -84,7 +84,7 @@ func ExportStandardProtectionJSON(
 		len(attestedPublicKeys), "Extracting signed attestations by validator public key",
 	)
 	for _, pubKey := range attestedPublicKeys {
-		if _, ok := keysFilterMap[string(pubKey[:])]; len(keysToFilter) > 0 && !ok {
+		if _, ok := keysFilterMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])

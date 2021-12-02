@@ -63,7 +63,7 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 	assert.Equal(t, int(params.BeaconConfig().MinGenesisActiveValidatorCount)+100, int(vals), "mainnet genesis active count isn't accurate")
 }
 
-func TestLoggingParameters(t *testing.T) {
+func TestLoggingParameters(_ *testing.T) {
 	logGossipParameters("testing", nil)
 	logGossipParameters("testing", &pubsub.TopicScoreParams{})
 	// Test out actual gossip parameters.
