@@ -16,24 +16,19 @@ type importKeystoresRequestJson struct {
 }
 
 type importKeystoresResponseJson struct {
-	Statuses []*importKeystoresStatusJson `json:"statuses"`
-}
-
-type importKeystoresStatusJson struct {
-	KeystorePath string `json:"keystore_path"`
-	Status       string `json:"status"`
+	Statuses []*statusJson `json:"statuses"`
 }
 
 type deleteKeystoresRequestJson struct {
 	PublicKeys []string `json:"public_keys" hex:"true"`
 }
 
-type deleteKeystoresStatusJson struct {
+type statusJson struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
 }
 
 type deleteKeystoresResponseJson struct {
-	Statuses           []*deleteKeystoresStatusJson `json:"statuses"`
-	SlashingProtection string                       `json:"slashing_protection"`
+	Statuses           []*statusJson `json:"statuses"`
+	SlashingProtection string        `json:"slashing_protection"`
 }
