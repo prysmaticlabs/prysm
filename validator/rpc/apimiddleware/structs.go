@@ -21,7 +21,7 @@ type importKeystoresResponseJson struct {
 
 type importKeystoresStatusJson struct {
 	KeystorePath string `json:"keystore_path"`
-	Status       string `json:"status" enum:"true"`
+	Status       string `json:"status"`
 }
 
 type deleteKeystoresRequestJson struct {
@@ -29,7 +29,7 @@ type deleteKeystoresRequestJson struct {
 }
 
 type deleteKeystoresStatusJson struct {
-	Status  string `json:"status" enum:"true"`
+	Status  string `json:"status"`
 	Message string `json:"message"`
 }
 
