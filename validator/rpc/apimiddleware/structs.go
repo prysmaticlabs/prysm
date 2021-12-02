@@ -10,9 +10,9 @@ type keystoreJson struct {
 }
 
 type importKeystoresRequestJson struct {
-	GenesisTime           string `json:"genesis_time" time:"true"`
-	GenesisValidatorsRoot string `json:"genesis_validators_root" hex:"true"`
-	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
+	Keystores          []string `json:"keystores"`
+	Passwords          []string `json:"passwords"`
+	SlashingProtection string   `json:"slashing_protection"`
 }
 
 type importKeystoresResponseJson struct {
