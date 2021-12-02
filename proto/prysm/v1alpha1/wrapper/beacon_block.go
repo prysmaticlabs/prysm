@@ -84,9 +84,14 @@ func (w Phase0SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 	return w.b, nil
 }
 
-// PbAltairBlock returns the underlying protobuf object.
+// PbAltairBlock is a stub.
 func (w Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, errors.New("unsupported altair block")
+}
+
+// PbMergeBlock is a stub.
+func (w Phase0SignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
+	return nil, errors.New("unsupported merge block")
 }
 
 // Version of the underlying protobuf object.
@@ -264,6 +269,11 @@ func (w Phase0BeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
 
+// ExecutionPayload is a stub.
+func (w Phase0BeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
+	return nil, errors.New("ExecutionPayload is not supported in phase 0 block body")
+}
+
 var (
 	// ErrUnsupportedPhase0Block is returned when accessing a phase0 block from an altair wrapped
 	// block.
@@ -348,6 +358,11 @@ func (w altairSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, 
 // PbPhase0Block is a stub.
 func (w altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedPhase0Block
+}
+
+// PbMergeBlock is a stub.
+func (w altairSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
+	return nil, errors.New("unsupported merge block")
 }
 
 // Version of the underlying protobuf object.
@@ -531,4 +546,275 @@ func (w altairBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 // body.
 func (w altairBeaconBlockBody) Proto() proto.Message {
 	return w.b
+}
+
+// ExecutionPayload is a stub.
+func (w altairBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
+	return nil, errors.New("ExecutionPayload is not supported in altair block body")
+}
+
+// mergeSignedBeaconBlock is a convenience wrapper around a merge beacon block
+// object. This wrapper allows us to conform to a common interface so that beacon
+// blocks for future forks can also be applied across prysm without issues.
+type mergeSignedBeaconBlock struct {
+	b *eth.SignedBeaconBlockMerge
+}
+
+// WrappedMergeSignedBeaconBlock is constructor which wraps a protobuf merge block with the block wrapper.
+func WrappedMergeSignedBeaconBlock(b *eth.SignedBeaconBlockMerge) (block.SignedBeaconBlock, error) {
+	w := mergeSignedBeaconBlock{b: b}
+	if w.IsNil() {
+		return nil, ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// Signature returns the respective block signature.
+func (w mergeSignedBeaconBlock) Signature() []byte {
+	return w.b.Signature
+}
+
+// Block returns the underlying beacon block object.
+func (w mergeSignedBeaconBlock) Block() block.BeaconBlock {
+	return mergeBeaconBlock{b: w.b.Block}
+}
+
+// IsNil checks if the underlying beacon block is nil.
+func (w mergeSignedBeaconBlock) IsNil() bool {
+	return w.b == nil || w.b.Block == nil
+}
+
+// Copy performs a deep copy of the signed beacon block object.
+func (w mergeSignedBeaconBlock) Copy() block.SignedBeaconBlock {
+	return mergeSignedBeaconBlock{b: eth.CopySignedBeaconBlockMerge(w.b)}
+}
+
+// MarshalSSZ marshals the signed beacon block to its relevant ssz form.
+func (w mergeSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
+	return w.b.MarshalSSZ()
+}
+
+// MarshalSSZTo marshals the signed beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w mergeSignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized signed block
+func (w mergeSignedBeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the signed beacon block from its relevant ssz
+// form.
+func (w mergeSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
+}
+
+// Proto returns the block in its underlying protobuf interface.
+func (w mergeSignedBeaconBlock) Proto() proto.Message {
+	return w.b
+}
+
+// PbMergeBlock returns the underlying protobuf object.
+func (w mergeSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
+	return w.b, nil
+}
+
+// PbPhase0Block is a stub.
+func (w mergeSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
+	return nil, ErrUnsupportedPhase0Block
+}
+
+// PbAltairBlock returns the underlying protobuf object.
+func (w mergeSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
+	return nil, errors.New("unsupported altair block")
+}
+
+// Version of the underlying protobuf object.
+func (w mergeSignedBeaconBlock) Version() int {
+	return version.Merge
+}
+
+func (w mergeSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
+	root, err := w.b.Block.Body.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not hash block")
+	}
+
+	return &eth.SignedBeaconBlockHeader{
+		Header: &eth.BeaconBlockHeader{
+			Slot:          w.b.Block.Slot,
+			ProposerIndex: w.b.Block.ProposerIndex,
+			ParentRoot:    w.b.Block.ParentRoot,
+			StateRoot:     w.b.Block.StateRoot,
+			BodyRoot:      root[:],
+		},
+		Signature: w.Signature(),
+	}, nil
+}
+
+// mergeBeaconBlock is the wrapper for the actual block.
+type mergeBeaconBlock struct {
+	b *eth.BeaconBlockMerge
+}
+
+// WrappedMergeBeaconBlock is constructor which wraps a protobuf merge object
+// with the block wrapper.
+func WrappedMergeBeaconBlock(b *eth.BeaconBlockMerge) (block.BeaconBlock, error) {
+	w := mergeBeaconBlock{b: b}
+	if w.IsNil() {
+		return nil, ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// Slot returns the respective slot of the block.
+func (w mergeBeaconBlock) Slot() types.Slot {
+	return w.b.Slot
+}
+
+// ProposerIndex returns proposer index of the beacon block.
+func (w mergeBeaconBlock) ProposerIndex() types.ValidatorIndex {
+	return w.b.ProposerIndex
+}
+
+// ParentRoot returns the parent root of beacon block.
+func (w mergeBeaconBlock) ParentRoot() []byte {
+	return w.b.ParentRoot
+}
+
+// StateRoot returns the state root of the beacon block.
+func (w mergeBeaconBlock) StateRoot() []byte {
+	return w.b.StateRoot
+}
+
+// Body returns the underlying block body.
+func (w mergeBeaconBlock) Body() block.BeaconBlockBody {
+	return mergeBeaconBlockBody{b: w.b.Body}
+}
+
+// IsNil checks if the beacon block is nil.
+func (w mergeBeaconBlock) IsNil() bool {
+	return w.b == nil
+}
+
+// HashTreeRoot returns the ssz root of the block.
+func (w mergeBeaconBlock) HashTreeRoot() ([32]byte, error) {
+	return w.b.HashTreeRoot()
+}
+
+// MarshalSSZ marshals the block into its respective
+// ssz form.
+func (w mergeBeaconBlock) MarshalSSZ() ([]byte, error) {
+	return w.b.MarshalSSZ()
+}
+
+// MarshalSSZTo marshals the beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w mergeBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized block.
+func (w mergeBeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the beacon block from its relevant ssz
+// form.
+func (w mergeBeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
+}
+
+// Proto returns the underlying block object in its
+// proto form.
+func (w mergeBeaconBlock) Proto() proto.Message {
+	return w.b
+}
+
+// Version of the underlying protobuf object.
+func (w mergeBeaconBlock) Version() int {
+	return version.Merge
+}
+
+// mergeBeaconBlockBody is a wrapper of a beacon block body.
+type mergeBeaconBlockBody struct {
+	b *eth.BeaconBlockBodyMerge
+}
+
+// WrappedMergeBeaconBlockBody is constructor which wraps a protobuf merge object
+// with the block wrapper.
+func WrappedMergeBeaconBlockBody(b *eth.BeaconBlockBodyMerge) (block.BeaconBlockBody, error) {
+	w := mergeBeaconBlockBody{b: b}
+	if w.IsNil() {
+		return nil, ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// RandaoReveal returns the randao reveal from the block body.
+func (w mergeBeaconBlockBody) RandaoReveal() []byte {
+	return w.b.RandaoReveal
+}
+
+// Eth1Data returns the eth1 data in the block.
+func (w mergeBeaconBlockBody) Eth1Data() *eth.Eth1Data {
+	return w.b.Eth1Data
+}
+
+// Graffiti returns the graffiti in the block.
+func (w mergeBeaconBlockBody) Graffiti() []byte {
+	return w.b.Graffiti
+}
+
+// ProposerSlashings returns the proposer slashings in the block.
+func (w mergeBeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
+	return w.b.ProposerSlashings
+}
+
+// AttesterSlashings returns the attester slashings in the block.
+func (w mergeBeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
+	return w.b.AttesterSlashings
+}
+
+// Attestations returns the stored attestations in the block.
+func (w mergeBeaconBlockBody) Attestations() []*eth.Attestation {
+	return w.b.Attestations
+}
+
+// Deposits returns the stored deposits in the block.
+func (w mergeBeaconBlockBody) Deposits() []*eth.Deposit {
+	return w.b.Deposits
+}
+
+// VoluntaryExits returns the voluntary exits in the block.
+func (w mergeBeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
+	return w.b.VoluntaryExits
+}
+
+// SyncAggregate returns the sync aggregate in the block.
+func (w mergeBeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
+	return w.b.SyncAggregate, nil
+}
+
+// IsNil checks if the block body is nil.
+func (w mergeBeaconBlockBody) IsNil() bool {
+	return w.b == nil
+}
+
+// HashTreeRoot returns the ssz root of the block body.
+func (w mergeBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
+	return w.b.HashTreeRoot()
+}
+
+// Proto returns the underlying proto form of the block
+// body.
+func (w mergeBeaconBlockBody) Proto() proto.Message {
+	return w.b
+}
+
+// ExecutionPayload returns the Execution payload of the block body.
+func (w mergeBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
+	return w.b.ExecutionPayload, nil
 }

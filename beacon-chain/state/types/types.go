@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
@@ -18,6 +19,10 @@ const (
 	// CompositeArray represents a variable length array with
 	// a non primitive type.
 	CompositeArray
+	// CompressedArray represents a variable length array which
+	// can pack multiple elements into a leaf of the underlying
+	// trie.
+	CompressedArray
 )
 
 // String returns the name of the field index.
@@ -54,12 +59,12 @@ func (f FieldIndex) String(stateVersion int) string {
 	case Slashings:
 		return "slashings"
 	case PreviousEpochAttestations:
-		if version.Altair == stateVersion {
+		if version.Altair == stateVersion || version.Merge == stateVersion {
 			return "previousEpochParticipationBits"
 		}
 		return "previousEpochAttestations"
 	case CurrentEpochAttestations:
-		if version.Altair == stateVersion {
+		if version.Altair == stateVersion || version.Merge == stateVersion {
 			return "currentEpochParticipationBits"
 		}
 		return "currentEpochAttestations"
@@ -77,8 +82,21 @@ func (f FieldIndex) String(stateVersion int) string {
 		return "currentSyncCommittee"
 	case NextSyncCommittee:
 		return "nextSyncCommittee"
+	case LatestExecutionPayloadHeader:
+		return "latestExecutionPayloadHeader"
 	default:
 		return ""
+	}
+}
+
+// ElemsInChunk returns the number of elements in the chunk (number of
+// elements that are able to be packed).
+func (f FieldIndex) ElemsInChunk() (uint64, error) {
+	switch f {
+	case Balances:
+		return 4, nil
+	default:
+		return 0, errors.Errorf("field %d doesn't support element compression", f)
 	}
 }
 
@@ -114,12 +132,13 @@ const (
 	InactivityScores
 	CurrentSyncCommittee
 	NextSyncCommittee
+	// State fields added in Merge.
+	LatestExecutionPayloadHeader
 )
 
 // Altair fields which replaced previous phase 0 fields.
 const (
-	// Epoch Attestations is switched with participation bits in
-	// Altair.
+	// Epoch Attestations is switched with participation bits in Altair.
 	PreviousEpochParticipationBits = PreviousEpochAttestations
 	CurrentEpochParticipationBits  = CurrentEpochAttestations
 )

@@ -1170,25 +1170,10 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				mockGen := stategen.NewMockService()
 
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
-				// Previous Epoch State
-				for i := 10; i < 15; i++ {
-					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
-					assert.NoError(t, err)
-					// Add 100 gwei, to mock an active validator
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-1000000000))
-				}
-
-				// Older Epoch State
-				for i := 10; i < 15; i++ {
-					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
-					assert.NoError(t, err)
-					// Add 200 gwei, to mock an active validator
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-2000000000))
-				}
+				hs, _, _, keys := createStateSetup(t, 4, mockGen)
 
 				vs := &Server{
-					StateGen: mockGen,
+					StateGen: nil,
 					HeadFetcher: &mockChain.ChainService{
 						State: hs,
 					},

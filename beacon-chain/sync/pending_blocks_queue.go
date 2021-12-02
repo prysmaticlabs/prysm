@@ -88,16 +88,29 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			s.pendingQueueLock.RLock()
-			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
-			s.pendingQueueLock.RUnlock()
-
 			blkRoot, err := b.Block().HashTreeRoot()
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				span.End()
 				return err
 			}
+			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
+			// No need to process the same block twice.
+			if inDB {
+				s.pendingQueueLock.Lock()
+				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+					s.pendingQueueLock.Unlock()
+					return err
+				}
+				s.pendingQueueLock.Unlock()
+				span.End()
+				continue
+			}
+
+			s.pendingQueueLock.RLock()
+			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
+			s.pendingQueueLock.RUnlock()
+
 			parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block().ParentRoot()))
 			blockIsBad := s.hasBadBlock(blkRoot)
 			// Check if parent is a bad block.
@@ -117,12 +130,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			inDB := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
+			parentInDb := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
 			hasPeer := len(pids) != 0
 
 			// Only request for missing parent block if it's not in beaconDB, not in pending cache
 			// and has peer in the peer list.
-			if !inPendingQueue && !inDB && hasPeer {
+			if !inPendingQueue && !parentInDb && hasPeer {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block().Slot(),
 					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block().ParentRoot())),
@@ -133,7 +146,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			if !inDB {
+			if !parentInDb {
 				span.End()
 				continue
 			}
@@ -167,6 +180,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			s.pendingQueueLock.Lock()
 			if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+				s.pendingQueueLock.Unlock()
 				return err
 			}
 			s.pendingQueueLock.Unlock()
@@ -321,6 +335,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 	}
 	if len(newBlks) == 0 {
 		s.slotToPendingBlocks.Delete(slotToCacheKey(slot))
+		delete(s.seenPendingBlocks, r)
 		return nil
 	}
 

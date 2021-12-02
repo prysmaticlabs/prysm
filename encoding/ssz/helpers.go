@@ -8,6 +8,7 @@ import (
 	"github.com/minio/sha256-simd"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 const bytesPerChunk = 32
@@ -110,6 +111,53 @@ func Pack(serializedItems [][]byte) ([][]byte, error) {
 		lastChunk = append(lastChunk, 0)
 	}
 	chunks[len(chunks)-1] = lastChunk
+	return chunks, nil
+}
+
+// PackByChunk a given byte array's final chunk with zeroes if needed.
+func PackByChunk(serializedItems [][]byte) ([][bytesPerChunk]byte, error) {
+	emptyChunk := [bytesPerChunk]byte{}
+	// If there are no items, we return an empty chunk.
+	if len(serializedItems) == 0 {
+		return [][bytesPerChunk]byte{emptyChunk}, nil
+	} else if len(serializedItems[0]) == bytesPerChunk {
+		// If each item has exactly BYTES_PER_CHUNK length, we return the list of serialized items.
+		chunks := make([][bytesPerChunk]byte, 0, len(serializedItems))
+		for _, c := range serializedItems {
+			chunks = append(chunks, bytesutil.ToBytes32(c))
+		}
+		return chunks, nil
+	}
+	// We flatten the list in order to pack its items into byte chunks correctly.
+	var orderedItems []byte
+	for _, item := range serializedItems {
+		orderedItems = append(orderedItems, item...)
+	}
+	// If all our serialized item slices are length zero, we
+	// exit early.
+	if len(orderedItems) == 0 {
+		return [][bytesPerChunk]byte{emptyChunk}, nil
+	}
+	numItems := len(orderedItems)
+	var chunks [][bytesPerChunk]byte
+	for i := 0; i < numItems; i += bytesPerChunk {
+		j := i + bytesPerChunk
+		// We create our upper bound index of the chunk, if it is greater than numItems,
+		// we set it as numItems itself.
+		if j > numItems {
+			j = numItems
+		}
+		// We create chunks from the list of items based on the
+		// indices determined above.
+		// Right-pad the last chunk with zero bytes if it does not
+		// have length bytesPerChunk from the helper.
+		// The ToBytes32 helper allocates a 32-byte array, before
+		// copying the ordered items in. This ensures that even if
+		// the last chunk is != 32 in length, we will right-pad it with
+		// zero bytes.
+		chunks = append(chunks, bytesutil.ToBytes32(orderedItems[i:j]))
+	}
+
 	return chunks, nil
 }
 

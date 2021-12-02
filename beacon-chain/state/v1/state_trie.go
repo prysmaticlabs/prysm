@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -383,7 +384,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return ssz.ByteArrayRootWithLimit(hRoots, params.BeaconConfig().HistoricalRootsLimit)
 	case eth1Data:
-		return eth1Root(hasher, b.eth1Data)
+		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(
@@ -409,7 +410,21 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(validators, b.validators)
 	case balances:
-		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
+		if features.Get().EnableBalanceTrieComputation {
+			if b.rebuildTrie[field] {
+				maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
+				elemSize := uint64(8)
+				balLimit := (maxBalCap*elemSize + 31) / 32
+				err := b.resetFieldTrie(field, b.state.Balances, balLimit)
+				if err != nil {
+					return [32]byte{}, err
+				}
+				delete(b.rebuildTrie, field)
+				return b.stateFieldLeaves[field].TrieRoot()
+			}
+			return b.recomputeFieldTrie(balances, b.state.Balances)
+		}
+		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.randaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))

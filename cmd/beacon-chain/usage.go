@@ -73,6 +73,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.RestoreSourceFileFlag,
 			cmd.RestoreTargetDirFlag,
 			cmd.BoltMMapInitialSizeFlag,
+			cmd.ValidatorMonitorIndicesFlag,
 		},
 	},
 	{
@@ -130,7 +131,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.TerminalTotalDifficultyOverride,
 			flags.TerminalBlockHashOverride,
 			flags.TerminalBlockHashActivationEpochOverride,
-			flags.Coinbase,
+			flags.FeeRecipient,
 		},
 	},
 	{

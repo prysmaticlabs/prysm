@@ -131,33 +131,6 @@ func TestImport_DuplicateKeys(t *testing.T) {
 	assert.Equal(t, 1, len(keys))
 }
 
-// TestImport_NonImportedWallet is a regression test that ensures non-silent failure when importing to non-imported wallets
-func TestImport_NonImportedWallet(t *testing.T) {
-	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
-	keysDir := filepath.Join(t.TempDir(), "keysDir")
-	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:          walletDir,
-		passwordsDir:       passwordsDir,
-		keysDir:            keysDir,
-		keymanagerKind:     keymanager.Derived,
-		walletPasswordFile: passwordFilePath,
-	})
-	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: password,
-		},
-	})
-	require.NoError(t, err)
-
-	// Create a key
-	createKeystore(t, keysDir)
-	require.ErrorContains(t, "only imported wallets", ImportAccountsCli(cliCtx))
-}
-
 func TestImport_Noninteractive_RandomName(t *testing.T) {
 	imported.ResetCaches()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)

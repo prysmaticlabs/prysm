@@ -1,6 +1,7 @@
 package assertions
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -81,6 +82,16 @@ func DeepNotSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, m
 func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
 	if err != nil {
 		errMsg := parseMsg("Unexpected error", msg...)
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s: %v", filepath.Base(file), line, errMsg, err)
+	}
+}
+
+// ErrorIs uses Errors.Is to recursively unwrap err looking for target in the chain.
+// If any error in the chain matches target, the assertion will pass.
+func ErrorIs(loggerFn assertionLoggerFn, err, target error, msg ...interface{}) {
+	if !errors.Is(err, target) {
+		errMsg := parseMsg(fmt.Sprintf("error %s not in chain", target), msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s: %v", filepath.Base(file), line, errMsg, err)
 	}

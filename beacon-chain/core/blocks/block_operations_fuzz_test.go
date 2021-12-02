@@ -47,7 +47,7 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzverifyDepositDataSigningRoot_10000(t *testing.T) {
+func TestFuzzverifyDepositDataSigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	var ba []byte
 	pubkey := [48]byte{}
@@ -86,7 +86,7 @@ func TestFuzzProcessEth1DataInBlock_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzareEth1DataEqual_10000(t *testing.T) {
+func TestFuzzareEth1DataEqual_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	eth1data := &eth.Eth1Data{}
 	eth1data2 := &eth.Eth1Data{}
@@ -228,7 +228,7 @@ func TestFuzzVerifyAttesterSlashing_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzIsSlashableAttestationData_10000(t *testing.T) {
+func TestFuzzIsSlashableAttestationData_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	attestationData := &eth.AttestationData{}
 	attestationData2 := &eth.AttestationData{}
@@ -240,7 +240,7 @@ func TestFuzzIsSlashableAttestationData_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzslashableAttesterIndices_10000(t *testing.T) {
+func TestFuzzslashableAttesterIndices_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	attesterSlashing := &eth.AttesterSlashing{}
 
@@ -398,7 +398,7 @@ func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzVerifyExit_10000(t *testing.T) {
+func TestFuzzVerifyExit_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ve := &eth.SignedVoluntaryExit{}
 	rawVal := &ethpb.Validator{}

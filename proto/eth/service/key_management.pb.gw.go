@@ -94,7 +94,7 @@ var (
 )
 
 func request_KeyManagement_DeleteKeystores_0(ctx context.Context, marshaler runtime.Marshaler, client KeyManagementClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ImportKeystoresRequest
+	var protoReq DeleteKeystoresRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -110,7 +110,7 @@ func request_KeyManagement_DeleteKeystores_0(ctx context.Context, marshaler runt
 }
 
 func local_request_KeyManagement_DeleteKeystores_0(ctx context.Context, marshaler runtime.Marshaler, server KeyManagementServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ImportKeystoresRequest
+	var protoReq DeleteKeystoresRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
