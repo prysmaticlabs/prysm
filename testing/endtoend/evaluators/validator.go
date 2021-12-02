@@ -5,19 +5,20 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	ethtypes "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var expectedParticipation = 0.95 // 95% participation to make room for minor issues.
+var expectedParticipation = 0.99
 
-var expectedSyncParticipation = 0.95 // 95% participation for sync committee members.
+var expectedSyncParticipation = 0.99
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
@@ -26,11 +27,13 @@ var ValidatorsAreActive = types.Evaluator{
 	Evaluation: validatorsAreActive,
 }
 
-// ValidatorsParticipating ensures the expected amount of validators are active.
-var ValidatorsParticipating = types.Evaluator{
-	Name:       "validators_participating_epoch_%d",
-	Policy:     policies.AfterNthEpoch(2),
-	Evaluation: validatorsParticipating,
+// ValidatorsParticipatingAtEpoch ensures the expected amount of validators are participating.
+var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator {
+	return types.Evaluator{
+		Name:       "validators_participating_epoch_%d",
+		Policy:     policies.AfterNthEpoch(epoch),
+		Evaluation: validatorsParticipating,
+	}
 }
 
 // ValidatorSyncParticipation ensures the expected amount of sync committee participants
@@ -126,8 +129,8 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get genesis data")
 	}
-	currSlot := core.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
-	currEpoch := core.SlotToEpoch(currSlot)
+	currSlot := slots.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
+	currEpoch := slots.ToEpoch(currSlot)
 	lowestBound := currEpoch - 1
 
 	if lowestBound < helpers.AltairE2EForkEpoch {
@@ -145,7 +148,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := core.StartSlot(helpers.AltairE2EForkEpoch)
+		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}
@@ -174,7 +177,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := core.StartSlot(helpers.AltairE2EForkEpoch)
+		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}

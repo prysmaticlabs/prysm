@@ -79,9 +79,8 @@ func TestProposeExit_Notification(t *testing.T) {
 			if event.Type == opfeed.ExitReceived {
 				notificationFound = true
 				data, ok := event.Data.(*opfeed.ExitReceivedData)
-				assert.Equal(t, true, ok, "Entity is not of type *opfeed.ExitReceivedData")
-				assert.Equal(t, epoch, data.Exit.Exit.Epoch, "Unexpected state feed epoch")
-				assert.Equal(t, validatorIndex, data.Exit.Exit.ValidatorIndex, "Unexpected state feed validator index")
+				assert.Equal(t, true, ok, "Entity is of the wrong type")
+				assert.NotNil(t, data.Exit)
 			}
 		case <-opSub.Err():
 			t.Error("Subscription to state notifier failed")

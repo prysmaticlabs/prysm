@@ -10,12 +10,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/grpc"
 )
 
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
 func DeserializeRequestBodyIntoContainer(body io.Reader, requestContainer interface{}) ErrorJson {
-	if err := json.NewDecoder(body).Decode(&requestContainer); err != nil {
+	decoder := json.NewDecoder(body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestContainer); err != nil {
+		if strings.Contains(err.Error(), "json: unknown field") {
+			e := errors.Wrap(err, "could not decode request body")
+			return &DefaultErrorJson{
+				Message: e.Error(),
+				Code:    http.StatusBadRequest,
+			}
+		}
 		return InternalServerErrorWithMessage(err, "could not decode request body")
 	}
 	return nil
@@ -87,26 +97,25 @@ func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
 	return body, nil
 }
 
-// DeserializeGrpcResponseBodyIntoErrorJson deserializes the body from the grpc-gateway's response into an error struct.
-// The struct can be later examined to check if the request resulted in an error.
-func DeserializeGrpcResponseBodyIntoErrorJson(errJson ErrorJson, body []byte) ErrorJson {
-	if err := json.Unmarshal(body, errJson); err != nil {
-		return InternalServerErrorWithMessage(err, "could not unmarshal error")
-	}
-	return nil
-}
-
 // HandleGrpcResponseError acts on an error that resulted from a grpc-gateway's response.
-func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, w http.ResponseWriter) {
-	// Something went wrong, but the request completed, meaning we can write headers and the error message.
-	for h, vs := range resp.Header {
-		for _, v := range vs {
-			w.Header().Set(h, v)
-		}
+func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []byte, w http.ResponseWriter) (bool, ErrorJson) {
+	responseHasError := false
+	if err := json.Unmarshal(respBody, errJson); err != nil {
+		return false, InternalServerErrorWithMessage(err, "could not unmarshal error")
 	}
-	// Set code to HTTP code because unmarshalled body contained gRPC code.
-	errJson.SetCode(resp.StatusCode)
-	WriteError(w, errJson, resp.Header)
+	if errJson.Msg() != "" {
+		responseHasError = true
+		// Something went wrong, but the request completed, meaning we can write headers and the error message.
+		for h, vs := range resp.Header {
+			for _, v := range vs {
+				w.Header().Set(h, v)
+			}
+		}
+		// Set code to HTTP code because unmarshalled body contained gRPC code.
+		errJson.SetCode(resp.StatusCode)
+		WriteError(w, errJson, resp.Header)
+	}
+	return responseHasError, nil
 }
 
 // GrpcResponseIsEmpty determines whether the grpc-gateway's response body contains no data.
@@ -191,9 +200,11 @@ func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson
 // WriteError writes the error by manipulating headers and the body of the final response.
 func WriteError(w http.ResponseWriter, errJson ErrorJson, responseHeader http.Header) {
 	// Include custom error in the error JSON.
+	hasCustomError := false
 	if responseHeader != nil {
 		customError, ok := responseHeader["Grpc-Metadata-"+grpc.CustomErrorMetadataKey]
 		if ok {
+			hasCustomError = true
 			// Assume header has only one value and read the 0 index.
 			if err := json.Unmarshal([]byte(customError[0]), errJson); err != nil {
 				log.WithError(err).Error("Could not unmarshal custom error message")
@@ -202,10 +213,29 @@ func WriteError(w http.ResponseWriter, errJson ErrorJson, responseHeader http.He
 		}
 	}
 
-	j, err := json.Marshal(errJson)
-	if err != nil {
-		log.WithError(err).Error("Could not marshal error message")
-		return
+	var j []byte
+	if hasCustomError {
+		var err error
+		j, err = json.Marshal(errJson)
+		if err != nil {
+			log.WithError(err).Error("Could not marshal error message")
+			return
+		}
+	} else {
+		var err error
+		// We marshal the response body into a DefaultErrorJson if the custom error is not present.
+		// This is because the ErrorJson argument is the endpoint's error definition, which may contain custom fields.
+		// In such a scenario marhaling the endpoint's error would populate the resulting JSON
+		// with these fields even if they are not present in the gRPC header.
+		d := &DefaultErrorJson{
+			Message: errJson.Msg(),
+			Code:    errJson.StatusCode(),
+		}
+		j, err = json.Marshal(d)
+		if err != nil {
+			log.WithError(err).Error("Could not marshal error message")
+			return
+		}
 	}
 
 	w.Header().Set("Content-Length", strconv.Itoa(len(j)))

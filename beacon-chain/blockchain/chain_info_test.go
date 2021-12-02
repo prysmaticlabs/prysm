@@ -120,7 +120,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 
 func TestHeadRoot_UseDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	c := &Service{cfg: &Config{BeaconDB: beaconDB}}
+	c := &Service{cfg: &config{BeaconDB: beaconDB}}
 	c.head = &head{root: params.BeaconConfig().ZeroHash}
 	b := util.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
@@ -278,14 +278,14 @@ func TestService_HeadGenesisValidatorRoot(t *testing.T) {
 }
 
 func TestService_ProtoArrayStore(t *testing.T) {
-	c := &Service{cfg: &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
+	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
 	p := c.ProtoArrayStore()
 	require.Equal(t, 0, int(p.FinalizedEpoch()))
 }
 
 func TestService_ChainHeads(t *testing.T) {
 	ctx := context.Background()
-	c := &Service{cfg: &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
+	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 0, 0))

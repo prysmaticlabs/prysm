@@ -10,12 +10,12 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -34,7 +34,7 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPCHandlers for p2p RPC.
 func (s *Service) registerRPCHandlers() {
-	currEpoch := core.SlotToEpoch(s.cfg.Chain.CurrentSlot())
+	currEpoch := slots.ToEpoch(s.cfg.chain.CurrentSlot())
 	// Register V2 handlers if we are past altair fork epoch.
 	if currEpoch >= params.BeaconConfig().AltairForkEpoch {
 		s.registerRPC(
@@ -97,20 +97,20 @@ func (s *Service) registerRPCHandlersAltair() {
 // Remove all v1 Stream handlers that are no longer supported
 // from altair onwards.
 func (s *Service) unregisterPhase0Handlers() {
-	fullBlockRangeTopic := p2p.RPCBlocksByRangeTopicV1 + s.cfg.P2P.Encoding().ProtocolSuffix()
-	fullBlockRootTopic := p2p.RPCBlocksByRootTopicV1 + s.cfg.P2P.Encoding().ProtocolSuffix()
-	fullMetadataTopic := p2p.RPCMetaDataTopicV1 + s.cfg.P2P.Encoding().ProtocolSuffix()
+	fullBlockRangeTopic := p2p.RPCBlocksByRangeTopicV1 + s.cfg.p2p.Encoding().ProtocolSuffix()
+	fullBlockRootTopic := p2p.RPCBlocksByRootTopicV1 + s.cfg.p2p.Encoding().ProtocolSuffix()
+	fullMetadataTopic := p2p.RPCMetaDataTopicV1 + s.cfg.p2p.Encoding().ProtocolSuffix()
 
-	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRangeTopic))
-	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullBlockRootTopic))
-	s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(fullMetadataTopic))
+	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullBlockRangeTopic))
+	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullBlockRootTopic))
+	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullMetadataTopic))
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
 func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
-	topic := baseTopic + s.cfg.P2P.Encoding().ProtocolSuffix()
+	topic := baseTopic + s.cfg.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
-	s.cfg.P2P.SetStreamHandler(topic, func(stream network.Stream) {
+	s.cfg.p2p.SetStreamHandler(topic, func(stream network.Stream) {
 		defer func() {
 			if r := recover(); r != nil {
 				log.WithField("error", r).Error("Panic occurred")
@@ -137,7 +137,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		log := log.WithField("peer", stream.Conn().RemotePeer().Pretty()).WithField("topic", string(stream.Protocol()))
 
 		// Check before hand that peer is valid.
-		if s.cfg.P2P.Peers().IsBad(stream.Conn().RemotePeer()) {
+		if s.cfg.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, stream.Conn().RemotePeer()); err != nil {
 				log.Debugf("Could not disconnect from peer: %v", err)
 			}
@@ -189,7 +189,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				log.Errorf("message of %T does not support marshaller interface", msg)
 				return
 			}
-			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 				// Debug logs for goodbye/status errors
 				if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
 					log.WithError(err).Debug("Could not decode goodbye stream message")
@@ -214,7 +214,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				log.Errorf("message of %T does not support marshaller interface", msg)
 				return
 			}
-			if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 				log.WithError(err).Debug("Could not decode stream message")
 				tracing.AnnotateError(span, err)
 				return

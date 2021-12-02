@@ -36,14 +36,14 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	if err := s.validateRangeRequest(m); err != nil {
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
-		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		tracing.AnnotateError(span, err)
 		return err
 	}
 
 	// The initial count for the first batch to be returned back.
 	count := m.Count
-	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
+	allowedBlocksPerSecond := flags.Get().BlockBatchLimit
 	if count > allowedBlocksPerSecond {
 		count = allowedBlocksPerSecond
 	}
@@ -123,7 +123,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	defer span.End()
 
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot).SetSlotStep(step)
-	blks, roots, err := s.cfg.DB.Blocks(ctx, filter)
+	blks, roots, err := s.cfg.beaconDB.Blocks(ctx, filter)
 	if err != nil {
 		log.WithError(err).Debug("Could not retrieve blocks")
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
@@ -183,7 +183,7 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 	// Add a buffer for possible large range requests from nodes syncing close to the
 	// head of the chain.
 	buffer := rangeLimit * 2
-	highestExpectedSlot := s.cfg.Chain.CurrentSlot().Add(uint64(buffer))
+	highestExpectedSlot := s.cfg.chain.CurrentSlot().Add(uint64(buffer))
 
 	// Ensure all request params are within appropriate bounds
 	if count == 0 || count > maxRequestBlocks {
@@ -215,7 +215,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []block.SignedBeaconBlo
 
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	for i, b := range blks {
-		isCanonical, err := s.cfg.Chain.IsCanonical(ctx, roots[i])
+		isCanonical, err := s.cfg.chain.IsCanonical(ctx, roots[i])
 		if err != nil {
 			return nil, err
 		}
@@ -247,11 +247,11 @@ func (s *Service) filterBlocks(ctx context.Context, blks []block.SignedBeaconBlo
 }
 
 func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream) {
-	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.P2P)
+	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.p2p)
 }
 
 func (s *Service) retrieveGenesisBlock(ctx context.Context) (block.SignedBeaconBlock, [32]byte, error) {
-	genBlock, err := s.cfg.DB.GenesisBlock(ctx)
+	genBlock, err := s.cfg.beaconDB.GenesisBlock(ctx)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}

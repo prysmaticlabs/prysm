@@ -16,7 +16,7 @@ const signatureVerificationInterval = 50 * time.Millisecond
 const verifierLimit = 50
 
 type signatureVerifier struct {
-	set     *bls.SignatureSet
+	set     *bls.SignatureBatch
 	resChan chan error
 }
 
@@ -49,7 +49,7 @@ func (s *Service) verifierRoutine() {
 	}
 }
 
-func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureSet) pubsub.ValidationResult {
+func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureBatch) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateWithBatchVerifier")
 	defer span.End()
 
@@ -65,21 +65,21 @@ func (s *Service) validateWithBatchVerifier(ctx context.Context, message string,
 		log.WithError(resErr).Tracef("Could not perform batch verification of %s", message)
 		verified, err := set.Verify()
 		if err != nil {
-			log.WithError(err).Debugf("Could not verify %s", message)
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject
+			verErr := errors.Wrapf(err, "Could not verify %s", message)
+			tracing.AnnotateError(span, verErr)
+			return pubsub.ValidationReject, verErr
 		}
 		if !verified {
-			log.Debugf("Verification of %s failed", message)
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject
+			verErr := errors.Errorf("Verification of %s failed", message)
+			tracing.AnnotateError(span, verErr)
+			return pubsub.ValidationReject, verErr
 		}
 	}
-	return pubsub.ValidationAccept
+	return pubsub.ValidationAccept, nil
 }
 
 func verifyBatch(verifierBatch []*signatureVerifier) {
-	if verifierBatch == nil || len(verifierBatch) == 0 {
+	if len(verifierBatch) == 0 {
 		return
 	}
 	aggSet := verifierBatch[0].set

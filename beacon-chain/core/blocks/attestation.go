@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -25,7 +25,7 @@ func ProcessAttestationsNoVerifySignature(
 	beaconState state.BeaconState,
 	b block.SignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	body := b.Block().Body()
@@ -52,8 +52,8 @@ func VerifyAttestationNoVerifySignature(
 	if err := helpers.ValidateNilAttestation(att); err != nil {
 		return err
 	}
-	currEpoch := core.CurrentEpoch(beaconState)
-	prevEpoch := core.PrevEpoch(beaconState)
+	currEpoch := time.CurrentEpoch(beaconState)
+	prevEpoch := time.PrevEpoch(beaconState)
 	data := att.Data
 	if data.Target.Epoch != prevEpoch && data.Target.Epoch != currEpoch {
 		return fmt.Errorf(
@@ -137,7 +137,7 @@ func ProcessAttestationNoVerifySignature(
 		return nil, err
 	}
 
-	currEpoch := core.CurrentEpoch(beaconState)
+	currEpoch := time.CurrentEpoch(beaconState)
 	data := att.Data
 	s := att.Data.Slot
 	proposerIndex, err := helpers.BeaconProposerIndex(ctx, beaconState)

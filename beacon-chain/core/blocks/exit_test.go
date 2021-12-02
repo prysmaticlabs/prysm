@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -113,7 +113,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	require.NoError(t, err)
 	val.PublicKey = priv.PublicKey().Marshal()
 	require.NoError(t, state.UpdateValidatorAtIndex(0, val))
-	exits[0].Signature, err = signing.ComputeDomainAndSign(state, core.CurrentEpoch(state), exits[0].Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
+	exits[0].Signature, err = signing.ComputeDomainAndSign(state, time.CurrentEpoch(state), exits[0].Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
 	require.NoError(t, err)
 
 	b := util.NewBeaconBlock()

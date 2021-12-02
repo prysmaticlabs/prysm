@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -158,24 +158,24 @@ func TestFinalityDelay(t *testing.T) {
 	finalizedEpoch := types.Epoch(0)
 	// Set values for each test case
 	setVal := func() {
-		prevEpoch = core.PrevEpoch(beaconState)
+		prevEpoch = time.PrevEpoch(beaconState)
 		finalizedEpoch = beaconState.FinalizedCheckpointEpoch()
 	}
 	setVal()
 	d := FinalityDelay(prevEpoch, finalizedEpoch)
-	w := core.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
+	w := time.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	assert.Equal(t, w, d, "Did not get wanted finality delay")
 
 	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}))
 	setVal()
 	d = FinalityDelay(prevEpoch, finalizedEpoch)
-	w = core.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
+	w = time.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	assert.Equal(t, w, d, "Did not get wanted finality delay")
 
 	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}))
 	setVal()
 	d = FinalityDelay(prevEpoch, finalizedEpoch)
-	w = core.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
+	w = time.PrevEpoch(beaconState) - beaconState.FinalizedCheckpointEpoch()
 	assert.Equal(t, w, d, "Did not get wanted finality delay")
 }
 
@@ -188,7 +188,7 @@ func TestIsInInactivityLeak(t *testing.T) {
 	finalizedEpoch := types.Epoch(0)
 	// Set values for each test case
 	setVal := func() {
-		prevEpoch = core.PrevEpoch(beaconState)
+		prevEpoch = time.PrevEpoch(beaconState)
 		finalizedEpoch = beaconState.FinalizedCheckpointEpoch()
 	}
 	setVal()

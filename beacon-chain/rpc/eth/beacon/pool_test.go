@@ -12,7 +12,6 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	notifiermock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -27,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -526,7 +526,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	for _, h := range []*ethpbv1.SignedBeaconBlockHeader{slashing.SignedHeader_1, slashing.SignedHeader_2} {
 		sb, err := signing.ComputeDomainAndSign(
 			state,
-			core.SlotToEpoch(h.Message.Slot),
+			slots.ToEpoch(h.Message.Slot),
 			h.Message,
 			params.BeaconConfig().DomainBeaconProposer,
 			keys[0],
@@ -766,7 +766,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	for _, att := range []*ethpbv1.Attestation{att1, att2} {
 		sb, err := signing.ComputeDomainAndSign(
 			state,
-			core.SlotToEpoch(att.Data.Slot),
+			slots.ToEpoch(att.Data.Slot),
 			att.Data,
 			params.BeaconConfig().DomainBeaconAttester,
 			keys[0],
@@ -873,7 +873,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	// Don't sign attInvalidSignature.
 	sb, err := signing.ComputeDomainAndSign(
 		state,
-		core.SlotToEpoch(attValid.Data.Slot),
+		slots.ToEpoch(attValid.Data.Slot),
 		attValid.Data,
 		params.BeaconConfig().DomainBeaconAttester,
 		keys[0],

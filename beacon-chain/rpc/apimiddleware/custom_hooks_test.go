@@ -12,12 +12,11 @@ import (
 
 	"github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestWrapAttestationArray(t *testing.T) {
@@ -384,7 +383,7 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		assert.Equal(t, reflect.TypeOf(signedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Altair", func(t *testing.T) {
-		slot, err := core.StartSlot(params.BeaconConfig().AltairForkEpoch)
+		slot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 		require.NoError(t, err)
 		s.Message = struct{ Slot string }{Slot: strconv.FormatUint(uint64(slot), 10)}
 		j, err := json.Marshal(s)
@@ -409,7 +408,8 @@ func TestPreparePublishedBlock(t *testing.T) {
 				},
 			},
 		}
-		preparePublishedBlock(endpoint, nil, nil)
+		errJson := preparePublishedBlock(endpoint, nil, nil)
+		require.Equal(t, true, errJson == nil)
 		_, ok := endpoint.PostRequest.(*phase0PublishBlockRequestJson)
 		assert.Equal(t, true, ok)
 	})
@@ -422,38 +422,15 @@ func TestPreparePublishedBlock(t *testing.T) {
 				},
 			},
 		}
-		preparePublishedBlock(endpoint, nil, nil)
+		errJson := preparePublishedBlock(endpoint, nil, nil)
+		require.Equal(t, true, errJson == nil)
 		_, ok := endpoint.PostRequest.(*altairPublishBlockRequestJson)
 		assert.Equal(t, true, ok)
 	})
-}
 
-func TestPrepareGraffiti(t *testing.T) {
-	t.Run("32_bytes", func(t *testing.T) {
-		result := prepareGraffiti(string(bytesutil.PadTo([]byte("foo"), 32)))
-		assert.Equal(
-			t,
-			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			result,
-		)
-	})
-
-	t.Run("graffiti_less_than_32_bytes", func(t *testing.T) {
-		result := prepareGraffiti("foo")
-		assert.Equal(
-			t,
-			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			result,
-		)
-	})
-
-	t.Run("graffiti_more_than_32_bytes", func(t *testing.T) {
-		result := prepareGraffiti(string(bytesutil.PadTo([]byte("foo"), 33)))
-		assert.Equal(
-			t,
-			"0x666f6f0000000000000000000000000000000000000000000000000000000000",
-			result,
-		)
+	t.Run("unsupported block type", func(t *testing.T) {
+		errJson := preparePublishedBlock(&apimiddleware.Endpoint{}, nil, nil)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "unsupported block type"))
 	})
 }
 
@@ -553,6 +530,17 @@ func TestSerializeV2Block(t *testing.T) {
 		require.NotNil(t, errJson)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
 	})
+
+	t.Run("unsupported block version", func(t *testing.T) {
+		response := &blockV2ResponseJson{
+			Version: "unsupported",
+		}
+		runDefault, j, errJson := serializeV2Block(response)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "unsupported block version"))
+	})
 }
 
 func TestSerializeV2State(t *testing.T) {
@@ -592,6 +580,17 @@ func TestSerializeV2State(t *testing.T) {
 		require.Equal(t, 0, len(j))
 		require.NotNil(t, errJson)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
+	})
+
+	t.Run("unsupported state version", func(t *testing.T) {
+		response := &beaconStateV2ResponseJson{
+			Version: "unsupported",
+		}
+		runDefault, j, errJson := serializeV2State(response)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "unsupported state version"))
 	})
 }
 
@@ -663,5 +662,16 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		require.Equal(t, 0, len(j))
 		require.NotNil(t, errJson)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
+	})
+
+	t.Run("unsupported block version", func(t *testing.T) {
+		response := &produceBlockResponseV2Json{
+			Version: "unsupported",
+		}
+		runDefault, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "unsupported block version"))
 	})
 }

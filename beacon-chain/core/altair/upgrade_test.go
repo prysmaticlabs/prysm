@@ -6,10 +6,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -62,9 +61,15 @@ func TestTranslateParticipation(t *testing.T) {
 	indices, err := attestation.AttestingIndices(pendingAtts[0].AggregationBits, committee)
 	require.NoError(t, err)
 	for _, index := range indices {
-		require.Equal(t, true, altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelyHeadFlagIndex))
-		require.Equal(t, true, altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelyTargetFlagIndex))
-		require.Equal(t, true, altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelySourceFlagIndex))
+		has, err := altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelySourceFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
+		has, err = altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelyTargetFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
+		has, err = altair.HasValidatorFlag(participation[index], params.BeaconConfig().TimelyHeadFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
 	}
 }
 
@@ -73,8 +78,6 @@ func TestUpgradeToAltair(t *testing.T) {
 	preForkState := st.Copy()
 	aState, err := altair.UpgradeToAltair(context.Background(), st)
 	require.NoError(t, err)
-	_, ok := aState.(state.BeaconStateAltair)
-	require.Equal(t, true, ok)
 
 	require.Equal(t, preForkState.GenesisTime(), aState.GenesisTime())
 	require.DeepSSZEqual(t, preForkState.GenesisValidatorRoot(), aState.GenesisValidatorRoot())
@@ -109,7 +112,7 @@ func TestUpgradeToAltair(t *testing.T) {
 	require.DeepSSZEqual(t, &ethpb.Fork{
 		PreviousVersion: st.Fork().CurrentVersion,
 		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
-		Epoch:           core.CurrentEpoch(st),
+		Epoch:           time.CurrentEpoch(st),
 	}, f)
 	csc, err := aState.CurrentSyncCommittee()
 	require.NoError(t, err)

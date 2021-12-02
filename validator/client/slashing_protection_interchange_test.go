@@ -9,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	interchangeformat "github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format"
+	history "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
 )
 
 type eip3076TestCase struct {
@@ -87,7 +88,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 				validator, _, _, _ := setup(t)
 
 				if tt.GenesisValidatorsRoot != "" {
-					r, err := interchangeformat.RootFromHex(tt.GenesisValidatorsRoot)
+					r, err := history.RootFromHex(tt.GenesisValidatorsRoot)
 					require.NoError(t, validator.db.SaveGenesisValidatorsRoot(context.Background(), r[:]))
 					require.NoError(t, err)
 				}
@@ -99,7 +100,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 					t.Fatal(err)
 				}
 				b := bytes.NewBuffer(interchangeBytes)
-				if err := interchangeformat.ImportStandardProtectionJSON(context.Background(), validator.db, b); err != nil {
+				if err := history.ImportStandardProtectionJSON(context.Background(), validator.db, b); err != nil {
 					if step.ShouldSucceed {
 						t.Fatal(err)
 					}
@@ -109,9 +110,9 @@ func TestEIP3076SpecTests(t *testing.T) {
 
 				// This loops through a list of block signings to attempt after importing the interchange data above.
 				for _, sb := range step.Blocks {
-					bSlot, err := interchangeformat.SlotFromString(sb.Slot)
+					bSlot, err := history.SlotFromString(sb.Slot)
 					require.NoError(t, err)
-					pk, err := interchangeformat.PubKeyFromHex(sb.Pubkey)
+					pk, err := history.PubKeyFromHex(sb.Pubkey)
 					require.NoError(t, err)
 					b := util.NewBeaconBlock()
 					b.Block.Slot = bSlot
@@ -133,11 +134,11 @@ func TestEIP3076SpecTests(t *testing.T) {
 
 				// This loops through a list of attestation signings to attempt after importing the interchange data above.
 				for _, sa := range step.Attestations {
-					target, err := interchangeformat.EpochFromString(sa.TargetEpoch)
+					target, err := history.EpochFromString(sa.TargetEpoch)
 					require.NoError(t, err)
-					source, err := interchangeformat.EpochFromString(sa.SourceEpoch)
+					source, err := history.EpochFromString(sa.SourceEpoch)
 					require.NoError(t, err)
-					pk, err := interchangeformat.PubKeyFromHex(sa.Pubkey)
+					pk, err := history.PubKeyFromHex(sa.Pubkey)
 					require.NoError(t, err)
 					ia := &ethpb.IndexedAttestation{
 						Data: &ethpb.AttestationData{
@@ -145,7 +146,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 							Target:          &ethpb.Checkpoint{Epoch: target, Root: make([]byte, 32)},
 							Source:          &ethpb.Checkpoint{Epoch: source, Root: make([]byte, 32)},
 						},
-						Signature: make([]byte, 96),
+						Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
 					}
 
 					var signingRoot [32]byte

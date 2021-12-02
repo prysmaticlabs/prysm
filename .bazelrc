@@ -36,6 +36,9 @@ run --define blst_disabled=false
 build:blst_disabled --define blst_disabled=true
 build:blst_disabled --define gotags=blst_disabled
 
+build:minimal --//proto:network=minimal
+build:minimal --@io_bazel_rules_go//go/config:tags=minimal
+
 # Release flags
 build:release --compilation_mode=opt
 build:release --config=llvm

@@ -10,7 +10,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -25,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -1035,7 +1035,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	forkedSlot := types.Slot(201)
 	chain2 := extendBlockSequence(t, chain1[:forkedSlot], 100)
 	finalizedSlot := types.Slot(63)
-	finalizedEpoch := core.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
@@ -1135,7 +1135,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		}
 
 		// Update counter, and trigger backtracking.
-		queue.staleEpochs[core.SlotToEpoch(machineSlots[0])] = maxResetAttempts
+		queue.staleEpochs[slots.ToEpoch(machineSlots[0])] = maxResetAttempts
 		handlerFn = queue.onProcessSkippedEvent(ctx)
 		updatedState, err = handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
 		assert.ErrorContains(t, "invalid range for non-skipped slot", err)
@@ -1185,7 +1185,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		}
 
 		// Update counter, and trigger backtracking.
-		queue.staleEpochs[core.SlotToEpoch(machineSlots[0])] = maxResetAttempts
+		queue.staleEpochs[slots.ToEpoch(machineSlots[0])] = maxResetAttempts
 		handlerFn = queue.onProcessSkippedEvent(ctx)
 		updatedState, err = handlerFn(queue.smm.machines[machineSlots[len(machineSlots)-1]], nil)
 		require.NoError(t, err)
@@ -1196,7 +1196,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 
 		// Alternative fork should start on slot 201, make sure that the first machine contains all
 		// required forked data, including data on and after slot 201.
-		forkedEpochStartSlot, err := core.StartSlot(core.SlotToEpoch(forkedSlot))
+		forkedEpochStartSlot, err := slots.EpochStart(slots.ToEpoch(forkedSlot))
 		require.NoError(t, err)
 		firstFSM, ok := queue.smm.findStateMachine(forkedEpochStartSlot + 1)
 		require.Equal(t, true, ok)
@@ -1236,7 +1236,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	chain := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
 	finalizedSlot := types.Slot(82)
-	finalizedEpoch := core.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain[0]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
@@ -1304,7 +1304,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	require.NoError(t, queue.start())
 	isProcessedBlock := func(ctx context.Context, blk block.SignedBeaconBlock, blkRoot [32]byte) bool {
-		finalizedSlot, err := core.StartSlot(mc.FinalizedCheckpt().Epoch)
+		finalizedSlot, err := slots.EpochStart(mc.FinalizedCheckpt().Epoch)
 		if err != nil {
 			return false
 		}

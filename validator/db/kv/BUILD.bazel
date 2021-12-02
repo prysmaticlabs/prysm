@@ -19,11 +19,13 @@ go_library(
         "schema.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/db/kv",
-    visibility = ["//validator:__subpackages__"],
+    visibility = [
+        "//cmd:__subpackages__",
+        "//validator:__subpackages__",
+    ],
     deps = [
         "//async/abool:go_default_library",
         "//async/event:go_default_library",
-        "//beacon-chain/core:go_default_library",
         "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
@@ -32,6 +34,7 @@ go_library(
         "//monitoring/tracing:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/slashings:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

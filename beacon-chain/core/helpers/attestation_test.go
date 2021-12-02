@@ -7,7 +7,6 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestAttestation_IsAggregator(t *testing.T) {
@@ -118,7 +118,7 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 		},
 		Signature: []byte{'B'},
 	}
-	valCount, err := helpers.ActiveValidatorCount(context.Background(), state, core.SlotToEpoch(att.Data.Slot))
+	valCount, err := helpers.ActiveValidatorCount(context.Background(), state, slots.ToEpoch(att.Data.Slot))
 	require.NoError(t, err)
 	sub := helpers.ComputeSubnetForAttestation(valCount, att)
 	assert.Equal(t, uint64(6), sub, "Did not get correct subnet for attestation")

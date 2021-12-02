@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -87,7 +87,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		}
 		filterStatus[ss] = true
 	}
-	epoch := core.SlotToEpoch(st.Slot())
+	epoch := slots.ToEpoch(st.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
 	for _, vc := range valContainers {
 		readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
@@ -144,7 +144,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	epoch := core.SlotToEpoch(st.Slot())
+	epoch := slots.ToEpoch(st.Slot())
 	if req.Epoch != nil {
 		epoch = *req.Epoch
 	}
@@ -153,11 +153,11 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
 
-	startSlot, err := core.StartSlot(epoch)
+	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid epoch: %v", err)
 	}
-	endSlot, err := core.EndSlot(epoch)
+	endSlot, err := slots.EpochEnd(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid epoch: %v", err)
 	}
@@ -189,11 +189,11 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 // This function returns the validator object based on the passed in ID. The validator ID could be its public key,
 // or its index.
 func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
-	epoch := core.SlotToEpoch(state.Slot())
+	epoch := slots.ToEpoch(state.Slot())
 	var valContainers []*ethpb.ValidatorContainer
+	allBalances := state.Balances()
 	if len(validatorIds) == 0 {
 		allValidators := state.Validators()
-		allBalances := state.Balances()
 		valContainers = make([]*ethpb.ValidatorContainer, len(allValidators))
 		for i, validator := range allValidators {
 			readOnlyVal, err := v1.NewValidator(validator)
@@ -249,7 +249,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			}
 			valContainers = append(valContainers, &ethpb.ValidatorContainer{
 				Index:     valIndex,
-				Balance:   v1Validator.EffectiveBalance,
+				Balance:   allBalances[valIndex],
 				Status:    subStatus,
 				Validator: v1Validator,
 			})

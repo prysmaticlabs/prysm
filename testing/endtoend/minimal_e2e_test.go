@@ -47,8 +47,8 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.HealthzCheck,
 		ev.MetricsCheck,
 		ev.ValidatorsAreActive,
-		ev.ValidatorsParticipating,
-		ev.FinalizationOccurs,
+		ev.ValidatorsParticipatingAtEpoch(2),
+		ev.FinalizationOccurs(3),
 		ev.ProcessesDepositsInBlocks,
 		ev.VerifyBlockGraffiti,
 		ev.ActivatesDepositedValidators,
@@ -60,12 +60,9 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.ForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
-	}
-	// TODO(#9166): remove this block once v2 changes are live.
-	if !usePrysmSh {
-		evals = append(evals, ev.ValidatorSyncParticipation)
-	} else {
-		t.Log("Warning: Skipping v2 specific evaluators for prior release")
+		ev.FinishedSyncing,
+		ev.AllNodesHaveSameHead,
+		ev.ValidatorSyncParticipation,
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -78,7 +75,6 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		EpochsToRun:         uint64(epochsToRun),
 		TestSync:            true,
 		TestDeposits:        true,
-		TestSlasher:         false,
 		UsePrysmShValidator: usePrysmSh,
 		UsePprof:            !longRunning,
 		TracingSinkEndpoint: tracingEndpoint,

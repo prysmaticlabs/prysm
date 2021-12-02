@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 const maxRandomByte = uint64(1<<8 - 1)
@@ -97,7 +98,7 @@ func NextSyncCommittee(ctx context.Context, s state.BeaconStateAltair) (*ethpb.S
 //        i += 1
 //    return sync_committee_indices
 func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
-	epoch := core.NextEpoch(s)
+	epoch := coreTime.NextEpoch(s)
 	indices, err := helpers.ActiveValidatorIndices(ctx, s, epoch)
 	if err != nil {
 		return nil, err
@@ -185,15 +186,15 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 
 // ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.
 func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
-	if err := core.ValidateSlotClock(slot, uint64(genesisTime.Unix())); err != nil {
+	if err := slots.ValidateClock(slot, uint64(genesisTime.Unix())); err != nil {
 		return err
 	}
-	messageTime, err := core.SlotToTime(uint64(genesisTime.Unix()), slot)
+	messageTime, err := slots.ToTime(uint64(genesisTime.Unix()), slot)
 	if err != nil {
 		return err
 	}
-	currentSlot := core.SlotsSince(genesisTime)
-	slotStartTime, err := core.SlotToTime(uint64(genesisTime.Unix()), currentSlot)
+	currentSlot := slots.Since(genesisTime)
+	slotStartTime, err := slots.ToTime(uint64(genesisTime.Unix()), currentSlot)
 	if err != nil {
 		return err
 	}
@@ -214,8 +215,8 @@ func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDispar
 		return fmt.Errorf(
 			"sync message slot %d not within allowable range of %d to %d (current slot)",
 			slot,
-			lowerBound.Unix(),
-			upperBound.Unix(),
+			uint64(lowerBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
+			uint64(upperBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
 		)
 	}
 	return nil

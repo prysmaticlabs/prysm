@@ -471,3 +471,29 @@ func TestSafeCopy2dBytes(t *testing.T) {
 		})
 	}
 }
+
+func TestBytesInvalidInputs(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("Test panicked: %v", r)
+		}
+	}()
+	rawBytes := bytesutil.ToBytes(100, -10)
+	assert.DeepEqual(t, []byte{}, rawBytes)
+
+	_, err := bytesutil.HighestBitIndexAt([]byte{'A', 'B', 'C'}, -5)
+	assert.ErrorContains(t, "index is negative", err)
+
+	// There should be no panic
+	_ = bytesutil.ClearBit([]byte{'C', 'D', 'E'}, -7)
+	res := bytesutil.FromBytes4([]byte{})
+	assert.Equal(t, res, uint64(0))
+	newRes := bytesutil.FromBytes2([]byte{})
+	assert.Equal(t, newRes, uint16(0))
+	res = bytesutil.FromBytes8([]byte{})
+	assert.Equal(t, res, uint64(0))
+
+	intRes := bytesutil.ToLowInt64([]byte{})
+	assert.Equal(t, intRes, int64(0))
+
+}

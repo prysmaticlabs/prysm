@@ -76,9 +76,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
-    strip_prefix = "rules_docker-0.17.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
+    sha256 = "1f4e59843b61981a96835dc4ac377ad4da9f8c334ebe5e0bb3f58f80c09735f4",
+    strip_prefix = "rules_docker-0.19.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.19.0/rules_docker-v0.19.0.tar.gz"],
 )
 
 http_archive(
@@ -140,6 +140,34 @@ load(
 )
 
 container_pull(
+    name = "cc_image_base",
+    digest = "sha256:2c4bb6b7236db0a55ec54ba8845e4031f5db2be957ac61867872bf42e56c4deb",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+)
+
+container_pull(
+    name = "cc_debug_image_base",
+    digest = "sha256:3680c61e81f68fc00bfb5e1ec65e8e678aaafa7c5f056bc2681c29527ebbb30c",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+)
+
+container_pull(
+    name = "go_image_base",
+    digest = "sha256:ba7a315f86771332e76fa9c3d423ecfdbb8265879c6f1c264d6fff7d4fa460a4",
+    registry = "gcr.io",
+    repository = "distroless/base",
+)
+
+container_pull(
+    name = "go_debug_image_base",
+    digest = "sha256:efd8711717d9e9b5d0dbb20ea10876dab0609c923bc05321b912f9239090ca80",
+    registry = "gcr.io",
+    repository = "distroless/base",
+)
+
+container_pull(
     name = "alpine_cc_linux_amd64",
     digest = "sha256:752aa0c9a88461ffc50c5267bb7497ef03a303e38b2c8f7f2ded9bebe5f1f00e",
     registry = "index.docker.io",
@@ -197,7 +225,7 @@ filegroup(
     url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.1.0"
+consensus_spec_version = "v1.1.6"
 
 bls_test_version = "v0.1.1"
 
@@ -213,7 +241,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "0f58ec1c8995ab2c0a3aada873e1a02f333c8659fdacaa1c76fbdce28b6177dc",
+    sha256 = "58dbf798e86017b5561af38f2217b99e9fa5b6be0e928b4c73dad6040bb94d65",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -229,7 +257,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "d2eeadef3f8885748f769a06eb916bea60fb00112a90cec3288ea78db5557df3",
+    sha256 = "5be19f7fca9733686ca25dad5ae306327e98830ef6354549d1ddfc56c10e0e9a",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -245,7 +273,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "bbc345432f4eaa4babe2619e16fcf3f607113ede82d1bd0fff2633c1376419f7",
+    sha256 = "cc110528fcf7ede049e6a05788c77f4a865c3110b49508149d61bb2a992bb896",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -260,7 +288,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "787a50c2a03bebab92f089333f598780ca7b4849b36a4897e6603ddd3e86ec24",
+    sha256 = "c318d7b909ab39db9cc861f645ddd364e7475a4a3425bb702ab407fad3807acd",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -334,9 +362,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "54ce527b83d092da01127f2e3816f4d5cfbab69354caba8537f1ea55889b6d7c",
+    sha256 = "0a3d94428ea28916276694c517b82b364122063fdbf924f54ee9ae0bc500289f",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.4/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.1/prysm-web-ui.tar.gz",
     ],
 )
 
@@ -366,10 +394,6 @@ load(
 )
 
 _cc_image_repos()
-
-load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
-
-geth_dependencies()
 
 load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
 

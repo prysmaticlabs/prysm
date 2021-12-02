@@ -9,13 +9,13 @@ import (
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -130,7 +130,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 	}
 	// In the event our attestation is outdated and beyond the
 	// acceptable threshold, we exit early and do not broadcast it.
-	currSlot := core.CurrentSlot(uint64(s.genesisTime.Unix()))
+	currSlot := slots.CurrentSlot(uint64(s.genesisTime.Unix()))
 	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < currSlot {
 		log.Warnf("Attestation is too old to broadcast, discarding it. Current Slot: %d , Attestation Slot: %d", currSlot, att.Data.Slot)
 		return

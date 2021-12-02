@@ -5,7 +5,6 @@ import (
 	"math"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,7 +22,7 @@ func (s *Simulator) generateAttestationsForSlot(
 ) ([]*ethpb.IndexedAttestation, []*ethpb.AttesterSlashing, error) {
 	attestations := make([]*ethpb.IndexedAttestation, 0)
 	slashings := make([]*ethpb.AttesterSlashing, 0)
-	currentEpoch := core.SlotToEpoch(slot)
+	currentEpoch := slots.ToEpoch(slot)
 
 	committeesPerSlot := helpers.SlotCommitteeCount(s.srvConfig.Params.NumValidators)
 	valsPerCommittee := s.srvConfig.Params.NumValidators /

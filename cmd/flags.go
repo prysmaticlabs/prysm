@@ -33,10 +33,10 @@ var (
 		Usage: "Logging verbosity (trace, debug, info=default, warn, error, fatal, panic)",
 		Value: "info",
 	}
-	// DataDirFlag defines a path on disk.
+	// DataDirFlag defines a path on disk where Prysm databases are stored.
 	DataDirFlag = &cli.StringFlag{
 		Name:  "datadir",
-		Usage: "Data directory for the databases and keystore",
+		Usage: "Data directory for the databases",
 		Value: DefaultDataDir(),
 	}
 	// EnableBackupWebhookFlag for users to trigger db backups via an HTTP webhook.
@@ -150,7 +150,7 @@ var (
 		Value: "",
 	}
 	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
-	P2PMaxPeers = &cli.IntFlag{
+	P2PMaxPeers = &cli.Uint64Flag{
 		Name:  "p2p-max-peers",
 		Usage: "The max number of p2p peers to maintain.",
 		Value: 45,
@@ -224,6 +224,13 @@ var (
 		Name:  "accept-terms-of-use",
 		Usage: "Accept Terms and Conditions (for non-interactive environments)",
 	}
+	// ValidatorMonitorIndicesFlag specifies a list of validator indices to
+	// track for performance updates
+	ValidatorMonitorIndicesFlag = &cli.IntSliceFlag{
+		Name:  "monitor-indices",
+		Usage: "List of validator indices to track performance",
+	}
+
 	// RestoreSourceFileFlag specifies the filepath to the backed-up database file
 	// which will be used to restore the database.
 	RestoreSourceFileFlag = &cli.StringFlag{

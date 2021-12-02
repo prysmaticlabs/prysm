@@ -7,14 +7,14 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	bolt "go.etcd.io/bbolt"
 )
 
 // PruneAttestationsAtEpoch deletes all attestations from the slasher DB with target epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneAttestationsAtEpoch(
-	ctx context.Context, maxEpoch types.Epoch,
+	_ context.Context, maxEpoch types.Epoch,
 ) (numPruned uint, err error) {
 	// We can prune everything less than the current epoch - history length.
 	encodedEndPruneEpoch := fssz.MarshalUint64([]byte{}, uint64(maxEpoch))
@@ -85,10 +85,10 @@ func (s *Store) PruneAttestationsAtEpoch(
 // PruneProposalsAtEpoch deletes all proposals from the slasher DB with epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneProposalsAtEpoch(
-	ctx context.Context, maxEpoch types.Epoch,
+	_ context.Context, maxEpoch types.Epoch,
 ) (numPruned uint, err error) {
 	var endPruneSlot types.Slot
-	endPruneSlot, err = core.EndSlot(maxEpoch)
+	endPruneSlot, err = slots.EpochEnd(maxEpoch)
 	if err != nil {
 		return
 	}

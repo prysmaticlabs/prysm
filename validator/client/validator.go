@@ -19,7 +19,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -411,9 +410,9 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	return buildDuplicateError(resp.Responses)
 }
 
-func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorResponse) error {
+func buildDuplicateError(response []*ethpb.DoppelGangerResponse_ValidatorResponse) error {
 	duplicates := make([][]byte, 0)
-	for _, valRes := range respones {
+	for _, valRes := range response {
 		if valRes.DuplicateExists {
 			copiedKey := [48]byte{}
 			copy(copiedKey[:], valRes.PublicKey)
@@ -426,7 +425,7 @@ func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorRespons
 	return errors.Errorf("Duplicate instances exists in the network for validator keys: %#x", duplicates)
 }
 
-// Ensures that the latest attestion history is retrieved.
+// Ensures that the latest attestation history is retrieved.
 func retrieveLatestRecord(recs []*kv.AttestationRecord) *kv.AttestationRecord {
 	if len(recs) == 0 {
 		return nil
@@ -458,7 +457,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 		return nil
 	}
 	// Set deadline to end of epoch.
-	ss, err := core.StartSlot(core.SlotToEpoch(slot) + 1)
+	ss, err := slots.EpochStart(slots.ToEpoch(slot) + 1)
 	if err != nil {
 		return err
 	}
@@ -615,7 +614,7 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 		// broadcasts signatures for `slot - 1` for inclusion in `slot`. At the last slot of the epoch,
 		// the validator checks whether it's in the sync committee of following epoch.
 		inSyncCommittee := false
-		if core.IsEpochEnd(slot) {
+		if slots.IsEpochEnd(slot) {
 			if v.duties.NextEpochDuties[validator].IsSyncCommittee {
 				roles = append(roles, iface.RoleSyncCommittee)
 				inSyncCommittee = true
@@ -717,7 +716,7 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
 		params.BeaconConfig().DomainSelectionProof[:],
 		params.BeaconConfig().DomainAggregateAndProof[:],
 	} {
-		_, err := v.domainData(ctx, core.SlotToEpoch(slot), d)
+		_, err := v.domainData(ctx, slots.ToEpoch(slot), d)
 		if err != nil {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
@@ -849,14 +848,11 @@ func validatorSubscribeKey(slot types.Slot, committeeID types.CommitteeIndex) [6
 
 // This tracks all validators' voting status.
 type voteStats struct {
-	startEpoch            types.Epoch
-	includedAttestedCount uint64
-	totalAttestedCount    uint64
-	totalDistance         types.Slot
-	correctSources        uint64
-	totalSources          uint64
-	correctTargets        uint64
-	totalTargets          uint64
-	correctHeads          uint64
-	totalHeads            uint64
+	startEpoch          types.Epoch
+	totalAttestedCount  uint64
+	totalRequestedCount uint64
+	totalDistance       types.Slot
+	totalCorrectSource  uint64
+	totalCorrectTarget  uint64
+	totalCorrectHead    uint64
 }

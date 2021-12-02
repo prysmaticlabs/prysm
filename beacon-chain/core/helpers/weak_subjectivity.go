@@ -10,11 +10,12 @@ import (
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ComputeWeakSubjectivityPeriod returns weak subjectivity period for the active validator count and finalized epoch.
@@ -58,7 +59,7 @@ func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconS
 	wsp := uint64(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
 
 	// Cardinality of active validator set.
-	N, err := ActiveValidatorCount(ctx, st, core.CurrentEpoch(st))
+	N, err := ActiveValidatorCount(ctx, st, time.CurrentEpoch(st))
 	if err != nil {
 		return 0, fmt.Errorf("cannot obtain active valiadtor count: %w", err)
 	}
@@ -132,9 +133,9 @@ func IsWithinWeakSubjectivityPeriod(
 		return false, fmt.Errorf("state (%#x) and checkpoint (%#x) roots do not match",
 			wsState.LatestBlockHeader().StateRoot, wsCheckpoint.StateRoot)
 	}
-	if core.SlotToEpoch(wsState.Slot()) != wsCheckpoint.Epoch {
+	if slots.ToEpoch(wsState.Slot()) != wsCheckpoint.Epoch {
 		return false, fmt.Errorf("state (%v) and checkpoint (%v) epochs do not match",
-			core.SlotToEpoch(wsState.Slot()), wsCheckpoint.Epoch)
+			slots.ToEpoch(wsState.Slot()), wsCheckpoint.Epoch)
 	}
 
 	// Compare given epoch to state epoch + weak subjectivity period.
@@ -142,7 +143,7 @@ func IsWithinWeakSubjectivityPeriod(
 	if err != nil {
 		return false, fmt.Errorf("cannot compute weak subjectivity period: %w", err)
 	}
-	wsStateEpoch := core.SlotToEpoch(wsState.Slot())
+	wsStateEpoch := slots.ToEpoch(wsState.Slot())
 
 	return currentEpoch <= wsStateEpoch+wsPeriod, nil
 }

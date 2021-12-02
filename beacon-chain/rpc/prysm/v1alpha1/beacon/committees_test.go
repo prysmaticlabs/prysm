@@ -7,7 +7,6 @@ import (
 	"time"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -107,7 +107,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 1, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	startSlot, err := core.StartSlot(1)
+	startSlot, err := slots.EpochStart(1)
 	require.NoError(t, err)
 	wanted, err := computeCommittees(context.Background(), startSlot, activeIndices, attesterSeed)
 	require.NoError(t, err)

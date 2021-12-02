@@ -180,16 +180,19 @@ func (f *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.PostRequest = &dutiesRequestJson{}
 		endpoint.PostResponse = &attesterDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
+		endpoint.Err = &nodeSyncDetailsErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
 		}
 	case "/eth/v1/validator/duties/proposer/{epoch}":
 		endpoint.GetResponse = &proposerDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
+		endpoint.Err = &nodeSyncDetailsErrorJson{}
 	case "/eth/v1/validator/duties/sync/{epoch}":
 		endpoint.PostRequest = &dutiesRequestJson{}
 		endpoint.PostResponse = &syncCommitteeDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
+		endpoint.Err = &nodeSyncDetailsErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
 		}
@@ -212,11 +215,13 @@ func (f *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "attestation_data_root", Hex: true}, {Name: "slot"}}
 	case "/eth/v1/validator/beacon_committee_subscriptions":
 		endpoint.PostRequest = &submitBeaconCommitteeSubscriptionsRequestJson{}
+		endpoint.Err = &nodeSyncDetailsErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapBeaconCommitteeSubscriptionsArray,
 		}
 	case "/eth/v1/validator/sync_committee_subscriptions":
 		endpoint.PostRequest = &submitSyncCommitteeSubscriptionRequestJson{}
+		endpoint.Err = &nodeSyncDetailsErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSubscriptionsArray,
 		}

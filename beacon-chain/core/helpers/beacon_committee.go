@@ -12,7 +12,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 var (
@@ -73,7 +74,7 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //        count=committees_per_slot * SLOTS_PER_EPOCH,
 //    )
 func BeaconCommitteeFromState(ctx context.Context, state state.ReadOnlyBeaconState, slot types.Slot, committeeIndex types.CommitteeIndex) ([]types.ValidatorIndex, error) {
-	epoch := core.SlotToEpoch(slot)
+	epoch := slots.ToEpoch(slot)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
@@ -157,7 +158,7 @@ func CommitteeAssignments(
 	state state.BeaconState,
 	epoch types.Epoch,
 ) (map[types.ValidatorIndex]*CommitteeAssignmentContainer, map[types.ValidatorIndex][]types.Slot, error) {
-	nextEpoch := core.NextEpoch(state)
+	nextEpoch := time.NextEpoch(state)
 	if epoch > nextEpoch {
 		return nil, nil, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
@@ -169,7 +170,7 @@ func CommitteeAssignments(
 	// We determine the slots in which proposers are supposed to act.
 	// Some validators may need to propose multiple times per epoch, so
 	// we use a map of proposer idx -> []slot to keep track of this possibility.
-	startSlot, err := core.StartSlot(epoch)
+	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -198,7 +199,7 @@ func CommitteeAssignments(
 	// Each slot in an epoch has a different set of committees. This value is derived from the
 	// active validator set, which does not change.
 	numCommitteesPerSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
-	validatorIndexToCommittee := make(map[types.ValidatorIndex]*CommitteeAssignmentContainer, params.BeaconConfig().SlotsPerEpoch.Mul(numCommitteesPerSlot))
+	validatorIndexToCommittee := make(map[types.ValidatorIndex]*CommitteeAssignmentContainer, len(activeValidatorIndices))
 
 	// Compute all committees for all slots.
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
@@ -320,13 +321,13 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaconState) error {
 	// The cache uses the state root at the (current epoch - 1)'s slot as key. (e.g. for epoch 2, the key is root at slot 63)
 	// Which is the reason why we skip genesis epoch.
-	if core.CurrentEpoch(state) <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+	if time.CurrentEpoch(state) <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		return nil
 	}
 
 	// Use state root from (current_epoch - 1))
-	wantedEpoch := core.PrevEpoch(state)
-	s, err := core.EndSlot(wantedEpoch)
+	wantedEpoch := time.PrevEpoch(state)
+	s, err := slots.EpochEnd(wantedEpoch)
 	if err != nil {
 		return err
 	}
@@ -347,7 +348,7 @@ func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaco
 		return nil
 	}
 
-	indices, err := ActiveValidatorIndices(ctx, state, core.CurrentEpoch(state))
+	indices, err := ActiveValidatorIndices(ctx, state, time.CurrentEpoch(state))
 	if err != nil {
 		return err
 	}
@@ -415,12 +416,12 @@ func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []
 	hashFunc := hash.CustomSHA256Hasher()
 	proposerIndices := make([]types.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
 
-	e := core.CurrentEpoch(state)
+	e := time.CurrentEpoch(state)
 	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate seed")
 	}
-	slot, err := core.StartSlot(e)
+	slot, err := slots.EpochStart(e)
 	if err != nil {
 		return nil, err
 	}

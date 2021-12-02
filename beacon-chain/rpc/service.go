@@ -34,7 +34,6 @@ import (
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
-	slasherv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/slasher"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	slasherservice "github.com/prysmaticlabs/prysm/beacon-chain/slasher"
@@ -237,10 +236,6 @@ func (s *Service) Start() {
 		HeadFetcher:        s.cfg.HeadFetcher,
 	}
 
-	slasherServer := &slasherv1alpha1.Server{
-		SlashingChecker: s.cfg.SlashingChecker,
-	}
-
 	beaconChainServer := &beaconv1alpha1.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.cfg.BeaconDB,
@@ -287,7 +282,6 @@ func (s *Service) Start() {
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
-	ethpbv1alpha1.RegisterSlasherServer(s.grpcServer, slasherServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	ethpbservice.RegisterEventsServer(s.grpcServer, &events.Server{
@@ -388,7 +382,7 @@ func (s *Service) logNewClientConnection(ctx context.Context) {
 		if !s.connectedRPCClients[clientInfo.Addr] {
 			log.WithFields(logrus.Fields{
 				"addr": clientInfo.Addr.String(),
-			}).Infof("New gRPC client connected to beacon node")
+			}).Infof("gRPC client connected to beacon node")
 			s.connectedRPCClients[clientInfo.Addr] = true
 		}
 	}

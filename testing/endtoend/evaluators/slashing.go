@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	e2eTypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -19,32 +20,40 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// InjectDoubleVote broadcasts a double vote into the beacon node pool for the slasher to detect.
-var InjectDoubleVote = e2eTypes.Evaluator{
-	Name:       "inject_double_vote_%d",
-	Policy:     policies.OnEpoch(1),
-	Evaluation: insertDoubleAttestationIntoPool,
+// InjectDoubleVoteOnEpoch broadcasts a double vote into the beacon node pool for the slasher to detect.
+var InjectDoubleVoteOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+	return e2eTypes.Evaluator{
+		Name:       "inject_double_vote_%d",
+		Policy:     policies.OnEpoch(n),
+		Evaluation: insertDoubleAttestationIntoPool,
+	}
 }
 
-// ProposeDoubleBlock broadcasts a double block to the beacon node for the slasher to detect.
-var ProposeDoubleBlock = e2eTypes.Evaluator{
-	Name:       "propose_double_block_%d",
-	Policy:     policies.OnEpoch(1),
-	Evaluation: proposeDoubleBlock,
+// InjectDoubleBlockOnEpoch proposes a double block to the beacon node for the slasher to detect.
+var InjectDoubleBlockOnEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+	return e2eTypes.Evaluator{
+		Name:       "inject_double_block_%d",
+		Policy:     policies.OnEpoch(n),
+		Evaluation: proposeDoubleBlock,
+	}
 }
 
-// ValidatorsSlashed ensures the expected amount of validators are slashed.
-var ValidatorsSlashed = e2eTypes.Evaluator{
-	Name:       "validators_slashed_epoch_%d",
-	Policy:     policies.AfterNthEpoch(1),
-	Evaluation: validatorsSlashed,
+// ValidatorsSlashedAfterEpoch ensures the expected amount of validators are slashed.
+var ValidatorsSlashedAfterEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+	return e2eTypes.Evaluator{
+		Name:       "validators_slashed_epoch_%d",
+		Policy:     policies.AfterNthEpoch(n),
+		Evaluation: validatorsSlashed,
+	}
 }
 
-// SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
-var SlashedValidatorsLoseBalance = e2eTypes.Evaluator{
-	Name:       "slashed_validators_lose_valance_epoch_%d",
-	Policy:     policies.AfterNthEpoch(1),
-	Evaluation: validatorsLoseBalance,
+// SlashedValidatorsLoseBalanceAfterEpoch checks if the validators slashed lose the right balance.
+var SlashedValidatorsLoseBalanceAfterEpoch = func(n types.Epoch) e2eTypes.Evaluator {
+	return e2eTypes.Evaluator{
+		Name:       "slashed_validators_lose_valance_epoch_%d",
+		Policy:     policies.AfterNthEpoch(n),
+		Evaluation: validatorsLoseBalance,
+	}
 }
 
 var slashedIndices []uint64
@@ -193,7 +202,6 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get chain head")
 	}
-
 	_, privKeys, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
 		return err
@@ -218,10 +226,23 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		}
 	}
 
+	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconNodeNum := e2e.TestParams.BeaconNodeCount
+	if validatorNum%beaconNodeNum != 0 {
+		return errors.New("validator count is not easily divisible by beacon node count")
+	}
+	validatorsPerNode := validatorNum / beaconNodeNum
+
+	// If the proposer index is in the second validator client, we connect to
+	// the corresponding beacon node instead.
+	if proposerIndex >= types.ValidatorIndex(uint64(validatorsPerNode)) {
+		valClient = eth.NewBeaconNodeValidatorClient(conns[1])
+	}
+
 	hashLen := 32
 	blk := &eth.BeaconBlock{
-		Slot:          chainHead.HeadSlot - 1,
-		ParentRoot:    bytesutil.PadTo([]byte("bad parent root"), hashLen),
+		Slot:          chainHead.HeadSlot + 1,
+		ParentRoot:    chainHead.HeadBlockRoot,
 		StateRoot:     bytesutil.PadTo([]byte("bad state root"), hashLen),
 		ProposerIndex: proposerIndex,
 		Body: &eth.BeaconBlockBody{
@@ -260,8 +281,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 
 	// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
 	// Only broadcasting the attestation to one node also helps test slashing propagation.
-	client := eth.NewBeaconNodeValidatorClient(conns[0])
-	if _, err = client.ProposeBlock(ctx, signedBlk); err == nil {
+	if _, err = valClient.ProposeBlock(ctx, signedBlk); err == nil {
 		return errors.New("expected block to fail processing")
 	}
 	slashedIndices = append(slashedIndices, uint64(proposerIndex))

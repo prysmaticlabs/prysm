@@ -38,7 +38,6 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// Send the voluntary exit to the operation feed.
 	vs.OperationNotifier.OperationFeed().Send(&feed.Event{
 		Type: opfeed.ExitReceived,
 		Data: &opfeed.ExitReceivedData{

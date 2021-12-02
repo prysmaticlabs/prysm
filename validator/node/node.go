@@ -483,6 +483,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		validatorpb.RegisterAuthHandler,
 		validatorpb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
+		validatorpb.RegisterHealthHandler,
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,

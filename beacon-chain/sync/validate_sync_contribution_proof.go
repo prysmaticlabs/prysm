@@ -8,6 +8,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -42,12 +44,12 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	defer span.End()
 
 	// Accept the sync committee contribution if the contribution came from itself.
-	if pid == s.cfg.P2P.PeerID() {
+	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
 
 	// Ignore the sync committee contribution if the beacon node is syncing.
-	if s.cfg.InitialSync.Syncing() {
+	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
 	m, err := s.readSyncContributionMessage(msg)
@@ -57,7 +59,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	}
 
 	// The contribution's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance).
-	if err := altair.ValidateSyncMessageTime(m.Message.Contribution.Slot, s.cfg.Chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := altair.ValidateSyncMessageTime(m.Message.Contribution.Slot, s.cfg.chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
@@ -79,6 +81,15 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	s.setSyncContributionIndexSlotSeen(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
 
 	msg.ValidatorData = m
+
+	// Broadcast the contribution on a feed to notify other services in the beacon node
+	// of a received contribution.
+	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
+		Type: opfeed.SyncCommitteeContributionReceived,
+		Data: &opfeed.SyncCommitteeContributionReceivedData{
+			Contribution: m,
+		},
+	})
 
 	return pubsub.ValidationAccept, nil
 }
@@ -151,7 +162,7 @@ func (s *Service) rejectInvalidIndexInSubCommittee(m *ethpb.SignedContributionAn
 		_, span := trace.StartSpan(ctx, "sync.rejectInvalidIndexInSubCommittee")
 		defer span.End()
 		// The aggregator's validator index is in the declared subcommittee of the current sync committee.
-		committeeIndices, err := s.cfg.Chain.HeadSyncCommitteeIndices(ctx, m.Message.AggregatorIndex, m.Message.Contribution.Slot)
+		committeeIndices, err := s.cfg.chain.HeadSyncCommitteeIndices(ctx, m.Message.AggregatorIndex, m.Message.Contribution.Slot)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore, err
@@ -193,12 +204,12 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 		_, span := trace.StartSpan(ctx, "sync.rejectInvalidContributionSignature")
 		defer span.End()
 		// The aggregator signature, `signed_contribution_and_proof.signature`, is valid.
-		d, err := s.cfg.Chain.HeadSyncContributionProofDomain(ctx, m.Message.Contribution.Slot)
+		d, err := s.cfg.chain.HeadSyncContributionProofDomain(ctx, m.Message.Contribution.Slot)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore, err
 		}
-		pubkey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.Message.AggregatorIndex)
+		pubkey, err := s.cfg.chain.HeadValidatorIndexToPublicKey(ctx, m.Message.AggregatorIndex)
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
@@ -213,12 +224,12 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 				tracing.AnnotateError(span, err)
 				return pubsub.ValidationReject, err
 			}
-			set := &bls.SignatureSet{
+			set := &bls.SignatureBatch{
 				Messages:   [][32]byte{root},
 				PublicKeys: []bls.PublicKey{publicKey},
 				Signatures: [][]byte{m.Signature},
 			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set), nil
+			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set)
 		}
 
 		if err := signing.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
@@ -237,7 +248,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
 		var activePubkeys []bls.PublicKey
 		var activeRawPubkeys [][]byte
-		syncPubkeys, err := s.cfg.Chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+		syncPubkeys, err := s.cfg.chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
@@ -258,7 +269,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 				activeRawPubkeys = append(activeRawPubkeys, pk)
 			}
 		}
-		d, err := s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Message.Contribution.Slot)
+		d, err := s.cfg.chain.HeadSyncCommitteeDomain(ctx, m.Message.Contribution.Slot)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore, err
@@ -277,12 +288,12 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 				tracing.AnnotateError(span, err)
 				return pubsub.ValidationIgnore, err
 			}
-			set := &bls.SignatureSet{
+			set := &bls.SignatureBatch{
 				Messages:   [][32]byte{sigRoot},
 				PublicKeys: []bls.PublicKey{aggKey},
 				Signatures: [][]byte{m.Message.Contribution.Signature},
 			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set), nil
+			return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
 		}
 		sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
 		if err != nil {
@@ -321,11 +332,11 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 // selection proof.
 func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.ContributionAndProof) error {
 	selectionData := &ethpb.SyncAggregatorSelectionData{Slot: m.Contribution.Slot, SubcommitteeIndex: m.Contribution.SubcommitteeIndex}
-	domain, err := s.cfg.Chain.HeadSyncSelectionProofDomain(ctx, m.Contribution.Slot)
+	domain, err := s.cfg.chain.HeadSyncSelectionProofDomain(ctx, m.Contribution.Slot)
 	if err != nil {
 		return err
 	}
-	pubkey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.AggregatorIndex)
+	pubkey, err := s.cfg.chain.HeadValidatorIndexToPublicKey(ctx, m.AggregatorIndex)
 	if err != nil {
 		return err
 	}
@@ -338,12 +349,15 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 		if err != nil {
 			return err
 		}
-		set := &bls.SignatureSet{
+		set := &bls.SignatureBatch{
 			Messages:   [][32]byte{root},
 			PublicKeys: []bls.PublicKey{publicKey},
 			Signatures: [][]byte{m.SelectionProof},
 		}
-		valid := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
+		valid, err := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
+		if err != nil {
+			return err
+		}
 		if valid != pubsub.ValidationAccept {
 			return errors.New("invalid sync selection proof provided")
 		}

@@ -28,7 +28,7 @@ func (s *MockSlashingChecker) HighestAttestations(
 	return atts, nil
 }
 
-func (s *MockSlashingChecker) IsSlashableBlock(ctx context.Context, proposal *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
+func (s *MockSlashingChecker) IsSlashableBlock(_ context.Context, _ *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
 	if s.ProposerSlashingFound {
 		return &ethpb.ProposerSlashing{
 			Header_1: &ethpb.SignedBeaconBlockHeader{
@@ -56,7 +56,7 @@ func (s *MockSlashingChecker) IsSlashableBlock(ctx context.Context, proposal *et
 	return nil, nil
 }
 
-func (s *MockSlashingChecker) IsSlashableAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
+func (s *MockSlashingChecker) IsSlashableAttestation(_ context.Context, _ *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
 	if s.AttesterSlashingFound {
 		return []*ethpb.AttesterSlashing{
 			{

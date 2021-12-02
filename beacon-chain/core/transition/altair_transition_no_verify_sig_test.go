@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -45,7 +45,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
-	epoch := core.CurrentEpoch(beaconState)
+	epoch := time.CurrentEpoch(beaconState)
 	randaoReveal, err := util.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
@@ -78,7 +78,7 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	syncSigs := make([]bls.Signature, len(indices))
 	for i, indice := range indices {
 		b := p2pType.SSZBytes(pbr[:])
-		sb, err := signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, time.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -132,7 +132,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	require.NoError(t, beaconState.SetEth1DataVotes([]*ethpb.Eth1Data{eth1Data}))
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
-	epoch := core.CurrentEpoch(beaconState)
+	epoch := time.CurrentEpoch(beaconState)
 	randaoReveal, err := util.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
@@ -165,7 +165,7 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	syncSigs := make([]bls.Signature, len(indices))
 	for i, indice := range indices {
 		b := p2pType.SSZBytes(pbr[:])
-		sb, err := signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(beaconState, time.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -213,9 +213,12 @@ func TestProcessEpoch_BadBalanceAltair(t *testing.T) {
 	assert.NoError(t, s.SetSlot(63))
 	assert.NoError(t, s.UpdateBalancesAtIndex(0, math.MaxUint64))
 	participation := byte(0)
-	participation = altair.AddValidatorFlag(participation, params.BeaconConfig().TimelyHeadFlagIndex)
-	participation = altair.AddValidatorFlag(participation, params.BeaconConfig().TimelySourceFlagIndex)
-	participation = altair.AddValidatorFlag(participation, params.BeaconConfig().TimelyTargetFlagIndex)
+	participation, err := altair.AddValidatorFlag(participation, params.BeaconConfig().TimelyHeadFlagIndex)
+	require.NoError(t, err)
+	participation, err = altair.AddValidatorFlag(participation, params.BeaconConfig().TimelySourceFlagIndex)
+	require.NoError(t, err)
+	participation, err = altair.AddValidatorFlag(participation, params.BeaconConfig().TimelyTargetFlagIndex)
+	require.NoError(t, err)
 
 	epochParticipation, err := s.CurrentEpochParticipation()
 	assert.NoError(t, err)

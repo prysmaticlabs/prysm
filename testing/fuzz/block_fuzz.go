@@ -1,3 +1,4 @@
+//go:build libfuzzer
 // +build libfuzzer
 
 package fuzz
@@ -137,37 +138,37 @@ func BeaconFuzzBlock(b []byte) {
 		panic(err)
 	}
 
-	chain, err := blockchain.NewService(context.Background(), &blockchain.Config{
-		ChainStartFetcher: powt.NewPOWChain(),
-		BeaconDB:          db1,
-		DepositCache:      nil,
-		AttPool:           ap,
-		ExitPool:          ep,
-		SlashingPool:      sp,
-		P2p:               p2p,
-		StateNotifier:     sn,
-		ForkChoiceStore:   protoarray.New(0, 0, [32]byte{}),
-		AttService:        ops,
-		StateGen:          sgen,
-	})
+	chain, err := blockchain.NewService(
+		context.Background(),
+		blockchain.WithChainStartFetcher(powt.NewPOWChain()),
+		blockchain.WithDatabase(db1),
+		blockchain.WithAttestationPool(ap),
+		blockchain.WithExitPool(ep),
+		blockchain.WithSlashingPool(sp),
+		blockchain.WithP2PBroadcaster(p2p),
+		blockchain.WithStateNotifier(sn),
+		blockchain.WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+		blockchain.WithAttestationService(ops),
+		blockchain.WithStateGen(sgen),
+	)
 	if err != nil {
 		panic(err)
 	}
 	chain.Start()
 
-	s := sync.NewRegularSyncFuzz(&sync.Config{
-		DB:                db1,
-		P2P:               p2p,
-		Chain:             chain,
-		InitialSync:       fakeChecker{},
-		StateNotifier:     sn,
-		BlockNotifier:     bn,
-		OperationNotifier: an,
-		AttPool:           ap,
-		ExitPool:          ep,
-		SlashingPool:      sp,
-		StateGen:          sgen,
-	})
+	s := sync.NewRegularSyncFuzz(
+		sync.WithDatabase(db1),
+		sync.WithP2P(p2p),
+		sync.WithChainService(chain),
+		sync.WithInitialSync(fakeChecker{}),
+		sync.WithStateNotifier(sn),
+		sync.WithBlockNotifier(bn),
+		sync.WithOperationNotifier(an),
+		sync.WithAttestationPool(ap),
+		sync.WithExitPool(ep),
+		sync.WithSlashingPool(sp),
+		sync.WithStateGen(sgen),
+	)
 
 	s.InitCaches()
 

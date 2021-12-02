@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -151,7 +151,7 @@ func GenerateFullBlock(
 	if err := bState.SetSlot(slot); err != nil {
 		return nil, err
 	}
-	reveal, err := RandaoReveal(bState, core.CurrentEpoch(bState), privs)
+	reveal, err := RandaoReveal(bState, time.CurrentEpoch(bState), privs)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func GenerateProposerSlashingForValidator(
 			BodyRoot:      bytesutil.PadTo([]byte{0, 1, 0}, 32),
 		},
 	})
-	currentEpoch := core.CurrentEpoch(bState)
+	currentEpoch := time.CurrentEpoch(bState)
 	var err error
 	header1.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
@@ -254,7 +254,7 @@ func GenerateAttesterSlashingForValidator(
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
-	currentEpoch := core.CurrentEpoch(bState)
+	currentEpoch := time.CurrentEpoch(bState)
 
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
@@ -354,7 +354,7 @@ func generateVoluntaryExits(
 	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
-	currentEpoch := core.CurrentEpoch(bState)
+	currentEpoch := time.CurrentEpoch(bState)
 
 	voluntaryExits := make([]*ethpb.SignedVoluntaryExit, numExits)
 	for i := 0; i < len(voluntaryExits); i++ {
@@ -364,7 +364,7 @@ func generateVoluntaryExits(
 		}
 		exit := &ethpb.SignedVoluntaryExit{
 			Exit: &ethpb.VoluntaryExit{
-				Epoch:          core.PrevEpoch(bState),
+				Epoch:          time.PrevEpoch(bState),
 				ValidatorIndex: valIndex,
 			},
 		}
@@ -378,7 +378,7 @@ func generateVoluntaryExits(
 }
 
 func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
-	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, core.CurrentEpoch(bState))
+	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, time.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}
@@ -608,6 +608,71 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 		b.SyncAggregate = &ethpb.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, 64),
 			SyncCommitteeSignature: make([]byte, 96),
+		}
+	}
+	return b
+}
+
+// HydrateSignedBeaconBlockMerge hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockMerge(b *ethpb.SignedBeaconBlockMerge) *ethpb.SignedBeaconBlockMerge {
+	if b.Signature == nil {
+		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	b.Block = HydrateBeaconBlockMerge(b.Block)
+	return b
+}
+
+// HydrateBeaconBlockMerge hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockMerge(b *ethpb.BeaconBlockMerge) *ethpb.BeaconBlockMerge {
+	if b == nil {
+		b = &ethpb.BeaconBlockMerge{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, 32)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, 32)
+	}
+	b.Body = HydrateBeaconBlockBodyMerge(b.Body)
+	return b
+}
+
+// HydrateBeaconBlockBodyMerge hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockBodyMerge(b *ethpb.BeaconBlockBodyMerge) *ethpb.BeaconBlockBodyMerge {
+	if b == nil {
+		b = &ethpb.BeaconBlockBodyMerge{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, 96),
+		}
+	}
+	if b.ExecutionPayload == nil {
+		b.ExecutionPayload = &ethpb.ExecutionPayload{
+			ParentHash:    make([]byte, 32),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, 32),
+			ReceiptRoot:   make([]byte, 32),
+			LogsBloom:     make([]byte, 256),
+			Random:        make([]byte, 32),
+			BaseFeePerGas: make([]byte, 32),
+			BlockHash:     make([]byte, 32),
 		}
 	}
 	return b

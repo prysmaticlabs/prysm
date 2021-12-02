@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
@@ -105,7 +105,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("foo"),
 				},
-				Signature: bytesutil.PadTo([]byte("A"), 96),
+				Signature: bytesutil.PadTo([]byte("A"), params.BeaconConfig().BLSSignatureLength),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
@@ -113,7 +113,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("bar"),
 				},
-				Signature: bytesutil.PadTo([]byte("B"), 96),
+				Signature: bytesutil.PadTo([]byte("B"), params.BeaconConfig().BLSSignatureLength),
 			},
 		},
 	}
@@ -329,7 +329,7 @@ func TestVerifyProposerSlashing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			sk := sks[tt.args.slashing.Header_1.Header.ProposerIndex]
-			d, err := signing.Domain(tt.args.beaconState.Fork(), core.SlotToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorRoot())
+			d, err := signing.Domain(tt.args.beaconState.Fork(), slots.ToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorRoot())
 			require.NoError(t, err)
 			if tt.args.slashing.Header_1.Signature == nil {
 				sr, err := signing.ComputeSigningRoot(tt.args.slashing.Header_1.Header, d)

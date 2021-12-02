@@ -174,6 +174,7 @@ func (v *ValidatorService) Start() {
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
+		slashingProtectionClient:       ethpb.NewSlasherClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
 		keyManager:                     v.keyManager,
 		graffiti:                       v.graffiti,

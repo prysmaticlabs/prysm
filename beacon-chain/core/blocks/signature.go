@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -16,10 +15,11 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// retrieves the signature set from the raw data, public key,signature and domain provided.
-func signatureSet(signedData, pub, signature, domain []byte) (*bls.SignatureSet, error) {
+// retrieves the signature batch from the raw data, public key,signature and domain provided.
+func signatureBatch(signedData, pub, signature, domain []byte) (*bls.SignatureBatch, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
@@ -32,7 +32,7 @@ func signatureSet(signedData, pub, signature, domain []byte) (*bls.SignatureSet,
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash container")
 	}
-	return &bls.SignatureSet{
+	return &bls.SignatureBatch{
 		Signatures: [][]byte{signature},
 		PublicKeys: []bls.PublicKey{publicKey},
 		Messages:   [][32]byte{root},
@@ -41,7 +41,7 @@ func signatureSet(signedData, pub, signature, domain []byte) (*bls.SignatureSet,
 
 // verifies the signature from the raw data, public key and domain provided.
 func verifySignature(signedData, pub, signature, domain []byte) error {
-	set, err := signatureSet(signedData, pub, signature, domain)
+	set, err := signatureBatch(signedData, pub, signature, domain)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 	proposerIndex types.ValidatorIndex,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) error {
-	currentEpoch := core.SlotToEpoch(beaconState.Slot())
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
 
 // VerifyBlockHeaderSignature verifies the proposer signature of a beacon block header.
 func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *ethpb.SignedBeaconBlockHeader) error {
-	currentEpoch := core.SlotToEpoch(beaconState.Slot())
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *ethpb.Sig
 // from the above method by not using fork data from the state and instead retrieving it
 // via the respective epoch.
 func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState, blk block.SignedBeaconBlock) error {
-	currentEpoch := core.SlotToEpoch(blk.Block().Slot())
+	currentEpoch := slots.ToEpoch(blk.Block().Slot())
 	fork, err := forks.Fork(currentEpoch)
 	if err != nil {
 		return err
@@ -116,12 +116,12 @@ func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState,
 	return signing.VerifyBlockSigningRoot(proposerPubKey, blk.Signature(), domain, blk.Block().HashTreeRoot)
 }
 
-// BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
-func BlockSignatureSet(beaconState state.ReadOnlyBeaconState,
+// BlockSignatureBatch retrieves the block signature batch from the provided block and its corresponding state.
+func BlockSignatureBatch(beaconState state.ReadOnlyBeaconState,
 	proposerIndex types.ValidatorIndex,
 	sig []byte,
-	rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
-	currentEpoch := core.SlotToEpoch(beaconState.Slot())
+	rootFunc func() ([32]byte, error)) (*bls.SignatureBatch, error) {
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
@@ -131,21 +131,21 @@ func BlockSignatureSet(beaconState state.ReadOnlyBeaconState,
 		return nil, err
 	}
 	proposerPubKey := proposer.PublicKey
-	return signing.BlockSignatureSet(proposerPubKey, sig, domain, rootFunc)
+	return signing.BlockSignatureBatch(proposerPubKey, sig, domain, rootFunc)
 }
 
-// RandaoSignatureSet retrieves the relevant randao specific signature set object
+// RandaoSignatureBatch retrieves the relevant randao specific signature batch object
 // from a block and its corresponding state.
-func RandaoSignatureSet(
+func RandaoSignatureBatch(
 	ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
 	reveal []byte,
-) (*bls.SignatureSet, error) {
+) (*bls.SignatureBatch, error) {
 	buf, proposerPub, domain, err := randaoSigningData(ctx, beaconState)
 	if err != nil {
 		return nil, err
 	}
-	set, err := signatureSet(buf, proposerPub, reveal, domain)
+	set, err := signatureBatch(buf, proposerPub, reveal, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func randaoSigningData(ctx context.Context, beaconState state.ReadOnlyBeaconStat
 	}
 	proposerPub := beaconState.PubkeyAtIndex(proposerIdx)
 
-	currentEpoch := core.SlotToEpoch(beaconState.Slot())
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, uint64(currentEpoch))
 
@@ -171,13 +171,13 @@ func randaoSigningData(ctx context.Context, beaconState state.ReadOnlyBeaconStat
 	return buf, proposerPub[:], domain, nil
 }
 
-// Method to break down attestations of the same domain and collect them into a single signature set.
-func createAttestationSignatureSet(
+// Method to break down attestations of the same domain and collect them into a single signature batch.
+func createAttestationSignatureBatch(
 	ctx context.Context,
 	beaconState state.ReadOnlyBeaconState,
 	atts []*ethpb.Attestation,
 	domain []byte,
-) (*bls.SignatureSet, error) {
+) (*bls.SignatureBatch, error) {
 	if len(atts) == 0 {
 		return nil, nil
 	}
@@ -216,16 +216,16 @@ func createAttestationSignatureSet(
 		}
 		msgs[i] = root
 	}
-	return &bls.SignatureSet{
+	return &bls.SignatureBatch{
 		Signatures: sigs,
 		PublicKeys: pks,
 		Messages:   msgs,
 	}, nil
 }
 
-// AttestationSignatureSet retrieves all the related attestation signature data such as the relevant public keys,
-// signatures and attestation signing data and collate it into a signature set object.
-func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeaconState, atts []*ethpb.Attestation) (*bls.SignatureSet, error) {
+// AttestationSignatureBatch retrieves all the related attestation signature data such as the relevant public keys,
+// signatures and attestation signing data and collate it into a signature batch object.
+func AttestationSignatureBatch(ctx context.Context, beaconState state.ReadOnlyBeaconState, atts []*ethpb.Attestation) (*bls.SignatureBatch, error) {
 	if len(atts) == 0 {
 		return bls.NewSet(), nil
 	}
@@ -238,7 +238,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeac
 	var preForkAtts []*ethpb.Attestation
 	var postForkAtts []*ethpb.Attestation
 	for _, a := range atts {
-		if core.SlotToEpoch(a.Data.Slot) < fork.Epoch {
+		if slots.ToEpoch(a.Data.Slot) < fork.Epoch {
 			preForkAtts = append(preForkAtts, a)
 		} else {
 			postForkAtts = append(postForkAtts, a)
@@ -247,12 +247,12 @@ func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeac
 	set := bls.NewSet()
 
 	// Check attestations from before the fork.
-	if fork.Epoch > 0 && len(preForkAtts) > 0 { // Check to prevent underflow and there is valid attestations to create sig set.
+	if fork.Epoch > 0 && len(preForkAtts) > 0 { // Check to prevent underflow and there is valid attestations to create sig batch.
 		prevDomain, err := signing.Domain(fork, fork.Epoch-1, dt, gvr)
 		if err != nil {
 			return nil, err
 		}
-		aSet, err := createAttestationSignatureSet(ctx, beaconState, preForkAtts, prevDomain)
+		aSet, err := createAttestationSignatureBatch(ctx, beaconState, preForkAtts, prevDomain)
 		if err != nil {
 			return nil, err
 		}
@@ -272,7 +272,7 @@ func AttestationSignatureSet(ctx context.Context, beaconState state.ReadOnlyBeac
 			return nil, err
 		}
 
-		aSet, err := createAttestationSignatureSet(ctx, beaconState, postForkAtts, currDomain)
+		aSet, err := createAttestationSignatureBatch(ctx, beaconState, postForkAtts, currDomain)
 		if err != nil {
 			return nil, err
 		}

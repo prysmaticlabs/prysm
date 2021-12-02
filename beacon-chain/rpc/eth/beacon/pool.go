@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/api/grpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -15,6 +14,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -99,7 +99,7 @@ func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAtt
 	broadcastFailed := false
 	for _, att := range validAttestations {
 		// Determine subnet to broadcast attestation to
-		wantedEpoch := core.SlotToEpoch(att.Data.Slot)
+		wantedEpoch := slots.ToEpoch(att.Data.Slot)
 		vals, err := bs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
 			return nil, err
@@ -281,7 +281,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 	}
 
 	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, alphaExit)
-	if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+	if err := bs.Broadcaster.Broadcast(ctx, alphaExit); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
 	}
 

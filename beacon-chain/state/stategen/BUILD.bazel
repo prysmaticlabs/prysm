@@ -23,8 +23,9 @@ go_library(
         "//testing/slasher/simulator:__pkg__",
     ],
     deps = [
-        "//beacon-chain/core:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
@@ -35,6 +36,7 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//runtime/version:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",

@@ -44,31 +44,31 @@ func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 	}{
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{},
+			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'A'}}},
 			index:       0,
 			expectedErr: "",
 		},
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{},
+			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'B'}}},
 			index:       3,
 			expectedErr: "wanted deposit with index 1 to be inserted but received 3",
 		},
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{},
+			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'C'}}},
 			index:       1,
 			expectedErr: "",
 		},
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{},
+			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'D'}}},
 			index:       4,
 			expectedErr: "wanted deposit with index 2 to be inserted but received 4",
 		},
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{},
+			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'E'}}},
 			index:       2,
 			expectedErr: "",
 		},
@@ -316,8 +316,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
-
-	dc.deposits = []*dbpb.DepositContainer{
+	ctrs := []*dbpb.DepositContainer{
 		{
 			Eth1BlockHeight: 9,
 			Deposit: &ethpb.Deposit{
@@ -359,6 +358,7 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 			},
 		},
 	}
+	dc.InsertDepositContainers(context.Background(), ctrs)
 
 	pk1 := bytesutil.PadTo([]byte("pk1"), 48)
 	dep, blkNum := dc.DepositByPubkey(context.Background(), pk1)
@@ -626,24 +626,28 @@ func TestPruneProofs_Ok(t *testing.T) {
 		index   int64
 	}{
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   0,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk0"), 48)}},
+			index: 0,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   1,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk1"), 48)}},
+			index: 1,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   2,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), 48)}},
+			index: 2,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   3,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), 48)}},
+			index: 3,
 		},
 	}
 
@@ -669,24 +673,26 @@ func TestPruneProofs_SomeAlreadyPruned(t *testing.T) {
 		index   int64
 	}{
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: nil},
-			index:   0,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: nil, Data: &ethpb.Deposit_Data{
+				PublicKey: bytesutil.PadTo([]byte("pk0"), 48)}},
+			index: 0,
+		},
+		{
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: nil, Data: &ethpb.Deposit_Data{
+				PublicKey: bytesutil.PadTo([]byte("pk1"), 48)}}, index: 1,
 		},
 		{
 			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: nil},
-			index:   1,
-		},
-		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(), Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), 48)}},
 			index:   2,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   3,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), 48)}},
+			index: 3,
 		},
 	}
 
@@ -709,24 +715,28 @@ func TestPruneProofs_PruneAllWhenDepositIndexTooBig(t *testing.T) {
 		index   int64
 	}{
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   0,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk0"), 48)}},
+			index: 0,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   1,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk1"), 48)}},
+			index: 1,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   2,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), 48)}},
+			index: 2,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   3,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), 48)}},
+			index: 3,
 		},
 	}
 
@@ -752,24 +762,28 @@ func TestPruneProofs_CorrectlyHandleLastIndex(t *testing.T) {
 		index   int64
 	}{
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   0,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk0"), 48)}},
+			index: 0,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   1,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk1"), 48)}},
+			index: 1,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   2,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), 48)}},
+			index: 2,
 		},
 		{
-			blkNum:  0,
-			deposit: &ethpb.Deposit{Proof: makeDepositProof()},
-			index:   3,
+			blkNum: 0,
+			deposit: &ethpb.Deposit{Proof: makeDepositProof(),
+				Data: &ethpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), 48)}},
+			index: 3,
 		},
 	}
 
@@ -783,6 +797,36 @@ func TestPruneProofs_CorrectlyHandleLastIndex(t *testing.T) {
 	assert.DeepEqual(t, [][]byte(nil), dc.deposits[1].Deposit.Proof)
 	assert.DeepEqual(t, [][]byte(nil), dc.deposits[2].Deposit.Proof)
 	assert.DeepEqual(t, [][]byte(nil), dc.deposits[3].Deposit.Proof)
+}
+
+func TestDepositMap_WorksCorrectly(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+
+	pk0 := bytesutil.PadTo([]byte("pk0"), 48)
+	dep, _ := dc.DepositByPubkey(context.Background(), pk0)
+	var nilDep *ethpb.Deposit
+	assert.DeepEqual(t, nilDep, dep)
+
+	dep = &ethpb.Deposit{Proof: makeDepositProof(), Data: &ethpb.Deposit_Data{PublicKey: pk0, Amount: 1000}}
+	assert.NoError(t, dc.InsertDeposit(context.Background(), dep, 1000, 0, [32]byte{}))
+
+	dep, _ = dc.DepositByPubkey(context.Background(), pk0)
+	assert.NotEqual(t, nilDep, dep)
+	assert.Equal(t, uint64(1000), dep.Data.Amount)
+
+	dep = &ethpb.Deposit{Proof: makeDepositProof(), Data: &ethpb.Deposit_Data{PublicKey: pk0, Amount: 10000}}
+	assert.NoError(t, dc.InsertDeposit(context.Background(), dep, 1000, 1, [32]byte{}))
+
+	// Make sure we have the same deposit returned over here.
+	dep, _ = dc.DepositByPubkey(context.Background(), pk0)
+	assert.NotEqual(t, nilDep, dep)
+	assert.Equal(t, uint64(1000), dep.Data.Amount)
+
+	// Make sure another key doesn't work.
+	pk1 := bytesutil.PadTo([]byte("pk1"), 48)
+	dep, _ = dc.DepositByPubkey(context.Background(), pk1)
+	assert.DeepEqual(t, nilDep, dep)
 }
 
 func makeDepositProof() [][]byte {

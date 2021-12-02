@@ -308,6 +308,46 @@ func TestCopyPendingAttestationSlice(t *testing.T) {
 	}
 }
 
+func TestCopyPayloadHeader(t *testing.T) {
+	p := genPayloadHeader()
+
+	got := v1alpha1.CopyExecutionPayloadHeader(p)
+	if !reflect.DeepEqual(got, p) {
+		t.Errorf("CopyExecutionPayloadHeader() = %v, want %v", got, p)
+	}
+	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
+}
+
+func TestCopySignedBeaconBlockMerge(t *testing.T) {
+	sbb := genSignedBeaconBlockMerge()
+
+	got := v1alpha1.CopySignedBeaconBlockMerge(sbb)
+	if !reflect.DeepEqual(got, sbb) {
+		t.Errorf("CopySignedBeaconBlockMerge() = %v, want %v", got, sbb)
+	}
+	assert.NotEmpty(t, sbb, "Copied signed beacon block Merge has empty fields")
+}
+
+func TestCopyBeaconBlockMerge(t *testing.T) {
+	b := genBeaconBlockMerge()
+
+	got := v1alpha1.CopyBeaconBlockMerge(b)
+	if !reflect.DeepEqual(got, b) {
+		t.Errorf("CopyBeaconBlockMerge() = %v, want %v", got, b)
+	}
+	assert.NotEmpty(t, b, "Copied beacon block Merge has empty fields")
+}
+
+func TestCopyBeaconBlockBodyMerge(t *testing.T) {
+	bb := genBeaconBlockBodyMerge()
+
+	got := v1alpha1.CopyBeaconBlockBodyMerge(bb)
+	if !reflect.DeepEqual(got, bb) {
+		t.Errorf("CopyBeaconBlockBodyMerge() = %v, want %v", got, bb)
+	}
+	assert.NotEmpty(t, bb, "Copied beacon block body Merge has empty fields")
+}
+
 func bytes() []byte {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
@@ -564,11 +604,81 @@ func genSignedBeaconBlockAltair() *v1alpha1.SignedBeaconBlockAltair {
 	}
 }
 
+func genBeaconBlockBodyMerge() *v1alpha1.BeaconBlockBodyMerge {
+	return &v1alpha1.BeaconBlockBodyMerge{
+		RandaoReveal:      bytes(),
+		Eth1Data:          genEth1Data(),
+		Graffiti:          bytes(),
+		ProposerSlashings: genProposerSlashings(5),
+		AttesterSlashings: genAttesterSlashings(5),
+		Attestations:      genAttestations(10),
+		Deposits:          genDeposits(5),
+		VoluntaryExits:    genSignedVoluntaryExits(12),
+		SyncAggregate:     genSyncAggregate(),
+		ExecutionPayload:  genPayload(),
+	}
+}
+
+func genBeaconBlockMerge() *v1alpha1.BeaconBlockMerge {
+	return &v1alpha1.BeaconBlockMerge{
+		Slot:          123455,
+		ProposerIndex: 55433,
+		ParentRoot:    bytes(),
+		StateRoot:     bytes(),
+		Body:          genBeaconBlockBodyMerge(),
+	}
+}
+
+func genSignedBeaconBlockMerge() *v1alpha1.SignedBeaconBlockMerge {
+	return &v1alpha1.SignedBeaconBlockMerge{
+		Block:     genBeaconBlockMerge(),
+		Signature: bytes(),
+	}
+}
+
 func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	return &v1alpha1.SyncCommitteeMessage{
 		Slot:           424555,
 		BlockRoot:      bytes(),
 		ValidatorIndex: 5443,
 		Signature:      bytes(),
+	}
+}
+
+func genPayload() *v1alpha1.ExecutionPayload {
+	return &v1alpha1.ExecutionPayload{
+		ParentHash:    bytes(),
+		FeeRecipient:  bytes(),
+		StateRoot:     bytes(),
+		ReceiptRoot:   bytes(),
+		LogsBloom:     bytes(),
+		Random:        bytes(),
+		BlockNumber:   1,
+		GasLimit:      2,
+		GasUsed:       3,
+		Timestamp:     4,
+		ExtraData:     bytes(),
+		BaseFeePerGas: bytes(),
+		BlockHash:     bytes(),
+		Transactions:  [][]byte{{'a'}, {'b'}, {'c'}},
+	}
+}
+
+func genPayloadHeader() *v1alpha1.ExecutionPayloadHeader {
+	return &v1alpha1.ExecutionPayloadHeader{
+		ParentHash:       bytes(),
+		FeeRecipient:     bytes(),
+		StateRoot:        bytes(),
+		ReceiptRoot:      bytes(),
+		LogsBloom:        bytes(),
+		Random:           bytes(),
+		BlockNumber:      1,
+		GasLimit:         2,
+		GasUsed:          3,
+		Timestamp:        4,
+		ExtraData:        bytes(),
+		BaseFeePerGas:    bytes(),
+		BlockHash:        bytes(),
+		TransactionsRoot: bytes(),
 	}
 }

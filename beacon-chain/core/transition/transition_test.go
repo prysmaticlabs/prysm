@@ -7,10 +7,10 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -68,7 +68,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
-	epoch := core.CurrentEpoch(beaconState)
+	epoch := time.CurrentEpoch(beaconState)
 	randaoReveal, err := util.RandaoReveal(beaconState, epoch, privKeys)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
@@ -214,7 +214,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	err = beaconState.SetSlot(slotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)) + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
 
-	currentEpoch := core.CurrentEpoch(beaconState)
+	currentEpoch := time.CurrentEpoch(beaconState)
 	header1 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
@@ -232,7 +232,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
 		},
 	})
-	header2.Signature, err = signing.ComputeDomainAndSign(beaconState, core.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
+	header2.Signature, err = signing.ComputeDomainAndSign(beaconState, time.CurrentEpoch(beaconState), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
 	require.NoError(t, err)
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
@@ -295,7 +295,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	blockAtt := util.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   beaconState.Slot(),
-			Target: &ethpb.Checkpoint{Epoch: core.CurrentEpoch(beaconState)},
+			Target: &ethpb.Checkpoint{Epoch: time.CurrentEpoch(beaconState)},
 			Source: &ethpb.Checkpoint{Root: mockRoot[:]}},
 		AggregationBits: aggBits,
 	})
@@ -380,38 +380,6 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	newState, err := transition.ProcessEpochPrecompute(context.Background(), s)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), newState.Slashings()[2], "Unexpected slashed balance")
-}
-
-func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
-	tests := []struct {
-		slot            types.Slot
-		canProcessEpoch bool
-	}{
-		{
-			slot:            1,
-			canProcessEpoch: false,
-		}, {
-			slot:            63,
-			canProcessEpoch: true,
-		},
-		{
-			slot:            64,
-			canProcessEpoch: false,
-		}, {
-			slot:            127,
-			canProcessEpoch: true,
-		}, {
-			slot:            1000000000,
-			canProcessEpoch: false,
-		},
-	}
-
-	for _, tt := range tests {
-		b := &ethpb.BeaconState{Slot: tt.slot}
-		s, err := v1.InitializeFromProto(b)
-		require.NoError(t, err)
-		assert.Equal(t, tt.canProcessEpoch, transition.CanProcessEpoch(s), "CanProcessEpoch(%d)", tt.slot)
-	}
 }
 
 func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
@@ -588,38 +556,4 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	s, err := transition.ProcessSlotsUsingNextSlotCache(context.Background(), s, r, 5)
 	require.NoError(t, err)
 	require.Equal(t, types.Slot(5), s.Slot())
-}
-
-func TestCanUpgradeToAltair(t *testing.T) {
-	bc := params.BeaconConfig()
-	bc.AltairForkEpoch = 5
-	params.OverrideBeaconConfig(bc)
-	tests := []struct {
-		name string
-		slot types.Slot
-		want bool
-	}{
-		{
-			name: "not epoch start",
-			slot: 1,
-			want: false,
-		},
-		{
-			name: "not altair epoch",
-			slot: params.BeaconConfig().SlotsPerEpoch,
-			want: false,
-		},
-		{
-			name: "altair epoch",
-			slot: types.Slot(params.BeaconConfig().AltairForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := transition.CanUpgradeToAltair(tt.slot); got != tt.want {
-				t.Errorf("canUpgradeToAltair() = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }

@@ -3,8 +3,8 @@ package altair
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	log "github.com/sirupsen/logrus"
@@ -19,7 +19,7 @@ import (
 //        state.current_sync_committee = state.next_sync_committee
 //        state.next_sync_committee = get_next_sync_committee(state)
 func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
-	nextEpoch := core.NextEpoch(beaconState)
+	nextEpoch := time.NextEpoch(beaconState)
 	if nextEpoch%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
 		nextSyncCommittee, err := beaconState.NextSyncCommittee()
 		if err != nil {

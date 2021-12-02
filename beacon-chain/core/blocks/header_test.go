@@ -5,10 +5,10 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -48,7 +48,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	latestBlockSignedRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
-	currentEpoch := core.CurrentEpoch(state)
+	currentEpoch := time.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
@@ -120,7 +120,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 
 	lbhsr, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	currentEpoch := core.CurrentEpoch(state)
+	currentEpoch := time.CurrentEpoch(state)
 
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	bh := state.LatestBlockHeader()
 	bh.Slot = 9
 	require.NoError(t, state.SetLatestBlockHeader(bh))
-	currentEpoch := core.CurrentEpoch(state)
+	currentEpoch := time.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sszBytes := p2ptypes.SSZBytes("hello")
@@ -200,7 +200,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	require.NoError(t, state.SetLatestBlockHeader(bh))
 	parentRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	currentEpoch := core.CurrentEpoch(state)
+	currentEpoch := time.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sszBytes := p2ptypes.SSZBytes("hello")
@@ -244,7 +244,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	latestBlockSignedRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
-	currentEpoch := core.CurrentEpoch(state)
+	currentEpoch := time.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
@@ -303,7 +303,7 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	latestBlockSignedRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
-	currentEpoch := core.CurrentEpoch(state)
+	currentEpoch := time.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
@@ -321,7 +321,7 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
 	require.NoError(t, err)
-	set, err := blocks.BlockSignatureSet(state, block.Block.ProposerIndex, block.Signature, block.Block.HashTreeRoot)
+	set, err := blocks.BlockSignatureBatch(state, block.Block.ProposerIndex, block.Signature, block.Block.HashTreeRoot)
 	require.NoError(t, err)
 
 	verified, err := set.Verify()

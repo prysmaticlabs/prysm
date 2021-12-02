@@ -8,10 +8,10 @@ import (
 	fuzz "github.com/google/gofuzz"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -75,8 +75,8 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 	want := fmt.Sprintf(
 		"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
 		att.Data.Target.Epoch,
-		core.PrevEpoch(beaconState),
-		core.CurrentEpoch(beaconState),
+		time.PrevEpoch(beaconState),
+		time.CurrentEpoch(beaconState),
 	)
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
-	b.Block.Body.Attestations[0].Data.Source.Epoch = core.CurrentEpoch(beaconState)
+	b.Block.Body.Attestations[0].Data.Source.Epoch = time.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
 	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -152,8 +152,8 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
-	b.Block.Body.Attestations[0].Data.Source.Epoch = core.PrevEpoch(beaconState)
-	b.Block.Body.Attestations[0].Data.Target.Epoch = core.PrevEpoch(beaconState)
+	b.Block.Body.Attestations[0].Data.Source.Epoch = time.PrevEpoch(beaconState)
+	b.Block.Body.Attestations[0].Data.Target.Epoch = time.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
 	wsb, err = wrapper.WrappedAltairSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -275,9 +275,15 @@ func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
 	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
 	for _, index := range indices {
-		require.Equal(t, true, altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyHeadFlagIndex))
-		require.Equal(t, true, altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyTargetFlagIndex))
-		require.Equal(t, true, altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelySourceFlagIndex))
+		has, err := altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyHeadFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
+		has, err = altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelySourceFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
+		has, err = altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyTargetFlagIndex)
+		require.NoError(t, err)
+		require.Equal(t, true, has)
 	}
 }
 
@@ -331,10 +337,17 @@ func TestValidatorFlag_Has(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, f := range tt.expected {
-				require.Equal(t, true, altair.HasValidatorFlag(tt.set, f))
+				has, err := altair.HasValidatorFlag(tt.set, f)
+				require.NoError(t, err)
+				require.Equal(t, true, has)
 			}
 		})
 	}
+}
+
+func TestValidatorFlag_Has_ExceedsLength(t *testing.T) {
+	_, err := altair.HasValidatorFlag(0, 8)
+	require.ErrorContains(t, "flag position exceeds length", err)
 }
 
 func TestValidatorFlag_Add(t *testing.T) {
@@ -368,21 +381,31 @@ func TestValidatorFlag_Add(t *testing.T) {
 			expectedFalse: []uint8{},
 		},
 	}
-
+	var err error
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := uint8(0)
 			for _, f := range tt.set {
-				b = altair.AddValidatorFlag(b, f)
+				b, err = altair.AddValidatorFlag(b, f)
+				require.NoError(t, err)
 			}
 			for _, f := range tt.expectedFalse {
-				require.Equal(t, false, altair.HasValidatorFlag(b, f))
+				has, err := altair.HasValidatorFlag(b, f)
+				require.NoError(t, err)
+				require.Equal(t, false, has)
 			}
 			for _, f := range tt.expectedTrue {
-				require.Equal(t, true, altair.HasValidatorFlag(b, f))
+				has, err := altair.HasValidatorFlag(b, f)
+				require.NoError(t, err)
+				require.Equal(t, true, has)
 			}
 		})
 	}
+}
+
+func TestValidatorFlag_Add_ExceedsLength(t *testing.T) {
+	_, err := altair.AddValidatorFlag(0, 8)
+	require.ErrorContains(t, "flag position exceeds length", err)
 }
 
 func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
@@ -471,7 +494,7 @@ func TestSetParticipationAndRewardProposer(t *testing.T) {
 			beaconState, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 			require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-			currentEpoch := core.CurrentEpoch(beaconState)
+			currentEpoch := time.CurrentEpoch(beaconState)
 			if test.epoch == currentEpoch {
 				require.NoError(t, beaconState.SetCurrentParticipationBits(test.epochParticipation))
 			} else {

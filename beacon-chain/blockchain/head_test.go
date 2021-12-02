@@ -8,7 +8,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -123,13 +123,15 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
+	ctx := context.Background()
 
 	state, _ := util.DeterministicGenesisState(t, 100)
 	r := [32]byte{'a'}
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: r[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
-	require.NoError(t, service.cacheJustifiedStateBalances(context.Background(), r))
-	require.DeepEqual(t, service.getJustifiedBalances(), state.Balances(), "Incorrect justified balances")
+	balances, err := service.justifiedBalances.get(ctx, r)
+	require.NoError(t, err)
+	require.DeepEqual(t, balances, state.Balances(), "Incorrect justified balances")
 }
 
 func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
@@ -153,7 +155,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		bState, _ := util.DeterministicGenesisState(t, 10)
 		notifier := &mock.MockStateNotifier{RecordEvents: true}
 		srv := &Service{
-			cfg: &Config{
+			cfg: &config{
 				StateNotifier: notifier,
 			},
 			genesisRoot: [32]byte{1},
@@ -182,14 +184,14 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		notifier := &mock.MockStateNotifier{RecordEvents: true}
 		genesisRoot := [32]byte{1}
 		srv := &Service{
-			cfg: &Config{
+			cfg: &config{
 				StateNotifier: notifier,
 			},
 			genesisRoot: genesisRoot,
 		}
-		epoch1Start, err := core.StartSlot(1)
+		epoch1Start, err := slots.EpochStart(1)
 		require.NoError(t, err)
-		epoch2Start, err := core.StartSlot(1)
+		epoch2Start, err := slots.EpochStart(1)
 		require.NoError(t, err)
 		require.NoError(t, bState.SetSlot(epoch1Start))
 

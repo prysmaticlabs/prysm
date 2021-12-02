@@ -6,13 +6,14 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -50,22 +51,42 @@ func ProcessProposerSlashings(
 	slashFunc slashValidatorFunc,
 ) (state.BeaconState, error) {
 	var err error
-	for idx, slashing := range slashings {
-		if slashing == nil {
-			return nil, errors.New("nil proposer slashings in block body")
-		}
-		if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
-			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
-		}
-		cfg := params.BeaconConfig()
-		slashingQuotient := cfg.MinSlashingPenaltyQuotient
-		if beaconState.Version() == version.Altair {
-			slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-		}
-		beaconState, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
+	for _, slashing := range slashings {
+		beaconState, err = ProcessProposerSlashing(ctx, beaconState, slashing, slashFunc)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
+			return nil, err
 		}
+	}
+	return beaconState, nil
+}
+
+// ProcessProposerSlashing processes individual proposer slashing.
+func ProcessProposerSlashing(
+	ctx context.Context,
+	beaconState state.BeaconState,
+	slashing *ethpb.ProposerSlashing,
+	slashFunc slashValidatorFunc,
+) (state.BeaconState, error) {
+	var err error
+	if slashing == nil {
+		return nil, errors.New("nil proposer slashings in block body")
+	}
+	if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
+		return nil, errors.Wrap(err, "could not verify proposer slashing")
+	}
+	cfg := params.BeaconConfig()
+	var slashingQuotient uint64
+	switch {
+	case beaconState.Version() == version.Phase0:
+		slashingQuotient = cfg.MinSlashingPenaltyQuotient
+	case beaconState.Version() == version.Altair:
+		slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+	default:
+		return nil, errors.New("unknown state version")
+	}
+	beaconState, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
 	}
 	return beaconState, nil
 }
@@ -93,12 +114,12 @@ func VerifyProposerSlashing(
 	if err != nil {
 		return err
 	}
-	if !helpers.IsSlashableValidatorUsingTrie(proposer, core.CurrentEpoch(beaconState)) {
+	if !helpers.IsSlashableValidatorUsingTrie(proposer, time.CurrentEpoch(beaconState)) {
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey())
 	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
 	for _, header := range headers {
-		if err := signing.ComputeDomainVerifySigningRoot(beaconState, pIdx, core.SlotToEpoch(hSlot),
+		if err := signing.ComputeDomainVerifySigningRoot(beaconState, pIdx, slots.ToEpoch(hSlot),
 			header.Header, params.BeaconConfig().DomainBeaconProposer, header.Signature); err != nil {
 			return errors.Wrap(err, "could not verify beacon block header")
 		}

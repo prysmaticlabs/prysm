@@ -17,6 +17,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//cmd/beacon-chain:__subpackages__",
         "//contracts/deposit:__pkg__",
         "//crypto/keystore:__pkg__",
         "//fuzz:__pkg__",
@@ -37,7 +38,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
-        "//beacon-chain/core:go_default_library",
+        "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
         "//container/slice:go_default_library",
@@ -49,6 +50,7 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//time:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
@@ -76,7 +78,7 @@ go_test(
     shard_count = 2,
     deps = [
         "//beacon-chain/cache:go_default_library",
-        "//beacon-chain/core:go_default_library",
+        "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
@@ -91,6 +93,7 @@ go_test(
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "//time:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

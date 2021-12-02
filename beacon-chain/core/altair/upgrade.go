@@ -3,8 +3,8 @@ package altair
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -63,7 +63,7 @@ import (
 //    post.next_sync_committee = get_next_sync_committee(post)
 //    return post
 func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.BeaconStateAltair, error) {
-	epoch := core.CurrentEpoch(state)
+	epoch := time.CurrentEpoch(state)
 
 	numValidators := state.NumValidators()
 	s := &ethpb.BeaconStateAltair{
@@ -161,14 +161,35 @@ func TranslateParticipation(ctx context.Context, state *statealtair.BeaconState,
 		targetFlagIndex := cfg.TimelyTargetFlagIndex
 		headFlagIndex := cfg.TimelyHeadFlagIndex
 		for _, index := range indices {
-			if participatedFlags[sourceFlagIndex] && !HasValidatorFlag(epochParticipation[index], sourceFlagIndex) {
-				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+			has, err := HasValidatorFlag(epochParticipation[index], sourceFlagIndex)
+			if err != nil {
+				return nil, err
 			}
-			if participatedFlags[targetFlagIndex] && !HasValidatorFlag(epochParticipation[index], targetFlagIndex) {
-				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+			if participatedFlags[sourceFlagIndex] && !has {
+				epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+				if err != nil {
+					return nil, err
+				}
 			}
-			if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
-				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+			has, err = HasValidatorFlag(epochParticipation[index], targetFlagIndex)
+			if err != nil {
+				return nil, err
+			}
+			if participatedFlags[targetFlagIndex] && !has {
+				epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+				if err != nil {
+					return nil, err
+				}
+			}
+			has, err = HasValidatorFlag(epochParticipation[index], headFlagIndex)
+			if err != nil {
+				return nil, err
+			}
+			if participatedFlags[headFlagIndex] && !has {
+				epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}

@@ -773,6 +773,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.DeepEqual(t, sszBlock, resp.Data)
+		assert.Equal(t, ethpbv2.Version_PHASE0, resp.Version)
 	})
 
 	t.Run("Altair", func(t *testing.T) {
@@ -811,6 +812,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.DeepEqual(t, sszBlock, resp.Data)
+		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 	})
 }
 

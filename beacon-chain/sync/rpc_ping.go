@@ -9,10 +9,10 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
@@ -31,7 +31,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
 		if errors.Is(err, p2ptypes.ErrInvalidSequenceNum) {
-			s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrInvalidSequenceNum.Error(), stream)
 		}
 		return err
@@ -39,8 +39,8 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	sq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
-	if _, err := s.cfg.P2P.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
+	sq := types.SSZUint64(s.cfg.p2p.MetadataSeq())
+	if _, err := s.cfg.p2p.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
 		return err
 	}
 
@@ -67,7 +67,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 			return
 		}
 		// update metadata if there is no error
-		s.cfg.P2P.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+		s.cfg.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
 	}()
 
 	return nil
@@ -77,38 +77,38 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	metadataSeq := types.SSZUint64(s.cfg.P2P.MetadataSeq())
-	topic, err := p2p.TopicFromMessage(p2p.PingMessageName, core.SlotToEpoch(s.cfg.Chain.CurrentSlot()))
+	metadataSeq := types.SSZUint64(s.cfg.p2p.MetadataSeq())
+	topic, err := p2p.TopicFromMessage(p2p.PingMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
 	if err != nil {
 		return err
 	}
-	stream, err := s.cfg.P2P.Send(ctx, &metadataSeq, topic, id)
+	stream, err := s.cfg.p2p.Send(ctx, &metadataSeq, topic, id)
 	if err != nil {
 		return err
 	}
 	currentTime := time.Now()
 	defer closeStream(stream, log)
 
-	code, errMsg, err := ReadStatusCode(stream, s.cfg.P2P.Encoding())
+	code, errMsg, err := ReadStatusCode(stream, s.cfg.p2p.Encoding())
 	if err != nil {
 		return err
 	}
 	// Records the latency of the ping request for that peer.
-	s.cfg.P2P.Host().Peerstore().RecordLatency(id, time.Now().Sub(currentTime))
+	s.cfg.p2p.Host().Peerstore().RecordLatency(id, time.Now().Sub(currentTime))
 
 	if code != 0 {
-		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 	msg := new(types.SSZUint64)
-	if err := s.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+	if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
 		// Descore peer for giving us a bad sequence number.
 		if errors.Is(err, p2ptypes.ErrInvalidSequenceNum) {
-			s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		}
 		return err
 	}
@@ -121,13 +121,13 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		// already done in the request method.
 		return err
 	}
-	s.cfg.P2P.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+	s.cfg.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
 	return nil
 }
 
 // validates the peer's sequence number.
 func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, error) {
-	md, err := s.cfg.P2P.Peers().Metadata(id)
+	md, err := s.cfg.p2p.Peers().Metadata(id)
 	if err != nil {
 		return false, err
 	}

@@ -6,13 +6,14 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -64,14 +65,14 @@ func ProcessAttestations(
 		vp = UpdateValidator(vp, v, indices, a, a.Data.Slot)
 	}
 
-	pBal = UpdateBalance(vp, pBal)
+	pBal = UpdateBalance(vp, pBal, state.Version())
 
 	return vp, pBal, nil
 }
 
 // AttestedCurrentEpoch returns true if attestation `a` attested once in current epoch and/or epoch boundary block.
 func AttestedCurrentEpoch(s state.ReadOnlyBeaconState, a *ethpb.PendingAttestation) (bool, bool, error) {
-	currentEpoch := core.CurrentEpoch(s)
+	currentEpoch := time.CurrentEpoch(s)
 	var votedCurrentEpoch, votedTarget bool
 	// Did validator vote current epoch.
 	if a.Data.Target.Epoch == currentEpoch {
@@ -89,7 +90,7 @@ func AttestedCurrentEpoch(s state.ReadOnlyBeaconState, a *ethpb.PendingAttestati
 
 // AttestedPrevEpoch returns true if attestation `a` attested once in previous epoch and epoch boundary block and/or the same head.
 func AttestedPrevEpoch(s state.ReadOnlyBeaconState, a *ethpb.PendingAttestation) (bool, bool, bool, error) {
-	prevEpoch := core.PrevEpoch(s)
+	prevEpoch := time.PrevEpoch(s)
 	var votedPrevEpoch, votedTarget, votedHead bool
 	// Did validator vote previous epoch.
 	if a.Data.Target.Epoch == prevEpoch {
@@ -170,7 +171,7 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *et
 }
 
 // UpdateBalance updates pre computed balance store.
-func UpdateBalance(vp []*Validator, bBal *Balance) *Balance {
+func UpdateBalance(vp []*Validator, bBal *Balance, stateVersion int) *Balance {
 	for _, v := range vp {
 		if !v.IsSlashed {
 			if v.IsCurrentEpochAttester {
@@ -179,7 +180,10 @@ func UpdateBalance(vp []*Validator, bBal *Balance) *Balance {
 			if v.IsCurrentEpochTargetAttester {
 				bBal.CurrentEpochTargetAttested += v.CurrentEpochEffectiveBalance
 			}
-			if v.IsPrevEpochAttester {
+			if stateVersion == version.Phase0 && v.IsPrevEpochAttester {
+				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
+			}
+			if stateVersion == version.Altair && v.IsPrevEpochSourceAttester {
 				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsPrevEpochTargetAttester {

@@ -12,6 +12,8 @@ go_library(
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
         "//crypto/hash:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -26,8 +28,8 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
         "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",

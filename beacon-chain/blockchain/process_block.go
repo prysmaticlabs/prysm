@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -21,6 +21,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -87,9 +88,8 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
-
-	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
-		return errors.New("nil block")
+	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+		return err
 	}
 	b := signed.Block()
 
@@ -151,7 +151,12 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 	}
 
-	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", s.justifiedCheckpt.Root)
+		return errors.Wrap(err, msg)
+	}
+	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
 
@@ -236,8 +241,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	if len(blks) == 0 || len(blockRoots) == 0 {
 		return nil, nil, errors.New("no blocks provided")
 	}
-	if blks[0] == nil || blks[0].IsNil() || blks[0].Block().IsNil() {
-		return nil, nil, errors.New("nil block")
+	if err := helpers.BeaconBlockIsNil(blks[0]); err != nil {
+		return nil, nil, err
 	}
 	b := blks[0].Block()
 
@@ -255,12 +260,12 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
-	sigSet := &bls.SignatureSet{
+	sigSet := &bls.SignatureBatch{
 		Signatures: [][]byte{},
 		PublicKeys: []bls.PublicKey{},
 		Messages:   [][32]byte{},
 	}
-	var set *bls.SignatureSet
+	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
@@ -268,7 +273,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 			return nil, nil, err
 		}
 		// Save potential boundary states.
-		if core.IsEpochStart(preState.Slot()) {
+		if slots.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
 			if err := s.handleEpochBoundary(ctx, preState); err != nil {
 				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
@@ -351,7 +356,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		// Update caches for the next epoch at epoch boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(postState, core.NextEpoch(postState)); err != nil {
+		if err := helpers.UpdateCommitteeCache(postState, coreTime.NextEpoch(postState)); err != nil {
 			return err
 		}
 		copied := postState.Copy()
@@ -367,14 +372,14 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 		var err error
-		s.nextEpochBoundarySlot, err = core.StartSlot(core.NextEpoch(postState))
+		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
 		if err != nil {
 			return err
 		}
 
 		// Update caches at epoch boundary slot.
 		// The following updates have short cut to return nil cheaply if fulfilled during boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(postState, core.CurrentEpoch(postState)); err != nil {
+		if err := helpers.UpdateCommitteeCache(postState, coreTime.CurrentEpoch(postState)); err != nil {
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {

@@ -3,19 +3,18 @@ package apimiddleware
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // https://ethereum.github.io/beacon-apis/#/Beacon/submitPoolAttestations expects posting a top-level array.
@@ -208,7 +207,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
-	if core.SlotToEpoch(types.Slot(slot)) < params.BeaconConfig().AltairForkEpoch {
+	if slots.ToEpoch(types.Slot(slot)) < params.BeaconConfig().AltairForkEpoch {
 		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
 	} else {
 		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}
@@ -219,7 +218,8 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 
 // In preparePublishedBlock we transform the PostRequest.
 // gRPC expects either a phase0_block or an altair_block field in the JSON object, but we have a message field at this point.
-// We do a simple conversion depending on the type of endpoint.PostRequest (which was filled out previously in setInitialPublishBlockPostRequest)
+// We do a simple conversion depending on the type of endpoint.PostRequest
+// (which was filled out previously in setInitialPublishBlockPostRequest).
 func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
 	if block, ok := endpoint.PostRequest.(*signedBeaconBlockContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
@@ -228,7 +228,7 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 			Signature:   block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
-		block.Message.Body.Graffiti = prepareGraffiti(block.Message.Body.Graffiti)
+		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*signedBeaconBlockAltairContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
@@ -237,15 +237,9 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 			Signature:   block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
-		block.Message.Body.Graffiti = prepareGraffiti(block.Message.Body.Graffiti)
+		return nil
 	}
-	return nil
-}
-
-// Posted graffiti needs to have length of 32 bytes, but client is allowed to send data of any length.
-func prepareGraffiti(graffiti string) string {
-	b := bytesutil.ToBytes32([]byte(graffiti))
-	return hexutil.Encode(b[:])
+	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
 }
 
 type tempSyncCommitteesResponseJson struct {
@@ -310,7 +304,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
-	} else {
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
 		actualRespContainer = &altairBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockAltairContainerJson{
@@ -318,6 +312,8 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
+	} else {
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
 
 	j, err := json.Marshal(actualRespContainer)
@@ -349,11 +345,13 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 			Version: respContainer.Version,
 			Data:    respContainer.Data.Phase0State,
 		}
-	} else {
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
 		actualRespContainer = &altairStateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.AltairState,
 		}
+	} else {
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported state version '%s'", respContainer.Version))
 	}
 
 	j, err := json.Marshal(actualRespContainer)
@@ -385,11 +383,13 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 			Version: respContainer.Version,
 			Data:    respContainer.Data.Phase0Block,
 		}
-	} else {
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
 		actualRespContainer = &altairProduceBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.AltairBlock,
 		}
+	} else {
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
 
 	j, err := json.Marshal(actualRespContainer)

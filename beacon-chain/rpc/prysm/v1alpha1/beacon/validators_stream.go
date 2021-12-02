@@ -17,10 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -319,7 +319,7 @@ func (is *infostream) generateValidatorInfo(
 		return is.generatePendingValidatorInfo(info)
 	}
 	// Status and progression timestamp
-	info.Status, info.TransitionTimestamp = is.calculateStatusAndTransition(validator, core.CurrentEpoch(headState))
+	info.Status, info.TransitionTimestamp = is.calculateStatusAndTransition(validator, coreTime.CurrentEpoch(headState))
 
 	// Balance
 	info.Balance = headState.Balances()[info.Index]

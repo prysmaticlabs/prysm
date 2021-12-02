@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
 	mathutil "github.com/prysmaticlabs/prysm/math"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -63,7 +63,7 @@ func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID)
 
 // waitForMinimumPeers spins and waits up until enough peers are available.
 func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, error) {
-	required := params.BeaconConfig().MaxPeersToSync
+	required := uint64(params.BeaconConfig().MaxPeersToSync)
 	if flags.Get().MinimumSyncPeers < required {
 		required = flags.Get().MinimumSyncPeers
 	}
@@ -76,10 +76,10 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 			headEpoch := f.chain.FinalizedCheckpt().Epoch
 			_, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 		} else {
-			headEpoch := core.SlotToEpoch(f.chain.HeadSlot())
+			headEpoch := slots.ToEpoch(f.chain.HeadSlot())
 			_, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
 		}
-		if len(peers) >= required {
+		if uint64(len(peers)) >= required {
 			return peers, nil
 		}
 		log.WithFields(logrus.Fields{
@@ -123,14 +123,14 @@ func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersP
 // trimPeers limits peer list, returning only specified percentage of peers.
 // Takes system constraints into account (min/max peers to sync).
 func trimPeers(peers []peer.ID, peersPercentage float64) []peer.ID {
-	required := params.BeaconConfig().MaxPeersToSync
+	required := uint64(params.BeaconConfig().MaxPeersToSync)
 	if flags.Get().MinimumSyncPeers < required {
 		required = flags.Get().MinimumSyncPeers
 	}
 	// Weak/slow peers will be pushed down the list and trimmed since only percentage of peers is selected.
 	limit := uint64(math.Round(float64(len(peers)) * peersPercentage))
 	// Limit cannot be less that minimum peers required by sync mechanism.
-	limit = mathutil.Max(limit, uint64(required))
+	limit = mathutil.Max(limit, required)
 	// Limit cannot be higher than number of peers available (safe-guard).
 	limit = mathutil.Min(limit, uint64(len(peers)))
 	return peers[:limit]

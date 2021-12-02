@@ -5,7 +5,6 @@
 package depositcache
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"math/big"
@@ -54,6 +53,7 @@ type DepositCache struct {
 	pendingDeposits   []*dbpb.DepositContainer
 	deposits          []*dbpb.DepositContainer
 	finalizedDeposits *FinalizedDeposits
+	depositsByKey     map[[48]byte][]*dbpb.DepositContainer
 	depositsLock      sync.RWMutex
 }
 
@@ -69,6 +69,7 @@ func New() (*DepositCache, error) {
 	return &DepositCache{
 		pendingDeposits:   []*dbpb.DepositContainer{},
 		deposits:          []*dbpb.DepositContainer{},
+		depositsByKey:     map[[48]byte][]*ethpb.DepositContainer{},
 		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 	}, nil
 }
@@ -95,10 +96,15 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	}
 	// Keep the slice sorted on insertion in order to avoid costly sorting on retrieval.
 	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Index >= index })
+	depCtr := &dbpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, DepositRoot: depositRoot[:], Index: index}
 	newDeposits := append(
-		[]*dbpb.DepositContainer{{Deposit: d, Eth1BlockHeight: blockNum, DepositRoot: depositRoot[:], Index: index}},
+		[]*dbpb.DepositContainer{depCtr},
 		dc.deposits[heightIdx:]...)
 	dc.deposits = append(dc.deposits[:heightIdx], newDeposits...)
+	// Append the deposit to our map, in the event no deposits
+	// exist for the pubkey , it is simply added to the map.
+	pubkey := bytesutil.ToBytes48(d.Data.PublicKey)
+	dc.depositsByKey[pubkey] = append(dc.depositsByKey[pubkey], depCtr)
 	historicalDepositsCount.Inc()
 	return nil
 }
@@ -112,6 +118,13 @@ func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*dbp
 
 	sort.SliceStable(ctrs, func(i int, j int) bool { return ctrs[i].Index < ctrs[j].Index })
 	dc.deposits = ctrs
+	for _, c := range ctrs {
+		// Use a new value, as the reference
+		// of c changes in the next iteration.
+		newPtr := c
+		pKey := bytesutil.ToBytes48(newPtr.Deposit.Data.PublicKey)
+		dc.depositsByKey[pKey] = append(dc.depositsByKey[pKey], newPtr)
+	}
 	historicalDepositsCount.Add(float64(len(ctrs)))
 }
 
@@ -136,7 +149,10 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
 			return
 		}
-		depositTrie.Insert(depHash[:], insertIndex)
+		if err = depositTrie.Insert(depHash[:], insertIndex); err != nil {
+			log.WithError(err).Error("Could not insert deposit hash")
+			return
+		}
 		insertIndex++
 	}
 
@@ -199,13 +215,15 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 
 	var deposit *ethpb.Deposit
 	var blockNum *big.Int
-	for _, ctnr := range dc.deposits {
-		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
-			deposit = ctnr.Deposit
-			blockNum = big.NewInt(int64(ctnr.Eth1BlockHeight))
-			break
-		}
+	deps, ok := dc.depositsByKey[bytesutil.ToBytes48(pubKey)]
+	if !ok || len(deps) == 0 {
+		return deposit, blockNum
 	}
+	// We always return the first deposit if a particular
+	// validator key has multiple deposits assigned to
+	// it.
+	deposit = deps[0].Deposit
+	blockNum = big.NewInt(int64(deps[0].Eth1BlockHeight))
 	return deposit, blockNum
 }
 

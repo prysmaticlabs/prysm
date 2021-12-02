@@ -17,7 +17,7 @@ func TestScorers_Service_Init(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 
 	t.Run("default config", func(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
@@ -82,7 +82,7 @@ func TestScorers_Service_Score(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 
 	peerScores := func(s *scorers.Service, pids []peer.ID) map[string]float64 {
 		scores := make(map[string]float64, len(pids))
@@ -143,7 +143,7 @@ func TestScorers_Service_Score(t *testing.T) {
 		s, pids := setupScorer()
 		// Peers start with boosted start score (new peers are boosted by block provider).
 		startScore := float64(0)
-		penalty := (-10 / float64(s.BadResponsesScorer().Params().Threshold)) * float64(0.3)
+		penalty := (-10 / float64(s.BadResponsesScorer().Params().Threshold)) * 0.3
 
 		// Update peers' stats and test the effect on peer order.
 		s.BadResponsesScorer().Increment("peer2")
@@ -197,7 +197,7 @@ func TestScorers_Service_Score(t *testing.T) {
 		s, _ := setupScorer()
 		s1 := s.BlockProviderScorer()
 		s2 := s.BadResponsesScorer()
-		penalty := (-10 / float64(s.BadResponsesScorer().Params().Threshold)) * float64(0.3)
+		penalty := (-10 / float64(s.BadResponsesScorer().Params().Threshold)) * 0.3
 
 		// Full score, no penalty.
 		s1.IncrementProcessedBlocks("peer1", batchSize*5)

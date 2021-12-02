@@ -125,12 +125,12 @@ func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path strin
 
 		var respJson []byte
 		if !GrpcResponseIsEmpty(grpcRespBody) {
-			if errJson := DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcRespBody); errJson != nil {
+			respHasError, errJson := HandleGrpcResponseError(endpoint.Err, grpcResp, grpcRespBody, w)
+			if errJson != nil {
 				WriteError(w, errJson, nil)
 				return
 			}
-			if endpoint.Err.Msg() != "" {
-				HandleGrpcResponseError(endpoint.Err, grpcResp, w)
+			if respHasError {
 				return
 			}
 

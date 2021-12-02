@@ -50,7 +50,9 @@ type Flags struct {
 	EnableOptimizedBalanceUpdate        bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
+	EnableGetBlockOptimizations         bool // EnableGetBlockOptimizations optimizes some elements of the GetBlock() function.
 	EnableBatchVerification             bool // EnableBatchVerification enables batch signature verification on gossip messages.
+	EnableBalanceTrieComputation        bool // EnableBalanceTrieComputation enables our beacon state to use balance tries for hash tree root operations.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
@@ -214,9 +216,17 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logDisabled(disableActiveBalanceCache)
 		cfg.EnableActiveBalanceCache = false
 	}
+	if ctx.Bool(enableGetBlockOptimizations.Name) {
+		logEnabled(enableGetBlockOptimizations)
+		cfg.EnableGetBlockOptimizations = true
+	}
 	if ctx.Bool(enableBatchGossipVerification.Name) {
 		logEnabled(enableBatchGossipVerification)
 		cfg.EnableBatchVerification = true
+	}
+	if ctx.Bool(enableBalanceTrieComputation.Name) {
+		logEnabled(enableBalanceTrieComputation)
+		cfg.EnableBalanceTrieComputation = true
 	}
 	Init(cfg)
 }
@@ -228,8 +238,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
-		cfg.RemoteSlasherProtection = true
+		log.Fatal(
+			"Remote slashing protection has currently been disabled in Prysm due to safety concerns. " +
+				"We appreciate your understanding in our desire to keep Prysm validators safe.",
+		)
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		logEnabled(writeWalletPasswordOnWebOnboarding)

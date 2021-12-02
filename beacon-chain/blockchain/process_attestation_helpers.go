@@ -8,13 +8,13 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
@@ -38,7 +38,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)
 	}
 
-	epochStartSlot, err := core.StartSlot(c.Epoch)
+	epochStartSlot, err := slots.EpochStart(c.Epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
 func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
 	currentSlot := types.Slot((nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot)
-	currentEpoch := core.SlotToEpoch(currentSlot)
+	currentEpoch := slots.ToEpoch(currentSlot)
 	var prevEpoch types.Epoch
 	// Prevents previous epoch under flow
 	if currentEpoch > 1 {
@@ -87,7 +87,7 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	if (b == nil || b.IsNil()) && s.hasInitSyncBlock(r) {
 		b = s.getInitSyncBlock(r)
 	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	if b.Block().Slot() > data.Slot {

@@ -13,8 +13,10 @@ import (
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/cmd"
+	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/logs"
@@ -63,6 +65,10 @@ var appFlags = []cli.Flag{
 	flags.Eth1HeaderReqLimit,
 	flags.GenesisStatePath,
 	flags.MinPeersPerSubnet,
+	flags.TerminalTotalDifficultyOverride,
+	flags.TerminalBlockHashOverride,
+	flags.TerminalBlockHashActivationEpochOverride,
+	flags.FeeRecipient,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
@@ -112,6 +118,7 @@ var appFlags = []cli.Flag{
 	cmd.RestoreSourceFileFlag,
 	cmd.RestoreTargetDirFlag,
 	cmd.BoltMMapInitialSizeFlag,
+	cmd.ValidatorMonitorIndicesFlag,
 }
 
 func init() {
@@ -224,7 +231,19 @@ func startNode(ctx *cli.Context) error {
 		gethlog.Root().SetHandler(glogger)
 	}
 
-	beacon, err := node.New(ctx)
+	blockchainFlagOpts, err := blockchaincmd.FlagOptions(ctx)
+	if err != nil {
+		return nil
+	}
+	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
+	if err != nil {
+		return nil
+	}
+	opts := []node.Option{
+		node.WithBlockchainFlagOptions(blockchainFlagOpts),
+		node.WithPowchainFlagOptions(powchainFlagOpts),
+	}
+	beacon, err := node.New(ctx, opts...)
 	if err != nil {
 		return err
 	}

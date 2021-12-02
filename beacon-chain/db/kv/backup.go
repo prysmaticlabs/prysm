@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	bolt "go.etcd.io/bbolt"
@@ -34,8 +34,8 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 	if err != nil {
 		return err
 	}
-	if head == nil || head.IsNil() {
-		return errors.New("no head block")
+	if err := helpers.BeaconBlockIsNil(head); err != nil {
+		return err
 	}
 	// Ensure the backups directory exists.
 	if err := file.HandleBackupDir(backupsDir, permissionOverride); err != nil {

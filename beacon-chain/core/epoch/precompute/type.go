@@ -20,12 +20,14 @@ type Validator struct {
 	IsCurrentEpochTargetAttester bool
 	// IsPrevEpochAttester is true if the validator attested previous epoch.
 	IsPrevEpochAttester bool
+	// IsPrevEpochSourceAttester is true if the validator attested to source previous epoch. [Only for Altair]
+	IsPrevEpochSourceAttester bool
 	// IsPrevEpochTargetAttester is true if the validator attested previous epoch target.
 	IsPrevEpochTargetAttester bool
 	// IsHeadAttester is true if the validator attested head.
 	IsPrevEpochHeadAttester bool
 
-	// CurrentEpochEffectiveBalance is how much effective balance this validator validator has current epoch.
+	// CurrentEpochEffectiveBalance is how much effective balance this validator has current epoch.
 	CurrentEpochEffectiveBalance uint64
 	// InclusionSlot is the slot of when the attestation gets included in the chain.
 	InclusionSlot types.Slot

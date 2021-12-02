@@ -10,26 +10,25 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
-	t.Skip("To be replaced with the new slasher implementation")
-
+func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	testConfig := &types.E2EConfig{
-		BeaconFlags:    []string{},
+		BeaconFlags: []string{
+			"--slasher",
+		},
 		ValidatorFlags: []string{},
 		EpochsToRun:    4,
 		TestSync:       false,
-		TestSlasher:    true,
 		TestDeposits:   false,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.HealthzCheck,
-			ev.ValidatorsSlashed,
-			ev.SlashedValidatorsLoseBalance,
-			ev.InjectDoubleVote,
-			ev.ProposeDoubleBlock,
+			ev.ValidatorsSlashedAfterEpoch(4),
+			ev.SlashedValidatorsLoseBalanceAfterEpoch(4),
+			ev.InjectDoubleVoteOnEpoch(2),
+			ev.InjectDoubleBlockOnEpoch(2),
 		},
 	}
 
