@@ -19,7 +19,7 @@ import (
 func ExportStandardProtectionJSON(
 	ctx context.Context,
 	validatorDB db.Database,
-	keysToFilter ...[]byte,
+	filteredKeys ...[]byte,
 ) (*format.EIPSlashingProtectionFormat, error) {
 	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	genesisValidatorsRoot, err := validatorDB.GenesisValidatorsRoot(ctx)
@@ -39,9 +39,9 @@ func ExportStandardProtectionJSON(
 	interchangeJSON.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
 
 	// Allow for filtering data for the keys we wish to export.
-	keysFilterMap := make(map[string]bool, len(keysToFilter))
-	for _, k := range keysToFilter {
-		keysFilterMap[string(k)] = true
+	filteredKeysMap := make(map[string]bool, len(filteredKeys))
+	for _, k := range filteredKeys {
+		filteredKeysMap[string(k)] = true
 	}
 
 	// Extract the existing public keys in our database.
@@ -60,7 +60,7 @@ func ExportStandardProtectionJSON(
 		len(proposedPublicKeys), "Extracting signed blocks by validator public key",
 	)
 	for _, pubKey := range proposedPublicKeys {
-		if _, ok := keysFilterMap[string(pubKey[:])]; len(keysToFilter) > 0 && !ok {
+		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
@@ -86,7 +86,7 @@ func ExportStandardProtectionJSON(
 		len(attestedPublicKeys), "Extracting signed attestations by validator public key",
 	)
 	for _, pubKey := range attestedPublicKeys {
-		if _, ok := keysFilterMap[string(pubKey[:])]; len(keysToFilter) > 0 && !ok {
+		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])

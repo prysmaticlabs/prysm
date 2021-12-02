@@ -1,8 +1,7 @@
-package v2
+package stateutil
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 )
@@ -26,7 +25,18 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
-
+	// Exit early if our previous leaves length don't match with the current set.
+	// This should never happen but better to be defensive here.
+	if len(prevLeaves) != len(leaves) {
+		res, err := h.merkleizeWithCache(leaves, length, fieldName, hashFunc)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		if h.rootsCache != nil {
+			leavesCache[fieldName] = leaves
+		}
+		return res, nil
+	}
 	for i := 0; i < len(leaves); i++ {
 		// We check if any items changed since the roots were last recomputed.
 		notEqual := leaves[i] != prevLeaves[i]
@@ -134,7 +144,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 	}
 	layers[0] = hashLayer
 	var err error
-	layers, hashLayer, err = stateutil.MerkleizeTrieLeaves(layers, hashLayer, hasher)
+	layers, hashLayer, err = MerkleizeTrieLeaves(layers, hashLayer, hasher)
 	if err != nil {
 		return [32]byte{}, err
 	}

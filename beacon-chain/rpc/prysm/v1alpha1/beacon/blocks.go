@@ -48,7 +48,7 @@ func (bs *Server) ListBlocks(
 
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForEpoch(ctx, req, q)
+		ctrs, numBlks, nextPageToken, err := bs.listBlocksForEpoch(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
@@ -63,7 +63,7 @@ func (bs *Server) ListBlocks(
 			NextPageToken:   nextPageToken,
 		}, nil
 	case *ethpb.ListBlocksRequest_Root:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForRoot(ctx, req, q)
+		ctrs, numBlks, nextPageToken, err := bs.listBlocksForRoot(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +79,7 @@ func (bs *Server) ListBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForSlot(ctx, req, q)
+		ctrs, numBlks, nextPageToken, err := bs.listBlocksForSlot(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +94,7 @@ func (bs *Server) ListBlocks(
 			NextPageToken:   nextPageToken,
 		}, nil
 	case *ethpb.ListBlocksRequest_Genesis:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForGenesis(ctx, req, q)
+		ctrs, numBlks, nextPageToken, err := bs.listBlocksForGenesis(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +128,7 @@ func (bs *Server) ListBeaconBlocks(
 
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForEpoch(ctx, req, q)
+		ctrs, numBlks, nextPageToken, err := bs.listBlocksForEpoch(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +142,7 @@ func (bs *Server) ListBeaconBlocks(
 			NextPageToken:   nextPageToken,
 		}, nil
 	case *ethpb.ListBlocksRequest_Root:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForRoot(ctx, req, q)
+		ctrs, numBlks, nextPageToken, err := bs.listBlocksForRoot(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +157,7 @@ func (bs *Server) ListBeaconBlocks(
 		}, nil
 
 	case *ethpb.ListBlocksRequest_Slot:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForSlot(ctx, req, q)
+		ctrs, numBlks, nextPageToken, err := bs.listBlocksForSlot(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
@@ -171,7 +171,7 @@ func (bs *Server) ListBeaconBlocks(
 			NextPageToken:   nextPageToken,
 		}, nil
 	case *ethpb.ListBlocksRequest_Genesis:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForGenesis(ctx, req, q)
+		ctrs, numBlks, nextPageToken, err := bs.listBlocksForGenesis(ctx, req, q)
 		if err != nil {
 			return nil, err
 		}
@@ -224,8 +224,8 @@ func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanon
 	return ctr, nil
 }
 
-// ListBlocksForEpoch retrieves all blocks for the provided epoch.
-func (bs *Server) ListBlocksForEpoch(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Epoch) ([]blockContainer, int, string, error) {
+// listBlocksForEpoch retrieves all blocks for the provided epoch.
+func (bs *Server) listBlocksForEpoch(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Epoch) ([]blockContainer, int, string, error) {
 	blks, _, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not get blocks: %v", err)
@@ -262,8 +262,8 @@ func (bs *Server) ListBlocksForEpoch(ctx context.Context, req *ethpb.ListBlocksR
 	return containers, numBlks, nextPageToken, nil
 }
 
-// ListBlocksForRoot retrieves the block for the provided root.
-func (bs *Server) ListBlocksForRoot(ctx context.Context, _ *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Root) ([]blockContainer, int, string, error) {
+// listBlocksForRoot retrieves the block for the provided root.
+func (bs *Server) listBlocksForRoot(ctx context.Context, _ *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Root) ([]blockContainer, int, string, error) {
 	blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
@@ -286,8 +286,8 @@ func (bs *Server) ListBlocksForRoot(ctx context.Context, _ *ethpb.ListBlocksRequ
 	}}, 1, strconv.Itoa(0), nil
 }
 
-// ListBlocksForSlot retrieves all blocks for the provided slot.
-func (bs *Server) ListBlocksForSlot(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Slot) ([]blockContainer, int, string, error) {
+// listBlocksForSlot retrieves all blocks for the provided slot.
+func (bs *Server) listBlocksForSlot(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Slot) ([]blockContainer, int, string, error) {
 	hasBlocks, blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
@@ -323,8 +323,8 @@ func (bs *Server) ListBlocksForSlot(ctx context.Context, req *ethpb.ListBlocksRe
 	return containers, numBlks, nextPageToken, nil
 }
 
-// ListBlocksForGenesis retrieves the genesis block.
-func (bs *Server) ListBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksRequest, _ *ethpb.ListBlocksRequest_Genesis) ([]blockContainer, int, string, error) {
+// listBlocksForGenesis retrieves the genesis block.
+func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksRequest, _ *ethpb.ListBlocksRequest_Genesis) ([]blockContainer, int, string, error) {
 	genBlk, err := bs.BeaconDB.GenesisBlock(ctx)
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)

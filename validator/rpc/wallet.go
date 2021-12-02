@@ -216,7 +216,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 // we return an empty response with no error. If the password is incorrect for a single keystore,
 // we return an appropriate error.
 func (s *Server) ValidateKeystores(
-	ctx context.Context, req *pb.ValidateKeystoresRequest,
+	_ context.Context, req *pb.ValidateKeystoresRequest,
 ) (*emptypb.Empty, error) {
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")

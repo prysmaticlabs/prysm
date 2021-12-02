@@ -183,12 +183,12 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 ) (*format.EIPSlashingProtectionFormat, error) {
 	// We select the keys that were DELETED or NOT_ACTIVE from the previous action
 	// and use that to filter our slashing protection export.
-	keysToFilter := make([][]byte, 0, len(pubKeys))
+	filteredKeys := make([][]byte, 0, len(pubKeys))
 	for i, pk := range pubKeys {
 		if statuses[i].Status == ethpbservice.DeletedKeystoreStatus_DELETED ||
 			statuses[i].Status == ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE {
-			keysToFilter = append(keysToFilter, pk)
+			filteredKeys = append(filteredKeys, pk)
 		}
 	}
-	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, keysToFilter...)
+	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, filteredKeys...)
 }
