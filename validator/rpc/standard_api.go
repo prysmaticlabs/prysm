@@ -90,7 +90,13 @@ func (s *Server) DeleteKeystores(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete keys: %v", err)
 	}
-	keysToFilter := req.PublicKeys
+	// We select keys that were deleted for retrieving slashing protection history.
+	keysToFilter := make([][]byte, 0, len(req.PublicKeys))
+	for i, st := range statuses {
+		if st.Status != ethpbservice.DeletedKeystoreStatus_ERROR {
+			keysToFilter = append(keysToFilter, req.PublicKeys[i])
+		}
+	}
 	exportedHistory, err := slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, keysToFilter...)
 	if err != nil {
 		return nil, status.Errorf(
