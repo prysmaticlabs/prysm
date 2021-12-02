@@ -221,7 +221,7 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 	}
 
 	b.balances = append(bals, bal)
-	balIdx := len(b.state.Balances) - 1
+	balIdx := len(b.balances) - 1
 	b.markFieldAsDirty(balances)
 	b.addDirtyIndices(balances, []uint64{uint64(balIdx)})
 	return nil

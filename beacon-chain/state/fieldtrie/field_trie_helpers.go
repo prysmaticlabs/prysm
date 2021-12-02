@@ -62,7 +62,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 			tmp := r
 			roots[i] = tmp[:]
 		}
-		return stateutil.HandleByteArrays(roots, indices, convertAll)
+		return handleByteArrays(roots, indices, convertAll)
 	case types.RandaoMixes:
 		val, ok := elements.(*customtypes.RandaoMixes)
 		if !ok {
@@ -74,7 +74,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 			tmp := m
 			mixes[i] = tmp[:]
 		}
-		return handleByteArrays(val, indices, convertAll)
+		return handleByteArrays(mixes, indices, convertAll)
 	case types.Eth1DataVotes:
 		val, ok := elements.([]*ethpb.Eth1Data)
 		if !ok {
