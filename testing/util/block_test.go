@@ -101,7 +101,10 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 
 func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	cfg := params.MinimalSpecConfig()
+	cfg.SlotsPerHistoricalRoot = 8192
+	cfg.EpochsPerHistoricalVector = 65536
+	params.OverrideBeaconConfig(cfg)
 	beaconState, privs := DeterministicGenesisState(t, 32)
 	conf := &BlockGenConfig{
 		NumAttesterSlashings: 1,
