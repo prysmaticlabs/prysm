@@ -43,8 +43,12 @@ func TestGateway_Customized(t *testing.T) {
 	g := New(
 		context.Background(),
 		[]*PbMux{},
-		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
-
+		func(
+			_ *apimiddleware.ApiProxyMiddleware,
+			_ http.HandlerFunc,
+			_ http.ResponseWriter,
+			_ *http.Request,
+		) {
 		},
 		"",
 		"",
@@ -78,8 +82,12 @@ func TestGateway_StartStop(t *testing.T) {
 	g := New(
 		ctx.Context,
 		[]*PbMux{},
-		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
-
+		func(
+			_ *apimiddleware.ApiProxyMiddleware,
+			_ http.HandlerFunc,
+			_ http.ResponseWriter,
+			_ *http.Request,
+		) {
 		},
 		selfAddress,
 		gatewayAddress,
