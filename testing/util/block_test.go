@@ -47,7 +47,10 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	// Changing to minimal config as this will process 4 epochs of blocks.
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	cfg := params.MinimalSpecConfig()
+	cfg.SlotsPerHistoricalRoot = 8192
+	cfg.EpochsPerHistoricalVector = 65536
+	params.OverrideBeaconConfig(cfg)
 	beaconState, privs := DeterministicGenesisState(t, 64)
 
 	conf := &BlockGenConfig{
