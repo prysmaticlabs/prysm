@@ -21,7 +21,7 @@ import "proto/eth/v2/beacon_state.proto";
 
 
 // WrappedBeaconState is used only inside db/kv package and it there for the sole purpose of
-// storing the state objects efficiently. With Normalizing the fields in the "state" bucket
+// storing the state objects efficiently. With normalizing the fields in the "state" bucket
 // it also stores some indexes and other metadata fields that cannot be stored in the
 // BeaconState object itself.
 message WrappedBeaconState {
