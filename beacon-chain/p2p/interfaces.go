@@ -77,7 +77,7 @@ type PeerManager interface {
 	ENR() *enr.Record
 	DiscoveryAddresses() ([]multiaddr.Multiaddr, error)
 	RefreshENR()
-	FindPeersWithSubnet(ctx context.Context, topic string, subIndex uint64, threshold int) (bool, error)
+	FindPeersWithSubnet(ctx context.Context, topic string, subIndex uint64, threshold uint64) (bool, error)
 	AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error)
 }
 

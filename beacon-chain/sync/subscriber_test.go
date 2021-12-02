@@ -489,7 +489,7 @@ func TestFilterSubnetPeers(t *testing.T) {
 	// Try with only peers from subnet 20.
 	wantedPeers = []peer.ID{p2.BHost.ID()}
 	// Connect an excess amount of peers in the particular subnet.
-	for i := 1; i <= flags.Get().MinimumPeersPerSubnet; i++ {
+	for i := uint64(1); i <= flags.Get().MinimumPeersPerSubnet; i++ {
 		nPeer := createPeer(t, subnet20)
 		p.Connect(nPeer)
 		wantedPeers = append(wantedPeers, nPeer.BHost.ID())
