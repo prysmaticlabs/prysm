@@ -30,7 +30,10 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 
 func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	cfg := params.MinimalSpecConfig()
+	cfg.SlotsPerHistoricalRoot = 8192
+	cfg.EpochsPerHistoricalVector = 65536
+	params.OverrideBeaconConfig(cfg)
 	beaconState, privs := DeterministicGenesisState(t, 1024)
 	conf := &BlockGenConfig{
 		NumAttestations: 4,
