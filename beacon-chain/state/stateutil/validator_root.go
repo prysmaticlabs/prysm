@@ -58,7 +58,7 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 // a list of uint64 and mixed with registry limit.
 func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	balancesMarshaling := make([][]byte, 0)
+	balancesMarshaling := make([][]byte, 0, len(balances))
 	for i := 0; i < len(balances); i++ {
 		balanceBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(balanceBuf, balances[i])
