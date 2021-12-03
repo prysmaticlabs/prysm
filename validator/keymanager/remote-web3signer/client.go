@@ -135,16 +135,15 @@ func (client *client) ReloadSignerKeys() error {
 		return err
 	}
 	resp, err := client.restClient.Do(req)
-	if err != nil {
-		fmt.Printf("error2: %d", err)
-		return err
-	}
-
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 
 		}
 	}()
+	if err != nil {
+		fmt.Printf("error2: %d", err)
+		return err
+	}
 
 	return nil
 }

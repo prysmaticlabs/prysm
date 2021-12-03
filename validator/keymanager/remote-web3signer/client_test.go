@@ -57,10 +57,12 @@ func TestClient_ReloadSignerKeys(t *testing.T) {
 	GetDoFunc = func(*http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: 200,
-			Body:       nil,
+			Body:       ioutil.NopCloser(bytes.NewReader(nil)),
 		}, nil
 	}
-
+	cl := client{BasePath: "example.com", APIPath: "/api/v1/eth", restClient: &mockClient{}}
+	err := cl.ReloadSignerKeys()
+	assert.Nil(t, err)
 }
 
 func TestClient_GetServerStatus(t *testing.T) {
