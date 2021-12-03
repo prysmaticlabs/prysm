@@ -235,7 +235,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 }
 
 func TestProcessAttesterSlashings_AppliesCorrectStatusMerge(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
 	for _, vv := range beaconState.Validators() {
 		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch)
 	}
