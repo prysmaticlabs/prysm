@@ -113,13 +113,63 @@ func (client *client) GetPublicKeys() ([]string, error) {
 	if err != nil {
 		fmt.Printf("error2: %d", err)
 	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
 
+		}
+	}()
 	var publicKeys []string
 	if err := json.NewDecoder(resp.Body).Decode(&publicKeys); err != nil {
 		return nil, errors.Wrap(err, "??")
 	}
 
 	return publicKeys, nil
+}
+
+func (client *client) ReloadSignerKeys() error {
+	const requestPath = "reload"
+	req, err := http.NewRequest(http.MethodPost, client.constructFullURL(requestPath), nil)
+	if err != nil {
+		fmt.Printf(" error1:  %d", err)
+		return err
+	}
+	resp, err := client.restClient.Do(req)
+	if err != nil {
+		fmt.Printf("error2: %d", err)
+		return err
+	}
+
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+
+		}
+	}()
+
+	return nil
+}
+
+func (client *client) GetServerStatus() (string, error) {
+	const requestPath = "upcheck"
+	req, err := http.NewRequest(http.MethodGet, client.constructFullURL(requestPath), nil)
+	if err != nil {
+		fmt.Printf(" error1:  %d", err)
+		return "", err
+	}
+	resp, err := client.restClient.Do(req)
+	if err != nil {
+		fmt.Printf("error2: %d", err)
+		return "", err
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+
+		}
+	}()
+	var status string
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return "", errors.Wrap(err, "??")
+	}
+	return status, nil
 }
 
 func (client *client) constructFullURL(actionPath string) string {
