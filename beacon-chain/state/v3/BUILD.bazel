@@ -9,7 +9,6 @@ go_library(
         "deprecated_getters.go",
         "deprecated_setters.go",
         "field_roots.go",
-        "generated.ssz.go",
         "getters_block.go",
         "getters_checkpoint.go",
         "getters_eth1.go",
