@@ -219,7 +219,7 @@ func (b *BeaconState) Balances() []uint64 {
 	return b.balancesInternal()
 }
 
-// balances of validators participating in consensus on the beacon chain.
+// balancesInternal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) balancesInternal() []uint64 {
 	if !b.hasInnerState() {
@@ -282,7 +282,7 @@ func (b *BeaconState) Slashings() []uint64 {
 	return b.slashingsInternal()
 }
 
-// slashings of validators on the beacon chain.
+// slashingsInternal of validators on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) slashingsInternal() []uint64 {
 	if !b.hasInnerState() {
@@ -297,7 +297,7 @@ func (b *BeaconState) slashingsInternal() []uint64 {
 	return res
 }
 
-// inactivityScores of validators participating in consensus on the beacon chain.
+// inactivityScoresInternal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) inactivityScoresInternal() []uint64 {
 	if !b.hasInnerState() {

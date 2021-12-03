@@ -62,9 +62,9 @@ type Service struct {
 	checkpointStateCache  *cache.CheckpointStateCache
 	initSyncBlocks        map[[32]byte]block.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
-	justifiedBalances     []uint64
-	justifiedBalancesLock sync.RWMutex
-	wsVerifier            *WeakSubjectivityVerifier
+	//justifiedBalances     []uint64
+	justifiedBalances *stateBalanceCache
+	wsVerifier        *WeakSubjectivityVerifier
 }
 
 // config options for the service.
@@ -97,7 +97,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]block.SignedBeaconBlock),
-		justifiedBalances:    make([]uint64, 0),
 		cfg:                  &config{},
 	}
 	for _, opt := range opts {
@@ -106,6 +105,12 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 	var err error
+	if srv.justifiedBalances == nil {
+		srv.justifiedBalances, err = newStateBalanceCache(srv.cfg.StateGen)
+		if err != nil {
+			return nil, err
+		}
+	}
 	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
 	if err != nil {
 		return nil, err
@@ -151,9 +156,6 @@ func (s *Service) Start() {
 
 		// Resume fork choice.
 		s.justifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
-		if err := s.cacheJustifiedStateBalances(s.ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))); err != nil {
-			log.Fatalf("Could not cache justified state balances: %v", err)
-		}
 		s.prevJustifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
 		s.bestJustifiedCheckpt = ethpb.CopyCheckpoint(justifiedCheckpoint)
 		s.finalizedCheckpt = ethpb.CopyCheckpoint(finalizedCheckpoint)
@@ -342,9 +344,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 
 	s.justifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
-	if err := s.cacheJustifiedStateBalances(ctx, genesisBlkRoot); err != nil {
-		return err
-	}
 	s.prevJustifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
 	s.bestJustifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
 	s.finalizedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)

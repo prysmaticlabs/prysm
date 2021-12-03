@@ -16,7 +16,11 @@ import (
 
 // ExportStandardProtectionJSON extracts all slashing protection data from a validator database
 // and packages it into an EIP-3076 compliant, standard
-func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) (*format.EIPSlashingProtectionFormat, error) {
+func ExportStandardProtectionJSON(
+	ctx context.Context,
+	validatorDB db.Database,
+	filteredKeys ...[]byte,
+) (*format.EIPSlashingProtectionFormat, error) {
 	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	genesisValidatorsRoot, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
@@ -34,6 +38,12 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 	interchangeJSON.Metadata.GenesisValidatorsRoot = genesisRootHex
 	interchangeJSON.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
 
+	// Allow for filtering data for the keys we wish to export.
+	filteredKeysMap := make(map[string]bool, len(filteredKeys))
+	for _, k := range filteredKeys {
+		filteredKeysMap[string(k)] = true
+	}
+
 	// Extract the existing public keys in our database.
 	proposedPublicKeys, err := validatorDB.ProposedPublicKeys(ctx)
 	if err != nil {
@@ -50,6 +60,9 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		len(proposedPublicKeys), "Extracting signed blocks by validator public key",
 	)
 	for _, pubKey := range proposedPublicKeys {
+		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
+			continue
+		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert public key to hex string")
@@ -73,6 +86,9 @@ func ExportStandardProtectionJSON(ctx context.Context, validatorDB db.Database) 
 		len(attestedPublicKeys), "Extracting signed attestations by validator public key",
 	)
 	for _, pubKey := range attestedPublicKeys {
+		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
+			continue
+		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert public key to hex string")

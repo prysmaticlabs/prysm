@@ -641,7 +641,7 @@ func (s *Service) unSubscribeFromTopic(topic string) {
 // find if we have peers who are subscribed to the same subnet
 func (s *Service) validPeersExist(subnetTopic string) bool {
 	numOfPeers := s.cfg.p2p.PubSub().ListPeers(subnetTopic + s.cfg.p2p.Encoding().ProtocolSuffix())
-	return len(numOfPeers) >= flags.Get().MinimumPeersPerSubnet
+	return uint64(len(numOfPeers)) >= flags.Get().MinimumPeersPerSubnet
 }
 
 func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
@@ -682,7 +682,7 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 	for _, sub := range wantedSubs {
 		subnetTopic := fmt.Sprintf(topic, digest, sub) + s.cfg.p2p.Encoding().ProtocolSuffix()
 		peers := s.cfg.p2p.PubSub().ListPeers(subnetTopic)
-		if len(peers) > flags.Get().MinimumPeersPerSubnet {
+		if uint64(len(peers)) > flags.Get().MinimumPeersPerSubnet {
 			// In the event we have more than the minimum, we can
 			// mark the remaining as viable for pruning.
 			peers = peers[:flags.Get().MinimumPeersPerSubnet]

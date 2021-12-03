@@ -19,11 +19,11 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -74,7 +74,7 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 // ImportAccountsConfig defines values to run the import accounts function.
 type ImportAccountsConfig struct {
 	Keystores       []*keymanager.Keystore
-	Keymanager      *imported.Keymanager
+	Importer        keymanager.Importer
 	AccountPassword string
 }
 
@@ -140,9 +140,9 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	k, ok := km.(*imported.Keymanager)
+	k, ok := km.(keymanager.Importer)
 	if !ok {
-		return errors.New("only imported wallets can import more keystores")
+		return errors.New("keymanager cannot import keystores")
 	}
 
 	// Check if the user wishes to import a one-off, private key directly
@@ -213,12 +213,21 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		}
 	}
 	fmt.Println("Importing accounts, this may take a while...")
-	if err := ImportAccounts(cliCtx.Context, &ImportAccountsConfig{
-		Keymanager:      k,
+	statuses, err := ImportAccounts(cliCtx.Context, &ImportAccountsConfig{
+		Importer:        k,
 		Keystores:       keystoresImported,
 		AccountPassword: accountsPassword,
-	}); err != nil {
+	})
+	if err != nil {
 		return err
+	}
+	for i, status := range statuses {
+		switch status.Status {
+		case ethpbservice.ImportedKeystoreStatus_DUPLICATE:
+			log.Warnf("Duplicate key %s found in import request, skipped", keystoresImported[i].Pubkey)
+		case ethpbservice.ImportedKeystoreStatus_ERROR:
+			log.Warnf("Could not import keystore for %s: %s", keystoresImported[i].Pubkey, status.Message)
+		}
 	}
 	fmt.Printf(
 		"Successfully imported %s accounts, view all of them by running `accounts list`\n",
@@ -229,17 +238,21 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 
 // ImportAccounts can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet.
-func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) error {
-	return cfg.Keymanager.ImportKeystores(
+func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+	passwords := make([]string, len(cfg.Keystores))
+	for i := 0; i < len(cfg.Keystores); i++ {
+		passwords[i] = cfg.AccountPassword
+	}
+	return cfg.Importer.ImportKeystores(
 		ctx,
 		cfg.Keystores,
-		cfg.AccountPassword,
+		passwords,
 	)
 }
 
 // Imports a one-off file containing a private key as a hex string into
 // the Prysm validator's accounts.
-func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, km *imported.Keymanager) error {
+func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, importer keymanager.Importer) error {
 	privKeyFile := cliCtx.String(flags.ImportPrivateKeyFileFlag.Name)
 	fullPath, err := file.ExpandPath(privKeyFile)
 	if err != nil {
@@ -270,15 +283,23 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, km *i
 	if err != nil {
 		return errors.Wrap(err, "could not encrypt private key into a keystore file")
 	}
-	if err := ImportAccounts(
+	statuses, err := ImportAccounts(
 		cliCtx.Context,
 		&ImportAccountsConfig{
-			Keymanager:      km,
+			Importer:        importer,
 			AccountPassword: wallet.Password(),
 			Keystores:       []*keymanager.Keystore{keystore},
 		},
-	); err != nil {
+	)
+	if err != nil {
 		return errors.Wrap(err, "could not import keystore into wallet")
+	}
+	for _, status := range statuses {
+		if status.Status == ethpbservice.ImportedKeystoreStatus_ERROR {
+			log.Warnf("Could not import keystore for %s: %s", keystore.Pubkey, status.Message)
+		} else if status.Status == ethpbservice.ImportedKeystoreStatus_DUPLICATE {
+			log.Warnf("Duplicate key %s skipped", keystore.Pubkey)
+		}
 	}
 	fmt.Printf(
 		"Imported account with public key %#x, view all accounts by running `accounts list`\n",

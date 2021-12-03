@@ -6,14 +6,8 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 go_library(
     name = "go_default_library",
     srcs = [
-        ":ssz_generated_files",
-        "beacon_state.go",
-        "beacon_state_minimal.go", # keep
         "deprecated_getters.go",
         "deprecated_setters.go",
-        "field_root_eth1.go",
-        "field_root_validator.go",
-        "field_root_vector.go",
         "field_roots.go",
         "getters_block.go",
         "getters_checkpoint.go",
@@ -35,10 +29,12 @@ go_library(
         "setters_validator.go",
         "state_trie.go",
         "types.go",
+        ":ssz_generated_files",  # keep
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v2",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//proto/migration:__subpackages__",
         "//testing/spectest:__subpackages__",
         "//testing/util:__pkg__",
     ],
@@ -57,7 +53,6 @@ go_library(
         "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
-        "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
@@ -74,7 +69,6 @@ go_test(
     srcs = [
         "deprecated_getters_test.go",
         "deprecated_setters_test.go",
-        "field_root_test.go",
         "getters_block_test.go",
         "getters_test.go",
         "getters_validator_test.go",
@@ -86,12 +80,14 @@ go_test(
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
+        "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
 

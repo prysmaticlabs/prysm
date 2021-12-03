@@ -40,6 +40,11 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
+	rawPublicKeys := make([][]byte, numValidators)
+	for i := 0; i < numValidators; i++ {
+		rawPublicKeys[i] = publicKeys[i][:]
+	}
+
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
 	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB)
@@ -114,6 +119,11 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
+	rawPublicKeys := make([][]byte, numValidators)
+	for i := 0; i < numValidators; i++ {
+		rawPublicKeys[i] = pubKeys[i][:]
+	}
+
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
 	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB)
@@ -126,6 +136,44 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	// so we create a map to verify we have the data we expected.
 	require.Equal(t, len(wanted.Data), len(eipStandard.Data))
 	require.DeepEqual(t, wanted.Data, eipStandard.Data)
+}
+
+func TestImportExport_FilterKeys(t *testing.T) {
+	ctx := context.Background()
+	numValidators := 10
+	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
+	require.NoError(t, err)
+	validatorDB := dbtest.SetupDB(t, publicKeys)
+
+	// First we setup some mock attesting and proposal histories and create a mock
+	// standard slashing protection format JSON struct.
+	attestingHistory, proposalHistory := slashtest.MockAttestingAndProposalHistories(publicKeys)
+	require.NoError(t, err)
+	wanted, err := slashtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	require.NoError(t, err)
+
+	// We encode the standard slashing protection struct into a JSON format.
+	blob, err := json.Marshal(wanted)
+	require.NoError(t, err)
+	buf := bytes.NewBuffer(blob)
+
+	// Next, we attempt to import it into our validator database.
+	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	require.NoError(t, err)
+
+	// Next up, we export our slashing protection database into the EIP standard file.
+	// Next, we attempt to import it into our validator database.
+	rawKeys := make([][]byte, 5)
+	for i := 0; i < len(rawKeys); i++ {
+		rawKeys[i] = publicKeys[i][:]
+	}
+
+	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB, rawKeys...)
+	require.NoError(t, err)
+
+	// We compare the metadata fields from import to export.
+	require.Equal(t, wanted.Metadata, eipStandard.Metadata)
+	require.Equal(t, len(rawKeys), len(eipStandard.Data))
 }
 
 func TestImportInterchangeData_OK(t *testing.T) {

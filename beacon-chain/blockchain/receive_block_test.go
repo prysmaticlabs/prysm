@@ -124,21 +124,16 @@ func TestService_ReceiveBlock(t *testing.T) {
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
 			require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 
-			cfg := &config{
-				BeaconDB: beaconDB,
-				ForkChoiceStore: protoarray.New(
-					0, // justifiedEpoch
-					0, // finalizedEpoch
-					genesisBlockRoot,
-				),
-				AttPool:       attestations.NewPool(),
-				ExitPool:      voluntaryexits.NewPool(),
-				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
-				StateGen:      stategen.New(beaconDB),
+			opts := []Option{
+				WithDatabase(beaconDB),
+				WithForkChoiceStore(protoarray.New(0, 0, genesisBlockRoot)),
+				WithAttestationPool(attestations.NewPool()),
+				WithExitPool(voluntaryexits.NewPool()),
+				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
+				WithStateGen(stategen.New(beaconDB)),
 			}
-			s, err := NewService(ctx)
+			s, err := NewService(ctx, opts...)
 			require.NoError(t, err)
-			s.cfg = cfg
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
 			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 			require.NoError(t, err)
@@ -166,21 +161,17 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
-	cfg := &config{
-		BeaconDB: beaconDB,
-		ForkChoiceStore: protoarray.New(
-			0, // justifiedEpoch
-			0, // finalizedEpoch
-			genesisBlockRoot,
-		),
-		AttPool:       attestations.NewPool(),
-		ExitPool:      voluntaryexits.NewPool(),
-		StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
-		StateGen:      stategen.New(beaconDB),
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithForkChoiceStore(protoarray.New(0, 0, genesisBlockRoot)),
+		WithAttestationPool(attestations.NewPool()),
+		WithExitPool(voluntaryexits.NewPool()),
+		WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
+		WithStateGen(stategen.New(beaconDB)),
 	}
-	s, err := NewService(ctx)
+
+	s, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	s.cfg = cfg
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
 	gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	require.NoError(t, err)
@@ -250,19 +241,14 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			beaconDB := testDB.SetupDB(t)
 			genesisBlockRoot, err := genesis.HashTreeRoot(ctx)
 			require.NoError(t, err)
-			cfg := &config{
-				BeaconDB: beaconDB,
-				ForkChoiceStore: protoarray.New(
-					0, // justifiedEpoch
-					0, // finalizedEpoch
-					genesisBlockRoot,
-				),
-				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
-				StateGen:      stategen.New(beaconDB),
+			opts := []Option{
+				WithDatabase(beaconDB),
+				WithForkChoiceStore(protoarray.New(0, 0, genesisBlockRoot)),
+				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
+				WithStateGen(stategen.New(beaconDB)),
 			}
-			s, err := NewService(ctx)
+			s, err := NewService(ctx, opts...)
 			require.NoError(t, err)
-			s.cfg = cfg
 			err = s.saveGenesisData(ctx, genesis)
 			require.NoError(t, err)
 			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
@@ -287,9 +273,10 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 }
 
 func TestService_HasInitSyncBlock(t *testing.T) {
-	s, err := NewService(context.Background())
+	opts := testServiceOptsNoDB()
+	opts = append(opts, WithStateNotifier(&blockchainTesting.MockStateNotifier{}))
+	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
-	s.cfg = &config{StateNotifier: &blockchainTesting.MockStateNotifier{}}
 	r := [32]byte{'a'}
 	if s.HasInitSyncBlock(r) {
 		t.Error("Should not have block")
@@ -301,11 +288,10 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 }
 
 func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
+	opts := testServiceOptsWithDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background())
+	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
-	s.cfg = &config{StateGen: stategen.New(beaconDB)}
 	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 	s.finalizedCheckpt = &ethpb.Checkpoint{}
@@ -315,11 +301,10 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 }
 
 func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background())
+	opts := testServiceOptsWithDB(t)
+	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
-	s.cfg = &config{StateGen: stategen.New(beaconDB)}
 	s.finalizedCheckpt = &ethpb.Checkpoint{}
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
 	s.genesisTime = time.Now()
@@ -329,11 +314,10 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 }
 
 func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background())
+	opts := testServiceOptsWithDB(t)
+	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
-	s.cfg = &config{StateGen: stategen.New(beaconDB)}
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 10000000}
 	s.genesisTime = time.Now()
 

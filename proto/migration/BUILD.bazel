@@ -5,11 +5,13 @@ go_library(
     srcs = [
         "enums.go",
         "v1alpha1_to_v1.go",
+        "v1alpha1_to_v2.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/migration",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
+        "//beacon-chain/state/v2:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
@@ -25,6 +27,7 @@ go_test(
     srcs = [
         "enums_test.go",
         "v1alpha1_to_v1_test.go",
+        "v1alpha1_to_v2_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
