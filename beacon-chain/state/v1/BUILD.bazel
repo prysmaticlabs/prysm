@@ -30,7 +30,7 @@ go_library(
         "types.go",
         "unsupported_getters.go",
         "unsupported_setters.go",
-        ":ssz_generated_files",
+        ":ssz_generated_files",  # keep
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v1",
     visibility = [
