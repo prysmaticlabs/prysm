@@ -93,10 +93,12 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 
 	numAccounts := 5
 	keystores := make([]*keymanager.Keystore, numAccounts)
+	passwords := make([]string, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		keystores[i] = createRandomKeystore(t, password)
+		passwords[i] = password
 	}
-	_, err = km.ImportKeystores(cliCtx.Context, keystores, []string{password})
+	_, err = km.ImportKeystores(cliCtx.Context, keystores, passwords)
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout

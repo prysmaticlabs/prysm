@@ -20,6 +20,8 @@ func LoadChainConfigFile(chainConfigFileName string) {
 	}
 	// Default to using mainnet.
 	conf := MainnetConfig().Copy()
+	// To track if config name is defined inside config file.
+	hasConfigName := false
 	// Convert 0x hex inputs to fixed bytes arrays
 	lines := strings.Split(string(yamlFile), "\n")
 	for i, line := range lines {
@@ -27,10 +29,12 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
 			continue
 		}
+		if strings.HasPrefix(line, "CONFIG_NAME") {
+			hasConfigName = true
+		}
 		if strings.HasPrefix(line, "PRESET_BASE: 'minimal'") || strings.HasPrefix(line, "# Minimal preset") {
 			conf = MinimalSpecConfig().Copy()
 		}
-
 		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
 			parts := ReplaceHexStringWithYAMLFormat(line)
 			lines[i] = strings.Join(parts, "\n")
@@ -43,6 +47,9 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		} else {
 			log.WithError(err).Error("There were some issues parsing the config from a yaml file")
 		}
+	}
+	if !hasConfigName {
+		conf.ConfigName = "devnet"
 	}
 	// recompute SqrRootSlotsPerEpoch constant to handle non-standard values of SlotsPerEpoch
 	conf.SqrRootSlotsPerEpoch = types.Slot(math.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))

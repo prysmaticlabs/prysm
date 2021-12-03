@@ -88,7 +88,7 @@ var (
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
-	MinSyncPeers = &cli.IntFlag{
+	MinSyncPeers = &cli.Uint64Flag{
 		Name:  "min-sync-peers",
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
@@ -123,13 +123,13 @@ var (
 		Usage: "Does not run the discoveryV5 dht.",
 	}
 	// BlockBatchLimit specifies the requested block batch size.
-	BlockBatchLimit = &cli.IntFlag{
+	BlockBatchLimit = &cli.Uint64Flag{
 		Name:  "block-batch-limit",
 		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
 		Value: 64,
 	}
 	// BlockBatchLimitBurstFactor specifies the factor by which block batch size may increase.
-	BlockBatchLimitBurstFactor = &cli.IntFlag{
+	BlockBatchLimitBurstFactor = &cli.Uint64Flag{
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 10,
