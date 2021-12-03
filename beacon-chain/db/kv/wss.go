@@ -2,6 +2,9 @@ package kv
 
 import (
 	"context"
+	"io"
+	"io/ioutil"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -9,8 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"io"
-	"io/ioutil"
 )
 
 const SLOTS_PER_EPOCH = 32
