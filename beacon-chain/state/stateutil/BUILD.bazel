@@ -57,6 +57,7 @@ go_test(
         "state_root_test.go",
         "stateutil_test.go",
         "trie_helpers_test.go",
+        "validator_root_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
