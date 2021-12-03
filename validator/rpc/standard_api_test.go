@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -115,6 +116,20 @@ func TestServer_ImportKeystores(t *testing.T) {
 		})
 		require.NotNil(t, err)
 	})
+	t.Run("error if no passwords in request", func(t *testing.T) {
+		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+			Keystores: []string{"hi"},
+			Passwords: []string{},
+		})
+		require.ErrorContains(t, "No passwords provided", err)
+	})
+	t.Run("error if number of passwords does not match number of keystores", func(t *testing.T) {
+		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+			Keystores: []string{"hi"},
+			Passwords: []string{"hi", "hi"},
+		})
+		require.ErrorContains(t, "Number of passwords does not match", err)
+	})
 	t.Run("prevents importing if faulty slashing protection data", func(t *testing.T) {
 		numKeystores := 5
 		password := "12345678"
@@ -135,12 +150,14 @@ func TestServer_ImportKeystores(t *testing.T) {
 		numKeystores := 5
 		password := "12345678"
 		keystores := make([]*keymanager.Keystore, numKeystores)
+		passwords := make([]string, numKeystores)
 		publicKeys := make([][48]byte, numKeystores)
 		for i := 0; i < numKeystores; i++ {
 			keystores[i] = createRandomKeystore(t, password)
 			pubKey, err := hex.DecodeString(keystores[i].Pubkey)
 			require.NoError(t, err)
 			publicKeys[i] = bytesutil.ToBytes48(pubKey)
+			passwords[i] = password
 		}
 
 		// Create a validator database.
@@ -176,7 +193,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 
 		resp, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
 			Keystores:          encodedKeystores,
-			Passwords:          []string{password},
+			Passwords:          passwords,
 			SlashingProtection: string(encodedSlashingProtection),
 		})
 		require.NoError(t, err)
@@ -189,46 +206,23 @@ func TestServer_ImportKeystores(t *testing.T) {
 
 func TestServer_DeleteKeystores(t *testing.T) {
 	ctx := context.Background()
-	t.Run("wallet not ready", func(t *testing.T) {
-		s := Server{}
-		_, err := s.DeleteKeystores(context.Background(), nil)
-		require.ErrorContains(t, "Wallet not ready", err)
-	})
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
+	srv := setupServerWithWallet(t)
 
-	s := &Server{
-		keymanager:        km,
-		walletInitialized: true,
-		wallet:            w,
-	}
-	numAccounts := 50
-	dr, ok := km.(*derived.Keymanager)
+	// We recover 3 accounts from a test mnemonic.
+	numAccounts := 3
+	dr, ok := srv.keymanager.(*derived.Keymanager)
 	require.Equal(t, true, ok)
-	err = dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, "", numAccounts)
+	err := dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
-
-	publicKeys, err := km.FetchValidatingPublicKeys(ctx)
+	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
-	require.Equal(t, numAccounts, len(publicKeys))
 
 	// Create a validator database.
 	validatorDB, err := kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{
 		PubKeys: publicKeys,
 	})
 	require.NoError(t, err)
-	s.valDB = validatorDB
+	srv.valDB = validatorDB
 
 	// Have to close it after import is done otherwise it complains db is not open.
 	defer func() {
@@ -248,39 +242,115 @@ func TestServer_DeleteKeystores(t *testing.T) {
 	encoded, err := json.Marshal(mockJSON)
 	require.NoError(t, err)
 
-	_, err = s.ImportSlashingProtection(ctx, &validatorpb.ImportSlashingProtectionRequest{
+	_, err = srv.ImportSlashingProtection(ctx, &validatorpb.ImportSlashingProtectionRequest{
 		SlashingProtectionJson: string(encoded),
 	})
 	require.NoError(t, err)
-	rawPubKeys := make([][]byte, numAccounts)
-	for i := 0; i < numAccounts; i++ {
-		rawPubKeys[i] = publicKeys[i][:]
+
+	// For ease of test setup, we'll give each public key a string identifier.
+	publicKeysWithId := map[string][48]byte{
+		"a": publicKeys[0],
+		"b": publicKeys[1],
+		"c": publicKeys[2],
 	}
 
-	// Deletes properly and returns slashing protection history.
-	resp, err := s.DeleteKeystores(ctx, &ethpbservice.DeleteKeystoresRequest{
-		PublicKeys: rawPubKeys,
-	})
-	require.NoError(t, err)
-	require.Equal(t, numAccounts, len(resp.Statuses))
-	for _, status := range resp.Statuses {
-		require.Equal(t, ethpbservice.DeletedKeystoreStatus_DELETED, status.Status)
+	type keyCase struct {
+		id                 string
+		wantProtectionData bool
 	}
-	publicKeys, err = km.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	require.Equal(t, 0, len(publicKeys))
-	require.Equal(t, numAccounts, len(mockJSON.Data))
+	tests := []struct {
+		keys         []*keyCase
+		wantStatuses []ethpbservice.DeletedKeystoreStatus_Status
+	}{
+		{
+			keys: []*keyCase{
+				{id: "a", wantProtectionData: true},
+				{id: "a", wantProtectionData: true},
+				{id: "d"},
+				{id: "c", wantProtectionData: true},
+			},
+			wantStatuses: []ethpbservice.DeletedKeystoreStatus_Status{
+				ethpbservice.DeletedKeystoreStatus_DELETED,
+				ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
+				ethpbservice.DeletedKeystoreStatus_NOT_FOUND,
+				ethpbservice.DeletedKeystoreStatus_DELETED,
+			},
+		},
+		{
+			keys: []*keyCase{
+				{id: "a", wantProtectionData: true},
+				{id: "c", wantProtectionData: true},
+			},
+			wantStatuses: []ethpbservice.DeletedKeystoreStatus_Status{
+				ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
+				ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
+			},
+		},
+		{
+			keys: []*keyCase{
+				{id: "x"},
+			},
+			wantStatuses: []ethpbservice.DeletedKeystoreStatus_Status{
+				ethpbservice.DeletedKeystoreStatus_NOT_FOUND,
+			},
+		},
+	}
+	for _, tc := range tests {
+		keys := make([][]byte, len(tc.keys))
+		for i := 0; i < len(tc.keys); i++ {
+			pk := publicKeysWithId[tc.keys[i].id]
+			keys[i] = pk[:]
+		}
+		resp, err := srv.DeleteKeystores(ctx, &ethpbservice.DeleteKeystoresRequest{PublicKeys: keys})
+		require.NoError(t, err)
+		require.Equal(t, len(keys), len(resp.Statuses))
+		slashingProtectionData := &format.EIPSlashingProtectionFormat{}
+		require.NoError(t, json.Unmarshal([]byte(resp.SlashingProtection), slashingProtectionData))
+		require.Equal(t, true, len(slashingProtectionData.Data) > 0)
 
-	// Returns slashing protection history if already deleted.
-	resp, err = s.DeleteKeystores(ctx, &ethpbservice.DeleteKeystoresRequest{
-		PublicKeys: rawPubKeys,
+		for i := 0; i < len(tc.keys); i++ {
+			require.Equal(
+				t,
+				tc.wantStatuses[i],
+				resp.Statuses[i].Status,
+				fmt.Sprintf("Checking status for key %s", tc.keys[i].id),
+			)
+			if tc.keys[i].wantProtectionData {
+				// We check that we can find the key in the slashing protection data.
+				var found bool
+				for _, dt := range slashingProtectionData.Data {
+					if dt.Pubkey == fmt.Sprintf("%#x", keys[i]) {
+						found = true
+						break
+					}
+				}
+				require.Equal(t, true, found)
+			}
+		}
+	}
+}
+
+func setupServerWithWallet(t testing.TB) *Server {
+	ctx := context.Background()
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	require.Equal(t, numAccounts, len(resp.Statuses))
-	for _, status := range resp.Statuses {
-		require.Equal(t, ethpbservice.DeletedKeystoreStatus_NOT_FOUND, status.Status)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+
+	return &Server{
+		keymanager:        km,
+		walletInitialized: true,
+		wallet:            w,
 	}
-	require.Equal(t, numAccounts, len(mockJSON.Data))
 }
 
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {

@@ -23,7 +23,7 @@ type Config struct {
 	MetaDataDir         string
 	TCPPort             uint
 	UDPPort             uint
-	MaxPeers            uint
+	MaxPeers            uint64
 	AllowListCIDR       string
 	DenyListCIDR        []string
 	StateNotifier       statefeed.Notifier
