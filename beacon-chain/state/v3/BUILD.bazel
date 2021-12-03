@@ -7,9 +7,6 @@ go_library(
     srcs = [
         "deprecated_getters.go",
         "deprecated_setters.go",
-        "field_root_eth1.go",
-        "field_root_validator.go",
-        "field_root_vector.go",
         "field_roots.go",
         "generated.ssz.go",
         "getters_block.go",
@@ -56,8 +53,6 @@ go_library(
         "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
-        "@com_github_dgraph_io_ristretto//:go_default_library",
-        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
@@ -73,7 +68,6 @@ go_test(
     srcs = [
         "deprecated_getters_test.go",
         "deprecated_setters_test.go",
-        "field_root_test.go",
         "getters_block_test.go",
         "getters_test.go",
         "getters_validator_test.go",

@@ -5,9 +5,14 @@ go_library(
     srcs = [
         "block_header_root.go",
         "eth1_root.go",
+        "field_root_attestation.go",
+        "field_root_eth1.go",
+        "field_root_validator.go",
+        "field_root_vector.go",
         "participation_bit_root.go",
         "pending_attestation_root.go",
         "reference.go",
+        "state_hasher.go",
         "sync_committee.root.go",
         "trie_helpers.go",
         "validator_map_handler.go",
@@ -28,6 +33,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/core/transition/stateutils:go_default_library",
+        "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//container/trie:go_default_library",
         "//crypto/hash:go_default_library",
@@ -35,8 +41,10 @@ go_library(
         "//encoding/ssz:go_default_library",
         "//math:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@io_opencensus_go//trace:go_default_library",
     ],
 )
 
@@ -44,6 +52,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "benchmark_test.go",
+        "field_root_test.go",
         "reference_bench_test.go",
         "state_root_test.go",
         "stateutil_test.go",
@@ -51,7 +60,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state/v1:go_default_library",
         "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//crypto/hash:go_default_library",

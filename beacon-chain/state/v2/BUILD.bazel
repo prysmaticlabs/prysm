@@ -7,9 +7,6 @@ go_library(
     srcs = [
         "deprecated_getters.go",
         "deprecated_setters.go",
-        "field_root_eth1.go",
-        "field_root_validator.go",
-        "field_root_vector.go",
         "field_roots.go",
         "generated.ssz.go",
         "getters_block.go",
@@ -73,7 +70,6 @@ go_test(
     srcs = [
         "deprecated_getters_test.go",
         "deprecated_setters_test.go",
-        "field_root_test.go",
         "getters_block_test.go",
         "getters_test.go",
         "getters_validator_test.go",

@@ -5,7 +5,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -21,7 +20,7 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 		tmp := r
 		bRootsSlice[i] = tmp[:]
 	}
-	root, err := v1.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	root, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
 	require.NoError(t, err)
 	blockRts := newState.BlockRoots()
 	roots := make([][32]byte, 0, len(blockRts))
@@ -36,7 +35,7 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 
 func TestReturnTrieLayerVariable_OK(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	root, err := v1.ValidatorRegistryRoot(newState.Validators())
+	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
 	hasher := hash.CustomSHA256Hasher()
 	validators := newState.Validators()
@@ -73,7 +72,7 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 		tmp := r
 		bRootsSlice[i] = tmp[:]
 	}
-	expectedRoot, err := v1.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	expectedRoot, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
 	require.NoError(t, err)
 	root, _, err := stateutil.RecomputeFromLayer(changedRoots, changedIdx, layers)
 	require.NoError(t, err)
@@ -107,7 +106,7 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[0]), changedVals[0]))
 	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
-	expectedRoot, err := v1.ValidatorRegistryRoot(newState.Validators())
+	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)
 	roots = make([][32]byte, 0, len(changedVals))
 	for _, val := range changedVals {
