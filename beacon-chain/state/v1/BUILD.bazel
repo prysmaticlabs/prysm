@@ -6,6 +6,8 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 go_library(
     name = "go_default_library",
     srcs = [
+        "beacon_state.go",
+        "beacon_state_minimal.go", # keep
         "doc.go",
         "field_roots.go",
         "getters_attestation.go",
