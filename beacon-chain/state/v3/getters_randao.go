@@ -1,42 +1,45 @@
 package v3
 
 import (
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"fmt"
+
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 )
 
 // RandaoMixes of block proposers on the beacon chain.
-func (b *BeaconState) RandaoMixes() [][]byte {
+func (b *BeaconState) RandaoMixes() *[65536][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.RandaoMixes == nil {
+	if b.randaoMixes == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.randaoMixes()
+	mixes := [65536][32]byte(*b.randaoMixesInternal())
+	return &mixes
 }
 
-// randaoMixes of block proposers on the beacon chain.
+// randaoMixesInternal of block proposers on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) randaoMixes() [][]byte {
+func (b *BeaconState) randaoMixesInternal() *customtypes.RandaoMixes {
 	if !b.hasInnerState() {
 		return nil
 	}
 
-	return bytesutil.SafeCopy2dBytes(b.state.RandaoMixes)
+	return b.randaoMixes
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
 // input index value.
-func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
+func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
-		return nil, ErrNilInnerState
+		return [32]byte{}, ErrNilInnerState
 	}
-	if b.state.RandaoMixes == nil {
-		return nil, nil
+	if b.randaoMixes == nil {
+		return [32]byte{}, nil
 	}
 
 	b.lock.RLock()
@@ -48,12 +51,15 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 // randaoMixAtIndex retrieves a specific block root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
+func (b *BeaconState) randaoMixAtIndex(idx uint64) ([32]byte, error) {
 	if !b.hasInnerState() {
-		return nil, ErrNilInnerState
+		return [32]byte{}, ErrNilInnerState
+	}
+	if uint64(len(b.randaoMixes)) <= idx {
+		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}
 
-	return bytesutil.SafeCopyRootAtIndex(b.state.RandaoMixes, idx)
+	return b.randaoMixes[idx], nil
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
@@ -61,7 +67,7 @@ func (b *BeaconState) RandaoMixesLength() int {
 	if !b.hasInnerState() {
 		return 0
 	}
-	if b.state.RandaoMixes == nil {
+	if b.randaoMixes == nil {
 		return 0
 	}
 
@@ -77,9 +83,9 @@ func (b *BeaconState) randaoMixesLength() int {
 	if !b.hasInnerState() {
 		return 0
 	}
-	if b.state.RandaoMixes == nil {
+	if b.randaoMixes == nil {
 		return 0
 	}
 
-	return len(b.state.RandaoMixes)
+	return len(b.randaoMixes)
 }

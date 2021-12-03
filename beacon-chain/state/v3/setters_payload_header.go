@@ -10,7 +10,7 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloa
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.LatestExecutionPayloadHeader = val
+	b.latestExecutionPayloadHeader = val
 	b.markFieldAsDirty(latestExecutionPayloadHeader)
 	return nil
 }

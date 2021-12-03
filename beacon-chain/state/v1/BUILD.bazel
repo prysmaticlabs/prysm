@@ -6,7 +6,6 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 go_library(
     name = "go_default_library",
     srcs = [
-        ":ssz_generated_files",
         "doc.go",
         "field_roots.go",
         "getters_attestation.go",
@@ -30,11 +29,13 @@ go_library(
         "types.go",
         "unsupported_getters.go",
         "unsupported_setters.go",
+        ":ssz_generated_files",  # keep
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v1",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//contracts/deposit:__subpackages__",
+        "//proto/migration:__subpackages__",
         "//proto/prysm/v1alpha1:__subpackages__",
         "//proto/testing:__subpackages__",
         "//runtime/interop:__subpackages__",
@@ -60,7 +61,6 @@ go_library(
         "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
-        "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",

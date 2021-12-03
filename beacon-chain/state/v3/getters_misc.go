@@ -4,6 +4,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -19,47 +20,39 @@ func (b *BeaconState) GenesisTime() uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisTime()
+	return b.genesisTimeInternal()
 }
 
-// genesisTime of the beacon state as a uint64.
+// genesisTimeInternal of the beacon state as a uint64.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisTime() uint64 {
+func (b *BeaconState) genesisTimeInternal() uint64 {
 	if !b.hasInnerState() {
 		return 0
 	}
 
-	return b.state.GenesisTime
+	return b.genesisTime
 }
 
 // GenesisValidatorRoot of the beacon state.
-func (b *BeaconState) GenesisValidatorRoot() []byte {
+func (b *BeaconState) GenesisValidatorRoot() [32]byte {
 	if !b.hasInnerState() {
-		return nil
-	}
-	if b.state.GenesisValidatorsRoot == nil {
-		return params.BeaconConfig().ZeroHash[:]
+		return params.BeaconConfig().ZeroHash
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisValidatorRoot()
+	return b.genesisValidatorRootInternal()
 }
 
-// genesisValidatorRoot of the beacon state.
+// genesisValidatorRootInternal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisValidatorRoot() []byte {
+func (b *BeaconState) genesisValidatorRootInternal() [32]byte {
 	if !b.hasInnerState() {
-		return nil
-	}
-	if b.state.GenesisValidatorsRoot == nil {
-		return params.BeaconConfig().ZeroHash[:]
+		return params.BeaconConfig().ZeroHash
 	}
 
-	root := make([]byte, 32)
-	copy(root, b.state.GenesisValidatorsRoot)
-	return root
+	return b.genesisValidatorsRoot
 }
 
 // GenesisUnixTime returns the genesis time as time.Time.
@@ -81,7 +74,7 @@ func (b *BeaconState) genesisUnixTime() time.Time {
 		return time.Unix(0, 0)
 	}
 
-	return time.Unix(int64(b.state.GenesisTime), 0)
+	return time.Unix(int64(b.genesisTime), 0)
 }
 
 // ParentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.
@@ -103,8 +96,12 @@ func (b *BeaconState) parentRoot() [32]byte {
 		return [32]byte{}
 	}
 
+	if b.latestBlockHeader == nil {
+		return [32]byte{}
+	}
+
 	parentRoot := [32]byte{}
-	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
+	copy(parentRoot[:], b.latestBlockHeader.ParentRoot)
 	return parentRoot
 }
 
@@ -124,17 +121,17 @@ func (b *BeaconState) Slot() types.Slot {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.slot()
+	return b.slotInternal()
 }
 
-// slot of the current beacon chain state.
+// slotInternal of the current beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slot() types.Slot {
+func (b *BeaconState) slotInternal() types.Slot {
 	if !b.hasInnerState() {
 		return 0
 	}
 
-	return b.state.Slot
+	return b.slot
 }
 
 // Fork version of the beacon chain.
@@ -142,59 +139,59 @@ func (b *BeaconState) Fork() *ethpb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Fork == nil {
+	if b.fork == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.fork()
+	return b.forkInternal()
 }
 
-// fork version of the beacon chain.
+// forkInternal version of the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) fork() *ethpb.Fork {
+func (b *BeaconState) forkInternal() *ethpb.Fork {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.Fork == nil {
+	if b.fork == nil {
 		return nil
 	}
 
-	prevVersion := make([]byte, len(b.state.Fork.PreviousVersion))
-	copy(prevVersion, b.state.Fork.PreviousVersion)
-	currVersion := make([]byte, len(b.state.Fork.CurrentVersion))
-	copy(currVersion, b.state.Fork.CurrentVersion)
+	prevVersion := make([]byte, len(b.fork.PreviousVersion))
+	copy(prevVersion, b.fork.PreviousVersion)
+	currVersion := make([]byte, len(b.fork.CurrentVersion))
+	copy(currVersion, b.fork.CurrentVersion)
 	return &ethpb.Fork{
 		PreviousVersion: prevVersion,
 		CurrentVersion:  currVersion,
-		Epoch:           b.state.Fork.Epoch,
+		Epoch:           b.fork.Epoch,
 	}
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
-func (b *BeaconState) HistoricalRoots() [][]byte {
+func (b *BeaconState) HistoricalRoots() [][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
-	if b.state.HistoricalRoots == nil {
+	if b.historicalRoots == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.historicalRoots()
+	return b.historicalRootsInternal()
 }
 
-// historicalRoots based on epochs stored in the beacon state.
+// historicalRootsInternal based on epochs stored in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) historicalRoots() [][]byte {
+func (b *BeaconState) historicalRootsInternal() customtypes.HistoricalRoots {
 	if !b.hasInnerState() {
 		return nil
 	}
-	return bytesutil.SafeCopy2dBytes(b.state.HistoricalRoots)
+	return bytesutil.SafeCopy2d32Bytes(b.historicalRoots)
 }
 
 // balancesLength returns the length of the balances slice.
@@ -203,9 +200,9 @@ func (b *BeaconState) balancesLength() int {
 	if !b.hasInnerState() {
 		return 0
 	}
-	if b.state.Balances == nil {
+	if b.balances == nil {
 		return 0
 	}
 
-	return len(b.state.Balances)
+	return len(b.balances)
 }

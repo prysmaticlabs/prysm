@@ -68,7 +68,7 @@ func TestStateByRootIfCachedNoCopy_HotState(t *testing.T) {
 	service.hotStateCache.put(r, beaconState)
 
 	loadedState := service.StateByRootIfCachedNoCopy(r)
-	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
+	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
 }
 
 func TestStateByRootIfCachedNoCopy_ColdState(t *testing.T) {

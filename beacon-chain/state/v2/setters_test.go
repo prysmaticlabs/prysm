@@ -155,7 +155,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
 	newRt := bytesutil.ToBytes32(st.merkleLayers[0][balances])
-	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.state.Balances)
+	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.balances)
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
 }

@@ -23,7 +23,7 @@ func (b *BeaconState) GenesisTime() uint64 {
 	return b.genesisTimeInternal()
 }
 
-// genesisTime of the beacon state as a uint64.
+// genesisTimeInternal of the beacon state as a uint64.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) genesisTimeInternal() uint64 {
 	if !b.hasInnerState() {
@@ -124,7 +124,7 @@ func (b *BeaconState) Slot() types.Slot {
 	return b.slotInternal()
 }
 
-// slot of the current beacon chain state.
+// slotInternal of the current beacon chain state.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) slotInternal() types.Slot {
 	if !b.hasInnerState() {
