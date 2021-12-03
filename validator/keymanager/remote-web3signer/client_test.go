@@ -23,7 +23,20 @@ func (m *mockClient) Do(req *http.Request) (*http.Response, error) {
 	return GetDoFunc(req)
 }
 
-func Test(t *testing.T) {
+func TestClient_Sign(t *testing.T) {
+	json := `{ signature: "0xaj0dsfj0adsfj0asjdsjfjasdfk" }`
+	// create a new reader with that JSON
+	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
+	GetDoFunc = func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       r,
+		}, nil
+	}
+
+}
+
+func TestClient_GetPublicKeys(t *testing.T) {
 	json := `["example","example2"]`
 	// create a new reader with that JSON
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
@@ -38,4 +51,26 @@ func Test(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, "example", resp[0])
+}
+
+func TestClient_ReloadSignerKeys(t *testing.T) {
+	GetDoFunc = func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       nil,
+		}, nil
+	}
+
+}
+
+func TestClient_GetServerStatus(t *testing.T) {
+	json := `some server status, not sure what it looks like, need to find some sample data`
+	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
+	GetDoFunc = func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       r,
+		}, nil
+	}
+
 }
