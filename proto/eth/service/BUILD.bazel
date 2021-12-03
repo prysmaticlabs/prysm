@@ -48,8 +48,24 @@ go_proto_library(
 
 go_proto_compiler(
     name = "allow_delete_body_gateway_compiler",
+    options = [
+        "logtostderr=true",
+        "allow_repeated_fields_in_body=true",
+        "allow_delete_body=true",
+    ],
     plugin = "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:protoc-gen-grpc-gateway",
-    options = ["allow_delete_body=true"],
+    suffix = ".pb.gw.go",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//grpclog:go_default_library",
+        "@org_golang_google_grpc//metadata:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
+    ],
 )
 
 go_proto_library(
