@@ -1,26 +1,16 @@
-package stateutil
+package v2
 
 import (
 	"bytes"
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
-
-// ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
-// a list of validator structs according to the Ethereum
-// Simple Serialize specification.
-func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
-	if features.Get().EnableSSZCache {
-		return CachedHasher.validatorRegistryRoot(vals)
-	}
-	return NocachedHasher.validatorRegistryRoot(vals)
-}
 
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
@@ -68,7 +58,7 @@ func (h *stateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Vali
 		return [32]byte{}, errors.New("nil validator")
 	}
 
-	enc := validatorEncKey(validator)
+	enc := stateutil.ValidatorEncKey(validator)
 	// Check if it exists in cache:
 	if h.rootsCache != nil {
 		if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
@@ -76,7 +66,7 @@ func (h *stateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Vali
 		}
 	}
 
-	valRoot, err := ValidatorRootWithHasher(hasher, validator)
+	valRoot, err := stateutil.ValidatorRootWithHasher(hasher, validator)
 	if err != nil {
 		return [32]byte{}, err
 	}
