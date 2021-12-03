@@ -3,6 +3,7 @@ package v3
 import (
 	"fmt"
 
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -15,14 +16,14 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.LatestBlockHeader = ethpb.CopyBeaconBlockHeader(val)
+	b.latestBlockHeader = ethpb.CopyBeaconBlockHeader(val)
 	b.markFieldAsDirty(latestBlockHeader)
 	return nil
 }
 
 // SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetBlockRoots(val [][]byte) error {
+func (b *BeaconState) SetBlockRoots(val *[8192][32]byte) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
@@ -32,7 +33,8 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	b.sharedFieldReferences[blockRoots].MinusRef()
 	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 
-	b.state.BlockRoots = val
+	roots := customtypes.StateRoots(*val)
+	b.blockRoots = &roots
 	b.markFieldAsDirty(blockRoots)
 	b.rebuildTrie[blockRoots] = true
 	return nil
@@ -44,23 +46,24 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}
-	if uint64(len(b.state.BlockRoots)) <= idx {
+	if uint64(len(b.blockRoots)) <= idx {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	r := b.state.BlockRoots
+	r := b.blockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		r = make([][]byte, len(b.state.BlockRoots))
-		copy(r, b.state.BlockRoots)
+		roots := *b.blockRoots
+		rootsCopy := roots
+		r = &rootsCopy
 		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 	}
 
-	r[idx] = blockRoot[:]
-	b.state.BlockRoots = r
+	r[idx] = blockRoot
+	b.blockRoots = r
 
 	b.markFieldAsDirty(blockRoots)
 	b.addDirtyIndices(blockRoots, []uint64{idx})

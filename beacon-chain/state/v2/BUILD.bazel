@@ -2,17 +2,16 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
-# gazelle:ignore
 go_library(
     name = "go_default_library",
     srcs = [
-        ":ssz_generated_files",
         "deprecated_getters.go",
         "deprecated_setters.go",
         "field_root_eth1.go",
         "field_root_validator.go",
         "field_root_vector.go",
         "field_roots.go",
+        "generated.ssz.go",
         "getters_block.go",
         "getters_checkpoint.go",
         "getters_eth1.go",
@@ -33,6 +32,7 @@ go_library(
         "setters_validator.go",
         "state_trie.go",
         "types.go",
+        ":ssz_generated_files",  # keep
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v2",
     visibility = [

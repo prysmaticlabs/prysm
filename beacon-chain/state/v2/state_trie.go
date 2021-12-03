@@ -200,10 +200,8 @@ func (b *BeaconState) Copy() state.BeaconState {
 		validators:                 b.validators,
 
 		// Everything else, too small to be concerned about, constant size.
-		genesisValidatorsRoot: b.genesisValidatorsRoot,
-		justificationBits:     b.justificationBits,
-
-		// Everything else, too small to be concerned about, constant size.
+		genesisValidatorsRoot:       b.genesisValidatorsRoot,
+		justificationBits:           b.justificationBits,
 		fork:                        b.fork,
 		latestBlockHeader:           b.latestBlockHeader,
 		eth1Data:                    b.eth1Data,

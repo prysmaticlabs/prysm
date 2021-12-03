@@ -12,7 +12,7 @@ func (b *BeaconState) SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.CurrentSyncCommittee = val
+	b.currentSyncCommittee = val
 	b.markFieldAsDirty(currentSyncCommittee)
 	return nil
 }
@@ -25,7 +25,7 @@ func (b *BeaconState) SetNextSyncCommittee(val *ethpb.SyncCommittee) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.NextSyncCommittee = val
+	b.nextSyncCommittee = val
 	b.markFieldAsDirty(nextSyncCommittee)
 	return nil
 }
