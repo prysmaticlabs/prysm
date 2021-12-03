@@ -109,7 +109,7 @@ func (s *Service) processSlashings(blk block.BeaconBlock) {
 		if s.trackedIndex(idx) {
 			log.WithFields(logrus.Fields{
 				"ProposerIndex": idx,
-				"Slot:":         blk.Slot(),
+				"Slot":          blk.Slot(),
 				"SlashingSlot":  slashing.Header_1.Header.Slot,
 				"Root1":         fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_1.Header.BodyRoot)),
 				"Root2":         fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_2.Header.BodyRoot)),
@@ -122,7 +122,7 @@ func (s *Service) processSlashings(blk block.BeaconBlock) {
 			if s.trackedIndex(types.ValidatorIndex(idx)) {
 				log.WithFields(logrus.Fields{
 					"AttesterIndex": idx,
-					"Slot:":         blk.Slot(),
+					"Slot":          blk.Slot(),
 					"Slot1":         slashing.Attestation_1.Data.Slot,
 					"Root1":         fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_1.Data.BeaconBlockRoot)),
 					"SourceEpoch1":  slashing.Attestation_1.Data.Source.Epoch,
