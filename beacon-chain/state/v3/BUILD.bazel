@@ -2,7 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
-# gazelle ignore
+# gazelle:ignore
 go_library(
     name = "go_default_library",
     srcs = [
