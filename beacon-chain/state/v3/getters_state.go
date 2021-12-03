@@ -60,7 +60,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 		InactivityScores:             b.inactivityScores,
 		CurrentSyncCommittee:         b.currentSyncCommittee,
 		NextSyncCommittee:            b.nextSyncCommittee,
-		LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderInternal(),
+		LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader,
 	}
 }
 
