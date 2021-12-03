@@ -143,6 +143,10 @@ var (
 		Name:  "enable-balance-trie-computation",
 		Usage: "This enables optimized hash tree root operations for our balance field.",
 	}
+	enableKeymanagerApi = &cli.BoolFlag{
+		Name:  "keymanager-api",
+		Usage: "Enable use of the validator standard keymanager API",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -166,6 +170,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	attestTimely,
 	enableSlashingProtectionPruning,
 	enableDoppelGangerProtection,
+	enableKeymanagerApi,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.

@@ -80,6 +80,9 @@ type Flags struct {
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
 
+	// Enable the keymanage standard API.
+	EnableKeymanagerApi bool
+
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 }
 
@@ -262,6 +265,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
 		logEnabled(enableDoppelGangerProtection)
 		cfg.EnableDoppelGanger = true
+	}
+	if ctx.Bool(enableKeymanagerApi.Name) {
+		logEnabled(enableKeymanagerApi)
+		cfg.EnableKeymanagerApi = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)
