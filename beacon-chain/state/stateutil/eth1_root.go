@@ -12,9 +12,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// Eth1DataEncKey returns the encoded key in bytes of input `eth1Data`,
+// eth1DataEncKey returns the encoded key in bytes of input `eth1Data`,
 // the returned key bytes can be used for caching purposes.
-func Eth1DataEncKey(eth1Data *ethpb.Eth1Data) []byte {
+func eth1DataEncKey(eth1Data *ethpb.Eth1Data) []byte {
 	enc := make([]byte, 0, 96)
 	if eth1Data != nil {
 		if len(eth1Data.DepositRoot) > 0 {

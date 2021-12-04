@@ -73,6 +73,7 @@ func (km *Keymanager) DeleteKeystores(
 			deletedKeysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
 		}
 	}
+
 	log.WithFields(logrus.Fields{
 		"publicKeys": deletedKeysStr,
 	}).Info("Successfully deleted validator key(s)")
@@ -89,5 +90,8 @@ func (km *Keymanager) DeleteKeystores(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize key caches")
 	}
+	log.WithFields(logrus.Fields{
+		"publicKeys": deletedKeysStr,
+	}).Info("Successfully deleted validator key(s)")
 	return statuses, nil
 }

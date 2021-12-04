@@ -35,7 +35,9 @@ type Signer interface {
 
 // Importer can import new keystores into the keymanager.
 type Importer interface {
-	ImportKeystores(ctx context.Context, keystores []*Keystore, importsPassword string) error
+	ImportKeystores(
+		ctx context.Context, keystores []*Keystore, passwords []string,
+	) ([]*ethpbservice.ImportedKeystoreStatus, error)
 }
 
 // Deleter can delete keystores from the keymanager.

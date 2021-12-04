@@ -107,6 +107,13 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 	return km.importedKM.FetchValidatingPrivateKeys(ctx)
 }
 
+// ImportKeystores for a derived keymanager.
+func (km *Keymanager) ImportKeystores(
+	ctx context.Context, keystores []*keymanager.Keystore, passwords []string,
+) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+	return km.importedKM.ImportKeystores(ctx, keystores, passwords)
+}
+
 // DeleteKeystores for a derived keymanager.
 func (km *Keymanager) DeleteKeystores(
 	ctx context.Context, publicKeys [][]byte,

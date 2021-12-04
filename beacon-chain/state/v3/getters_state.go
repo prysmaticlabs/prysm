@@ -113,8 +113,7 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	if !b.hasInnerState() {
 		return nil, errors.New("nil beacon state")
 	}
-	//TODO: Blocked by https://github.com/ferranbt/fastssz/pull/65
-	return []byte{}, nil
+	return b.state.MarshalSSZ()
 }
 
 // ProtobufBeaconState transforms an input into beacon state Merge in the form of protobuf.

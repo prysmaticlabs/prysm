@@ -177,6 +177,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		}
 	}
 
+	stateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
@@ -185,6 +186,15 @@ func (b *BeaconState) Copy() state.BeaconState {
 				b.stateFieldLeaves[field].FieldReference().MinusRef()
 			}
 		}
+		for i := 0; i < fieldCount; i++ {
+			field := types.FieldIndex(i)
+			delete(b.stateFieldLeaves, field)
+			delete(b.dirtyIndices, field)
+			delete(b.dirtyFields, field)
+			delete(b.sharedFieldReferences, field)
+			delete(b.stateFieldLeaves, field)
+		}
+		stateCount.Sub(1)
 	})
 
 	return dst
@@ -200,7 +210,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	defer b.lock.Unlock()
 
 	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(b.state)
+		fieldRoots, err := computeFieldRoots(ctx, b.state)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -287,7 +297,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	case historicalRoots:
 		return ssz.ByteArrayRootWithLimit(b.state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
 	case eth1Data:
-		return eth1Root(hasher, b.state.Eth1Data)
+		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))))

@@ -118,6 +118,7 @@ var appFlags = []cli.Flag{
 	cmd.RestoreSourceFileFlag,
 	cmd.RestoreTargetDirFlag,
 	cmd.BoltMMapInitialSizeFlag,
+	cmd.ValidatorMonitorIndicesFlag,
 }
 
 func init() {

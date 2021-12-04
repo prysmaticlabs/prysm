@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -116,11 +118,9 @@ func TestProcessSlashings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := &Service{
-				config: &ValidatorMonitorConfig{
-					TrackedValidators: map[types.ValidatorIndex]interface{}{
-						1: nil,
-						2: nil,
-					},
+				TrackedValidators: map[types.ValidatorIndex]bool{
+					1: true,
+					2: true,
 				},
 			}
 			s.processSlashings(wrapper.WrappedPhase0BeaconBlock(tt.block))
@@ -178,31 +178,69 @@ func TestProcessProposedBlock(t *testing.T) {
 
 }
 
-func TestProcessBlock_ProposerAndSlashedTrackedVals(t *testing.T) {
+func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	s := setupService(t)
-	genesis, keys := util.DeterministicGenesisState(t, 64)
+
+	genesis, keys := util.DeterministicGenesisStateAltair(t, 64)
+	c, err := altair.NextSyncCommittee(ctx, genesis)
+	require.NoError(t, err)
+	require.NoError(t, genesis.SetCurrentSyncCommittee(c))
+
 	genConfig := util.DefaultBlockGenConfig()
 	genConfig.NumProposerSlashings = 1
-	b, err := util.GenerateFullBlock(genesis, keys, genConfig, 1)
+	b, err := util.GenerateFullBlockAltair(genesis, keys, genConfig, 1)
+	require.NoError(t, err)
+	s := setupService(t)
+
+	pubKeys := make([][]byte, 3)
+	pubKeys[0] = genesis.Validators()[0].PublicKey
+	pubKeys[1] = genesis.Validators()[1].PublicKey
+	pubKeys[2] = genesis.Validators()[2].PublicKey
+
+	currentSyncCommittee := util.ConvertToCommittee([][]byte{
+		pubKeys[0], pubKeys[1], pubKeys[2], pubKeys[1], pubKeys[1],
+	})
+	require.NoError(t, genesis.SetCurrentSyncCommittee(currentSyncCommittee))
+
 	idx := b.Block.Body.ProposerSlashings[0].Header_1.Header.ProposerIndex
-	if !s.TrackedIndex(idx) {
-		s.config.TrackedValidators[idx] = nil
+	s.RLock()
+	if !s.trackedIndex(idx) {
+		s.TrackedValidators[idx] = true
 		s.latestPerformance[idx] = ValidatorLatestPerformance{
 			balance: 31900000000,
 		}
 		s.aggregatedPerformance[idx] = ValidatorAggregatedPerformance{}
 	}
+	s.RUnlock()
+	s.updateSyncCommitteeTrackedVals(genesis)
 
-	require.NoError(t, err)
 	root, err := b.GetBlock().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
-	wanted1 := fmt.Sprintf("\"Proposed block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0x67a9fe4d0d8d ProposerIndex=15 Slot=1 Version=0 prefix=monitor", bytesutil.Trunc(root[:]))
-	wanted2 := fmt.Sprintf("\"Proposer slashing was included\" ProposerIndex=%d Root1=0x000100000000 Root2=0x000200000000 SlashingSlot=0 Slot:=1 prefix=monitor", idx)
-	wrapped := wrapper.WrappedPhase0SignedBeaconBlock(b)
+	wanted1 := fmt.Sprintf("\"Proposed block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0xf732eaeb7fae ProposerIndex=15 Slot=1 Version=1 prefix=monitor", bytesutil.Trunc(root[:]))
+	wanted2 := fmt.Sprintf("\"Proposer slashing was included\" ProposerIndex=%d Root1=0x000100000000 Root2=0x000200000000 SlashingSlot=0 Slot=1 prefix=monitor", idx)
+	wanted3 := "\"Sync committee contribution included\" BalanceChange=0 Contributions=3 ExpectedContrib=3 NewBalance=32000000000 ValidatorIndex=1 prefix=monitor"
+	wanted4 := "\"Sync committee contribution included\" BalanceChange=0 Contributions=1 ExpectedContrib=1 NewBalance=32000000000 ValidatorIndex=2 prefix=monitor"
+	wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	require.NoError(t, err)
 	s.processBlock(ctx, wrapped)
 	require.LogsContain(t, hook, wanted1)
 	require.LogsContain(t, hook, wanted2)
+	require.LogsContain(t, hook, wanted3)
+	require.LogsContain(t, hook, wanted4)
+}
+
+func TestLogAggregatedPerformance(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s := setupService(t)
+
+	s.logAggregatedPerformance()
+	time.Sleep(3000 * time.Millisecond)
+	wanted := "\"Aggregated performance since launch\" AttestationInclusion=\"80.00%\"" +
+		" AverageInclusionDistance=1.2 BalanceChangePct=\"0.95%\" CorrectlyVotedHeadPct=\"66.67%\" " +
+		"CorrectlyVotedSourcePct=\"91.67%\" CorrectlyVotedTargetPct=\"100.00%\" StartBalance=31700000000 " +
+		"StartEpoch=0 TotalAggregations=0 TotalProposedBlocks=1 TotalRequested=15 TotalSyncContributions=0 " +
+		"ValidatorIndex=1 prefix=monitor"
+	require.LogsContain(t, hook, wanted)
 }

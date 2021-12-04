@@ -27,6 +27,7 @@ go_test(
     srcs = [
         "enums_test.go",
         "v1alpha1_to_v1_test.go",
+        "v1alpha1_to_v2_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
