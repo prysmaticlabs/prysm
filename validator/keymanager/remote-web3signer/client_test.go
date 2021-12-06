@@ -46,7 +46,7 @@ func TestClient_GetPublicKeys(t *testing.T) {
 			Body:       r,
 		}, nil
 	}
-	cl := client{BasePath: "example.com", APIPath: "/api/v1/eth", restClient: &mockClient{}}
+	cl := client{BasePath: "example.com", restClient: &mockClient{}}
 	resp, err := cl.GetPublicKeys()
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
@@ -60,7 +60,7 @@ func TestClient_ReloadSignerKeys(t *testing.T) {
 			Body:       ioutil.NopCloser(bytes.NewReader(nil)),
 		}, nil
 	}
-	cl := client{BasePath: "example.com", APIPath: "/api/v1/eth", restClient: &mockClient{}}
+	cl := client{BasePath: "example.com", restClient: &mockClient{}}
 	err := cl.ReloadSignerKeys()
 	assert.Nil(t, err)
 }
