@@ -85,7 +85,7 @@ func (s *Store) PruneAttestationsAtEpoch(
 // PruneProposalsAtEpoch deletes all proposals from the slasher DB with epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneProposalsAtEpoch(
-	_ context.Context, maxEpoch types.Epoch,
+	ctx context.Context, maxEpoch types.Epoch,
 ) (numPruned uint, err error) {
 	var endPruneSlot types.Slot
 	endPruneSlot, err = slots.EpochEnd(maxEpoch)
