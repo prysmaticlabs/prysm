@@ -2,6 +2,7 @@ package remote_web3signer
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
@@ -9,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type HTTPClient interface {
@@ -58,6 +60,7 @@ type signResponse struct {
 }
 
 func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, error) {
+	// need to think of way to address versioning here, can i get eth2 api namespace from somewhere?
 	requestPath := "/api/v1/eth2/sign/" + pubKey
 
 	jsonRequest, err := json.Marshal(request)
@@ -91,8 +94,12 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 		return nil, errors.Wrap(err, "???")
 	}
 
-	// should hex.decode, trim prefix
-	blsSig, err := bls.SignatureFromBytes([]byte(signResp.Signature))
+	decoded, err := hex.DecodeString(strings.TrimPrefix(signResp.Signature, "0x"))
+	if err != nil {
+		//panic(err)
+	}
+
+	blsSig, err := bls.SignatureFromBytes([]byte(decoded))
 	if err != nil {
 		//panic(err)
 	}
@@ -121,7 +128,10 @@ func (client *client) GetPublicKeys() ([]string, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&publicKeys); err != nil {
 		return nil, errors.Wrap(err, "??")
 	}
-
+	for i, value := range publicKeys {
+		// does this need to be in bytes?
+		publicKeys[i] = strings.TrimPrefix("0x", value)
+	}
 	return publicKeys, nil
 }
 
@@ -151,6 +161,7 @@ func (client *client) GetServerStatus() (string, error) {
 	req, err := http.NewRequest(http.MethodGet, client.BasePath+requestPath, nil)
 	if err != nil {
 		fmt.Printf(" error1:  %d", err)
+		// handling empty? what's the best way to do this?
 		return "", err
 	}
 	resp, err := client.restClient.Do(req)

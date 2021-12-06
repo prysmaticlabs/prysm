@@ -23,8 +23,10 @@ func (m *mockClient) Do(req *http.Request) (*http.Response, error) {
 	return GetDoFunc(req)
 }
 
-func TestClient_Sign(t *testing.T) {
-	json := `{ signature: "0xaj0dsfj0adsfj0asjdsjfjasdfk" }`
+func TestClient_Sign_HappyPath(t *testing.T) {
+	json := `{
+  		"signature": "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9"
+	}`
 	// create a new reader with that JSON
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
 	GetDoFunc = func(*http.Request) (*http.Response, error) {
@@ -33,10 +35,31 @@ func TestClient_Sign(t *testing.T) {
 			Body:       r,
 		}, nil
 	}
+	cl := client{BasePath: "example.com", restClient: &mockClient{}}
+	forkData := &Fork{
+		PreviousVersion: "",
+		CurrentVersion:  "",
+		Epoch:           "",
+	}
+	forkInfoData := &ForkInfo{
+		Fork:                  forkData,
+		GenesisValidatorsRoot: "",
+	}
 
+	randaoRevealData := &RandaoReveal{Epoch: ""}
+	// remember to replace signing root with hex encoding remove 0x
+	web3SignerRequest := SignRequest{
+		Type:         "foo",
+		ForkInfo:     forkInfoData,
+		SigningRoot:  "0xfasd0fjsa0dfjas0dfjasdf",
+		RandaoReveal: randaoRevealData,
+	}
+	resp, err := cl.Sign("a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", &web3SignerRequest)
+	assert.NotNil(t, resp)
+	assert.Nil(t, err)
 }
 
-func TestClient_GetPublicKeys(t *testing.T) {
+func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	json := `["example","example2"]`
 	// create a new reader with that JSON
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
@@ -53,7 +76,7 @@ func TestClient_GetPublicKeys(t *testing.T) {
 	assert.EqualValues(t, "example", resp[0])
 }
 
-func TestClient_ReloadSignerKeys(t *testing.T) {
+func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
 	GetDoFunc = func(*http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: 200,
@@ -65,8 +88,8 @@ func TestClient_ReloadSignerKeys(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestClient_GetServerStatus(t *testing.T) {
-	json := `some server status, not sure what it looks like, need to find some sample data`
+func TestClient_GetServerStatus_HappyPath(t *testing.T) {
+	json := `"some server status, not sure what it looks like, need to find some sample data"`
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
 	GetDoFunc = func(*http.Request) (*http.Response, error) {
 		return &http.Response{
@@ -74,5 +97,9 @@ func TestClient_GetServerStatus(t *testing.T) {
 			Body:       r,
 		}, nil
 	}
+	cl := client{BasePath: "example.com", restClient: &mockClient{}}
+	resp, err := cl.GetServerStatus()
+	assert.NotNil(t, resp)
+	assert.Nil(t, err)
 
 }
