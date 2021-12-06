@@ -34,7 +34,10 @@ go_library(
         "state_trie.go",
         "types.go",
         ":ssz_generated_files",  # keep
-    ],
+    ] + select({
+        "//config:mainnet": ["beacon_state.go"],
+        "//config:minimal": ["beacon_state_minimal.go"],
+    }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v3",
     visibility = [
         "//beacon-chain:__subpackages__",

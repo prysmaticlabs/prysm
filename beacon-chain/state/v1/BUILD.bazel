@@ -6,8 +6,6 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 go_library(
     name = "go_default_library",
     srcs = [
-        "beacon_state.go",
-        "beacon_state_minimal.go", # keep
         "doc.go",
         "field_roots.go",
         "getters_attestation.go",
@@ -32,7 +30,10 @@ go_library(
         "unsupported_getters.go",
         "unsupported_setters.go",
         ":ssz_generated_files",  # keep
-    ],
+    ] + select({
+        "//config:mainnet": ["beacon_state.go"],
+        "//config:minimal": ["beacon_state_minimal.go"],
+    }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v1",
     visibility = [
         "//beacon-chain:__subpackages__",
