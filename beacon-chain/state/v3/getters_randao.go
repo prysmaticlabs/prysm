@@ -7,7 +7,7 @@ import (
 )
 
 // RandaoMixes of block proposers on the beacon chain.
-func (b *BeaconState) RandaoMixes() *[65536][32]byte {
+func (b *BeaconState) RandaoMixes() *[customtypes.RandaoMixesSize][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}

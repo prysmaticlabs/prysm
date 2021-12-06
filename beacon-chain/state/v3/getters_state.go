@@ -154,7 +154,7 @@ func (b *BeaconState) hasInnerState() bool {
 }
 
 // StateRoots kept track of in the beacon state.
-func (b *BeaconState) StateRoots() *[8192][32]byte {
+func (b *BeaconState) StateRoots() *[customtypes.StateRootsSize][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
