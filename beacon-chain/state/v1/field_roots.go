@@ -12,7 +12,7 @@ import (
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
 func computeFieldRoots(ctx context.Context, state *BeaconState) ([][]byte, error) {
-	protoState, ok := state.ToProto().(*eth.BeaconState)
+	protoState, ok := state.toProtoNoLock().(*eth.BeaconState)
 	if !ok {
 		return nil, errors.New("could not convert beacon state to proto")
 	}
