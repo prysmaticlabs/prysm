@@ -118,7 +118,7 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 		capacityWeight  float64
 	}
 
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 	tests := []struct {
 		name   string
 		args   args

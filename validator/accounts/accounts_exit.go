@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // PerformExitCfg for account voluntary exits.
@@ -56,6 +57,20 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	validatorClient, nodeClient, err := prepareClients(cliCtx)
 	if err != nil {
 		return err
+	}
+	if nodeClient == nil {
+		return errors.New("could not prepare beacon node client")
+	}
+	syncStatus, err := (*nodeClient).GetSyncStatus(cliCtx.Context, &emptypb.Empty{})
+	if err != nil {
+		return err
+	}
+	if syncStatus == nil {
+		return errors.New("could not get sync status")
+	}
+
+	if (*syncStatus).Syncing {
+		return errors.New("could not perform exit: beacon node is syncing.")
 	}
 
 	cfg := PerformExitCfg{

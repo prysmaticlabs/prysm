@@ -68,7 +68,7 @@ var appFlags = []cli.Flag{
 	flags.TerminalTotalDifficultyOverride,
 	flags.TerminalBlockHashOverride,
 	flags.TerminalBlockHashActivationEpochOverride,
-	flags.Coinbase,
+	flags.FeeRecipient,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
@@ -118,6 +118,7 @@ var appFlags = []cli.Flag{
 	cmd.RestoreSourceFileFlag,
 	cmd.RestoreTargetDirFlag,
 	cmd.BoltMMapInitialSizeFlag,
+	cmd.ValidatorMonitorIndicesFlag,
 }
 
 func init() {

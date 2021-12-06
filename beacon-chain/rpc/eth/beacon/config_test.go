@@ -100,7 +100,7 @@ func TestGetSpec(t *testing.T) {
 	config.TerminalBlockHash = common.HexToHash("TerminalBlockHash")
 	config.TerminalBlockHashActivationEpoch = 72
 	config.TerminalTotalDifficulty = 73
-	config.Coinbase = common.HexToAddress("Coinbase")
+	config.FeeRecipient = common.HexToAddress("FeeRecipient")
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -130,7 +130,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 94, len(resp.Data))
+	assert.Equal(t, 96, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -329,8 +329,12 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, common.HexToHash("TerminalBlockHash"), common.HexToHash(v))
 		case "TERMINAL_TOTAL_DIFFICULTY":
 			assert.Equal(t, "73", v)
-		case "COINBASE":
-			assert.Equal(t, common.HexToAddress("Coinbase"), v)
+		case "FeeRecipient":
+			assert.Equal(t, common.HexToAddress("FeeRecipient"), v)
+		case "PROPORTIONAL_SLASHING_MULTIPLIER_MERGE":
+			assert.Equal(t, "3", v)
+		case "MIN_SLASHING_PENALTY_QUOTIENT_MERGE":
+			assert.Equal(t, "32", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

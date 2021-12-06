@@ -2,18 +2,17 @@ package imported
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strings"
+	"strconv"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -37,7 +36,7 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	}
 }
 
-func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
+func TestImportedKeymanager_NoDuplicates(t *testing.T) {
 	numKeys := 50
 	pubKeys := make([][]byte, numKeys)
 	privKeys := make([][]byte, numKeys)
@@ -95,6 +94,7 @@ func TestImportedKeymanager_CreateAccountsKeystore_NoDuplicates(t *testing.T) {
 }
 
 func TestImportedKeymanager_ImportKeystores(t *testing.T) {
+	ctx := context.Background()
 	// Setup the keymanager.
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
@@ -105,50 +105,101 @@ func TestImportedKeymanager_ImportKeystores(t *testing.T) {
 		accountsStore: &accountStore{},
 	}
 
-	// Create a duplicate keystore and attempt to import it. This should complete correctly though log specific output.
-	numAccounts := 5
-	keystores := make([]*keymanager.Keystore, numAccounts+1)
-	for i := 1; i < numAccounts+1; i++ {
-		keystores[i] = createRandomKeystore(t, password)
-	}
-	keystores[0] = keystores[1]
-	ctx := context.Background()
-	hook := logTest.NewGlobal()
-	require.NoError(t, dr.ImportKeystores(
-		ctx,
-		keystores,
-		password,
-	))
-	require.LogsContain(t, hook, "Duplicate key")
-	// Import them correctly even without the duplicate.
-	require.NoError(t, dr.ImportKeystores(
-		ctx,
-		keystores[1:],
-		password,
-	))
-
-	// Ensure the single, all-encompassing accounts keystore was written
-	// to the wallet and ensure we can decrypt it using the EIP-2335 standard.
-	var encodedKeystore []byte
-	for k, v := range wallet.Files[AccountsPath] {
-		if strings.Contains(k, "keystore") {
-			encodedKeystore = v
+	t.Run("no passwords provided", func(t *testing.T) {
+		_, err := dr.ImportKeystores(ctx, nil, nil)
+		require.ErrorContains(t, "no passwords provided", err)
+	})
+	t.Run("number of passwords does not match number of keystores", func(t *testing.T) {
+		_, err := dr.ImportKeystores(
+			ctx,
+			[]*keymanager.Keystore{{}, {}},
+			[]string{"foo", "bar", "baz"},
+		)
+		require.ErrorContains(t, "number of passwords does not match", err)
+	})
+	t.Run("same password used to decrypt all keystores", func(t *testing.T) {
+		numKeystores := 5
+		keystores := make([]*keymanager.Keystore, numKeystores)
+		passwords := make([]string, numKeystores)
+		for i := 0; i < numKeystores; i++ {
+			keystores[i] = createRandomKeystore(t, password)
+			passwords[i] = password
 		}
-	}
-	require.NotNil(t, encodedKeystore, "could not find keystore file")
-	keystoreFile := &keymanager.Keystore{}
-	require.NoError(t, json.Unmarshal(encodedKeystore, keystoreFile))
+		statuses, err := dr.ImportKeystores(
+			ctx,
+			keystores,
+			passwords,
+		)
+		require.NoError(t, err)
+		require.Equal(t, numKeystores, len(statuses))
+		for _, status := range statuses {
+			require.Equal(t, ethpbservice.ImportedKeystoreStatus_IMPORTED, status.Status)
+		}
+	})
+	t.Run("each imported keystore with a different password succeeds", func(t *testing.T) {
+		numKeystores := 5
+		keystores := make([]*keymanager.Keystore, numKeystores)
+		passwords := make([]string, numKeystores)
+		for i := 0; i < numKeystores; i++ {
+			pass := password + strconv.Itoa(i)
+			keystores[i] = createRandomKeystore(t, pass)
+			passwords[i] = pass
+		}
+		statuses, err := dr.ImportKeystores(
+			ctx,
+			keystores,
+			passwords,
+		)
+		require.NoError(t, err)
+		require.Equal(t, numKeystores, len(statuses))
+		for _, status := range statuses {
+			require.Equal(t, ethpbservice.ImportedKeystoreStatus_IMPORTED, status.Status)
+		}
+	})
+	t.Run("some succeed, some fail to decrypt, some duplicated", func(t *testing.T) {
+		keystores := make([]*keymanager.Keystore, 0)
+		passwords := make([]string, 0)
 
-	// We decrypt the crypto fields of the accounts keystore.
-	decryptor := keystorev4.New()
-	encodedAccounts, err := decryptor.Decrypt(keystoreFile.Crypto, password)
-	require.NoError(t, err, "Could not decrypt validator accounts")
-	store := &accountStore{}
-	require.NoError(t, json.Unmarshal(encodedAccounts, store))
+		// First keystore is normal.
+		keystore1 := createRandomKeystore(t, password)
+		keystores = append(keystores, keystore1)
+		passwords = append(passwords, password)
 
-	// We should have successfully imported all accounts
-	// from external sources into a single AccountsStore
-	// struct preserved within a single keystore file.
-	assert.Equal(t, numAccounts, len(store.PublicKeys))
-	assert.Equal(t, numAccounts, len(store.PrivateKeys))
+		// Second keystore is a duplicate of the first.
+		keystores = append(keystores, keystore1)
+		passwords = append(passwords, password)
+
+		// Third keystore has a wrong password.
+		keystore3 := createRandomKeystore(t, password)
+		keystores = append(keystores, keystore3)
+		passwords = append(passwords, "foobar")
+
+		statuses, err := dr.ImportKeystores(
+			ctx,
+			keystores,
+			passwords,
+		)
+		require.NoError(t, err)
+		require.Equal(t, len(keystores), len(statuses))
+		require.Equal(
+			t,
+			ethpbservice.ImportedKeystoreStatus_IMPORTED,
+			statuses[0].Status,
+		)
+		require.Equal(
+			t,
+			ethpbservice.ImportedKeystoreStatus_DUPLICATE,
+			statuses[1].Status,
+		)
+		require.Equal(
+			t,
+			ethpbservice.ImportedKeystoreStatus_ERROR,
+			statuses[2].Status,
+		)
+		require.Equal(
+			t,
+			fmt.Sprintf("incorrect password for key 0x%s", keystores[2].Pubkey),
+			statuses[2].Message,
+		)
+	})
 }

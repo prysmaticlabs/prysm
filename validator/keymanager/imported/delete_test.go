@@ -29,10 +29,13 @@ func TestImportedKeymanager_DeleteKeystores(t *testing.T) {
 	numAccounts := 5
 	ctx := context.Background()
 	keystores := make([]*keymanager.Keystore, numAccounts)
+	passwords := make([]string, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		keystores[i] = createRandomKeystore(t, password)
+		passwords[i] = password
 	}
-	require.NoError(t, dr.ImportKeystores(ctx, keystores, password))
+	_, err := dr.ImportKeystores(ctx, keystores, passwords)
+	require.NoError(t, err)
 	accounts, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(accounts))

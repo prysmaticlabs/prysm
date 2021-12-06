@@ -358,7 +358,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 	}
 
 	want := "nil or missing indexed attestation data"
-	_, err := blocks.AttestationSignatureSet(context.Background(), beaconState, atts)
+	_, err := blocks.AttestationSignatureBatch(context.Background(), beaconState, atts)
 	assert.ErrorContains(t, want, err)
 
 	atts = []*ethpb.Attestation{}
@@ -378,7 +378,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 	}
 
 	want = "expected non-empty attesting indices"
-	_, err = blocks.AttestationSignatureSet(context.Background(), beaconState, atts)
+	_, err = blocks.AttestationSignatureBatch(context.Background(), beaconState, atts)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -502,7 +502,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	set, err := blocks.AttestationSignatureSet(ctx, st, []*ethpb.Attestation{att1, att2})
+	set, err := blocks.AttestationSignatureBatch(ctx, st, []*ethpb.Attestation{att1, att2})
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)
@@ -566,6 +566,6 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	_, err = blocks.AttestationSignatureSet(ctx, st, []*ethpb.Attestation{att1, att2})
+	_, err = blocks.AttestationSignatureBatch(ctx, st, []*ethpb.Attestation{att1, att2})
 	require.NoError(t, err)
 }

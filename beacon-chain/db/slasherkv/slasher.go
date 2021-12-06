@@ -420,7 +420,7 @@ func (s *Store) SaveBlockProposals(
 
 // HighestAttestations retrieves the last attestation data from the database for all indices.
 func (s *Store) HighestAttestations(
-	ctx context.Context,
+	_ context.Context,
 	indices []types.ValidatorIndex,
 ) ([]*slashpb.HighestAttestation, error) {
 	if len(indices) == 0 {

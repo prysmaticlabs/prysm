@@ -88,7 +88,7 @@ var (
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
-	MinSyncPeers = &cli.IntFlag{
+	MinSyncPeers = &cli.Uint64Flag{
 		Name:  "min-sync-peers",
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
@@ -123,13 +123,13 @@ var (
 		Usage: "Does not run the discoveryV5 dht.",
 	}
 	// BlockBatchLimit specifies the requested block batch size.
-	BlockBatchLimit = &cli.IntFlag{
+	BlockBatchLimit = &cli.Uint64Flag{
 		Name:  "block-batch-limit",
 		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
 		Value: 64,
 	}
 	// BlockBatchLimitBurstFactor specifies the factor by which block batch size may increase.
-	BlockBatchLimitBurstFactor = &cli.IntFlag{
+	BlockBatchLimitBurstFactor = &cli.Uint64Flag{
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 10,
@@ -211,9 +211,9 @@ var (
 			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch. " +
 			"Incorrect usage will result in your node experience consensus failure.",
 	}
-	// Coinbase specifies the fee recipient for the transaction fees.
-	Coinbase = &cli.StringFlag{
-		Name:  "coinbase",
+	// FeeRecipient specifies the fee recipient for the transaction fees.
+	FeeRecipient = &cli.StringFlag{
+		Name:  "fee-recipient",
 		Usage: "Post merge, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst merge is in development state.",
 		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
 	}
