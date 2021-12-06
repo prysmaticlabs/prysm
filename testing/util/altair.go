@@ -270,6 +270,11 @@ func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 	}
 }
 
+// NewBeaconBlockMerge creates a beacon block with minimum marshalable fields.
+func NewBeaconBlockMerge() *ethpb.SignedBeaconBlockMerge {
+	return HydrateSignedBeaconBlockMerge(&ethpb.SignedBeaconBlockMerge{})
+}
+
 // BlockSignatureAltair calculates the post-state root of the block and returns the signature.
 func BlockSignatureAltair(
 	bState state.BeaconStateAltair,

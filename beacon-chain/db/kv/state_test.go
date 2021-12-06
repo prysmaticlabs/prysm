@@ -782,6 +782,100 @@ func checkStateReadTime(b *testing.B, saveCount int) {
 	}
 }
 
+func TestStateMerge_CanSaveRetrieveValidatorEntries(t *testing.T) {
+	db := setupDB(t)
+
+	// enable historical state representation flag to test this
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnableHistoricalSpaceRepresentation: true,
+	})
+	defer resetCfg()
+
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r))
+
+	stateValidators := validators(10)
+	st, _ := util.DeterministicGenesisStateMerge(t, 20)
+	require.NoError(t, st.SetSlot(100))
+	require.NoError(t, st.SetValidators(stateValidators))
+
+	ctx := context.Background()
+	require.NoError(t, db.SaveState(ctx, st, r))
+	assert.Equal(t, true, db.HasState(context.Background(), r))
+
+	savedS, err := db.State(context.Background(), r)
+	require.NoError(t, err)
+
+	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
+
+	// check if the index of the second state is still present.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
+		data := idxBkt.Get(r[:])
+		require.NotEqual(t, 0, len(data))
+		return nil
+	})
+	require.NoError(t, err)
+
+	// check if all the validator entries are still intact in the validator entry bucket.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		valBkt := tx.Bucket(stateValidatorsBucket)
+		// if any of the original validator entry is not present, then fail the test.
+		for _, val := range stateValidators {
+			hash, hashErr := val.HashTreeRoot()
+			assert.NoError(t, hashErr)
+			data := valBkt.Get(hash[:])
+			require.NotNil(t, data)
+			require.NotEqual(t, 0, len(data))
+		}
+		return nil
+	})
+	require.NoError(t, err)
+}
+
+func TestMergeState_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r))
+
+	st, _ := util.DeterministicGenesisStateMerge(t, 1)
+	require.NoError(t, st.SetSlot(100))
+
+	require.NoError(t, db.SaveState(context.Background(), st, r))
+	require.Equal(t, true, db.HasState(context.Background(), r))
+
+	savedS, err := db.State(context.Background(), r)
+	require.NoError(t, err)
+
+	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe())
+
+	savedS, err = db.State(context.Background(), [32]byte{'B'})
+	require.NoError(t, err)
+	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+}
+
+func TestMergeState_CanDelete(t *testing.T) {
+	db := setupDB(t)
+
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r))
+
+	st, _ := util.DeterministicGenesisStateMerge(t, 1)
+	require.NoError(t, st.SetSlot(100))
+
+	require.NoError(t, db.SaveState(context.Background(), st, r))
+	require.Equal(t, true, db.HasState(context.Background(), r))
+
+	require.NoError(t, db.DeleteState(context.Background(), r))
+	savedS, err := db.State(context.Background(), r)
+	require.NoError(t, err)
+	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+}
+
 func BenchmarkState_CheckStateSaveTime_1(b *testing.B)  { checkStateSaveTime(b, 1) }
 func BenchmarkState_CheckStateSaveTime_10(b *testing.B) { checkStateSaveTime(b, 10) }
 
