@@ -96,9 +96,10 @@ go_test(
 
 ssz_gen_marshal(
     name = "ssz_generated_files",
-    srcs = [
-        "beacon_state.go",
-    ],
+    srcs = select({
+           "//config:mainnet": ["beacon_state.go"],
+           "//config:minimal": ["beacon_state_minimal.go"],
+        }),
     includes = [
         "//beacon-chain/state/custom-types:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
