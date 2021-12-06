@@ -17,7 +17,6 @@ type HTTPClient interface {
 
 type client struct {
 	BasePath   string
-	APIPath    string
 	restClient HTTPClient
 }
 
@@ -28,7 +27,6 @@ func newClient(endpoint string) (*client, error) {
 	}
 	return &client{
 		BasePath:   u.Host,
-		APIPath:    u.Path,
 		restClient: &http.Client{},
 	}, nil
 }
@@ -60,13 +58,13 @@ type signResponse struct {
 }
 
 func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, error) {
-	requestPath := "sign/" + pubKey
+	requestPath := "/api/v1/eth2/sign/" + pubKey
 
 	jsonRequest, err := json.Marshal(request)
 	if err != nil {
 		// return error
 	}
-	req, err := http.NewRequest(http.MethodPost, client.constructFullURL(requestPath), bytes.NewBuffer(jsonRequest))
+	req, err := http.NewRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(jsonRequest))
 	if err != nil {
 		// return error
 	}
@@ -103,8 +101,8 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 }
 
 func (client *client) GetPublicKeys() ([]string, error) {
-	const requestPath = "publicKeys"
-	req, err := http.NewRequest(http.MethodGet, client.constructFullURL(requestPath), nil)
+	const requestPath = "/publicKeys"
+	req, err := http.NewRequest(http.MethodGet, client.BasePath+requestPath, nil)
 	if err != nil {
 		fmt.Printf(" error1:  %d", err)
 
@@ -128,8 +126,8 @@ func (client *client) GetPublicKeys() ([]string, error) {
 }
 
 func (client *client) ReloadSignerKeys() error {
-	const requestPath = "reload"
-	req, err := http.NewRequest(http.MethodPost, client.constructFullURL(requestPath), nil)
+	const requestPath = "/reload"
+	req, err := http.NewRequest(http.MethodPost, client.BasePath+requestPath, nil)
 	if err != nil {
 		fmt.Printf(" error1:  %d", err)
 		return err
@@ -149,8 +147,8 @@ func (client *client) ReloadSignerKeys() error {
 }
 
 func (client *client) GetServerStatus() (string, error) {
-	const requestPath = "upcheck"
-	req, err := http.NewRequest(http.MethodGet, client.constructFullURL(requestPath), nil)
+	const requestPath = "/upcheck"
+	req, err := http.NewRequest(http.MethodGet, client.BasePath+requestPath, nil)
 	if err != nil {
 		fmt.Printf(" error1:  %d", err)
 		return "", err
@@ -170,8 +168,4 @@ func (client *client) GetServerStatus() (string, error) {
 		return "", errors.Wrap(err, "??")
 	}
 	return status, nil
-}
-
-func (client *client) constructFullURL(actionPath string) string {
-	return client.BasePath + client.APIPath + actionPath
 }
