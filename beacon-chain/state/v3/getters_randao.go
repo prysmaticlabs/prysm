@@ -18,7 +18,7 @@ func (b *BeaconState) RandaoMixes() *[65536][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	mixes := [65536][32]byte(*b.randaoMixesInternal())
+	mixes := [customtypes.RandaoMixesSize][32]byte(*b.randaoMixesInternal())
 	return &mixes
 }
 

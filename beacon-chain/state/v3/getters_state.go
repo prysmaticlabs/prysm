@@ -165,7 +165,7 @@ func (b *BeaconState) StateRoots() *[8192][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := [8192][32]byte(*b.stateRootsInternal())
+	roots := [customtypes.StateRootsSize][32]byte(*b.stateRootsInternal())
 	return &roots
 }
 
