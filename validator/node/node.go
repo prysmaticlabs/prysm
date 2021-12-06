@@ -515,7 +515,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		// and also the website for the Prysm Web UI.
 		if strings.HasPrefix(req.URL.Path, "/api/eth/") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
-			// If the suffix has /eth/, we handle it with the standard API gateway middleware
+			// If the prefix has /eth/, we handle it with the standard API gateway middleware
 			// which will convert bytes values into hex strings as desired by the ETH standard API.
 			apiMware.HandleFunc(w, req)
 		} else if strings.HasPrefix(req.URL.Path, "/api") {
