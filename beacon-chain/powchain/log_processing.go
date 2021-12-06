@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -374,9 +375,23 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if fRoot == params.BeaconConfig().ZeroHash {
 		return nil
 	}
-	fState, err := s.cfg.stateGen.StateByRoot(ctx, fRoot)
-	if err != nil {
-		return err
+	fState := s.cfg.finalizedStateAtStartup
+	// If processing past logs takes a long time, we
+	// need to check if this is indeed the correct
+	// finalized state we are referring to and whether
+	// our cached finalized state is referring to our
+	// current finalized checkpoint.
+	// The current code does ignore an edge case where
+	// the finalized block is in a different epoch from
+	// the checkpoint's epoch. This only happens in the
+	// event of skipped slots so for the purposes of
+	// pruning it is not an issue.
+	isNil := fState == nil || fState.IsNil()
+	if isNil || slots.ToEpoch(fState.Slot()) != c.Epoch {
+		fState, err = s.cfg.stateGen.StateByRoot(ctx, fRoot)
+		if err != nil {
+			return err
+		}
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
 		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
