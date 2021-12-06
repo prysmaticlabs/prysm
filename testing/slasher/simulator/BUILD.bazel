@@ -24,6 +24,7 @@ go_library(
         "//beacon-chain/slasher:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
+        "//beacon-chain/sync:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/rand:go_default_library",
