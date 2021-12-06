@@ -377,13 +377,13 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 	fState := s.cfg.finalizedStateAtStartup
 	isNil := fState == nil || fState.IsNil()
-	
-	// If processing past logs take a long time, we 
-	// need to check if this is the correct finalized 
-	// state we are referring to and whether our cached 
-	// finalized state is referring to our current finalized checkpoint. 
-	// The current code does ignore an edge case where the finalized 
-	// block is in a different epoch from the checkpoint's epoch. 
+
+	// If processing past logs take a long time, we
+	// need to check if this is the correct finalized
+	// state we are referring to and whether our cached
+	// finalized state is referring to our current finalized checkpoint.
+	// The current code does ignore an edge case where the finalized
+	// block is in a different epoch from the checkpoint's epoch.
 	// This only happens in skipped slots, so pruning it is not an issue.
 	if isNil || slots.ToEpoch(fState.Slot()) != c.Epoch {
 		fState, err = s.cfg.stateGen.StateByRoot(ctx, fRoot)
