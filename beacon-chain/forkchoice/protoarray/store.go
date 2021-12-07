@@ -74,7 +74,7 @@ func (f *ForkChoice) Head(
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
+	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
 	defer span.End()
 	f.votesLock.Lock()
 	defer f.votesLock.Unlock()
@@ -327,7 +327,7 @@ func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
 	root, parent, graffiti [32]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
+	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
 	s.nodesLock.Lock()
@@ -379,7 +379,7 @@ func (s *Store) insert(ctx context.Context,
 // back propagate the nodes delta to its parents delta. After scoring changes,
 // the best child is then updated along with best descendant.
 func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, delta []int) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
+	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
 	// The length of the nodes can not be different than length of the delta.
@@ -557,7 +557,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 // pruned if the input finalized root are different than the one in stored and
 // the number of the nodes in store has met prune threshold.
 func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
+	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
 	defer span.End()
 
 	s.nodesLock.Lock()

@@ -11,7 +11,6 @@ import (
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -47,8 +46,8 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 		Slot:                         1,
 		CurrentEpochParticipation:    []byte{},
 		PreviousEpochParticipation:   []byte{},
-		Validators:                   []*eth.Validator{},
-		Eth1Data:                     &eth.Eth1Data{},
+		Validators:                   []*ethpb.Validator{},
+		Eth1Data:                     &ethpb.Eth1Data{},
 		BlockRoots:                   mockblockRoots,
 		StateRoots:                   mockstateRoots,
 		RandaoMixes:                  mockrandaoMixes,
@@ -63,13 +62,13 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	_, err = st.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	for i := 0; i < 10; i++ {
-		assert.NoError(t, st.AppendValidator(&eth.Validator{}))
+		assert.NoError(t, st.AppendValidator(&ethpb.Validator{}))
 	}
 	assert.Equal(t, false, st.rebuildTrie[validators])
 	assert.NotEqual(t, len(st.dirtyIndices[validators]), 0)
 
 	for i := 0; i < indicesLimit; i++ {
-		assert.NoError(t, st.AppendValidator(&eth.Validator{}))
+		assert.NoError(t, st.AppendValidator(&ethpb.Validator{}))
 	}
 	assert.Equal(t, true, st.rebuildTrie[validators])
 	assert.Equal(t, len(st.dirtyIndices[validators]), 0)
@@ -142,7 +141,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		PreviousEpochParticipation: []byte{},
 		Validators:                 vals,
 		Balances:                   bals,
-		Eth1Data: &eth.Eth1Data{
+		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, 32),
 			BlockHash:   make([]byte, 32),
 		},

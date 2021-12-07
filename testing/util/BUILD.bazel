@@ -10,6 +10,7 @@ go_library(
         "block.go",
         "deposits.go",
         "helpers.go",
+        "merge.go",
         "merge_state.go",
         "state.go",
         "sync_aggregate.go",

@@ -25,8 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -93,7 +92,7 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 		State: st,
 		Root:  genesisRoot[:],
 		DB:    beaconDB,
-		FinalizedCheckPoint: &eth.Checkpoint{
+		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 		},
 		Genesis:        time.Now(),
@@ -174,7 +173,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 			assert.NoError(t, stream.Close())
 		}()
 
-		req := &p2ppb.BeaconBlocksByRangeRequest{}
+		req := &ethpb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
 		requestedBlocks := makeSequence(req.StartSlot, req.StartSlot.Add((req.Count-1)*req.Step))
@@ -192,7 +191,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		// Determine the correct subset of blocks to return as dictated by the test scenario.
 		slots := slice.IntersectionSlot(datum.blocks, requestedBlocks)
 
-		ret := make([]*eth.SignedBeaconBlock, 0)
+		ret := make([]*ethpb.SignedBeaconBlock, 0)
 		for _, slot := range slots {
 			if (slot - req.StartSlot).Mod(req.Step) != 0 {
 				continue
@@ -228,7 +227,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 
 	peerStatus.Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
 	peerStatus.SetConnectionState(p.PeerID(), peers.PeerConnected)
-	peerStatus.SetChainState(p.PeerID(), &p2ppb.Status{
+	peerStatus.SetChainState(p.PeerID(), &ethpb.Status{
 		ForkDigest:     params.BeaconConfig().GenesisForkVersion,
 		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
 		FinalizedEpoch: datum.finalizedEpoch,
@@ -240,9 +239,9 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 }
 
 // extendBlockSequence extends block chain sequentially (creating genesis block, if necessary).
-func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int) []*eth.SignedBeaconBlock {
+func extendBlockSequence(t *testing.T, inSeq []*ethpb.SignedBeaconBlock, size int) []*ethpb.SignedBeaconBlock {
 	// Start from the original sequence.
-	outSeq := make([]*eth.SignedBeaconBlock, len(inSeq)+size)
+	outSeq := make([]*ethpb.SignedBeaconBlock, len(inSeq)+size)
 	copy(outSeq, inSeq)
 
 	// See if genesis block needs to be created.
@@ -271,7 +270,7 @@ func extendBlockSequence(t *testing.T, inSeq []*eth.SignedBeaconBlock, size int)
 
 // connectPeerHavingBlocks connect host with a peer having provided blocks.
 func connectPeerHavingBlocks(
-	t *testing.T, host *p2pt.TestP2P, blocks []*eth.SignedBeaconBlock, finalizedSlot types.Slot,
+	t *testing.T, host *p2pt.TestP2P, blocks []*ethpb.SignedBeaconBlock, finalizedSlot types.Slot,
 	peerStatus *peers.Status,
 ) peer.ID {
 	p := p2pt.NewTestP2P(t)
@@ -282,7 +281,7 @@ func connectPeerHavingBlocks(
 			_ = _err
 		}()
 
-		req := &p2ppb.BeaconBlocksByRangeRequest{}
+		req := &ethpb.BeaconBlocksByRangeRequest{}
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
 		for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
@@ -326,7 +325,7 @@ func connectPeerHavingBlocks(
 
 	peerStatus.Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
 	peerStatus.SetConnectionState(p.PeerID(), peers.PeerConnected)
-	peerStatus.SetChainState(p.PeerID(), &p2ppb.Status{
+	peerStatus.SetChainState(p.PeerID(), &ethpb.Status{
 		ForkDigest:     params.BeaconConfig().GenesisForkVersion,
 		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
 		FinalizedEpoch: finalizedEpoch,

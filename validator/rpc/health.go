@@ -39,7 +39,7 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *emptypb.Empty) 
 }
 
 // GetLogsEndpoints for the beacon and validator client.
-func (s *Server) GetLogsEndpoints(_ context.Context, _ *emptypb.Empty) (*validatorpb.LogsEndpointResponse, error) {
+func (_ *Server) GetLogsEndpoints(_ context.Context, _ *emptypb.Empty) (*validatorpb.LogsEndpointResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "unimplemented")
 }
 

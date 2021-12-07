@@ -16,10 +16,10 @@ type secondMockService struct {
 	status error
 }
 
-func (m *mockService) Start() {
+func (_ *mockService) Start() {
 }
 
-func (m *mockService) Stop() error {
+func (_ *mockService) Stop() error {
 	return nil
 }
 
@@ -27,10 +27,10 @@ func (m *mockService) Status() error {
 	return m.status
 }
 
-func (s *secondMockService) Start() {
+func (_ *secondMockService) Start() {
 }
 
-func (s *secondMockService) Stop() error {
+func (_ *secondMockService) Stop() error {
 	return nil
 }
 

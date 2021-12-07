@@ -234,7 +234,7 @@ func handlePendingAttestation(val []*ethpb.PendingAttestation, indices []uint64,
 	return roots, nil
 }
 
-func handleBalanceSlice(val []uint64, indices []uint64, convertAll bool) ([][32]byte, error) {
+func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, error) {
 	if convertAll {
 		balancesMarshaling := make([][]byte, 0)
 		for _, b := range val {

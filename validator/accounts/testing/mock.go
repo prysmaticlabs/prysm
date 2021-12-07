@@ -72,6 +72,6 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, pathName, fileName string) ([
 }
 
 // InitializeKeymanager --
-func (w *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerConfig) (keymanager.IKeymanager, error) {
+func (_ *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerConfig) (keymanager.IKeymanager, error) {
 	return nil, nil
 }
