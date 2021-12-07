@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
@@ -63,7 +62,7 @@ type Server struct {
 	beaconChainClient         ethpb.BeaconChainClient
 	beaconNodeClient          ethpb.NodeClient
 	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
-	beaconNodeHealthClient    pb.HealthClient
+	beaconNodeHealthClient    ethpb.HealthClient
 	valDB                     db.Database
 	ctx                       context.Context
 	cancel                    context.CancelFunc

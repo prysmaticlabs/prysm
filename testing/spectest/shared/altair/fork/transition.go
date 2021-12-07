@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	wrapperv1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -101,7 +100,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			ctx := context.Background()
 			var ok bool
 			for _, b := range preforkBlocks {
-				st, err := transition.ExecuteStateTransition(ctx, beaconState, wrapperv1.WrappedPhase0SignedBeaconBlock(b))
+				st, err := transition.ExecuteStateTransition(ctx, beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 				require.NoError(t, err)
 				beaconState, ok = st.(*v1.BeaconState)
 				require.Equal(t, true, ok)

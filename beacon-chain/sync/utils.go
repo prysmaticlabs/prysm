@@ -32,7 +32,7 @@ func (s sortedObj) Len() int {
 }
 
 // removes duplicates from provided blocks and roots.
-func (s *Service) dedupBlocksAndRoots(blks []block.SignedBeaconBlock, roots [][32]byte) ([]block.SignedBeaconBlock, [][32]byte, error) {
+func (_ *Service) dedupBlocksAndRoots(blks []block.SignedBeaconBlock, roots [][32]byte) ([]block.SignedBeaconBlock, [][32]byte, error) {
 	if len(blks) != len(roots) {
 		return nil, nil, errors.New("input blks and roots are diff lengths")
 	}
@@ -52,7 +52,7 @@ func (s *Service) dedupBlocksAndRoots(blks []block.SignedBeaconBlock, roots [][3
 	return newBlks, newRoots, nil
 }
 
-func (s *Service) dedupRoots(roots [][32]byte) [][32]byte {
+func (_ *Service) dedupRoots(roots [][32]byte) [][32]byte {
 	newRoots := make([][32]byte, 0, len(roots))
 	rootMap := make(map[[32]byte]bool, len(roots))
 	for i, r := range roots {
@@ -67,7 +67,7 @@ func (s *Service) dedupRoots(roots [][32]byte) [][32]byte {
 
 // sort the provided blocks and roots in ascending order. This method assumes that the size of
 // block slice and root slice is equal.
-func (s *Service) sortBlocksAndRoots(blks []block.SignedBeaconBlock, roots [][32]byte) ([]block.SignedBeaconBlock, [][32]byte) {
+func (_ *Service) sortBlocksAndRoots(blks []block.SignedBeaconBlock, roots [][32]byte) ([]block.SignedBeaconBlock, [][32]byte) {
 	obj := sortedObj{
 		blks:  blks,
 		roots: roots,

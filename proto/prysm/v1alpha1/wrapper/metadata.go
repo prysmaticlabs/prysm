@@ -74,12 +74,12 @@ func (m MetadataV0) MetadataObjV0() *pb.MetaDataV0 {
 
 // MetadataObjV1 returns the inner metatdata object in its type
 // specified form. If it doesn't exist then we return nothing.
-func (m MetadataV0) MetadataObjV1() *pb.MetaDataV1 {
+func (_ MetadataV0) MetadataObjV1() *pb.MetaDataV1 {
 	return nil
 }
 
 // Version returns the fork version of the underlying object.
-func (m MetadataV0) Version() int {
+func (_ MetadataV0) Version() int {
 	return version.Phase0
 }
 
@@ -143,7 +143,7 @@ func (m MetadataV1) UnmarshalSSZ(buf []byte) error {
 
 // MetadataObjV0 returns the inner metadata object in its type
 // specified form. If it doesn't exist then we return nothing.
-func (m MetadataV1) MetadataObjV0() *pb.MetaDataV0 {
+func (_ MetadataV1) MetadataObjV0() *pb.MetaDataV0 {
 	return nil
 }
 
@@ -154,6 +154,6 @@ func (m MetadataV1) MetadataObjV1() *pb.MetaDataV1 {
 }
 
 // Version returns the fork version of the underlying object.
-func (m MetadataV1) Version() int {
+func (_ MetadataV1) Version() int {
 	return version.Altair
 }

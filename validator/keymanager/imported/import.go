@@ -101,7 +101,7 @@ func (km *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]
 // Retrieves the private key and public key from an EIP-2335 keystore file
 // by decrypting using a specified password. If the password fails,
 // it prompts the user for the correct password until it confirms.
-func (km *Keymanager) attemptDecryptKeystore(
+func (_ *Keymanager) attemptDecryptKeystore(
 	enc *keystorev4.Encryptor, keystore *keymanager.Keystore, password string,
 ) ([]byte, []byte, string, error) {
 	// Attempt to decrypt the keystore with the specifies password.
