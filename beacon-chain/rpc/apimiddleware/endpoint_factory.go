@@ -14,7 +14,7 @@ func (f *BeaconEndpointFactory) IsNil() bool {
 }
 
 // Paths is a collection of all valid beacon chain API paths.
-func (f *BeaconEndpointFactory) Paths() []string {
+func (_ *BeaconEndpointFactory) Paths() []string {
 	return []string{
 		"/eth/v1/beacon/genesis",
 		"/eth/v1/beacon/states/{state_id}/root",
@@ -67,7 +67,7 @@ func (f *BeaconEndpointFactory) Paths() []string {
 }
 
 // Create returns a new endpoint for the provided API path.
-func (f *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, error) {
+func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, error) {
 	endpoint := apimiddleware.DefaultEndpoint()
 	switch path {
 	case "/eth/v1/beacon/genesis":

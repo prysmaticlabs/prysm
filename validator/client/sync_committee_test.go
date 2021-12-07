@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -23,7 +22,7 @@ import (
 func TestSubmitSyncCommitteeMessage_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{}}
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	m.validatorClient.EXPECT().GetSyncMessageBlockRoot(
@@ -45,7 +44,7 @@ func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			Committee:      committee,
@@ -77,7 +76,7 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			Committee:      committee,
@@ -96,7 +95,7 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
 			gomock.Any()). // epoch
-		Return(&eth.DomainResponse{
+		Return(&ethpb.DomainResponse{
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
@@ -118,7 +117,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			Committee:      committee,
@@ -137,7 +136,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
 			gomock.Any()). // epoch
-		Return(&eth.DomainResponse{
+		Return(&ethpb.DomainResponse{
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
@@ -162,7 +161,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 func TestSubmitSignedContributionAndProof_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, validatorKey, finish := setup(t)
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{}}
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	pubKey := [48]byte{}
@@ -176,7 +175,7 @@ func TestSubmitSignedContributionAndProof_GetSyncSubcommitteeIndexFailure(t *tes
 	validator, m, validatorKey, finish := setup(t)
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			Committee:      committee,
@@ -204,7 +203,7 @@ func TestSubmitSignedContributionAndProof_NothingToDo(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			Committee:      committee,
@@ -232,7 +231,7 @@ func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			Committee:      committee,
@@ -254,7 +253,7 @@ func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
 			gomock.Any()). // epoch
-		Return(&eth.DomainResponse{
+		Return(&ethpb.DomainResponse{
 			SignatureDomain: make([]byte, 32),
 		}, errors.New("bad domain response"))
 
@@ -273,7 +272,7 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			Committee:      committee,
@@ -295,7 +294,7 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
 			gomock.Any()). // epoch
-		Return(&eth.DomainResponse{
+		Return(&ethpb.DomainResponse{
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
@@ -323,7 +322,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			Committee:      committee,
@@ -345,7 +344,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
 			gomock.Any()). // epoch
-		Return(&eth.DomainResponse{
+		Return(&ethpb.DomainResponse{
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
@@ -367,7 +366,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
 			gomock.Any()). // epoch
-		Return(&eth.DomainResponse{
+		Return(&ethpb.DomainResponse{
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
@@ -401,7 +400,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &eth.DutiesResponse{Duties: []*eth.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			Committee:      committee,
@@ -423,7 +422,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
 			gomock.Any()). // epoch
-		Return(&eth.DomainResponse{
+		Return(&ethpb.DomainResponse{
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 
@@ -445,7 +444,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
 			gomock.Any()). // epoch
-		Return(&eth.DomainResponse{
+		Return(&ethpb.DomainResponse{
 			SignatureDomain: make([]byte, 32),
 		}, nil)
 

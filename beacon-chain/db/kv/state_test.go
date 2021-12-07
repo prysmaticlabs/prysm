@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v1alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -183,7 +182,7 @@ func TestState_CanSaveRetrieveValidatorEntriesFromCache(t *testing.T) {
 		assert.Equal(t, true, ok)
 		require.NotNil(t, data)
 
-		valEntry, vType := data.(*v1alpha.Validator)
+		valEntry, vType := data.(*ethpb.Validator)
 		assert.Equal(t, true, vType)
 		require.NotNil(t, valEntry)
 
