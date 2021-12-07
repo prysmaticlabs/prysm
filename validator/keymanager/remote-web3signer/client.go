@@ -37,7 +37,7 @@ func newClient(endpoint string) (*client, error) {
 		BasePath: u.Host,
 		restClient: &http.Client{
 			Timeout: maxTimeout,
-		}, // add timeout
+		},
 	}, nil
 }
 
@@ -69,7 +69,6 @@ type signResponse struct {
 
 func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, error) {
 	requestPath := ethApiNamespace + pubKey
-
 	jsonRequest, err := json.Marshal(request)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
@@ -79,22 +78,18 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 		return nil, err
 	}
 	defer closeBody(resp.Body)
-	// is this how we are supposed to do it?
 	jsonDataFromHttp, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to read response body")
 	}
-
 	signResp := &signResponse{}
 	if err := json.Unmarshal(jsonDataFromHttp, signResp); err != nil {
 		return nil, errors.Wrap(err, "Invalid Format, failed to unmarshal json response")
 	}
-
 	decoded, err := decodeHex(signResp.Signature)
 	if err != nil {
 		return nil, err
 	}
-
 	blsSig, err := bls.SignatureFromBytes([]byte(decoded))
 	if err != nil {
 		return nil, err
