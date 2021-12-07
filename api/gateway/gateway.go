@@ -43,21 +43,20 @@ type MuxHandler func(
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
 type Gateway struct {
-	conn                         *grpc.ClientConn
-	pbHandlers                   []*PbMux
-	muxHandler                   MuxHandler
-	maxCallRecvMsgSize           uint64
-	router                       *mux.Router
-	server                       *http.Server
-	cancel                       context.CancelFunc
-	remoteCert                   string
-	gatewayAddr                  string
-	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
-	proxy                        *apimiddleware.ApiProxyMiddleware
-	ctx                          context.Context
-	startFailure                 error
-	remoteAddr                   string
-	allowedOrigins               []string
+	conn               *grpc.ClientConn
+	pbHandlers         []*PbMux
+	muxHandler         MuxHandler
+	maxCallRecvMsgSize uint64
+	router             *mux.Router
+	server             *http.Server
+	cancel             context.CancelFunc
+	remoteCert         string
+	gatewayAddr        string
+	proxy              *apimiddleware.ApiProxyMiddleware
+	ctx                context.Context
+	startFailure       error
+	remoteAddr         string
+	allowedOrigins     []string
 }
 
 // New returns a new instance of the Gateway.
@@ -106,7 +105,7 @@ func (g *Gateway) WithMaxCallRecvMsgSize(size uint64) *Gateway {
 
 // WithApiMiddleware allows adding API Middleware proxy to the gateway.
 func (g *Gateway) WithApiMiddleware(endpointFactory apimiddleware.EndpointFactory) *Gateway {
-	g.apiMiddlewareEndpointFactory = endpointFactory
+	g.proxy.EndpointCreator = endpointFactory
 	return g
 }
 
@@ -138,7 +137,7 @@ func (g *Gateway) Start() {
 
 	corsMux := g.corsMiddleware(g.router)
 
-	if g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
+	if g.proxy != nil && !g.proxy.EndpointCreator.IsNil() {
 		g.registerApiMiddleware()
 	}
 

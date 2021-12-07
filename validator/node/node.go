@@ -511,12 +511,12 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		),
 	)
 	muxHandler := func(apiMware *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
-		// The validator gateway handler has some special logic as it serves two kinds of APIs
-		// and also the website for the Prysm Web UI.
+		// The validator gateway handler requires this special logic as it serves two kinds of APIs, namely
+		// the standard validator keymanager API under the /eth namespace, and the Prysm internal
+		// validator API under the /api namespace. Finally, it also serves requests to host the validator web UI.
 		if strings.HasPrefix(req.URL.Path, "/api/eth/") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
-			// If the prefix has /eth/, we handle it with the standard API gateway middleware
-			// which will convert bytes values into hex strings as desired by the ETH standard API.
+			// If the prefix has /eth/, we handle it with the standard API gateway middleware.
 			apiMware.HandleFunc(w, req)
 		} else if strings.HasPrefix(req.URL.Path, "/api") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
