@@ -79,7 +79,7 @@ func doDecode(b []byte, to fastssz.Unmarshaler) error {
 }
 
 // DecodeGossip decodes the bytes to the protobuf gossip message provided.
-func (e SszNetworkEncoder) DecodeGossip(b []byte, to fastssz.Unmarshaler) error {
+func (_ SszNetworkEncoder) DecodeGossip(b []byte, to fastssz.Unmarshaler) error {
 	b, err := DecodeSnappy(b, MaxGossipSize)
 	if err != nil {
 		return err
