@@ -12,8 +12,8 @@ func TestMain(m *testing.M) {
 	prevConfig := params.BeaconConfig().Copy()
 	defer params.OverrideBeaconConfig(prevConfig)
 	cfg := params.MinimalSpecConfig()
-	cfg.EpochsPerHistoricalVector = 65536
-	cfg.SlotsPerHistoricalRoot = 8192
+	//cfg.EpochsPerHistoricalVector = 65536
+	//cfg.SlotsPerHistoricalRoot = 8192
 	params.OverrideBeaconConfig(cfg)
 
 	resetFlags := flags.Get()
