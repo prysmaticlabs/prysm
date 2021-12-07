@@ -12,27 +12,6 @@ proto_library(
         "events_service.proto",
         "node_service.proto",
         "validator_service.proto",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//proto/eth/ext:proto",
-        "//proto/eth/v1:proto",
-        "//proto/eth/v2:proto",
-        "@com_google_protobuf//:descriptor_proto",
-        "@com_google_protobuf//:empty_proto",
-        "@com_google_protobuf//:timestamp_proto",
-        "@go_googleapis//google/api:annotations_proto",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:event_source_proto",
-    ],
-)
-
-# We create a custom proto library for key_management.proto as it requires a different
-# compiler plugin for grpc gateway than the others. Namely, it requires adding the option
-# --allow_delete_body=true to allow grpc gateway endpoints to take in DELETE HTTP requests
-# with a request body properly.
-proto_library(
-    name = "custom_proto",
-    srcs = [
         "key_management.proto",
     ],
     visibility = ["//visibility:public"],
@@ -67,35 +46,32 @@ go_proto_library(
     ],
 )
 
-go_proto_library(
-    name = "custom_go_proto",
-    compilers = ["@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
-    proto = ":custom_proto",
-    visibility = ["//visibility:public"],
-    deps = [
-        "//proto/eth/ext:go_default_library",
-        "//proto/eth/v1:go_default_library",
-        "//proto/eth/v2:go_default_library",
-        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
-        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "@go_googleapis//google/api:annotations_go_proto",
-        "@com_github_golang_protobuf//proto:go_default_library",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:go_default_library",
-    ],
-)
-
 go_proto_compiler(
     name = "allow_delete_body_gateway_compiler",
+    options = [
+        "logtostderr=true",
+        "allow_repeated_fields_in_body=true",
+        "allow_delete_body=true",
+    ],
     plugin = "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:protoc-gen-grpc-gateway",
-    options = ["allow_delete_body=true"],
+    suffix = ".pb.gw.go",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//grpclog:go_default_library",
+        "@org_golang_google_grpc//metadata:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
+    ],
 )
 
 go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+        "allow_delete_body_gateway_compiler",
     ],
     embed = [":go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
@@ -113,30 +89,9 @@ go_proto_library(
     ],
 )
 
-go_proto_library(
-    name = "custom_go_grpc_gateway_library",
-    compilers = [
-        "allow_delete_body_gateway_compiler",
-    ],
-    embed = [":custom_go_proto"],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
-    protos = [":custom_proto"],
-    visibility = ["//proto:__subpackages__"],
-    deps = [
-        "//proto/eth/ext:go_default_library",
-        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "@go_googleapis//google/api:annotations_go_proto",
-        "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
-        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:go_default_library",
-    ],
-)
-
 go_library(
     name = "go_default_library",
-    embed = [":go_grpc_gateway_library", ":custom_go_grpc_gateway_library"],
+    embed = [":go_grpc_gateway_library"],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
     visibility = ["//visibility:public"],
 )

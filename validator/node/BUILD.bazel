@@ -29,6 +29,7 @@ go_library(
     ],
     deps = [
         "//api/gateway:go_default_library",
+        "//api/gateway/apimiddleware:go_default_library",
         "//async/event:go_default_library",
         "//cmd:go_default_library",
         "//cmd/validator/flags:go_default_library",
@@ -38,6 +39,7 @@ go_library(
         "//monitoring/backup:go_default_library",
         "//monitoring/prometheus:go_default_library",
         "//monitoring/tracing:go_default_library",
+        "//proto/eth/service:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//runtime:go_default_library",
@@ -52,6 +54,7 @@ go_library(
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/imported:go_default_library",
         "//validator/rpc:go_default_library",
+        "//validator/rpc/apimiddleware:go_default_library",
         "//validator/web:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
