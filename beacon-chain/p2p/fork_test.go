@@ -30,12 +30,14 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
+	genesisValidatorsRoot := [32]byte{'a'}
 	s := &Service{
 		cfg: &Config{
 			UDPPort:       uint(port),
 			StateNotifier: &mock.MockStateNotifier{},
 		},
-		genesisTime: genesisTime,
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -93,6 +95,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
 	s.genesisTime = genesisTime
+	s.genesisValidatorsRoot = genesisValidatorsRoot
 	s.dv5Listener = lastListener
 	var addrs []ma.Multiaddr
 
@@ -115,10 +118,12 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
+	genesisValidatorsRoot := [32]byte{'a'}
 	s := &Service{
-		cfg:           &Config{UDPPort: uint(port)},
-		genesisTime:   genesisTime,
-		stateNotifier: &mock.MockStateNotifier{},
+		cfg:                   &Config{UDPPort: uint(port)},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
+		stateNotifier:         &mock.MockStateNotifier{},
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -146,9 +151,10 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		// will cause each peer to have a different ForkDigest, preventing
 		// them from connecting according to our discovery rules for Ethereum consensus.
 		s = &Service{
-			cfg:           cfg,
-			genesisTime:   genesisTime,
-			stateNotifier: &mock.MockStateNotifier{},
+			cfg:                   cfg,
+			genesisTime:           genesisTime,
+			genesisValidatorsRoot: genesisValidatorsRoot,
+			stateNotifier:         &mock.MockStateNotifier{},
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
@@ -181,6 +187,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	require.NoError(t, err)
 
 	s.genesisTime = genesisTime
+	s.genesisValidatorsRoot = genesisValidatorsRoot
 	s.dv5Listener = lastListener
 	var addrs []ma.Multiaddr
 
