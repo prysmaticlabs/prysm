@@ -55,7 +55,7 @@ func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 }
 
 // DepositTrie --
-func (m *POWChain) DepositTrie() *trie.SparseMerkleTrie {
+func (_ *POWChain) DepositTrie() *trie.SparseMerkleTrie {
 	return &trie.SparseMerkleTrie{}
 }
 
@@ -104,13 +104,13 @@ func (m *POWChain) BlockByTimestamp(_ context.Context, time uint64) (*types.Head
 }
 
 // DepositRoot --
-func (m *POWChain) DepositRoot() [32]byte {
+func (_ *POWChain) DepositRoot() [32]byte {
 	root := []byte("depositroot")
 	return bytesutil.ToBytes32(root)
 }
 
 // ChainStartDeposits --
-func (m *POWChain) ChainStartDeposits() []*ethpb.Deposit {
+func (_ *POWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
@@ -125,12 +125,12 @@ func (m *POWChain) PreGenesisState() state.BeaconState {
 }
 
 // ClearPreGenesisData --
-func (m *POWChain) ClearPreGenesisData() {
+func (_ *POWChain) ClearPreGenesisData() {
 	// no-op
 }
 
 // IsConnectedToETH1 --
-func (m *POWChain) IsConnectedToETH1() bool {
+func (_ *POWChain) IsConnectedToETH1() bool {
 	return true
 }
 

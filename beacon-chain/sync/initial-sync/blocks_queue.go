@@ -439,7 +439,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 // onCheckStaleEvent is an event that allows to mark stale epochs,
 // so that they can be re-processed.
-func (q *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
+func (_ *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()

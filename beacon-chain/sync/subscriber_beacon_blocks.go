@@ -10,7 +10,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	wrapperv2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -71,7 +70,7 @@ func blockFromProto(msg proto.Message) (block.SignedBeaconBlock, error) {
 	case *ethpb.SignedBeaconBlock:
 		return wrapper.WrappedPhase0SignedBeaconBlock(t), nil
 	case *ethpb.SignedBeaconBlockAltair:
-		return wrapperv2.WrappedAltairSignedBeaconBlock(t)
+		return wrapper.WrappedAltairSignedBeaconBlock(t)
 	default:
 		return nil, errors.Errorf("message has invalid underlying type: %T", msg)
 	}

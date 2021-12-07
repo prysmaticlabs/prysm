@@ -85,17 +85,17 @@ func (w Phase0SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 }
 
 // PbAltairBlock is a stub.
-func (w Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
+func (_ Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, errors.New("unsupported altair block")
 }
 
 // PbMergeBlock is a stub.
-func (w Phase0SignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
+func (_ Phase0SignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
 	return nil, errors.New("unsupported merge block")
 }
 
 // Version of the underlying protobuf object.
-func (w Phase0SignedBeaconBlock) Version() int {
+func (_ Phase0SignedBeaconBlock) Version() int {
 	return version.Phase0
 }
 
@@ -193,7 +193,7 @@ func (w Phase0BeaconBlock) Proto() proto.Message {
 }
 
 // Version of the underlying protobuf object.
-func (w Phase0BeaconBlock) Version() int {
+func (_ Phase0BeaconBlock) Version() int {
 	return version.Phase0
 }
 
@@ -249,7 +249,7 @@ func (w Phase0BeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
 }
 
 // SyncAggregate returns the sync aggregate in the block.
-func (w Phase0BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
+func (_ Phase0BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 	return nil, errors.New("Sync aggregate is not supported in phase 0 block")
 }
 
@@ -270,7 +270,7 @@ func (w Phase0BeaconBlockBody) Proto() proto.Message {
 }
 
 // ExecutionPayload is a stub.
-func (w Phase0BeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
+func (_ Phase0BeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
 	return nil, errors.New("ExecutionPayload is not supported in phase 0 block body")
 }
 
@@ -356,17 +356,17 @@ func (w altairSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, 
 }
 
 // PbPhase0Block is a stub.
-func (w altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
+func (_ altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedPhase0Block
 }
 
 // PbMergeBlock is a stub.
-func (w altairSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
+func (_ altairSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
 	return nil, errors.New("unsupported merge block")
 }
 
 // Version of the underlying protobuf object.
-func (w altairSignedBeaconBlock) Version() int {
+func (_ altairSignedBeaconBlock) Version() int {
 	return version.Altair
 }
 
@@ -468,7 +468,7 @@ func (w altairBeaconBlock) Proto() proto.Message {
 }
 
 // Version of the underlying protobuf object.
-func (w altairBeaconBlock) Version() int {
+func (_ altairBeaconBlock) Version() int {
 	return version.Altair
 }
 
@@ -549,7 +549,7 @@ func (w altairBeaconBlockBody) Proto() proto.Message {
 }
 
 // ExecutionPayload is a stub.
-func (w altairBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
+func (_ altairBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
 	return nil, errors.New("ExecutionPayload is not supported in altair block body")
 }
 
@@ -622,17 +622,17 @@ func (w mergeSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, err
 }
 
 // PbPhase0Block is a stub.
-func (w mergeSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
+func (_ mergeSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedPhase0Block
 }
 
 // PbAltairBlock returns the underlying protobuf object.
-func (w mergeSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
+func (_ mergeSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, errors.New("unsupported altair block")
 }
 
 // Version of the underlying protobuf object.
-func (w mergeSignedBeaconBlock) Version() int {
+func (_ mergeSignedBeaconBlock) Version() int {
 	return version.Merge
 }
 
@@ -734,7 +734,7 @@ func (w mergeBeaconBlock) Proto() proto.Message {
 }
 
 // Version of the underlying protobuf object.
-func (w mergeBeaconBlock) Version() int {
+func (_ mergeBeaconBlock) Version() int {
 	return version.Merge
 }
 
