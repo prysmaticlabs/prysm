@@ -6,4 +6,3 @@ import ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 func NewBeaconBlockMerge() *ethpb.SignedBeaconBlockMerge {
 	return HydrateSignedBeaconBlockMerge(&ethpb.SignedBeaconBlockMerge{})
 }
-
