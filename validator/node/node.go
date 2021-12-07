@@ -517,7 +517,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		if strings.HasPrefix(req.URL.Path, "/api/eth/") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
 			// If the prefix has /eth/, we handle it with the standard API gateway middleware.
-			apiMware.HandleFunc(w, req)
+			apiMware.ServeHTTP(w, req)
 		} else if strings.HasPrefix(req.URL.Path, "/api") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
 			// Else, we handle with the Prysm API gateway without a middleware.
@@ -537,13 +537,13 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gateway.WithRemoteAddr(rpcAddr),
 		gateway.WithGatewayAddr(gatewayAddress),
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
-		gateway.WithMuxHandler(muxHandler),
 		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
 		gateway.WithAllowedOrigins(allowedOrigins),
 	}
 	if features.Get().EnableKeymanagerApi {
 		opts = append(opts, gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}))
 	}
+	opts = append(opts, gateway.WithMuxHandler(muxHandler))
 	gw, err := gateway.New(cliCtx.Context, opts...)
 	if err != nil {
 		return err
