@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -50,10 +49,10 @@ type FinalizedDeposits struct {
 // stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
 	// Beacon chain deposits in memory.
-	pendingDeposits   []*dbpb.DepositContainer
-	deposits          []*dbpb.DepositContainer
+	pendingDeposits   []*ethpb.DepositContainer
+	deposits          []*ethpb.DepositContainer
 	finalizedDeposits *FinalizedDeposits
-	depositsByKey     map[[48]byte][]*dbpb.DepositContainer
+	depositsByKey     map[[48]byte][]*ethpb.DepositContainer
 	depositsLock      sync.RWMutex
 }
 
@@ -67,8 +66,8 @@ func New() (*DepositCache, error) {
 	// finalizedDeposits.MerkleTrieIndex is initialized to -1 because it represents the index of the last trie item.
 	// Inserting the first item into the trie will set the value of the index to 0.
 	return &DepositCache{
-		pendingDeposits:   []*dbpb.DepositContainer{},
-		deposits:          []*dbpb.DepositContainer{},
+		pendingDeposits:   []*ethpb.DepositContainer{},
+		deposits:          []*ethpb.DepositContainer{},
 		depositsByKey:     map[[48]byte][]*ethpb.DepositContainer{},
 		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 	}, nil
@@ -96,9 +95,9 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	}
 	// Keep the slice sorted on insertion in order to avoid costly sorting on retrieval.
 	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Index >= index })
-	depCtr := &dbpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, DepositRoot: depositRoot[:], Index: index}
+	depCtr := &ethpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, DepositRoot: depositRoot[:], Index: index}
 	newDeposits := append(
-		[]*dbpb.DepositContainer{depCtr},
+		[]*ethpb.DepositContainer{depCtr},
 		dc.deposits[heightIdx:]...)
 	dc.deposits = append(dc.deposits[:heightIdx], newDeposits...)
 	// Append the deposit to our map, in the event no deposits
@@ -110,7 +109,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 }
 
 // InsertDepositContainers inserts a set of deposit containers into our deposit cache.
-func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*dbpb.DepositContainer) {
+func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer) {
 	_, span := trace.StartSpan(ctx, "DepositsCache.InsertDepositContainers")
 	defer span.End()
 	dc.depositsLock.Lock()
@@ -163,7 +162,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 }
 
 // AllDepositContainers returns all historical deposit containers.
-func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*dbpb.DepositContainer {
+func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*ethpb.DepositContainer {
 	_, span := trace.StartSpan(ctx, "DepositsCache.AllDepositContainers")
 	defer span.End()
 	dc.depositsLock.RLock()

@@ -15,7 +15,6 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -422,7 +421,7 @@ func (s *Store) SaveBlockProposals(
 func (s *Store) HighestAttestations(
 	_ context.Context,
 	indices []types.ValidatorIndex,
-) ([]*slashpb.HighestAttestation, error) {
+) ([]*ethpb.HighestAttestation, error) {
 	if len(indices) == 0 {
 		return nil, nil
 	}
@@ -437,7 +436,7 @@ func (s *Store) HighestAttestations(
 		encodedIndices[i] = encodeValidatorIndex(valIdx)
 	}
 
-	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
+	history := make([]*ethpb.HighestAttestation, 0, len(encodedIndices))
 	err = s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
@@ -453,7 +452,7 @@ func (s *Store) HighestAttestations(
 					if err != nil {
 						return err
 					}
-					highestAtt := &slashpb.HighestAttestation{
+					highestAtt := &ethpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),
 						HighestSourceEpoch: attWrapper.IndexedAttestation.Data.Source.Epoch,
 						HighestTargetEpoch: attWrapper.IndexedAttestation.Data.Target.Epoch,

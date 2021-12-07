@@ -8,7 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -24,7 +23,7 @@ var (
 // PendingDepositsFetcher specifically outlines a struct that can retrieve deposits
 // which have not yet been included in the chain.
 type PendingDepositsFetcher interface {
-	PendingContainers(ctx context.Context, untilBlk *big.Int) []*dbpb.DepositContainer
+	PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer
 }
 
 // InsertPendingDeposit into the database. If deposit or block number are nil
@@ -42,7 +41,7 @@ func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Depos
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
 	dc.pendingDeposits = append(dc.pendingDeposits,
-		&dbpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, Index: index, DepositRoot: depositRoot[:]})
+		&ethpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, Index: index, DepositRoot: depositRoot[:]})
 	pendingDepositsCount.Inc()
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(dc.pendingDeposits))))
 }
@@ -66,13 +65,13 @@ func (dc *DepositCache) PendingDeposits(ctx context.Context, untilBlk *big.Int) 
 
 // PendingContainers returns a list of deposit containers until the given block number
 // (inclusive).
-func (dc *DepositCache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*dbpb.DepositContainer {
+func (dc *DepositCache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer {
 	_, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	var depositCntrs []*dbpb.DepositContainer
+	var depositCntrs []*ethpb.DepositContainer
 	for _, ctnr := range dc.pendingDeposits {
 		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
 			depositCntrs = append(depositCntrs, ctnr)
@@ -140,7 +139,7 @@ func (dc *DepositCache) PrunePendingDeposits(ctx context.Context, merkleTreeInde
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
 
-	var cleanDeposits []*dbpb.DepositContainer
+	var cleanDeposits []*ethpb.DepositContainer
 	for _, dp := range dc.pendingDeposits {
 		if dp.Index >= merkleTreeIndex {
 			cleanDeposits = append(cleanDeposits, dp)

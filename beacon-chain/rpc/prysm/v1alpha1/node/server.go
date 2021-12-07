@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -221,7 +220,7 @@ func (ns *Server) ListPeers(ctx context.Context, _ *empty.Empty) (*ethpb.Peers, 
 }
 
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
-func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream ethpb.Health_StreamBeaconLogsServer) error {
 	ch := make(chan []byte, ns.StreamLogsBufferSize)
 	sub := ns.LogsStreamer.LogsFeed().Subscribe(ch)
 	defer func() {
@@ -234,7 +233,7 @@ func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream pb.Health_StreamBeacon
 	for i, log := range recentLogs {
 		logStrings[i] = string(log)
 	}
-	if err := stream.Send(&pb.LogsResponse{
+	if err := stream.Send(&ethpb.LogsResponse{
 		Logs: logStrings,
 	}); err != nil {
 		return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
@@ -242,7 +241,7 @@ func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream pb.Health_StreamBeacon
 	for {
 		select {
 		case log := <-ch:
-			resp := &pb.LogsResponse{
+			resp := &ethpb.LogsResponse{
 				Logs: []string{string(log)},
 			}
 			if err := stream.Send(resp); err != nil {
