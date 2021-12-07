@@ -170,7 +170,7 @@ func decodeHex(signature string) ([]byte, error) {
 	}
 	return decoded, nil
 }
-func closeBody(body io.ReadCloser) {
+func closeBody(body io.Closer) {
 	if err := body.Close(); err != nil {
 		log.Errorf("Could not close response body: %v", err)
 	}
