@@ -19,6 +19,32 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+type mockSyncChecker struct{}
+
+func (c mockSyncChecker) Initialized() bool {
+	return true
+}
+
+func (c mockSyncChecker) Syncing() bool {
+	return false
+}
+
+func (c mockSyncChecker) Synced() bool {
+	return true
+}
+
+func (c mockSyncChecker) Status() error {
+	return nil
+}
+
+func (c mockSyncChecker) Resync() error {
+	return nil
+}
+
+func (mockSyncChecker) IsSynced(_ context.Context) (bool, error) {
+	return true, nil
+}
+
 func TestEndToEnd_SlasherSimulator(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
@@ -66,6 +92,7 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 		StateGen:                    gen,
 		PrivateKeysByValidatorIndex: privKeys,
 		SlashingsPool:               &slashings.PoolMock{},
+		SyncChecker:                 mockSyncChecker{},
 	})
 	require.NoError(t, err)
 	sim.Start()
