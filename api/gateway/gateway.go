@@ -109,7 +109,7 @@ func (g *Gateway) Start() {
 
 	corsMux := g.corsMiddleware(g.cfg.router)
 
-	if g.proxy != nil && !g.proxy.EndpointCreator.IsNil() {
+	if !g.cfg.apiMiddlewareEndpointFactory.IsNil() {
 		g.registerApiMiddleware()
 	}
 
