@@ -248,7 +248,7 @@ func doMiddlewareJSONGetRequestV1(requestPath string, beaconNodeIdx int, dst int
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
-func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData interface{}, dst interface{}) error {
+func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData, dst interface{}) error {
 	b, err := json.Marshal(postData)
 	if err != nil {
 		return err

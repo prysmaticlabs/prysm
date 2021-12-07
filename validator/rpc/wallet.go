@@ -215,7 +215,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 // can indeed be decrypted using a password in the request. If there is no issue,
 // we return an empty response with no error. If the password is incorrect for a single keystore,
 // we return an appropriate error.
-func (s *Server) ValidateKeystores(
+func (_ *Server) ValidateKeystores(
 	_ context.Context, req *pb.ValidateKeystoresRequest,
 ) (*emptypb.Empty, error) {
 	if req.KeystoresPassword == "" {

@@ -266,34 +266,22 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
 	nowTime := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
-	require.NoError(t, service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Root: make([]byte, 32)}))
+	require.NoError(t, verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Root: make([]byte, 32)}))
 }
 
 func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
 	nowTime := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
-	require.NoError(t, service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Epoch: 1}))
+	require.NoError(t, verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Epoch: 1}))
 }
 
 func TestAttEpoch_NotMatch(t *testing.T) {
 	ctx := context.Background()
 
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
 	nowTime := 2 * uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
-	err = service.verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Root: make([]byte, 32)})
+	err := verifyAttTargetEpoch(ctx, 0, nowTime, &ethpb.Checkpoint{Root: make([]byte, 32)})
 	assert.ErrorContains(t, "target epoch 0 does not match current epoch 2 or prev epoch 1", err)
 }
 

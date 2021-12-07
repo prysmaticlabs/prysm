@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -13,9 +12,9 @@ func TestBeaconState_LatestBlockHeader(t *testing.T) {
 	s, err := InitializeFromProto(&ethpb.BeaconStateAltair{})
 	require.NoError(t, err)
 	got := s.LatestBlockHeader()
-	require.DeepEqual(t, (*v1alpha1.BeaconBlockHeader)(nil), got)
+	require.DeepEqual(t, (*ethpb.BeaconBlockHeader)(nil), got)
 
-	want := &v1alpha1.BeaconBlockHeader{Slot: 100}
+	want := &ethpb.BeaconBlockHeader{Slot: 100}
 	s, err = InitializeFromProto(&ethpb.BeaconStateAltair{LatestBlockHeader: want})
 	require.NoError(t, err)
 	got = s.LatestBlockHeader()

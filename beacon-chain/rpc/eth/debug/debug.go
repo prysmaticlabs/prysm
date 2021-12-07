@@ -123,7 +123,7 @@ func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateReq
 
 // ListForkChoiceHeads retrieves the fork choice leaves for the current head.
 func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ForkChoiceHeadsResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeads")
+	_, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeads")
 	defer span.End()
 
 	headRoots, headSlots := ds.HeadFetcher.ChainHeads()
