@@ -31,7 +31,7 @@ type client struct {
 func newClient(endpoint string) (*client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return nil, errors.Wrap(err, "Invalid Format, unable to parse url")
+		return nil, errors.Wrap(err, "invalid Format, unable to parse url")
 	}
 	return &client{
 		BasePath: u.Host,
