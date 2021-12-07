@@ -203,7 +203,6 @@ func TestServer_ImportKeystores(t *testing.T) {
 		}
 	})
 }
-
 func TestServer_DeleteKeystores(t *testing.T) {
 	ctx := context.Background()
 	srv := setupServerWithWallet(t)
@@ -246,6 +245,14 @@ func TestServer_DeleteKeystores(t *testing.T) {
 		SlashingProtectionJson: string(encoded),
 	})
 	require.NoError(t, err)
+
+	t.Run("no slashing protection response if no keys in request even if we have a history in DB", func(t *testing.T) {
+		resp, err := srv.DeleteKeystores(context.Background(), &ethpbservice.DeleteKeystoresRequest{
+			PublicKeys: nil,
+		})
+		require.NoError(t, err)
+		require.Equal(t, "", resp.SlashingProtection)
+	})
 
 	// For ease of test setup, we'll give each public key a string identifier.
 	publicKeysWithId := map[string][48]byte{

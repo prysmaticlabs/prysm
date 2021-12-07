@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "gateway.go",
         "log.go",
+        "options.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/api/gateway",
     visibility = [
