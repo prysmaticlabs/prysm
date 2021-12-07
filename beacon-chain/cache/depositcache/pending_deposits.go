@@ -30,7 +30,7 @@ type PendingDepositsFetcher interface {
 // InsertPendingDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
 func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertPendingDeposit")
+	_, span := trace.StartSpan(ctx, "DepositsCache.InsertPendingDeposit")
 	defer span.End()
 	if d == nil {
 		log.WithFields(logrus.Fields{
@@ -67,7 +67,7 @@ func (dc *DepositCache) PendingDeposits(ctx context.Context, untilBlk *big.Int) 
 // PendingContainers returns a list of deposit containers until the given block number
 // (inclusive).
 func (dc *DepositCache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*dbpb.DepositContainer {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
+	_, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
@@ -91,7 +91,7 @@ func (dc *DepositCache) PendingContainers(ctx context.Context, untilBlk *big.Int
 // RemovePendingDeposit from the database. The deposit is indexed by the
 // Index. This method does nothing if deposit ptr is nil.
 func (dc *DepositCache) RemovePendingDeposit(ctx context.Context, d *ethpb.Deposit) {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.RemovePendingDeposit")
+	_, span := trace.StartSpan(ctx, "DepositsCache.RemovePendingDeposit")
 	defer span.End()
 
 	if d == nil {
@@ -129,7 +129,7 @@ func (dc *DepositCache) RemovePendingDeposit(ctx context.Context, d *ethpb.Depos
 
 // PrunePendingDeposits removes any deposit which is older than the given deposit merkle tree index.
 func (dc *DepositCache) PrunePendingDeposits(ctx context.Context, merkleTreeIndex int64) {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.PrunePendingDeposits")
+	_, span := trace.StartSpan(ctx, "DepositsCache.PrunePendingDeposits")
 	defer span.End()
 
 	if merkleTreeIndex == 0 {

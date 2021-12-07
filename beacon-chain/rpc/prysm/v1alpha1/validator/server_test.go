@@ -49,8 +49,6 @@ func TestValidatorIndex_OK(t *testing.T) {
 }
 
 func TestWaitForActivation_ContextClosed(t *testing.T) {
-	ctx := context.Background()
-
 	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},

@@ -160,7 +160,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 // Note: beacon blocks from the latest finalized epoch return true, whether or not they are
 // considered canonical in the "head view" of the beacon node.
 func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
+	_, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
 	defer span.End()
 
 	var exists bool

@@ -64,7 +64,7 @@ func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.St
 
 // HasStateSummary returns true if a state summary exists in DB.
 func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
+	_, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
 	defer span.End()
 
 	var hasSummary bool
