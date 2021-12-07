@@ -45,10 +45,10 @@ type mockService struct {
 	status error
 }
 
-func (m *mockService) Start() {
+func (_ *mockService) Start() {
 }
 
-func (m *mockService) Stop() error {
+func (_ *mockService) Stop() error {
 	return nil
 }
 

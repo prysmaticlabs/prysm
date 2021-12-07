@@ -117,7 +117,7 @@ func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethT
 	return header, nil
 }
 
-func (g *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
+func (_ *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
 	return nil, nil
 }
 
@@ -828,7 +828,7 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 	}
 
 	for _, test := range tt {
-		assert.Equal(t, test.expectedRes, s1.validateDepositContainers(test.ctrsFunc()))
+		assert.Equal(t, test.expectedRes, validateDepositContainers(test.ctrsFunc()))
 	}
 }
 

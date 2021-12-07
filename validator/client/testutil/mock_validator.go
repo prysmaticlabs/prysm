@@ -167,21 +167,21 @@ func (fv *FakeValidator) ProposeBlock(_ context.Context, slot types.Slot, _ [48]
 }
 
 // SubmitAggregateAndProof for mocking.
-func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot, _ [48]byte) {}
+func (_ *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot, _ [48]byte) {}
 
 // SubmitSyncCommitteeMessage for mocking.
-func (fv *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.Slot, _ [48]byte) {}
+func (_ *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.Slot, _ [48]byte) {}
 
 // LogAttestationsSubmitted for mocking.
-func (fv *FakeValidator) LogAttestationsSubmitted() {}
+func (_ *FakeValidator) LogAttestationsSubmitted() {}
 
 // LogNextDutyTimeLeft for mocking.
-func (fv *FakeValidator) LogNextDutyTimeLeft(_ types.Slot) error {
+func (_ *FakeValidator) LogNextDutyTimeLeft(_ types.Slot) error {
 	return nil
 }
 
 // UpdateDomainDataCaches for mocking.
-func (fv *FakeValidator) UpdateDomainDataCaches(context.Context, types.Slot) {}
+func (_ *FakeValidator) UpdateDomainDataCaches(context.Context, types.Slot) {}
 
 // BalancesByPubkeys for mocking.
 func (fv *FakeValidator) BalancesByPubkeys(_ context.Context) map[[48]byte]uint64 {
@@ -204,7 +204,7 @@ func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[48]byte]ethpb
 }
 
 // AllValidatorsAreExited for mocking
-func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
+func (_ *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	if ctx.Value(AllValidatorsAreExitedCtxKey) == nil {
 		return false, nil
 	}
@@ -217,7 +217,7 @@ func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
 }
 
 // CheckDoppelGanger for mocking
-func (fv *FakeValidator) CheckDoppelGanger(_ context.Context) error {
+func (_ *FakeValidator) CheckDoppelGanger(_ context.Context) error {
 	return nil
 }
 
@@ -241,5 +241,5 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) 
 }
 
 // SubmitSignedContributionAndProof for mocking
-func (fv *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [48]byte) {
+func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [48]byte) {
 }

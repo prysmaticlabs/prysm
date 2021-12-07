@@ -126,7 +126,7 @@ func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event
 }
 
 // ValidatingAccountNames for a imported keymanager.
-func (km *Keymanager) ValidatingAccountNames() ([]string, error) {
+func (_ *Keymanager) ValidatingAccountNames() ([]string, error) {
 	lock.RLock()
 	names := make([]string, len(orderedPublicKeys))
 	for i, pubKey := range orderedPublicKeys {
@@ -157,7 +157,7 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 }
 
 // FetchValidatingPublicKeys fetches the list of active public keys from the imported account keystores.
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (_ *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	_, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
@@ -189,7 +189,7 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 }
 
 // Sign signs a message using a validator key.
-func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+func (_ *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 	_, span := trace.StartSpan(ctx, "keymanager.Sign")
 	defer span.End()
 

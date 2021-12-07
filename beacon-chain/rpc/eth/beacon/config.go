@@ -18,7 +18,7 @@ import (
 )
 
 // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
-func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkScheduleResponse, error) {
+func (_ *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkScheduleResponse, error) {
 	_, span := trace.StartSpan(ctx, "beacon.GetForkSchedule")
 	defer span.End()
 
@@ -56,7 +56,7 @@ func (bs *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb
 // Values are returned with following format:
 // - any value starting with 0x in the spec is returned as a hex string.
 // - all other values are returned as number.
-func (bs *Server) GetSpec(ctx context.Context, _ *emptypb.Empty) (*ethpb.SpecResponse, error) {
+func (_ *Server) GetSpec(ctx context.Context, _ *emptypb.Empty) (*ethpb.SpecResponse, error) {
 	_, span := trace.StartSpan(ctx, "beacon.GetSpec")
 	defer span.End()
 
@@ -68,7 +68,7 @@ func (bs *Server) GetSpec(ctx context.Context, _ *emptypb.Empty) (*ethpb.SpecRes
 }
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.
-func (bs *Server) GetDepositContract(ctx context.Context, _ *emptypb.Empty) (*ethpb.DepositContractResponse, error) {
+func (_ *Server) GetDepositContract(ctx context.Context, _ *emptypb.Empty) (*ethpb.DepositContractResponse, error) {
 	_, span := trace.StartSpan(ctx, "beaconv1.GetDepositContract")
 	defer span.End()
 

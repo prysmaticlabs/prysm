@@ -21,11 +21,11 @@ func (*BeaconState) AppendCurrentEpochAttestations(_ *ethpb.PendingAttestation) 
 }
 
 // AppendPreviousEpochAttestations is not supported for HF1 beacon state.
-func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
+func (*BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
 	return errors.New("AppendPreviousEpochAttestations is not supported for version Merge beacon state")
 }
 
 // RotateAttestations is not supported for HF1 beacon state.
-func (b *BeaconState) RotateAttestations() error {
+func (*BeaconState) RotateAttestations() error {
 	return errors.New("RotateAttestations is not supported for version Merge beacon state")
 }

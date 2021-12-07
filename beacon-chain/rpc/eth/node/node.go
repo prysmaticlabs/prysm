@@ -138,7 +138,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
-	emptyStateFilter, emptyDirectionFilter := ns.handleEmptyFilters(req)
+	emptyStateFilter, emptyDirectionFilter := handleEmptyFilters(req)
 
 	if emptyStateFilter && emptyDirectionFilter {
 		allIds := peerStatus.All()
@@ -247,7 +247,7 @@ func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerC
 
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
-func (ns *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
+func (_ *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
 	_, span := trace.StartSpan(ctx, "node.GetVersion")
 	defer span.End()
 
@@ -300,7 +300,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 	return &emptypb.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
 
-func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection bool) {
+func handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection bool) {
 	emptyState = true
 	for _, stateFilter := range req.State {
 		normalized := strings.ToUpper(stateFilter.String())

@@ -192,7 +192,7 @@ func (s *Store) CheckSlashableAttestation(
 }
 
 // Iterate from the back of the bucket since we are looking for target_epoch > att.target_epoch
-func (s *Store) checkSurroundedVote(
+func (_ *Store) checkSurroundedVote(
 	targetEpochsBucket *bolt.Bucket, att *ethpb.IndexedAttestation,
 ) (SlashingKind, error) {
 	c := targetEpochsBucket.Cursor()
@@ -232,7 +232,7 @@ func (s *Store) checkSurroundedVote(
 }
 
 // Iterate from the back of the bucket since we are looking for source_epoch > att.source_epoch
-func (s *Store) checkSurroundingVote(
+func (_ *Store) checkSurroundingVote(
 	sourceEpochsBucket *bolt.Bucket, att *ethpb.IndexedAttestation,
 ) (SlashingKind, error) {
 	c := sourceEpochsBucket.Cursor()
