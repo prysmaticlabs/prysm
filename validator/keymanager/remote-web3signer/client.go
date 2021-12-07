@@ -4,19 +4,20 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 )
 
 const (
 	ethApiNamespace = "/api/v1/eth2/sign/"
-	maxTimeout      = 5 * time.Second
+	maxTimeout      = 3 * time.Second
 )
 
 type HTTPClient interface {
@@ -31,7 +32,7 @@ type client struct {
 func newClient(endpoint string) (*client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid Format, unable to parse url")
+		return nil, errors.Wrap(err, "invalid format, unable to parse url")
 	}
 	return &client{
 		BasePath: u.Host,
@@ -80,11 +81,11 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 	defer closeBody(resp.Body)
 	jsonDataFromHttp, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to read response body")
+		return nil, errors.Wrap(err, "failed to read response body")
 	}
 	signResp := &signResponse{}
 	if err := json.Unmarshal(jsonDataFromHttp, signResp); err != nil {
-		return nil, errors.Wrap(err, "Invalid Format, failed to unmarshal json response")
+		return nil, errors.Wrap(err, "invalid format, failed to unmarshal json response")
 	}
 	decoded, err := decodeHex(signResp.Signature)
 	if err != nil {
@@ -106,7 +107,7 @@ func (client *client) GetPublicKeys() ([][]byte, error) {
 	defer closeBody(resp.Body)
 	var publicKeys []string
 	if err := json.NewDecoder(resp.Body).Decode(&publicKeys); err != nil {
-		return nil, errors.Wrap(err, "Invalid Format, unable to read response body as array of strings")
+		return nil, errors.Wrap(err, "invalid format, unable to read response body as array of strings")
 	}
 	decodedKeys := make([][]byte, len(publicKeys))
 	var errorMessage string
@@ -114,7 +115,7 @@ func (client *client) GetPublicKeys() ([][]byte, error) {
 		decodedKey, err := decodeHex(value)
 		if err != nil {
 			if errorMessage == "" {
-				errorMessage = "Failed to decode from Hex from the following public keys: "
+				errorMessage = "failed to decode from Hex from the following public keys: "
 			}
 			errorMessage += value + " "
 			continue
@@ -146,7 +147,7 @@ func (client *client) GetServerStatus() (string, error) {
 	defer closeBody(resp.Body)
 	var status string
 	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-		return "", errors.Wrap(err, "Invalid Format, unable to read response body as a string")
+		return "", errors.Wrap(err, "invalid format, unable to read response body as a string")
 	}
 	return status, nil
 }
@@ -158,7 +159,7 @@ func (client *client) doRequest(httpMethod string, fullPath string, body io.Read
 	}
 	resp, err := client.restClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to execute json request")
+		return nil, errors.Wrap(err, "failed to execute json request")
 	}
 	return resp, nil
 }
@@ -166,12 +167,12 @@ func (client *client) doRequest(httpMethod string, fullPath string, body io.Read
 func decodeHex(signature string) ([]byte, error) {
 	decoded, err := hex.DecodeString(strings.TrimPrefix(signature, "0x"))
 	if err != nil {
-		return nil, errors.Wrap(err, "Invalid Format, failed to unmarshal json response")
+		return nil, errors.Wrap(err, "invalid format, failed to unmarshal json response")
 	}
 	return decoded, nil
 }
 func closeBody(body io.Closer) {
 	if err := body.Close(); err != nil {
-		log.Errorf("Could not close response body: %v", err)
+		log.Errorf("could not close response body: %v", err)
 	}
 }
