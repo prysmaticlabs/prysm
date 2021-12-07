@@ -201,9 +201,9 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 			"Slot":            att.Aggregate.Data.Slot,
 			"BeaconBlockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
 				att.Aggregate.Data.BeaconBlockRoot)),
-			"SourceRoot:": fmt.Sprintf("%#x", bytesutil.Trunc(
+			"SourceRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
 				att.Aggregate.Data.Source.Root)),
-			"TargetRoot:": fmt.Sprintf("%#x", bytesutil.Trunc(
+			"TargetRoot": fmt.Sprintf("%#x", bytesutil.Trunc(
 				att.Aggregate.Data.Target.Root)),
 		}).Info("Processed attestation aggregation")
 		aggregatedPerf := s.aggregatedPerformance[att.AggregatorIndex]

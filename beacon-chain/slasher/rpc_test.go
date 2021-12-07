@@ -83,9 +83,10 @@ func TestIsSlashableAttestation(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database: slasherDB,
 		},
-		params:      DefaultParams(),
-		blksQueue:   newBlocksQueue(),
-		genesisTime: genesisTime,
+		params:                         DefaultParams(),
+		blksQueue:                      newBlocksQueue(),
+		genesisTime:                    genesisTime,
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	prevAtts := []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(t, 2, 3, []uint64{0}, []byte{1}),
@@ -93,7 +94,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 	}
 	err := slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
 	require.NoError(t, err)
-	attesterSlashings, err := s.checkSlashableAttestations(ctx, prevAtts)
+	attesterSlashings, err := s.checkSlashableAttestations(ctx, currentEpoch, prevAtts)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(attesterSlashings))
 
@@ -125,7 +126,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 		{
 			name:         "should detect multiple surround if multiple same indices",
 			attToCheck:   createAttestationWrapper(t, 1, 4, []uint64{0, 1}, []byte{2}),
-			amtSlashable: 2,
+			amtSlashable: 4,
 		},
 	}
 	for _, tt := range tests {
