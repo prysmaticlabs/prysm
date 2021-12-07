@@ -21,31 +21,31 @@ func (*BeaconState) AppendInactivityScore(_ uint64) error {
 }
 
 // SetCurrentSyncCommittee is not supported for phase 0 beacon state.
-func (b *BeaconState) SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error {
+func (*BeaconState) SetCurrentSyncCommittee(_ *ethpb.SyncCommittee) error {
 	return errors.New("SetCurrentSyncCommittee is not supported for phase 0 beacon state")
 }
 
 // SetNextSyncCommittee is not supported for phase 0 beacon state.
-func (b *BeaconState) SetNextSyncCommittee(val *ethpb.SyncCommittee) error {
+func (*BeaconState) SetNextSyncCommittee(_ *ethpb.SyncCommittee) error {
 	return errors.New("SetNextSyncCommittee is not supported for phase 0 beacon state")
 }
 
 // SetPreviousParticipationBits is not supported for phase 0 beacon state.
-func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
+func (*BeaconState) SetPreviousParticipationBits(_ []byte) error {
 	return errors.New("SetPreviousParticipationBits is not supported for phase 0 beacon state")
 }
 
 // SetCurrentParticipationBits is not supported for phase 0 beacon state.
-func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
+func (*BeaconState) SetCurrentParticipationBits(_ []byte) error {
 	return errors.New("SetCurrentParticipationBits is not supported for phase 0 beacon state")
 }
 
 // SetInactivityScores is not supported for phase 0 beacon state.
-func (b *BeaconState) SetInactivityScores(val []uint64) error {
+func (*BeaconState) SetInactivityScores(_ []uint64) error {
 	return errors.New("SetInactivityScores is not supported for phase 0 beacon state")
 }
 
 // SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state.
-func (b *BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
+func (*BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
 	return errors.New("SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state")
 }

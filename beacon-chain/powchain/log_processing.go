@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -245,7 +244,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	}
 }
 
-func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
+func createGenesisTime(timeStamp uint64) uint64 {
 	// adds in the genesis delay to the eth1 block time
 	// on which it was triggered.
 	return timeStamp + params.BeaconConfig().GenesisDelay
@@ -487,7 +486,7 @@ func (s *Service) currentCountAndTime(ctx context.Context, blockTime uint64) (ui
 		log.WithError(err).Error("Could not determine active validator count from pre genesis state")
 		return 0, 0
 	}
-	return valCount, s.createGenesisTime(blockTime)
+	return valCount, createGenesisTime(blockTime)
 }
 
 func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
@@ -508,7 +507,7 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	eth1Data := &protodb.ETH1ChainData{
+	eth1Data := &ethpb.ETH1ChainData{
 		CurrentEth1Data:   s.latestEth1Data,
 		ChainstartData:    s.chainStartData,
 		BeaconState:       pbState, // I promise not to mutate it!

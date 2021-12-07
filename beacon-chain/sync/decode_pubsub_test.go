@@ -85,10 +85,12 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				} else if tt.input.Message == nil {
 					tt.input.Message = &pb.Message{}
 				}
-				tt.input.Message.Topic = &tt.topic
+				// reassign because tt is a loop variable
+				topic := tt.topic
+				tt.input.Message.Topic = &topic
 			}
 			got, err := s.decodePubsubMessage(tt.input)
-			if err != tt.wantErr && !strings.Contains(err.Error(), tt.wantErr.Error()) {
+			if err != nil && err != tt.wantErr && !strings.Contains(err.Error(), tt.wantErr.Error()) {
 				t.Errorf("decodePubsubMessage() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}

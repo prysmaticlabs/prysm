@@ -11,7 +11,7 @@ import (
 
 // LastArchivedSlot from the db.
 func (s *Store) LastArchivedSlot(ctx context.Context) (types.Slot, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedSlot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedSlot")
 	defer span.End()
 	var index types.Slot
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -26,7 +26,7 @@ func (s *Store) LastArchivedSlot(ctx context.Context) (types.Slot, error) {
 
 // LastArchivedRoot from the db.
 func (s *Store) LastArchivedRoot(ctx context.Context) [32]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedRoot")
 	defer span.End()
 
 	var blockRoot []byte
@@ -44,7 +44,7 @@ func (s *Store) LastArchivedRoot(ctx context.Context) [32]byte {
 // ArchivedPointRoot returns the block root of an archived point from the DB.
 // This is essential for cold state management and to restore a cold state.
 func (s *Store) ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedPointRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.ArchivedPointRoot")
 	defer span.End()
 
 	var blockRoot []byte
@@ -61,7 +61,7 @@ func (s *Store) ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
 
 // HasArchivedPoint returns true if an archived point exists in DB.
 func (s *Store) HasArchivedPoint(ctx context.Context, slot types.Slot) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasArchivedPoint")
+	_, span := trace.StartSpan(ctx, "BeaconDB.HasArchivedPoint")
 	defer span.End()
 	var exists bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
