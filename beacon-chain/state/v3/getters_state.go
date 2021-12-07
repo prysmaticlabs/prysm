@@ -146,18 +146,8 @@ func (b *BeaconState) toProtoNoLock() interface{} {
 	}
 }
 
-// hasInnerState detects if the internal reference to the state data structure
-// is populated correctly. Returns false if nil.
-func (b *BeaconState) hasInnerState() bool {
-	// TODO: Remove this function entirely
-	return true
-}
-
 // StateRoots kept track of in the beacon state.
 func (b *BeaconState) StateRoots() *[8192][32]byte {
-	if !b.hasInnerState() {
-		return nil
-	}
 	if b.stateRoots == nil {
 		return nil
 	}
@@ -172,18 +162,12 @@ func (b *BeaconState) StateRoots() *[8192][32]byte {
 // stateRootsInternal kept track of in the beacon state.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) stateRootsInternal() *customtypes.BeaconStateRoots {
-	if !b.hasInnerState() {
-		return nil
-	}
 	return b.stateRoots
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
 // input index value.
 func (b *BeaconState) StateRootAtIndex(idx uint64) ([32]byte, error) {
-	if !b.hasInnerState() {
-		return [32]byte{}, ErrNilInnerState
-	}
 	if b.stateRoots == nil {
 		return [32]byte{}, nil
 	}
@@ -198,9 +182,6 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([32]byte, error) {
 // input index value.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
-	if !b.hasInnerState() {
-		return [32]byte{}, ErrNilInnerState
-	}
 	if uint64(len(b.stateRoots)) <= idx {
 		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}

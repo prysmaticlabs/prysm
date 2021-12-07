@@ -7,9 +7,6 @@ import (
 // SetPreviousParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -25,9 +22,6 @@ func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 // SetCurrentParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -43,9 +37,6 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 // AppendCurrentParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -67,9 +58,6 @@ func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 // AppendPreviousParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

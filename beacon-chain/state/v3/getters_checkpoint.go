@@ -10,9 +10,6 @@ import (
 
 // JustificationBits marking which epochs have been justified in the beacon chain.
 func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
-	if !b.hasInnerState() {
-		return nil
-	}
 	if b.justificationBits == nil {
 		return nil
 	}
@@ -26,9 +23,6 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 // justificationBitsInternal marking which epochs have been justified in the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) justificationBitsInternal() bitfield.Bitvector4 {
-	if !b.hasInnerState() {
-		return nil
-	}
 	if b.justificationBits == nil {
 		return nil
 	}
@@ -40,9 +34,6 @@ func (b *BeaconState) justificationBitsInternal() bitfield.Bitvector4 {
 
 // PreviousJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
-	if !b.hasInnerState() {
-		return nil
-	}
 	if b.previousJustifiedCheckpoint == nil {
 		return nil
 	}
@@ -56,18 +47,11 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 // previousJustifiedCheckpointInternal denoting an epoch and block root.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) previousJustifiedCheckpointInternal() *ethpb.Checkpoint {
-	if !b.hasInnerState() {
-		return nil
-	}
-
 	return ethpb.CopyCheckpoint(b.previousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
-	if !b.hasInnerState() {
-		return nil
-	}
 	if b.currentJustifiedCheckpoint == nil {
 		return nil
 	}
@@ -81,19 +65,12 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 // currentJustifiedCheckpointInternal denoting an epoch and block root.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) currentJustifiedCheckpointInternal() *ethpb.Checkpoint {
-	if !b.hasInnerState() {
-		return nil
-	}
-
 	return ethpb.CopyCheckpoint(b.currentJustifiedCheckpoint)
 }
 
 // MatchCurrentJustifiedCheckpoint returns true if input justified checkpoint matches
 // the current justified checkpoint in state.
 func (b *BeaconState) MatchCurrentJustifiedCheckpoint(c *ethpb.Checkpoint) bool {
-	if !b.hasInnerState() {
-		return false
-	}
 	if b.currentJustifiedCheckpoint == nil {
 		return false
 	}
@@ -107,9 +84,6 @@ func (b *BeaconState) MatchCurrentJustifiedCheckpoint(c *ethpb.Checkpoint) bool 
 // MatchPreviousJustifiedCheckpoint returns true if the input justified checkpoint matches
 // the previous justified checkpoint in state.
 func (b *BeaconState) MatchPreviousJustifiedCheckpoint(c *ethpb.Checkpoint) bool {
-	if !b.hasInnerState() {
-		return false
-	}
 	if b.previousJustifiedCheckpoint == nil {
 		return false
 	}
@@ -122,9 +96,6 @@ func (b *BeaconState) MatchPreviousJustifiedCheckpoint(c *ethpb.Checkpoint) bool
 
 // FinalizedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
-	if !b.hasInnerState() {
-		return nil
-	}
 	if b.finalizedCheckpoint == nil {
 		return nil
 	}
@@ -138,18 +109,11 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 // finalizedCheckpointInternal denoting an epoch and block root.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) finalizedCheckpointInternal() *ethpb.Checkpoint {
-	if !b.hasInnerState() {
-		return nil
-	}
-
 	return ethpb.CopyCheckpoint(b.finalizedCheckpoint)
 }
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
 func (b *BeaconState) FinalizedCheckpointEpoch() types.Epoch {
-	if !b.hasInnerState() {
-		return 0
-	}
 	if b.finalizedCheckpoint == nil {
 		return 0
 	}

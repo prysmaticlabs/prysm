@@ -6,9 +6,6 @@ import (
 
 // SetCurrentSyncCommittee for the beacon state.
 func (b *BeaconState) SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -19,9 +16,6 @@ func (b *BeaconState) SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error {
 
 // SetNextSyncCommittee for the beacon state.
 func (b *BeaconState) SetNextSyncCommittee(val *ethpb.SyncCommittee) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

@@ -171,10 +171,6 @@ func Initialize() (*BeaconState, error) {
 
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() state.BeaconState {
-	if !b.hasInnerState() {
-		return nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
