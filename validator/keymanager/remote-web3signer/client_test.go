@@ -21,7 +21,7 @@ var (
 )
 
 // Do is the mock client's `Do` func
-func (_ *mockClient) Do(req *http.Request) (*http.Response, error) {
+func (*mockClient) Do(req *http.Request) (*http.Response, error) {
 	return GetDoFunc(req)
 }
 

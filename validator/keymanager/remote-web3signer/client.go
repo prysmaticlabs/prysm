@@ -162,7 +162,7 @@ func (client *client) doRequest(httpMethod, fullPath string, body io.Reader) (*h
 }
 
 // unmarshalResponse is a utility method for unmarshalling responses.
-func (client *client) unmarshalResponse(responseBody io.ReadCloser, unmarshalledResponseObject interface{}) error {
+func (*client) unmarshalResponse(responseBody io.ReadCloser, unmarshalledResponseObject interface{}) error {
 	defer closeBody(responseBody)
 	if err := json.NewDecoder(responseBody).Decode(&unmarshalledResponseObject); err != nil {
 		return errors.Wrap(err, "invalid format, unable to read response body as array of strings")
