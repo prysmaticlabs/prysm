@@ -767,16 +767,6 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 }
 
 func TestService_ValidateDepositContainers(t *testing.T) {
-	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
-	require.NoError(t, err)
-
-	s1, err := NewService(context.Background(),
-		WithDatabase(beaconDB),
-		WithDepositCache(cache),
-	)
-	require.NoError(t, err)
-
 	var tt = []struct {
 		name        string
 		ctrsFunc    func() []*protodb.DepositContainer
