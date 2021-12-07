@@ -73,8 +73,10 @@ var beaconStateEpoch = fieldSpec{
 }
 
 type ConfigFork struct {
-	Config params.ConfigName
-	Fork   params.ForkName
+	ConfigName params.ConfigName
+	Fork       params.ForkName
+	Config *params.BeaconChainConfig
+	Version [4]byte
 	Epoch  types.Epoch
 }
 
@@ -93,15 +95,17 @@ func ConfigForkForState(marshaled []byte) (*ConfigFork, error) {
 func FindConfigFork(epoch types.Epoch, cv [4]byte) (*ConfigFork, error) {
 	cf := &ConfigFork{
 		Epoch: epoch,
+		Version: cv,
 	}
 	for name, cfg := range params.AllConfigs() {
 		genesis := bytesutil.ToBytes4(cfg.GenesisForkVersion)
 		altair := bytesutil.ToBytes4(cfg.AltairForkVersion)
 		merge := bytesutil.ToBytes4(cfg.MergeForkVersion)
-		for id := range cfg.ForkVersionSchedule {
-			if id == cv {
-				cf.Config = name
-				switch id {
+		for v := range cfg.ForkVersionSchedule {
+			if v == cv {
+				cf.ConfigName = name
+				cf.Config = cfg
+				switch v {
 				case genesis:
 					cf.Fork = params.ForkGenesis
 				case altair:

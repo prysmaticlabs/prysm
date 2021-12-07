@@ -23,6 +23,7 @@ func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Read
 	if err != nil {
 		return errors.Wrap(err, "could not read origin state bytes from reader")
 	}
+
 	cf, err := sniff.ConfigForkForState(sb)
 	if err != nil {
 		return errors.Wrap(err, "could not sniff config+fork for origin state bytes")
@@ -32,7 +33,7 @@ func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Read
 		return errors.Wrap(err, "failed to initialize origin state w/ bytes + config+fork")
 	}
 
-	bb, err := ioutil.ReadAll(stateReader)
+	bb, err := ioutil.ReadAll(blockReader)
 	if err != nil {
 		return errors.Wrap(err, "could not read origin block bytes from reader")
 	}

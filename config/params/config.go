@@ -2,6 +2,9 @@
 package params
 
 import (
+	"fmt"
+	"github.com/pkg/errors"
+	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -195,4 +198,46 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
 	// Set Altair fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
+}
+
+type ForkScheduleEntry struct {
+	Version [4]byte
+	Epoch types.Epoch
+}
+
+type OrderedForkSchedule []ForkScheduleEntry
+
+func (o OrderedForkSchedule) Len() int           { return len(o) }
+func (o OrderedForkSchedule) Swap(i, j int)      { o[i], o[j] = o[j], o[i] }
+func (o OrderedForkSchedule) Less(i, j int) bool { return o[i].Epoch < o[j].Epoch }
+
+
+var VersionForEpochNotFound = errors.New("could not find an entry in the ForkVersionSchedule")
+func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([4]byte, error) {
+	for i := range o {
+		// moving from lowest to highest, only consider epochs that start at or before the slot
+		if epoch < o[i].Epoch {
+			continue
+		}
+		// `i+1 == len(o)`: at last element, don't need to check if there is another fork schedule entry in between
+		// `o[i+1].Epoch > fse.Epoch`: next version's epoch is past the epoch in question, so `i` is correct
+		if i+1 == len(o) || epoch < o[i+1].Epoch {
+			return o[i].Version, nil
+		}
+	}
+	var nope [4]byte
+	return nope, errors.Wrap(VersionForEpochNotFound, fmt.Sprintf("no epoch in list <= %d", epoch))
+}
+
+func (b *BeaconChainConfig) OrderedForkSchedule() OrderedForkSchedule {
+	ofs := make(OrderedForkSchedule, 0)
+	for version, epoch := range b.ForkVersionSchedule {
+		fse := ForkScheduleEntry{
+			Version: version,
+			Epoch:   epoch,
+		}
+		ofs = append(ofs, fse)
+	}
+	sort.Sort(ofs)
+	return ofs
 }

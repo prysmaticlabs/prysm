@@ -37,10 +37,21 @@ func BlockForConfigFork(b []byte, cf *ConfigFork) (block.SignedBeaconBlock, erro
 	if err != nil {
 		return nil, err
 	}
+
+	// heuristic to make sure block is from the same version as the state
+	// based on the fork schedule for the Config detected from the state
+	// get the version that corresponds to the epoch the block is from according to the fork choice schedule
+	// and make sure that the version is the same one that was pulled from the state
 	epoch := slots.ToEpoch(slot)
-	if epoch != cf.Epoch {
-		return nil, fmt.Errorf("cannot sniff block schema, block (slot=%d, epoch=%d) is not from ConfigFork.Epoch=%d", slot, epoch, cf.Epoch)
+	fs := cf.Config.OrderedForkSchedule()
+	ver, err := fs.VersionForEpoch(epoch)
+	if err != nil {
+		return nil, err
 	}
+	if ver != cf.Version {
+		return nil, fmt.Errorf("cannot sniff block schema, block (slot=%d, epoch=%d) is on a different fork", slot, epoch)
+	}
+
 	switch cf.Fork {
 	case params.ForkGenesis:
 		blk := &v1alpha1.SignedBeaconBlock{}
