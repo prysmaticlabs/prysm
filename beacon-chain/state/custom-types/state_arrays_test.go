@@ -71,7 +71,7 @@ func TestByte32_SizeSSZ(t *testing.T) {
 
 func TestStateRoots_Casting(t *testing.T) {
 	var b [stateRootsSize][32]byte
-	d := StateRoots(b)
+	d := BeaconStateRoots(b)
 	if !reflect.DeepEqual([stateRootsSize][32]byte(d), b) {
 		t.Errorf("Unequal: %v = %v", d, b)
 	}
@@ -79,7 +79,7 @@ func TestStateRoots_Casting(t *testing.T) {
 
 func TestStateRoots_UnmarshalSSZ(t *testing.T) {
 	t.Run("Ok", func(t *testing.T) {
-		d := StateRoots{}
+		d := BeaconStateRoots{}
 		var b [stateRootsSize][32]byte
 		b[0] = [32]byte{'f', 'o', 'o'}
 		b[1] = [32]byte{'b', 'a', 'r'}
@@ -99,7 +99,7 @@ func TestStateRoots_UnmarshalSSZ(t *testing.T) {
 	})
 
 	t.Run("Wrong slice length", func(t *testing.T) {
-		d := StateRoots{}
+		d := BeaconStateRoots{}
 		var b [stateRootsSize][16]byte
 		b[0] = [16]byte{'f', 'o', 'o'}
 		b[1] = [16]byte{'b', 'a', 'r'}
@@ -117,7 +117,7 @@ func TestStateRoots_UnmarshalSSZ(t *testing.T) {
 }
 
 func TestStateRoots_MarshalSSZTo(t *testing.T) {
-	var d StateRoots
+	var d BeaconStateRoots
 	dst := []byte("foo")
 	b, err := d.MarshalSSZTo(dst)
 	if err != nil {
@@ -131,7 +131,7 @@ func TestStateRoots_MarshalSSZTo(t *testing.T) {
 }
 
 func TestStateRoots_MarshalSSZ(t *testing.T) {
-	d := StateRoots{}
+	d := BeaconStateRoots{}
 	d[0] = [32]byte{'f', 'o', 'o'}
 	d[1] = [32]byte{'b', 'a', 'r'}
 	b, err := d.MarshalSSZ()
@@ -147,7 +147,7 @@ func TestStateRoots_MarshalSSZ(t *testing.T) {
 }
 
 func TestStateRoots_SizeSSZ(t *testing.T) {
-	d := StateRoots{}
+	d := BeaconStateRoots{}
 	if d.SizeSSZ() != stateRootsSize*32 {
 		t.Errorf("Wrong SSZ size. Expected %v vs actual %v", stateRootsSize*32, d.SizeSSZ())
 	}

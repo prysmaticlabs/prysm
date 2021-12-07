@@ -11,9 +11,6 @@ import (
 // RotateAttestations sets the previous epoch attestations to the current epoch attestations and
 // then clears the current epoch attestations.
 func (b *BeaconState) RotateAttestations() error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -43,9 +40,6 @@ func (b *BeaconState) setCurrentEpochAttestations(val []*ethpb.PendingAttestatio
 // AppendCurrentEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -72,9 +66,6 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 // AppendPreviousEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

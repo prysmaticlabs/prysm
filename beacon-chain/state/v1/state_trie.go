@@ -43,11 +43,11 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 		return nil, errors.New("received nil state")
 	}
 
-	var bRoots customtypes.StateRoots
+	var bRoots customtypes.BeaconStateRoots
 	for i, r := range st.BlockRoots {
 		bRoots[i] = bytesutil.ToBytes32(r)
 	}
-	var sRoots customtypes.StateRoots
+	var sRoots customtypes.BeaconStateRoots
 	for i, r := range st.StateRoots {
 		sRoots[i] = bytesutil.ToBytes32(r)
 	}
@@ -121,8 +121,8 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 
 func Initialize() (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
-	sRoots := customtypes.StateRoots([8192][32]byte{})
-	bRoots := customtypes.StateRoots([8192][32]byte{})
+	sRoots := customtypes.BeaconStateRoots([8192][32]byte{})
+	bRoots := customtypes.BeaconStateRoots([8192][32]byte{})
 	mixes := customtypes.RandaoMixes([65536][32]byte{})
 	b := &BeaconState{
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
@@ -165,10 +165,6 @@ func Initialize() (*BeaconState, error) {
 
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() state.BeaconState {
-	if !b.hasInnerState() {
-		return nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount

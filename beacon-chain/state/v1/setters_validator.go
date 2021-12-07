@@ -11,9 +11,6 @@ import (
 // SetValidators for the beacon state. Updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -29,9 +26,6 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	v := b.validators
 	if ref := b.sharedFieldReferences[validators]; ref.Refs() > 1 {
@@ -65,9 +59,6 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 // UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethpb.Validator) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	if uint64(len(b.validators)) <= uint64(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -92,9 +83,6 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethp
 // SetBalances for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -110,9 +98,6 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 // UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	if uint64(len(b.balances)) <= uint64(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -136,9 +121,6 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64
 // SetSlashings for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetSlashings(val []uint64) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -153,9 +135,6 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 // UpdateSlashingsAtIndex for the beacon state. Updates the slashings
 // at a specific index to a new value.
 func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	if uint64(len(b.slashings)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -180,9 +159,6 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 // AppendValidator for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -207,9 +183,6 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 // AppendBalance for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendBalance(bal uint64) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

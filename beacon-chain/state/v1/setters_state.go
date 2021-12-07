@@ -9,16 +9,13 @@ import (
 // SetStateRoots for the beacon state. Updates the state roots
 // to a new value by overwriting the previous value.
 func (b *BeaconState) SetStateRoots(val *[8192][32]byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[stateRoots].MinusRef()
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 
-	roots := customtypes.StateRoots(*val)
+	roots := customtypes.BeaconStateRoots(*val)
 	b.stateRoots = &roots
 	b.markFieldAsDirty(stateRoots)
 	b.rebuildTrie[stateRoots] = true
@@ -28,10 +25,6 @@ func (b *BeaconState) SetStateRoots(val *[8192][32]byte) error {
 // UpdateStateRootAtIndex for the beacon state. Updates the state root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
-
 	b.lock.RLock()
 	if uint64(len(b.stateRoots)) <= idx {
 		b.lock.RUnlock()
