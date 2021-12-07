@@ -43,21 +43,21 @@ func (_ *MockHost) Mux() protocol.Switch {
 }
 
 // Connect --
-func (_ *MockHost) Connect(ctx context.Context, pi peer.AddrInfo) error {
+func (_ *MockHost) Connect(_ context.Context, _ peer.AddrInfo) error {
 	return nil
 }
 
 // SetStreamHandler --
-func (_ *MockHost) SetStreamHandler(pid protocol.ID, handler network.StreamHandler) {}
+func (_ *MockHost) SetStreamHandler(_ protocol.ID, _ network.StreamHandler) {}
 
 // SetStreamHandlerMatch --
 func (_ *MockHost) SetStreamHandlerMatch(protocol.ID, func(string) bool, network.StreamHandler) {}
 
 // RemoveStreamHandler --
-func (_ *MockHost) RemoveStreamHandler(pid protocol.ID) {}
+func (_ *MockHost) RemoveStreamHandler(_ protocol.ID) {}
 
 // NewStream --
-func (_ *MockHost) NewStream(ctx context.Context, p peer.ID, pids ...protocol.ID) (network.Stream, error) {
+func (_ *MockHost) NewStream(_ context.Context, _ peer.ID, _ ...protocol.ID) (network.Stream, error) {
 	return nil, nil
 }
 

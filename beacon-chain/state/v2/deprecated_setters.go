@@ -21,7 +21,7 @@ func (*BeaconState) AppendCurrentEpochAttestations(_ *ethpb.PendingAttestation) 
 }
 
 // AppendPreviousEpochAttestations is not supported for HF1 beacon state.
-func (*BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
+func (*BeaconState) AppendPreviousEpochAttestations(_ *ethpb.PendingAttestation) error {
 	return errors.New("AppendPreviousEpochAttestations is not supported for hard fork 1 beacon state")
 }
 
@@ -31,6 +31,6 @@ func (*BeaconState) RotateAttestations() error {
 }
 
 // SetLatestExecutionPayloadHeader is not supported for hard fork 1 beacon state.
-func (*BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
+func (*BeaconState) SetLatestExecutionPayloadHeader(_ *ethpb.ExecutionPayloadHeader) error {
 	return errors.New("SetLatestExecutionPayloadHeader is not supported for hard fork 1 beacon state")
 }
