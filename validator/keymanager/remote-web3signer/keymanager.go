@@ -28,9 +28,11 @@ func New(endpoint string) *Keymanager {
 
 func (k *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	panic("implement me")
+	//reload first then get public keys
 }
 
 func (k *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
+
 	// where we do we get this info?
 	forkData := &Fork{
 		PreviousVersion: "",

@@ -4,13 +4,19 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
+)
+
+const (
+	ethApiNamespace = "/api/v1/eth2/sign/"
+	maxTimeout      = 5 * time.Second
 )
 
 type HTTPClient interface {
@@ -25,11 +31,13 @@ type client struct {
 func newClient(endpoint string) (*client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Invalid Format, unable to parse url")
 	}
 	return &client{
-		BasePath:   u.Host,
-		restClient: &http.Client{},
+		BasePath: u.Host,
+		restClient: &http.Client{
+			Timeout: maxTimeout,
+		}, // add timeout
 	}, nil
 }
 
@@ -60,123 +68,115 @@ type signResponse struct {
 }
 
 func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, error) {
-	// need to think of way to address versioning here, can i get eth2 api namespace from somewhere?
-	requestPath := "/api/v1/eth2/sign/" + pubKey
+	requestPath := ethApiNamespace + pubKey
 
 	jsonRequest, err := json.Marshal(request)
 	if err != nil {
-		// return error
+		return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
 	}
-	req, err := http.NewRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(jsonRequest))
+	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(jsonRequest))
 	if err != nil {
-		// return error
+		return nil, err
 	}
-
-	resp, err := client.restClient.Do(req)
-	if err != nil {
-		fmt.Printf("error2: %d", err)
-	}
-
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-
-		}
-	}()
-
+	defer closeBody(resp.Body)
 	// is this how we are supposed to do it?
 	jsonDataFromHttp, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		//panic(err)
+		return nil, errors.Wrap(err, "Failed to read response body")
 	}
 
 	signResp := &signResponse{}
 	if err := json.Unmarshal(jsonDataFromHttp, signResp); err != nil {
-		return nil, errors.Wrap(err, "???")
+		return nil, errors.Wrap(err, "Invalid Format, failed to unmarshal json response")
 	}
 
-	decoded, err := hex.DecodeString(strings.TrimPrefix(signResp.Signature, "0x"))
+	decoded, err := decodeHex(signResp.Signature)
 	if err != nil {
-		//panic(err)
+		return nil, err
 	}
 
 	blsSig, err := bls.SignatureFromBytes([]byte(decoded))
 	if err != nil {
-		//panic(err)
+		return nil, err
 	}
-
 	return blsSig, nil
 }
 
-func (client *client) GetPublicKeys() ([]string, error) {
+func (client *client) GetPublicKeys() ([][]byte, error) {
 	const requestPath = "/publicKeys"
-	req, err := http.NewRequest(http.MethodGet, client.BasePath+requestPath, nil)
+	resp, err := client.doRequest(http.MethodGet, client.BasePath+requestPath, nil)
 	if err != nil {
-		fmt.Printf(" error1:  %d", err)
-
+		return nil, err
 	}
-
-	resp, err := client.restClient.Do(req)
-	if err != nil {
-		fmt.Printf("error2: %d", err)
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-
-		}
-	}()
+	defer closeBody(resp.Body)
 	var publicKeys []string
 	if err := json.NewDecoder(resp.Body).Decode(&publicKeys); err != nil {
-		return nil, errors.Wrap(err, "??")
+		return nil, errors.Wrap(err, "Invalid Format, unable to read response body as array of strings")
 	}
+	decodedKeys := make([][]byte, len(publicKeys))
+	var errorMessage string
 	for i, value := range publicKeys {
-		// does this need to be in bytes?
-		publicKeys[i] = strings.TrimPrefix("0x", value)
+		decodedKey, err := decodeHex(value)
+		if err != nil {
+			if errorMessage == "" {
+				errorMessage = "Failed to decode from Hex from the following public keys: "
+			}
+			errorMessage += value + " "
+			continue
+		}
+		decodedKeys[i] = decodedKey[:]
 	}
-	return publicKeys, nil
+	if errorMessage != "" {
+		return nil, errors.New(errorMessage)
+	}
+	return decodedKeys, nil
 }
 
 func (client *client) ReloadSignerKeys() error {
 	const requestPath = "/reload"
-	req, err := http.NewRequest(http.MethodPost, client.BasePath+requestPath, nil)
+	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, nil)
 	if err != nil {
-		fmt.Printf(" error1:  %d", err)
 		return err
 	}
-	resp, err := client.restClient.Do(req)
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-
-		}
-	}()
-	if err != nil {
-		fmt.Printf("error2: %d", err)
-		return err
-	}
-
+	defer closeBody(resp.Body)
 	return nil
 }
 
 func (client *client) GetServerStatus() (string, error) {
 	const requestPath = "/upcheck"
-	req, err := http.NewRequest(http.MethodGet, client.BasePath+requestPath, nil)
+	resp, err := client.doRequest(http.MethodGet, client.BasePath+requestPath, nil)
 	if err != nil {
-		fmt.Printf(" error1:  %d", err)
-		// handling empty? what's the best way to do this?
 		return "", err
+	}
+	defer closeBody(resp.Body)
+	var status string
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return "", errors.Wrap(err, "Invalid Format, unable to read response body as a string")
+	}
+	return status, nil
+}
+
+func (client *client) doRequest(httpMethod string, fullPath string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(httpMethod, fullPath, body)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid format, failed to create new Post Request Object")
 	}
 	resp, err := client.restClient.Do(req)
 	if err != nil {
-		fmt.Printf("error2: %d", err)
-		return "", err
+		return nil, errors.Wrap(err, "Failed to execute json request")
 	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
+	return resp, nil
+}
 
-		}
-	}()
-	var status string
-	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-		return "", errors.Wrap(err, "??")
+func decodeHex(signature string) ([]byte, error) {
+	decoded, err := hex.DecodeString(strings.TrimPrefix(signature, "0x"))
+	if err != nil {
+		return nil, errors.Wrap(err, "Invalid Format, failed to unmarshal json response")
 	}
-	return status, nil
+	return decoded, nil
+}
+func closeBody(body io.ReadCloser) {
+	if err := body.Close(); err != nil {
+		log.Errorf("Could not close response body: %v", err)
+	}
 }

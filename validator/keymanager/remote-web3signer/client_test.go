@@ -60,7 +60,8 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 }
 
 func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
-	json := `["example","example2"]`
+	// public keys are returned hex encoded with 0x
+	json := `["0x613262356161616439633665666566653762623962313234336130343334303466333336323933376366623662333138333339323938333331373366343736363330656132636665623064396464663135663937636138363835393438383230","0x613262356161616439633665666566653762623962313234336130343334303466333336323933376366623662333138333339323938333331373366343736363330656132636665623064396464663135663937636138363835393438383230"]`
 	// create a new reader with that JSON
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
 	GetDoFunc = func(*http.Request) (*http.Response, error) {
@@ -73,7 +74,8 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	resp, err := cl.GetPublicKeys()
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
-	assert.EqualValues(t, "example", resp[0])
+	// we would like them as 48byte base64 without 0x
+	assert.EqualValues(t, "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", string(resp[0]))
 }
 
 func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
@@ -101,5 +103,4 @@ func TestClient_GetServerStatus_HappyPath(t *testing.T) {
 	resp, err := cl.GetServerStatus()
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
-
 }
