@@ -216,10 +216,14 @@ func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, curre
 	if err != nil {
 		return errors.Wrap(err, "Could not prune proposals")
 	}
-	log.WithFields(logrus.Fields{
-		"prunedAttestationRecords": numPrunedAtts,
-		"prunedProposalRecords":    numPrunedProposals,
-		"elapsed":                  time.Since(start),
-	}).Info("Successfully ran slasher data pruning")
+	fields := logrus.Fields{}
+	if numPrunedAtts > 0 {
+		fields["numPrunedAtts"] = numPrunedAtts
+	}
+	if numPrunedProposals > 0 {
+		fields["numPrunedProposals"] = numPrunedProposals
+	}
+	fields["elapsed"] = time.Since(start)
+	log.WithFields(fields).Info("Done pruning old attestations and proposals for slasher")
 	return nil
 }
