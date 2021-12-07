@@ -32,6 +32,7 @@ type client struct {
 }
 
 // newClient method instantiates a new client object.
+//nolint:golint,unused
 func newClient(endpoint string) (*client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
