@@ -27,7 +27,7 @@ type stateRequest struct {
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
 func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.GenesisResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetGenesis")
+	_, span := trace.StartSpan(ctx, "beacon.GetGenesis")
 	defer span.End()
 
 	genesisTime := bs.GenesisTimeFetcher.GenesisTime()

@@ -303,7 +303,7 @@ func (s *Service) Started() bool {
 }
 
 // Encoding returns the configured networking encoding.
-func (s *Service) Encoding() encoder.NetworkEncoding {
+func (_ *Service) Encoding() encoder.NetworkEncoding {
 	return &encoder.SszNetworkEncoder{}
 }
 

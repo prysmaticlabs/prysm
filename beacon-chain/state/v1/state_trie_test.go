@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -253,7 +252,7 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 	st1 := st0.Copy()
 	originalCount := st1.NumValidators()
 
-	val := &eth.Validator{Slashed: true}
+	val := &ethpb.Validator{Slashed: true}
 	assert.NoError(t, st0.AppendValidator(val))
 	assert.Equal(t, originalCount, st1.NumValidators(), "st1 NumValidators mutated")
 	_, ok := st1.ValidatorIndexByPubkey(bytesutil.ToBytes48(val.PublicKey))

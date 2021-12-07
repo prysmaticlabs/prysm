@@ -10,8 +10,7 @@ import (
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
-	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	notifiermock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -137,7 +136,7 @@ func TestListPoolAttestations(t *testing.T) {
 		Signature: bytesutil.PadTo([]byte("signature2"), 96),
 	}
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
 		AttestationsPool: attestations.NewPool(),
 	}
 	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]*ethpbv1alpha1.Attestation{att1, att2, att3}))
@@ -270,7 +269,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 	}
 
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
 		SlashingsPool:    &slashings.PoolMock{PendingAttSlashings: []*ethpbv1alpha1.AttesterSlashing{slashing1, slashing2}},
 	}
 
@@ -330,7 +329,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 	}
 
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
 		SlashingsPool:    &slashings.PoolMock{PendingPropSlashings: []*ethpbv1alpha1.ProposerSlashing{slashing1, slashing2}},
 	}
 
@@ -360,7 +359,7 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 	}
 
 	s := &Server{
-		ChainInfoFetcher:   &chainMock.ChainService{State: state},
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: state},
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{Exits: []*ethpbv1alpha1.SignedVoluntaryExit{exit1, exit2}},
 	}
 
@@ -432,7 +431,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
 		SlashingsPool:    &slashings.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
@@ -475,7 +474,7 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
 		SlashingsPool:    &slashings.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
@@ -539,7 +538,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
 		SlashingsPool:    &slashings.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
@@ -575,7 +574,7 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &chainMock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
 		SlashingsPool:    &slashings.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
@@ -618,7 +617,7 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher:   &chainMock.ChainService{State: state},
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: state},
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
@@ -656,7 +655,7 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher:   &chainMock.ChainService{State: state},
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: state},
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
@@ -691,7 +690,7 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher:   &chainMock.ChainService{State: state},
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: state},
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
@@ -778,13 +777,13 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
-	chainService := &chainMock.ChainService{State: state}
+	chainService := &blockchainmock.ChainService{State: state}
 	s := &Server{
 		HeadFetcher:       chainService,
 		ChainInfoFetcher:  chainService,
 		AttestationsPool:  attestations.NewPool(),
 		Broadcaster:       broadcaster,
-		OperationNotifier: &notifiermock.MockOperationNotifier{},
+		OperationNotifier: &blockchainmock.MockOperationNotifier{},
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpbv1.SubmitAttestationsRequest{
@@ -884,13 +883,13 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	attValid.Signature = sig.Marshal()
 
 	broadcaster := &p2pMock.MockBroadcaster{}
-	chainService := &chainMock.ChainService{State: state}
+	chainService := &blockchainmock.ChainService{State: state}
 	s := &Server{
 		HeadFetcher:       chainService,
 		ChainInfoFetcher:  chainService,
 		AttestationsPool:  attestations.NewPool(),
 		Broadcaster:       broadcaster,
-		OperationNotifier: &notifiermock.MockOperationNotifier{},
+		OperationNotifier: &blockchainmock.MockOperationNotifier{},
 	}
 
 	_, err = s.SubmitAttestations(ctx, &ethpbv1.SubmitAttestationsRequest{
@@ -955,13 +954,13 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 		Signature: nil,
 	}
 
-	chain := &chainMock.ChainService{State: state}
+	chain := &blockchainmock.ChainService{State: state}
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher:  chain,
 		AttestationsPool:  attestations.NewPool(),
 		Broadcaster:       broadcaster,
-		OperationNotifier: &notifiermock.MockOperationNotifier{},
+		OperationNotifier: &blockchainmock.MockOperationNotifier{},
 		HeadFetcher:       chain,
 	}
 

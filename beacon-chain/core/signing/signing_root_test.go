@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -51,7 +50,7 @@ func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 	tests := []struct {
 		name       string
 		genState   func(t *testing.T) (state.BeaconState, []bls.SecretKey)
-		genBlock   func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock
+		genBlock   func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *ethpb.SignedBeaconBlock
 		domainType [4]byte
 		want       []byte
 	}{
@@ -62,7 +61,7 @@ func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 				require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 				return beaconState, privKeys
 			},
-			genBlock: func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *eth.SignedBeaconBlock {
+			genBlock: func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *ethpb.SignedBeaconBlock {
 				block, err := util.GenerateFullBlock(st, keys, nil, 1)
 				require.NoError(t, err)
 				return block

@@ -173,7 +173,9 @@ type BeaconChainConfig struct {
 	// Note: We do not override previous configuration values but instead creates new values and replaces usage throughout.
 	InactivityPenaltyQuotientAltair      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_ALTAIR" spec:"true"`      // InactivityPenaltyQuotientAltair for penalties during inactivity post Altair hard fork.
 	MinSlashingPenaltyQuotientAltair     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR" spec:"true"`    // MinSlashingPenaltyQuotientAltair for slashing penalties post Altair hard fork.
-	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties multiplier post Alair hard fork.
+	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties' multiplier post Alair hard fork.
+	MinSlashingPenaltyQuotientMerge      uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE" spec:"true"`     // MinSlashingPenaltyQuotientMerge for slashing penalties post Merge hard fork.
+	ProportionalSlashingMultiplierMerge  uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE" spec:"true"`  // ProportionalSlashingMultiplierMerge for slashing penalties' multiplier post Merge hard fork.
 
 	// Light client
 	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.

@@ -13,7 +13,7 @@ func EnableHTTPEthAPI(httpModules string) bool {
 	return enableAPI(httpModules, EthAPIModule)
 }
 
-func enableAPI(httpModules string, api string) bool {
+func enableAPI(httpModules, api string) bool {
 	for _, m := range strings.Split(httpModules, ",") {
 		if strings.EqualFold(m, api) {
 			return true

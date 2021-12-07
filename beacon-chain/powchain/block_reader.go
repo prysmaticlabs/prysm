@@ -47,7 +47,7 @@ func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big
 
 // BlockExistsWithCache returns true if the block exists in cache, its height and any possible error encountered.
 func (s *Service) BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExistsWithCache")
+	_, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExistsWithCache")
 	defer span.End()
 	if exists, hdrInfo, err := s.headerCache.HeaderInfoByHash(hash); exists || err != nil {
 		if err != nil {
