@@ -8,12 +8,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -103,6 +105,40 @@ func (r *testRunner) run() {
 		return nil
 	})
 
+	binaryPath, found := bazel.FindBinary("external/lighthouse", "lighthouse")
+	if !found {
+		log.Info(binaryPath)
+		log.Error("beacon chain binary not found")
+	}
+	cmd := exec.CommandContext(ctx, binaryPath, "beacon-node --help") /* #nosec G204 */
+	// Write stdout and stderr to log files.
+	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("beacon_node_%d_stdout.log", 100)))
+	if err != nil {
+		log.Error(err)
+	}
+	e2e.TestParams.TestPath
+	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("beacon_node_%d_stderr.log", 100)))
+	if err != nil {
+		log.Error(err)
+	}
+	defer func() {
+		if err := stdout.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stdout file")
+		}
+		if err := stderr.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stderr file")
+		}
+	}()
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	err = cmd.Start()
+	if err != nil {
+		log.Error(err)
+	}
+	defer func() {
+		err = cmd.Wait()
+		_ = err
+	}()
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {

@@ -66,8 +66,7 @@ func newConfig(ctx *cli.Context) *Flags {
 	}
 	if ctx.Bool(E2EConfigFlag.Name) {
 		log.Warn("Using end-to-end testing config")
-		cfg.MinimalConfig = true
-		params.UseE2EConfig()
+		params.UseE2EMainnetConfig()
 	}
 	return cfg
 }
