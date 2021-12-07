@@ -71,6 +71,7 @@ go_test(
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/core/transition/stateutils:go_default_library",
+        "//beacon-chain/state/custom-types:go_default_library",
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/eth/v1:go_default_library",
