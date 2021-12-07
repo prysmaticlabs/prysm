@@ -178,11 +178,8 @@ func decodeHex(signature string) ([]byte, error) {
 	}
 	return decoded, nil
 }
-<<<<<<< HEAD
-====== =
 
 // closeBody a utility method to wrap an error for closing
->>>>>>> 864a91c20 (addressing review comments)
 func closeBody(body io.Closer) {
 	if err := body.Close(); err != nil {
 		log.Errorf("could not close response body: %v", err)
