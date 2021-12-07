@@ -533,17 +533,21 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		Patterns:      []string{"/accounts/", "/v2/", "/internal/eth/v1/"},
 		Mux:           gwmux,
 	}
-
-	gw := gateway.New(
-		cliCtx.Context,
-		[]*gateway.PbMux{pbHandler},
-		muxHandler,
-		rpcAddr,
-		gatewayAddress,
-	).WithAllowedOrigins(allowedOrigins).
-		WithMaxCallRecvMsgSize(maxCallSize).
-		WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{})
-
+	opts := []gateway.Option{
+		gateway.WithRemoteAddr(rpcAddr),
+		gateway.WithGatewayAddr(gatewayAddress),
+		gateway.WithMaxCallRecvMsgSize(maxCallSize),
+		gateway.WithMuxHandler(muxHandler),
+		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
+		gateway.WithAllowedOrigins(allowedOrigins),
+	}
+	if features.Get().EnableKeymanagerApi {
+		opts = append(opts, gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}))
+	}
+	gw, err := gateway.New(cliCtx.Context, opts...)
+	if err != nil {
+		return err
+	}
 	return c.services.RegisterService(gw)
 }
 
