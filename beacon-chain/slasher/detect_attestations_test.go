@@ -3,7 +3,6 @@ package slasher
 import (
 	"context"
 	"fmt"
-	"sort"
 	"testing"
 	"time"
 
@@ -241,9 +240,10 @@ func Test_processQueuedAttestations(t *testing.T) {
 					AttestationStateFetcher: mockChain,
 					SlashingPoolInserter:    &slashings.PoolMock{},
 				},
-				params:      DefaultParams(),
-				attsQueue:   newAttestationsQueue(),
-				genesisTime: genesisTime,
+				params:                         DefaultParams(),
+				attsQueue:                      newAttestationsQueue(),
+				genesisTime:                    genesisTime,
+				latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 			}
 			currentSlotChan := make(chan types.Slot)
 			exitChan := make(chan struct{})
@@ -299,9 +299,10 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 			AttestationStateFetcher: mockChain,
 			SlashingPoolInserter:    &slashings.PoolMock{},
 		},
-		params:      slasherParams,
-		attsQueue:   newAttestationsQueue(),
-		genesisTime: genesisTime,
+		params:                         slasherParams,
+		attsQueue:                      newAttestationsQueue(),
+		genesisTime:                    genesisTime,
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -365,9 +366,10 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 			AttestationStateFetcher: mockChain,
 			SlashingPoolInserter:    &slashings.PoolMock{},
 		},
-		params:      slasherParams,
-		attsQueue:   newAttestationsQueue(),
-		genesisTime: genesisTime,
+		params:                         slasherParams,
+		attsQueue:                      newAttestationsQueue(),
+		genesisTime:                    genesisTime,
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	currentSlotChan := make(chan types.Slot)
 	exitChan := make(chan struct{})
@@ -397,9 +399,9 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Could not detect")
 }
 
-func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing.T) {
-	slasherDB := dbtest.SetupSlasherDB(t)
+func Test_epochUpdateForValidators(t *testing.T) {
 	ctx := context.Background()
+	slasherDB := dbtest.SetupSlasherDB(t)
 
 	// Check if the chunk at chunk index already exists in-memory.
 	s := &Service{
@@ -408,71 +410,67 @@ func Test_determineChunksToUpdateForValidators_FromLatestWrittenEpoch(t *testing
 			validatorChunkSize: 2, // 2 validators in a chunk.
 			historyLength:      4,
 		},
-		serviceCfg: &ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
-		},
+		serviceCfg:                     &ServiceConfig{Database: slasherDB},
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
-	validators := []types.ValidatorIndex{
-		1, 2,
-	}
-	currentEpoch := types.Epoch(3)
 
-	// Set the latest written epoch for validators to current epoch - 1.
-	latestWrittenEpoch := currentEpoch - 1
-	err := slasherDB.SaveLastEpochWrittenForValidators(ctx, validators, latestWrittenEpoch)
-	require.NoError(t, err)
+	t.Run("no update if no latest written epoch", func(t *testing.T) {
+		validators := []types.ValidatorIndex{
+			1, 2,
+		}
+		currentEpoch := types.Epoch(3)
+		// No last written epoch for both validators.
+		s.latestEpochWrittenForValidator = map[types.ValidatorIndex]types.Epoch{}
 
-	// Because the validators have no recorded latest epoch written in the database,
-	// Because the latest written epoch for the input validators is == 2, we expect
-	// that we will update all epochs from 2 up to 3 (the current epoch). This is all
-	// safe contained in chunk index 1.
-	chunkIndices, err := s.determineChunksToUpdateForValidators(
-		ctx,
-		&chunkUpdateArgs{
-			currentEpoch: currentEpoch,
-		},
-		validators,
-	)
-	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{1}, chunkIndices)
-}
-
-func Test_determineChunksToUpdateForValidators_FromGenesis(t *testing.T) {
-	slasherDB := dbtest.SetupSlasherDB(t)
-	ctx := context.Background()
-
-	// Check if the chunk at chunk index already exists in-memory.
-	s := &Service{
-		params: &Parameters{
-			chunkSize:          2, // 2 epochs in a chunk.
-			validatorChunkSize: 2, // 2 validators in a chunk.
-			historyLength:      4,
-		},
-		serviceCfg: &ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
-		},
-	}
-	validators := []types.ValidatorIndex{
-		1, 2,
-	}
-	// Because the validators have no recorded latest epoch written in the database,
-	// we expect that we will update all epochs from genesis up to the current epoch.
-	// Given the chunk size is 2 epochs per chunk, updating with current epoch == 3
-	// will mean that we should be updating from epoch 0 to 3, meaning chunk indices 0 and 1.
-	chunkIndices, err := s.determineChunksToUpdateForValidators(
-		ctx,
-		&chunkUpdateArgs{
-			currentEpoch: 3,
-		},
-		validators,
-	)
-	require.NoError(t, err)
-	sort.Slice(chunkIndices, func(i, j int) bool {
-		return chunkIndices[i] < chunkIndices[j]
+		// Because the validators have no recorded latest epoch written, we expect
+		// no chunks to be loaded nor updated to.
+		updatedChunks := make(map[uint64]Chunker)
+		for _, valIdx := range validators {
+			err := s.epochUpdateForValidator(
+				ctx,
+				&chunkUpdateArgs{
+					currentEpoch: currentEpoch,
+				},
+				updatedChunks,
+				valIdx,
+			)
+			require.NoError(t, err)
+		}
+		require.Equal(t, 0, len(updatedChunks))
 	})
-	require.DeepEqual(t, []uint64{0, 1}, chunkIndices)
+
+	t.Run("update from latest written epoch", func(t *testing.T) {
+		validators := []types.ValidatorIndex{
+			1, 2,
+		}
+		currentEpoch := types.Epoch(3)
+
+		// Set the latest written epoch for validators to current epoch - 1.
+		latestWrittenEpoch := currentEpoch - 1
+		s.latestEpochWrittenForValidator = map[types.ValidatorIndex]types.Epoch{
+			1: latestWrittenEpoch,
+			2: latestWrittenEpoch,
+		}
+
+		// Because the latest written epoch for the input validators is == 2, we expect
+		// that we will update all epochs from 2 up to 3 (the current epoch). This is all
+		// safe contained in chunk index 1.
+		updatedChunks := make(map[uint64]Chunker)
+		for _, valIdx := range validators {
+			err := s.epochUpdateForValidator(
+				ctx,
+				&chunkUpdateArgs{
+					currentEpoch: currentEpoch,
+				},
+				updatedChunks,
+				valIdx,
+			)
+			require.NoError(t, err)
+		}
+		require.Equal(t, 1, len(updatedChunks))
+		_, ok := updatedChunks[1]
+		require.Equal(t, true, ok)
+	})
 }
 
 func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
@@ -485,6 +483,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	// We initialize an empty chunks slice.
 	chunk := EmptyMinSpanChunksSlice(params)
@@ -545,6 +544,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
 		},
+		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	// We initialize an empty chunks slice.
 	chunk := EmptyMaxSpanChunksSlice(params)
@@ -796,7 +796,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	tickerChan <- 1
 	cancel()
 	<-exitChan
-	assert.LogsContain(t, hook, "New slot, processing queued")
+	assert.LogsContain(t, hook, "Processing queued")
 }
 
 func BenchmarkCheckSlashableAttestations(b *testing.B) {
@@ -885,7 +885,8 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators u
 		genesisTime := time.Now().Add(-time.Second * time.Duration(totalSeconds))
 		s.genesisTime = genesisTime
 
-		_, err := s.checkSlashableAttestations(context.Background(), atts)
+		epoch := slots.EpochsSinceGenesis(genesisTime)
+		_, err := s.checkSlashableAttestations(context.Background(), epoch, atts)
 		require.NoError(b, err)
 	}
 }
