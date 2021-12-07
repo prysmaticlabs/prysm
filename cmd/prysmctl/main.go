@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/prysmaticlabs/prysm/cmd/prysmctl/get"
+	"github.com/prysmaticlabs/prysm/cmd/prysmctl/ssz"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -26,4 +27,5 @@ func main() {
 func init() {
 	prysmctlCommands = append(prysmctlCommands, checkpoint.Commands...)
 	prysmctlCommands = append(prysmctlCommands, get.Commands...)
+	prysmctlCommands = append(prysmctlCommands, ssz.Commands...)
 }

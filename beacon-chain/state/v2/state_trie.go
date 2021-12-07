@@ -2,8 +2,6 @@ package v2
 
 import (
 	"context"
-	"io"
-	"io/ioutil"
 	"runtime"
 	"sort"
 
@@ -35,17 +33,6 @@ var (
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
-}
-
-// InitializeFromSSZReader can be used when the source for a serialized BeaconState object
-// is an io.Reader. This allows client code to remain agnostic about whether the data comes
-// from the network or a file without needing to read the entire state into mem as a large byte slice.
-func InitializeFromSSZReader(r io.Reader) (*BeaconState, error) {
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	return InitializeFromSSZBytes(b)
 }
 
 // InitializeFromSSZBytes is a convenience method to obtain a BeaconState by unmarshaling
