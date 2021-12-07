@@ -183,10 +183,7 @@ func handlePostRequestForEndpoint(endpoint *Endpoint, w http.ResponseWriter, req
 	if errJson := ProcessRequestContainerFields(endpoint.PostRequest); errJson != nil {
 		return errJson
 	}
-	if errJson := SetRequestBodyToRequestContainer(endpoint.PostRequest, req); errJson != nil {
-		return errJson
-	}
-	return nil
+	return SetRequestBodyToRequestContainer(endpoint.PostRequest, req)
 }
 
 func handleDeleteRequestForEndpoint(endpoint *Endpoint, req *http.Request) ErrorJson {
@@ -196,10 +193,7 @@ func handleDeleteRequestForEndpoint(endpoint *Endpoint, req *http.Request) Error
 	if errJson := ProcessRequestContainerFields(endpoint.DeleteRequest); errJson != nil {
 		return errJson
 	}
-	if errJson := SetRequestBodyToRequestContainer(endpoint.DeleteRequest, req); errJson != nil {
-		return errJson
-	}
-	return nil
+	return SetRequestBodyToRequestContainer(endpoint.DeleteRequest, req)
 }
 
 func deserializeRequestBodyIntoContainerWrapped(endpoint *Endpoint, req *http.Request, w http.ResponseWriter) ErrorJson {

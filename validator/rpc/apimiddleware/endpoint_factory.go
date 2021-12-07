@@ -14,14 +14,14 @@ func (f *ValidatorEndpointFactory) IsNil() bool {
 }
 
 // Paths is a collection of all valid validator API paths.
-func (f *ValidatorEndpointFactory) Paths() []string {
+func (*ValidatorEndpointFactory) Paths() []string {
 	return []string{
 		"/eth/v1/keystores",
 	}
 }
 
 // Create returns a new endpoint for the provided API path.
-func (f *ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, error) {
+func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, error) {
 	endpoint := apimiddleware.DefaultEndpoint()
 	switch path {
 	case "/eth/v1/keystores":
@@ -33,7 +33,6 @@ func (f *ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint,
 	default:
 		return nil, errors.New("invalid path")
 	}
-
 	endpoint.Path = path
 	return &endpoint, nil
 }
