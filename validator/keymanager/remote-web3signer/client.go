@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,15 +20,18 @@ const (
 	maxTimeout      = 3 * time.Second
 )
 
+// HTTPClient defines interface for easier testing and mocks.
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// client a wrapper object around web3signer APIs. API docs found here https://consensys.github.io/web3signer/web3signer-eth2.html.
 type client struct {
 	BasePath   string
 	restClient HTTPClient
 }
 
+// newClient method instantiates a new client object.
 func newClient(endpoint string) (*client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -42,32 +45,38 @@ func newClient(endpoint string) (*client, error) {
 	}, nil
 }
 
+// SignRequest is a request object for web3signer sign api.
 type SignRequest struct {
-	Type         string        `json:"type"`
-	ForkInfo     *ForkInfo     `json:"fork_info"`
-	SigningRoot  string        `json:"signingRoot"`
-	RandaoReveal *RandaoReveal `json:"randao_reveal"`
+	Type            string           `json:"type"`
+	ForkInfo        *ForkInfo        `json:"fork_info"`
+	SigningRoot     string           `json:"signingRoot"`
+	AggregationSlot *AggregationSlot `json:"aggregation_slot"`
 }
 
+// ForkInfo a sub property object of the Sign request,in the future before the merge to remove the need to send the entire block body and just use the block_body_root.
 type ForkInfo struct {
 	Fork                  *Fork  `json:"fork"`
 	GenesisValidatorsRoot string `json:"genesis_validators_root"`
 }
 
+// Fork a sub property of ForkInfo.
 type Fork struct {
 	PreviousVersion string `json:"previous_version"`
 	CurrentVersion  string `json:"current_version"`
 	Epoch           string `json:"epoch"`
 }
 
-type RandaoReveal struct {
-	Epoch string `json:"epoch"`
+// AggregationSlot a sub property of SignRequest.
+type AggregationSlot struct {
+	Slot string `json:"slot"`
 }
 
+// signResponse the response object of the web3signer sign api.
 type signResponse struct {
 	Signature string `json:"signature"`
 }
 
+// Sign is a wrapper method around the web3signer sign api.
 func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, error) {
 	requestPath := ethApiNamespace + pubKey
 	jsonRequest, err := json.Marshal(request)
@@ -78,81 +87,69 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 	if err != nil {
 		return nil, err
 	}
-	defer closeBody(resp.Body)
-	jsonDataFromHttp, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read response body")
-	}
 	signResp := &signResponse{}
-	if err := json.Unmarshal(jsonDataFromHttp, signResp); err != nil {
-		return nil, errors.Wrap(err, "invalid format, failed to unmarshal json response")
+	if err := client.unmarshalResponse(resp.Body, &signResp); err != nil {
+		return nil, err
 	}
 	decoded, err := decodeHex(signResp.Signature)
 	if err != nil {
 		return nil, err
 	}
-	blsSig, err := bls.SignatureFromBytes([]byte(decoded))
-	if err != nil {
-		return nil, err
-	}
-	return blsSig, nil
+	return bls.SignatureFromBytes(decoded)
 }
 
+// GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
 func (client *client) GetPublicKeys() ([][]byte, error) {
 	const requestPath = "/publicKeys"
 	resp, err := client.doRequest(http.MethodGet, client.BasePath+requestPath, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer closeBody(resp.Body)
 	var publicKeys []string
-	if err := json.NewDecoder(resp.Body).Decode(&publicKeys); err != nil {
-		return nil, errors.Wrap(err, "invalid format, unable to read response body as array of strings")
+	if err := client.unmarshalResponse(resp.Body, &publicKeys); err != nil {
+		return nil, err
 	}
 	decodedKeys := make([][]byte, len(publicKeys))
-	var errorMessage string
+	var errorKeyPositions string
 	for i, value := range publicKeys {
 		decodedKey, err := decodeHex(value)
 		if err != nil {
-			if errorMessage == "" {
-				errorMessage = "failed to decode from Hex from the following public keys: "
-			}
-			errorMessage += value + " "
+			errorKeyPositions += fmt.Sprintf("%v, ", i)
 			continue
 		}
-		decodedKeys[i] = decodedKey[:]
+		decodedKeys[i] = decodedKey
 	}
-	if errorMessage != "" {
-		return nil, errors.New(errorMessage)
+	if errorKeyPositions != "" {
+		return nil, errors.New("failed to decode from Hex from the following public key index locations: " + errorKeyPositions)
 	}
 	return decodedKeys, nil
 }
 
+// ReloadSignerKeys is a wrapper method around the web3signer reload api.
 func (client *client) ReloadSignerKeys() error {
 	const requestPath = "/reload"
-	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, nil)
-	if err != nil {
+	if _, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, nil); err != nil {
 		return err
 	}
-	defer closeBody(resp.Body)
 	return nil
 }
 
+// GetServerStatus is a wrapper method around the web3signer upcheck api
 func (client *client) GetServerStatus() (string, error) {
 	const requestPath = "/upcheck"
 	resp, err := client.doRequest(http.MethodGet, client.BasePath+requestPath, nil)
 	if err != nil {
 		return "", err
 	}
-	defer closeBody(resp.Body)
 	var status string
-	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-		return "", errors.Wrap(err, "invalid format, unable to read response body as a string")
+	if err := client.unmarshalResponse(resp.Body, &status); err != nil {
+		return "", err
 	}
 	return status, nil
 }
 
-func (client *client) doRequest(httpMethod string, fullPath string, body io.Reader) (*http.Response, error) {
+// doRequest is a utility method for requests.
+func (client *client) doRequest(httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest(httpMethod, fullPath, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, failed to create new Post Request Object")
@@ -164,6 +161,16 @@ func (client *client) doRequest(httpMethod string, fullPath string, body io.Read
 	return resp, nil
 }
 
+// unmarshalResponse is a utility method for unmarshalling responses.
+func (client *client) unmarshalResponse(responseBody io.ReadCloser, unmarshalledResponseObject interface{}) error {
+	defer closeBody(responseBody)
+	if err := json.NewDecoder(responseBody).Decode(&unmarshalledResponseObject); err != nil {
+		return errors.Wrap(err, "invalid format, unable to read response body as array of strings")
+	}
+	return nil
+}
+
+// decodeHex a utility method for decoding hex strings may be a duplicate in which case will be removed in the future.
 func decodeHex(signature string) ([]byte, error) {
 	decoded, err := hex.DecodeString(strings.TrimPrefix(signature, "0x"))
 	if err != nil {
@@ -171,6 +178,11 @@ func decodeHex(signature string) ([]byte, error) {
 	}
 	return decoded, nil
 }
+<<<<<<< HEAD
+====== =
+
+// closeBody a utility method to wrap an error for closing
+>>>>>>> 864a91c20 (addressing review comments)
 func closeBody(body io.Closer) {
 	if err := body.Close(); err != nil {
 		log.Errorf("could not close response body: %v", err)

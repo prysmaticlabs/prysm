@@ -2,10 +2,12 @@ package remote_web3signer
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // MockClient is the mock client
@@ -19,7 +21,7 @@ var (
 )
 
 // Do is the mock client's `Do` func
-func (m *mockClient) Do(req *http.Request) (*http.Response, error) {
+func (_ *mockClient) Do(req *http.Request) (*http.Response, error) {
 	return GetDoFunc(req)
 }
 
@@ -46,17 +48,18 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 		GenesisValidatorsRoot: "",
 	}
 
-	randaoRevealData := &RandaoReveal{Epoch: ""}
+	AggregationSlotData := &AggregationSlot{Slot: ""}
 	// remember to replace signing root with hex encoding remove 0x
 	web3SignerRequest := SignRequest{
-		Type:         "foo",
-		ForkInfo:     forkInfoData,
-		SigningRoot:  "0xfasd0fjsa0dfjas0dfjasdf",
-		RandaoReveal: randaoRevealData,
+		Type:            "foo",
+		ForkInfo:        forkInfoData,
+		SigningRoot:     "0xfasd0fjsa0dfjas0dfjasdf",
+		AggregationSlot: AggregationSlotData,
 	}
 	resp, err := cl.Sign("a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", &web3SignerRequest)
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
+	assert.EqualValues(t, "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9", fmt.Sprintf("%#x", resp.Marshal()))
 }
 
 func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
