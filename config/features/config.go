@@ -38,9 +38,6 @@ type Flags struct {
 	// Testnet Flags.
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
-	// Enable the keymanage standard API.
-	EnableKeymanagerApi bool
-
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
@@ -265,10 +262,6 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
 		logEnabled(enableDoppelGangerProtection)
 		cfg.EnableDoppelGanger = true
-	}
-	if ctx.Bool(enableKeymanagerApi.Name) {
-		logEnabled(enableKeymanagerApi)
-		cfg.EnableKeymanagerApi = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)

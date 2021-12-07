@@ -490,16 +490,14 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,
-	}
-	if features.Get().EnableKeymanagerApi {
-		registrations = append(registrations, ethpbservice.RegisterKeyManagementHandler)
+		ethpbservice.RegisterKeyManagementHandler,
 	}
 	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 			Marshaler: &gwruntime.JSONPb{
 				MarshalOptions: protojson.MarshalOptions{
 					EmitUnpopulated: true,
-					UseProtoNames:   features.Get().EnableKeymanagerApi,
+					UseProtoNames:   true,
 				},
 				UnmarshalOptions: protojson.UnmarshalOptions{
 					DiscardUnknown: true,
@@ -539,11 +537,9 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
 		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
 		gateway.WithAllowedOrigins(allowedOrigins),
+		gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}),
+		gateway.WithMuxHandler(muxHandler),
 	}
-	if features.Get().EnableKeymanagerApi {
-		opts = append(opts, gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}))
-	}
-	opts = append(opts, gateway.WithMuxHandler(muxHandler))
 	gw, err := gateway.New(cliCtx.Context, opts...)
 	if err != nil {
 		return err
