@@ -4,7 +4,6 @@ import (
 	stdmath "math"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -357,7 +356,7 @@ func TestMath_Sub64(t *testing.T) {
 		{args: args{1 << 63, 2}, res: 9223372036854775806},
 	}
 	for _, tt := range tests {
-		got, err := types.Sub64(tt.args.a, tt.args.b)
+		got, err := math.Sub64(tt.args.a, tt.args.b)
 		if tt.err && err == nil {
 			t.Errorf("Sub64() Expected Error = %v, want error", tt.err)
 			continue
