@@ -52,7 +52,7 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots, types.StateRoots:
-		val, ok := elements.(*customtypes.BeaconStateRoots)
+		val, ok := elements.(*customtypes.BlockRoots)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())

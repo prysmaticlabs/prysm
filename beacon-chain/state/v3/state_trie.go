@@ -42,11 +42,11 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 		return nil, errors.New("received nil state")
 	}
 
-	var bRoots customtypes.BeaconStateRoots
+	var bRoots customtypes.BlockRoots
 	for i, r := range st.BlockRoots {
 		bRoots[i] = bytesutil.ToBytes32(r)
 	}
-	var sRoots customtypes.BeaconStateRoots
+	var sRoots customtypes.BlockRoots
 	for i, r := range st.StateRoots {
 		sRoots[i] = bytesutil.ToBytes32(r)
 	}
@@ -125,8 +125,8 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 
 func Initialize() (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
-	sRoots := customtypes.BeaconStateRoots([8192][32]byte{})
-	bRoots := customtypes.BeaconStateRoots([8192][32]byte{})
+	sRoots := customtypes.BlockRoots([8192][32]byte{})
+	bRoots := customtypes.BlockRoots([8192][32]byte{})
 	mixes := customtypes.RandaoMixes([65536][32]byte{})
 	b := &BeaconState{
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),

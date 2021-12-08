@@ -15,7 +15,7 @@ func (b *BeaconState) SetStateRoots(val *[8192][32]byte) error {
 	b.sharedFieldReferences[stateRoots].MinusRef()
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 
-	roots := customtypes.BeaconStateRoots(*val)
+	roots := customtypes.BlockRoots(*val)
 	b.stateRoots = &roots
 	b.markFieldAsDirty(stateRoots)
 	b.rebuildTrie[stateRoots] = true

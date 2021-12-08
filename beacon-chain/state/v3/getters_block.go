@@ -59,7 +59,7 @@ func (b *BeaconState) BlockRoots() *[8192][32]byte {
 
 // blockRootsInternal kept track of in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRootsInternal() *customtypes.BeaconStateRoots {
+func (b *BeaconState) blockRootsInternal() *customtypes.BlockRoots {
 	return b.blockRoots
 }
 
