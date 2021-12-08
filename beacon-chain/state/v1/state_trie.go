@@ -33,14 +33,13 @@ var (
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconState) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
-}
-
-// InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
-// and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
+	}
+
+	st, ok := proto.Clone(st).(*ethpb.BeaconState)
+	if !ok {
+		return nil, errors.New("could not clone proto beacon state")
 	}
 
 	var bRoots customtypes.BlockRoots
@@ -116,6 +115,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
 	stateCount.Inc()
+
 	return b, nil
 }
 

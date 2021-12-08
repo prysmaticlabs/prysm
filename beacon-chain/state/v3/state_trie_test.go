@@ -103,7 +103,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconStateMerge{
+	st, err := InitializeFromProto(&ethpb.BeaconStateMerge{
 		Validators: vals,
 	})
 	assert.NoError(t, err)
@@ -138,7 +138,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	wg.Wait()
 }
 
-func TestInitializeFromProtoUnsafe(t *testing.T) {
+func TestInitializeFromProto(t *testing.T) {
 	type test struct {
 		name  string
 		state *ethpb.BeaconStateMerge

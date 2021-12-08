@@ -398,7 +398,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return v2.InitializeFromProtoUnsafe(protoState)
+		return v2.InitializeFromProto(protoState)
 	default:
 		// Marshal state bytes to phase 0 beacon state.
 		protoState := &ethpb.BeaconState{}
@@ -412,7 +412,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return v1.InitializeFromProtoUnsafe(protoState)
+		return v1.InitializeFromProto(protoState)
 	}
 }
 

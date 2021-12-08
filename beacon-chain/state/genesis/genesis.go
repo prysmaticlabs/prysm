@@ -35,5 +35,5 @@ func load(b []byte) (*state.BeaconState, error) {
 	if err := st.UnmarshalSSZ(b); err != nil {
 		return nil, err
 	}
-	return state.InitializeFromProtoUnsafe(st)
+	return state.InitializeFromProto(st)
 }

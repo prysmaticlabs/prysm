@@ -418,7 +418,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		if b.Block == nil {
 			b.Block = &ethpb.BeaconBlockAltair{}
 		}
-		s, err := stateAltair.InitializeFromProtoUnsafe(state)
+		s, err := stateAltair.InitializeFromProto(state)
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 		require.NoError(t, err)

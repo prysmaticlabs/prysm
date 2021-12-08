@@ -66,7 +66,7 @@ func TestInitializeFromProto(t *testing.T) {
 	}
 }
 
-func TestInitializeFromProtoUnsafe(t *testing.T) {
+func TestInitializeFromProto(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
 	pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := v1.InitializeFromProtoUnsafe(tt.state)
+			_, err := v1.InitializeFromProto(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {

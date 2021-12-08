@@ -60,7 +60,7 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 	if err := st.UnmarshalSSZ(b); err != nil {
 		return err
 	}
-	gs, err := statev1.InitializeFromProtoUnsafe(st)
+	gs, err := statev1.InitializeFromProto(st)
 	if err != nil {
 		return err
 	}
