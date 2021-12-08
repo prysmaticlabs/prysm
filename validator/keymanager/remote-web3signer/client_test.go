@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// MockClient is the mock client
+// mockTransport is the mock Transport object
 type mockTransport struct {
 	mockResponse *http.Response
 }
 
-// Do is the mock client's `Do` func
+// RoundTrip is mocking my own implementation of the RoundTripper interface
 func (m *mockTransport) RoundTrip(*http.Request) (*http.Response, error) {
 	return m.mockResponse, nil
 }
