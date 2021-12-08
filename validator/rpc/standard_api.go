@@ -73,7 +73,14 @@ func (s *Server) ImportKeystores(
 		if err := slashingprotection.ImportStandardProtectionJSON(
 			ctx, s.valDB, bytes.NewBuffer([]byte(req.SlashingProtection)),
 		); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not import slashing protection JSON: %v", err)
+			statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(req.Keystores))
+			for i := range statuses {
+				statuses[i] = &ethpbservice.ImportedKeystoreStatus{
+					Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
+					Message: fmt.Sprintf("could not import slashing protection: %v", err),
+				}
+			}
+			return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
 		}
 	}
 	statuses, err := importer.ImportKeystores(ctx, keystores, req.Passwords)
