@@ -233,6 +233,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ProportionalSlashingMultiplierAltair: 2,
 	MinSlashingPenaltyQuotientMerge:      32,
 	ProportionalSlashingMultiplierMerge:  3,
+	InactivityPenaltyQuotientMerge:       1 << 24,
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
