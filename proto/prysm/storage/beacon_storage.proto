@@ -13,22 +13,28 @@
 // limitations under the License.
 syntax = "proto3";
 
-package ethereum.eth.wrapper;
+package ethereum.eth.storage;
 
 import "proto/eth/v2/version.proto";
-import "proto/eth/v1/beacon_state.proto";
-import "proto/eth/v2/beacon_state.proto";
+import "proto/prysm/v1alpha1/beacon_state.proto";
 
 
-// WrappedBeaconState is used only inside db/kv package and it there for the sole purpose of
+
+// BeaconStateForStorage is used only inside db/kv package and it there for the sole purpose of
 // storing the state objects efficiently. With normalizing the fields in the "state" bucket
 // it also stores some indexes and other metadata fields that cannot be stored in the
 // BeaconState object itself.
-message WrappedBeaconState {
+message BeaconStateForStorage {
   v2.Version version = 1001;        // Used to identify the state object
   bytes validatorIndexes = 1002;    // stores the compressed indexes of the validator entry hashes
   oneof state {
-    v1.BeaconState phase0_state = 1;    // Phase0 state object
-    v2.BeaconStateV2 altair_state = 2;  // Altair state object
+    // Representing a phase 0 beacon state.
+    v1alpha1.BeaconState phase0 = 1;
+
+    // Representing a post-Altair fork beacon state.
+    v1alpha1.BeaconStateAltair altair = 2;
+
+    // Representing a post-Merge fork beacon state.
+    v1alpha1.BeaconStateMerge merge = 3;
   }
 }
