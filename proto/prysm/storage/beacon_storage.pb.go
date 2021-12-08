@@ -7,13 +7,14 @@
 package ethereum_eth_storage
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	v2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
