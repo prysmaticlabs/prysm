@@ -102,21 +102,21 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 }
 
 // Start initializes the genesis state from configured flags.
-func (s *Service) Start() {
+func (_ *Service) Start() {
 }
 
 // Stop does nothing.
-func (s *Service) Stop() error {
+func (_ *Service) Stop() error {
 	return nil
 }
 
 // Status always returns nil.
-func (s *Service) Status() error {
+func (_ *Service) Status() error {
 	return nil
 }
 
 // AllDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) AllDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
+func (_ *Service) AllDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
@@ -126,37 +126,37 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 }
 
 // ChainStartEth1Data mocks out the powchain functionality for interop.
-func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
+func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
 // PreGenesisState returns an empty beacon state.
-func (s *Service) PreGenesisState() state.BeaconState {
+func (_ *Service) PreGenesisState() state.BeaconState {
 	return &v1.BeaconState{}
 }
 
 // ClearPreGenesisData --
-func (s *Service) ClearPreGenesisData() {
+func (_ *Service) ClearPreGenesisData() {
 	// no-op
 }
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.
-func (s *Service) DepositByPubkey(_ context.Context, _ []byte) (*ethpb.Deposit, *big.Int) {
+func (_ *Service) DepositByPubkey(_ context.Context, _ []byte) (*ethpb.Deposit, *big.Int) {
 	return &ethpb.Deposit{}, nil
 }
 
 // DepositsNumberAndRootAtHeight mocks out the deposit cache functionality for interop.
-func (s *Service) DepositsNumberAndRootAtHeight(_ context.Context, _ *big.Int) (uint64, [32]byte) {
+func (_ *Service) DepositsNumberAndRootAtHeight(_ context.Context, _ *big.Int) (uint64, [32]byte) {
 	return 0, [32]byte{}
 }
 
 // FinalizedDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) FinalizedDeposits(_ context.Context) *depositcache.FinalizedDeposits {
+func (_ *Service) FinalizedDeposits(_ context.Context) *depositcache.FinalizedDeposits {
 	return nil
 }
 
 // NonFinalizedDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
+func (_ *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 

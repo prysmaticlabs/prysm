@@ -24,27 +24,27 @@ func NewMockService() *MockStateManager {
 }
 
 // StateByRootIfCached
-func (m *MockStateManager) StateByRootIfCachedNoCopy(_ [32]byte) state.BeaconState { // skipcq: RVV-B0013
+func (_ *MockStateManager) StateByRootIfCachedNoCopy(_ [32]byte) state.BeaconState {
 	panic("implement me")
 }
 
 // Resume --
-func (m *MockStateManager) Resume(_ context.Context, _ state.BeaconState) (state.BeaconState, error) {
+func (_ *MockStateManager) Resume(_ context.Context, _ state.BeaconState) (state.BeaconState, error) {
 	panic("implement me")
 }
 
 // SaveFinalizedState --
-func (m *MockStateManager) SaveFinalizedState(_ types.Slot, _ [32]byte, _ state.BeaconState) {
+func (_ *MockStateManager) SaveFinalizedState(_ types.Slot, _ [32]byte, _ state.BeaconState) {
 	panic("implement me")
 }
 
 // MigrateToCold --
-func (m *MockStateManager) MigrateToCold(_ context.Context, _ [32]byte) error {
+func (_ *MockStateManager) MigrateToCold(_ context.Context, _ [32]byte) error {
 	panic("implement me")
 }
 
 // ReplayBlocks --
-func (m *MockStateManager) ReplayBlocks(
+func (_ *MockStateManager) ReplayBlocks(
 	_ context.Context,
 	_ state.BeaconState,
 	_ []block.SignedBeaconBlock,
@@ -54,7 +54,7 @@ func (m *MockStateManager) ReplayBlocks(
 }
 
 // LoadBlocks --
-func (m *MockStateManager) LoadBlocks(
+func (_ *MockStateManager) LoadBlocks(
 	_ context.Context,
 	_, _ types.Slot,
 	_ [32]byte,
@@ -63,12 +63,12 @@ func (m *MockStateManager) LoadBlocks(
 }
 
 // HasState --
-func (m *MockStateManager) HasState(_ context.Context, _ [32]byte) (bool, error) {
+func (_ *MockStateManager) HasState(_ context.Context, _ [32]byte) (bool, error) {
 	panic("implement me")
 }
 
 // HasStateInCache --
-func (m *MockStateManager) HasStateInCache(_ context.Context, _ [32]byte) (bool, error) {
+func (_ *MockStateManager) HasStateInCache(_ context.Context, _ [32]byte) (bool, error) {
 	panic("implement me")
 }
 
@@ -78,7 +78,7 @@ func (m *MockStateManager) StateByRoot(_ context.Context, blockRoot [32]byte) (s
 }
 
 // StateByRootInitialSync --
-func (m *MockStateManager) StateByRootInitialSync(_ context.Context, _ [32]byte) (state.BeaconState, error) {
+func (_ *MockStateManager) StateByRootInitialSync(_ context.Context, _ [32]byte) (state.BeaconState, error) {
 	panic("implement me")
 }
 
@@ -88,7 +88,7 @@ func (m *MockStateManager) StateBySlot(_ context.Context, slot types.Slot) (stat
 }
 
 // RecoverStateSummary --
-func (m *MockStateManager) RecoverStateSummary(
+func (_ *MockStateManager) RecoverStateSummary(
 	_ context.Context,
 	_ [32]byte,
 ) (*ethpb.StateSummary, error) {
@@ -96,22 +96,22 @@ func (m *MockStateManager) RecoverStateSummary(
 }
 
 // SaveState --
-func (m *MockStateManager) SaveState(_ context.Context, _ [32]byte, _ state.BeaconState) error {
+func (_ *MockStateManager) SaveState(_ context.Context, _ [32]byte, _ state.BeaconState) error {
 	panic("implement me")
 }
 
 // ForceCheckpoint --
-func (m *MockStateManager) ForceCheckpoint(_ context.Context, _ []byte) error {
+func (_ *MockStateManager) ForceCheckpoint(_ context.Context, _ []byte) error {
 	panic("implement me")
 }
 
 // EnableSaveHotStateToDB --
-func (m *MockStateManager) EnableSaveHotStateToDB(_ context.Context) {
+func (_ *MockStateManager) EnableSaveHotStateToDB(_ context.Context) {
 	panic("implement me")
 }
 
 // DisableSaveHotStateToDB --
-func (m *MockStateManager) DisableSaveHotStateToDB(_ context.Context) error {
+func (_ *MockStateManager) DisableSaveHotStateToDB(_ context.Context) error {
 	panic("implement me")
 }
 

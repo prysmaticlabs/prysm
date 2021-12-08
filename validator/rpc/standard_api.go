@@ -97,6 +97,9 @@ func (s *Server) DeleteKeystores(
 	if !ok {
 		return nil, status.Error(codes.Internal, "Keymanager kind cannot delete keys")
 	}
+	if len(req.PublicKeys) == 0 {
+		return &ethpbservice.DeleteKeystoresResponse{Statuses: make([]*ethpbservice.DeletedKeystoreStatus, 0)}, nil
+	}
 	statuses, err := deleter.DeleteKeystores(ctx, req.PublicKeys)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete keys: %v", err)
