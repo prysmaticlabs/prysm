@@ -53,8 +53,8 @@ type Service struct {
 	head        *head
 	headLock    sync.RWMutex
 	// originBlockRoot is the genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	originBlockRoot  [32]byte
-	justifiedCheckpt *ethpb.Checkpoint
+	originBlockRoot       [32]byte
+	justifiedCheckpt      *ethpb.Checkpoint
 	prevJustifiedCheckpt  *ethpb.Checkpoint
 	bestJustifiedCheckpt  *ethpb.Checkpoint
 	finalizedCheckpt      *ethpb.Checkpoint
