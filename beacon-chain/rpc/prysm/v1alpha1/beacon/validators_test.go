@@ -1603,7 +1603,8 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 
 func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	helpers.ClearCache()
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -1682,7 +1683,8 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T) {
 	helpers.ClearCache()
 	beaconDB := dbTest.SetupDB(t)
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	ctx := context.Background()
 	validatorCount := uint64(32)
@@ -2258,7 +2260,8 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 
 func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 	helpers.ClearCache()
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -2326,7 +2329,8 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 
 func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 	helpers.ClearCache()
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
