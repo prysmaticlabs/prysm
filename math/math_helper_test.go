@@ -332,3 +332,37 @@ func TestAdd64(t *testing.T) {
 		}
 	}
 }
+
+func TestMath_Sub64(t *testing.T) {
+	type args struct {
+		a uint64
+		b uint64
+	}
+	tests := []struct {
+		args args
+		res  uint64
+		err  bool
+	}{
+		{args: args{1, 0}, res: 1},
+		{args: args{0, 1}, res: 0, err: true},
+		{args: args{1 << 32, 1}, res: 4294967295},
+		{args: args{1 << 32, 100}, res: 4294967196},
+		{args: args{1 << 31, 1 << 31}, res: 0},
+		{args: args{1 << 63, 1 << 63}, res: 0},
+		{args: args{1 << 63, 1}, res: 9223372036854775807},
+		{args: args{stdmath.MaxUint64, stdmath.MaxUint64}, res: 0},
+		{args: args{stdmath.MaxUint64 - 1, stdmath.MaxUint64}, res: 0, err: true},
+		{args: args{stdmath.MaxUint64, 0}, res: stdmath.MaxUint64},
+		{args: args{1 << 63, 2}, res: 9223372036854775806},
+	}
+	for _, tt := range tests {
+		got, err := math.Sub64(tt.args.a, tt.args.b)
+		if tt.err && err == nil {
+			t.Errorf("Sub64() Expected Error = %v, want error", tt.err)
+			continue
+		}
+		if tt.res != got {
+			t.Errorf("Sub64() %v, want %v", got, tt.res)
+		}
+	}
+}
