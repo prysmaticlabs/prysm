@@ -134,17 +134,23 @@ func TestServer_ImportKeystores(t *testing.T) {
 		numKeystores := 5
 		password := "12345678"
 		encodedKeystores := make([]string, numKeystores)
+		passwords := make([]string, numKeystores)
 		for i := 0; i < numKeystores; i++ {
 			enc, err := json.Marshal(createRandomKeystore(t, password))
 			encodedKeystores[i] = string(enc)
 			require.NoError(t, err)
+			passwords[i] = password
 		}
-		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+		resp, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
 			Keystores:          encodedKeystores,
-			Passwords:          []string{password},
+			Passwords:          passwords,
 			SlashingProtection: "foobar",
 		})
-		require.NotNil(t, err)
+		require.NoError(t, err)
+		require.Equal(t, numKeystores, len(resp.Statuses))
+		for _, st := range resp.Statuses {
+			require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, st.Status)
+		}
 	})
 	t.Run("returns proper statuses for keystores in request", func(t *testing.T) {
 		numKeystores := 5
