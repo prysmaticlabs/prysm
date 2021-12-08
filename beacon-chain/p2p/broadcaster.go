@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
@@ -55,7 +54,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
-func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation) error {
+func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastAttestation")
 	defer span.End()
 	forkDigest, err := s.currentForkDigest()
@@ -89,7 +88,7 @@ func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint
 	return nil
 }
 
-func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation, forkDigest [4]byte) {
+func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation, forkDigest [4]byte) {
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.

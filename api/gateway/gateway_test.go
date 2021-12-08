@@ -40,26 +40,30 @@ func TestGateway_Customized(t *testing.T) {
 	size := uint64(100)
 	endpointFactory := &mockEndpointFactory{}
 
-	g := New(
-		context.Background(),
-		[]*PbMux{},
-		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
+	opts := []Option{
+		WithRouter(r),
+		WithRemoteCert(cert),
+		WithAllowedOrigins(origins),
+		WithMaxCallRecvMsgSize(size),
+		WithApiMiddleware(endpointFactory),
+		WithMuxHandler(func(
+			_ *apimiddleware.ApiProxyMiddleware,
+			_ http.HandlerFunc,
+			_ http.ResponseWriter,
+			_ *http.Request,
+		) {
+		}),
+	}
 
-		},
-		"",
-		"",
-	).WithRouter(r).
-		WithRemoteCert(cert).
-		WithAllowedOrigins(origins).
-		WithMaxCallRecvMsgSize(size).
-		WithApiMiddleware(endpointFactory)
+	g, err := New(context.Background(), opts...)
+	require.NoError(t, err)
 
-	assert.Equal(t, r, g.router)
-	assert.Equal(t, cert, g.remoteCert)
-	require.Equal(t, 1, len(g.allowedOrigins))
-	assert.Equal(t, origins[0], g.allowedOrigins[0])
-	assert.Equal(t, size, g.maxCallRecvMsgSize)
-	assert.Equal(t, endpointFactory, g.apiMiddlewareEndpointFactory)
+	assert.Equal(t, r, g.cfg.router)
+	assert.Equal(t, cert, g.cfg.remoteCert)
+	require.Equal(t, 1, len(g.cfg.allowedOrigins))
+	assert.Equal(t, origins[0], g.cfg.allowedOrigins[0])
+	assert.Equal(t, size, g.cfg.maxCallRecvMsgSize)
+	assert.Equal(t, endpointFactory, g.cfg.apiMiddlewareEndpointFactory)
 }
 
 func TestGateway_StartStop(t *testing.T) {
@@ -75,23 +79,27 @@ func TestGateway_StartStop(t *testing.T) {
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, ctx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 
-	g := New(
-		ctx.Context,
-		[]*PbMux{},
-		func(handler http.Handler, writer http.ResponseWriter, request *http.Request) {
+	opts := []Option{
+		WithGatewayAddr(gatewayAddress),
+		WithRemoteAddr(selfAddress),
+		WithMuxHandler(func(
+			_ *apimiddleware.ApiProxyMiddleware,
+			_ http.HandlerFunc,
+			_ http.ResponseWriter,
+			_ *http.Request,
+		) {
+		}),
+	}
 
-		},
-		selfAddress,
-		gatewayAddress,
-	)
+	g, err := New(context.Background(), opts...)
+	require.NoError(t, err)
 
 	g.Start()
 	go func() {
 		require.LogsContain(t, hook, "Starting gRPC gateway")
 		require.LogsDoNotContain(t, hook, "Starting API middleware")
 	}()
-
-	err := g.Stop()
+	err = g.Stop()
 	require.NoError(t, err)
 }
 
@@ -106,15 +114,15 @@ func TestGateway_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 	selfAddress := fmt.Sprintf("%s:%d", rpcHost, ctx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 
-	g := New(
-		ctx.Context,
-		[]*PbMux{},
-		/* muxHandler */ nil,
-		selfAddress,
-		gatewayAddress,
-	)
+	opts := []Option{
+		WithGatewayAddr(gatewayAddress),
+		WithRemoteAddr(selfAddress),
+	}
+
+	g, err := New(context.Background(), opts...)
+	require.NoError(t, err)
 
 	writer := httptest.NewRecorder()
-	g.router.ServeHTTP(writer, &http.Request{Method: "GET", Host: "localhost", URL: &url.URL{Path: "/foo"}})
+	g.cfg.router.ServeHTTP(writer, &http.Request{Method: "GET", Host: "localhost", URL: &url.URL{Path: "/foo"}})
 	assert.Equal(t, http.StatusNotFound, writer.Code)
 }

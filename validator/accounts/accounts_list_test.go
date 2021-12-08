@@ -40,11 +40,11 @@ func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][
 	return m.publicKeys, nil
 }
 
-func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
+func (_ *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, nil
 }
 
-func (m *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+func (_ *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
 	return nil
 }
 
@@ -93,10 +93,12 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 
 	numAccounts := 5
 	keystores := make([]*keymanager.Keystore, numAccounts)
+	passwords := make([]string, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		keystores[i] = createRandomKeystore(t, password)
+		passwords[i] = password
 	}
-	_, err = km.ImportKeystores(cliCtx.Context, keystores, []string{password})
+	_, err = km.ImportKeystores(cliCtx.Context, keystores, passwords)
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout

@@ -37,8 +37,8 @@ import (
 
 type dummyIdentity enode.ID
 
-func (id dummyIdentity) Verify(_ *enr.Record, _ []byte) error { return nil }
-func (id dummyIdentity) NodeAddr(_ *enr.Record) []byte        { return id[:] }
+func (_ dummyIdentity) Verify(_ *enr.Record, _ []byte) error { return nil }
+func (id dummyIdentity) NodeAddr(_ *enr.Record) []byte       { return id[:] }
 
 func TestGetVersion(t *testing.T) {
 	semVer := version.SemanticVersion()

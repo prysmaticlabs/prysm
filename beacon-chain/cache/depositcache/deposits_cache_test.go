@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -44,31 +43,31 @@ func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 	}{
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'A'}}},
+			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'A'}}},
 			index:       0,
 			expectedErr: "",
 		},
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'B'}}},
+			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'B'}}},
 			index:       3,
 			expectedErr: "wanted deposit with index 1 to be inserted but received 3",
 		},
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'C'}}},
+			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'C'}}},
 			index:       1,
 			expectedErr: "",
 		},
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'D'}}},
+			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'D'}}},
 			index:       4,
 			expectedErr: "wanted deposit with index 2 to be inserted but received 4",
 		},
 		{
 			blkNum:      0,
-			deposit:     &ethpb.Deposit{Data: &dbpb.Deposit_Data{PublicKey: []byte{'E'}}},
+			deposit:     &ethpb.Deposit{Data: &ethpb.Deposit_Data{PublicKey: []byte{'E'}}},
 			index:       2,
 			expectedErr: "",
 		},
@@ -93,7 +92,7 @@ func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	deposits := []*dbpb.DepositContainer{
+	deposits := []*ethpb.DepositContainer{
 		{
 			Eth1BlockHeight: 10,
 			Deposit:         &ethpb.Deposit{},
@@ -133,7 +132,7 @@ func TestAllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	deposits := []*dbpb.DepositContainer{
+	deposits := []*ethpb.DepositContainer{
 		{
 			Eth1BlockHeight: 10,
 			Deposit:         &ethpb.Deposit{},
@@ -174,7 +173,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 	t.Run("requesting_last_item_works", func(t *testing.T) {
 		dc, err := New()
 		require.NoError(t, err)
-		dc.deposits = []*dbpb.DepositContainer{
+		dc.deposits = []*ethpb.DepositContainer{
 			{
 				Eth1BlockHeight: 10,
 				Index:           0,
@@ -205,7 +204,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc, err := New()
 		require.NoError(t, err)
 
-		dc.deposits = []*dbpb.DepositContainer{
+		dc.deposits = []*ethpb.DepositContainer{
 			{
 				Eth1BlockHeight: 10,
 				Index:           0,
@@ -221,7 +220,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc, err := New()
 		require.NoError(t, err)
 
-		dc.deposits = []*dbpb.DepositContainer{
+		dc.deposits = []*ethpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
 				Index:           0,
@@ -247,7 +246,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc, err := New()
 		require.NoError(t, err)
 
-		dc.deposits = []*dbpb.DepositContainer{
+		dc.deposits = []*ethpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
 				Index:           0,
@@ -263,7 +262,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc, err := New()
 		require.NoError(t, err)
 
-		dc.deposits = []*dbpb.DepositContainer{
+		dc.deposits = []*ethpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
 				Index:           0,
@@ -279,7 +278,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 		dc, err := New()
 		require.NoError(t, err)
 
-		dc.deposits = []*dbpb.DepositContainer{
+		dc.deposits = []*ethpb.DepositContainer{
 			{
 				Eth1BlockHeight: 8,
 				Index:           0,
@@ -316,7 +315,7 @@ func TestDepositsNumberAndRootAtHeight(t *testing.T) {
 func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
-	ctrs := []*dbpb.DepositContainer{
+	ctrs := []*ethpb.DepositContainer{
 		{
 			Eth1BlockHeight: 9,
 			Deposit: &ethpb.Deposit{
@@ -374,7 +373,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	finalizedDeposits := []*dbpb.DepositContainer{
+	finalizedDeposits := []*ethpb.DepositContainer{
 		{
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
@@ -406,7 +405,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 			Index: 2,
 		},
 	}
-	dc.deposits = append(finalizedDeposits, &dbpb.DepositContainer{
+	dc.deposits = append(finalizedDeposits, &ethpb.DepositContainer{
 		Deposit: &ethpb.Deposit{
 			Data: &ethpb.Deposit_Data{
 				PublicKey:             bytesutil.PadTo([]byte{3}, 48),
@@ -438,7 +437,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	oldFinalizedDeposits := []*dbpb.DepositContainer{
+	oldFinalizedDeposits := []*ethpb.DepositContainer{
 		{
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
@@ -460,7 +459,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 			Index: 1,
 		},
 	}
-	newFinalizedDeposit := dbpb.DepositContainer{
+	newFinalizedDeposit := ethpb.DepositContainer{
 		Deposit: &ethpb.Deposit{
 			Data: &ethpb.Deposit_Data{
 				PublicKey:             bytesutil.PadTo([]byte{2}, 48),
@@ -473,7 +472,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	dc.deposits = oldFinalizedDeposits
 	dc.InsertFinalizedDeposits(context.Background(), 1)
 	// Artificially exclude old deposits so that they can only be retrieved from previously finalized deposits.
-	dc.deposits = []*dbpb.DepositContainer{&newFinalizedDeposit}
+	dc.deposits = []*ethpb.DepositContainer{&newFinalizedDeposit}
 
 	dc.InsertFinalizedDeposits(context.Background(), 2)
 
@@ -506,7 +505,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	finalizedDeposits := []*dbpb.DepositContainer{
+	finalizedDeposits := []*ethpb.DepositContainer{
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
@@ -531,7 +530,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 		},
 	}
 	dc.deposits = append(finalizedDeposits,
-		&dbpb.DepositContainer{
+		&ethpb.DepositContainer{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
@@ -542,7 +541,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 			},
 			Index: 2,
 		},
-		&dbpb.DepositContainer{
+		&ethpb.DepositContainer{
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
@@ -563,7 +562,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 	dc, err := New()
 	require.NoError(t, err)
 
-	finalizedDeposits := []*dbpb.DepositContainer{
+	finalizedDeposits := []*ethpb.DepositContainer{
 		{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
@@ -588,7 +587,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 		},
 	}
 	dc.deposits = append(finalizedDeposits,
-		&dbpb.DepositContainer{
+		&ethpb.DepositContainer{
 			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
@@ -599,7 +598,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 			},
 			Index: 2,
 		},
-		&dbpb.DepositContainer{
+		&ethpb.DepositContainer{
 			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
