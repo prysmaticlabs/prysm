@@ -2,10 +2,11 @@ package checkpoint
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"net"
 	"net/url"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/prysmaticlabs/prysm/api/client/openapi"
 	log "github.com/sirupsen/logrus"

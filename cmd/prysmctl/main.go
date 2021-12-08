@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/prysmaticlabs/prysm/cmd/prysmctl/get"
 	"os"
+
+	"github.com/prysmaticlabs/prysm/cmd/prysmctl/get"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
