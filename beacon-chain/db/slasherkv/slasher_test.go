@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -52,9 +51,17 @@ func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 
 	attestedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
 	require.NoError(t, err)
-	require.Equal(t, true, len(attestedEpochs) == 0)
+	require.Equal(t, true, len(attestedEpochs) == len(indices))
+	for _, item := range attestedEpochs {
+		require.Equal(t, types.Epoch(0), item.Epoch)
+	}
 
-	err = beaconDB.SaveLastEpochWrittenForValidators(ctx, indices, epoch)
+	epochsByValidator := map[types.ValidatorIndex]types.Epoch{
+		1: epoch,
+		2: epoch,
+		3: epoch,
+	}
+	err = beaconDB.SaveLastEpochsWrittenForValidators(ctx, epochsByValidator)
 	require.NoError(t, err)
 
 	retrievedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
@@ -338,7 +345,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 	tests := []struct {
 		name             string
 		attestationsInDB []*slashertypes.IndexedAttestationWrapper
-		expected         []*slashpb.HighestAttestation
+		expected         []*ethpb.HighestAttestation
 		indices          []types.ValidatorIndex
 		wantErr          bool
 	}{
@@ -348,7 +355,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 				createAttestationWrapper(0, 3, []uint64{1}, []byte{1}),
 			},
 			indices: []types.ValidatorIndex{1},
-			expected: []*slashpb.HighestAttestation{
+			expected: []*ethpb.HighestAttestation{
 				{
 					ValidatorIndex:     1,
 					HighestSourceEpoch: 0,
@@ -365,7 +372,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 				createAttestationWrapper(5, 6, []uint64{5}, []byte{4}),
 			},
 			indices: []types.ValidatorIndex{2, 3, 4, 5},
-			expected: []*slashpb.HighestAttestation{
+			expected: []*ethpb.HighestAttestation{
 				{
 					ValidatorIndex:     2,
 					HighestSourceEpoch: 0,
@@ -397,7 +404,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 				createAttestationWrapper(6, 7, []uint64{5}, []byte{4}),
 			},
 			indices: []types.ValidatorIndex{2, 3, 4, 5},
-			expected: []*slashpb.HighestAttestation{
+			expected: []*ethpb.HighestAttestation{
 				{
 					ValidatorIndex:     2,
 					HighestSourceEpoch: 4,

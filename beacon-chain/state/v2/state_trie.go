@@ -258,7 +258,7 @@ func (b *BeaconState) IsNil() bool {
 }
 
 func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
+	_, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("field", field.String(b.Version())))
 

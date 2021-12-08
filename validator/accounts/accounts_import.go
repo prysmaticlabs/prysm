@@ -239,10 +239,14 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 // ImportAccounts can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet.
 func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+	passwords := make([]string, len(cfg.Keystores))
+	for i := 0; i < len(cfg.Keystores); i++ {
+		passwords[i] = cfg.AccountPassword
+	}
 	return cfg.Importer.ImportKeystores(
 		ctx,
 		cfg.Keystores,
-		[]string{cfg.AccountPassword},
+		passwords,
 	)
 }
 

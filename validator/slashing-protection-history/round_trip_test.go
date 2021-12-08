@@ -40,6 +40,11 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
+	rawPublicKeys := make([][]byte, numValidators)
+	for i := 0; i < numValidators; i++ {
+		rawPublicKeys[i] = publicKeys[i][:]
+	}
+
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
 	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB)
@@ -114,6 +119,11 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
 	require.NoError(t, err)
 
+	rawPublicKeys := make([][]byte, numValidators)
+	for i := 0; i < numValidators; i++ {
+		rawPublicKeys[i] = pubKeys[i][:]
+	}
+
 	// Next up, we export our slashing protection database into the EIP standard file.
 	// Next, we attempt to import it into our validator database.
 	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB)
@@ -157,6 +167,7 @@ func TestImportExport_FilterKeys(t *testing.T) {
 	for i := 0; i < len(rawKeys); i++ {
 		rawKeys[i] = publicKeys[i][:]
 	}
+
 	eipStandard, err := history.ExportStandardProtectionJSON(ctx, validatorDB, rawKeys...)
 	require.NoError(t, err)
 
