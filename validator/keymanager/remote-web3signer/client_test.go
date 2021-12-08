@@ -11,18 +11,13 @@ import (
 )
 
 // MockClient is the mock client
-type mockClient struct {
-	DoFunc func(req *http.Request) (*http.Response, error)
+type mockTransport struct {
+	mockResponse *http.Response
 }
 
-var (
-	// GetDoFunc fetches the mock client's `Do` func
-	GetDoFunc func(req *http.Request) (*http.Response, error)
-)
-
 // Do is the mock client's `Do` func
-func (*mockClient) Do(req *http.Request) (*http.Response, error) {
-	return GetDoFunc(req)
+func (m *mockTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return m.mockResponse, nil
 }
 
 func TestClient_Sign_HappyPath(t *testing.T) {
@@ -31,13 +26,11 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 	}`
 	// create a new reader with that JSON
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
-	GetDoFunc = func(*http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       r,
-		}, nil
-	}
-	cl := client{BasePath: "example.com", restClient: &mockClient{}}
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 200,
+		Body:       r,
+	}}
+	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
 	forkData := &Fork{
 		PreviousVersion: "",
 		CurrentVersion:  "",
@@ -67,13 +60,11 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	json := `["0x613262356161616439633665666566653762623962313234336130343334303466333336323933376366623662333138333339323938333331373366343736363330656132636665623064396464663135663937636138363835393438383230","0x613262356161616439633665666566653762623962313234336130343334303466333336323933376366623662333138333339323938333331373366343736363330656132636665623064396464663135663937636138363835393438383230"]`
 	// create a new reader with that JSON
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
-	GetDoFunc = func(*http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       r,
-		}, nil
-	}
-	cl := client{BasePath: "example.com", restClient: &mockClient{}}
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 200,
+		Body:       r,
+	}}
+	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
 	resp, err := cl.GetPublicKeys()
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
@@ -82,13 +73,11 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 }
 
 func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
-	GetDoFunc = func(*http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewReader(nil)),
-		}, nil
-	}
-	cl := client{BasePath: "example.com", restClient: &mockClient{}}
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 200,
+		Body:       ioutil.NopCloser(bytes.NewReader(nil)),
+	}}
+	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
 	err := cl.ReloadSignerKeys()
 	assert.Nil(t, err)
 }
@@ -96,13 +85,11 @@ func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
 func TestClient_GetServerStatus_HappyPath(t *testing.T) {
 	json := `"some server status, not sure what it looks like, need to find some sample data"`
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
-	GetDoFunc = func(*http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       r,
-		}, nil
-	}
-	cl := client{BasePath: "example.com", restClient: &mockClient{}}
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 200,
+		Body:       r,
+	}}
+	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
 	resp, err := cl.GetServerStatus()
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)

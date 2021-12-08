@@ -20,15 +20,10 @@ const (
 	maxTimeout      = 3 * time.Second
 )
 
-// HTTPClient defines interface for easier testing and mocks.
-type HTTPClient interface {
-	Do(req *http.Request) (*http.Response, error)
-}
-
 // client a wrapper object around web3signer APIs. API docs found here https://consensys.github.io/web3signer/web3signer-eth2.html.
 type client struct {
 	BasePath   string
-	restClient HTTPClient
+	restClient *http.Client
 }
 
 // newClient method instantiates a new client object.
@@ -87,6 +82,10 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(jsonRequest))
 	if err != nil {
 		return nil, err
+	} else if resp.StatusCode == 404 {
+		return nil, errors.Wrap(err, "public key not found")
+	} else if resp.StatusCode == 412 {
+		return nil, errors.Wrap(err, "signing operation failed due to slashing protection rules")
 	}
 	signResp := &signResponse{}
 	if err := client.unmarshalResponse(resp.Body, &signResp); err != nil {
@@ -157,9 +156,14 @@ func (client *client) doRequest(httpMethod, fullPath string, body io.Reader) (*h
 	}
 	resp, err := client.restClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to execute json request")
+		return resp, errors.Wrap(err, "failed to execute json request")
 	}
-	return resp, nil
+	if resp.StatusCode == 500 {
+		return nil, errors.Wrap(err, "internal Web3Signer server error")
+	} else if resp.StatusCode == 400 {
+		return nil, errors.Wrap(err, "bad request format")
+	}
+	return resp, err
 }
 
 // unmarshalResponse is a utility method for unmarshalling responses.
