@@ -56,8 +56,8 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c := setupBeaconChain(t, beaconDB)
 	c.finalizedCheckpt = cp
-	c.originRoot = genesisRoot
-	assert.DeepEqual(t, c.originRoot[:], c.FinalizedCheckpt().Root)
+	c.originBlockRoot = genesisRoot
+	assert.DeepEqual(t, c.originBlockRoot[:], c.FinalizedCheckpt().Root)
 }
 
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
@@ -77,8 +77,8 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	genesisRoot := [32]byte{'B'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c.justifiedCheckpt = cp
-	c.originRoot = genesisRoot
-	assert.DeepEqual(t, c.originRoot[:], c.CurrentJustifiedCheckpt().Root)
+	c.originBlockRoot = genesisRoot
+	assert.DeepEqual(t, c.originBlockRoot[:], c.CurrentJustifiedCheckpt().Root)
 }
 
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
@@ -98,8 +98,8 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c := setupBeaconChain(t, beaconDB)
 	c.prevJustifiedCheckpt = cp
-	c.originRoot = genesisRoot
-	assert.DeepEqual(t, c.originRoot[:], c.PreviousJustifiedCheckpt().Root)
+	c.originBlockRoot = genesisRoot
+	assert.DeepEqual(t, c.originBlockRoot[:], c.PreviousJustifiedCheckpt().Root)
 }
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {

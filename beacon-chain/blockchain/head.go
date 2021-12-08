@@ -50,7 +50,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	// instead of zero hashes.
 	headStartRoot := bytesutil.ToBytes32(j.Root)
 	if headStartRoot == params.BeaconConfig().ZeroHash {
-		headStartRoot = s.originRoot
+		headStartRoot = s.originBlockRoot
 	}
 
 	// In order to process head, fork choice store requires justified info.
@@ -277,8 +277,8 @@ func (s *Service) notifyNewHeadEvent(
 	newHeadStateRoot,
 	newHeadRoot []byte,
 ) error {
-	previousDutyDependentRoot := s.originRoot[:]
-	currentDutyDependentRoot := s.originRoot[:]
+	previousDutyDependentRoot := s.originBlockRoot[:]
+	currentDutyDependentRoot := s.originBlockRoot[:]
 
 	var previousDutyEpoch types.Epoch
 	currentDutyEpoch := slots.ToEpoch(newHeadSlot)

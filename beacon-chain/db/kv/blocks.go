@@ -49,7 +49,7 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeac
 // OriginBlockRoot returns the value written to the db in SaveOriginBlockRoot
 // This is the root of a finalized block within the weak subjectivity period
 // at the time the chain was started, used to initialize the database and chain
-// without syncing from origin.
+// without syncing from genesis.
 func (s *Store) OriginBlockRoot(ctx context.Context) ([32]byte, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.OriginBlockRoot")
 	defer span.End()

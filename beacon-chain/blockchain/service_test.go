@@ -301,7 +301,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if !bytes.Equal(headRoot[:], r) {
 		t.Error("head slot incorrect")
 	}
-	assert.Equal(t, genesisRoot, c.originRoot, "Genesis block root incorrect")
+	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 }
 
 func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
@@ -335,7 +335,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
-	assert.Equal(t, genesisRoot, c.originRoot, "Genesis block root incorrect")
+	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	assert.DeepEqual(t, genesis, c.head.block.Proto())
 }
 
@@ -395,7 +395,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
-	assert.Equal(t, genesisRoot, c.originRoot, "Genesis block root incorrect")
+	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
 	assert.DeepEqual(t, finalizedBlock, c.head.block.Proto())
 	assert.LogsContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
@@ -416,7 +416,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	s, err = c.HeadState(ctx)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
-	assert.Equal(t, genesisRoot, c.originRoot, "Genesis block root incorrect")
+	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	// Head slot is far beyond the latest finalized checkpoint, head sync is triggered.
 	assert.DeepEqual(t, headBlock, c.head.block.Proto())
 	assert.LogsContain(t, hook, "Regenerating state from the last checkpoint at slot 225")

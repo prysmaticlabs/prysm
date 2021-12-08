@@ -733,10 +733,10 @@ func TestEnsureRootNotZeroHashes(t *testing.T) {
 	opts := testServiceOptsNoDB()
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.originRoot = [32]byte{'a'}
+	service.originBlockRoot = [32]byte{'a'}
 
 	r := service.ensureRootNotZeros(params.BeaconConfig().ZeroHash)
-	assert.Equal(t, service.originRoot, r, "Did not get wanted justified root")
+	assert.Equal(t, service.originBlockRoot, r, "Did not get wanted justified root")
 	root := [32]byte{'b'}
 	r = service.ensureRootNotZeros(root)
 	assert.Equal(t, root, r, "Did not get wanted justified root")
@@ -917,7 +917,7 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: gRoot[:]}))
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, beaconState, gRoot))
-	service.originRoot = gRoot
+	service.originBlockRoot = gRoot
 	currentCp := &ethpb.Checkpoint{Epoch: 1}
 	service.justifiedCheckpt = currentCp
 	newCp := &ethpb.Checkpoint{Epoch: 2, Root: gRoot[:]}

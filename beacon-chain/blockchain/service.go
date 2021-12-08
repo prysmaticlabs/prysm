@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
@@ -35,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -53,9 +52,9 @@ type Service struct {
 	genesisTime time.Time
 	head        *head
 	headLock    sync.RWMutex
-	// originRoot is the genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	originRoot            [32]byte
-	justifiedCheckpt      *ethpb.Checkpoint
+	// originBlockRoot is the genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
+	originBlockRoot  [32]byte
+	justifiedCheckpt *ethpb.Checkpoint
 	prevJustifiedCheckpt  *ethpb.Checkpoint
 	bestJustifiedCheckpt  *ethpb.Checkpoint
 	finalizedCheckpt      *ethpb.Checkpoint
@@ -153,7 +152,7 @@ func (s *Service) Stop() error {
 // Status always returns nil unless there is an error condition that causes
 // this service to be unhealthy.
 func (s *Service) Status() error {
-	if s.originRoot == params.BeaconConfig().ZeroHash {
+	if s.originBlockRoot == params.BeaconConfig().ZeroHash {
 		return errors.New("genesis state has not been created")
 	}
 	if runtime.NumGoroutine() > s.cfg.MaxRoutines {
@@ -171,7 +170,7 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return err
 	}
-	s.originRoot = originRoot
+	s.originBlockRoot = originRoot
 
 	if err := s.initializeHeadFromDB(s.ctx); err != nil {
 		return errors.Wrap(err, "could not set up chain info")
@@ -237,12 +236,12 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 	if err == nil {
 		return originRoot, nil
 	}
-	// if it's an ErrNotFound, that probably just means the node was synced from genesis
 	if !errors.Is(err, db.ErrNotFound) {
 		return originRoot, errors.Wrap(err, "could not retrieve checkpoint sync chain origin data from db")
 	}
 
-	// if the chain started from a genesis state, we should have a value for GenesisBlock
+	// we got here because OriginBlockRoot gave us an ErrNotFound. this means the node was started from a genesis state,
+	// so we should have a value for GenesisBlock
 	genesisBlock, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	if err != nil {
 		return originRoot, errors.Wrap(err, "could not get genesis block from db")
@@ -443,7 +442,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 		return errors.Wrap(err, "could not get genesis block root")
 	}
 
-	s.originRoot = genesisBlkRoot
+	s.originBlockRoot = genesisBlkRoot
 	s.cfg.StateGen.SaveFinalizedState(0 /*slot*/, genesisBlkRoot, genesisState)
 
 	// Finalized checkpoint at genesis is a zero hash.
