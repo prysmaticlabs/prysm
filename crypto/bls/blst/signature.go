@@ -1,3 +1,4 @@
+//go:build ((linux && amd64) || (linux && arm64) || (darwin && amd64) || (darwin && arm64) || (windows && amd64)) && !blst_disabled
 // +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
 // +build !blst_disabled
 
@@ -207,8 +208,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 	randFunc := func(scalar *blst.Scalar) {
 		var rbytes [scalarBytes]byte
 		randLock.Lock()
-		// Ignore error as the error will always be nil in `read` in math/rand.
-		randGen.Read(rbytes[:]) /* #nosec G104 */
+		randGen.Read(rbytes[:]) /* #nosec G104 -- Error will always be nil in `read` in math/rand */
 		randLock.Unlock()
 		// Protect against the generator returning 0. Since the scalar value is
 		// derived from a big endian byte slice, we take the last byte.
