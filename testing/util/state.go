@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -32,14 +33,14 @@ func FillRootsNaturalOpt(state state.BeaconState) error {
 		}
 		roots[j] = h
 	}
-	var stateRoots [8192][32]byte
+	var stateRoots [customtypes.StateRootsSize][32]byte
 	for i := range stateRoots {
 		stateRoots[i] = bytesutil.ToBytes32(roots[i])
 	}
 	if err := state.SetStateRoots(&stateRoots); err != nil {
 		return errors.Wrap(err, "could not set state roots")
 	}
-	var blockRoots [8192][32]byte
+	var blockRoots [customtypes.BlockRootsSize][32]byte
 	for i := range blockRoots {
 		blockRoots[i] = bytesutil.ToBytes32(roots[i])
 	}
@@ -68,10 +69,10 @@ func NewBeaconState(options ...func(beaconState state.BeaconState) error) (*v1.B
 	if err = st.SetHistoricalRoots([][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set historical roots")
 	}
-	if err = st.SetBlockRoots(&[8192][32]byte{}); err != nil {
+	if err = st.SetBlockRoots(&[customtypes.BlockRootsSize][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set block roots")
 	}
-	if err = st.SetStateRoots(&[8192][32]byte{}); err != nil {
+	if err = st.SetStateRoots(&[customtypes.StateRootsSize][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set state roots")
 	}
 	if err = st.SetEth1Data(&ethpb.Eth1Data{
@@ -86,7 +87,7 @@ func NewBeaconState(options ...func(beaconState state.BeaconState) error) (*v1.B
 	if err = st.SetValidators(make([]*ethpb.Validator, 0)); err != nil {
 		return nil, errors.Wrap(err, "could not set validators")
 	}
-	if err = st.SetRandaoMixes(&[65536][32]byte{}); err != nil {
+	if err = st.SetRandaoMixes(&[customtypes.RandaoMixesSize][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set randao mixes")
 	}
 	if err = st.SetSlashings(make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector)); err != nil {

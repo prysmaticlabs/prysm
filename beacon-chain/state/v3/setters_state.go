@@ -8,7 +8,7 @@ import (
 
 // SetStateRoots for the beacon state. Updates the state roots
 // to a new value by overwriting the previous value.
-func (b *BeaconState) SetStateRoots(val *[8192][32]byte) error {
+func (b *BeaconState) SetStateRoots(val *[customtypes.StateRootsSize][32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

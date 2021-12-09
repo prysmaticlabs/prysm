@@ -126,9 +126,9 @@ func InitializeFromProto(st *ethpb.BeaconStateMerge) (*BeaconState, error) {
 
 func Initialize() (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
-	sRoots := customtypes.BlockRoots([8192][32]byte{})
-	bRoots := customtypes.BlockRoots([8192][32]byte{})
-	mixes := customtypes.RandaoMixes([65536][32]byte{})
+	sRoots := customtypes.StateRoots([customtypes.StateRootsSize][32]byte{})
+	bRoots := customtypes.StateRoots([customtypes.BlockRootsSize][32]byte{})
+	mixes := customtypes.RandaoMixes([customtypes.RandaoMixesSize][32]byte{})
 	b := &BeaconState{
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),

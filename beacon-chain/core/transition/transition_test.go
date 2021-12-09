@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -140,7 +141,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 		},
 	}
-	var blockRoots [8192][32]byte
+	var blockRoots [customtypes.BlockRootsSize][32]byte
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots[i] = [32]byte{byte(i)}
 	}
@@ -285,7 +286,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		},
 	}
 
-	var blockRoots [8192][32]byte
+	var blockRoots [customtypes.BlockRootsSize][32]byte
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots[i] = [32]byte{byte(i)}
 	}

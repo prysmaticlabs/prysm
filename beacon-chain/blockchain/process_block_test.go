@@ -931,20 +931,6 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	assert.DeepSSZEqual(t, newCp, cp, "Incorrect current justified checkpoint in db")
 }
 
-func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
-	ctx := context.Background()
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	s, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, s.SetSlot(1))
-	service.head = &head{state: (*v1.BeaconState)(nil)}
-
-	require.ErrorContains(t, "failed to initialize precompute: nil inner state", service.handleEpochBoundary(ctx, s))
-}
-
 func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 	ctx := context.Background()
 	opts := testServiceOptsNoDB()

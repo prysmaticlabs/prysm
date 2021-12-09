@@ -20,7 +20,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 
 // SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetBlockRoots(val *[8192][32]byte) error {
+func (b *BeaconState) SetBlockRoots(val *[customtypes.BlockRootsSize][32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

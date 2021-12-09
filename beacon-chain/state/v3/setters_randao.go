@@ -8,7 +8,7 @@ import (
 
 // SetRandaoMixes for the beacon state. Updates the entire
 // randao mixes to a new value by overwriting the previous one.
-func (b *BeaconState) SetRandaoMixes(val *[65536][32]byte) error {
+func (b *BeaconState) SetRandaoMixes(val *[customtypes.RandaoMixesSize][32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

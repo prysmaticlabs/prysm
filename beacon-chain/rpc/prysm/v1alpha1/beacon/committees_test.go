@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -78,7 +79,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, numValidators)
 
-	var mixes [65536][32]byte
+	var mixes [customtypes.RandaoMixesSize][32]byte
 	require.NoError(t, headState.SetRandaoMixes(&mixes))
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
