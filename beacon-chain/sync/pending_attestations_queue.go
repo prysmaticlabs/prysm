@@ -180,7 +180,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 // check specifies the pending attestation could not fall one epoch behind
 // of the current slot.
 func (s *Service) validatePendingAtts(ctx context.Context, slot types.Slot) {
-	ctx, span := trace.StartSpan(ctx, "validatePendingAtts")
+	_, span := trace.StartSpan(ctx, "validatePendingAtts")
 	defer span.End()
 
 	s.pendingAttsLock.Lock()

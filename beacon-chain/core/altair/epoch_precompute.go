@@ -254,7 +254,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 // AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func AttestationsDelta(beaconState state.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
+func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
 	numOfVals := beaconState.NumValidators()
 	rewards = make([]uint64, numOfVals)
 	penalties = make([]uint64, numOfVals)
@@ -266,9 +266,17 @@ func AttestationsDelta(beaconState state.BeaconStateAltair, bal *precompute.Bala
 	factor := cfg.BaseRewardFactor
 	baseRewardMultiplier := increment * factor / math.IntegerSquareRoot(bal.ActiveCurrentEpoch)
 	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
-	inactivityDenominator := cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientAltair
-	if beaconState.Version() == version.Merge {
-		inactivityDenominator = cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientMerge
+
+	// Modified in Altair and Merge.
+	var inactivityDenominator uint64
+	bias := cfg.InactivityScoreBias
+	switch beaconState.Version() {
+	case version.Altair:
+		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientAltair
+	case version.Merge:
+		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientMerge
+	default:
+		return nil, nil, errors.Errorf("invalid state type version: %T", beaconState.Version())
 	}
 
 	for i, v := range vals {

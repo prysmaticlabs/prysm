@@ -178,13 +178,13 @@ func (s *BlockProviderScorer) processedBlocks(pid peer.ID) uint64 {
 // Block provider scorer cannot guarantee that lower score of a peer is indeed a sign of a bad peer.
 // Therefore this scorer never marks peers as bad, and relies on scores to probabilistically sort
 // out low-scorers (see WeightSorted method).
-func (s *BlockProviderScorer) IsBadPeer(_ peer.ID) bool {
+func (_ *BlockProviderScorer) IsBadPeer(_ peer.ID) bool {
 	return false
 }
 
 // BadPeers returns the peers that are considered bad.
 // No peers are considered bad by block providers scorer.
-func (s *BlockProviderScorer) BadPeers() []peer.ID {
+func (_ *BlockProviderScorer) BadPeers() []peer.ID {
 	return []peer.ID{}
 }
 

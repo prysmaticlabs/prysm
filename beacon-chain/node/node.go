@@ -833,19 +833,22 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		muxs = append(muxs, gatewayConfig.EthPbMux)
 	}
 
-	g := apigateway.New(
-		b.ctx,
-		muxs,
-		gatewayConfig.Handler,
-		selfAddress,
-		gatewayAddress,
-	).WithAllowedOrigins(allowedOrigins).
-		WithRemoteCert(selfCert).
-		WithMaxCallRecvMsgSize(maxCallSize)
-	if flags.EnableHTTPEthAPI(httpModules) {
-		g.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
+	opts := []apigateway.Option{
+		apigateway.WithGatewayAddr(gatewayAddress),
+		apigateway.WithRemoteAddr(selfAddress),
+		apigateway.WithPbHandlers(muxs),
+		apigateway.WithMuxHandler(gatewayConfig.Handler),
+		apigateway.WithRemoteCert(selfCert),
+		apigateway.WithMaxCallRecvMsgSize(maxCallSize),
+		apigateway.WithAllowedOrigins(allowedOrigins),
 	}
-
+	if flags.EnableHTTPEthAPI(httpModules) {
+		opts = append(opts, apigateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
+	}
+	g, err := apigateway.New(b.ctx, opts...)
+	if err != nil {
+		return err
+	}
 	return b.services.RegisterService(g)
 }
 

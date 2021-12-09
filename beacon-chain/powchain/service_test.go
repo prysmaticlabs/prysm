@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -127,7 +126,7 @@ func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethT
 	return header, nil
 }
 
-func (g *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
+func (_ *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
 	return nil, nil
 }
 
@@ -237,9 +236,9 @@ func TestStart_NoHttpEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 
-	require.NoError(t, beaconDB.SavePowchainData(context.Background(), &protodb.ETH1ChainData{
-		ChainstartData: &protodb.ChainStartData{Chainstarted: true},
-		Trie:           &protodb.SparseMerkleTrie{},
+	require.NoError(t, beaconDB.SavePowchainData(context.Background(), &ethpb.ETH1ChainData{
+		ChainstartData: &ethpb.ChainStartData{Chainstarted: true},
+		Trie:           &ethpb.SparseMerkleTrie{},
 	}))
 	s, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{""}),
@@ -360,9 +359,9 @@ func TestStatus(t *testing.T) {
 	testCases := map[*Service]string{
 		// "status is ok" cases
 		{}: "",
-		{isRunning: true, latestEth1Data: &protodb.LatestETH1Data{BlockTime: afterFiveMinutesAgo}}:   "",
-		{isRunning: false, latestEth1Data: &protodb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "",
-		{isRunning: false, runError: errors.New("test runError")}:                                    "",
+		{isRunning: true, latestEth1Data: &ethpb.LatestETH1Data{BlockTime: afterFiveMinutesAgo}}:   "",
+		{isRunning: false, latestEth1Data: &ethpb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "",
+		{isRunning: false, runError: errors.New("test runError")}:                                  "",
 		// "status is error" cases
 		{isRunning: true, runError: errors.New("test runError")}: "test runError",
 	}
@@ -435,7 +434,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		testAcc.Backend.Commit()
 	}
-	web3Service.latestEth1Data = &protodb.LatestETH1Data{LastRequestedBlock: 0}
+	web3Service.latestEth1Data = &ethpb.LatestETH1Data{LastRequestedBlock: 0}
 	// Spin off to a separate routine
 	go web3Service.run(web3Service.ctx.Done())
 	// Wait for 2 seconds so that the
@@ -446,7 +445,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 }
 
 func TestInitDepositCache_OK(t *testing.T) {
-	ctrs := []*protodb.DepositContainer{
+	ctrs := []*ethpb.DepositContainer{
 		{Index: 0, Eth1BlockHeight: 2, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("A")}, Data: &ethpb.Deposit_Data{PublicKey: []byte{}}}},
 		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}, Data: &ethpb.Deposit_Data{PublicKey: []byte{}}}},
 		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}, Data: &ethpb.Deposit_Data{PublicKey: []byte{}}}},
@@ -454,7 +453,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 	gs, _ := util.DeterministicGenesisState(t, 1)
 	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
-		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
+		chainStartData:  &ethpb.ChainStartData{Chainstarted: false},
 		preGenesisState: gs,
 		cfg:             &config{beaconDB: beaconDB},
 	}
@@ -477,7 +476,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 }
 
 func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
-	ctrs := []*protodb.DepositContainer{
+	ctrs := []*ethpb.DepositContainer{
 		{
 			Index:           0,
 			Eth1BlockHeight: 2,
@@ -515,7 +514,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 	gs, _ := util.DeterministicGenesisState(t, 1)
 	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
-		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
+		chainStartData:  &ethpb.ChainStartData{Chainstarted: false},
 		preGenesisState: gs,
 		cfg:             &config{beaconDB: beaconDB},
 	}
@@ -762,9 +761,9 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 
 	require.NoError(t, s1.cfg.beaconDB.SaveGenesisData(context.Background(), genState))
 
-	err = s1.cfg.beaconDB.SavePowchainData(context.Background(), &protodb.ETH1ChainData{
-		ChainstartData:    &protodb.ChainStartData{Chainstarted: true},
-		DepositContainers: []*protodb.DepositContainer{{Index: 1}},
+	err = s1.cfg.beaconDB.SavePowchainData(context.Background(), &ethpb.ETH1ChainData{
+		ChainstartData:    &ethpb.ChainStartData{Chainstarted: true},
+		DepositContainers: []*ethpb.DepositContainer{{Index: 1}},
 	})
 	require.NoError(t, err)
 	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
@@ -777,34 +776,24 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 }
 
 func TestService_ValidateDepositContainers(t *testing.T) {
-	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
-	require.NoError(t, err)
-
-	s1, err := NewService(context.Background(),
-		WithDatabase(beaconDB),
-		WithDepositCache(cache),
-	)
-	require.NoError(t, err)
-
 	var tt = []struct {
 		name        string
-		ctrsFunc    func() []*protodb.DepositContainer
+		ctrsFunc    func() []*ethpb.DepositContainer
 		expectedRes bool
 	}{
 		{
 			name: "zero containers",
-			ctrsFunc: func() []*protodb.DepositContainer {
-				return make([]*protodb.DepositContainer, 0)
+			ctrsFunc: func() []*ethpb.DepositContainer {
+				return make([]*ethpb.DepositContainer, 0)
 			},
 			expectedRes: true,
 		},
 		{
 			name: "ordered containers",
-			ctrsFunc: func() []*protodb.DepositContainer {
-				ctrs := make([]*protodb.DepositContainer, 0)
+			ctrsFunc: func() []*ethpb.DepositContainer {
+				ctrs := make([]*ethpb.DepositContainer, 0)
 				for i := 0; i < 10; i++ {
-					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+					ctrs = append(ctrs, &ethpb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
 				}
 				return ctrs
 			},
@@ -812,10 +801,10 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 		},
 		{
 			name: "0th container missing",
-			ctrsFunc: func() []*protodb.DepositContainer {
-				ctrs := make([]*protodb.DepositContainer, 0)
+			ctrsFunc: func() []*ethpb.DepositContainer {
+				ctrs := make([]*ethpb.DepositContainer, 0)
 				for i := 1; i < 10; i++ {
-					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+					ctrs = append(ctrs, &ethpb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
 				}
 				return ctrs
 			},
@@ -823,13 +812,13 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 		},
 		{
 			name: "skipped containers",
-			ctrsFunc: func() []*protodb.DepositContainer {
-				ctrs := make([]*protodb.DepositContainer, 0)
+			ctrsFunc: func() []*ethpb.DepositContainer {
+				ctrs := make([]*ethpb.DepositContainer, 0)
 				for i := 0; i < 10; i++ {
 					if i == 5 || i == 7 {
 						continue
 					}
-					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+					ctrs = append(ctrs, &ethpb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
 				}
 				return ctrs
 			},
@@ -838,7 +827,7 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 	}
 
 	for _, test := range tt {
-		assert.Equal(t, test.expectedRes, s1.validateDepositContainers(test.ctrsFunc()))
+		assert.Equal(t, test.expectedRes, validateDepositContainers(test.ctrsFunc()))
 	}
 }
 

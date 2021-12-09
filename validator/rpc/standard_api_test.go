@@ -134,17 +134,23 @@ func TestServer_ImportKeystores(t *testing.T) {
 		numKeystores := 5
 		password := "12345678"
 		encodedKeystores := make([]string, numKeystores)
+		passwords := make([]string, numKeystores)
 		for i := 0; i < numKeystores; i++ {
 			enc, err := json.Marshal(createRandomKeystore(t, password))
 			encodedKeystores[i] = string(enc)
 			require.NoError(t, err)
+			passwords[i] = password
 		}
-		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+		resp, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
 			Keystores:          encodedKeystores,
-			Passwords:          []string{password},
+			Passwords:          passwords,
 			SlashingProtection: "foobar",
 		})
-		require.NotNil(t, err)
+		require.NoError(t, err)
+		require.Equal(t, numKeystores, len(resp.Statuses))
+		for _, st := range resp.Statuses {
+			require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, st.Status)
+		}
 	})
 	t.Run("returns proper statuses for keystores in request", func(t *testing.T) {
 		numKeystores := 5
@@ -203,7 +209,6 @@ func TestServer_ImportKeystores(t *testing.T) {
 		}
 	})
 }
-
 func TestServer_DeleteKeystores(t *testing.T) {
 	ctx := context.Background()
 	srv := setupServerWithWallet(t)
@@ -246,6 +251,14 @@ func TestServer_DeleteKeystores(t *testing.T) {
 		SlashingProtectionJson: string(encoded),
 	})
 	require.NoError(t, err)
+
+	t.Run("no slashing protection response if no keys in request even if we have a history in DB", func(t *testing.T) {
+		resp, err := srv.DeleteKeystores(context.Background(), &ethpbservice.DeleteKeystoresRequest{
+			PublicKeys: nil,
+		})
+		require.NoError(t, err)
+		require.Equal(t, "", resp.SlashingProtection)
+	})
 
 	// For ease of test setup, we'll give each public key a string identifier.
 	publicKeysWithId := map[string][48]byte{

@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -31,7 +30,7 @@ func TestServer_GetBlock(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 	}
-	res, err := bs.GetBlock(ctx, &pbrpc.BlockRequestByRoot{
+	res, err := bs.GetBlock(ctx, &ethpb.BlockRequestByRoot{
 		BlockRoot: blockRoot[:],
 	})
 	require.NoError(t, err)
@@ -41,7 +40,7 @@ func TestServer_GetBlock(t *testing.T) {
 
 	// Checking for nil block.
 	blockRoot = [32]byte{}
-	res, err = bs.GetBlock(ctx, &pbrpc.BlockRequestByRoot{
+	res, err = bs.GetBlock(ctx, &ethpb.BlockRequestByRoot{
 		BlockRoot: blockRoot[:],
 	})
 	require.NoError(t, err)
@@ -78,10 +77,10 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	b.Block.Slot = 2
 	b.Block.Body.Attestations = []*ethpb.Attestation{a}
 	require.NoError(t, bs.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	res, err := bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: uint64(c[0])})
+	res, err := bs.GetInclusionSlot(ctx, &ethpb.InclusionSlotRequest{Slot: 1, Id: uint64(c[0])})
 	require.NoError(t, err)
 	require.Equal(t, b.Block.Slot, res.Slot)
-	res, err = bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: 9999999})
+	res, err = bs.GetInclusionSlot(ctx, &ethpb.InclusionSlotRequest{Slot: 1, Id: 9999999})
 	require.NoError(t, err)
 	require.Equal(t, params.BeaconConfig().FarFutureSlot, res.Slot)
 }

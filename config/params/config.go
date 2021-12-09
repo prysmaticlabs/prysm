@@ -174,6 +174,7 @@ type BeaconChainConfig struct {
 	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties' multiplier post Alair hard fork.
 	MinSlashingPenaltyQuotientMerge      uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE" spec:"true"`     // MinSlashingPenaltyQuotientMerge for slashing penalties post Merge hard fork.
 	ProportionalSlashingMultiplierMerge  uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE" spec:"true"`  // ProportionalSlashingMultiplierMerge for slashing penalties' multiplier post Merge hard fork.
+	InactivityPenaltyQuotientMerge       uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_MERGE" spec:"true"`       // InactivityPenaltyQuotientMerge for penalties during inactivity post Merge hard fork.
 
 	// Merge.
 	EnabledMerge                     bool           // EnabledMerge is true if merge feature is enabled.

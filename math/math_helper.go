@@ -112,3 +112,12 @@ func Add64(a, b uint64) (uint64, error) {
 	}
 	return res, nil
 }
+
+// Sub64 subtracts two 64-bit unsigned integers and checks for errors.
+func Sub64(a, b uint64) (uint64, error) {
+	res, borrow := bits.Sub64(a, b, 0 /* borrow */)
+	if borrow > 0 {
+		return 0, errors.New("subtraction underflow")
+	}
+	return res, nil
+}

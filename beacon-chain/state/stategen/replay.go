@@ -21,7 +21,7 @@ import (
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
-func (s *State) ReplayBlocks(
+func (_ *State) ReplayBlocks(
 	ctx context.Context,
 	state state.BeaconState,
 	signed []block.SignedBeaconBlock,

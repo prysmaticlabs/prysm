@@ -148,6 +148,6 @@ func NewPowchainCollector(ctx context.Context) (*PowchainCollector, error) {
 
 type NopBeaconNodeStatsUpdater struct{}
 
-func (nop *NopBeaconNodeStatsUpdater) Update(_ clientstats.BeaconNodeStats) {}
+func (_ *NopBeaconNodeStatsUpdater) Update(_ clientstats.BeaconNodeStats) {}
 
 var _ BeaconNodeStatsUpdater = &NopBeaconNodeStatsUpdater{}
