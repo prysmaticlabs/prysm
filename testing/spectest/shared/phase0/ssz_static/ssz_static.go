@@ -1,15 +1,19 @@
 package ssz_static
 
 import (
+	"context"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"path"
 	"testing"
 
 	fssz "github.com/ferranbt/fastssz"
+	"github.com/golang/snappy"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 // SSZRoots --
@@ -29,11 +33,12 @@ func RunSSZStaticTests(t *testing.T, config string) {
 		for _, modeFolder := range modeFolders {
 			innerPath := path.Join(modePath, modeFolder.Name())
 			innerTestFolders, innerTestsFolderPath := utils.TestFolders(t, config, "phase0", innerPath)
+
 			for _, innerFolder := range innerTestFolders {
 				t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {
 					serializedBytes, err := util.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
 					require.NoError(t, err)
-					serializedSSZ, err := snappy.Decode(nil  dst , serializedBytes)
+					serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
 					require.NoError(t, err, "Failed to decompress")
 					object, err := UnmarshalledSSZ(t, serializedSSZ, folder.Name())
 					require.NoError(t, err, "Could not unmarshall serialized SSZ")
