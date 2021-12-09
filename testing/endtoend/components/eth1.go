@@ -81,7 +81,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		"--dev.period=2",
 		"--ipcdisable",
 	}
-	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 -- Safe */
+	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1.log")
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	web3 := ethclient.NewClient(client)
 
 	// Access the dev account keystore to deploy the contract.
-	fileName, err := exec.Command("ls", path.Join(eth1Path, "keystore")).Output() /* #nosec G204 */
+	fileName, err := exec.Command("ls", path.Join(eth1Path, "keystore")).Output() // #nosec G204
 	if err != nil {
 		return err
 	}
