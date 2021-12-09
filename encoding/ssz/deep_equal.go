@@ -13,8 +13,8 @@ import (
 // checks in progress are true when it reencounters them.
 // Visited comparisons are stored in a map indexed by visit.
 type visit struct {
-	a1  unsafe.Pointer /* #nosec G103 */
-	a2  unsafe.Pointer /* #nosec G103 */
+	a1  unsafe.Pointer // #nosec G103 -- Test use only
+	a2  unsafe.Pointer // #nosec G103 -- Test use only
 	typ reflect.Type
 }
 
@@ -48,8 +48,8 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 	}
 
 	if v1.CanAddr() && v2.CanAddr() && hard(v1.Kind()) {
-		addr1 := unsafe.Pointer(v1.UnsafeAddr()) /* #nosec G103 */
-		addr2 := unsafe.Pointer(v2.UnsafeAddr()) /* #nosec G103 */
+		addr1 := unsafe.Pointer(v1.UnsafeAddr()) // #nosec G103 -- Test compare only
+		addr2 := unsafe.Pointer(v2.UnsafeAddr()) // #nosec G103 -- Test compare only
 
 		if uintptr(addr1) > uintptr(addr2) {
 			// Canonicalize order to reduce number of entries in visited.
@@ -139,8 +139,8 @@ func deepValueEqualExportedOnly(v1, v2 reflect.Value, visited map[visit]bool, de
 	}
 
 	if v1.CanAddr() && v2.CanAddr() && hard(v1.Kind()) {
-		addr1 := unsafe.Pointer(v1.UnsafeAddr()) /* #nosec G103 */
-		addr2 := unsafe.Pointer(v2.UnsafeAddr()) /* #nosec G103 */
+		addr1 := unsafe.Pointer(v1.UnsafeAddr()) // #nosec G103 -- Test compare only
+		addr2 := unsafe.Pointer(v2.UnsafeAddr()) // #nosec G103 -- Test compare only
 		if uintptr(addr1) > uintptr(addr2) {
 			// Canonicalize order to reduce number of entries in visited.
 			// Assumes non-moving garbage collector.
