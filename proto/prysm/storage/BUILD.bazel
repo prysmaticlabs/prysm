@@ -9,7 +9,6 @@ proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/v2:proto",
-        "//proto/prysm/v1alpha1:proto",
     ],
 )
 
@@ -20,7 +19,6 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/v2:go_default_library",
-        "//proto/prysm/v1alpha1:go_default_library",
     ],
 )
 
