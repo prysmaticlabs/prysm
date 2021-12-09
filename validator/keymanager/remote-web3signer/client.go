@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 )
@@ -28,8 +30,8 @@ type client struct {
 
 // newClient method instantiates a new client object.
 //nolint:unused,deadcode
-func newClient(endpoint string) (*client, error) {
-	u, err := url.Parse(endpoint)
+func newClient(baseEndpoint string) (*client, error) {
+	u, err := url.Parse(baseEndpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, unable to parse url")
 	}
@@ -101,7 +103,7 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
-func (client *client) GetPublicKeys() ([][]byte, error) {
+func (client *client) GetPublicKeys() ([][48]byte, error) {
 	const requestPath = "/publicKeys"
 	resp, err := client.doRequest(http.MethodGet, client.BasePath+requestPath, nil)
 	if err != nil {
@@ -111,7 +113,7 @@ func (client *client) GetPublicKeys() ([][]byte, error) {
 	if err := client.unmarshalResponse(resp.Body, &publicKeys); err != nil {
 		return nil, err
 	}
-	decodedKeys := make([][]byte, len(publicKeys))
+	decodedKeys := make([][48]byte, len(publicKeys))
 	var errorKeyPositions string
 	for i, value := range publicKeys {
 		decodedKey, err := decodeHex(value)
@@ -119,7 +121,7 @@ func (client *client) GetPublicKeys() ([][]byte, error) {
 			errorKeyPositions += fmt.Sprintf("%v, ", i)
 			continue
 		}
-		decodedKeys[i] = decodedKey
+		decodedKeys[i] = bytesutil.ToBytes48(decodedKey)
 	}
 	if errorKeyPositions != "" {
 		return nil, errors.New("failed to decode from Hex from the following public key index locations: " + errorKeyPositions)

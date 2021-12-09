@@ -57,7 +57,7 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 
 func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	// public keys are returned hex encoded with 0x
-	json := `["0x613262356161616439633665666566653762623962313234336130343334303466333336323933376366623662333138333339323938333331373366343736363330656132636665623064396464663135663937636138363835393438383230","0x613262356161616439633665666566653762623962313234336130343334303466333336323933376366623662333138333339323938333331373366343736363330656132636665623064396464663135663937636138363835393438383230"]`
+	json := `["0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"]`
 	// create a new reader with that JSON
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
 	mock := &mockTransport{mockResponse: &http.Response{
@@ -69,7 +69,7 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	// we would like them as 48byte base64 without 0x
-	assert.EqualValues(t, "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", string(resp[0]))
+	assert.EqualValues(t, "[162 181 170 173 156 110 254 254 123 185 177 36 58 4 52 4 243 54 41 55 207 182 179 24 51 146 152 51 23 63 71 102 48 234 44 254 176 217 221 241 95 151 202 134 133 148 136 32]", fmt.Sprintf("%v", resp[0][:]))
 }
 
 func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
