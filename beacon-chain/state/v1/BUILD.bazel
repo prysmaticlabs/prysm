@@ -30,7 +30,10 @@ go_library(
         "unsupported_getters.go",
         "unsupported_setters.go",
         ":ssz_generated_files",  # keep
-    ],
+    ] + select({
+        "//config:mainnet": ["beacon_state.go"],
+        "//config:minimal": ["beacon_state_minimal.go"],
+    }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v1",
     visibility = [
         "//beacon-chain:__subpackages__",
@@ -109,9 +112,10 @@ go_test(
 
 ssz_gen_marshal(
     name = "ssz_generated_files",
-    srcs = [
-        "types.go",
-    ],
+    srcs = select({
+           "//config:mainnet": ["beacon_state.go"],
+           "//config:minimal": ["beacon_state_minimal.go"],
+        }),
     includes = [
         "//beacon-chain/state/custom-types:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

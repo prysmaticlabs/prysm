@@ -51,7 +51,7 @@ func (b *BeaconState) latestBlockHeaderInternal() *ethpb.BeaconBlockHeader {
 }
 
 // BlockRoots kept track of in the beacon state.
-func (b *BeaconState) BlockRoots() *[8192][32]byte {
+func (b *BeaconState) BlockRoots() *[customtypes.BlockRootsSize][32]byte {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (b *BeaconState) BlockRoots() *[8192][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := [8192][32]byte(*b.blockRootsInternal())
+	roots := [customtypes.BlockRootsSize][32]byte(*b.blockRootsInternal())
 	return &roots
 }
 

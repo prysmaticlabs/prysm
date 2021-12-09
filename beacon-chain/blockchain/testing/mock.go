@@ -214,7 +214,11 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.Signe
 // ReceiveBlock mocks ReceiveBlock method in chain service.
 func (s *ChainService) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &v1.BeaconState{}
+		st, err := v1.Initialize()
+		if err != nil {
+			return err
+		}
+		s.State = st
 	}
 	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())

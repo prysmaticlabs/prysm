@@ -67,7 +67,7 @@ func TestGetState(t *testing.T) {
 			return nil
 		})
 		require.NoError(t, err)
-		stateRoot, err = bs.HashTreeRoot(ctx)
+		newStateRoot, err := bs.HashTreeRoot(ctx)
 		require.NoError(t, err)
 
 		require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
@@ -82,7 +82,7 @@ func TestGetState(t *testing.T) {
 		require.NoError(t, err)
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
-		assert.DeepEqual(t, stateRoot, sRoot)
+		assert.DeepEqual(t, newStateRoot, sRoot)
 	})
 
 	t.Run("finalized", func(t *testing.T) {

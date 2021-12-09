@@ -8,6 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -110,19 +111,19 @@ type ReadOnlyCheckpoint interface {
 
 // ReadOnlyBlockRoots defines a struct which only has read access to block roots methods.
 type ReadOnlyBlockRoots interface {
-	BlockRoots() *[8192][32]byte
+	BlockRoots() *[customtypes.BlockRootsSize][32]byte
 	BlockRootAtIndex(idx uint64) ([32]byte, error)
 }
 
 // ReadOnlyStateRoots defines a struct which only has read access to state roots methods.
 type ReadOnlyStateRoots interface {
-	StateRoots() *[8192][32]byte
+	StateRoots() *[customtypes.StateRootsSize][32]byte
 	StateRootAtIndex(idx uint64) ([32]byte, error)
 }
 
 // ReadOnlyRandaoMixes defines a struct which only has read access to randao mixes methods.
 type ReadOnlyRandaoMixes interface {
-	RandaoMixes() *[65536][32]byte
+	RandaoMixes() *[customtypes.RandaoMixesSize][32]byte
 	RandaoMixAtIndex(idx uint64) ([32]byte, error)
 	RandaoMixesLength() int
 }
@@ -142,13 +143,13 @@ type ReadOnlyAttestations interface {
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
 type WriteOnlyBlockRoots interface {
-	SetBlockRoots(val *[8192][32]byte) error
+	SetBlockRoots(val *[customtypes.BlockRootsSize][32]byte) error
 	UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error
 }
 
 // WriteOnlyStateRoots defines a struct which only has write access to state roots methods.
 type WriteOnlyStateRoots interface {
-	SetStateRoots(val *[8192][32]byte) error
+	SetStateRoots(val *[customtypes.StateRootsSize][32]byte) error
 	UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error
 }
 
@@ -177,7 +178,7 @@ type WriteOnlyBalances interface {
 
 // WriteOnlyRandaoMixes defines a struct which only has write access to randao mixes methods.
 type WriteOnlyRandaoMixes interface {
-	SetRandaoMixes(val *[65536][32]byte) error
+	SetRandaoMixes(val *[customtypes.RandaoMixesSize][32]byte) error
 	UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error
 }
 
