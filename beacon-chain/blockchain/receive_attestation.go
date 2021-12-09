@@ -145,11 +145,11 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 
 				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 				if err != nil {
-					log.Errorf("Unable to get justified balances for root %v w/ error %s", s.justifiedCheckpt.Root, err)
+					log.WithError(err).Errorf("Unable to get justified balances for root %v", s.justifiedCheckpt.Root)
 					continue
 				}
 				if err := s.updateHead(s.ctx, balances); err != nil {
-					log.Warnf("Resolving fork due to new attestation: %v", err)
+					log.WithError(err).Warn("Resolving fork due to new attestation")
 				}
 			}
 		}
