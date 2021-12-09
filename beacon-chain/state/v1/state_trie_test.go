@@ -66,49 +66,6 @@ func TestInitializeFromProto(t *testing.T) {
 	}
 }
 
-func TestInitializeFromProto(t *testing.T) {
-	testState, _ := util.DeterministicGenesisState(t, 64)
-	pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
-	require.NoError(t, err)
-	type test struct {
-		name  string
-		state *ethpb.BeaconState
-		error string
-	}
-	initTests := []test{
-		{
-			name:  "nil state",
-			state: nil,
-			error: "received nil state",
-		},
-		{
-			name: "nil validators",
-			state: &ethpb.BeaconState{
-				Slot:       4,
-				Validators: nil,
-			},
-		},
-		{
-			name:  "empty state",
-			state: &ethpb.BeaconState{},
-		},
-		{
-			name:  "full state",
-			state: pbState,
-		},
-	}
-	for _, tt := range initTests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := v1.InitializeFromProto(tt.state)
-			if tt.error != "" {
-				assert.ErrorContains(t, tt.error, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestBeaconState_HashTreeRoot(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
 

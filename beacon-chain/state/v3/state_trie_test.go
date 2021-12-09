@@ -137,31 +137,3 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	// Test will not terminate in the event of a deadlock.
 	wg.Wait()
 }
-
-func TestInitializeFromProto(t *testing.T) {
-	type test struct {
-		name  string
-		state *ethpb.BeaconStateMerge
-		error string
-	}
-	initTests := []test{
-		{
-			name:  "nil state",
-			state: nil,
-			error: "received nil state",
-		},
-		{
-			name: "nil validators",
-			state: &ethpb.BeaconStateMerge{
-				Slot:       4,
-				Validators: nil,
-			},
-		},
-		{
-			name:  "empty state",
-			state: &ethpb.BeaconStateMerge{},
-		},
-		// TODO: Add full state. Blocked by testutil migration.
-	}
-	_ = initTests
-}
