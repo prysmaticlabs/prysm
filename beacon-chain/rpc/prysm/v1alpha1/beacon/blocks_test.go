@@ -498,8 +498,9 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
-	params.UseMainnetConfig()
 	genBlock := util.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genBlock)))
@@ -723,7 +724,8 @@ func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
