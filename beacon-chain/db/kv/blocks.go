@@ -46,6 +46,28 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeac
 	return blk, err
 }
 
+// OriginBlockRoot returns the value written to the db in SaveOriginBlockRoot
+// This is the root of a finalized block within the weak subjectivity period
+// at the time the chain was started, used to initialize the database and chain
+// without syncing from genesis.
+func (s *Store) OriginBlockRoot(ctx context.Context) ([32]byte, error) {
+	_, span := trace.StartSpan(ctx, "BeaconDB.OriginBlockRoot")
+	defer span.End()
+
+	var root [32]byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		rootSlice := bkt.Get(originBlockRootKey)
+		if rootSlice == nil {
+			return ErrNotFoundOriginBlockRoot
+		}
+		copy(root[:], rootSlice)
+		return nil
+	})
+
+	return root, err
+}
+
 // HeadBlock returns the latest canonical block in the Ethereum Beacon Chain.
 func (s *Store) HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadBlock")
@@ -333,6 +355,19 @@ func (s *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) er
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(genesisBlockRootKey, blockRoot[:])
+	})
+}
+
+// SaveOriginBlockRoot is used to keep track of the block root used for origin sync.
+// This should be a finalized block from within the current weak subjectivity period.
+// This value is used by a running beacon chain node to locate the state at the beginning
+// of the chain history, in places where genesis would typically be used.
+func (s *Store) SaveOriginBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveOriginBlockRoot")
+	defer span.End()
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(blocksBucket)
+		return bucket.Put(originBlockRootKey, blockRoot[:])
 	})
 }
 

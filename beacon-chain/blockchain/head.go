@@ -46,11 +46,11 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	// Get head from the fork choice service.
 	f := s.finalizedCheckpt
 	j := s.justifiedCheckpt
-	// To get head before the first justified epoch, the fork choice will start with genesis root
+	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
 	headStartRoot := bytesutil.ToBytes32(j.Root)
 	if headStartRoot == params.BeaconConfig().ZeroHash {
-		headStartRoot = s.genesisRoot
+		headStartRoot = s.originBlockRoot
 	}
 
 	// In order to process head, fork choice store requires justified info.
@@ -277,8 +277,8 @@ func (s *Service) notifyNewHeadEvent(
 	newHeadStateRoot,
 	newHeadRoot []byte,
 ) error {
-	previousDutyDependentRoot := s.genesisRoot[:]
-	currentDutyDependentRoot := s.genesisRoot[:]
+	previousDutyDependentRoot := s.originBlockRoot[:]
+	currentDutyDependentRoot := s.originBlockRoot[:]
 
 	var previousDutyEpoch types.Epoch
 	currentDutyEpoch := slots.ToEpoch(newHeadSlot)
