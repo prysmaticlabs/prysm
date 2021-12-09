@@ -121,6 +121,10 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 		if s.genesisTime.IsZero() {
 			log.Warn("ProcessAttestations routine waiting for genesis time")
 			for s.genesisTime.IsZero() {
+				if err := s.ctx.Err(); err != nil {
+					log.WithError(err).Error("Giving up waiting for genesis time")
+					return
+				}
 				time.Sleep(1 * time.Second)
 			}
 			log.Warn("Genesis time received, now available to process attestations")
