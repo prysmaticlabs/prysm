@@ -108,7 +108,6 @@ func (g *Gateway) Start() {
 	}
 
 	corsMux := g.corsMiddleware(g.cfg.router)
-	_ = corsMux
 
 	if g.cfg.apiMiddlewareEndpointFactory != nil && !g.cfg.apiMiddlewareEndpointFactory.IsNil() {
 		g.registerApiMiddleware()
@@ -116,13 +115,13 @@ func (g *Gateway) Start() {
 
 	if g.cfg.muxHandler != nil {
 		g.cfg.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			g.cfg.muxHandler(g.proxy, g.cfg.router.ServeHTTP, w, r)
+			g.cfg.muxHandler(g.proxy, corsMux.ServeHTTP, w, r)
 		})
 	}
 
 	g.server = &http.Server{
 		Addr:    g.cfg.gatewayAddr,
-		Handler: g.cfg.router,
+		Handler: corsMux,
 	}
 
 	go func() {
