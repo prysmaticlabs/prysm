@@ -15,7 +15,7 @@ func (b *BeaconState) SetStateRoots(val *[customtypes.StateRootsSize][32]byte) e
 	b.sharedFieldReferences[stateRoots].MinusRef()
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 
-	roots := customtypes.BlockRoots(*val)
+	roots := customtypes.StateRoots(*val)
 	b.stateRoots = &roots
 	b.markFieldAsDirty(stateRoots)
 	b.rebuildTrie[stateRoots] = true

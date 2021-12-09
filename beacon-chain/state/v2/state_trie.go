@@ -46,7 +46,7 @@ func InitializeFromProto(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
 	for i, r := range st.BlockRoots {
 		bRoots[i] = bytesutil.ToBytes32(r)
 	}
-	var sRoots customtypes.BlockRoots
+	var sRoots customtypes.StateRoots
 	for i, r := range st.StateRoots {
 		sRoots[i] = bytesutil.ToBytes32(r)
 	}
@@ -126,7 +126,7 @@ func InitializeFromProto(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
 func Initialize() (*BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
 	sRoots := customtypes.StateRoots([customtypes.StateRootsSize][32]byte{})
-	bRoots := customtypes.StateRoots([customtypes.BlockRootsSize][32]byte{})
+	bRoots := customtypes.BlockRoots([customtypes.BlockRootsSize][32]byte{})
 	mixes := customtypes.RandaoMixes([customtypes.RandaoMixesSize][32]byte{})
 	b := &BeaconState{
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),

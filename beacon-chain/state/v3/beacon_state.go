@@ -22,7 +22,7 @@ type BeaconState struct {
 	slot                         eth2types.Slot                `ssz-gen:"true"`
 	fork                         *ethpb.Fork                   `ssz-gen:"true"`
 	latestBlockHeader            *ethpb.BeaconBlockHeader      `ssz-gen:"true"`
-	blockRoots                   *customtypes.StateRoots       `ssz-gen:"true" ssz-size:"8192,32"`
+	blockRoots                   *customtypes.BlockRoots       `ssz-gen:"true" ssz-size:"8192,32"`
 	stateRoots                   *customtypes.StateRoots       `ssz-gen:"true" ssz-size:"8192,32"`
 	historicalRoots              customtypes.HistoricalRoots   `ssz-gen:"true" ssz-size:"?,32" ssz-max:"16777216"`
 	eth1Data                     *ethpb.Eth1Data               `ssz-gen:"true"`
