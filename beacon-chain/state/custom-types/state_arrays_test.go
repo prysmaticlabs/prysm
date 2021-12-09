@@ -70,9 +70,9 @@ func TestByte32_SizeSSZ(t *testing.T) {
 }
 
 func TestBlockRoots_Casting(t *testing.T) {
-	var b [blockRootsSize][32]byte
+	var b [BlockRootsSize][32]byte
 	d := BlockRoots(b)
-	if !reflect.DeepEqual([blockRootsSize][32]byte(d), b) {
+	if !reflect.DeepEqual([BlockRootsSize][32]byte(d), b) {
 		t.Errorf("Unequal: %v = %v", d, b)
 	}
 }
@@ -80,10 +80,10 @@ func TestBlockRoots_Casting(t *testing.T) {
 func TestBlockRoots_UnmarshalSSZ(t *testing.T) {
 	t.Run("Ok", func(t *testing.T) {
 		d := BlockRoots{}
-		var b [blockRootsSize][32]byte
+		var b [BlockRootsSize][32]byte
 		b[0] = [32]byte{'f', 'o', 'o'}
 		b[1] = [32]byte{'b', 'a', 'r'}
-		bb := make([]byte, blockRootsSize*32)
+		bb := make([]byte, BlockRootsSize*32)
 		for i, elem32 := range b {
 			for j, elem := range elem32 {
 				bb[i*32+j] = elem
@@ -93,17 +93,17 @@ func TestBlockRoots_UnmarshalSSZ(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
-		if !reflect.DeepEqual(b, [blockRootsSize][32]byte(d)) {
-			t.Errorf("Unequal: %v = %v", b, [blockRootsSize][32]byte(d))
+		if !reflect.DeepEqual(b, [BlockRootsSize][32]byte(d)) {
+			t.Errorf("Unequal: %v = %v", b, [BlockRootsSize][32]byte(d))
 		}
 	})
 
 	t.Run("Wrong slice length", func(t *testing.T) {
 		d := BlockRoots{}
-		var b [blockRootsSize][16]byte
+		var b [BlockRootsSize][16]byte
 		b[0] = [16]byte{'f', 'o', 'o'}
 		b[1] = [16]byte{'b', 'a', 'r'}
-		bb := make([]byte, blockRootsSize*16)
+		bb := make([]byte, BlockRootsSize*16)
 		for i, elem16 := range b {
 			for j, elem := range elem16 {
 				bb[i*16+j] = elem
@@ -148,8 +148,8 @@ func TestBlockRoots_MarshalSSZ(t *testing.T) {
 
 func TestBlockRoots_SizeSSZ(t *testing.T) {
 	d := BlockRoots{}
-	if d.SizeSSZ() != blockRootsSize*32 {
-		t.Errorf("Wrong SSZ size. Expected %v vs actual %v", blockRootsSize*32, d.SizeSSZ())
+	if d.SizeSSZ() != BlockRootsSize*32 {
+		t.Errorf("Wrong SSZ size. Expected %v vs actual %v", BlockRootsSize*32, d.SizeSSZ())
 	}
 }
 
