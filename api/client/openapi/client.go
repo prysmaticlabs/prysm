@@ -24,14 +24,17 @@ const GET_WEAK_SUBJECTIVITY_CHECKPOINT_PATH = "/eth/v1alpha1/beacon/weak_subject
 const GET_SIGNED_BLOCK_PATH = "/eth/v2/beacon/blocks"
 const GET_STATE_PATH = "/eth/v2/debug/beacon/states"
 
+// ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
 
+// WithTimeout sets the .Timeout attribute of the wrapped http.Client
 func WithTimeout(timeout time.Duration) ClientOpt {
 	return func(c *Client) {
 		c.c.Timeout = timeout
 	}
 }
 
+// Client provides a collection of helper methods for calling the beacon node OpenAPI endpoints
 type Client struct {
 	c      *http.Client
 	host   string
@@ -47,6 +50,9 @@ func (c *Client) urlForPath(methodPath string) *url.URL {
 	return u
 }
 
+// NewClient constructs a new client with the provided options (ex WithTimeout).
+// host is the base host + port used to construct request urls. This value can be
+// a URL string, or NewClient will assume an http endpoint if just `host:port` is used.
 func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 	host, err := validHostname(host)
 	if err != nil {
@@ -81,6 +87,9 @@ type checkpointEpochResponse struct {
 	Epoch string
 }
 
+// GetWeakSubjectivityCheckpointEpoch retrieves the epoch for a finalized block within the weak subjectivity period.
+// The main use case for method is to find the slot that can be used to fetch a block within the subjectivity period
+// which can be used to sync (as an alternative to syncing from genesis).
 func (c *Client) GetWeakSubjectivityCheckpointEpoch() (uint64, error) {
 	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_CHECKPOINT_EPOCH_PATH)
 	r, err := c.c.Get(u.String())
@@ -98,12 +107,17 @@ func (c *Client) GetWeakSubjectivityCheckpointEpoch() (uint64, error) {
 	return strconv.ParseUint(jsonr.Epoch, 10, 64)
 }
 
-type WSCResponse struct {
+type wscResponse struct {
 	BlockRoot string
 	StateRoot string
 	Epoch     string
 }
 
+// GetWeakSubjectivityCheckpoint calls an entirely different rpc method than GetWeakSubjectivityCheckpointEpoch
+// This endpoint is much slower, because it uses stategen to generate the BeaconState at the beginning of the
+// weak subjectivity epoch. This also results in a different set of state+block roots, because this endpoint currently
+// uses the state's latest_block_header for the block hash, while the checkpoint sync code assumes that the block
+// is from the first slot in the epoch and the state is from the subesequent slot.
 func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpoint, error) {
 	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_CHECKPOINT_PATH)
 	r, err := c.c.Get(u.String())
@@ -113,7 +127,7 @@ func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpo
 	if r.StatusCode != http.StatusOK {
 		return nil, non200Err(r)
 	}
-	v := &WSCResponse{}
+	v := &wscResponse{}
 	b := bytes.NewBuffer(nil)
 	bodyReader := io.TeeReader(r.Body, b)
 	err = json.NewDecoder(bodyReader).Decode(v)
@@ -139,6 +153,8 @@ func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpo
 	}, nil
 }
 
+// TODO: fix hardcoded pb type using sniff code
+// GetBlockBySlot queries the beacon node API for the SignedBeaconBlockAltair for the given slot
 func (c *Client) GetBlockBySlot(slot uint64) (*ethpb.SignedBeaconBlockAltair, error) {
 	blockPath := path.Join(GET_SIGNED_BLOCK_PATH, strconv.FormatUint(slot, 10))
 	u := c.urlForPath(blockPath)
@@ -166,6 +182,7 @@ func (c *Client) GetBlockBySlot(slot uint64) (*ethpb.SignedBeaconBlockAltair, er
 	return v, err
 }
 
+// GetBlockByRoot retrieves a SignedBeaconBlockAltair with the given root via the beacon node API
 func (c *Client) GetBlockByRoot(blockHex string) (*ethpb.SignedBeaconBlockAltair, error) {
 	blockPath := path.Join(GET_SIGNED_BLOCK_PATH, blockHex)
 	u := c.urlForPath(blockPath)
@@ -193,6 +210,7 @@ func (c *Client) GetBlockByRoot(blockHex string) (*ethpb.SignedBeaconBlockAltair
 	return v, err
 }
 
+// GetStateByRoot retrieves a BeaconStateAltair with the given root via the beacon node API
 func (c *Client) GetStateByRoot(stateHex string) (*ethpb.BeaconStateAltair, error) {
 	statePath := path.Join(GET_STATE_PATH, stateHex)
 	u := c.urlForPath(statePath)
@@ -220,6 +238,7 @@ func (c *Client) GetStateByRoot(stateHex string) (*ethpb.BeaconStateAltair, erro
 	return v, err
 }
 
+// GetStateBySlot retrieves a BeaconStateAltair at the given slot via the beacon node API
 func (c *Client) GetStateBySlot(slot uint64) (*ethpb.BeaconStateAltair, error) {
 	statePath := path.Join(GET_STATE_PATH, strconv.FormatUint(slot, 10))
 	u := c.urlForPath(statePath)
