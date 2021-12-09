@@ -51,8 +51,20 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
-	case types.BlockRoots, types.StateRoots:
+	case types.BlockRoots:
 		val, ok := elements.(*customtypes.BlockRoots)
+		if !ok {
+			return nil, errors.Errorf("Wanted type of %v but got %v",
+				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
+		}
+		roots := make([][]byte, len(val))
+		for i, r := range val {
+			tmp := r
+			roots[i] = tmp[:]
+		}
+		return handleByteArrays(roots, indices, convertAll)
+	case types.StateRoots:
+		val, ok := elements.(*customtypes.StateRoots)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
