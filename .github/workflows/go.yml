@@ -32,7 +32,7 @@ jobs:
           goimports-path: ./
 
       - name: Gosec security scanner
-        uses: securego/gosec@v2.9.0
+        uses: securego/gosec@master
         with:
           args: '-exclude=G307 -exclude-dir=crypto/bls/herumi ./...'
 
