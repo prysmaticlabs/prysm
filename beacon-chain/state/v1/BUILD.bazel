@@ -113,7 +113,7 @@ go_test(
 ssz_gen_marshal(
     name = "ssz_generated_files",
     srcs = select({
-           "//config:mainnet": ["beacon_state.go"],
+           "//config:mainnet": ["beacon_state_mainnet.go"],
            "//config:minimal": ["beacon_state_minimal.go"],
         }),
     includes = [
