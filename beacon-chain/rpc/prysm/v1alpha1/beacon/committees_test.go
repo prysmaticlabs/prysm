@@ -70,7 +70,9 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
+	params.UseMainnetConfig()
 	ctx := context.Background()
+
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 
