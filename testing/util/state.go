@@ -19,7 +19,7 @@ import (
 // It fills state and block roots with hex representations of natural numbers starting with 0.
 // Example: 16 becomes 0x00...0f.
 func FillRootsNaturalOpt(state state.BeaconState) error {
-	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
+	rootsLen := params.BeaconConfig().SlotsPerHistoricalRoot
 	roots := make([][]byte, rootsLen)
 	for i := types.Slot(0); i < rootsLen; i++ {
 		roots[i] = make([]byte, 32)
@@ -90,7 +90,7 @@ func NewBeaconState(options ...func(beaconState state.BeaconState) error) (*v1.B
 	if err = st.SetRandaoMixes(&[customtypes.RandaoMixesSize][32]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set randao mixes")
 	}
-	if err = st.SetSlashings(make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector)); err != nil {
+	if err = st.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)); err != nil {
 		return nil, errors.Wrap(err, "could not set slashings")
 	}
 	if err = st.SetJustificationBits(bitfield.Bitvector4{0x0}); err != nil {

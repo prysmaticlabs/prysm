@@ -45,7 +45,6 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 }
 
 func TestServer_ListAssignments_NoResults(t *testing.T) {
-
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	st, err := util.NewBeaconState()

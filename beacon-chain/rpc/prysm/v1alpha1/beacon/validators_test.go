@@ -1566,7 +1566,6 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 
 func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	helpers.ClearCache()
-	params.UseMainnetConfig()
 
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -1645,7 +1644,6 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T) {
 	helpers.ClearCache()
 	beaconDB := dbTest.SetupDB(t)
-	params.UseMainnetConfig()
 
 	ctx := context.Background()
 	validatorCount := uint64(32)
