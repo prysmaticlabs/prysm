@@ -82,9 +82,11 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(jsonRequest))
 	if err != nil {
 		return nil, err
-	} else if resp.StatusCode == 404 {
+	}
+	if resp.StatusCode == 404 {
 		return nil, errors.Wrap(err, "public key not found")
-	} else if resp.StatusCode == 412 {
+	}
+	if resp.StatusCode == 412 {
 		return nil, errors.Wrap(err, "signing operation failed due to slashing protection rules")
 	}
 	signResp := &signResponse{}
