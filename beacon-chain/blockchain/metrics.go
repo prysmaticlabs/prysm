@@ -262,15 +262,6 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	case version.Merge:
-		v, b, err = altair.InitializePrecomputeValidators(ctx, headState)
-		if err != nil {
-			return err
-		}
-		_, b, err = altair.ProcessEpochParticipation(ctx, headState, b, v)
-		if err != nil {
-			return err
-		}
 	default:
 		return errors.Errorf("invalid state type provided: %T", headState.InnerStateUnsafe())
 	}
