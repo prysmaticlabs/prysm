@@ -6,6 +6,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
@@ -33,9 +34,8 @@ func (c *SyncCommitteeHeadStateCache) Put(slot types.Slot, st state.BeaconState)
 		return ErrNilValueProvided
 	}
 
-	_, okV2State := st.(*v2.BeaconState)
-	_, okV3State := st.(*v3.BeaconState)
-	if !okV2State && !okV3State {
+	_, ok := st.(*v1.BeaconState)
+	if ok {
 		return ErrIncorrectType
 	}
 
