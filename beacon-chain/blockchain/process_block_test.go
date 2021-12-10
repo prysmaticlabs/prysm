@@ -186,8 +186,8 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	ctx := context.Background()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
@@ -219,8 +219,8 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 
 func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	ctx := context.Background()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
