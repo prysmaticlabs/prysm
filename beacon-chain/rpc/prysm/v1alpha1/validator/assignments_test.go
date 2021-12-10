@@ -100,8 +100,7 @@ func TestGetDuties_OK(t *testing.T) {
 
 func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.UseMainnetConfig()
-	cfg := params.BeaconConfig().Copy()
+	cfg := params.MainnetConfig()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(cfg)
 
@@ -202,8 +201,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 
 func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.UseMainnetConfig()
-	cfg := params.BeaconConfig().Copy()
+	cfg := params.MainnetConfig()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(cfg)
 

@@ -439,7 +439,7 @@ func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
 // fork choice justification routine.
 func (s *Service) ensureRootNotZeros(root [32]byte) [32]byte {
 	if root == params.BeaconConfig().ZeroHash {
-		return s.genesisRoot
+		return s.originBlockRoot
 	}
 	return root
 }
