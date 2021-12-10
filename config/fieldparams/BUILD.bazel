@@ -2,10 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "mainnet.go",
-        "minimal.go",  #keep
-    ],
+    srcs = select({
+        "//config:mainnet": ["mainnet.go"],
+        "//config:minimal": ["minimal.go"],
+    }),
     importpath = "github.com/prysmaticlabs/prysm/config/fieldparams",
     visibility = ["//visibility:public"],
 )
