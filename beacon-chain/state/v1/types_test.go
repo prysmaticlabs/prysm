@@ -18,7 +18,8 @@ import (
 )
 
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
 	customState, err := v1.InitializeFromProto(genesis)
@@ -121,7 +122,8 @@ func BenchmarkCloneValidators_Manual(b *testing.B) {
 
 func BenchmarkStateClone_Proto(b *testing.B) {
 	b.StopTimer()
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(b)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(b, 64)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -132,7 +134,8 @@ func BenchmarkStateClone_Proto(b *testing.B) {
 
 func BenchmarkStateClone_Manual(b *testing.B) {
 	b.StopTimer()
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(b)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(b, 64)
 	st, err := v1.InitializeFromProto(genesis)
 	require.NoError(b, err)
@@ -173,7 +176,8 @@ func cloneValidatorsManually(vals []*ethpb.Validator) []*ethpb.Validator {
 }
 
 func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(t, 64)
 	a, err := v1.InitializeFromProto(genesis)
 	require.NoError(t, err)
@@ -209,7 +213,8 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 }
 
 func TestForkManualCopy_OK(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(t, 64)
 	a, err := v1.InitializeFromProto(genesis)
 	require.NoError(t, err)

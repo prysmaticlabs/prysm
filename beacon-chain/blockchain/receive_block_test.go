@@ -33,6 +33,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 		assert.NoError(t, err)
 		return blk
 	}
+	params.SetupTestConfigCleanup(t)
 	bc := params.BeaconConfig()
 	bc.ShardCommitteePeriod = 0 // Required for voluntary exits test in reasonable time.
 	params.OverrideBeaconConfig(bc)

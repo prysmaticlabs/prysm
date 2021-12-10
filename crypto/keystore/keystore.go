@@ -55,8 +55,7 @@ type Keystore struct {
 // GetKey from file using the filename path and a decryption password.
 func (_ Keystore) GetKey(filename, password string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
-	// #nosec G304
-	keyJSON, err := ioutil.ReadFile(filename)
+	keyJSON, err := ioutil.ReadFile(filename) // #nosec G304 -- ReadFile is safe
 	if err != nil {
 		return nil, err
 	}
