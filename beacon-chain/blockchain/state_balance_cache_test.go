@@ -43,7 +43,7 @@ func testStateFixture(opts ...testStateOpt) state.BeaconState {
 	for _, o := range opts {
 		o(a)
 	}
-	s, _ := v2.InitializeFromProto(a)
+	s, _ := v2.InitializeFromProtoUnsafe(a)
 	return s
 }
 

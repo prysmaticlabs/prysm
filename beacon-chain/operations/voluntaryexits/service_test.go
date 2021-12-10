@@ -269,7 +269,7 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 			p := &Pool{
 				pending: tt.fields.pending,
 			}
-			s, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: validators})
+			s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{Validators: validators})
 			require.NoError(t, err)
 			p.InsertVoluntaryExit(ctx, s, tt.args.exit)
 			if len(p.pending) != len(tt.want) {
@@ -520,7 +520,7 @@ func TestPool_PendingExits(t *testing.T) {
 			p := &Pool{
 				pending: tt.fields.pending,
 			}
-			s, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}})
+			s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{Validators: []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}})
 			require.NoError(t, err)
 			if got := p.PendingExits(s, tt.args.slot, tt.fields.noLimit); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PendingExits() = %v, want %v", got, tt.want)

@@ -25,7 +25,7 @@ func BeaconStateFuzz(input []byte) {
 	if err := st.UnmarshalSSZ(input); err != nil {
 		return
 	}
-	s, err := v1.InitializeFromProto(st)
+	s, err := v1.InitializeFromProtoUnsafe(st)
 	if err != nil {
 		panic(err)
 	}

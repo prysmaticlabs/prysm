@@ -674,7 +674,7 @@ func TestComputeProposerIndex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bState := &ethpb.BeaconState{Validators: tt.args.validators}
-			stTrie, err := v1.InitializeFromProto(bState)
+			stTrie, err := v1.InitializeFromProtoUnsafe(bState)
 			require.NoError(t, err)
 			got, err := ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
 			if tt.wantedErr != "" {

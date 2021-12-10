@@ -15,7 +15,7 @@ func TestFuzzFinalUpdates_10000(t *testing.T) {
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(base)
-		s, err := v1.InitializeFromProto(base)
+		s, err := v1.InitializeFromProtoUnsafe(base)
 		require.NoError(t, err)
 		_, err = ProcessFinalUpdates(s)
 		_ = err

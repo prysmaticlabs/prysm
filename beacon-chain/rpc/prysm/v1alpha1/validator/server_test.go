@@ -141,7 +141,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
-	trie, err := v1.InitializeFromProto(beaconState)
+	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
 		Ctx:                context.Background(),
@@ -221,7 +221,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	trie, err := v1.InitializeFromProto(beaconState)
+	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
 		Ctx:                context.Background(),

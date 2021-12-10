@@ -21,7 +21,7 @@ func TestFuzzProcessDeposits_10000(t *testing.T) {
 		for i := range deposits {
 			fuzzer.Fuzz(deposits[i])
 		}
-		s, err := stateAltair.InitializeFromProto(state)
+		s, err := stateAltair.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		r, err := altair.ProcessDeposits(ctx, s, deposits)
 		if err != nil && r != nil {
@@ -38,7 +38,7 @@ func TestFuzzProcessDeposit_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(deposit)
-		s, err := stateAltair.InitializeFromProto(state)
+		s, err := stateAltair.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
 		r, err := altair.ProcessDeposit(context.Background(), s, deposit, true)
 		if err != nil && r != nil {

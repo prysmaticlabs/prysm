@@ -36,7 +36,7 @@ func TestProcessAttestationNoVerifySignature_BeaconFuzzIssue78(t *testing.T) {
 	if err := spb.UnmarshalSSZ(stateData); err != nil {
 		t.Fatal(err)
 	}
-	st, err := v1.InitializeFromProto(spb)
+	st, err := v1.InitializeFromProtoUnsafe(spb)
 	if err != nil {
 		t.Fatal(err)
 	}

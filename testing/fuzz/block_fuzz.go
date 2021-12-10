@@ -118,7 +118,7 @@ func BeaconFuzzBlock(b []byte) {
 	if err := input.UnmarshalSSZ(b); err != nil {
 		return
 	}
-	st, err := v1.InitializeFromProto(input.State)
+	st, err := v1.InitializeFromProtoUnsafe(input.State)
 	if err != nil {
 		return
 	}
