@@ -22,6 +22,14 @@ const (
 	maxTimeout      = 3 * time.Second
 )
 
+// Web3signerClient defines the interface for interacting with a remote web3signer.
+type Web3signerClient interface {
+	Sign(pubKey string, request *SignRequest) (bls.Signature, error)
+	GetPublicKeys(url string) ([][48]byte, error)
+	//ReloadSignerKeys() error
+	//GetServerStatus() (string, error)
+}
+
 // client a wrapper object around web3signer APIs. API docs found here https://consensys.github.io/web3signer/web3signer-eth2.html.
 type client struct {
 	BasePath   string
@@ -29,7 +37,6 @@ type client struct {
 }
 
 // newClient method instantiates a new client object.
-//nolint:unused,deadcode
 func newClient(baseEndpoint string) (*client, error) {
 	u, err := url.Parse(baseEndpoint)
 	if err != nil {
@@ -103,9 +110,8 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
-func (client *client) GetPublicKeys() ([][48]byte, error) {
-	const requestPath = "/publicKeys"
-	resp, err := client.doRequest(http.MethodGet, client.BasePath+requestPath, nil)
+func (client *client) GetPublicKeys(url string) ([][48]byte, error) {
+	resp, err := client.doRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}

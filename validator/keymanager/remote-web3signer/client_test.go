@@ -65,7 +65,7 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 		Body:       r,
 	}}
 	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
-	resp, err := cl.GetPublicKeys()
+	resp, err := cl.GetPublicKeys("example.com/api/publickeys")
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	// we would like them as 48byte base64 without 0x
