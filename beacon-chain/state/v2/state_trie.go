@@ -36,8 +36,8 @@ func InitializeFromProto(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
 }
 
-// InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
-// and sets it as the inner state of the BeaconState type.
+// InitializeFromProtoUnsafe directly uses the beacon state protobuf fields
+// and sets them as fields of the BeaconState type.
 func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
