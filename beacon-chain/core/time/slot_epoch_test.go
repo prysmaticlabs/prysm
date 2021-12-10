@@ -81,6 +81,7 @@ func TestNextEpoch_OK(t *testing.T) {
 }
 
 func TestCanUpgradeToAltair(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	bc := params.BeaconConfig()
 	bc.AltairForkEpoch = 5
 	params.OverrideBeaconConfig(bc)
@@ -115,6 +116,7 @@ func TestCanUpgradeToAltair(t *testing.T) {
 }
 
 func TestCanUpgradeToMerge(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	bc := params.BeaconConfig()
 	bc.MergeForkEpoch = 5
 	params.OverrideBeaconConfig(bc)

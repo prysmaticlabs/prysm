@@ -481,10 +481,10 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 
 func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.AltairForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
-	defer params.UseMainnetConfig()
 
 	st, _ := util.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
@@ -516,10 +516,10 @@ func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
 
 func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.AltairForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
-	defer params.UseMainnetConfig()
 
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))

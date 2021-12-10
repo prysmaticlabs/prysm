@@ -154,8 +154,8 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	db := dbTest.SetupDB(t)
 	chain := &chainMock.ChainService{
@@ -406,8 +406,8 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 }
 
 func TestServer_GetChainHead(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	db := dbTest.SetupDB(t)
 	genBlock := util.NewBeaconBlock()
@@ -913,8 +913,8 @@ func TestServer_ListBlocksAltair_Genesis_MultiBlocks(t *testing.T) {
 }
 
 func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	db := dbTest.SetupDB(t)
 	chain := &chainMock.ChainService{

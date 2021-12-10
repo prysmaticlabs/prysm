@@ -171,8 +171,8 @@ func TestAttestedCurrentEpoch(t *testing.T) {
 }
 
 func TestProcessAttestations(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	validators := uint64(128)
 	beaconState, _ := util.DeterministicGenesisState(t, validators)

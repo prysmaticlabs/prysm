@@ -1069,7 +1069,8 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 }
 
 func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -1760,8 +1761,8 @@ func TestGetValidatorPerformance_Syncing(t *testing.T) {
 
 func TestGetValidatorPerformance_OK(t *testing.T) {
 	helpers.ClearCache()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	ctx := context.Background()
 	epoch := types.Epoch(1)
@@ -1987,8 +1988,8 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 
 func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 	helpers.ClearCache()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	ctx := context.Background()
 	epoch := types.Epoch(1)
@@ -2105,8 +2106,8 @@ func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 }
 
 func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -2179,8 +2180,8 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	helpers.ClearCache()
 
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
