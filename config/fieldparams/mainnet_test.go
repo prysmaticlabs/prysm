@@ -1,17 +1,17 @@
-// +build minimal
+// +build !minimal
 
 package field_params_test
 
 import (
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	fieldparams "github.com/prysmaticlabs/prysm/config/params/fieldparams"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestFieldParametersValues(t *testing.T) {
-	params.UseMinimalConfig()
+	params.UseMainnetConfig()
 	assert.Equal(t, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), uint64(fieldparams.BlockRootsLength))
 	assert.Equal(t, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), uint64(fieldparams.StateRootsLength))
 	assert.Equal(t, params.BeaconConfig().HistoricalRootsLimit, uint64(fieldparams.HistoricalRootsLength))

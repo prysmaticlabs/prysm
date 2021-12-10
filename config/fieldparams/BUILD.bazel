@@ -3,16 +3,16 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "field_parameters_mainnet.go",
-        "field_parameters_minimal.go",  #keep
+        "mainnet.go",
+        "minimal.go",  #keep
     ],
-    importpath = "github.com/prysmaticlabs/prysm/config/params/fieldparams",
+    importpath = "github.com/prysmaticlabs/prysm/config/fieldparams",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["field_parameters_mainnet_test.go"],
+    srcs = ["mainnet_test.go"],
     deps = [
         ":go_default_library",
         "//config/params:go_default_library",
@@ -22,7 +22,7 @@ go_test(
 
 go_test(
     name = "go_minimal_test",
-    srcs = ["field_parameters_minimal_test.go"],
+    srcs = ["minimal_test.go"],
     eth_network = "minimal",
     deps = [
         ":go_default_library",
