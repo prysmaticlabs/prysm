@@ -30,7 +30,7 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 
 func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privs := DeterministicGenesisState(t, 1024)
 	conf := &BlockGenConfig{
 		NumAttestations: 4,
