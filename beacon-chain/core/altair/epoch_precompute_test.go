@@ -263,7 +263,7 @@ func TestAttestationsDeltaMerge(t *testing.T) {
 	// Last index should have 0 penalty.
 	require.Equal(t, uint64(0), penalties[len(penalties)-1])
 
-	want := []uint64{0, 9782, 1172534, 1485582}
+	want := []uint64{0, 939146, 2101898, 2414946}
 	require.DeepEqual(t, want, rewards)
 	want = []uint64{3577700, 2325505, 0, 0}
 	require.DeepEqual(t, want, penalties)
