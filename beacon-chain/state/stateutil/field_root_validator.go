@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -45,7 +45,7 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 		}
 	}
 
-	validatorsRootsRoot, err := ssz.BitwiseMerkleizeArrays(hasher, roots, uint64(len(roots)), params.BeaconConfig().ValidatorRegistryLimit)
+	validatorsRootsRoot, err := ssz.BitwiseMerkleizeArrays(hasher, roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
