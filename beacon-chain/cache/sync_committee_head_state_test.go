@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -21,6 +22,13 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 	})
 	require.NoError(t, err)
 	phase0State, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	})
+	require.NoError(t, err)
+	mergeState, err := v3.InitializeFromProto(&ethpb.BeaconStateMerge{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -81,6 +89,24 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 				state: beaconState,
 			},
 			want: beaconState,
+		},
+		{
+			name: "not found when non-existent key in non-empty cache (merge state)",
+			key:  types.Slot(2),
+			put: &put{
+				slot:  types.Slot(1),
+				state: mergeState,
+			},
+			wantErr: true,
+		},
+		{
+			name: "found with key (merge state)",
+			key:  types.Slot(100),
+			put: &put{
+				slot:  types.Slot(100),
+				state: mergeState,
+			},
+			want: mergeState,
 		},
 	}
 	for _, tt := range tests {

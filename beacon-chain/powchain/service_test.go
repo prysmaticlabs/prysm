@@ -306,10 +306,10 @@ func TestFollowBlock_OK(t *testing.T) {
 
 	// simulated backend sets eth1 block
 	// time as 10 seconds
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(conf)
-	defer params.UseMainnetConfig()
 
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
@@ -389,21 +389,14 @@ func TestLogTillGenesis_OK(t *testing.T) {
 		logPeriod = currPeriod
 	}()
 
-	orgConfig := params.BeaconConfig().Copy()
+	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig()
 	cfg.Eth1FollowDistance = 5
 	params.OverrideBeaconConfig(cfg)
-	defer func() {
-		params.OverrideBeaconConfig(orgConfig)
-	}()
 
-	orgNetworkConfig := params.BeaconNetworkConfig().Copy()
 	nCfg := params.BeaconNetworkConfig()
 	nCfg.ContractDeploymentBlock = 0
 	params.OverrideBeaconNetworkConfig(nCfg)
-	defer func() {
-		params.OverrideBeaconNetworkConfig(orgNetworkConfig)
-	}()
 
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
@@ -552,11 +545,11 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	// simulated backend sets eth1 block
 	// time as 10 seconds
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.SecondsPerETH1Block = 10
 	conf.Eth1FollowDistance = 50
 	params.OverrideBeaconConfig(conf)
-	defer params.UseMainnetConfig()
 
 	// Genesis not set
 	followBlock := uint64(2000)
