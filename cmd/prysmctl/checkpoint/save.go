@@ -117,7 +117,7 @@ func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 	}
 	log.Printf("retrieved block at slot %d with root=%#x", bSlot, blockRoot)
 	blockStateRoot := block.Block().StateRoot()
-	log.Printf("retrieved block has state root %s", fmt.Sprintf("%#x", blockStateRoot))
+	log.Printf("retrieved block has state root=%#x", blockStateRoot)
 
 	// assigning this variable to make it extra obvious that the state slot is different
 	sSlot := bSlot + 1
@@ -141,7 +141,7 @@ func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("retrieved state for checkpoint at slot %d, w/ root=%s", sSlot, fmt.Sprintf("%#x", stateRoot))
+	log.Printf("retrieved state for checkpoint at slot %d, w/ root=%#x", sSlot, stateRoot)
 	latestBlockRoot, err := state.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
 		return err
