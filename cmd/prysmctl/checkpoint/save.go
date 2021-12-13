@@ -109,7 +109,7 @@ func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 	}
 	block, err := sniff.BlockForConfigFork(blockBytes, cf)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to detect config/version from block inspection"))
+		return errors.Wrap(err, "failed to detect config/version from block inspection")
 	}
 	blockRoot, err := block.Block().HashTreeRoot()
 	if err != nil {
