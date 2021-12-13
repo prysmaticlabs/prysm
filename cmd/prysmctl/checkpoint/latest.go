@@ -38,7 +38,7 @@ var latestCmd = &cli.Command{
 	},
 }
 
-func cliActionLatest(c *cli.Context) error {
+func cliActionLatest(_ *cli.Context) error {
 	f := latestFlags
 	opts := make([]openapi.ClientOpt, 0)
 	log.Printf("--beacon-node-url=%s", f.BeaconNodeHost)

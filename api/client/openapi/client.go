@@ -298,5 +298,5 @@ func non200Err(response *http.Response) error {
 	} else {
 		body = "response body:\n" + string(bodyBytes)
 	}
-	return fmt.Errorf("Got non-200 status code = %d requesting %s. %s", response.StatusCode, response.Request.URL, body)
+	return fmt.Errorf("got non-200 status, code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
 }

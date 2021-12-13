@@ -57,16 +57,18 @@ func TestOrderedConfigSchedule(t *testing.T) {
 			// so we use a pointer to detect the boundary condition and skip it
 			var prevEpoch *types.Epoch
 			for _, fse := range cfg.OrderedForkSchedule() {
+				// copy loop variable so we can take the address of fields
+				f := fse
 				if prevEpoch == nil {
-					prevEpoch = &fse.Epoch
-					prevVersion = fse.Version
+					prevEpoch = &f.Epoch
+					prevVersion = f.Version
 					continue
 				}
-				if *prevEpoch > fse.Epoch {
-					t.Errorf("Epochs out of order! %#x/%d before %#x/%d", fse.Version, fse.Epoch, prevVersion, prevEpoch)
+				if *prevEpoch > f.Epoch {
+					t.Errorf("Epochs out of order! %#x/%d before %#x/%d", f.Version, f.Epoch, prevVersion, prevEpoch)
 				}
-				prevEpoch = &fse.Epoch
-				prevVersion = fse.Version
+				prevEpoch = &f.Epoch
+				prevVersion = f.Version
 			}
 		})
 	}

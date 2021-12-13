@@ -49,7 +49,7 @@ var saveCmd = &cli.Command{
 	},
 }
 
-func cliActionSave(c *cli.Context) error {
+func cliActionSave(_ *cli.Context) error {
 	f := saveFlags
 	opts := make([]openapi.ClientOpt, 0)
 	log.Printf("--beacon-node-url=%s", f.BeaconNodeHost)
@@ -108,6 +108,9 @@ func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 		return errors.Wrap(err, fmt.Sprintf("failed to read response body for block at slot %d from api", bSlot))
 	}
 	block, err := sniff.BlockForConfigFork(blockBytes, cf)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed to detect config/version from block inspection"))
+	}
 	blockRoot, err := block.Block().HashTreeRoot()
 	if err != nil {
 		return err
