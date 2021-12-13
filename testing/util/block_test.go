@@ -72,7 +72,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.UseMainnetConfig()
 	beaconState, privs := DeterministicGenesisState(t, 32)
 	conf := &BlockGenConfig{
 		NumProposerSlashings: 1,
@@ -91,8 +91,8 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 
 func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	beaconState, privs := DeterministicGenesisState(t, 32)
+	params.UseMainnetConfig()
+	beaconState, privs := DeterministicGenesisState(t, 1000)
 	conf := &BlockGenConfig{
 		NumAttesterSlashings: 1,
 	}
@@ -110,7 +110,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 
 func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.UseMainnetConfig()
 
 	beaconState, privs := DeterministicGenesisState(t, 256)
 	conf := &BlockGenConfig{
