@@ -52,7 +52,7 @@ func (e *Byte32) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized object.
-func (e *Byte32) SizeSSZ() int {
+func (_ *Byte32) SizeSSZ() int {
 	return 32
 }
 
@@ -85,7 +85,7 @@ func (r *BlockRoots) UnmarshalSSZ(buf []byte) error {
 	}
 
 	var roots BlockRoots
-	for i, _ := range roots {
+	for i := range roots {
 		copy(roots[i][:], buf[i*32:(i+1)*32])
 	}
 	*r = roots
@@ -113,7 +113,7 @@ func (r *BlockRoots) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized object.
-func (r *BlockRoots) SizeSSZ() int {
+func (_ *BlockRoots) SizeSSZ() int {
 	return fieldparams.BlockRootsLength * 32
 }
 
@@ -146,7 +146,7 @@ func (r *StateRoots) UnmarshalSSZ(buf []byte) error {
 	}
 
 	var roots StateRoots
-	for i, _ := range roots {
+	for i := range roots {
 		copy(roots[i][:], buf[i*32:(i+1)*32])
 	}
 	*r = roots
@@ -174,7 +174,7 @@ func (r *StateRoots) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized object.
-func (r *StateRoots) SizeSSZ() int {
+func (_ *StateRoots) SizeSSZ() int {
 	return fieldparams.StateRootsLength * 32
 }
 
@@ -207,7 +207,7 @@ func (r *RandaoMixes) UnmarshalSSZ(buf []byte) error {
 	}
 
 	var roots RandaoMixes
-	for i, _ := range roots {
+	for i := range roots {
 		copy(roots[i][:], buf[i*32:(i+1)*32])
 	}
 	*r = roots
@@ -235,7 +235,7 @@ func (r *RandaoMixes) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized object.
-func (r *RandaoMixes) SizeSSZ() int {
+func (_ *RandaoMixes) SizeSSZ() int {
 	return fieldparams.RandaoMixesLength * 32
 }
 
@@ -268,7 +268,7 @@ func (r *HistoricalRoots) UnmarshalSSZ(buf []byte) error {
 	}
 
 	mixes := make([][32]byte, len(buf)/32)
-	for i, _ := range mixes {
+	for i := range mixes {
 		copy(mixes[i][:], buf[i*32:(i+1)*32])
 	}
 	*r = mixes

@@ -171,7 +171,7 @@ func BlockSignatureBatch(pub, signature, domain []byte, rootFunc func() ([32]byt
 //        genesis_validators_root = Root()  # all bytes zero by default
 //    fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
 //    return Domain(domain_type + fork_data_root[:28])
-func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte, genesisValidatorsRoot []byte) ([]byte, error) {
+func ComputeDomain(domainType [DomainByteLength]byte, forkVersion, genesisValidatorsRoot []byte) ([]byte, error) {
 	if forkVersion == nil {
 		forkVersion = params.BeaconConfig().GenesisForkVersion
 	}

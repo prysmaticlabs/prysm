@@ -115,13 +115,3 @@ func NewBeaconState(options ...func(beaconState state.BeaconState) error) (*v1.B
 
 	return st.Copy().(*v1.BeaconState), nil
 }
-
-// SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round
-// trip testing.
-func filledByteSlice2D(length, innerLen uint64) [][]byte {
-	b := make([][]byte, length)
-	for i := uint64(0); i < length; i++ {
-		b[i] = make([]byte, innerLen)
-	}
-	return b
-}

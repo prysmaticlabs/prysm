@@ -217,9 +217,7 @@ func SafeCopy2dBytes(ary [][]byte) [][]byte {
 func SafeCopy2d32Bytes(ary [][32]byte) [][32]byte {
 	if ary != nil {
 		copied := make([][32]byte, len(ary))
-		for i, a := range ary {
-			copied[i] = a
-		}
+		copy(copied, ary)
 		return copied
 	}
 	return nil
