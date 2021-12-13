@@ -66,7 +66,7 @@ func (p *Pool) PendingExits(state state.ReadOnlyBeaconState, slot types.Slot, no
 // InsertVoluntaryExit into the pool. This method is a no-op if the pending exit already exists,
 // or the validator is already exited.
 func (p *Pool) InsertVoluntaryExit(ctx context.Context, state state.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit) {
-	ctx, span := trace.StartSpan(ctx, "exitPool.InsertVoluntaryExit")
+	_, span := trace.StartSpan(ctx, "exitPool.InsertVoluntaryExit")
 	defer span.End()
 	p.lock.Lock()
 	defer p.lock.Unlock()

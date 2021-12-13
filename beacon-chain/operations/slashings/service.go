@@ -33,7 +33,7 @@ func NewPool() *Pool {
 func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.AttesterSlashing {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	ctx, span := trace.StartSpan(ctx, "operations.PendingAttesterSlashing")
+	_, span := trace.StartSpan(ctx, "operations.PendingAttesterSlashing")
 	defer span.End()
 
 	// Update prom metric.
@@ -80,7 +80,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnl
 func (p *Pool) PendingProposerSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.ProposerSlashing {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	ctx, span := trace.StartSpan(ctx, "operations.PendingProposerSlashing")
+	_, span := trace.StartSpan(ctx, "operations.PendingProposerSlashing")
 	defer span.End()
 
 	// Update prom metric.
@@ -187,7 +187,7 @@ func (p *Pool) InsertProposerSlashing(
 ) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	ctx, span := trace.StartSpan(ctx, "operations.InsertProposerSlashing")
+	_, span := trace.StartSpan(ctx, "operations.InsertProposerSlashing")
 	defer span.End()
 
 	if err := blocks.VerifyProposerSlashing(state, slashing); err != nil {

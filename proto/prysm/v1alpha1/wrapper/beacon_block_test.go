@@ -7,7 +7,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -206,7 +205,7 @@ func TestAltairBeaconBlockBody_RandaoReveal(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_Eth1Data(t *testing.T) {
-	data := &v1alpha1.Eth1Data{}
+	data := &ethpb.Eth1Data{}
 	body := &ethpb.BeaconBlockBodyAltair{
 		Eth1Data: data,
 	}
@@ -225,8 +224,8 @@ func TestAltairBeaconBlockBody_Graffiti(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_ProposerSlashings(t *testing.T) {
-	ps := []*v1alpha1.ProposerSlashing{
-		{Header_1: &v1alpha1.SignedBeaconBlockHeader{
+	ps := []*ethpb.ProposerSlashing{
+		{Header_1: &ethpb.SignedBeaconBlockHeader{
 			Signature: []byte{0x11, 0x20},
 		}},
 	}
@@ -238,8 +237,8 @@ func TestAltairBeaconBlockBody_ProposerSlashings(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_AttesterSlashings(t *testing.T) {
-	as := []*v1alpha1.AttesterSlashing{
-		{Attestation_1: &v1alpha1.IndexedAttestation{Signature: []byte{0x11}}},
+	as := []*ethpb.AttesterSlashing{
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte{0x11}}},
 	}
 	body := &ethpb.BeaconBlockBodyAltair{AttesterSlashings: as}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
@@ -249,7 +248,7 @@ func TestAltairBeaconBlockBody_AttesterSlashings(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_Attestations(t *testing.T) {
-	atts := []*v1alpha1.Attestation{{Signature: []byte{0x88}}}
+	atts := []*ethpb.Attestation{{Signature: []byte{0x88}}}
 
 	body := &ethpb.BeaconBlockBodyAltair{Attestations: atts}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
@@ -259,7 +258,7 @@ func TestAltairBeaconBlockBody_Attestations(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_Deposits(t *testing.T) {
-	deposits := []*v1alpha1.Deposit{
+	deposits := []*ethpb.Deposit{
 		{Proof: [][]byte{{0x54, 0x10}}},
 	}
 	body := &ethpb.BeaconBlockBodyAltair{Deposits: deposits}
@@ -270,8 +269,8 @@ func TestAltairBeaconBlockBody_Deposits(t *testing.T) {
 }
 
 func TestAltairBeaconBlockBody_VoluntaryExits(t *testing.T) {
-	exits := []*v1alpha1.SignedVoluntaryExit{
-		{Exit: &v1alpha1.VoluntaryExit{Epoch: 54}},
+	exits := []*ethpb.SignedVoluntaryExit{
+		{Exit: &ethpb.VoluntaryExit{Epoch: 54}},
 	}
 	body := &ethpb.BeaconBlockBodyAltair{VoluntaryExits: exits}
 	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
@@ -557,7 +556,7 @@ func TestMergeBeaconBlockBody_RandaoReveal(t *testing.T) {
 }
 
 func TestMergeBeaconBlockBody_Eth1Data(t *testing.T) {
-	data := &v1alpha1.Eth1Data{}
+	data := &ethpb.Eth1Data{}
 	body := &ethpb.BeaconBlockBodyMerge{
 		Eth1Data: data,
 	}
@@ -576,8 +575,8 @@ func TestMergeBeaconBlockBody_Graffiti(t *testing.T) {
 }
 
 func TestMergeBeaconBlockBody_ProposerSlashings(t *testing.T) {
-	ps := []*v1alpha1.ProposerSlashing{
-		{Header_1: &v1alpha1.SignedBeaconBlockHeader{
+	ps := []*ethpb.ProposerSlashing{
+		{Header_1: &ethpb.SignedBeaconBlockHeader{
 			Signature: []byte{0x11, 0x20},
 		}},
 	}
@@ -589,8 +588,8 @@ func TestMergeBeaconBlockBody_ProposerSlashings(t *testing.T) {
 }
 
 func TestMergeBeaconBlockBody_AttesterSlashings(t *testing.T) {
-	as := []*v1alpha1.AttesterSlashing{
-		{Attestation_1: &v1alpha1.IndexedAttestation{Signature: []byte{0x11}}},
+	as := []*ethpb.AttesterSlashing{
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte{0x11}}},
 	}
 	body := &ethpb.BeaconBlockBodyMerge{AttesterSlashings: as}
 	wbb, err := wrapper.WrappedMergeBeaconBlockBody(body)
@@ -600,7 +599,7 @@ func TestMergeBeaconBlockBody_AttesterSlashings(t *testing.T) {
 }
 
 func TestMergeBeaconBlockBody_Attestations(t *testing.T) {
-	atts := []*v1alpha1.Attestation{{Signature: []byte{0x88}}}
+	atts := []*ethpb.Attestation{{Signature: []byte{0x88}}}
 
 	body := &ethpb.BeaconBlockBodyMerge{Attestations: atts}
 	wbb, err := wrapper.WrappedMergeBeaconBlockBody(body)
@@ -610,7 +609,7 @@ func TestMergeBeaconBlockBody_Attestations(t *testing.T) {
 }
 
 func TestMergeBeaconBlockBody_Deposits(t *testing.T) {
-	deposits := []*v1alpha1.Deposit{
+	deposits := []*ethpb.Deposit{
 		{Proof: [][]byte{{0x54, 0x10}}},
 	}
 	body := &ethpb.BeaconBlockBodyMerge{Deposits: deposits}
@@ -621,8 +620,8 @@ func TestMergeBeaconBlockBody_Deposits(t *testing.T) {
 }
 
 func TestMergeBeaconBlockBody_VoluntaryExits(t *testing.T) {
-	exits := []*v1alpha1.SignedVoluntaryExit{
-		{Exit: &v1alpha1.VoluntaryExit{Epoch: 54}},
+	exits := []*ethpb.SignedVoluntaryExit{
+		{Exit: &ethpb.VoluntaryExit{Epoch: 54}},
 	}
 	body := &ethpb.BeaconBlockBodyMerge{VoluntaryExits: exits}
 	wbb, err := wrapper.WrappedMergeBeaconBlockBody(body)
@@ -659,7 +658,7 @@ func TestMergeBeaconBlockBody_Proto(t *testing.T) {
 }
 
 func TestMergeBeaconBlockBody_ExecutionPayload(t *testing.T) {
-	payloads := &v1alpha1.ExecutionPayload{
+	payloads := &ethpb.ExecutionPayload{
 		BlockNumber: 100,
 	}
 	body := &ethpb.BeaconBlockBodyMerge{ExecutionPayload: payloads}

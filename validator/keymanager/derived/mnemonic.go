@@ -42,7 +42,7 @@ func GenerateAndConfirmMnemonic(
 
 // Generate a mnemonic seed phrase in english using a source of
 // entropy given as raw bytes.
-func (m *EnglishMnemonicGenerator) Generate(data []byte) (string, error) {
+func (_ *EnglishMnemonicGenerator) Generate(data []byte) (string, error) {
 	return bip39.NewMnemonic(data)
 }
 

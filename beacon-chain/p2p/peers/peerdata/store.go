@@ -11,7 +11,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 )
 
@@ -54,7 +53,7 @@ type PeerData struct {
 	NextValidTime time.Time
 	// Chain related data.
 	MetaData                  metadata.Metadata
-	ChainState                *pb.Status
+	ChainState                *ethpb.Status
 	ChainStateLastUpdated     time.Time
 	ChainStateValidationError error
 	// Scorers internal data.
@@ -62,7 +61,7 @@ type PeerData struct {
 	ProcessedBlocks      uint64
 	BlockProviderUpdated time.Time
 	// Gossip Scoring data.
-	TopicScores      map[string]*pb.TopicScoreSnapshot
+	TopicScores      map[string]*ethpb.TopicScoreSnapshot
 	GossipScore      float64
 	BehaviourPenalty float64
 }

@@ -34,74 +34,51 @@ type PbMux struct {
 type PbHandlerRegistration func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error
 
 // MuxHandler is a function that implements the mux handler functionality.
-type MuxHandler func(http.Handler, http.ResponseWriter, *http.Request)
+type MuxHandler func(
+	apiMiddlewareHandler *apimiddleware.ApiProxyMiddleware,
+	h http.HandlerFunc,
+	w http.ResponseWriter,
+	req *http.Request,
+)
+
+// Config parameters for setting up the gateway service.
+type config struct {
+	maxCallRecvMsgSize           uint64
+	remoteCert                   string
+	gatewayAddr                  string
+	remoteAddr                   string
+	allowedOrigins               []string
+	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
+	muxHandler                   MuxHandler
+	pbHandlers                   []*PbMux
+	router                       *mux.Router
+}
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
 type Gateway struct {
-	conn                         *grpc.ClientConn
-	pbHandlers                   []*PbMux
-	muxHandler                   MuxHandler
-	maxCallRecvMsgSize           uint64
-	router                       *mux.Router
-	server                       *http.Server
-	cancel                       context.CancelFunc
-	remoteCert                   string
-	gatewayAddr                  string
-	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
-	ctx                          context.Context
-	startFailure                 error
-	remoteAddr                   string
-	allowedOrigins               []string
+	cfg          *config
+	conn         *grpc.ClientConn
+	server       *http.Server
+	cancel       context.CancelFunc
+	proxy        *apimiddleware.ApiProxyMiddleware
+	ctx          context.Context
+	startFailure error
 }
 
 // New returns a new instance of the Gateway.
-func New(
-	ctx context.Context,
-	pbHandlers []*PbMux,
-	muxHandler MuxHandler,
-	remoteAddr,
-	gatewayAddress string,
-) *Gateway {
+func New(ctx context.Context, opts ...Option) (*Gateway, error) {
 	g := &Gateway{
-		pbHandlers:     pbHandlers,
-		muxHandler:     muxHandler,
-		router:         mux.NewRouter(),
-		gatewayAddr:    gatewayAddress,
-		ctx:            ctx,
-		remoteAddr:     remoteAddr,
-		allowedOrigins: []string{},
+		ctx: ctx,
+		cfg: &config{
+			router: mux.NewRouter(),
+		},
 	}
-	return g
-}
-
-// WithRouter allows adding a custom mux router to the gateway.
-func (g *Gateway) WithRouter(r *mux.Router) *Gateway {
-	g.router = r
-	return g
-}
-
-// WithAllowedOrigins allows adding a set of allowed origins to the gateway.
-func (g *Gateway) WithAllowedOrigins(origins []string) *Gateway {
-	g.allowedOrigins = origins
-	return g
-}
-
-// WithRemoteCert allows adding a custom certificate to the gateway,
-func (g *Gateway) WithRemoteCert(cert string) *Gateway {
-	g.remoteCert = cert
-	return g
-}
-
-// WithMaxCallRecvMsgSize allows specifying the maximum allowed gRPC message size.
-func (g *Gateway) WithMaxCallRecvMsgSize(size uint64) *Gateway {
-	g.maxCallRecvMsgSize = size
-	return g
-}
-
-// WithApiMiddleware allows adding API Middleware proxy to the gateway.
-func (g *Gateway) WithApiMiddleware(endpointFactory apimiddleware.EndpointFactory) *Gateway {
-	g.apiMiddlewareEndpointFactory = endpointFactory
-	return g
+	for _, opt := range opts {
+		if err := opt(g); err != nil {
+			return nil, err
+		}
+	}
+	return g, nil
 }
 
 // Start the gateway service.
@@ -109,7 +86,7 @@ func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
-	conn, err := g.dial(ctx, "tcp", g.remoteAddr)
+	conn, err := g.dial(ctx, "tcp", g.cfg.remoteAddr)
 	if err != nil {
 		log.WithError(err).Error("Failed to connect to gRPC server")
 		g.startFailure = err
@@ -117,7 +94,7 @@ func (g *Gateway) Start() {
 	}
 	g.conn = conn
 
-	for _, h := range g.pbHandlers {
+	for _, h := range g.cfg.pbHandlers {
 		for _, r := range h.Registrations {
 			if err := r(ctx, h.Mux, g.conn); err != nil {
 				log.WithError(err).Error("Failed to register handler")
@@ -126,29 +103,29 @@ func (g *Gateway) Start() {
 			}
 		}
 		for _, p := range h.Patterns {
-			g.router.PathPrefix(p).Handler(h.Mux)
+			g.cfg.router.PathPrefix(p).Handler(h.Mux)
 		}
 	}
 
-	corsMux := g.corsMiddleware(g.router)
+	corsMux := g.corsMiddleware(g.cfg.router)
 
-	if g.muxHandler != nil {
-		g.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			g.muxHandler(corsMux, w, r)
+	if g.cfg.apiMiddlewareEndpointFactory != nil && !g.cfg.apiMiddlewareEndpointFactory.IsNil() {
+		g.registerApiMiddleware()
+	}
+
+	if g.cfg.muxHandler != nil {
+		g.cfg.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			g.cfg.muxHandler(g.proxy, corsMux.ServeHTTP, w, r)
 		})
 	}
 
-	if g.apiMiddlewareEndpointFactory != nil && !g.apiMiddlewareEndpointFactory.IsNil() {
-		go g.registerApiMiddleware()
-	}
-
 	g.server = &http.Server{
-		Addr:    g.gatewayAddr,
-		Handler: g.router,
+		Addr:    g.cfg.gatewayAddr,
+		Handler: corsMux,
 	}
 
 	go func() {
-		log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway")
+		log.WithField("address", g.cfg.gatewayAddr).Info("Starting gRPC gateway")
 		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
 			log.WithError(err).Error("Failed to start gRPC gateway")
 			g.startFailure = err
@@ -162,11 +139,9 @@ func (g *Gateway) Status() error {
 	if g.startFailure != nil {
 		return g.startFailure
 	}
-
 	if s := g.conn.GetState(); s != connectivity.Ready {
 		return fmt.Errorf("grpc server is %s", s)
 	}
-
 	return nil
 }
 
@@ -183,18 +158,16 @@ func (g *Gateway) Stop() error {
 			}
 		}
 	}
-
 	if g.cancel != nil {
 		g.cancel()
 	}
-
 	return nil
 }
 
 func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
 	c := cors.New(cors.Options{
-		AllowedOrigins:   g.allowedOrigins,
-		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodOptions},
+		AllowedOrigins:   g.cfg.allowedOrigins,
+		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodOptions},
 		AllowCredentials: true,
 		MaxAge:           600,
 		AllowedHeaders:   []string{"*"},
@@ -236,8 +209,8 @@ func (g *Gateway) dial(ctx context.Context, network, addr string) (*grpc.ClientC
 // "addr" must be a valid TCP address with a port number.
 func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, error) {
 	security := grpc.WithInsecure()
-	if len(g.remoteCert) > 0 {
-		creds, err := credentials.NewClientTLSFromFile(g.remoteCert, "")
+	if len(g.cfg.remoteCert) > 0 {
+		creds, err := credentials.NewClientTLSFromFile(g.cfg.remoteCert, "")
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +218,7 @@ func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, e
 	}
 	opts := []grpc.DialOption{
 		security,
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.cfg.maxCallRecvMsgSize))),
 	}
 
 	return grpc.DialContext(ctx, addr, opts...)
@@ -266,16 +239,16 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithContextDialer(f),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.cfg.maxCallRecvMsgSize))),
 	}
 	return grpc.DialContext(ctx, addr, opts...)
 }
 
 func (g *Gateway) registerApiMiddleware() {
-	proxy := &apimiddleware.ApiProxyMiddleware{
-		GatewayAddress:  g.gatewayAddr,
-		EndpointCreator: g.apiMiddlewareEndpointFactory,
+	g.proxy = &apimiddleware.ApiProxyMiddleware{
+		GatewayAddress:  g.cfg.gatewayAddr,
+		EndpointCreator: g.cfg.apiMiddlewareEndpointFactory,
 	}
 	log.Info("Starting API middleware")
-	proxy.Run(g.router)
+	g.proxy.Run(g.cfg.router)
 }

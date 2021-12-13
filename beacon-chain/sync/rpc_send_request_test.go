@@ -16,8 +16,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -36,13 +35,13 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		bogusPeer := p2ptest.NewTestP2P(t)
 		p1.Connect(bogusPeer)
 
-		req := &pb.BeaconBlocksByRangeRequest{}
+		req := &ethpb.BeaconBlocksByRangeRequest{}
 		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		_, err := SendBeaconBlocksByRangeRequest(ctx, chain, p1, bogusPeer.PeerID(), req, nil)
 		assert.ErrorContains(t, "protocol not supported", err)
 	})
 
-	knownBlocks := make([]*eth.SignedBeaconBlock, 0)
+	knownBlocks := make([]*ethpb.SignedBeaconBlock, 0)
 	genesisBlk := util.NewBeaconBlock()
 	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -62,7 +61,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				assert.NoError(t, stream.Close())
 			}()
 
-			req := &pb.BeaconBlocksByRangeRequest{}
+			req := &ethpb.BeaconBlocksByRangeRequest{}
 			assert.NoError(t, p2pProvider.Encoding().DecodeWithMaxLength(stream, req))
 
 			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
@@ -98,7 +97,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		p1.Connect(p2)
 		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, nil))
 
-		req := &pb.BeaconBlocksByRangeRequest{
+		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 20,
 			Count:     128,
 			Step:      1,
@@ -116,7 +115,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, nil))
 
 		// No error from block processor.
-		req := &pb.BeaconBlocksByRangeRequest{
+		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 20,
 			Count:     128,
 			Step:      1,
@@ -139,7 +138,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, nil))
 
 		// Send error from block processor.
-		req := &pb.BeaconBlocksByRangeRequest{
+		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 20,
 			Count:     128,
 			Step:      1,
@@ -159,7 +158,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		p2.SetStreamHandler(pcl, knownBlocksProvider(p2, nil))
 
 		// No cap on max roots.
-		req := &pb.BeaconBlocksByRangeRequest{
+		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 20,
 			Count:     128,
 			Step:      1,
@@ -202,7 +201,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			return nil
 		}))
 
-		req := &pb.BeaconBlocksByRangeRequest{
+		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 20,
 			Count:     128,
 			Step:      1,
@@ -229,7 +228,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				assert.NoError(t, stream.Close())
 			}()
 
-			req := &pb.BeaconBlocksByRangeRequest{}
+			req := &ethpb.BeaconBlocksByRangeRequest{}
 			assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, req))
 
 			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
@@ -244,7 +243,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			}
 		})
 
-		req := &pb.BeaconBlocksByRangeRequest{
+		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 20,
 			Count:     128,
 			Step:      1,
@@ -272,7 +271,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				assert.NoError(t, stream.Close())
 			}()
 
-			req := &pb.BeaconBlocksByRangeRequest{}
+			req := &ethpb.BeaconBlocksByRangeRequest{}
 			assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, req))
 
 			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
@@ -287,7 +286,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			}
 		})
 
-		req := &pb.BeaconBlocksByRangeRequest{
+		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: 20,
 			Count:     128,
 			Step:      10,
@@ -305,7 +304,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 	defer cancel()
 	pcl := fmt.Sprintf("%s/ssz_snappy", p2p.RPCBlocksByRootTopicV1)
 
-	knownBlocks := make(map[[32]byte]*eth.SignedBeaconBlock)
+	knownBlocks := make(map[[32]byte]*ethpb.SignedBeaconBlock)
 	knownRoots := make([][32]byte, 0)
 	for i := 0; i < 5; i++ {
 		blk := util.NewBeaconBlock()

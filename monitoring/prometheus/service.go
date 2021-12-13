@@ -113,7 +113,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
+func (_ *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 	stack := debug.Stack()
 	if _, err := w.Write(stack); err != nil {
 		log.WithError(err).Error("Failed to write goroutines stack")
