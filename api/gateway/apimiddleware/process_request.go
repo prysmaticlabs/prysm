@@ -85,7 +85,6 @@ func WithTimeout(t time.Duration) ClientOption {
 // ProxyRequest proxies the request to grpc-gateway.
 func ProxyRequest(req *http.Request, opts ...ClientOption) (*http.Response, ErrorJson) {
 	// We do not use http.DefaultClient because it does not have any timeout.
-	// TODO: think about exposing this as a flag, or based on endpoint
 	netClient := &http.Client{Timeout: time.Minute * 2}
 	for _, o := range opts {
 		o(netClient)

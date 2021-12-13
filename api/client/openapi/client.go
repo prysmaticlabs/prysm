@@ -156,7 +156,6 @@ func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpo
 	}, nil
 }
 
-// TODO: fix hardcoded pb type using sniff code
 // GetBlockBySlot queries the beacon node API for the SignedBeaconBlockAltair for the given slot
 func (c *Client) GetBlockBySlot(slot uint64) (io.Reader, error) {
 	blockPath := path.Join(GET_SIGNED_BLOCK_PATH, strconv.FormatUint(slot, 10))

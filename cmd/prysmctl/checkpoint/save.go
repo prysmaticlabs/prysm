@@ -167,7 +167,6 @@ func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 	if err != nil {
 		return err
 	}
-	//statePath := fmt.Sprintf("state-%s.ssz", fmt.Sprintf("%#x", stateRoot))
 	statePath := fname("state", cf, sSlot, stateRoot)
 	log.Printf("saving ssz-encoded state to to %s", statePath)
 	err = os.WriteFile(statePath, sb, 0600)
