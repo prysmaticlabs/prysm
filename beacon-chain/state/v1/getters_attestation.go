@@ -6,9 +6,6 @@ import (
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, error) {
-	if !b.hasInnerState() {
-		return nil, nil
-	}
 	if b.previousEpochAttestations == nil {
 		return nil, nil
 	}
@@ -22,18 +19,11 @@ func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, 
 // previousEpochAttestationsInternal corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) previousEpochAttestationsInternal() []*ethpb.PendingAttestation {
-	if !b.hasInnerState() {
-		return nil
-	}
-
 	return ethpb.CopyPendingAttestationSlice(b.previousEpochAttestations)
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, error) {
-	if !b.hasInnerState() {
-		return nil, nil
-	}
 	if b.currentEpochAttestations == nil {
 		return nil, nil
 	}
@@ -47,9 +37,5 @@ func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, e
 // currentEpochAttestations corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) currentEpochAttestationsInternal() []*ethpb.PendingAttestation {
-	if !b.hasInnerState() {
-		return nil
-	}
-
 	return ethpb.CopyPendingAttestationSlice(b.currentEpochAttestations)
 }

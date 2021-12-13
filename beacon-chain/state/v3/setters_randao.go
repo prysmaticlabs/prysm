@@ -9,9 +9,6 @@ import (
 // SetRandaoMixes for the beacon state. Updates the entire
 // randao mixes to a new value by overwriting the previous one.
 func (b *BeaconState) SetRandaoMixes(val *[customtypes.RandaoMixesSize][32]byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -28,9 +25,6 @@ func (b *BeaconState) SetRandaoMixes(val *[customtypes.RandaoMixesSize][32]byte)
 // UpdateRandaoMixesAtIndex for the beacon state. Updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	if uint64(len(b.randaoMixes)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}

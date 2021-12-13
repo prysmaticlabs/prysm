@@ -19,7 +19,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 40)
 
 	// 5 represents the enum value of state roots
-	sRoots := customtypes.StateRoots(*newState.StateRoots())
+	sRoots := customtypes.BlockRoots(*newState.StateRoots())
 	trie, err := fieldtrie.NewFieldTrie(5, stateTypes.BasicArray, &sRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
 	sRootsSlice := make([][]byte, len(newState.StateRoots()))

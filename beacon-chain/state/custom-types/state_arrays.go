@@ -55,12 +55,73 @@ func (e *Byte32) SizeSSZ() int {
 	return 32
 }
 
-var _ fssz.HashRoot = (StateRoots)([BlockRootsSize][32]byte{})
+var _ fssz.HashRoot = (BlockRoots)([BlockRootsSize][32]byte{})
+var _ fssz.Marshaler = (*BlockRoots)(nil)
+var _ fssz.Unmarshaler = (*BlockRoots)(nil)
+
+// BlockRoots represents block roots of the beacon state.
+type BlockRoots [BlockRootsSize][32]byte
+
+// HashTreeRoot returns calculated hash root.
+func (r BlockRoots) HashTreeRoot() ([32]byte, error) {
+	return fssz.HashWithDefaultHasher(r)
+}
+
+// HashTreeRootWith hashes a BlockRoots object with a Hasher from the default HasherPool.
+func (r BlockRoots) HashTreeRootWith(hh *fssz.Hasher) error {
+	index := hh.Index()
+	for _, sRoot := range r {
+		hh.Append(sRoot[:])
+	}
+	hh.Merkleize(index)
+	return nil
+}
+
+// UnmarshalSSZ deserializes the provided bytes buffer into the BlockRoots object.
+func (r *BlockRoots) UnmarshalSSZ(buf []byte) error {
+	if len(buf) != r.SizeSSZ() {
+		return fmt.Errorf("expected buffer of length %d received %d", r.SizeSSZ(), len(buf))
+	}
+
+	var roots BlockRoots
+	for i, _ := range roots {
+		copy(roots[i][:], buf[i*32:(i+1)*32])
+	}
+	*r = roots
+	return nil
+}
+
+// MarshalSSZTo marshals BlockRoots with the provided byte slice.
+func (r *BlockRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
+	marshalled, err := r.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	return append(dst, marshalled...), nil
+}
+
+// MarshalSSZ marshals BlockRoots into a serialized object.
+func (r *BlockRoots) MarshalSSZ() ([]byte, error) {
+	marshalled := make([]byte, BlockRootsSize*32)
+	for i, r32 := range r {
+		for j, rr := range r32 {
+			marshalled[i*32+j] = rr
+		}
+	}
+	return marshalled, nil
+}
+
+// SizeSSZ returns the size of the serialized object.
+func (r *BlockRoots) SizeSSZ() int {
+	return BlockRootsSize * 32
+}
+
+var _ fssz.HashRoot = (StateRoots)([StateRootsSize][32]byte{})
 var _ fssz.Marshaler = (*StateRoots)(nil)
 var _ fssz.Unmarshaler = (*StateRoots)(nil)
 
-// Byte32 represents a 32 bytes StateRoots object in Ethereum beacon chain consensus.
-type StateRoots [BlockRootsSize][32]byte
+// StateRoots represents block roots of the beacon state.
+type StateRoots [StateRootsSize][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r StateRoots) HashTreeRoot() ([32]byte, error) {
@@ -102,7 +163,7 @@ func (r *StateRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 
 // MarshalSSZ marshals StateRoots into a serialized object.
 func (r *StateRoots) MarshalSSZ() ([]byte, error) {
-	marshalled := make([]byte, BlockRootsSize*32)
+	marshalled := make([]byte, StateRootsSize*32)
 	for i, r32 := range r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
@@ -113,7 +174,7 @@ func (r *StateRoots) MarshalSSZ() ([]byte, error) {
 
 // SizeSSZ returns the size of the serialized object.
 func (r *StateRoots) SizeSSZ() int {
-	return BlockRootsSize * 32
+	return StateRootsSize * 32
 }
 
 var _ fssz.HashRoot = (RandaoMixes)([RandaoMixesSize][32]byte{})

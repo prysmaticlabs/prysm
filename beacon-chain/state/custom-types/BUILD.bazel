@@ -5,7 +5,7 @@ go_library(
     srcs = [
         "state_arrays.go",
     ] + select({
-        "//config:mainnet": ["sizes.go"],
+        "//config:mainnet": ["sizes_mainnet.go"],
         "//config:minimal": ["sizes_minimal.go"],
     }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types",

@@ -8,29 +8,17 @@ import (
 // currentSyncCommitteeInternal of the current sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) currentSyncCommitteeInternal() *ethpb.SyncCommittee {
-	if !b.hasInnerState() {
-		return nil
-	}
-
 	return CopySyncCommittee(b.currentSyncCommittee)
 }
 
 // nextSyncCommitteeInternal of the next sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) nextSyncCommitteeInternal() *ethpb.SyncCommittee {
-	if !b.hasInnerState() {
-		return nil
-	}
-
 	return CopySyncCommittee(b.nextSyncCommittee)
 }
 
 // CurrentSyncCommittee of the current sync committee in beacon chain state.
 func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
-	if !b.hasInnerState() {
-		return nil, nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -43,10 +31,6 @@ func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 
 // NextSyncCommittee of the next sync committee in beacon chain state.
 func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
-	if !b.hasInnerState() {
-		return nil, nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 

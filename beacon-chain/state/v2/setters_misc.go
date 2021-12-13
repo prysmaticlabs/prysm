@@ -60,9 +60,6 @@ func (b *BeaconState) SetGenesisValidatorRoot(val [32]byte) error {
 
 // SetSlot for the beacon state.
 func (b *BeaconState) SetSlot(val types.Slot) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -73,9 +70,6 @@ func (b *BeaconState) SetSlot(val types.Slot) error {
 
 // SetFork version for the beacon chain.
 func (b *BeaconState) SetFork(val *ethpb.Fork) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -91,9 +85,6 @@ func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 // SetHistoricalRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetHistoricalRoots(val [][32]byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -108,9 +99,6 @@ func (b *BeaconState) SetHistoricalRoots(val [][32]byte) error {
 // AppendHistoricalRoots for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
