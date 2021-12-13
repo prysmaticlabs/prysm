@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	fssz "github.com/ferranbt/fastssz"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 var _ fssz.HashRoot = (Byte32)([32]byte{})
@@ -55,12 +56,12 @@ func (e *Byte32) SizeSSZ() int {
 	return 32
 }
 
-var _ fssz.HashRoot = (BlockRoots)([BlockRootsSize][32]byte{})
+var _ fssz.HashRoot = (BlockRoots)([fieldparams.BlockRootsLength][32]byte{})
 var _ fssz.Marshaler = (*BlockRoots)(nil)
 var _ fssz.Unmarshaler = (*BlockRoots)(nil)
 
 // BlockRoots represents block roots of the beacon state.
-type BlockRoots [BlockRootsSize][32]byte
+type BlockRoots [fieldparams.BlockRootsLength][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r BlockRoots) HashTreeRoot() ([32]byte, error) {
@@ -102,7 +103,7 @@ func (r *BlockRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 
 // MarshalSSZ marshals BlockRoots into a serialized object.
 func (r *BlockRoots) MarshalSSZ() ([]byte, error) {
-	marshalled := make([]byte, BlockRootsSize*32)
+	marshalled := make([]byte, fieldparams.BlockRootsLength*32)
 	for i, r32 := range r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
@@ -113,15 +114,15 @@ func (r *BlockRoots) MarshalSSZ() ([]byte, error) {
 
 // SizeSSZ returns the size of the serialized object.
 func (r *BlockRoots) SizeSSZ() int {
-	return BlockRootsSize * 32
+	return fieldparams.BlockRootsLength * 32
 }
 
-var _ fssz.HashRoot = (StateRoots)([StateRootsSize][32]byte{})
+var _ fssz.HashRoot = (StateRoots)([fieldparams.StateRootsLength][32]byte{})
 var _ fssz.Marshaler = (*StateRoots)(nil)
 var _ fssz.Unmarshaler = (*StateRoots)(nil)
 
 // StateRoots represents block roots of the beacon state.
-type StateRoots [StateRootsSize][32]byte
+type StateRoots [fieldparams.StateRootsLength][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r StateRoots) HashTreeRoot() ([32]byte, error) {
@@ -163,7 +164,7 @@ func (r *StateRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 
 // MarshalSSZ marshals StateRoots into a serialized object.
 func (r *StateRoots) MarshalSSZ() ([]byte, error) {
-	marshalled := make([]byte, StateRootsSize*32)
+	marshalled := make([]byte, fieldparams.StateRootsLength*32)
 	for i, r32 := range r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
@@ -174,15 +175,15 @@ func (r *StateRoots) MarshalSSZ() ([]byte, error) {
 
 // SizeSSZ returns the size of the serialized object.
 func (r *StateRoots) SizeSSZ() int {
-	return StateRootsSize * 32
+	return fieldparams.StateRootsLength * 32
 }
 
-var _ fssz.HashRoot = (RandaoMixes)([RandaoMixesSize][32]byte{})
+var _ fssz.HashRoot = (RandaoMixes)([fieldparams.RandaoMixesLength][32]byte{})
 var _ fssz.Marshaler = (*RandaoMixes)(nil)
 var _ fssz.Unmarshaler = (*RandaoMixes)(nil)
 
 // Byte32 represents a 32 bytes RandaoMixes object in Ethereum beacon chain consensus.
-type RandaoMixes [RandaoMixesSize][32]byte
+type RandaoMixes [fieldparams.RandaoMixesLength][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r RandaoMixes) HashTreeRoot() ([32]byte, error) {
@@ -224,7 +225,7 @@ func (r *RandaoMixes) MarshalSSZTo(dst []byte) ([]byte, error) {
 
 // MarshalSSZ marshals RandaoMixes into a serialized object.
 func (r *RandaoMixes) MarshalSSZ() ([]byte, error) {
-	marshalled := make([]byte, RandaoMixesSize*32)
+	marshalled := make([]byte, fieldparams.RandaoMixesLength*32)
 	for i, r32 := range r {
 		for j, rr := range r32 {
 			marshalled[i*32+j] = rr
@@ -235,7 +236,7 @@ func (r *RandaoMixes) MarshalSSZ() ([]byte, error) {
 
 // SizeSSZ returns the size of the serialized object.
 func (r *RandaoMixes) SizeSSZ() int {
-	return RandaoMixesSize * 32
+	return fieldparams.RandaoMixesLength * 32
 }
 
 var _ fssz.HashRoot = (HistoricalRoots)([][32]byte{})

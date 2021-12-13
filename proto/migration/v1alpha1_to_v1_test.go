@@ -6,7 +6,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -454,9 +453,9 @@ func TestBeaconStateToV1(t *testing.T) {
 			StateRoot:     bytesutil.PadTo([]byte("lbhstateroot"), 32),
 			BodyRoot:      bytesutil.PadTo([]byte("lbhbodyroot"), 32),
 		}))
-		bRoots := [customtypes.BlockRootsSize][32]byte{bytesutil.ToBytes32([]byte("blockroots"))}
+		bRoots := [fieldparams.BlockRootsLength][32]byte{bytesutil.ToBytes32([]byte("blockroots"))}
 		require.NoError(t, state.SetBlockRoots(&bRoots))
-		sRoots := [customtypes.StateRootsSize][32]byte{bytesutil.ToBytes32([]byte("stateroots"))}
+		sRoots := [fieldparams.StateRootsLength][32]byte{bytesutil.ToBytes32([]byte("stateroots"))}
 		require.NoError(t, state.SetStateRoots(&sRoots))
 		require.NoError(t, state.SetHistoricalRoots([][32]byte{bytesutil.ToBytes32([]byte("historicalroots"))}))
 		require.NoError(t, state.SetEth1Data(&ethpbalpha.Eth1Data{
@@ -481,7 +480,7 @@ func TestBeaconStateToV1(t *testing.T) {
 			WithdrawableEpoch:          13,
 		}}))
 		require.NoError(t, state.SetBalances([]uint64{14}))
-		mixes := [customtypes.RandaoMixesSize][32]byte{bytesutil.ToBytes32([]byte("randaomixes"))}
+		mixes := [fieldparams.RandaoMixesLength][32]byte{bytesutil.ToBytes32([]byte("randaomixes"))}
 		require.NoError(t, state.SetRandaoMixes(&mixes))
 		require.NoError(t, state.SetSlashings([]uint64{15}))
 		require.NoError(t, state.AppendPreviousEpochAttestations(&ethpbalpha.PendingAttestation{
@@ -555,13 +554,13 @@ func TestBeaconStateToV1(t *testing.T) {
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("lbhparentroot"), 32), resultLatestBlockHeader.ParentRoot)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("lbhstateroot"), 32), resultLatestBlockHeader.StateRoot)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("lbhbodyroot"), 32), resultLatestBlockHeader.BodyRoot)
-	bRoots := make([][]byte, customtypes.BlockRootsSize)
+	bRoots := make([][]byte, fieldparams.BlockRootsLength)
 	for i := 0; i < len(bRoots); i++ {
 		bRoots[i] = make([]byte, 32)
 	}
 	bRoots[0] = bytesutil.PadTo([]byte("blockroots"), 32)
 	assert.DeepEqual(t, bRoots, result.BlockRoots)
-	sRoots := make([][]byte, customtypes.StateRootsSize)
+	sRoots := make([][]byte, fieldparams.StateRootsLength)
 	for i := 0; i < len(sRoots); i++ {
 		sRoots[i] = make([]byte, 32)
 	}
@@ -592,7 +591,7 @@ func TestBeaconStateToV1(t *testing.T) {
 	assert.Equal(t, types.Epoch(12), resultValidator.ExitEpoch)
 	assert.Equal(t, types.Epoch(13), resultValidator.WithdrawableEpoch)
 	assert.DeepEqual(t, []uint64{14}, result.Balances)
-	mixes := make([][]byte, customtypes.RandaoMixesSize)
+	mixes := make([][]byte, fieldparams.RandaoMixesLength)
 	for i := 0; i < len(mixes); i++ {
 		mixes[i] = make([]byte, 32)
 	}

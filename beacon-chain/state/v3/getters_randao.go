@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 // RandaoMixes of block proposers on the beacon chain.
-func (b *BeaconState) RandaoMixes() *[customtypes.RandaoMixesSize][32]byte {
+func (b *BeaconState) RandaoMixes() *[fieldparams.RandaoMixesLength][32]byte {
 	if b.randaoMixes == nil {
 		return nil
 	}
@@ -15,7 +16,7 @@ func (b *BeaconState) RandaoMixes() *[customtypes.RandaoMixesSize][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	mixes := [customtypes.RandaoMixesSize][32]byte(*b.randaoMixesInternal())
+	mixes := [fieldparams.RandaoMixesLength][32]byte(*b.randaoMixesInternal())
 	return &mixes
 }
 

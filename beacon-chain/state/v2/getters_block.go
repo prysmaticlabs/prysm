@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -45,7 +46,7 @@ func (b *BeaconState) latestBlockHeaderInternal() *ethpb.BeaconBlockHeader {
 }
 
 // BlockRoots kept track of in the beacon state.
-func (b *BeaconState) BlockRoots() *[customtypes.BlockRootsSize][32]byte {
+func (b *BeaconState) BlockRoots() *[fieldparams.BlockRootsLength][32]byte {
 	if b.blockRoots == nil {
 		return nil
 	}
@@ -53,7 +54,7 @@ func (b *BeaconState) BlockRoots() *[customtypes.BlockRootsSize][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := [customtypes.BlockRootsSize][32]byte(*b.blockRootsInternal())
+	roots := [fieldparams.BlockRootsLength][32]byte(*b.blockRootsInternal())
 	return &roots
 }
 

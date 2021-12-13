@@ -5,6 +5,7 @@ import (
 
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -20,7 +21,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 
 // SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetBlockRoots(val *[customtypes.BlockRootsSize][32]byte) error {
+func (b *BeaconState) SetBlockRoots(val *[fieldparams.BlockRootsLength][32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
