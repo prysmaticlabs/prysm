@@ -4,11 +4,12 @@ import (
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 // SetStateRoots for the beacon state. Updates the state roots
 // to a new value by overwriting the previous value.
-func (b *BeaconState) SetStateRoots(val *[customtypes.StateRootsSize][32]byte) error {
+func (b *BeaconState) SetStateRoots(val *[fieldparams.StateRootsLength][32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

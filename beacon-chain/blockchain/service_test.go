@@ -334,7 +334,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, c.startFromSavedState(headState))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.ToProtoUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	assert.DeepEqual(t, genesis, c.head.block.Proto())
 }
@@ -394,7 +394,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	require.NoError(t, c.startFromSavedState(headState))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.ToProtoUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
 	assert.DeepEqual(t, finalizedBlock, c.head.block.Proto())

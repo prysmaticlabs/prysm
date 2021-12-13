@@ -27,9 +27,9 @@ import (
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -59,7 +59,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	var roots [customtypes.BlockRootsSize][32]byte
+	var roots [fieldparams.BlockRootsLength][32]byte
 	roots[0] = genesisRoot
 	require.NoError(t, bs.SetBlockRoots(&roots))
 
@@ -141,7 +141,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.NoError(t, bs.SetSlot(5))
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
-		var roots [customtypes.BlockRootsSize][32]byte
+		var roots [fieldparams.BlockRootsLength][32]byte
 		roots[0] = genesisRoot
 		require.NoError(t, bs.SetBlockRoots(&roots))
 
@@ -236,7 +236,7 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	var roots [customtypes.BlockRootsSize][32]byte
+	var roots [fieldparams.BlockRootsLength][32]byte
 	roots[0] = genesisRoot
 	require.NoError(t, bs.SetBlockRoots(&roots))
 
@@ -285,7 +285,7 @@ func TestGetProposerDuties(t *testing.T) {
 		require.NoError(t, bs.SetSlot(5))
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
-		var roots [customtypes.BlockRootsSize][32]byte
+		var roots [fieldparams.BlockRootsLength][32]byte
 		roots[0] = genesisRoot
 		require.NoError(t, bs.SetBlockRoots(&roots))
 
@@ -1117,7 +1117,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	var roots [customtypes.BlockRootsSize][32]byte
+	var roots [fieldparams.BlockRootsLength][32]byte
 	roots[0] = genesisRoot
 	require.NoError(t, bs.SetBlockRoots(&roots))
 
@@ -1258,7 +1258,7 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 	require.NoError(t, err, "Could not set up genesis state")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	var roots [customtypes.BlockRootsSize][32]byte
+	var roots [fieldparams.BlockRootsLength][32]byte
 	roots[0] = genesisRoot
 	require.NoError(t, bs.SetBlockRoots(&roots))
 

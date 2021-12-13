@@ -3,7 +3,7 @@ package v2
 import (
 	"testing"
 
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -29,9 +29,9 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 	s, err := InitializeFromProto(&ethpb.BeaconStateAltair{})
 	require.NoError(t, err)
 	got := s.BlockRoots()
-	require.DeepEqual(t, [customtypes.BlockRootsSize][32]byte{}, *got)
+	require.DeepEqual(t, [fieldparams.BlockRootsLength][32]byte{}, *got)
 
-	want := [customtypes.BlockRootsSize][32]byte{{'a'}}
+	want := [fieldparams.BlockRootsLength][32]byte{{'a'}}
 	bRoots := make([][]byte, len(want))
 	for i, r := range want {
 		tmp := r
@@ -54,7 +54,7 @@ func TestBeaconState_BlockRootAtIndex(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepEqual(t, [32]byte{}, got)
 
-	r := [customtypes.BlockRootsSize][32]byte{{'a'}}
+	r := [fieldparams.BlockRootsLength][32]byte{{'a'}}
 	bRoots := make([][]byte, len(r))
 	for i, root := range r {
 		tmp := root

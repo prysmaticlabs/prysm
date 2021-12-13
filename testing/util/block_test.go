@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/stateutils"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -32,8 +32,8 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.MinimalSpecConfig()
-	cfg.SlotsPerHistoricalRoot = customtypes.BlockRootsSize
-	cfg.EpochsPerHistoricalVector = customtypes.RandaoMixesSize
+	cfg.SlotsPerHistoricalRoot = fieldparams.BlockRootsLength
+	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privs := DeterministicGenesisState(t, 1024)
 	conf := &BlockGenConfig{
@@ -48,8 +48,8 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.MinimalSpecConfig()
-	cfg.SlotsPerHistoricalRoot = customtypes.BlockRootsSize
-	cfg.EpochsPerHistoricalVector = customtypes.RandaoMixesSize
+	cfg.SlotsPerHistoricalRoot = fieldparams.BlockRootsLength
+	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privs := DeterministicGenesisState(t, 64)
 
@@ -80,8 +80,8 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.MinimalSpecConfig()
-	cfg.SlotsPerHistoricalRoot = customtypes.BlockRootsSize
-	cfg.EpochsPerHistoricalVector = customtypes.RandaoMixesSize
+	cfg.SlotsPerHistoricalRoot = fieldparams.BlockRootsLength
+	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privs := DeterministicGenesisState(t, 32)
 	conf := &BlockGenConfig{
@@ -102,8 +102,8 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.MinimalSpecConfig()
-	cfg.SlotsPerHistoricalRoot = customtypes.BlockRootsSize
-	cfg.EpochsPerHistoricalVector = customtypes.RandaoMixesSize
+	cfg.SlotsPerHistoricalRoot = fieldparams.BlockRootsLength
+	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privs := DeterministicGenesisState(t, 256)
 	conf := &BlockGenConfig{
@@ -124,8 +124,8 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.MinimalSpecConfig()
-	cfg.SlotsPerHistoricalRoot = customtypes.BlockRootsSize
-	cfg.EpochsPerHistoricalVector = customtypes.RandaoMixesSize
+	cfg.SlotsPerHistoricalRoot = fieldparams.BlockRootsLength
+	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
 	params.OverrideBeaconConfig(cfg)
 
 	beaconState, privs := DeterministicGenesisState(t, 256)

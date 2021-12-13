@@ -4,11 +4,12 @@ import (
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 // SetRandaoMixes for the beacon state. Updates the entire
 // randao mixes to a new value by overwriting the previous one.
-func (b *BeaconState) SetRandaoMixes(val *[customtypes.RandaoMixesSize][32]byte) error {
+func (b *BeaconState) SetRandaoMixes(val *[fieldparams.RandaoMixesLength][32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

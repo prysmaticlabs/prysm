@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -21,8 +21,8 @@ import (
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.MinimalSpecConfig()
-	cfg.SlotsPerHistoricalRoot = customtypes.BlockRootsSize
-	cfg.EpochsPerHistoricalVector = customtypes.RandaoMixesSize
+	cfg.SlotsPerHistoricalRoot = fieldparams.BlockRootsLength
+	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
 	params.OverrideBeaconConfig(cfg)
 
 	ctx := context.Background()

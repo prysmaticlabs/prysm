@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -145,7 +146,7 @@ func (b *BeaconState) toProtoNoLock() interface{} {
 }
 
 // StateRoots kept track of in the beacon state.
-func (b *BeaconState) StateRoots() *[customtypes.StateRootsSize][32]byte {
+func (b *BeaconState) StateRoots() *[fieldparams.StateRootsLength][32]byte {
 	if b.stateRoots == nil {
 		return nil
 	}
@@ -153,7 +154,7 @@ func (b *BeaconState) StateRoots() *[customtypes.StateRootsSize][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := [customtypes.StateRootsSize][32]byte(*b.stateRootsInternal())
+	roots := [fieldparams.StateRootsLength][32]byte(*b.stateRootsInternal())
 	return &roots
 }
 

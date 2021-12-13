@@ -15,9 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -87,7 +87,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	var randaoMixes [customtypes.RandaoMixesSize][32]byte
+	var randaoMixes [fieldparams.RandaoMixesLength][32]byte
 	for i := 0; i < len(randaoMixes); i++ {
 		var h [32]byte
 		copy(h[:], eth1Data.BlockHash)
@@ -102,12 +102,12 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		activeIndexRoots[i] = zeroHash
 	}
 
-	var blockRoots [customtypes.BlockRootsSize][32]byte
+	var blockRoots [fieldparams.BlockRootsLength][32]byte
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash32
 	}
 
-	var stateRoots [customtypes.StateRootsSize][32]byte
+	var stateRoots [fieldparams.StateRootsLength][32]byte
 	for i := 0; i < len(stateRoots); i++ {
 		stateRoots[i] = zeroHash32
 	}

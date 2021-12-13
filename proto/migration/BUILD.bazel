@@ -32,7 +32,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/custom-types:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
