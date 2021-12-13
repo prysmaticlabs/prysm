@@ -41,6 +41,7 @@ go_library(
         "//beacon-chain/state/types:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//config/features:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//container/slice:go_default_library",
         "//crypto/hash:go_default_library",

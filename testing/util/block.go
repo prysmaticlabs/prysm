@@ -313,7 +313,7 @@ func generateAttesterSlashings(
 	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
 	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
-		committeeIndex := randGen.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
+		committeeIndex := randGen.Uint64() % helpers.SlotCommitteeCount(uint64(bState.NumValidators()))
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, bState.Slot(), types.CommitteeIndex(committeeIndex))
 		if err != nil {
 			return nil, err
