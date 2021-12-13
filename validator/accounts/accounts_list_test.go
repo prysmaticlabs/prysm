@@ -40,11 +40,11 @@ func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][
 	return m.publicKeys, nil
 }
 
-func (m *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
+func (_ *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
 	return nil, nil
 }
 
-func (m *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+func (_ *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
 	return nil
 }
 

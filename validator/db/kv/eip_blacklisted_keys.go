@@ -10,7 +10,7 @@ import (
 // EIPImportBlacklistedPublicKeys returns keys that were marked as blacklisted during EIP-3076 slashing
 // protection imports, ensuring that we can prevent these keys from having duties at runtime.
 func (s *Store) EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.EIPImportBlacklistedPublicKeys")
+	_, span := trace.StartSpan(ctx, "Validator.EIPImportBlacklistedPublicKeys")
 	defer span.End()
 	var err error
 	publicKeys := make([][48]byte, 0)
@@ -31,7 +31,7 @@ func (s *Store) EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte,
 // SaveEIPImportBlacklistedPublicKeys stores a list of blacklisted public keys that
 // were determined during EIP-3076 slashing protection imports.
 func (s *Store) SaveEIPImportBlacklistedPublicKeys(ctx context.Context, publicKeys [][48]byte) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveEIPImportBlacklistedPublicKeys")
+	_, span := trace.StartSpan(ctx, "Validator.SaveEIPImportBlacklistedPublicKeys")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(slashablePublicKeysBucket)

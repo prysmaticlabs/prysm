@@ -167,7 +167,7 @@ func (s *Service) Stop() error {
 }
 
 // Status of the slasher service.
-func (s *Service) Status() error {
+func (_ *Service) Status() error {
 	return nil
 }
 

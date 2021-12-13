@@ -9,3 +9,10 @@ func hasAltairKey(enc []byte) bool {
 	}
 	return bytes.Equal(enc[:len(altairKey)], altairKey)
 }
+
+func hasMergeKey(enc []byte) bool {
+	if len(mergeKey) >= len(enc) {
+		return false
+	}
+	return bytes.Equal(enc[:len(mergeKey)], mergeKey)
+}
