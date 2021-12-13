@@ -20,17 +20,7 @@ func (m *mockTransport) RoundTrip(*http.Request) (*http.Response, error) {
 	return m.mockResponse, nil
 }
 
-func TestClient_Sign_HappyPath(t *testing.T) {
-	json := `{
-  		"signature": "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9"
-	}`
-	// create a new reader with that JSON
-	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
-	mock := &mockTransport{mockResponse: &http.Response{
-		StatusCode: 200,
-		Body:       r,
-	}}
-	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
+func getClientMockSignRequest() *SignRequest {
 	forkData := &Fork{
 		PreviousVersion: "",
 		CurrentVersion:  "",
@@ -49,7 +39,22 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 		SigningRoot:     "0xfasd0fjsa0dfjas0dfjasdf",
 		AggregationSlot: AggregationSlotData,
 	}
-	resp, err := cl.Sign("a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", &web3SignerRequest)
+	return &web3SignerRequest
+}
+
+func TestClient_Sign_HappyPath(t *testing.T) {
+	json := `{
+  		"signature": "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9"
+	}`
+	// create a new reader with that JSON
+	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 200,
+		Body:       r,
+	}}
+	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
+
+	resp, err := cl.Sign("a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", getClientMockSignRequest())
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9", fmt.Sprintf("%#x", resp.Marshal()))
@@ -72,6 +77,7 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	assert.EqualValues(t, "[162 181 170 173 156 110 254 254 123 185 177 36 58 4 52 4 243 54 41 55 207 182 179 24 51 146 152 51 23 63 71 102 48 234 44 254 176 217 221 241 95 151 202 134 133 148 136 32]", fmt.Sprintf("%v", resp[0][:]))
 }
 
+// TODO: not really in use, should be revisited
 func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
@@ -82,6 +88,7 @@ func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+// TODO: not really in use, should be revisited
 func TestClient_GetServerStatus_HappyPath(t *testing.T) {
 	json := `"some server status, not sure what it looks like, need to find some sample data"`
 	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))

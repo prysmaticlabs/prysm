@@ -2,7 +2,9 @@ package remote_web3signer
 
 import (
 	"context"
-	"encoding/hex"
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/pkg/errors"
 
@@ -37,7 +39,7 @@ func WithKeyList(keys [][48]byte) KeymanagerOption {
 // Keymanager defines the web3signer keymanager
 type Keymanager struct {
 	opt                   *KeymanagerOption
-	client                *Web3signerClient
+	client                Web3SignerClient
 	genesisValidatorsRoot []byte
 	publicKeysURL         string
 	providedPublicKeys    [][48]byte
@@ -47,12 +49,11 @@ type Keymanager struct {
 // NewKeymanager instantiates a new web3signer key manager
 func NewKeymanager(_ context.Context, baseEndpoint string, genesisValidatorsRoot []byte, option KeymanagerOption) (*Keymanager, error) {
 	client, err := newClient(baseEndpoint)
-	var cl Web3signerClient = client
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create client")
 	}
 	k := &Keymanager{
-		client:                &cl,
+		client:                Web3SignerClient(client),
 		genesisValidatorsRoot: genesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
 	}
@@ -78,17 +79,17 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 	forkData := &Fork{
 		PreviousVersion: string(request.Fork.PreviousVersion),
 		CurrentVersion:  string(request.Fork.CurrentVersion),
-		Epoch:           string(request.Fork.Epoch),
+		Epoch:           fmt.Sprint(request.Fork.Epoch),
 	}
 	forkInfoData := &ForkInfo{
 		Fork:                  forkData,
-		GenesisValidatorsRoot: "0x" + hex.EncodeToString(km.genesisValidatorsRoot),
+		GenesisValidatorsRoot: hexutil.Encode(km.genesisValidatorsRoot),
 	}
-	aggregationSlotData := &AggregationSlot{Slot: string(request.AggregationSlot)}
+	aggregationSlotData := &AggregationSlot{Slot: fmt.Sprint(request.AggregationSlot)}
 	web3SignerRequest := SignRequest{
 		Type:            signRequestType,
 		ForkInfo:        forkInfoData,
-		SigningRoot:     "0x" + hex.EncodeToString(request.SigningRoot),
+		SigningRoot:     hexutil.Encode(request.SigningRoot),
 		AggregationSlot: aggregationSlotData,
 	}
 	return km.client.Sign(string(request.PublicKey), &web3SignerRequest)

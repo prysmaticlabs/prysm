@@ -2,19 +2,17 @@ package remote_web3signer
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 const (
@@ -22,8 +20,8 @@ const (
 	maxTimeout      = 3 * time.Second
 )
 
-// Web3signerClient defines the interface for interacting with a remote web3signer.
-type Web3signerClient interface {
+// Web3SignerClient defines the interface for interacting with a remote web3signer.
+type Web3SignerClient interface {
 	Sign(pubKey string, request *SignRequest) (bls.Signature, error)
 	GetPublicKeys(url string) ([][48]byte, error)
 	//ReloadSignerKeys() error
@@ -102,9 +100,9 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 	if err := client.unmarshalResponse(resp.Body, &signResp); err != nil {
 		return nil, err
 	}
-	decoded, err := decodeHex(signResp.Signature)
+	decoded, err := hexutil.Decode(signResp.Signature)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to decode signature")
 	}
 	return bls.SignatureFromBytes(decoded)
 }
@@ -122,7 +120,7 @@ func (client *client) GetPublicKeys(url string) ([][48]byte, error) {
 	decodedKeys := make([][48]byte, len(publicKeys))
 	var errorKeyPositions string
 	for i, value := range publicKeys {
-		decodedKey, err := decodeHex(value)
+		decodedKey, err := hexutil.Decode(value)
 		if err != nil {
 			errorKeyPositions += fmt.Sprintf("%v, ", i)
 			continue
@@ -183,15 +181,6 @@ func (*client) unmarshalResponse(responseBody io.ReadCloser, unmarshalledRespons
 		return errors.Wrap(err, "invalid format, unable to read response body as array of strings")
 	}
 	return nil
-}
-
-// decodeHex a utility method for decoding hex strings may be a duplicate in which case will be removed in the future.
-func decodeHex(signature string) ([]byte, error) {
-	decoded, err := hex.DecodeString(strings.TrimPrefix(signature, "0x"))
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid format, failed to unmarshal json response")
-	}
-	return decoded, nil
 }
 
 // closeBody a utility method to wrap an error for closing
