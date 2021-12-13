@@ -158,7 +158,7 @@ func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 	}
 	blockPath := fname("block", cf, bSlot, blockRoot)
 	log.Printf("saving ssz-encoded block to to %s", blockPath)
-	err = os.WriteFile(blockPath, bb, 0644)
+	err = os.WriteFile(blockPath, bb, 0600)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 	//statePath := fmt.Sprintf("state-%s.ssz", fmt.Sprintf("%#x", stateRoot))
 	statePath := fname("state", cf, sSlot, stateRoot)
 	log.Printf("saving ssz-encoded state to to %s", statePath)
-	err = os.WriteFile(statePath, sb, 0644)
+	err = os.WriteFile(statePath, sb, 0600)
 	if err != nil {
 		return err
 	}
