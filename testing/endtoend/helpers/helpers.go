@@ -162,7 +162,7 @@ func WritePprofFiles(testDir string, index int) error {
 }
 
 func writeURLRespAtPath(url, filePath string) error {
-	resp, err := http.Get(url) /* #nosec G107 */
+	resp, err := http.Get(url) // #nosec G107 -- Safe, used internally
 	if err != nil {
 		return err
 	}

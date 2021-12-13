@@ -71,7 +71,8 @@ func TestServer_StreamAltairBlocks_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisStateAltair(t, 64)
 	c, err := altair.NextSyncCommittee(ctx, beaconState)
@@ -112,7 +113,8 @@ func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisStateAltair(t, 32)

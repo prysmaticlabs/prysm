@@ -29,10 +29,10 @@ func (s *Simulator) generateAttestationsForSlot(
 		(committeesPerSlot * uint64(s.srvConfig.Params.SlotsPerEpoch))
 	valsPerSlot := committeesPerSlot * valsPerCommittee
 
-	var sourceEpoch types.Epoch = 0
-	if currentEpoch != 0 {
-		sourceEpoch = currentEpoch - 1
+	if currentEpoch < 2 {
+		return nil, nil, nil
 	}
+	sourceEpoch := currentEpoch - 1
 
 	var slashedIndices []uint64
 	startIdx := valsPerSlot * uint64(slot%s.srvConfig.Params.SlotsPerEpoch)

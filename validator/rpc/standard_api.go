@@ -73,7 +73,14 @@ func (s *Server) ImportKeystores(
 		if err := slashingprotection.ImportStandardProtectionJSON(
 			ctx, s.valDB, bytes.NewBuffer([]byte(req.SlashingProtection)),
 		); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not import slashing protection JSON: %v", err)
+			statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(req.Keystores))
+			for i := range statuses {
+				statuses[i] = &ethpbservice.ImportedKeystoreStatus{
+					Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
+					Message: fmt.Sprintf("could not import slashing protection: %v", err),
+				}
+			}
+			return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
 		}
 	}
 	statuses, err := importer.ImportKeystores(ctx, keystores, req.Passwords)
@@ -96,6 +103,9 @@ func (s *Server) DeleteKeystores(
 	deleter, ok := s.keymanager.(keymanager.Deleter)
 	if !ok {
 		return nil, status.Error(codes.Internal, "Keymanager kind cannot delete keys")
+	}
+	if len(req.PublicKeys) == 0 {
+		return &ethpbservice.DeleteKeystoresResponse{Statuses: make([]*ethpbservice.DeletedKeystoreStatus, 0)}, nil
 	}
 	statuses, err := deleter.DeleteKeystores(ctx, req.PublicKeys)
 	if err != nil {

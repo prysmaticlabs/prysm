@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -357,7 +358,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 		return stateutil.BlockHeaderRoot(b.latestBlockHeader)
 	case blockRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.blockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+			err := b.resetFieldTrie(field, b.blockRoots, fieldparams.BlockRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -368,7 +369,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 		return b.recomputeFieldTrie(blockRoots, b.blockRoots)
 	case stateRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.stateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+			err := b.resetFieldTrie(field, b.stateRoots, fieldparams.StateRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -382,12 +383,16 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 		for i := range hRoots {
 			hRoots[i] = b.historicalRoots[i][:]
 		}
-		return ssz.ByteArrayRootWithLimit(hRoots, params.BeaconConfig().HistoricalRootsLimit)
+		return ssz.ByteArrayRootWithLimit(hRoots, fieldparams.HistoricalRootsLength)
 	case eth1Data:
 		return stateutil.Eth1Root(hasher, b.eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.eth1DataVotes, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))))
+			err := b.resetFieldTrie(
+				field,
+				b.eth1DataVotes,
+				fieldparams.Eth1DataVotesLength,
+			)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -398,7 +403,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 		return b.recomputeFieldTrie(field, b.eth1DataVotes)
 	case validators:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.validators, params.BeaconConfig().ValidatorRegistryLimit)
+			err := b.resetFieldTrie(field, b.validators, fieldparams.ValidatorRegistryLimit)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -411,7 +416,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.randaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)
 			if err != nil {
 				return [32]byte{}, err
 			}

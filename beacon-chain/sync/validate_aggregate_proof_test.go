@@ -33,8 +33,8 @@ import (
 
 func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	ctx := context.Background()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	validators := uint64(32)
 	s, _ := util.DeterministicGenesisState(t, validators)
@@ -58,8 +58,8 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 
 func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 	ctx := context.Background()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	validators := uint64(64)
 	s, _ := util.DeterministicGenesisState(t, validators)
@@ -81,8 +81,8 @@ func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 
 func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	ctx := context.Background()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	validators := uint64(2048)
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 

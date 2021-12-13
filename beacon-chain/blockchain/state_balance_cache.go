@@ -28,7 +28,7 @@ type stateByRooter interface {
 // to avoid nil pointer bugs when updating the cache in the read path (get())
 func newStateBalanceCache(sg *stategen.State) (*stateBalanceCache, error) {
 	if sg == nil {
-		return nil, errors.New("Can't initialize state balance cache without stategen")
+		return nil, errors.New("can't initialize state balance cache without stategen")
 	}
 	return &stateBalanceCache{stateGen: sg}, nil
 }

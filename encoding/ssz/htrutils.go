@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -78,7 +78,7 @@ func ByteArrayRootWithLimit(roots [][]byte, limit uint64) ([32]byte, error) {
 // a list of uint64 slashing values according to the Ethereum
 // Simple Serialize specification.
 func SlashingsRoot(slashings []uint64) ([32]byte, error) {
-	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)
+	slashingMarshaling := make([][]byte, fieldparams.SlashingsLength)
 	for i := 0; i < len(slashings) && i < len(slashingMarshaling); i++ {
 		slashBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(slashBuf, slashings[i])

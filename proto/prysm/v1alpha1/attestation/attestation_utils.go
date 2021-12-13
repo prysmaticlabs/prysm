@@ -37,7 +37,7 @@ import (
 //        signature=attestation.signature,
 //    )
 func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []types.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "attestationutil.ConvertToIndexed")
+	_, span := trace.StartSpan(ctx, "attestationutil.ConvertToIndexed")
 	defer span.End()
 
 	attIndices, err := AttestingIndices(attestation.AggregationBits, committee)
@@ -101,7 +101,7 @@ func AttestingIndices(bf bitfield.Bitfield, committee []types.ValidatorIndex) ([
 //    signing_root = compute_signing_root(indexed_attestation.data, domain)
 //    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
 func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKeys []bls.PublicKey, domain []byte) error {
-	ctx, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestationSig")
+	_, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestationSig")
 	defer span.End()
 	indices := indexedAtt.AttestingIndices
 	messageHash, err := signing.ComputeSigningRoot(indexedAtt.Data, domain)
@@ -140,7 +140,7 @@ func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedA
 //    signing_root = compute_signing_root(indexed_attestation.data, domain)
 //    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
 func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "attestationutil.IsValidAttestationIndices")
+	_, span := trace.StartSpan(ctx, "attestationutil.IsValidAttestationIndices")
 	defer span.End()
 
 	if indexedAttestation == nil || indexedAttestation.Data == nil || indexedAttestation.Data.Target == nil || indexedAttestation.AttestingIndices == nil {

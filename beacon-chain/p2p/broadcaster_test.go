@@ -17,9 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -99,17 +97,17 @@ func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 }
 
 func TestService_Attestation_Subnet(t *testing.T) {
-	if gtm := GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]; gtm != AttestationSubnetTopicFormat {
+	if gtm := GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]; gtm != AttestationSubnetTopicFormat {
 		t.Errorf("Constant is out of date. Wanted %s, got %s", AttestationSubnetTopicFormat, gtm)
 	}
 
 	tests := []struct {
-		att   *eth.Attestation
+		att   *ethpb.Attestation
 		topic string
 	}{
 		{
-			att: &eth.Attestation{
-				Data: &eth.AttestationData{
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
 					CommitteeIndex: 0,
 					Slot:           2,
 				},
@@ -117,8 +115,8 @@ func TestService_Attestation_Subnet(t *testing.T) {
 			topic: "/eth2/00000000/beacon_attestation_2",
 		},
 		{
-			att: &eth.Attestation{
-				Data: &eth.AttestationData{
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
 					CommitteeIndex: 11,
 					Slot:           10,
 				},
@@ -126,8 +124,8 @@ func TestService_Attestation_Subnet(t *testing.T) {
 			topic: "/eth2/00000000/beacon_attestation_21",
 		},
 		{
-			att: &eth.Attestation{
-				Data: &eth.AttestationData{
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
 					CommitteeIndex: 55,
 					Slot:           529,
 				},
@@ -163,7 +161,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		}),
 	}
 
-	msg := util.HydrateAttestation(&eth.Attestation{AggregationBits: bitfield.NewBitlist(7)})
+	msg := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(7)})
 	subnet := uint64(5)
 
 	topic := AttestationSubnetTopicFormat
@@ -190,7 +188,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		incomingMessage, err := sub.Next(ctx)
 		require.NoError(t, err)
 
-		result := &eth.Attestation{}
+		result := &ethpb.Attestation{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		if !proto.Equal(result, msg) {
 			tt.Errorf("Did not receive expected message, got %+v, wanted %+v", result, msg)
@@ -251,7 +249,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		// Set for 2nd peer
 		if i == 2 {
 			s.dv5Listener = listener
-			s.metaData = wrapper.WrappedMetadataV0(new(pb.MetaDataV0))
+			s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 			bitV := bitfield.NewBitvector64()
 			bitV.SetBitAt(subnet, true)
 			s.updateSubnetRecordWithMetadata(bitV)
@@ -319,7 +317,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		}),
 	}
 
-	msg := util.HydrateAttestation(&eth.Attestation{AggregationBits: bitfield.NewBitlist(7)})
+	msg := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(7)})
 	topic := AttestationSubnetTopicFormat
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.currentForkDigest()
@@ -348,7 +346,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		incomingMessage, err := sub.Next(ctx)
 		require.NoError(t, err)
 
-		result := &eth.Attestation{}
+		result := &ethpb.Attestation{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		if !proto.Equal(result, msg) {
 			tt.Errorf("Did not receive expected message, got %+v, wanted %+v", result, msg)
@@ -384,7 +382,7 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 		}),
 	}
 
-	msg := util.HydrateSyncCommittee(&pb.SyncCommitteeMessage{})
+	msg := util.HydrateSyncCommittee(&ethpb.SyncCommitteeMessage{})
 	subnet := uint64(5)
 
 	topic := SyncCommitteeSubnetTopicFormat
@@ -411,7 +409,7 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 		incomingMessage, err := sub.Next(ctx)
 		require.NoError(t, err)
 
-		result := &pb.SyncCommitteeMessage{}
+		result := &ethpb.SyncCommitteeMessage{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		if !proto.Equal(result, msg) {
 			tt.Errorf("Did not receive expected message, got %+v, wanted %+v", result, msg)

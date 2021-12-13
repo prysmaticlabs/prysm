@@ -74,7 +74,12 @@ message SignRequest {
         ethereum.eth.v1alpha1.SyncAggregatorSelectionData sync_aggregator_selection_data = 108;
         ethereum.eth.v1alpha1.ContributionAndProof contribution_and_proof = 109;
         bytes sync_message_block_root  = 110;
+
+        // Merge objects.
+        ethereum.eth.v1alpha1.BeaconBlockMerge blockV3 = 111;
     }
+    ethereum.eth.v1alpha1.Fork fork = 4;
+    uint64 aggregation_slot = 5;
 }
 
 // SignResponse returned by a RemoteSigner gRPC service.

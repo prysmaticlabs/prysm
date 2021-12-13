@@ -46,7 +46,6 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 }
 
 func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
-	// Changing to minimal config as this will process 4 epochs of blocks.
 	params.SetupTestConfigCleanup(t)
 	cfg := params.MinimalSpecConfig()
 	cfg.SlotsPerHistoricalRoot = customtypes.BlockRootsSize
@@ -106,7 +105,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	cfg.SlotsPerHistoricalRoot = customtypes.BlockRootsSize
 	cfg.EpochsPerHistoricalVector = customtypes.RandaoMixesSize
 	params.OverrideBeaconConfig(cfg)
-	beaconState, privs := DeterministicGenesisState(t, 32)
+	beaconState, privs := DeterministicGenesisState(t, 256)
 	conf := &BlockGenConfig{
 		NumAttesterSlashings: 1,
 	}

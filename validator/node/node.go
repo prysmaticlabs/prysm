@@ -17,6 +17,7 @@ import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
@@ -26,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime"
@@ -40,6 +42,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
+	validatorMiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -487,12 +490,14 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,
+		ethpbservice.RegisterKeyManagementHandler,
 	}
-	mux := gwruntime.NewServeMux(
+	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 			Marshaler: &gwruntime.JSONPb{
 				MarshalOptions: protojson.MarshalOptions{
 					EmitUnpopulated: true,
+					UseProtoNames:   true,
 				},
 				UnmarshalOptions: protojson.UnmarshalOptions{
 					DiscardUnknown: true,
@@ -503,28 +508,42 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 			"text/event-stream", &gwruntime.EventSourceJSONPb{},
 		),
 	)
-	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
-		if strings.HasPrefix(req.URL.Path, "/api") {
-			http.StripPrefix("/api", h).ServeHTTP(w, req)
+	muxHandler := func(apiMware *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
+		// The validator gateway handler requires this special logic as it serves two kinds of APIs, namely
+		// the standard validator keymanager API under the /eth namespace, and the Prysm internal
+		// validator API under the /api namespace. Finally, it also serves requests to host the validator web UI.
+		if strings.HasPrefix(req.URL.Path, "/api/eth/") {
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			// If the prefix has /eth/, we handle it with the standard API gateway middleware.
+			apiMware.ServeHTTP(w, req)
+		} else if strings.HasPrefix(req.URL.Path, "/api") {
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			// Else, we handle with the Prysm API gateway without a middleware.
+			h(w, req)
 		} else {
+			// Finally, we handle with the web server.
 			web.Handler(w, req)
 		}
 	}
 
 	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
-		Patterns:      []string{"/accounts/", "/v2/"},
-		Mux:           mux,
+		Patterns:      []string{"/accounts/", "/v2/", "/internal/eth/v1/"},
+		Mux:           gwmux,
 	}
-
-	gw := gateway.New(
-		cliCtx.Context,
-		[]*gateway.PbMux{pbHandler},
-		muxHandler,
-		rpcAddr,
-		gatewayAddress,
-	).WithAllowedOrigins(allowedOrigins).WithMaxCallRecvMsgSize(maxCallSize)
-
+	opts := []gateway.Option{
+		gateway.WithRemoteAddr(rpcAddr),
+		gateway.WithGatewayAddr(gatewayAddress),
+		gateway.WithMaxCallRecvMsgSize(maxCallSize),
+		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
+		gateway.WithAllowedOrigins(allowedOrigins),
+		gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}),
+		gateway.WithMuxHandler(muxHandler),
+	}
+	gw, err := gateway.New(cliCtx.Context, opts...)
+	if err != nil {
+		return err
+	}
 	return c.services.RegisterService(gw)
 }
 

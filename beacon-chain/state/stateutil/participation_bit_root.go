@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 )
@@ -18,7 +18,7 @@ func ParticipationBitsRoot(bits []byte) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 
-	limit := (params.BeaconConfig().ValidatorRegistryLimit + 31) / 32
+	limit := (uint64(fieldparams.ValidatorRegistryLimit + 31)) / 32
 	if limit == 0 {
 		if len(bits) == 0 {
 			limit = 1

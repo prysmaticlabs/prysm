@@ -39,7 +39,7 @@ func (b *BeaconState) genesisValidatorRootInternal() [32]byte {
 // Version of the beacon state. This method
 // is strictly meant to be used without a lock
 // internally.
-func (b *BeaconState) Version() int {
+func (_ *BeaconState) Version() int {
 	return version.Phase0
 }
 
