@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -273,7 +274,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+			err := b.resetFieldTrie(field, b.state.BlockRoots, fieldparams.BlockRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -283,7 +284,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return b.recomputeFieldTrie(blockRoots, b.state.BlockRoots)
 	case stateRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+			err := b.resetFieldTrie(field, b.state.StateRoots, fieldparams.StateRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -292,7 +293,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(stateRoots, b.state.StateRoots)
 	case historicalRoots:
-		return ssz.ByteArrayRootWithLimit(b.state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
+		return ssz.ByteArrayRootWithLimit(b.state.HistoricalRoots, fieldparams.HistoricalRootsLength)
 	case eth1Data:
 		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
@@ -300,7 +301,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			err := b.resetFieldTrie(
 				field,
 				b.state.Eth1DataVotes,
-				uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))),
+				fieldparams.Eth1DataVotesLength,
 			)
 			if err != nil {
 				return [32]byte{}, err
@@ -311,7 +312,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return b.recomputeFieldTrie(field, b.state.Eth1DataVotes)
 	case validators:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.Validators, params.BeaconConfig().ValidatorRegistryLimit)
+			err := b.resetFieldTrie(field, b.state.Validators, fieldparams.ValidatorRegistryLimit)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -322,7 +323,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case balances:
 		if features.Get().EnableBalanceTrieComputation {
 			if b.rebuildTrie[field] {
-				maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
+				maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
 				elemSize := uint64(8)
 				balLimit := (maxBalCap*elemSize + 31) / 32
 				err := b.resetFieldTrie(field, b.state.Balances, balLimit)
@@ -337,7 +338,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+			err := b.resetFieldTrie(field, b.state.RandaoMixes, fieldparams.RandaoMixesLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -352,7 +353,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			err := b.resetFieldTrie(
 				field,
 				b.state.PreviousEpochAttestations,
-				uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)),
+				fieldparams.PreviousEpochAttestationsLength,
 			)
 			if err != nil {
 				return [32]byte{}, err
@@ -366,7 +367,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 			err := b.resetFieldTrie(
 				field,
 				b.state.CurrentEpochAttestations,
-				uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)),
+				fieldparams.CurrentEpochAttestationsLength,
 			)
 			if err != nil {
 				return [32]byte{}, err

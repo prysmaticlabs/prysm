@@ -7,6 +7,7 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -90,21 +91,21 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 	fieldRoots[4] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, fieldparams.BlockRootsLength, "BlockRoots")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[5] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := h.arraysRoot(state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	stateRootsRoot, err := h.arraysRoot(state.StateRoots, fieldparams.StateRootsLength, "StateRoots")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
 	fieldRoots[6] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
-	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
+	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, fieldparams.HistoricalRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -145,7 +146,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 	fieldRoots[12] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
+	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, fieldparams.RandaoMixesLength, "RandaoMixes")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
@@ -238,21 +239,21 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	fieldRoots[4] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, fieldparams.BlockRootsLength, "BlockRoots")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[5] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := h.arraysRoot(state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	stateRootsRoot, err := h.arraysRoot(state.StateRoots, fieldparams.StateRootsLength, "StateRoots")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
 	fieldRoots[6] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
-	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
+	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, fieldparams.HistoricalRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -293,7 +294,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	fieldRoots[12] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
+	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, fieldparams.RandaoMixesLength, "RandaoMixes")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
@@ -408,21 +409,21 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, 
 	fieldRoots[4] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, fieldparams.BlockRootsLength, "BlockRoots")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[5] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := h.arraysRoot(state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	stateRootsRoot, err := h.arraysRoot(state.StateRoots, fieldparams.StateRootsLength, "StateRoots")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
 	fieldRoots[6] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
-	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
+	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, fieldparams.HistoricalRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -463,7 +464,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, 
 	fieldRoots[12] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
+	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, fieldparams.RandaoMixesLength, "RandaoMixes")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
