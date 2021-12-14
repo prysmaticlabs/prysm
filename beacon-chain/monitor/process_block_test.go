@@ -45,7 +45,7 @@ func TestProcessSlashings(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: "\"Proposer slashing was included\" BodyRoot1= BodyRoot2= ProposerIndex=2 SlashingSlot=33 Slot=0",
+			wantedErr: "\"Proposer slashing was included\" BodyRoot1= BodyRoot2= ProposerIndex=2",
 		},
 		{
 			name: "Proposer slashing an untracked index",
