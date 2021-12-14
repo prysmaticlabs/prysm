@@ -25,7 +25,10 @@ type MockClient struct {
 }
 
 func (mc *MockClient) Sign(pubKey string, request *SignRequest) (bls.Signature, error) {
-	decoded, _ := hex.DecodeString(strings.TrimPrefix(mc.Signature, "0x"))
+	decoded, err := hex.DecodeString(strings.TrimPrefix(mc.Signature, "0x"))
+	if err != nil {
+		return nil, err
+	}
 	return bls.SignatureFromBytes(decoded)
 }
 func (mc *MockClient) GetPublicKeys(url string) ([][48]byte, error) {
@@ -63,10 +66,16 @@ func TestKeymanager_Sign_HappyPath(t *testing.T) {
 		BaseEndpoint:          "example.com",
 		GenesisValidatorsRoot: root,
 	}
-	km, _ := NewKeymanager(ctx, config)
+	km, err := NewKeymanager(ctx, config)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	km.client = client
 
 	resp, err := km.Sign(ctx, getMockSignRequest())
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9", fmt.Sprintf("%#x", resp.Marshal()))
@@ -74,7 +83,10 @@ func TestKeymanager_Sign_HappyPath(t *testing.T) {
 
 func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T) {
 	ctx := context.Background()
-	decodedKey, _ := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
+	decodedKey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	keys := [][48]byte{
 		bytesutil.ToBytes48(decodedKey),
 	}
@@ -88,8 +100,14 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 		BaseEndpoint:          "example.com",
 		GenesisValidatorsRoot: root,
 	}
-	km, _ := NewKeymanager(ctx, config)
+	km, err := NewKeymanager(ctx, config)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	resp, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, resp, keys)
@@ -114,9 +132,15 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 		BaseEndpoint:          "example.com",
 		GenesisValidatorsRoot: root,
 	}
-	km, _ := NewKeymanager(ctx, config)
+	km, err := NewKeymanager(ctx, config)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	km.client = client
 	resp, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, resp, keys)
@@ -135,7 +159,11 @@ func TestKeymanager_SubscribeAccountChanges(t *testing.T) {
 		BaseEndpoint:          "example.com",
 		GenesisValidatorsRoot: root,
 	}
-	km, _ := NewKeymanager(ctx, config)
+	km, err := NewKeymanager(ctx, config)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	resp := km.SubscribeAccountChanges(nil)
 	assert.NotNil(t, resp)
+
 }
