@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
@@ -45,12 +46,12 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 	return &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ParentRoot: make([]byte, 32),
-			StateRoot:  make([]byte, 32),
+			ParentRoot: make([]byte, fieldparams.RootLength),
+			StateRoot:  make([]byte, fieldparams.RootLength),
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot: make([]byte, 32),
+					DepositRoot: make([]byte, fieldparams.RootLength),
 					BlockHash:   make([]byte, 32),
 				},
 				Graffiti:          make([]byte, 32),
@@ -213,8 +214,8 @@ func GenerateProposerSlashingForValidator(
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
 			BodyRoot:      bytesutil.PadTo([]byte{0, 2, 0}, 32),
-			StateRoot:     make([]byte, 32),
-			ParentRoot:    make([]byte, 32),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ParentRoot:    make([]byte, fieldparams.RootLength),
 		},
 	}
 	header2.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, header2.Header, params.BeaconConfig().DomainBeaconProposer, priv)
@@ -260,7 +261,7 @@ func GenerateAttesterSlashingForValidator(
 		Data: &ethpb.AttestationData{
 			Slot:            bState.Slot(),
 			CommitteeIndex:  0,
-			BeaconBlockRoot: make([]byte, 32),
+			BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
 				Root:  params.BeaconConfig().ZeroHash[:],
@@ -282,7 +283,7 @@ func GenerateAttesterSlashingForValidator(
 		Data: &ethpb.AttestationData{
 			Slot:            bState.Slot(),
 			CommitteeIndex:  0,
-			BeaconBlockRoot: make([]byte, 32),
+			BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
 				Root:  params.BeaconConfig().ZeroHash[:],
@@ -402,13 +403,13 @@ func HydrateBeaconHeader(h *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHeader {
 		h = &ethpb.BeaconBlockHeader{}
 	}
 	if h.BodyRoot == nil {
-		h.BodyRoot = make([]byte, 32)
+		h.BodyRoot = make([]byte, fieldparams.RootLength)
 	}
 	if h.StateRoot == nil {
-		h.StateRoot = make([]byte, 32)
+		h.StateRoot = make([]byte, fieldparams.RootLength)
 	}
 	if h.ParentRoot == nil {
-		h.ParentRoot = make([]byte, 32)
+		h.ParentRoot = make([]byte, fieldparams.RootLength)
 	}
 	return h
 }
@@ -430,10 +431,10 @@ func HydrateBeaconBlock(b *ethpb.BeaconBlock) *ethpb.BeaconBlock {
 		b = &ethpb.BeaconBlock{}
 	}
 	if b.ParentRoot == nil {
-		b.ParentRoot = make([]byte, 32)
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
 	}
 	if b.StateRoot == nil {
-		b.StateRoot = make([]byte, 32)
+		b.StateRoot = make([]byte, fieldparams.RootLength)
 	}
 	b.Body = HydrateBeaconBlockBody(b.Body)
 	return b
