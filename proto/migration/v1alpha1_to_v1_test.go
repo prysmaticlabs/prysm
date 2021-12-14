@@ -5,6 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -21,16 +22,16 @@ var (
 	committeeIndex   = types.CommitteeIndex(1)
 	depositCount     = uint64(2)
 	attestingIndices = []uint64{1, 2}
-	parentRoot       = bytesutil.PadTo([]byte("parentroot"), fieldparams.RootLength
-	stateRoot        = bytesutil.PadTo([]byte("stateroot"), fieldparams.RootLength
+	parentRoot       = bytesutil.PadTo([]byte("parentroot"), fieldparams.RootLength)
+	stateRoot        = bytesutil.PadTo([]byte("stateroot"), fieldparams.RootLength)
 	signature        = bytesutil.PadTo([]byte("signature"), 96)
 	randaoReveal     = bytesutil.PadTo([]byte("randaoreveal"), 96)
-	depositRoot      = bytesutil.PadTo([]byte("depositroot"), fieldparams.RootLength
+	depositRoot      = bytesutil.PadTo([]byte("depositroot"), fieldparams.RootLength)
 	blockHash        = bytesutil.PadTo([]byte("blockhash"), 32)
-	beaconBlockRoot  = bytesutil.PadTo([]byte("beaconblockroot"), fieldparams.RootLength
-	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), fieldparams.RootLength
-	targetRoot       = bytesutil.PadTo([]byte("targetroot"), fieldparams.RootLength
-	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), fieldparams.RootLength
+	beaconBlockRoot  = bytesutil.PadTo([]byte("beaconblockroot"), fieldparams.RootLength)
+	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), fieldparams.RootLength)
+	targetRoot       = bytesutil.PadTo([]byte("targetroot"), fieldparams.RootLength)
+	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), fieldparams.RootLength)
 	selectionProof   = bytesutil.PadTo([]byte("selectionproof"), 96)
 	aggregationBits  = bitfield.Bitlist{0x01}
 )
