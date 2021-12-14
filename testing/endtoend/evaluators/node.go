@@ -105,7 +105,7 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		expectedPeers := len(conns) - 1
+		expectedPeers := len(conns)
 		if expectedPeers != len(peersResp.Peers) {
 			return fmt.Errorf("unexpected amount of peers, expected %d, received %d", expectedPeers, len(peersResp.Peers))
 		}

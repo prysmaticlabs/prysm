@@ -112,7 +112,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--boot-nodes=%s", node.enr),
 		"--metrics",
 		"--http",
-		"--debug-level=trace",
+		"--debug-level=debug",
 	}
 	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
 	// Write stdout and stderr to log files.
