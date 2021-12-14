@@ -51,7 +51,12 @@ func TestKeymanager_Sign_HappyPath(t *testing.T) {
 	ctx := context.Background()
 	option := WithExternalURL("example2.com")
 	root, _ := hexutil.Decode("0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a2")
-	km, _ := NewKeymanager(ctx, "example.com", root, option)
+	config := &SetupConfig{
+		Option:                &option,
+		BaseEndpoint:          "example.com",
+		GenesisValidatorsRoot: root,
+	}
+	km, _ := NewKeymanager(ctx, config)
 	km.client = client
 
 	resp, err := km.Sign(ctx, getMockSignRequest())
@@ -68,7 +73,12 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 	}
 	option := WithKeyList(keys)
 	root, _ := hexutil.Decode("0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a2")
-	km, _ := NewKeymanager(ctx, "example.com", root, option)
+	config := &SetupConfig{
+		Option:                &option,
+		BaseEndpoint:          "example.com",
+		GenesisValidatorsRoot: root,
+	}
+	km, _ := NewKeymanager(ctx, config)
 	resp, err := km.FetchValidatingPublicKeys(ctx)
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
@@ -86,7 +96,12 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 	}
 	option := WithExternalURL("example2.com")
 	root, _ := hexutil.Decode("0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a2")
-	km, _ := NewKeymanager(ctx, "example.com", root, option)
+	config := &SetupConfig{
+		Option:                &option,
+		BaseEndpoint:          "example.com",
+		GenesisValidatorsRoot: root,
+	}
+	km, _ := NewKeymanager(ctx, config)
 	km.client = client
 	resp, err := km.FetchValidatingPublicKeys(ctx)
 	assert.NotNil(t, resp)
@@ -99,7 +114,12 @@ func TestKeymanager_SubscribeAccountChanges(t *testing.T) {
 	ctx := context.Background()
 	option := WithKeyList(nil)
 	root, _ := hexutil.Decode("0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a2")
-	km, _ := NewKeymanager(ctx, "example.com", root, option)
+	config := &SetupConfig{
+		Option:                &option,
+		BaseEndpoint:          "example.com",
+		GenesisValidatorsRoot: root,
+	}
+	km, _ := NewKeymanager(ctx, config)
 	resp := km.SubscribeAccountChanges(nil)
 	assert.NotNil(t, resp)
 }

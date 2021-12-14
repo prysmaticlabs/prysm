@@ -20,25 +20,33 @@ type Web3SignerKeyManager interface {
 }
 
 // KeymanagerOption is a type to help conditionally configure the Keymanager
-type KeymanagerOption func(*Keymanager)
+type PublicKeysOption func(*Keymanager)
 
 // WithExternalURL sets the external url for the keymanager
-func WithExternalURL(url string) KeymanagerOption {
+func WithExternalURL(url string) PublicKeysOption {
 	return func(km *Keymanager) {
 		km.publicKeysURL = url
 	}
 }
 
 // WithKeyList is a function to set the key list
-func WithKeyList(keys [][48]byte) KeymanagerOption {
+func WithKeyList(keys [][48]byte) PublicKeysOption {
 	return func(km *Keymanager) {
 		km.providedPublicKeys = keys
 	}
 }
 
+// SetupConfig includes configuration values for initializing
+// a keymanager, such as passwords, the wallet, and more.
+type SetupConfig struct {
+	Option                *PublicKeysOption
+	BaseEndpoint          string
+	GenesisValidatorsRoot []byte
+}
+
 // Keymanager defines the web3signer keymanager
 type Keymanager struct {
-	opt                   *KeymanagerOption
+	opt                   *PublicKeysOption
 	client                Web3SignerClient
 	genesisValidatorsRoot []byte
 	publicKeysURL         string
@@ -47,18 +55,25 @@ type Keymanager struct {
 }
 
 // NewKeymanager instantiates a new web3signer key manager
-func NewKeymanager(_ context.Context, baseEndpoint string, genesisValidatorsRoot []byte, option KeymanagerOption) (*Keymanager, error) {
-	client, err := newClient(baseEndpoint)
+func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
+	if cfg.Option == nil || cfg.BaseEndpoint == "" || cfg.GenesisValidatorsRoot == nil {
+		return nil, errors.New("invalid setup config")
+	}
+	client, err := newClient(cfg.BaseEndpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create client")
 	}
-	k := &Keymanager{
+	km := &Keymanager{
 		client:                Web3SignerClient(client),
-		genesisValidatorsRoot: genesisValidatorsRoot,
+		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
 	}
-	option(k)
-	return k, nil
+	optionFunction := *cfg.Option
+	optionFunction(km)
+	if km.publicKeysURL == "" && km.providedPublicKeys == nil {
+		return nil, errors.New("no valid public key options provided")
+	}
+	return km, nil
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys
