@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -76,9 +77,9 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: make([]byte, 32),
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+		Target:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		Source:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}, nil)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -420,7 +421,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	).Return(&ethpb.AttestationData{
 		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
 		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
-		BeaconBlockRoot: make([]byte, 32),
+		BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(

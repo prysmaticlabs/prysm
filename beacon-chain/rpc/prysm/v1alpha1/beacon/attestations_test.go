@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -375,9 +376,9 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
-								Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-								Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), fieldparams.RootLength),
+								Source:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+								Target:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 								Slot:            i,
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
@@ -515,12 +516,12 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 			{
 				Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, 32),
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 					Target: &ethpb.Checkpoint{
 						Root: targetRoot[:],
 					},
 					Source: &ethpb.Checkpoint{
-						Root: make([]byte, 32),
+						Root: make([]byte, fieldparams.RootLength),
 					},
 					Slot:           i,
 					CommitteeIndex: 0,
@@ -624,7 +625,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 								CommitteeIndex:  0,
 								Target: &ethpb.Checkpoint{
 									Epoch: epoch,
-									Root:  make([]byte, 32),
+									Root:  make([]byte, fieldparams.RootLength),
 								},
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
@@ -643,7 +644,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
+		randaoMixes[i] = make([]byte, fieldparams.RootLength)
 	}
 	require.NoError(t, state.SetRandaoMixes(randaoMixes))
 	require.NoError(t, state.SetSlot(startSlot))

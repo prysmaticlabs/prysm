@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -298,15 +299,15 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att0.AggregationBits = bitfield.Bitlist{0b11100}
 	att1, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), 32)
+	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), fieldparams.RootLength)
 	att1.AggregationBits = bitfield.Bitlist{0b11001}
 	att2, err := generateAtt(beaconState, 2, privKeys)
 	require.NoError(t, err)
-	att2.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att2.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att2.AggregationBits = bitfield.Bitlist{0b11110}
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -349,14 +350,14 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 
 	// This test creates two distinct attestations, neither of which contain the validator's index,
 	// index 0. This test should choose the most bits attestation, att1.
-	beaconState, privKeys := util.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := util.DeterministicGenesisState(t, fieldparams.RootLength)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att0.AggregationBits = bitfield.Bitlist{0b11100}
 	att1, err := generateAtt(beaconState, 2, privKeys)
 	require.NoError(t, err)
-	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), 32)
+	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), fieldparams.RootLength)
 	att1.AggregationBits = bitfield.Bitlist{0b11110}
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)

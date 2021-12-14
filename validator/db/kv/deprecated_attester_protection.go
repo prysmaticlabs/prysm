@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -104,7 +105,7 @@ func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, t
 	}
 	history := &deprecatedHistoryData{}
 	history.Source = types.Epoch(bytesutil.FromBytes8(dh[cursor : cursor+sourceSize]))
-	sr := make([]byte, 32)
+	sr := make([]byte, fieldparams.RootLength)
 	copy(sr, dh[cursor+sourceSize:cursor+historySize])
 	history.SigningRoot = sr
 	return history, nil
