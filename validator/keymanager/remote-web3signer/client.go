@@ -9,10 +9,11 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 const (

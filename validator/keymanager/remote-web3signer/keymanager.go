@@ -23,6 +23,7 @@ type Web3SignerKeyManager interface {
 type PublicKeysOption func(*Keymanager)
 
 // WithExternalURL sets the external url for the keymanager
+// explain usecases for this option
 func WithExternalURL(url string) PublicKeysOption {
 	return func(km *Keymanager) {
 		km.publicKeysURL = url
@@ -30,6 +31,7 @@ func WithExternalURL(url string) PublicKeysOption {
 }
 
 // WithKeyList is a function to set the key list
+// explain usecases for this option
 func WithKeyList(keys [][48]byte) PublicKeysOption {
 	return func(km *Keymanager) {
 		km.providedPublicKeys = keys
@@ -57,7 +59,7 @@ type Keymanager struct {
 // NewKeymanager instantiates a new web3signer key manager
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if cfg.Option == nil || cfg.BaseEndpoint == "" || cfg.GenesisValidatorsRoot == nil {
-		return nil, errors.New("invalid setup config")
+		return nil, errors.New("invalid setup config, one or more configs are empty: " + fmt.Sprintf("Option: %v, BaseEndpoint: %v, GenesisValidatorsRoot: %v.", cfg.Option, cfg.BaseEndpoint, cfg.GenesisValidatorsRoot))
 	}
 	client, err := newClient(cfg.BaseEndpoint)
 	if err != nil {
@@ -70,7 +72,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	}
 	optionFunction := *cfg.Option
 	optionFunction(km)
-	if km.publicKeysURL == "" && km.providedPublicKeys == nil {
+	if km.publicKeysURL == "" && len(km.providedPublicKeys) == 0 {
 		return nil, errors.New("no valid public key options provided")
 	}
 	return km, nil
@@ -86,14 +88,22 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 
 // Sign signs the message by using a remote web3signer server
 func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
+
+	if request.Fork == nil {
+		return nil, errors.New("invalid sign request: Fork is nil")
+	}
+	if request.AggregationSlot == 0 {
+		return nil, errors.New("invalid sign request: AggregationSlot is 0")
+	}
+
 	// get new keys before signing
 	signRequestType, err := getSignRequestType(request)
 	if err != nil {
 		return nil, err
 	}
 	forkData := &Fork{
-		PreviousVersion: string(request.Fork.PreviousVersion),
-		CurrentVersion:  string(request.Fork.CurrentVersion),
+		PreviousVersion: hexutil.Encode(request.Fork.PreviousVersion),
+		CurrentVersion:  hexutil.Encode(request.Fork.CurrentVersion),
 		Epoch:           fmt.Sprint(request.Fork.Epoch),
 	}
 	forkInfoData := &ForkInfo{
@@ -112,11 +122,11 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 
 // getSignRequestType returns the type of the sign request
 func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
-	//	*SignRequest_Slot
-	//	*SignRequest_Epoch
+	//	*SignRequest_Slot // check where this is used
+	//	*SignRequest_Epoch // check where this is used
 	//	*SignRequest_SyncAggregatorSelectionData
 	//	*SignRequest_SyncMessageBlockRoot
-	//	*SignRequest_BlockV3
+	//	*SignRequest_BlockV3 // check where this is used
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_Block:
 		return "BLOCK", nil
@@ -128,15 +138,15 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 		return "AGGREGATION_SLOT", nil
 	case *validatorpb.SignRequest_BlockV2:
 		return "BLOCK_V2", nil
-	//case *validatorpb.SignRequest_BlockV2:
+	//case *validatorpb.:
 	//	return "DEPOSIT", nil
-	//case *validatorpb.SignRequest_BlockV2:
+	//case *validatorpb.:
 	//	return "RANDAO_REVEAL", nil
 	case *validatorpb.SignRequest_Exit: //not sure
 		return "VOLUNTARY_EXIT", nil
-	//case *validatorpb.SignRequest_Exit:
+	//case *validatorpb.:
 	//	return "SYNC_COMMITTEE_MESSAGE", nil
-	//case *validatorpb.SignRequest_Exit:
+	//case *validatorpb.:
 	//	return "SYNC_COMMITTEE_SELECTION_PROOF", nil
 	case *validatorpb.SignRequest_ContributionAndProof:
 		return "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF", nil

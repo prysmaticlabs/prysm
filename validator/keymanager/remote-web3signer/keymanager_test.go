@@ -39,8 +39,9 @@ func (mc *MockClient) GetPublicKeys(url string) ([][48]byte, error) {
 
 func getMockSignRequest() *validatorpb.SignRequest {
 	return &validatorpb.SignRequest{
-		Object: &validatorpb.SignRequest_Block{},
-		Fork:   &v1alpha1.Fork{Epoch: 0},
+		Object:          &validatorpb.SignRequest_Block{},
+		Fork:            &v1alpha1.Fork{Epoch: 0},
+		AggregationSlot: 9999,
 	}
 }
 
@@ -50,7 +51,7 @@ func TestKeymanager_Sign_HappyPath(t *testing.T) {
 	}
 	ctx := context.Background()
 	option := WithExternalURL("example2.com")
-	root, _ := hexutil.Decode("0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a2")
+	root, _ := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	config := &SetupConfig{
 		Option:                &option,
 		BaseEndpoint:          "example.com",
@@ -72,7 +73,7 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 		bytesutil.ToBytes48(decodedKey),
 	}
 	option := WithKeyList(keys)
-	root, _ := hexutil.Decode("0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a2")
+	root, _ := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	config := &SetupConfig{
 		Option:                &option,
 		BaseEndpoint:          "example.com",
@@ -95,7 +96,7 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 		bytesutil.ToBytes48(decodedKey),
 	}
 	option := WithExternalURL("example2.com")
-	root, _ := hexutil.Decode("0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a2")
+	root, _ := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	config := &SetupConfig{
 		Option:                &option,
 		BaseEndpoint:          "example.com",
@@ -113,7 +114,7 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 func TestKeymanager_SubscribeAccountChanges(t *testing.T) {
 	ctx := context.Background()
 	option := WithKeyList(nil)
-	root, _ := hexutil.Decode("0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a2")
+	root, _ := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	config := &SetupConfig{
 		Option:                &option,
 		BaseEndpoint:          "example.com",
