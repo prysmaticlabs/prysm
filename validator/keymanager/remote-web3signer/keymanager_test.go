@@ -31,7 +31,10 @@ func (mc *MockClient) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 func (mc *MockClient) GetPublicKeys(url string) ([][48]byte, error) {
 	var keys [][48]byte
 	for _, pk := range mc.PublicKeys {
-		decoded, _ := hex.DecodeString(strings.TrimPrefix(pk, "0x"))
+		decoded, err := hex.DecodeString(strings.TrimPrefix(pk, "0x"))
+		if err != nil {
+			return nil, err
+		}
 		keys = append(keys, bytesutil.ToBytes48(decoded))
 	}
 	return keys, nil
@@ -51,7 +54,10 @@ func TestKeymanager_Sign_HappyPath(t *testing.T) {
 	}
 	ctx := context.Background()
 	option := WithExternalURL("example2.com")
-	root, _ := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	config := &SetupConfig{
 		Option:                &option,
 		BaseEndpoint:          "example.com",
@@ -73,7 +79,10 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 		bytesutil.ToBytes48(decodedKey),
 	}
 	option := WithKeyList(keys)
-	root, _ := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	config := &SetupConfig{
 		Option:                &option,
 		BaseEndpoint:          "example.com",
@@ -96,7 +105,10 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 		bytesutil.ToBytes48(decodedKey),
 	}
 	option := WithExternalURL("example2.com")
-	root, _ := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	config := &SetupConfig{
 		Option:                &option,
 		BaseEndpoint:          "example.com",
@@ -114,7 +126,10 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 func TestKeymanager_SubscribeAccountChanges(t *testing.T) {
 	ctx := context.Background()
 	option := WithKeyList(nil)
-	root, _ := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
 	config := &SetupConfig{
 		Option:                &option,
 		BaseEndpoint:          "example.com",
