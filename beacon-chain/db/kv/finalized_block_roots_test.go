@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -217,7 +218,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
 	ifaceBlocks := make([]block.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
-		parentRoot := make([]byte, 32)
+		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])
 		blocks[j-i] = util.NewBeaconBlock()
 		blocks[j-i].Block.Slot = types.Slot(j + 1)
@@ -234,7 +235,7 @@ func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte)
 	blocks := make([]*ethpb.SignedBeaconBlockAltair, num)
 	ifaceBlocks := make([]block.SignedBeaconBlock, num)
 	for j := startIdx; j < num+startIdx; j++ {
-		parentRoot := make([]byte, 32)
+		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])
 		blocks[j-startIdx] = util.NewBeaconBlockAltair()
 		blocks[j-startIdx].Block.Slot = types.Slot(j + 1)

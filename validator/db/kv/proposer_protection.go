@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -83,7 +84,7 @@ func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [48]byte
 		}
 		return valBucket.ForEach(func(slotKey, signingRootBytes []byte) error {
 			slot := bytesutil.BytesToSlotBigEndian(slotKey)
-			sr := make([]byte, 32)
+			sr := make([]byte, fieldparams.RootLength)
 			copy(sr, signingRootBytes)
 			proposals = append(proposals, &Proposal{
 				Slot:        slot,

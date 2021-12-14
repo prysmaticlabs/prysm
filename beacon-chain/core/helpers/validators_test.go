@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -291,7 +292,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 	}
 	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
-		roots[i] = make([]byte, 32)
+		roots[i] = make([]byte, fieldparams.RootLength)
 	}
 
 	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
