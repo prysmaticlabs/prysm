@@ -9,7 +9,7 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
@@ -26,11 +26,10 @@ type SSZRoots struct {
 func RunSSZStaticTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, _ := utils.TestFolders(t, config, "altair", "ssz_static")
+	testFolders, _ := utils.TestFolders(t, config, "merge", "ssz_static")
 	for _, folder := range testFolders {
 		innerPath := path.Join("ssz_static", folder.Name(), "ssz_random")
-		innerTestFolders, innerTestsFolderPath := utils.TestFolders(t, config, "altair", innerPath)
-
+		innerTestFolders, innerTestsFolderPath := utils.TestFolders(t, config, "merge", innerPath)
 		for _, innerFolder := range innerTestFolders {
 			t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {
 				serializedBytes, err := util.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
@@ -47,9 +46,10 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
-				if _, ok := object.(*ethpb.BeaconStateAltair); ok {
+
+				if _, ok := object.(*ethpb.BeaconStateMerge); ok {
 					htr = func(s interface{}) ([32]byte, error) {
-						beaconState, err := stateAltair.InitializeFromProto(s.(*ethpb.BeaconStateAltair))
+						beaconState, err := v3.InitializeFromProto(s.(*ethpb.BeaconStateMerge))
 						require.NoError(t, err)
 						return beaconState.HashTreeRoot(context.Background())
 					}
@@ -93,6 +93,10 @@ func RunSSZStaticTests(t *testing.T, config string) {
 func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
 	switch folderName {
+	case "ExecutionPayload":
+		obj = &ethpb.ExecutionPayload{}
+	case "ExecutionPayloadHeader":
+		obj = &ethpb.ExecutionPayloadHeader{}
 	case "Attestation":
 		obj = &ethpb.Attestation{}
 	case "AttestationData":
@@ -102,13 +106,13 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "AggregateAndProof":
 		obj = &ethpb.AggregateAttestationAndProof{}
 	case "BeaconBlock":
-		obj = &ethpb.BeaconBlockAltair{}
+		obj = &ethpb.BeaconBlockMerge{}
 	case "BeaconBlockBody":
-		obj = &ethpb.BeaconBlockBodyAltair{}
+		obj = &ethpb.BeaconBlockBodyMerge{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
-		obj = &ethpb.BeaconStateAltair{}
+		obj = &ethpb.BeaconStateMerge{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
@@ -137,7 +141,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SignedAggregateAndProof":
 		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
-		obj = &ethpb.SignedBeaconBlockAltair{}
+		obj = &ethpb.SignedBeaconBlockMerge{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
 	case "SignedVoluntaryExit":
@@ -167,6 +171,9 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		return nil, nil
 	case "LightClientUpdate":
 		t.Skip("not a beacon node type, this is a light node type")
+		return nil, nil
+	case "PowBlock":
+		t.Skip("not a beacon node type")
 		return nil, nil
 	default:
 		return nil, errors.New("type not found")
