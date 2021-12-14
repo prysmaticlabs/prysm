@@ -163,7 +163,7 @@ func TestProcessAggregatedAttestationStateNotCached(t *testing.T) {
 	}
 	s.processAggregatedAttestation(ctx, att)
 	require.LogsContain(t, hook, "\"Processed attestation aggregation\" AggregatorIndex=2 BeaconBlockRoot=0x000000000000 Slot=1 SourceRoot=0x68656c6c6f2d TargetRoot=0x68656c6c6f2d prefix=monitor")
-	require.LogsContain(t, hook, "Skipping agregated attestation due to state not found in cache")
+	require.LogsContain(t, hook, "Skipping aggregated attestation due to state not found in cache")
 	logrus.SetLevel(logrus.InfoLevel)
 }
 
