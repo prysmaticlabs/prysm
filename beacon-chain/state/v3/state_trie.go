@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -278,7 +279,6 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -289,7 +289,6 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -308,7 +307,6 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -319,12 +317,25 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[validators] = []uint64{}
 			delete(b.rebuildTrie, validators)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
+		if features.Get().EnableBalanceTrieComputation {
+			if b.rebuildTrie[field] {
+				maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
+				elemSize := uint64(8)
+				balLimit := (maxBalCap*elemSize + 31) / 32
+				err := b.resetFieldTrie(field, b.state.Balances, balLimit)
+				if err != nil {
+					return [32]byte{}, err
+				}
+				delete(b.rebuildTrie, field)
+				return b.stateFieldLeaves[field].TrieRoot()
+			}
+			return b.recomputeFieldTrie(balances, b.state.Balances)
+		}
 		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
@@ -332,7 +343,6 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
