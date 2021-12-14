@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -45,7 +46,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 		},
 		{
 			name:           "can't find the block in DB",
-			checkpt:        &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'a'}, 32), Epoch: 1},
+			checkpt:        &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength), Epoch: 1},
 			finalizedEpoch: 3,
 			wantErr:        errWSBlockNotFound,
 		},
