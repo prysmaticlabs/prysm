@@ -237,13 +237,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ProportionalSlashingMultiplierAltair: 2,
 
 	// Merge.
-	MaxTransactionsPerPayload:        1 << 20,
-	MaxBytesPerTransaction:           1 << 30,
-	TerminalBlockHash:                [32]byte{},
-	TerminalBlockHashActivationEpoch: math.MaxUint64,
-	MinSlashingPenaltyQuotientMerge:      32,
-	ProportionalSlashingMultiplierMerge:  3,
-	InactivityPenaltyQuotientMerge:       1 << 24,
+	MaxTransactionsPerPayload:           1 << 20,
+	MaxBytesPerTransaction:              1 << 30,
+	TerminalBlockHash:                   [32]byte{},
+	TerminalBlockHashActivationEpoch:    math.MaxUint64,
+	MinSlashingPenaltyQuotientMerge:     32,
+	ProportionalSlashingMultiplierMerge: 3,
+	InactivityPenaltyQuotientMerge:      1 << 24,
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
