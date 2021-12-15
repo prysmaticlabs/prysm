@@ -495,5 +495,4 @@ func TestBytesInvalidInputs(t *testing.T) {
 
 	intRes := bytesutil.ToLowInt64([]byte{})
 	assert.Equal(t, intRes, int64(0))
-
 }
