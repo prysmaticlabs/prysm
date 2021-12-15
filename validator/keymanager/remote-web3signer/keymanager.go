@@ -78,7 +78,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
 	if km.publicKeysURL != "" {
 		return km.client.GetPublicKeys(km.publicKeysURL)
 	}
@@ -86,7 +86,7 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 }
 
 // Sign signs the message by using a remote web3signer server
-func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
+func (km *Keymanager) Sign(_ context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
 
 	if request.Fork == nil {
 		return nil, errors.New("invalid sign request: Fork is nil")
@@ -155,7 +155,7 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 }
 
 // SubscribeAccountChanges returns the event subscription for changes to public keys
-func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
 	// not used right now
 	// returns a stub for the time being as there is a danger of being slashed if the client reloads keys dynamically.
 	// because there is no way to dynamically reload keys, add or remove remote keys we are returning a stub without any event updates for the time being.

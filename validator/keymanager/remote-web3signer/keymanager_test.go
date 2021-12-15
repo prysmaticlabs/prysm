@@ -20,14 +20,14 @@ type MockClient struct {
 	PublicKeys []string
 }
 
-func (mc *MockClient) Sign(pubKey string, request *SignRequest) (bls.Signature, error) {
+func (mc *MockClient) Sign(_ string, _ *SignRequest) (bls.Signature, error) {
 	decoded, err := hex.DecodeString(strings.TrimPrefix(mc.Signature, "0x"))
 	if err != nil {
 		return nil, err
 	}
 	return bls.SignatureFromBytes(decoded)
 }
-func (mc *MockClient) GetPublicKeys(url string) ([][48]byte, error) {
+func (mc *MockClient) GetPublicKeys(_ string) ([][48]byte, error) {
 	var keys [][48]byte
 	for _, pk := range mc.PublicKeys {
 		decoded, err := hex.DecodeString(strings.TrimPrefix(pk, "0x"))
