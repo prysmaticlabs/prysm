@@ -51,6 +51,7 @@ go_test(
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",

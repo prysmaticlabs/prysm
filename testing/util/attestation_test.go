@@ -14,7 +14,7 @@ func TestHydrateAttestation(t *testing.T) {
 	a := HydrateAttestation(&ethpb.Attestation{})
 	_, err := a.HashTreeRoot()
 	require.NoError(t, err)
-	require.DeepEqual(t, a.Signature, make([]byte, params.BeaconConfig().BLSSignatureLength))
+	require.DeepEqual(t, a.Signature, make([]byte, fieldparams.BLSSignatureLength))
 }
 
 func TestHydrateAttestationData(t *testing.T) {
@@ -30,7 +30,7 @@ func TestHydrateV1Attestation(t *testing.T) {
 	a := HydrateV1Attestation(&v1.Attestation{})
 	_, err := a.HashTreeRoot()
 	require.NoError(t, err)
-	require.DeepEqual(t, a.Signature, make([]byte, params.BeaconConfig().BLSSignatureLength))
+	require.DeepEqual(t, a.Signature, make([]byte, fieldparams.BLSSignatureLength))
 }
 
 func TestHydrateV1AttestationData(t *testing.T) {
