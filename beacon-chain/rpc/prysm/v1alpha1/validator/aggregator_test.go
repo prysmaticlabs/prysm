@@ -393,7 +393,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 	aggregatorServer := &Server{}
 	req := &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
-			Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
+			Signature: make([]byte, fieldparams.BLSSignatureLength),
 			Message: &ethpb.AggregateAttestationAndProof{
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{},
@@ -411,7 +411,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{},
 				},
-				SelectionProof: make([]byte, params.BeaconConfig().BLSSignatureLength),
+				SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 			},
 		},
 	}

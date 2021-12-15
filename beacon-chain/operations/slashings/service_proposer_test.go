@@ -191,7 +191,7 @@ func TestPool_InsertProposerSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 		slashings[i] = sl
 	}
 	// We mess up the signature of the second slashing.
-	badSig := make([]byte, 96)
+	badSig := make([]byte, fieldparams.BLSSignatureLength)
 	copy(badSig, "muahaha")
 	slashings[1].Header_1.Signature = badSig
 	p := &Pool{

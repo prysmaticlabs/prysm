@@ -146,7 +146,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 							Target:          &ethpb.Checkpoint{Epoch: target, Root: make([]byte, 32)},
 							Source:          &ethpb.Checkpoint{Epoch: source, Root: make([]byte, 32)},
 						},
-						Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
 					}
 
 					var signingRoot [32]byte

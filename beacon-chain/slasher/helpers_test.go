@@ -442,7 +442,7 @@ func Test_validateBlockHeaderIntegrity(t *testing.T) {
 			args: args{
 				header: &ethpb.SignedBeaconBlockHeader{
 					Header:    &ethpb.BeaconBlockHeader{},
-					Signature: make([]byte, params.BeaconConfig().BLSSignatureLength+1),
+					Signature: make([]byte, fieldparams.BLSSignatureLength+1),
 				},
 			},
 			want: false,
