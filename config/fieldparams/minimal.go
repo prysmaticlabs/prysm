@@ -13,4 +13,5 @@ const (
 	CurrentEpochAttestationsLength  = 1024          // MAX_ATTESTATIONS * SLOTS_PER_EPOCH
 	SlashingsLength                 = 64            // EPOCHS_PER_SLASHINGS_VECTOR
 	SyncCommitteeLength             = 32            // SYNC_COMMITTEE_SIZE
+	RootLength                      = 32            // RootLength defines the byte length of a Merkle root .
 )
