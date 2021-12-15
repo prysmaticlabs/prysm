@@ -29,6 +29,7 @@ import (
 	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -953,7 +954,7 @@ func TestProduceAttestationData(t *testing.T) {
 func TestGetAggregateAttestation(t *testing.T) {
 	ctx := context.Background()
 	root1 := bytesutil.PadTo([]byte("root1"), 32)
-	sig1 := bytesutil.PadTo([]byte("sig1"), params.BeaconConfig().BLSSignatureLength)
+	sig1 := bytesutil.PadTo([]byte("sig1"), fieldparams.BLSSignatureLength)
 	attSlot1 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -972,7 +973,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 		Signature: sig1,
 	}
 	root2_1 := bytesutil.PadTo([]byte("root2_1"), 32)
-	sig2_1 := bytesutil.PadTo([]byte("sig2_1"), params.BeaconConfig().BLSSignatureLength)
+	sig2_1 := bytesutil.PadTo([]byte("sig2_1"), fieldparams.BLSSignatureLength)
 	attSlot2_1 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -991,7 +992,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 		Signature: sig2_1,
 	}
 	root2_2 := bytesutil.PadTo([]byte("root2_2"), 32)
-	sig2_2 := bytesutil.PadTo([]byte("sig2_2"), params.BeaconConfig().BLSSignatureLength)
+	sig2_2 := bytesutil.PadTo([]byte("sig2_2"), fieldparams.BLSSignatureLength)
 	attSlot2_2 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1, 1, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -1050,7 +1051,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *testing.T) {
 	ctx := context.Background()
 	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bytesutil.PadTo([]byte("sig"), params.BeaconConfig().BLSSignatureLength)
+	sig := bytesutil.PadTo([]byte("sig"), fieldparams.BLSSignatureLength)
 	att1 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -1409,8 +1410,8 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	c.MaximumGossipClockDisparity = time.Hour
 	params.OverrideBeaconNetworkConfig(c)
 	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bytesutil.PadTo([]byte("sig"), params.BeaconConfig().BLSSignatureLength)
-	proof := bytesutil.PadTo([]byte("proof"), params.BeaconConfig().BLSSignatureLength)
+	sig := bytesutil.PadTo([]byte("sig"), fieldparams.BLSSignatureLength)
+	proof := bytesutil.PadTo([]byte("proof"), fieldparams.BLSSignatureLength)
 	att := &ethpbv1.Attestation{
 		AggregationBits: []byte{0, 1},
 		Data: &ethpbv1.AttestationData{

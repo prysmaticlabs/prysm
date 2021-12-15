@@ -47,6 +47,7 @@ go_test(
     deps = [
         "//async:go_default_library",
         "//beacon-chain/operations/attestations/kv:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
