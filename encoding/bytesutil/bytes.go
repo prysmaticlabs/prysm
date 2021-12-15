@@ -385,8 +385,10 @@ func IsHex(b []byte) bool {
 }
 
 // ReverseByteOrder Switch the endianness of a byte slice by reversing its order.
+// this function does not modify the actual input bytes.
 func ReverseByteOrder(input []byte) []byte {
-	b := input
+	b := make([]byte, len(input))
+	copy(b, input)
 	for i := 0; i < len(b)/2; i++ {
 		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
 	}

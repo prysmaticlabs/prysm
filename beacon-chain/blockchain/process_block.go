@@ -638,9 +638,7 @@ func validTerminalPowBlock(transitionBlock *powchain.ExecutionBlock, transitionP
 
 func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableDataV1 {
 	// Convert the base fee bytes from little endian to big endian
-	a := make([]byte, len(payload.BaseFeePerGas))
-	copy(a, payload.BaseFeePerGas)
-	baseFeeInBigEndian := bytesutil.ReverseByteOrder(a)
+	baseFeeInBigEndian := bytesutil.ReverseByteOrder(payload.BaseFeePerGas)
 	baseFeePerGas := new(big.Int)
 	baseFeePerGas.SetBytes(baseFeeInBigEndian)
 
