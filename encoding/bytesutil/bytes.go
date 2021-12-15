@@ -2,6 +2,7 @@
 package bytesutil
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math/bits"
@@ -382,4 +383,14 @@ func IsHex(b []byte) bool {
 		return false
 	}
 	return hexRegex.Match(b)
+}
+
+// Uint32toBigEndianBytes converts the given uint32 to bytes in big-endian format.
+func Uint32toBigEndianBytes(a uint32) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, a)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }

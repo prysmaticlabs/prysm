@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"time"
@@ -125,7 +126,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				return errors.Wrap(err, "could not get body execution payload")
 			}
 			// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
-			_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
+			data, err := executionPayloadToExecutableData(payload)
+			if err != nil {
+				return errors.Wrap(err, "could not convert payload to executable data")
+			}
+			_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, data)
 			if err != nil {
 				return errors.Wrap(err, "could not execute payload")
 			}
@@ -636,10 +641,16 @@ func validTerminalPowBlock(transitionBlock *powchain.ExecutionBlock, transitionP
 	return totalDifficultyReached && parentTotalDifficultyValid
 }
 
-func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableDataV1 {
+func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) (*catalyst.ExecutableDataV1, error) {
+	// convert the base fee to bytes we have (in little-endian format) to
+	// bit int (in big-endian format).
+	baseFee := binary.LittleEndian.Uint32(payload.BaseFeePerGas)
+	baseFeeInBigEndian, err := bytesutil.Uint32toBigEndianBytes(baseFee)
+	if err != nil {
+		return nil, err
+	}
 	baseFeePerGas := new(big.Int)
-	// TODO_MERGE: The conversion from 32bytes to big int is broken. This assumes base fee per gas in single digit
-	baseFeePerGas.SetBytes([]byte{payload.BaseFeePerGas[0]})
+	baseFeePerGas.SetBytes(baseFeeInBigEndian)
 
 	return &catalyst.ExecutableDataV1{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
@@ -656,5 +667,5 @@ func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst
 		ExtraData:     payload.ExtraData,
 		BaseFeePerGas: baseFeePerGas,
 		Transactions:  payload.Transactions,
-	}
+	}, nil
 }
