@@ -11,40 +11,26 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 )
 
-// PublicKeysOption is a type to help conditionally configure the Keymanager
-type PublicKeysOption func(*Keymanager)
-
-// WithExternalURL sets the external url for the keymanager.
-// Web3Signer contains one public keys option. Either through a URL or a static key list.
-// If the URL is set, the keymanager will fetch the public keys from the URL.
-// caution: this option is susceptible to slashing if the web3signer's validator keys are shared across validators
-func WithExternalURL(url string) PublicKeysOption {
-	return func(km *Keymanager) {
-		km.publicKeysURL = url
-	}
-}
-
-// WithKeyList is a function to set the key list.
-// Web3Signer contains one public keys option. Either through a URL or a static key list.
-// This option allows a static list of public keys to be passed by the user to determine what accounts should sign.
-// This will provide a layer of safety against slashing if the web3signer is shared across validators.
-func WithKeyList(keys [][48]byte) PublicKeysOption {
-	return func(km *Keymanager) {
-		km.providedPublicKeys = keys
-	}
-}
-
 // SetupConfig includes configuration values for initializing
 // a keymanager, such as passwords, the wallet, and more.
+// Web3Signer contains one public keys option. Either through a URL or a static key list.
 type SetupConfig struct {
-	Option                *PublicKeysOption
 	BaseEndpoint          string
 	GenesisValidatorsRoot []byte
+
+	//Either URL or keylist must be set.
+	// If the URL is set, the keymanager will fetch the public keys from the URL.
+	// caution: this option is susceptible to slashing if the web3signer's validator keys are shared across validators
+	PublicKeysURL string
+
+	//Either URL or keylist must be set.
+	//a static list of public keys to be passed by the user to determine what accounts should sign.
+	// This will provide a layer of safety against slashing if the web3signer is shared across validators.
+	ProvidedPublicKeys [][48]byte
 }
 
 // Keymanager defines the web3signer keymanager
 type Keymanager struct {
-	opt                   *PublicKeysOption
 	client                Web3SignerClient
 	genesisValidatorsRoot []byte
 	publicKeysURL         string
@@ -54,27 +40,26 @@ type Keymanager struct {
 
 // NewKeymanager instantiates a new web3signer key manager
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
-	if cfg.Option == nil ||
-		cfg.BaseEndpoint == "" ||
-		len(cfg.GenesisValidatorsRoot) == 0 {
-
-		return nil, errors.New("invalid setup config, one or more configs are empty: " + fmt.Sprintf("Option: %v, BaseEndpoint: %v, GenesisValidatorsRoot: %v.", cfg.Option, cfg.BaseEndpoint, cfg.GenesisValidatorsRoot))
+	if cfg.BaseEndpoint == "" || len(cfg.GenesisValidatorsRoot) == 0 {
+		return nil, errors.New("invalid setup config, one or more configs are empty: " + fmt.Sprintf("BaseEndpoint: %v, GenesisValidatorsRoot: %v.", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot))
+	}
+	if cfg.PublicKeysURL != "" && len(cfg.ProvidedPublicKeys) != 0 {
+		return nil, errors.New("Either a provided list of public keys or a URL to a list of public keys must be provided, but not both")
+	}
+	if cfg.PublicKeysURL == "" && len(cfg.ProvidedPublicKeys) == 0 {
+		return nil, errors.New("no valid public key options provided")
 	}
 	client, err := newClient(cfg.BaseEndpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create client")
 	}
-	km := &Keymanager{
+	return &Keymanager{
 		client:                Web3SignerClient(client),
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
-	}
-	optionFunction := *cfg.Option
-	optionFunction(km)
-	if km.publicKeysURL == "" && len(km.providedPublicKeys) == 0 {
-		return nil, errors.New("no valid public key options provided")
-	}
-	return km, nil
+		publicKeysURL:         cfg.PublicKeysURL,
+		providedPublicKeys:    cfg.ProvidedPublicKeys,
+	}, nil
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys

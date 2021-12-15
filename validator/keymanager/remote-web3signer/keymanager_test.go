@@ -52,15 +52,14 @@ func TestKeymanager_Sign_HappyPath(t *testing.T) {
 		Signature: "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9",
 	}
 	ctx := context.Background()
-	option := WithExternalURL("example2.com")
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		Option:                &option,
 		BaseEndpoint:          "example.com",
 		GenesisValidatorsRoot: root,
+		PublicKeysURL:         "example2.com/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
@@ -86,15 +85,14 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 	keys := [][48]byte{
 		bytesutil.ToBytes48(decodedKey),
 	}
-	option := WithKeyList(keys)
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		Option:                &option,
 		BaseEndpoint:          "example.com",
 		GenesisValidatorsRoot: root,
+		ProvidedPublicKeys:    keys,
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
@@ -121,15 +119,14 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 	keys := [][48]byte{
 		bytesutil.ToBytes48(decodedKey),
 	}
-	option := WithExternalURL("example2.com")
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		Option:                &option,
 		BaseEndpoint:          "example.com",
 		GenesisValidatorsRoot: root,
+		PublicKeysURL:         "example2.com/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
