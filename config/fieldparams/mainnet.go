@@ -14,5 +14,5 @@ const (
 	SlashingsLength                 = 8192          // EPOCHS_PER_SLASHINGS_VECTOR
 	SyncCommitteeLength             = 512           // SYNC_COMMITTEE_SIZE
 	RootLength                      = 32            // RootLength defines the byte length of a Merkle root.
-	BLSSignatureLength = 96 // BLSSignatureLength defines the byte length of a BLSSignature.
+	BLSSignatureLength              = 96            // BLSSignatureLength defines the byte length of a BLSSignature.
 )
