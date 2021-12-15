@@ -5,33 +5,29 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
-// Web3SignerKeyManager interface implements Ikeymanager interface
-type Web3SignerKeyManager interface {
-	keymanager.IKeymanager
-}
-
-// KeymanagerOption is a type to help conditionally configure the Keymanager
+// PublicKeysOption is a type to help conditionally configure the Keymanager
 type PublicKeysOption func(*Keymanager)
 
-// WithExternalURL sets the external url for the keymanager
-// explain usecases for this option
+// WithExternalURL sets the external url for the keymanager.
+// Web3Signer contains one public keys option. Either through a URL or a static key list.
+// If the URL is set, the keymanager will fetch the public keys from the URL.
+// caution: this option is susceptible to slashing if the web3signer's validator keys are shared across validators
 func WithExternalURL(url string) PublicKeysOption {
 	return func(km *Keymanager) {
 		km.publicKeysURL = url
 	}
 }
 
-// WithKeyList is a function to set the key list
-// explain usecases for this option
+// WithKeyList is a function to set the key list.
+// Web3Signer contains one public keys option. Either through a URL or a static key list.
+// This option allows a static list of public keys to be passed by the user to determine what accounts should sign.
+// This will provide a layer of safety against slashing if the web3signer is shared across validators.
 func WithKeyList(keys [][48]byte) PublicKeysOption {
 	return func(km *Keymanager) {
 		km.providedPublicKeys = keys
@@ -58,7 +54,10 @@ type Keymanager struct {
 
 // NewKeymanager instantiates a new web3signer key manager
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
-	if cfg.Option == nil || cfg.BaseEndpoint == "" || cfg.GenesisValidatorsRoot == nil {
+	if cfg.Option == nil ||
+		cfg.BaseEndpoint == "" ||
+		len(cfg.GenesisValidatorsRoot) == 0 {
+
 		return nil, errors.New("invalid setup config, one or more configs are empty: " + fmt.Sprintf("Option: %v, BaseEndpoint: %v, GenesisValidatorsRoot: %v.", cfg.Option, cfg.BaseEndpoint, cfg.GenesisValidatorsRoot))
 	}
 	client, err := newClient(cfg.BaseEndpoint)
@@ -158,6 +157,8 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 // SubscribeAccountChanges returns the event subscription for changes to public keys
 func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
 	// not used right now
+	// returns a stub for the time being as there is a danger of being slashed if the client reloads keys dynamically.
+	// because there is no way to dynamically reload keys, add or remove remote keys we are returning a stub without any event updates for the time being.
 	return event.NewSubscription(func(i <-chan struct{}) error {
 		return nil
 	})
@@ -166,4 +167,6 @@ func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event
 // reloadKeys reloads the public keys from the remote server
 func (km *Keymanager) reloadKeys() {
 	// not used right now
+	// the feature of needing to dynamically reload from the validator instead of from the web3signer is yet to be determined.
+	// in the future there may be an api provided to add remote sign keys to the static list or remove from the static list.
 }

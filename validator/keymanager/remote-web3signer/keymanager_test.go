@@ -1,22 +1,18 @@
 package remote_web3signer
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"strings"
 	"testing"
 
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"golang.org/x/net/context"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/stretchr/testify/assert"
 )
 
 type MockClient struct {
