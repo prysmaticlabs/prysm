@@ -1,6 +1,7 @@
 package bytesutil_test
 
 import (
+	"math/big"
 	"reflect"
 	"testing"
 
@@ -496,4 +497,15 @@ func TestBytesInvalidInputs(t *testing.T) {
 	intRes := bytesutil.ToLowInt64([]byte{})
 	assert.Equal(t, intRes, int64(0))
 
+}
+
+func TestUint32toBigEndianBytes(t *testing.T) {
+	baseFeeUint32 := uint32(2000)
+
+	bigEndianBytes, err := bytesutil.Uint32toBigEndianBytes(baseFeeUint32)
+	assert.NoError(t, err)
+
+	baseFeeBigInt := new(big.Int)
+	baseFeeBigInt.SetBytes(bigEndianBytes)
+	assert.Equal(t, baseFeeUint32, uint32(baseFeeBigInt.Uint64()))
 }
