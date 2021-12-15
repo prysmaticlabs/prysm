@@ -90,7 +90,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 
 func e2eMainnet(t *testing.T, usePrysmSh bool) {
 	params.UseE2EMainnetConfig()
-	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+	require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
@@ -114,13 +114,8 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		ev.ValidatorsAreActive,
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
-		ev.ProcessesDepositsInBlocks,
-		ev.VerifyBlockGraffiti,
-		ev.ActivatesDepositedValidators,
-		ev.DepositedValidatorsAreActive,
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorHasExited,
-		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
 		ev.ForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,

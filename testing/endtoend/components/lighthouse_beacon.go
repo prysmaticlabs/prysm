@@ -48,8 +48,10 @@ func (s *LighthouseBeaconNodeSet) Start(ctx context.Context) error {
 	}
 
 	// Create beacon nodes.
-	nodes := make([]e2etypes.ComponentRunner, 1)
-	nodes[0] = NewLighthouseBeaconNode(s.config, 0, s.enr)
+	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.LighthouseBeaconNodeCount)
+	for i := 0; i < e2e.TestParams.LighthouseBeaconNodeCount; i++ {
+		nodes[i] = NewLighthouseBeaconNode(s.config, i, s.enr)
+	}
 
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
@@ -110,6 +112,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--target-peers=%d", 10),
 		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort),
 		fmt.Sprintf("--boot-nodes=%s", node.enr),
+		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BeaconNodeMetricsPort+index+300),
 		"--metrics",
 		"--http",
 		"--debug-level=debug",

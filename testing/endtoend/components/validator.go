@@ -53,15 +53,16 @@ func NewValidatorNodeSet(config *e2etypes.E2EConfig) *ValidatorNodeSet {
 func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	beaconNodeNum := e2e.TestParams.BeaconNodeCount
+	prysmBeaconNodeNum := e2e.TestParams.BeaconNodeCount
+	beaconNodeNum := prysmBeaconNodeNum + e2e.TestParams.LighthouseBeaconNodeCount
 	if validatorNum%beaconNodeNum != 0 {
 		return errors.New("validator count is not easily divisible by beacon node count")
 	}
 	validatorsPerNode := validatorNum / beaconNodeNum
 
 	// Create validator nodes.
-	nodes := make([]e2etypes.ComponentRunner, beaconNodeNum)
-	for i := 0; i < beaconNodeNum; i++ {
+	nodes := make([]e2etypes.ComponentRunner, prysmBeaconNodeNum)
+	for i := 0; i < prysmBeaconNodeNum; i++ {
 		nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i)
 	}
 

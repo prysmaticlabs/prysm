@@ -76,6 +76,13 @@ func (r *testRunner) run() {
 		return tracingSink.Start(ctx)
 	})
 
+	keyGen := components.NewKeystoreGenerator()
+
+	// Generate lighthouse keystores.
+	g.Go(func() error {
+		return keyGen.Start(ctx)
+	})
+
 	// ETH1 node.
 	eth1Node := components.NewEth1Node()
 	g.Go(func() error {
@@ -137,6 +144,18 @@ func (r *testRunner) run() {
 		return nil
 	})
 
+	// Lighthouse Validator nodes.
+	lighthouseValidatorNodes := components.NewLighthouseValidatorNodeSet(config)
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{keyGen, lighthouseNodes}); err != nil {
+			return errors.Wrap(err, "validator nodes require beacon nodes to run")
+		}
+		if err := lighthouseValidatorNodes.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start validator nodes")
+		}
+		return nil
+	})
+
 	// Run E2E evaluators and tests.
 	g.Go(func() error {
 		// When everything is done, cancel parent context (will stop all spawned nodes).
@@ -147,7 +166,7 @@ func (r *testRunner) run() {
 
 		// Wait for all required nodes to start.
 		requiredComponents := []e2etypes.ComponentRunner{
-			tracingSink, eth1Node, bootNode, beaconNodes, lighthouseNodes, validatorNodes,
+			tracingSink, keyGen, eth1Node, bootNode, beaconNodes, lighthouseNodes, validatorNodes, lighthouseValidatorNodes,
 		}
 		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 		defer cancel()
