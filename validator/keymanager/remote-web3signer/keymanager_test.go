@@ -144,25 +144,3 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 	assert.Nil(t, err)
 	assert.EqualValues(t, resp, keys)
 }
-
-//TODO: not a very useful test as we aren't looking at reload for keymanager jsut yet
-func TestKeymanager_SubscribeAccountChanges(t *testing.T) {
-	ctx := context.Background()
-	option := WithKeyList(nil)
-	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
-	if err != nil {
-		fmt.Printf("error: %v", err)
-	}
-	config := &SetupConfig{
-		Option:                &option,
-		BaseEndpoint:          "example.com",
-		GenesisValidatorsRoot: root,
-	}
-	km, err := NewKeymanager(ctx, config)
-	if err != nil {
-		fmt.Printf("error: %v", err)
-	}
-	resp := km.SubscribeAccountChanges(nil)
-	assert.NotNil(t, resp)
-
-}
