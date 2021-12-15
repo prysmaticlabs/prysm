@@ -8,7 +8,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -31,7 +31,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 			}),
 			AggregatorIndex: 100,
 		},
-		Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
 	}
 	require.NoError(t, r.beaconAggregateProofSubscriber(context.Background(), a))
 	assert.DeepSSZEqual(t, []*ethpb.Attestation{a.Message.Aggregate}, r.cfg.attPool.AggregatedAttestations(), "Did not save aggregated attestation")
@@ -50,7 +50,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testin
 		Message: &ethpb.AggregateAttestationAndProof{
 			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x03},
-				Signature:       make([]byte, params.BeaconConfig().BLSSignatureLength),
+				Signature:       make([]byte, fieldparams.BLSSignatureLength),
 			}),
 			AggregatorIndex: 100,
 		},

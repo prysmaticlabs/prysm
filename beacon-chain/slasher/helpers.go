@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -111,8 +112,8 @@ func validateBlockHeaderIntegrity(header *ethpb.SignedBeaconBlockHeader) bool {
 	// If a signed block header is malformed, we drop it.
 	if header == nil ||
 		header.Header == nil ||
-		len(header.Signature) != params.BeaconConfig().BLSSignatureLength ||
-		bytes.Equal(header.Signature, make([]byte, params.BeaconConfig().BLSSignatureLength)) {
+		len(header.Signature) != fieldparams.BLSSignatureLength ||
+		bytes.Equal(header.Signature, make([]byte, fieldparams.BLSSignatureLength)) {
 		return false
 	}
 	return true

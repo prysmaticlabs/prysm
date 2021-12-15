@@ -49,7 +49,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 			ParentRoot: make([]byte, fieldparams.RootLength),
 			StateRoot:  make([]byte, fieldparams.RootLength),
 			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: make([]byte, 96),
+				RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
 				Eth1Data: &ethpb.Eth1Data{
 					DepositRoot: make([]byte, fieldparams.RootLength),
 					BlockHash:   make([]byte, 32),
@@ -62,7 +62,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
 			},
 		},
-		Signature: make([]byte, 96),
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
 	}
 }
 
@@ -390,7 +390,7 @@ func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBeaconHeader(h *ethpb.SignedBeaconBlockHeader) *ethpb.SignedBeaconBlockHeader {
 	if h.Signature == nil {
-		h.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		h.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	h.Header = HydrateBeaconHeader(h.Header)
 	return h
@@ -418,7 +418,7 @@ func HydrateBeaconHeader(h *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHeader {
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBeaconBlock(b *ethpb.SignedBeaconBlock) *ethpb.SignedBeaconBlock {
 	if b.Signature == nil {
-		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	b.Block = HydrateBeaconBlock(b.Block)
 	return b
@@ -447,7 +447,7 @@ func HydrateBeaconBlockBody(b *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 		b = &ethpb.BeaconBlockBody{}
 	}
 	if b.RandaoReveal == nil {
-		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, 32)
@@ -465,7 +465,7 @@ func HydrateBeaconBlockBody(b *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateV1SignedBeaconBlock(b *v1.SignedBeaconBlock) *v1.SignedBeaconBlock {
 	if b.Signature == nil {
-		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	b.Block = HydrateV1BeaconBlock(b.Block)
 	return b
@@ -494,7 +494,7 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 		b = &v1.BeaconBlockBody{}
 	}
 	if b.RandaoReveal == nil {
-		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, 32)
@@ -512,7 +512,7 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateV2SignedBeaconBlock(b *v2.SignedBeaconBlockAltair) *v2.SignedBeaconBlockAltair {
 	if b.Signature == nil {
-		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	b.Message = HydrateV2BeaconBlock(b.Message)
 	return b
@@ -541,7 +541,7 @@ func HydrateV2BeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlockBodyAl
 		b = &v2.BeaconBlockBodyAltair{}
 	}
 	if b.RandaoReveal == nil {
-		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, 32)
@@ -555,7 +555,7 @@ func HydrateV2BeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlockBodyAl
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &v1.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, 64),
-			SyncCommitteeSignature: make([]byte, 96),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}
 	return b
@@ -565,7 +565,7 @@ func HydrateV2BeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlockBodyAl
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBeaconBlockAltair(b *ethpb.SignedBeaconBlockAltair) *ethpb.SignedBeaconBlockAltair {
 	if b.Signature == nil {
-		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	b.Block = HydrateBeaconBlockAltair(b.Block)
 	return b
@@ -594,7 +594,7 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 		b = &ethpb.BeaconBlockBodyAltair{}
 	}
 	if b.RandaoReveal == nil {
-		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, 32)
@@ -608,7 +608,7 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &ethpb.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, 64),
-			SyncCommitteeSignature: make([]byte, 96),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}
 	return b
@@ -618,7 +618,7 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBeaconBlockMerge(b *ethpb.SignedBeaconBlockMerge) *ethpb.SignedBeaconBlockMerge {
 	if b.Signature == nil {
-		b.Signature = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	b.Block = HydrateBeaconBlockMerge(b.Block)
 	return b
@@ -647,7 +647,7 @@ func HydrateBeaconBlockBodyMerge(b *ethpb.BeaconBlockBodyMerge) *ethpb.BeaconBlo
 		b = &ethpb.BeaconBlockBodyMerge{}
 	}
 	if b.RandaoReveal == nil {
-		b.RandaoReveal = make([]byte, params.BeaconConfig().BLSSignatureLength)
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, 32)
@@ -661,7 +661,7 @@ func HydrateBeaconBlockBodyMerge(b *ethpb.BeaconBlockBodyMerge) *ethpb.BeaconBlo
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &ethpb.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, 64),
-			SyncCommitteeSignature: make([]byte, 96),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}
 	if b.ExecutionPayload == nil {
