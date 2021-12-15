@@ -3,7 +3,6 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 	"math/big"
 	"time"
@@ -126,11 +125,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				return errors.Wrap(err, "could not get body execution payload")
 			}
 			// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
-			data, err := executionPayloadToExecutableData(payload)
-			if err != nil {
-				return errors.Wrap(err, "could not convert payload to executable data")
-			}
-			_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, data)
+			_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
 			if err != nil {
 				return errors.Wrap(err, "could not execute payload")
 			}
@@ -641,16 +636,12 @@ func validTerminalPowBlock(transitionBlock *powchain.ExecutionBlock, transitionP
 	return totalDifficultyReached && parentTotalDifficultyValid
 }
 
-func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) (*catalyst.ExecutableDataV1, error) {
+func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableDataV1 {
 	// convert the base fee to bytes we have (in little-endian format) to
 	// bit int (in big-endian format).
-	baseFee := binary.LittleEndian.Uint32(payload.BaseFeePerGas)
-	baseFeeInBigEndian, err := bytesutil.Uint32toBigEndianBytes(baseFee)
-	if err != nil {
-		return nil, err
-	}
+	b := bytesutil.ReverseByteOrder(payload.BaseFeePerGas)
 	baseFeePerGas := new(big.Int)
-	baseFeePerGas.SetBytes(baseFeeInBigEndian)
+	baseFeePerGas.SetBytes(b)
 
 	return &catalyst.ExecutableDataV1{
 		BlockHash:     common.BytesToHash(payload.BlockHash),
@@ -667,5 +658,5 @@ func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) (*catalys
 		ExtraData:     payload.ExtraData,
 		BaseFeePerGas: baseFeePerGas,
 		Transactions:  payload.Transactions,
-	}, nil
+	}
 }

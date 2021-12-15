@@ -2,7 +2,6 @@
 package bytesutil
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math/bits"
@@ -385,12 +384,11 @@ func IsHex(b []byte) bool {
 	return hexRegex.Match(b)
 }
 
-// Uint32toBigEndianBytes converts the given uint32 to bytes in big-endian format.
-func Uint32toBigEndianBytes(a uint32) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, a)
-	if err != nil {
-		return nil, err
+// ReverseByteOrder Switch the endianness of a byte slice by reversing its order.
+func ReverseByteOrder(input []byte) []byte {
+	b := input
+	for i := 0; i < len(b)/2; i++ {
+		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
 	}
-	return buf.Bytes(), nil
+	return b
 }
