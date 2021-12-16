@@ -8,7 +8,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
     ],
-        deps = [
+    deps = [
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v3:go_default_library",
