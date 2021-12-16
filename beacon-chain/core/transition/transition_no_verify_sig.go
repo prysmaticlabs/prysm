@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -152,7 +153,7 @@ func CalculateStateRoot(
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
-	if signed.Version() == version.Altair {
+	if signed.Version() == version.Altair || signed.Version() == version.Merge {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return [32]byte{}, err
@@ -198,7 +199,7 @@ func ProcessBlockNoVerifyAnySig(
 	if err != nil {
 		return nil, nil, err
 	}
-	if signed.Version() == version.Altair {
+	if signed.Version() == version.Altair || signed.Version() == version.Merge {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return nil, nil, err
@@ -273,7 +274,12 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Merge:
+	case version.Altair:
+		state, err = altairOperations(ctx, state, signedBeaconBlock)
+		if err != nil {
+			return nil, err
+		}
+	case version.Merge:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
@@ -302,12 +308,30 @@ func ProcessBlockForStateRoot(
 	body := blk.Body()
 	bodyRoot, err := body.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not hash tree root beacon block body")
 	}
 	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
+	}
+
+	if state.Version() == version.Merge {
+		enabled, err := execution.Enabled(state, blk.Body())
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "could not check if execution is enabled")
+		}
+		if enabled {
+			payload, err := blk.Body().ExecutionPayload()
+			if err != nil {
+				return nil, err
+			}
+			state, err = execution.ProcessPayload(state, payload)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process execution payload")
+			}
+		}
 	}
 
 	state, err = b.ProcessRandaoNoVerify(state, signed.Block().Body().RandaoReveal())
