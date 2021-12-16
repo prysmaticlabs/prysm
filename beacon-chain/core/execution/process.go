@@ -25,7 +25,7 @@ func IsMergeComplete(st state.BeaconState) (bool, error) {
 		return false, err
 	}
 	// TODO_MERGE: Benchmark this for faster compare.
-	return !ssz.DeepEqual(h, EmptypayloadHeader()), nil
+	return !ssz.DeepEqual(h, EmptyPayloadHeader()), nil
 }
 
 // IsMergeBlock returns true if input block can become the merge block.
@@ -205,8 +205,8 @@ func EmptyPayload() *ethpb.ExecutionPayload {
 	}
 }
 
-// This represents `ExecutionPayloadHeader()` in spec.
-func EmptypayloadHeader() *ethpb.ExecutionPayloadHeader {
+// EmptyPayloadHeader represents `ExecutionPayloadHeader()` in spec.
+func EmptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
 	return &ethpb.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, 32),
 		FeeRecipient:     make([]byte, 20),
