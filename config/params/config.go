@@ -185,8 +185,8 @@ type BeaconChainConfig struct {
 	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
 	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of the experimental merge spec. This value is type is currently TBD: https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/beacon-chain.md#transition-settings
 	FeeRecipient                     common.Address // FeeRecipient where the transaction fee goes to.
-	MaxTransactionsPerPayload        uint64         `yaml:"MAX_TRANSACTIONS_PER_PAYLOAD" spec:"true"`         // MaxTransactionsPerPayload of beacon chain.
-	MaxBytesPerTransaction           uint64         `yaml:"MAX_BYTES_PER_TRANSACTION" spec:"true"`            // MaxBytesPerTransaction of beacon chain.
+	MaxTransactionsPerPayload        uint64         `yaml:"MAX_TRANSACTIONS_PER_PAYLOAD" spec:"true"` // MaxTransactionsPerPayload of beacon chain.
+	MaxBytesPerTransaction           uint64         `yaml:"MAX_BYTES_PER_TRANSACTION" spec:"true"`    // MaxBytesPerTransaction of beacon chain.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.

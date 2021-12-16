@@ -239,6 +239,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Merge
 	TerminalBlockHashActivationEpoch: math.MaxUint64,
-	MaxTransactionsPerPayload:           1 << 20,
-	MaxBytesPerTransaction:              1 << 30,
+	MaxTransactionsPerPayload:        1 << 20,
+	MaxBytesPerTransaction:           1 << 30,
 }
