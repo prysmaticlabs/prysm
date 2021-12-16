@@ -92,11 +92,6 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	return BitwiseMerkleize(hash.CustomSHA256Hasher(), slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 }
 
-const (
-	maxBytesPerTransaction    = 1073741824
-	maxTransactionsPerPayload = 1048576
-)
-
 // TransactionsRoot computes the HTR for the Transactions property of the ExecutionPayload
 // The code was largely copy/pasted from the code generated to compute the HTR of the entire
 // ExecutionPayload.
