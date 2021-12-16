@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -100,8 +101,7 @@ func TestGetDuties_OK(t *testing.T) {
 
 func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.UseMainnetConfig()
-	cfg := params.BeaconConfig().Copy()
+	cfg := params.MainnetConfig()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(cfg)
 
@@ -112,9 +112,9 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := util.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	h := &ethpb.BeaconBlockHeader{
-		StateRoot:  bytesutil.PadTo([]byte{'a'}, 32),
-		ParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
-		BodyRoot:   bytesutil.PadTo([]byte{'c'}, 32),
+		StateRoot:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+		ParentRoot: bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		BodyRoot:   bytesutil.PadTo([]byte{'c'}, fieldparams.RootLength),
 	}
 	require.NoError(t, bs.SetLatestBlockHeader(h))
 	require.NoError(t, err, "Could not setup genesis bs")
@@ -202,8 +202,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 
 func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.UseMainnetConfig()
-	cfg := params.BeaconConfig().Copy()
+	cfg := params.MainnetConfig()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(cfg)
 
@@ -215,9 +214,9 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	bs, err := util.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	require.NoError(t, err)
 	h := &ethpb.BeaconBlockHeader{
-		StateRoot:  bytesutil.PadTo([]byte{'a'}, 32),
-		ParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
-		BodyRoot:   bytesutil.PadTo([]byte{'c'}, 32),
+		StateRoot:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+		ParentRoot: bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		BodyRoot:   bytesutil.PadTo([]byte{'c'}, fieldparams.RootLength),
 	}
 	require.NoError(t, bs.SetLatestBlockHeader(h))
 	require.NoError(t, err, "Could not setup genesis bs")

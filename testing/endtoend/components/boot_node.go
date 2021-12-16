@@ -55,7 +55,7 @@ func (node *BootNode) Start(ctx context.Context) error {
 		"--debug",
 	}
 
-	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
+	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	cmd.Stdout = stdOutFile
 	cmd.Stderr = stdOutFile
 	log.Infof("Starting boot node with flags: %s", strings.Join(args[1:], " "))

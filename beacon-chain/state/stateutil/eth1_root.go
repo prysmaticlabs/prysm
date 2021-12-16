@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -98,7 +98,7 @@ func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 		hasher,
 		eth1Chunks,
 		uint64(len(eth1Chunks)),
-		uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))),
+		fieldparams.Eth1DataVotesLength,
 	)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")

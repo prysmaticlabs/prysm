@@ -44,6 +44,7 @@ type ReadOnlyBeaconState interface {
 	IsNil() bool
 	LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
 	Version() int
+	LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.

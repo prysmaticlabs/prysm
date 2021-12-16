@@ -1,4 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -20,5 +20,18 @@ go_library(
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["upgrade_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/core/time:go_default_library",
+        "//config/params:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
     ],
 )

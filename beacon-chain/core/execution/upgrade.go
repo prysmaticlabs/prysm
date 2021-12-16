@@ -10,7 +10,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// UpgradeToMerge updates input state to return the version Merge state.
+// UpgradeToMerge updates inputs a generic state to return the version Merge state.
+// It inserts an empty `ExecutionPayloadHeader` into the state.
 func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	epoch := time.CurrentEpoch(state)
 

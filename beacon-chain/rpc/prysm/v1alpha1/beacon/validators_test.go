@@ -22,6 +22,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/cmd"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -1069,7 +1070,8 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 }
 
 func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -1264,7 +1266,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 
 	bs := &Server{
 		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
@@ -1760,8 +1762,8 @@ func TestGetValidatorPerformance_Syncing(t *testing.T) {
 
 func TestGetValidatorPerformance_OK(t *testing.T) {
 	helpers.ClearCache()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	ctx := context.Background()
 	epoch := types.Epoch(1)
@@ -1987,8 +1989,8 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 
 func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 	helpers.ClearCache()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	ctx := context.Background()
 	epoch := types.Epoch(1)
@@ -2105,8 +2107,8 @@ func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 }
 
 func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -2179,8 +2181,8 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	helpers.ClearCache()
 
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
