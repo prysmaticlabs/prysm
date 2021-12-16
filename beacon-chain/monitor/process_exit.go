@@ -6,8 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// processExitsFromBlock logs the event of one of our tracked validators' exit was
-// included in a block
+// processExitsFromBlock logs the event when a tracked validators' exit was included in a block
 func (s *Service) processExitsFromBlock(blk block.BeaconBlock) {
 	s.RLock()
 	defer s.RUnlock()
@@ -22,7 +21,7 @@ func (s *Service) processExitsFromBlock(blk block.BeaconBlock) {
 	}
 }
 
-// processExit logs the event of one of our tracked validators' exit was processed
+// processExit logs the event when tracked validators' exit was processed
 func (s *Service) processExit(exit *ethpb.SignedVoluntaryExit) {
 	idx := exit.Exit.ValidatorIndex
 	s.RLock()
