@@ -273,7 +273,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair:
+	case version.Altair, version.Merge:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
