@@ -42,7 +42,6 @@ type ReadOnlyBeaconState interface {
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
-	LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
 	Version() int
 	LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
 }
