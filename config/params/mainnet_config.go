@@ -28,10 +28,10 @@ const (
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                   1 << 20,  // 1 MiB
-	GossipMaxSizeMerge:              10 << 10, // 10 MiB
-	MaxChunkSize:                    1 << 20,  // 1 MiB
-	MaxChunkSizeMerge:               10 << 20, // 10 MiB
+	GossipMaxSize:                   1 << 20,      // 1 MiB
+	GossipMaxSizeMerge:              10 * 1 << 20, // 10 MiB
+	MaxChunkSize:                    1 << 20,      // 1 MiB
+	MaxChunkSizeMerge:               10 * 1 << 20, // 10 MiB
 	AttestationSubnetCount:          64,
 	AttestationPropagationSlotRange: 32,
 	MaxRequestBlocks:                1 << 10, // 1024
