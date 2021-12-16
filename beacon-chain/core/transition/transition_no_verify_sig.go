@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -317,7 +316,7 @@ func ProcessBlockForStateRoot(
 	}
 
 	if state.Version() == version.Merge {
-		enabled, err := execution.Enabled(state, blk.Body())
+		enabled, err := b.Enabled(state, blk.Body())
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not check if execution is enabled")
@@ -327,7 +326,7 @@ func ProcessBlockForStateRoot(
 			if err != nil {
 				return nil, err
 			}
-			state, err = execution.ProcessPayload(state, payload)
+			state, err = b.ProcessPayload(state, payload)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not process execution payload")
 			}
