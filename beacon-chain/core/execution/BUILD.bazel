@@ -7,7 +7,10 @@ go_library(
         "upgrade.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/execution",
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//testing/spectest:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
