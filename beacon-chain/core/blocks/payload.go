@@ -6,10 +6,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
 // MergeComplete returns true if the transition to merge has completed.
-// Meaning the payload header in beacon state is not `ExecutionPayloadHeader()` (i.e. not empty).
+// Meaning the header header in beacon state is not `ExecutionPayloadHeader()` (i.e. not empty).
 //
 // Spec code:
 // def is_merge_complete(state: BeaconState) -> bool:
@@ -21,6 +22,75 @@ func MergeComplete(st state.BeaconState) (bool, error) {
 	}
 
 	return !isEmptyHeader(h), nil
+}
+
+// MergeBlock returns true if the input block is the terminal merge block.
+// Meaning the header header in beacon state is  `ExecutionPayloadHeader()` (i.e. empty).
+// And the input block has a non-empty header.
+//
+// Spec code:
+// def is_merge_block(state: BeaconState, body: BeaconBlockBody) -> bool:
+//    return not is_merge_complete(state) and body.execution_payload != ExecutionPayload()
+func MergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
+	mergeComplete, err := MergeComplete(st)
+	if err != nil {
+		return false, err
+	}
+	if mergeComplete {
+		return false, err
+	}
+
+	payload, err := blk.ExecutionPayload()
+	if err != nil {
+		return false, err
+	}
+	return !isEmptyPayload(payload), nil
+}
+
+func isEmptyPayload(p *ethpb.ExecutionPayload) bool {
+	if !bytes.Equal(p.ParentHash, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.FeeRecipient, make([]byte, fieldparams.FeeRecipientLength)) {
+		return false
+	}
+	if !bytes.Equal(p.StateRoot, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.ReceiptRoot, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.LogsBloom, make([]byte, fieldparams.LogsBloomLength)) {
+		return false
+	}
+	if !bytes.Equal(p.Random, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.BaseFeePerGas, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.BlockHash, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if p.Transactions != nil {
+		return false
+	}
+	if p.ExtraData != nil {
+		return false
+	}
+	if p.BlockNumber != 0 {
+		return false
+	}
+	if p.GasLimit != 0 {
+		return false
+	}
+	if p.GasUsed != 0 {
+		return false
+	}
+	if p.Timestamp != 0 {
+		return false
+	}
+	return true
 }
 
 func isEmptyHeader(h *ethpb.ExecutionPayloadHeader) bool {
