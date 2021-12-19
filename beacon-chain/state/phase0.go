@@ -24,6 +24,8 @@ type BeaconState interface {
 // StateProver defines the ability to create Merkle proofs for beacon state fields.
 type StateProver interface {
 	ProveFinalizedRoot() ([][]byte, error)
+	ProveCurrentSyncCommittee() ([][]byte, error)
+	ProveNextSyncCommittee() ([][]byte, error)
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
