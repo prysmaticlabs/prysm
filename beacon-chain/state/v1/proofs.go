@@ -18,12 +18,12 @@ func FinalizedRootGeneralizedIndex() uint64 {
 }
 
 // CurrentSyncCommitteeProof from the state's Merkle trie representation.
-func (b *BeaconState) CurrentSyncCommitteeProof() ([][]byte, error) {
+func (*BeaconState) CurrentSyncCommitteeProof() ([][]byte, error) {
 	return nil, errors.New("CurrentSyncCommitteeProof() unsupported for v1 beacon state")
 }
 
 // NextSyncCommitteeProof from the state's Merkle trie representation.
-func (b *BeaconState) NextSyncCommitteeProof() ([][]byte, error) {
+func (*BeaconState) NextSyncCommitteeProof() ([][]byte, error) {
 	return nil, errors.New("NextSyncCommitteeProof() unsupported for v1 beacon state")
 }
 
