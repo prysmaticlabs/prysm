@@ -197,6 +197,20 @@ func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, dept
 	return bytes.Equal(root, node[:])
 }
 
+// VerifyMerkleProof given a trie root, a leaf, the generalized merkle index
+// of the leaf in the trie, and the proof itself.
+func VerifyMerkleProof(root, item []byte, merkleIndex int, proof [][]byte) bool {
+	node := bytesutil.ToBytes32(item)
+	for i := 0; i < len(proof); i++ {
+		if (uint64(merkleIndex) / math.PowerOf2(uint64(i)) % 2) != 0 {
+			node = hash.Hash(append(proof[i], node[:]...))
+		} else {
+			node = hash.Hash(append(node[:], proof[i]...))
+		}
+	}
+	return bytes.Equal(root, node[:])
+}
+
 // Copy performs a deep copy of the trie.
 func (m *SparseMerkleTrie) Copy() *SparseMerkleTrie {
 	dstBranches := make([][][]byte, len(m.branches))
