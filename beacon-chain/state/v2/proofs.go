@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	// Precomputed generalized index in the Merkle trie for Altair
+	// Precomputed generalized index in the Merkle trie for Altair.
 	finalizedRootIndex = 105
 )
 

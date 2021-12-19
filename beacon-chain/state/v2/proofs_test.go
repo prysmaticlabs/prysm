@@ -9,6 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
+const (
+	// Precomputed generalized index in the Merkle trie for Altair.
+	finalizedRootIndex = 105
+)
+
 func TestProve_BeaconState_FinalizedRoot(t *testing.T) {
 	ctx := context.Background()
 	st, _ := util.DeterministicGenesisStateAltair(t, 256)

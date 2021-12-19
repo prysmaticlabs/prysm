@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	// Precomputed generalized index in the Merkle trie for Altair the merge.
+	// Precomputed generalized index in the Merkle trie for the Merge.
 	finalizedRootIndex = 105
 )
 
