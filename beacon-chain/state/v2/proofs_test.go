@@ -6,6 +6,7 @@ import (
 
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
@@ -18,9 +19,11 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 	t.Run("current sync committee", func(t *testing.T) {
 		sc, err := st.CurrentSyncCommittee()
 		require.NoError(t, err)
-		proof, err := st.CurrentSyncCommitteeProof()
-		require.NoError(t, err)
+
+		// Verify the Merkle proof.
 		scRoot, err := sc.HashTreeRoot()
+		require.NoError(t, err)
+		proof, err := st.CurrentSyncCommitteeProof()
 		require.NoError(t, err)
 		valid := trie.VerifyMerkleProof(htr[:], scRoot[:], v2.CurrentSyncCommitteeGeneralizedIndex(), proof)
 		require.Equal(t, true, valid)
@@ -30,13 +33,39 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 		require.NoError(t, err)
 		proof, err := st.NextSyncCommitteeProof()
 		require.NoError(t, err)
+
+		// Verify the Merkle proof.
 		nextSCRoot, err := nextSC.HashTreeRoot()
 		require.NoError(t, err)
 		valid := trie.VerifyMerkleProof(htr[:], nextSCRoot[:], v2.NextSyncCommitteeGeneralizedIndex(), proof)
 		require.Equal(t, true, valid)
+
+		// Edit the sync committee.
+		privKey, err := bls.RandKey()
+		require.NoError(t, err)
+		nextSC.AggregatePubkey = privKey.PublicKey().Marshal()
+		require.NoError(t, st.SetNextSyncCommittee(nextSC))
+
+		// Verifying the old Merkle proof for the new value should fail.
+		nextSCRoot, err = nextSC.HashTreeRoot()
+		require.NoError(t, err)
+		valid = trie.VerifyMerkleProof(htr[:], nextSCRoot[:], v2.NextSyncCommitteeGeneralizedIndex(), proof)
+		require.Equal(t, false, valid)
+
+		// Generating a new, valid proof should pass.
+		proof, err = st.NextSyncCommitteeProof()
+		require.NoError(t, err)
+		htr, err = st.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		valid = trie.VerifyMerkleProof(htr[:], nextSCRoot[:], v2.NextSyncCommitteeGeneralizedIndex(), proof)
+		require.Equal(t, true, valid)
 	})
 	t.Run("finalized root", func(t *testing.T) {
 		finalizedRoot := st.FinalizedCheckpoint().Root
+
+		// Verify the Merkle proof.
+		htr, err = st.HashTreeRoot(ctx)
+		require.NoError(t, err)
 		proof, err := st.FinalizedRootProof()
 		require.NoError(t, err)
 		gIndex := v2.FinalizedRootGeneralizedIndex()
