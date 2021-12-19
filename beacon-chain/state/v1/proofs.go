@@ -1,8 +1,9 @@
-package v2
+package v1
 
 import (
 	"encoding/binary"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -16,28 +17,14 @@ func FinalizedRootGeneralizedIndex() uint64 {
 	return finalizedRootIndex
 }
 
-// CurrentSyncCommitteeGeneralizedIndex for the beacon state.
-func CurrentSyncCommitteeGeneralizedIndex() uint64 {
-	return uint64(currentSyncCommittee)
-}
-
-// NextSyncCommitteeGeneralizedIndex for the beacon state.
-func NextSyncCommitteeGeneralizedIndex() uint64 {
-	return uint64(nextSyncCommittee)
-}
-
 // CurrentSyncCommitteeProof from the state's Merkle trie representation.
 func (b *BeaconState) CurrentSyncCommitteeProof() ([][]byte, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, currentSyncCommittee), nil
+	return nil, errors.New("CurrentSyncCommitteeProof() unsupported for v1 beacon state")
 }
 
 // NextSyncCommitteeProof from the state's Merkle trie representation.
 func (b *BeaconState) NextSyncCommitteeProof() ([][]byte, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, nextSyncCommittee), nil
+	return nil, errors.New("NextSyncCommitteeProof() unsupported for v1 beacon state")
 }
 
 // FinalizedRootProof crafts a Merkle proof for the finalized root

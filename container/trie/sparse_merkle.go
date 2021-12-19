@@ -199,10 +199,10 @@ func VerifyMerkleProofWithDepth(root, item []byte, merkleIndex int, proof [][]by
 
 // VerifyMerkleProof given a trie root, a leaf, the generalized merkle index
 // of the leaf in the trie, and the proof itself.
-func VerifyMerkleProof(root, item []byte, merkleIndex int, proof [][]byte) bool {
+func VerifyMerkleProof(root, item []byte, merkleIndex uint64, proof [][]byte) bool {
 	node := bytesutil.ToBytes32(item)
 	for i := 0; i < len(proof); i++ {
-		if (uint64(merkleIndex) / math.PowerOf2(uint64(i)) % 2) != 0 {
+		if (merkleIndex / math.PowerOf2(uint64(i)) % 2) != 0 {
 			node = hash.Hash(append(proof[i], node[:]...))
 		} else {
 			node = hash.Hash(append(node[:], proof[i]...))

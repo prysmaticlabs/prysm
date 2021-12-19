@@ -34,8 +34,3 @@ func (*BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 func (*BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
 	return nil, errors.New("LatestExecutionPayloadHeader is not supported for phase 0 beacon state")
 }
-
-// ProveFinalizedRoot --
-func (b *BeaconState) ProveFinalizedRoot() ([][]byte, error) {
-	return nil, errors.New("ProveFinalizedRoot() is not supported for phase 0 beacon state")
-}
