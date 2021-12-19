@@ -11,8 +11,8 @@ const (
 )
 
 // FinalizedRootGeneralizedIndex for the Altair beacon state.
-func (b *BeaconState) FinalizedRootGeneralizedIndex() (int, error) {
-	return finalizedRootIndex, nil
+func FinalizedRootGeneralizedIndex() int {
+	return finalizedRootIndex
 }
 
 // ProveFinalizedRoot crafts a Merkle proof for the finalized root

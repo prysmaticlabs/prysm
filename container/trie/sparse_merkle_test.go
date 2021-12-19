@@ -87,7 +87,7 @@ func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
 	}
 }
 
-func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
+func TestMerkleTrie_VerifyMerkleProofWithDepth(t *testing.T) {
 	items := [][]byte{
 		[]byte("A"),
 		[]byte("B"),
@@ -111,6 +111,32 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, trie.VerifyMerkleProofWithDepth(root[:], items[3], 3, proof, params.BeaconConfig().DepositContractTreeDepth))
 	require.Equal(t, false, trie.VerifyMerkleProofWithDepth(root[:], []byte("buzz"), 3, proof, params.BeaconConfig().DepositContractTreeDepth))
+}
+
+func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("B"),
+		[]byte("C"),
+		[]byte("D"),
+		[]byte("E"),
+		[]byte("F"),
+		[]byte("G"),
+		[]byte("H"),
+	}
+	m, err := trie.GenerateTrieFromItems(items, params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err)
+	proof, err := m.MerkleProof(0)
+	require.NoError(t, err)
+	require.Equal(t, int(params.BeaconConfig().DepositContractTreeDepth)+1, len(proof))
+	root := m.HashTreeRoot()
+	if ok := trie.VerifyMerkleProof(root[:], items[0], 0, proof); !ok {
+		t.Error("First Merkle proof did not verify")
+	}
+	proof, err = m.MerkleProof(3)
+	require.NoError(t, err)
+	require.Equal(t, true, trie.VerifyMerkleProof(root[:], items[3], 3, proof))
+	require.Equal(t, false, trie.VerifyMerkleProof(root[:], []byte("buzz"), 3, proof))
 }
 
 func TestMerkleTrie_NegativeIndexes(t *testing.T) {

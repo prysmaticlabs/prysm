@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -17,8 +18,7 @@ func TestProve_BeaconState_FinalizedRoot(t *testing.T) {
 	finalizedRoot := st.FinalizedCheckpoint().Root
 	proof, err := st.ProveFinalizedRoot()
 	require.NoError(t, err)
-	gIndex, err := st.FinalizedRootGeneralizedIndex()
-	require.NoError(t, err)
+	gIndex := v3.FinalizedRootGeneralizedIndex()
 	valid := trie.VerifyMerkleProof(htr[:], finalizedRoot, gIndex, proof)
 	require.Equal(t, true, valid)
 }
