@@ -9,11 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
-const (
-	// Precomputed generalized index in the Merkle trie for the Merge.
-	finalizedRootIndex = 105
-)
-
 func TestProve_BeaconState_FinalizedRoot(t *testing.T) {
 	ctx := context.Background()
 	st, _ := util.DeterministicGenesisStateMerge(t, 256)
@@ -22,6 +17,8 @@ func TestProve_BeaconState_FinalizedRoot(t *testing.T) {
 	finalizedRoot := st.FinalizedCheckpoint().Root
 	proof, err := st.ProveFinalizedRoot()
 	require.NoError(t, err)
-	valid := trie.VerifyMerkleProof(htr[:], finalizedRoot, finalizedRootIndex, proof)
+	gIndex, err := st.FinalizedRootGeneralizedIndex()
+	require.NoError(t, err)
+	valid := trie.VerifyMerkleProof(htr[:], finalizedRoot, gIndex, proof)
 	require.Equal(t, true, valid)
 }

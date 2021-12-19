@@ -7,9 +7,13 @@ import (
 )
 
 const (
-	// Precomputed generalized index in the Merkle trie for Altair.
 	finalizedRootIndex = 105
 )
+
+// FinalizedRootGeneralizedIndex for the Altair beacon state.
+func (b *BeaconState) FinalizedRootGeneralizedIndex() (int, error) {
+	return finalizedRootIndex, nil
+}
 
 // ProveFinalizedRoot crafts a Merkle proof for the finalized root
 // contained within the finalized checkpoint of a beacon state.

@@ -39,3 +39,8 @@ func (*BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeade
 func (b *BeaconState) ProveFinalizedRoot() ([][]byte, error) {
 	return nil, errors.New("ProveFinalizedRoot() is not supported for phase 0 beacon state")
 }
+
+// FinalizedRootGeneralizedIndex --
+func (b *BeaconState) FinalizedRootGeneralizedIndex() (int, error) {
+	return 0, errors.New("FinalizedRootGeneralizedIndex() is not supported for phase 0 beacon state")
+}
