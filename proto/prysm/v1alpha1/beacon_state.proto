@@ -232,22 +232,6 @@ message BeaconStateMerge {
   SyncCommittee next_sync_committee = 9003; // [New in Altair]
 
   // Merge fields [10001-11000]
-  ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Merge]
+  ethereum.eth.v1alpha1.ExecutionPayloadHeader  latest_execution_payload_header = 10001; // [New in Merge]
 }
 
-message ExecutionPayloadHeader {
-  bytes parent_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes fee_recipient = 2 [(ethereum.eth.ext.ssz_size) = "20"];
-  bytes state_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes receipt_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes logs_bloom = 5 [(ethereum.eth.ext.ssz_size) = "256"];
-  bytes random = 6 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 block_number = 7;
-  uint64 gas_limit = 8;
-  uint64 gas_used = 9;
-  uint64 timestamp = 10;
-  bytes extra_data = 11 [(ethereum.eth.ext.ssz_max) = "32"];
-  bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
-}

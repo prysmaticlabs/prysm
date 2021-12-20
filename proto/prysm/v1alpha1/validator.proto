@@ -176,6 +176,13 @@ service BeaconNodeValidator {
         };
     }
 
+    // Retrieves the blinded beacon block to be signed and broadcasted to the network.
+    rpc GetBlindedBeaconBlock(BlockRequest) returns (GenericBeaconBlock) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha2/validator/blinded_block"
+        };
+    }
+
     // Sends the newly signed beacon block to beacon node.
     //
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
