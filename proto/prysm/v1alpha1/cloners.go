@@ -467,3 +467,47 @@ func CopyExecutionPayloadHeader(payload *ExecutionPayloadHeader) *ExecutionPaylo
 		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
 	}
 }
+
+// CopySignedBlindedBeaconBlockMerge copies the provided SignedBlindedBeaconBlockMerge.
+func CopySignedBlindedBeaconBlockMerge(sigBlock *SignedBlindedBeaconBlockMerge) *SignedBlindedBeaconBlockMerge {
+	if sigBlock == nil {
+		return nil
+	}
+	return &SignedBlindedBeaconBlockMerge{
+		Block:     CopyBlindedBeaconBlockMerge(sigBlock.Block),
+		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+	}
+}
+
+// CopyBlindedBeaconBlockMerge copies the provided BlindedBeaconBlockMerge.
+func CopyBlindedBeaconBlockMerge(block *BlindedBeaconBlockMerge) *BlindedBeaconBlockMerge {
+	if block == nil {
+		return nil
+	}
+	return &BlindedBeaconBlockMerge{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		Body:          CopyBlindedBeaconBlockBodyMerge(block.Body),
+	}
+}
+
+// CopyBlindedBeaconBlockBodyMerge copies the provided BlindedBeaconBlockBodyMerge.
+func CopyBlindedBeaconBlockBodyMerge(body *BlindedBeaconBlockBodyMerge) *BlindedBeaconBlockBodyMerge {
+	if body == nil {
+		return nil
+	}
+	return &BlindedBeaconBlockBodyMerge{
+		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:          CopyETH1Data(body.Eth1Data),
+		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:      CopyAttestations(body.Attestations),
+		Deposits:          CopyDeposits(body.Deposits),
+		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
+		ExecutionPayloadHeader:  CopyExecutionPayloadHeader(body.ExecutionPayloadHeader),
+	}
+}

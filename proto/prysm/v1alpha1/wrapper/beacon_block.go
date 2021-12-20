@@ -13,6 +13,9 @@ var (
 	_ = block.SignedBeaconBlock(&altairSignedBeaconBlock{})
 	_ = block.BeaconBlock(&altairBeaconBlock{})
 	_ = block.BeaconBlockBody(&altairBeaconBlockBody{})
+	_ = block.SignedBeaconBlock(&mergeSignedBeaconBlock{})
+	_ = block.BeaconBlock(&mergeBeaconBlock{})
+	_ = block.BeaconBlockBody(&mergeBeaconBlockBody{})
 )
 
 // Phase0SignedBeaconBlock is a convenience wrapper around a phase 0 beacon block
@@ -92,6 +95,11 @@ func (_ Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, 
 // PbMergeBlock is a stub.
 func (_ Phase0SignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
 	return nil, errors.New("unsupported merge block")
+}
+
+// PbBlindedMergeBlock is a stub.
+func (_ Phase0SignedBeaconBlock) PbBlindedMergeBlock() (*eth.SignedBlindedBeaconBlockMerge, error) {
+	return nil, errors.New("unsupported blinded merge block")
 }
 
 // Version of the underlying protobuf object.
@@ -274,6 +282,11 @@ func (_ Phase0BeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error)
 	return nil, errors.New("ExecutionPayload is not supported in phase 0 block body")
 }
 
+// ExecutionPayloadHeader is stub.
+func (_ Phase0BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+	return nil, errors.New("Phase0BeaconBlockBody does not implement ExecutionPayloadHeader")
+}
+
 var (
 	// ErrUnsupportedPhase0Block is returned when accessing a phase0 block from an altair wrapped
 	// block.
@@ -364,6 +377,12 @@ func (_ altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 func (_ altairSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
 	return nil, errors.New("unsupported merge block")
 }
+
+// PbBlindedMergeBlock is a stub.
+func (_ altairSignedBeaconBlock) PbBlindedMergeBlock() (*eth.SignedBlindedBeaconBlockMerge, error) {
+	return nil, errors.New("unsupported blinded merge block")
+}
+
 
 // Version of the underlying protobuf object.
 func (_ altairSignedBeaconBlock) Version() int {
@@ -553,6 +572,12 @@ func (_ altairBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error)
 	return nil, errors.New("ExecutionPayload is not supported in altair block body")
 }
 
+// ExecutionPayloadHeader returns the Execution payload header of the block body.
+func (_ altairBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+	return nil, errors.New("altairBeaconBlockBody does not implement ExecutionPayloadHeader")
+}
+
+
 // mergeSignedBeaconBlock is a convenience wrapper around a merge beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
@@ -626,9 +651,14 @@ func (_ mergeSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) 
 	return nil, ErrUnsupportedPhase0Block
 }
 
-// PbAltairBlock returns the underlying protobuf object.
+// PbAltairBlock is a stub.
 func (_ mergeSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, errors.New("unsupported altair block")
+}
+
+// PbBlindedMergeBlock is a stub.
+func (_ mergeSignedBeaconBlock) PbBlindedMergeBlock() (*eth.SignedBlindedBeaconBlockMerge, error) {
+	return nil, errors.New("unsupported blinded merge block")
 }
 
 // Version of the underlying protobuf object.
@@ -817,4 +847,9 @@ func (w mergeBeaconBlockBody) Proto() proto.Message {
 // ExecutionPayload returns the Execution payload of the block body.
 func (w mergeBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
 	return w.b.ExecutionPayload, nil
+}
+
+// ExecutionPayloadHeader is a stub.
+func (_ mergeBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+	return nil, errors.New("mergeBeaconBlockBody does not implement ExecutionPayloadHeader")
 }

@@ -18,6 +18,7 @@ type SignedBeaconBlock interface {
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
 	PbMergeBlock() (*ethpb.SignedBeaconBlockMerge, error)
+	PbBlindedMergeBlock() (*ethpb.SignedBlindedBeaconBlockMerge, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
@@ -56,4 +57,4 @@ type BeaconBlockBody interface {
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
 	ExecutionPayload() (*ethpb.ExecutionPayload, error)
-}
+	ExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)}
