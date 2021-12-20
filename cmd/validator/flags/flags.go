@@ -303,6 +303,12 @@ var (
 		Usage: "Enables more verbose logging for counting down to duty",
 		Value: false,
 	}
+	// BlindedPayloadBuilderFlag enables the use of the blinded payload builder.
+	BlindedPayloadBuilderFlag = &cli.BoolFlag{
+		Name:  "blinded-payload-builder",
+		Usage: "Enables signing of blinding beacon blocks with a blinded payload",
+		Value: false,
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

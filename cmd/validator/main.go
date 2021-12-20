@@ -74,6 +74,7 @@ var appFlags = []cli.Flag{
 	flags.EnableWebFlag,
 	flags.GraffitiFileFlag,
 	flags.EnableDutyCountDown,
+	flags.BlindedPayloadBuilderFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.EnableBackupWebhookFlag,
 	cmd.MinimalConfigFlag,

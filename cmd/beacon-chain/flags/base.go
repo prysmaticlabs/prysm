@@ -19,7 +19,7 @@ var (
 	}
 	// PayloadBuilderProviderFlag provides an HTTP access endpoint to a payload builder RPC end point.
 	PayloadBuilderProviderFlag = &cli.StringFlag{
-		Name:  "--payload-builder",
+		Name:  "payload-builder-web3provider",
 		Usage: "A payload builder provider string http endpoint.",
 		Value: "",
 	}

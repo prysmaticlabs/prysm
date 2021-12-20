@@ -51,6 +51,13 @@ message GenericBeaconBlock {
     }
 }
 
+message GenericBlindedBeaconBlock {
+    oneof block {
+        // Representing a post-Merge fork blinded beacon block.
+        BlindedBeaconBlockMerge merge = 3;
+    }
+}
+
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlock {
     // Beacon chain slot that this block represents.
