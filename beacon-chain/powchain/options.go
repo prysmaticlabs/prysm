@@ -32,6 +32,14 @@ func WithHttpEndpoints(endpointStrings []string) Option {
 	}
 }
 
+// WithBuilderProposerEndpoint sets the endpoint for the beacon chain builder proposer.
+func WithBuilderProposerEndpoint(endpointString string) Option {
+	return func(s *Service) error {
+		s.cfg.builderProposerHttpEndpoint = HttpEndpoint(endpointString)
+		return nil
+	}
+}
+
 // WithDepositContractAddress for the deposit contract.
 func WithDepositContractAddress(addr common.Address) Option {
 	return func(s *Service) error {

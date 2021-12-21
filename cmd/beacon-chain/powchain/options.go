@@ -15,6 +15,7 @@ func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	opts := []powchain.Option{
 		powchain.WithHttpEndpoints(endpoints),
 		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
+		powchain.WithBuilderProposerEndpoint(c.String(flags.PayloadBuilderProviderFlag.Name)),
 	}
 	return opts, nil
 }

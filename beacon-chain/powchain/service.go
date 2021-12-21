@@ -126,16 +126,17 @@ type RPCClient interface {
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	depositContractAddr     common.Address
-	beaconDB                db.HeadAccessDatabase
-	depositCache            *depositcache.DepositCache
-	stateNotifier           statefeed.Notifier
-	stateGen                *stategen.State
-	eth1HeaderReqLimit      uint64
-	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
-	httpEndpoints           []network.Endpoint
-	currHttpEndpoint        network.Endpoint
-	finalizedStateAtStartup state.BeaconState
+	depositContractAddr         common.Address
+	beaconDB                    db.HeadAccessDatabase
+	depositCache                *depositcache.DepositCache
+	stateNotifier               statefeed.Notifier
+	stateGen                    *stategen.State
+	eth1HeaderReqLimit          uint64
+	beaconNodeStatsUpdater      BeaconNodeStatsUpdater
+	httpEndpoints               []network.Endpoint
+	currHttpEndpoint            network.Endpoint
+	builderProposerHttpEndpoint network.Endpoint
+	finalizedStateAtStartup     state.BeaconState
 }
 
 // Service fetches important information about the canonical
