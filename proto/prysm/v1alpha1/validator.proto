@@ -195,6 +195,13 @@ service BeaconNodeValidator {
         };
     }
 
+    rpc ProposeBlindedBeaconBlock(GenericSignedBlindedBeaconBlock) returns (ProposeResponse) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha2/validator/blinded_block"
+            body: "*"
+        };
+    }
+
     // Retrieves the latest valid attestation data to be attested on the beacon chain.
     //
     // The server returns the latest valid data which represents the correct vote

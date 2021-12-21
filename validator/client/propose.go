@@ -566,6 +566,12 @@ func (v *validator) proposeBlockMerge(ctx context.Context, slot types.Slot, pubK
 		log.WithError(err).Warn("Could not get graffiti")
 	}
 
+	// Request and sign blinded blinded block when enabled
+	if v.usePayloadBuilder {
+		v.proposeBlindedBlockMerge(ctx, slot, pubKey, randaoReveal, g)
+		return
+	}
+
 	// Request block from beacon node
 	b, err := v.validatorClient.GetBeaconBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
@@ -665,6 +671,117 @@ func (v *validator) proposeBlockMerge(ctx context.Context, slot types.Slot, pubK
 		"graffiti":        string(mergeBlk.Merge.Body.Graffiti),
 		"fork":            "merge",
 	}).Info("Submitted new block")
+
+	if v.emitAccountMetrics {
+		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
+	}
+}
+
+func (v *validator) proposeBlindedBlockMerge(ctx context.Context, slot types.Slot, pubKey [48]byte, randaoReveal []byte, g []byte) {
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlindedBlockMerge")
+	defer span.End()
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+
+	b, err := v.validatorClient.GetBlindedBeaconBlock(ctx, &ethpb.BlockRequest{
+		Slot:         slot,
+		RandaoReveal: randaoReveal,
+		Graffiti:     g,
+	})
+	if err != nil {
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request blinded block from beacon node")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	mergeBlk, ok := b.Block.(*ethpb.GenericBlindedBeaconBlock_Merge)
+	if !ok {
+		log.Error("Not an Merge block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	// Sign returned block from beacon node
+	wb, err := wrapper.WrappedMergeBlindedBeaconBlock(mergeBlk.Merge)
+	if err != nil {
+		log.WithError(err).Error("Failed to wrap block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wb)
+	if err != nil {
+		log.WithError(err).Error("Failed to sign block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	blk := &ethpb.SignedBlindedBeaconBlockMerge{
+		Block:     mergeBlk.Merge,
+		Signature: sig,
+	}
+
+	signingRoot, err := signing.ComputeSigningRoot(mergeBlk.Merge, domain.SignatureDomain)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		log.WithError(err).Error("Failed to compute signing root for block")
+		return
+	}
+
+	wsb, err := wrapper.WrappedMergeSignedBlindedBeaconBlock(blk)
+	if err != nil {
+		log.WithError(err).Error("Failed to wrap signed block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	if err := v.slashableProposalCheck(ctx, pubKey, wsb, signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, wb, nil),
+		).WithError(err).Error("Failed block slashing protection check")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	// Propose and broadcast block via beacon node
+	blkResp, err := v.validatorClient.ProposeBlindedBeaconBlock(ctx, &ethpb.GenericSignedBlindedBeaconBlock{
+		Block: &ethpb.GenericSignedBlindedBeaconBlock_Merge{Merge: blk},
+	})
+	if err != nil {
+		log.WithError(err).Error("Failed to propose block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	span.AddAttributes(
+		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
+		trace.Int64Attribute("numDeposits", int64(len(mergeBlk.Merge.Body.Deposits))),
+		trace.Int64Attribute("numAttestations", int64(len(mergeBlk.Merge.Body.Attestations))),
+	)
+
+	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	log.WithFields(logrus.Fields{
+		"slot":            mergeBlk.Merge.Slot,
+		"blockRoot":       blkRoot,
+		"numAttestations": len(mergeBlk.Merge.Body.Attestations),
+		"numDeposits":     len(mergeBlk.Merge.Body.Deposits),
+		"graffiti":        string(mergeBlk.Merge.Body.Graffiti),
+		"fork":            "merge",
+	}).Info("Submitted new blinded block")
 
 	if v.emitAccountMetrics {
 		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()

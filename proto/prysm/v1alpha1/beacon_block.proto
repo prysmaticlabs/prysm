@@ -51,6 +51,12 @@ message GenericBeaconBlock {
     }
 }
 
+message GenericSignedBlindedBeaconBlock {
+    oneof block {
+        SignedBlindedBeaconBlockMerge merge = 1;
+    }
+}
+
 message GenericBlindedBeaconBlock {
     oneof block {
         // Representing a post-Merge fork blinded beacon block.

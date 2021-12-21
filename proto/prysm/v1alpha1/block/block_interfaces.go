@@ -57,4 +57,5 @@ type BeaconBlockBody interface {
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
 	ExecutionPayload() (*ethpb.ExecutionPayload, error)
-	ExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)}
+	ExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
+}

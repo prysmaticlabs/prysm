@@ -68,6 +68,7 @@ type ValidatorService struct {
 	grpcHeaders           []string
 	graffiti              []byte
 	graffitiStruct        *graffiti.Graffiti
+	usePayloadBuilder     bool
 }
 
 // Config for the validator service.
@@ -76,6 +77,7 @@ type Config struct {
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	LogDutyCountDown           bool
+	UsePayloadBuilder          bool
 	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
@@ -115,6 +117,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		useWeb:                cfg.UseWeb,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
+		usePayloadBuilder:     cfg.UsePayloadBuilder,
 	}, nil
 }
 
@@ -193,6 +196,7 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
+		usePayloadBuilder:              v.usePayloadBuilder,
 	}
 	// To resolve a race condition at startup due to the interface
 	// nature of the abstracted block type. We initialize

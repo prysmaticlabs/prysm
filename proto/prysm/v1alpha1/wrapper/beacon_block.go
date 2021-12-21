@@ -383,7 +383,6 @@ func (_ altairSignedBeaconBlock) PbBlindedMergeBlock() (*eth.SignedBlindedBeacon
 	return nil, errors.New("unsupported blinded merge block")
 }
 
-
 // Version of the underlying protobuf object.
 func (_ altairSignedBeaconBlock) Version() int {
 	return version.Altair
@@ -576,7 +575,6 @@ func (_ altairBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error)
 func (_ altairBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
 	return nil, errors.New("altairBeaconBlockBody does not implement ExecutionPayloadHeader")
 }
-
 
 // mergeSignedBeaconBlock is a convenience wrapper around a merge beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon
