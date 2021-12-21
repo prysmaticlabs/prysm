@@ -235,7 +235,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	if err := b.initializeMerkleLayers(ctx); err != nil {
 		return [32]byte{}, err
 	}
-	if err := b.recomputeDirtyFields(); err != nil {
+	if err := b.recomputeDirtyFields(ctx); err != nil {
 		return [32]byte{}, err
 	}
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
