@@ -23,7 +23,7 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 		// Verify the Merkle proof.
 		scRoot, err := sc.HashTreeRoot()
 		require.NoError(t, err)
-		proof, err := st.CurrentSyncCommitteeProof()
+		proof, err := st.CurrentSyncCommitteeProof(ctx)
 		require.NoError(t, err)
 		valid := trie.VerifyMerkleProof(htr[:], scRoot[:], v3.CurrentSyncCommitteeGeneralizedIndex(), proof)
 		require.Equal(t, true, valid)
@@ -31,7 +31,7 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 	t.Run("next sync committee", func(t *testing.T) {
 		nextSC, err := st.NextSyncCommittee()
 		require.NoError(t, err)
-		proof, err := st.NextSyncCommitteeProof()
+		proof, err := st.NextSyncCommitteeProof(ctx)
 		require.NoError(t, err)
 
 		// Verify the Merkle proof.
@@ -53,7 +53,7 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 		require.Equal(t, false, valid)
 
 		// Generating a new, valid proof should pass.
-		proof, err = st.NextSyncCommitteeProof()
+		proof, err = st.NextSyncCommitteeProof(ctx)
 		require.NoError(t, err)
 		htr, err = st.HashTreeRoot(ctx)
 		require.NoError(t, err)
@@ -66,7 +66,7 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 		// Verify the Merkle proof.
 		htr, err = st.HashTreeRoot(ctx)
 		require.NoError(t, err)
-		proof, err := st.FinalizedRootProof()
+		proof, err := st.FinalizedRootProof(ctx)
 		require.NoError(t, err)
 		gIndex := v3.FinalizedRootGeneralizedIndex()
 		valid := trie.VerifyMerkleProof(htr[:], finalizedRoot, gIndex, proof)

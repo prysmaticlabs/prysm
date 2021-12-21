@@ -16,16 +16,16 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 	htr, err := st.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	t.Run("current sync committee", func(t *testing.T) {
-		_, err := st.CurrentSyncCommitteeProof()
+		_, err := st.CurrentSyncCommitteeProof(ctx)
 		require.ErrorContains(t, "unsupported", err)
 	})
 	t.Run("next sync committee", func(t *testing.T) {
-		_, err := st.NextSyncCommitteeProof()
+		_, err := st.NextSyncCommitteeProof(ctx)
 		require.ErrorContains(t, "unsupported", err)
 	})
 	t.Run("finalized root", func(t *testing.T) {
 		finalizedRoot := st.FinalizedCheckpoint().Root
-		proof, err := st.FinalizedRootProof()
+		proof, err := st.FinalizedRootProof(ctx)
 		require.NoError(t, err)
 		gIndex := v1.FinalizedRootGeneralizedIndex()
 		valid := trie.VerifyMerkleProof(htr[:], finalizedRoot, gIndex, proof)
