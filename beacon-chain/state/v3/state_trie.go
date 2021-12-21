@@ -237,7 +237,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 // WARNING: Caller must acquire the mutex before using.
 func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 	for field := range b.dirtyFields {
-		root, err := b.rootSelector(ctx, field)
+		root, err := b.rootSelector(field)
 		if err != nil {
 			return err
 		}
