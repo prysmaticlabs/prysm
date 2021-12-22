@@ -235,7 +235,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 
 // Recomputes the Merkle layers for the dirty fields in the state.
 // WARNING: Caller must acquire the mutex before using.
-func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
+func (b *BeaconState) recomputeDirtyFields(_ context.Context) error {
 	for field := range b.dirtyFields {
 		root, err := b.rootSelector(field)
 		if err != nil {
