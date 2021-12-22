@@ -24,14 +24,14 @@ func MergeComplete(st state.BeaconState) (bool, error) {
 	return !isEmptyHeader(h), nil
 }
 
-// MergeBlock returns true if the input block is the terminal merge block.
+// IsMergeBlock returns true if the input block is the terminal merge block.
 // Meaning the header header in beacon state is  `ExecutionPayloadHeader()` (i.e. empty).
 // And the input block has a non-empty header.
 //
 // Spec code:
 // def is_merge_block(state: BeaconState, body: BeaconBlockBody) -> bool:
 //    return not is_merge_complete(state) and body.execution_payload != ExecutionPayload()
-func MergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
+func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
 	mergeComplete, err := MergeComplete(st)
 	if err != nil {
 		return false, err
