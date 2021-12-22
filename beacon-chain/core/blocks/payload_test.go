@@ -338,7 +338,7 @@ func Test_MergeBlock(t *testing.T) {
 			got, err := blocks.IsMergeBlock(st, body)
 			require.NoError(t, err)
 			if got != tt.want {
-				t.Errorf("MergeBlock() got = %v, want %v", got, tt.want)
+				t.Errorf("IsMergeBlock() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
