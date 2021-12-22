@@ -47,6 +47,23 @@ func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error)
 	return !isEmptyPayload(payload), nil
 }
 
+// ExecutionEnabled returns true if the beacon chain can begin executing.
+// Meaning the payload header is beacon state is non-empty or the payload in block body is non-empty.
+//
+// Spec code:
+// def is_execution_enabled(state: BeaconState, body: BeaconBlockBody) -> bool:
+//    return is_merge_block(state, body) or is_merge_complete(state)
+func ExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
+	mergeBlock, err := IsMergeBlock(st, blk)
+	if err != nil {
+		return false, err
+	}
+	if mergeBlock {
+		return true, nil
+	}
+	return MergeComplete(st)
+}
+
 func isEmptyPayload(p *ethpb.ExecutionPayload) bool {
 	if !bytes.Equal(p.ParentHash, make([]byte, fieldparams.RootLength)) {
 		return false
