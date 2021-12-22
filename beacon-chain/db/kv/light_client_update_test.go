@@ -151,7 +151,7 @@ func TestStore_DeleteLightClientUpdates(t *testing.T) {
 		require.NoError(t, db.SaveLightClientUpdate(ctx, u))
 	}
 
-	db.DeleteLightClientUpdates(ctx, []types.Slot{1, 3, 5, 7, 9})
+	require.NoError(t, db.DeleteLightClientUpdates(ctx, []types.Slot{1, 3, 5, 7, 9}))
 	updates, err := db.LightClientUpdates(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(10))
 	require.NoError(t, err)
 	for _, update := range updates {
