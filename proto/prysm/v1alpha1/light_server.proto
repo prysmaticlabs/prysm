@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "proto/eth/ext/options.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+import "proto/prysm/v1alpha1/attestation.proto";
+import "proto/prysm/v1alpha1/beacon_state.proto";
+import "proto/prysm/v1alpha1/beacon_block.proto";
+import "proto/prysm/v1alpha1/sync_committee.proto";
+
+option csharp_namespace = "Ethereum.Eth.V1alpha1";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
+option java_multiple_files = true;
+option java_outer_classname = "LightUpdate";
+option java_package = "org.ethereum.eth.v1alpha1";
+option php_namespace = "Ethereum\\Eth\\v1alpha1";
+
+message LightClientUpdate {
+  // The beacon block header that is attested to by the sync committee.
+  ethereum.eth.v1alpha1.BeaconBlockHeader attested_header = 1;
+
+  // Next sync committee corresponds to the finality_header if finality header is empty.
+  // Otherwise, corresponding to the attested_header
+  ethereum.eth.v1alpha1.SyncCommittee next_sync_committee = 2;
+  repeated bytes next_sync_committee_branch = 3 [(ethereum.eth.ext.ssz_size) = "5,32"];
+
+  ethereum.eth.v1alpha1.BeaconBlockHeader finality_header = 4;
+  repeated bytes finality_branch = 5 [(ethereum.eth.ext.ssz_size) = "6,32"];
+
+  // Committee signs of the attested_header
+  bytes sync_committee_bits = 6 [(ethereum.eth.ext.ssz_size) = "sync_committee_bytes.size", (ethereum.eth.ext.cast_type) = "sync_committee_bits.type"];
+  bytes sync_committee_signature = 7 [(ethereum.eth.ext.ssz_size) = "96"];
+
+  // Fork version for the aggregate signature
+  bytes fork_version = 8 [(ethereum.eth.ext.ssz_size) = "4"];
+}
