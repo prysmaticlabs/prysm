@@ -51,6 +51,11 @@ type ReadOnlyDatabase interface {
 
 	// origin checkpoint sync support
 	OriginBlockRoot(ctx context.Context) ([32]byte, error)
+
+	// Light client server support
+	LightClientUpdates(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.LightClientUpdate, error)
+	LatestLightClientUpdate(ctx context.Context) (*ethpb.LightClientUpdate, error)
+	LatestFinalizedLightClientUpdate(ctx context.Context) (*ethpb.LightClientUpdate, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -77,6 +82,11 @@ type NoHeadAccessDatabase interface {
 	SavePowchainData(ctx context.Context, data *ethpb.ETH1ChainData) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
+
+	// Light client server support
+	SaveLightClientUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error
+	SaveLatestFinalizedLightClientUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error
+	DeleteLightClientUpdates(ctx context.Context, slots []types.Slot) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error
 }

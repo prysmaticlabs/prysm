@@ -176,6 +176,8 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			newStateServiceCompatibleBucket,
 			// Migrations
 			migrationsBucket,
+			// Light client bucket.
+			lightClientUpdateBucket,
 		)
 	}); err != nil {
 		return nil, err

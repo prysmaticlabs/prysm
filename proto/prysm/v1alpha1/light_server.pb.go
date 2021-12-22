@@ -9,8 +9,8 @@ package eth
 import (
 	proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/ptypes/empty"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
+	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
