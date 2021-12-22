@@ -39,11 +39,9 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		)
 	}
 
-	var reqPeriodStartEpoch types.Epoch
-	if req.Epoch == nil {
-		reqPeriodStartEpoch = currentPeriodStartEpoch
-	} else {
-		reqPeriodStartEpoch, err = slots.SyncCommitteePeriodStartEpoch(*req.Epoch)
+	requestNextCommittee := false
+	if req.Epoch != nil {
+		reqPeriodStartEpoch, err := slots.SyncCommitteePeriodStartEpoch(*req.Epoch)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -59,6 +57,10 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 				*req.Epoch, currentEpoch,
 			)
 		}
+		if reqPeriodStartEpoch > currentPeriodStartEpoch {
+			requestNextCommittee = true
+			req.Epoch = &currentPeriodStartEpoch
+		}
 	}
 
 	st, err := bs.stateFromRequest(ctx, &stateRequest{
@@ -71,7 +73,7 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 
 	var committeeIndices []types.ValidatorIndex
 	var committee *ethpbalpha.SyncCommittee
-	if reqPeriodStartEpoch > currentPeriodStartEpoch {
+	if requestNextCommittee {
 		// Get the next sync committee and sync committee indices from the state.
 		committeeIndices, committee, err = nextCommitteeIndicesFromState(st)
 		if err != nil {

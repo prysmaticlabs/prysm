@@ -335,7 +335,7 @@ func Test_MergeBlock(t *testing.T) {
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedMergeBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
-			got, err := blocks.MergeBlock(st, body)
+			got, err := blocks.IsMergeBlock(st, body)
 			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("MergeBlock() got = %v, want %v", got, tt.want)
