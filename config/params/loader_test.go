@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var placeholderFields = []string{"PROPOSER_SCORE_BOOST"}
+var placeholderFields = []string{"PROPOSER_SCORE_BOOST", "UPDATE_TIMEOUT"}
 
 func TestLoadConfigFileMainnet(t *testing.T) {
 	// See https://media.githubusercontent.com/media/ethereum/consensus-spec-tests/master/tests/minimal/config/phase0.yaml
