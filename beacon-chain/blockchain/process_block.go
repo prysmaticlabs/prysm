@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -115,7 +115,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	if postState.Version() == version.Merge {
-		executionEnabled, err := execution.Enabled(postState, body)
+		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
 		if err != nil {
 			return errors.Wrap(err, "could not check if execution is enabled")
 		}
@@ -130,7 +130,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				return errors.Wrap(err, "could not execute payload")
 			}
 
-			mergeBlock, err := execution.IsMergeBlock(postState, body)
+			mergeBlock, err := blocks.IsMergeBlock(postState, body)
 			if err != nil {
 				return errors.Wrap(err, "could not check if merge block is terminal")
 			}
@@ -201,7 +201,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 	// Notify execution layer with fork choice head update if this is post merge block.
 	if postState.Version() == version.Merge {
-		executionEnabled, err := execution.Enabled(postState, body)
+		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
 		if err != nil {
 			return errors.Wrap(err, "could not check if execution is enabled")
 		}

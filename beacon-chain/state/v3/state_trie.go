@@ -177,7 +177,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 			}
 		}
 	}
-
 	stateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {

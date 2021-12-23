@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -231,7 +230,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	// check if the block has execution payload.
 	// If yes, then do few more checks per spec
 	if parentState.Version() == version.Merge {
-		executionEnabled, err := execution.Enabled(parentState, blk.Block().Body())
+		executionEnabled, err := blocks.ExecutionEnabled(parentState, blk.Block().Body())
 		if err != nil {
 			return err
 		}

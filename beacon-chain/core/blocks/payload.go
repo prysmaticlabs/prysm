@@ -155,3 +155,16 @@ func isEmptyHeader(h *ethpb.ExecutionPayloadHeader) bool {
 	}
 	return true
 }
+
+func EmptyPayload() *ethpb.ExecutionPayload {
+	return &ethpb.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptRoot:   make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		Random:        make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+	}
+}

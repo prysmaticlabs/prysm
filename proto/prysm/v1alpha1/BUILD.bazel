@@ -50,11 +50,6 @@ proto_library(
 ##############################################################################
 ssz_gen_marshal(
     name = "ssz_generated_files",
-    exclude_objs = [
-        #"ExecutionPayloadHeader",
-        #"ExecutionPayload",
-        #"Transaction",
-    ],
     go_proto = ":go_proto",
     includes = [
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
@@ -185,7 +180,6 @@ go_library(
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
-        "@com_github_pkg_errors//:go_default_library",
     ],
 )
 

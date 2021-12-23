@@ -17,10 +17,10 @@ var (
 		Name:  "prater",
 		Usage: "Run Prysm configured for the Prater test network",
 	}
-	// MergeTestnet flag for the multiclient Ethereum consensus testnet.
-	MergeTestnet = &cli.BoolFlag{
-		Name:  "merge-testnet",
-		Usage: "Run Prysm configured for the Merge test network",
+	// KintsugiTestnet flag for the multiclient Ethereum consensus testnet.
+	KintsugiTestnet = &cli.BoolFlag{
+		Name:  "kintsugi-testnet",
+		Usage: "Run Prysm configured for the Kintsugi test network",
 	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
@@ -166,7 +166,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableAttestingHistoryDBCache,
 	PyrmontTestnet,
 	PraterTestnet,
-	MergeTestnet,
+	KintsugiTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
@@ -187,7 +187,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	attestationAggregationStrategy,
 	PyrmontTestnet,
 	PraterTestnet,
-	MergeTestnet,
+	KintsugiTestnet,
 	Mainnet,
 	enablePeerScorer,
 	enableLargerGossipHistory,

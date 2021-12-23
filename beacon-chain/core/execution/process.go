@@ -4,67 +4,15 @@ import (
 	"bytes"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
-
-// IsMergeComplete returns true if the transition merge has happened.
-//
-// Spec code:
-// def is_merge_complete(state: BeaconState) -> bool:
-//    return state.latest_execution_payload_header != ExecutionPayloadHeader()
-func IsMergeComplete(st state.BeaconState) (bool, error) {
-	h, err := st.LatestExecutionPayloadHeader()
-	if err != nil {
-		return false, err
-	}
-	// TODO_MERGE: Benchmark this for faster compare.
-	return !ssz.DeepEqual(h, EmptypayloadHeader()), nil
-}
-
-// IsMergeBlock returns true if input block can become the merge block.
-//
-// Spec code:
-// def is_merge_block(state: BeaconState, body: BeaconBlockBody) -> bool:
-//    return not is_merge_complete(state) and body.execution_payload != ExecutionPayload()
-func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
-	mergeComplete, err := IsMergeComplete(st)
-	if err != nil {
-		return false, err
-	}
-	if mergeComplete {
-		return false, err
-	}
-
-	payload, err := blk.ExecutionPayload()
-	if err != nil {
-		return false, err
-	}
-	// TODO_MERGE: Benchmark this for faster compare.
-	return !ssz.DeepEqual(payload, EmptyPayload()), nil
-}
-
-// Enabled returns true if the beacon chain can begin executing.
-//
-// Spec code:
-// def is_execution_enabled(state: BeaconState, body: BeaconBlockBody) -> bool:
-//    return is_merge_block(state, body) or is_merge_complete(state)
-func Enabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
-	mergeBlock, err := IsMergeBlock(st, blk)
-	if err != nil {
-		return false, err
-	}
-	if mergeBlock {
-		return true, nil
-	}
-	return IsMergeComplete(st)
-}
 
 // ProcessPayload processes input execution payload using beacon state.
 //
@@ -122,7 +70,7 @@ func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (stat
 // This validates if payload is valid according to beacon state.
 // These validation steps ONLY apply to post merge.
 func validatePayloadWhenMergeCompletes(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
-	complete, err := IsMergeComplete(st)
+	complete, err := blocks.MergeComplete(st)
 	if err != nil {
 		return err
 	}
@@ -183,44 +131,4 @@ func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
 		TransactionsRoot: txRoot[:],
 	}, nil
-}
-
-// EmptyPayload represents `ExecutionPayload()` in spec.
-func EmptyPayload() *ethpb.ExecutionPayload {
-	return &ethpb.ExecutionPayload{
-		ParentHash:    make([]byte, 32),
-		FeeRecipient:  make([]byte, 20),
-		StateRoot:     make([]byte, 32),
-		ReceiptRoot:   make([]byte, 32),
-		LogsBloom:     make([]byte, 256),
-		Random:        make([]byte, 32),
-		BlockNumber:   0,
-		GasLimit:      0,
-		GasUsed:       0,
-		Timestamp:     0,
-		ExtraData:     nil,
-		BaseFeePerGas: make([]byte, 32),
-		BlockHash:     make([]byte, 32),
-		Transactions:  nil,
-	}
-}
-
-// This represents `ExecutionPayloadHeader()` in spec.
-func EmptypayloadHeader() *ethpb.ExecutionPayloadHeader {
-	return &ethpb.ExecutionPayloadHeader{
-		ParentHash:       make([]byte, 32),
-		FeeRecipient:     make([]byte, 20),
-		StateRoot:        make([]byte, 32),
-		ReceiptRoot:      make([]byte, 32),
-		LogsBloom:        make([]byte, 256),
-		Random:           make([]byte, 32),
-		BlockNumber:      0,
-		GasLimit:         0,
-		GasUsed:          0,
-		Timestamp:        0,
-		ExtraData:        nil,
-		BaseFeePerGas:    make([]byte, 32),
-		BlockHash:        make([]byte, 32),
-		TransactionsRoot: make([]byte, 32),
-	}
 }

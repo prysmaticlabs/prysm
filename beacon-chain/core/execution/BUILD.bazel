@@ -12,6 +12,7 @@ go_library(
         "//testing/spectest:__subpackages__",
     ],
     deps = [
+        "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
@@ -20,7 +21,6 @@ go_library(
         "//encoding/bytesutil:go_default_library",
         "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v1alpha1/block:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
