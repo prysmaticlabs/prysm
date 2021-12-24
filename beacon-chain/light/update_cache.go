@@ -38,10 +38,7 @@ func (s *Service) getUpdate(root []byte) (*ethpb.LightClientUpdate, error) {
 	s.updateCacheLock.RLock()
 	defer s.updateCacheLock.RUnlock()
 
-	item, err := s.updateCache.PopByKey(string(root))
-	if err != nil {
-		return nil, err
-	}
+	item := s.updateCache.RetrieveByKey(string(root))
 	if item == nil {
 		return nil, errors.New("item is nil")
 	}

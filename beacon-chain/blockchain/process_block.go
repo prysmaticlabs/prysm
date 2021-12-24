@@ -210,10 +210,14 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			// Send an event regarding the new finalized checkpoint over a common event feed.
 			s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 				Type: statefeed.FinalizedCheckpoint,
-				Data: &ethpbv1.EventFinalizedCheckpoint{
-					Epoch: postState.FinalizedCheckpoint().Epoch,
-					Block: postState.FinalizedCheckpoint().Root,
-					State: signed.Block().StateRoot(),
+				Data: &statefeed.NewFinalizedData{
+					SignedBlock: signed,
+					PostState:   postState,
+					FinalizedInfo: &ethpbv1.EventFinalizedCheckpoint{
+						Epoch: postState.FinalizedCheckpoint().Epoch,
+						Block: postState.FinalizedCheckpoint().Root,
+						State: signed.Block().StateRoot(),
+					},
 				},
 			})
 
@@ -267,7 +271,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		Messages:   [][32]byte{},
 	}
 	var set *bls.SignatureBatch
-	boundaries := make(map[[32]byte]state.BeaconState)
+	boundaryStates := make(map[[32]byte]state.BeaconState)
+	boundaryBlks := make(map[[32]byte]block.SignedBeaconBlock)
 	for i, b := range blks {
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
@@ -275,7 +280,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		}
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
-			boundaries[blockRoots[i]] = preState.Copy()
+			boundaryBlks[blockRoots[i]] = b
+			boundaryStates[blockRoots[i]] = preState.Copy()
 			if err := s.handleEpochBoundary(ctx, preState); err != nil {
 				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
 			}
@@ -291,10 +297,21 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	if !verify {
 		return nil, nil, errors.New("batch block signature verification failed")
 	}
-	for r, st := range boundaries {
+	for r, st := range boundaryStates {
 		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 			return nil, nil, err
 		}
+		blk := boundaryBlks[r]
+		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{
+				Slot:        blk.Block().Slot(),
+				BlockRoot:   r,
+				SignedBlock: blk,
+				PostState:   st,
+				Verified:    true,
+			},
+		})
 	}
 	// Also saves the last post state which to be used as pre state for the next batch.
 	lastB := blks[len(blks)-1]
@@ -346,6 +363,23 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		}
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = fCheckpoint
+
+		st, err := s.cfg.StateGen.StateByRoot(ctx, blockRoot)
+		if err != nil {
+			return err
+		}
+		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.FinalizedCheckpoint,
+			Data: &statefeed.NewFinalizedData{
+				SignedBlock: signed,
+				PostState:   st,
+				FinalizedInfo: &ethpbv1.EventFinalizedCheckpoint{
+					Epoch: fCheckpoint.Epoch,
+					Block: fCheckpoint.Root,
+					State: signed.Block().StateRoot(),
+				},
+			},
+		})
 	}
 	return nil
 }

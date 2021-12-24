@@ -270,12 +270,14 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedCheckpoint := &ethpb.EventFinalizedCheckpoint{
-			Block: make([]byte, 32),
-			State: make([]byte, 32),
-			Epoch: 8,
+		wantedCheckpoint := &statefeed.NewFinalizedData{
+			FinalizedInfo: &ethpb.EventFinalizedCheckpoint{
+				Block: make([]byte, 32),
+				State: make([]byte, 32),
+				Epoch: 8,
+			},
 		}
-		genericResponse, err := anypb.New(wantedCheckpoint)
+		genericResponse, err := anypb.New(wantedCheckpoint.FinalizedInfo)
 		require.NoError(t, err)
 		wantedMessage := &gateway.EventSource{
 			Event: FinalizedCheckpointTopic,

@@ -194,11 +194,11 @@ func handleStateEvents(
 		if _, ok := requestedTopics[FinalizedCheckpointTopic]; !ok {
 			return nil
 		}
-		finalizedCheckpoint, ok := event.Data.(*ethpb.EventFinalizedCheckpoint)
+		data, ok := event.Data.(*statefeed.NewFinalizedData)
 		if !ok {
 			return nil
 		}
-		return streamData(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
+		return streamData(stream, FinalizedCheckpointTopic, data.FinalizedInfo)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil

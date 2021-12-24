@@ -6,10 +6,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func (s *Service) subscribeEvents(ctx context.Context) {
@@ -24,13 +25,23 @@ func (s *Service) subscribeEvents(ctx context.Context) {
 				if !ok {
 					continue
 				}
+				if d.SignedBlock == nil || d.PostState == nil {
+					continue
+				}
 				if err := s.newBlock(ctx, d.BlockRoot, d.SignedBlock, d.PostState); err != nil {
 					log.WithError(err).Error("Could not process new block")
 					continue
 				}
 			} else if ev.Type == statefeed.FinalizedCheckpoint {
-				_, ok := ev.Data.(*ethpbv1.EventFinalizedCheckpoint)
+				d, ok := ev.Data.(*statefeed.NewFinalizedData)
 				if !ok {
+					continue
+				}
+				if d.SignedBlock == nil || d.PostState == nil {
+					continue
+				}
+				if err := s.newFinalized(ctx, d.SignedBlock, d.PostState); err != nil {
+					log.WithError(err).Error("Could not process new finalized")
 					continue
 				}
 			}
@@ -45,7 +56,7 @@ func (s *Service) subscribeEvents(ctx context.Context) {
 }
 
 func (s *Service) newBlock(ctx context.Context, r [32]byte, blk block.SignedBeaconBlock, st state.BeaconState) error {
-	if st.Version() == version.Phase0 {
+	if st.Version() == version.Phase0 || blk.Version() == version.Phase0 {
 		return nil
 	}
 	h, err := blk.Header()
@@ -62,6 +73,7 @@ func (s *Service) newBlock(ctx context.Context, r [32]byte, blk block.SignedBeac
 	}
 	update := &ethpb.LightClientUpdate{
 		AttestedHeader:          h.Header,
+		FinalityHeader:          util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
 		NextSyncCommittee:       com,
 		NextSyncCommitteeBranch: b,
 		ForkVersion:             st.Fork().CurrentVersion,
@@ -86,6 +98,34 @@ func (s *Service) newBlock(ctx context.Context, r [32]byte, blk block.SignedBeac
 	return s.cfg.BeaconDB.SaveLightClientUpdate(ctx, update)
 }
 
-func (s *Service) newFinalized(ctx context.Context) {
+func (s *Service) newFinalized(ctx context.Context, blk block.SignedBeaconBlock, st state.BeaconState) error {
+	if blk.Version() == version.Phase0 {
+		return nil
+	}
+	parentRoot := blk.Block().ParentRoot()
+	update, err := s.getUpdate(parentRoot)
+	if err != nil {
+		return err
+	}
+	if update == nil {
+		return nil
+	}
 
+	fb, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(st.FinalizedCheckpoint().Root))
+	if err != nil {
+		return err
+	}
+	fh, err := fb.Header()
+	if err != nil {
+		return err
+	}
+	update.FinalityHeader = fh.Header
+
+	fp, err := st.FinalizedRootProof()
+	if err != nil {
+		return err
+	}
+	update.FinalityBranch = fp
+
+	return s.cfg.BeaconDB.SaveLightClientUpdate(ctx, update)
 }

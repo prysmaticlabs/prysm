@@ -8,6 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
@@ -61,4 +62,13 @@ type InitializedData struct {
 	StartTime time.Time
 	// GenesisValidatorsRoot represents state.validators.HashTreeRoot().
 	GenesisValidatorsRoot []byte
+}
+
+type NewFinalizedData struct {
+	// SignedBlock is the processed block which triggers new finalized checkpoint.
+	SignedBlock block.SignedBeaconBlock
+	// PostState is the beacon state after applying the block.
+	PostState state.BeaconState
+	// FinalizedInfo contains finalized epoch, block root and state root.
+	FinalizedInfo *ethpbv1.EventFinalizedCheckpoint
 }
