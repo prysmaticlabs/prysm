@@ -171,6 +171,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			Slot:        signed.Block().Slot(),
 			BlockRoot:   blockRoot,
 			SignedBlock: signed,
+			PostState:   postState,
 			Verified:    true,
 		},
 	})

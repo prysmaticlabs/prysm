@@ -30,10 +30,8 @@ message LightClientUpdate {
   ethereum.eth.v1alpha1.BeaconBlockHeader finality_header = 4;
   repeated bytes finality_branch = 5 [(ethereum.eth.ext.ssz_size) = "6,32"];
 
-  // Committee signs of the attested_header
-  bytes sync_committee_bits = 6 [(ethereum.eth.ext.ssz_size) = "sync_committee_bytes.size", (ethereum.eth.ext.cast_type) = "sync_committee_bits.type"];
-  bytes sync_committee_signature = 7 [(ethereum.eth.ext.ssz_size) = "96"];
+  ethereum.eth.v1alpha1.SyncAggregate sync_aggregate = 6;
 
   // Fork version for the aggregate signature
-  bytes fork_version = 8 [(ethereum.eth.ext.ssz_size) = "4"];
+  bytes fork_version = 7 [(ethereum.eth.ext.ssz_size) = "4"];
 }

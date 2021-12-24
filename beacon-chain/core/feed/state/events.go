@@ -7,6 +7,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
@@ -38,6 +39,8 @@ type BlockProcessedData struct {
 	SignedBlock block.SignedBeaconBlock
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
+	// PostState is the beacon state after applying the block.
+	PostState state.BeaconState
 }
 
 // ChainStartedData is the data sent with ChainStarted events.
