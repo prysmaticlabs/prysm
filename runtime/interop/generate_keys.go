@@ -2,9 +2,10 @@ package interop
 
 import (
 	"encoding/binary"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"math/big"
 	"sync"
+
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
