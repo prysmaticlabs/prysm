@@ -20,7 +20,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
 	lowestSignedSlot := types.Slot(10)
-	pubKeyBytes := [48]byte{}
+	pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
 
 	// We save a proposal at the lowest signed slot in the DB.
@@ -88,7 +88,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 		Signature: params.BeaconConfig().EmptySignature[:],
 	})
 
-	pubKeyBytes := [48]byte{}
+	pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())
 
 	// We save a proposal at slot 1 as our lowest proposal.
@@ -99,7 +99,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	dummySigningRoot := [32]byte{1}
 	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, 10, dummySigningRoot[:])
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	sBlock := wrapper.WrappedPhase0SignedBeaconBlock(blk)
 	blockHdr, err := block.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
@@ -151,7 +151,7 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	defer reset()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
 	blk := util.NewBeaconBlock()

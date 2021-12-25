@@ -420,9 +420,9 @@ func (a *AttestationData) UnmarshalSSZ(buf []byte) error {
 
 	// Field (2) 'BeaconBlockRoot'
 	if cap(a.BeaconBlockRoot) == 0 {
-		a.BeaconBlockRoot = make([]byte, 0, len(buf[16:48]))
+		a.BeaconBlockRoot = make([]byte, 0, len(buf[16:fieldparams.BLSPubkeyLength]))
 	}
-	a.BeaconBlockRoot = append(a.BeaconBlockRoot, buf[16:48]...)
+	a.BeaconBlockRoot = append(a.BeaconBlockRoot, buf[16:fieldparams.BLSPubkeyLength]...)
 
 	// Field (3) 'Source'
 	if a.Source == nil {
@@ -620,9 +620,9 @@ func (b *BeaconBlock) UnmarshalSSZ(buf []byte) error {
 
 	// Field (2) 'ParentRoot'
 	if cap(b.ParentRoot) == 0 {
-		b.ParentRoot = make([]byte, 0, len(buf[16:48]))
+		b.ParentRoot = make([]byte, 0, len(buf[16:fieldparams.BLSPubkeyLength]))
 	}
-	b.ParentRoot = append(b.ParentRoot, buf[16:48]...)
+	b.ParentRoot = append(b.ParentRoot, buf[16:fieldparams.BLSPubkeyLength]...)
 
 	// Field (3) 'StateRoot'
 	if cap(b.StateRoot) == 0 {
@@ -876,9 +876,9 @@ func (b *BeaconBlockAltair) UnmarshalSSZ(buf []byte) error {
 
 	// Field (2) 'ParentRoot'
 	if cap(b.ParentRoot) == 0 {
-		b.ParentRoot = make([]byte, 0, len(buf[16:48]))
+		b.ParentRoot = make([]byte, 0, len(buf[16:fieldparams.BLSPubkeyLength]))
 	}
-	b.ParentRoot = append(b.ParentRoot, buf[16:48]...)
+	b.ParentRoot = append(b.ParentRoot, buf[16:fieldparams.BLSPubkeyLength]...)
 
 	// Field (3) 'StateRoot'
 	if cap(b.StateRoot) == 0 {
@@ -8477,9 +8477,9 @@ func (v *Validator) UnmarshalSSZ(buf []byte) error {
 
 	// Field (0) 'PublicKey'
 	if cap(v.PublicKey) == 0 {
-		v.PublicKey = make([]byte, 0, len(buf[0:48]))
+		v.PublicKey = make([]byte, 0, len(buf[0:fieldparams.BLSPubkeyLength]))
 	}
-	v.PublicKey = append(v.PublicKey, buf[0:48]...)
+	v.PublicKey = append(v.PublicKey, buf[0:fieldparams.BLSPubkeyLength]...)
 
 	// Field (1) 'WithdrawalCredentials'
 	if cap(v.WithdrawalCredentials) == 0 {

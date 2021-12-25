@@ -56,7 +56,7 @@ func setupGenesisState(tb testing.TB, count uint64) *ethpb.BeaconState {
 	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		genesisState.Validators = append(genesisState.Validators, &ethpb.Validator{
@@ -77,7 +77,7 @@ func setupGenesisState(tb testing.TB, count uint64) *ethpb.BeaconState {
 func BenchmarkCloneValidators_Proto(b *testing.B) {
 	b.StopTimer()
 	validators := make([]*ethpb.Validator, 16384)
-	somePubKey := [48]byte{1, 2, 3}
+	somePubKey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3}
 	someRoot := [32]byte{3, 4, 5}
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -100,7 +100,7 @@ func BenchmarkCloneValidators_Proto(b *testing.B) {
 func BenchmarkCloneValidators_Manual(b *testing.B) {
 	b.StopTimer()
 	validators := make([]*ethpb.Validator, 16384)
-	somePubKey := [48]byte{1, 2, 3}
+	somePubKey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3}
 	someRoot := [32]byte{3, 4, 5}
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{

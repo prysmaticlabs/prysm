@@ -203,7 +203,7 @@ func TestKeyReload_ActiveKey(t *testing.T) {
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Keymanager: km}
 	go func() {
-		km.SimulateAccountChanges([][48]byte{testutil.ActiveKey})
+		km.SimulateAccountChanges([][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey})
 
 		cancel()
 	}()
@@ -219,7 +219,7 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Keymanager: km}
 	go func() {
-		km.SimulateAccountChanges(make([][48]byte, 0))
+		km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
 
 		cancel()
 	}()

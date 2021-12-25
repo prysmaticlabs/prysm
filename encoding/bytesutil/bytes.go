@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
@@ -110,8 +111,8 @@ func ToBytes32(x []byte) [32]byte {
 // ToBytes48 is a convenience method for converting a byte slice to a fix
 // sized 48 byte array. This method will truncate the input if it is larger
 // than 48 bytes.
-func ToBytes48(x []byte) [48]byte {
-	var y [48]byte
+func ToBytes48(x []byte) [fieldparams.BLSPubkeyLength]byte {
+	var y [fieldparams.BLSPubkeyLength]byte
 	copy(y[:], x)
 	return y
 }
@@ -160,13 +161,13 @@ func FromBool(x bool) byte {
 
 // FromBytes48 is a convenience method for converting a fixed-size byte array
 // to a byte slice.
-func FromBytes48(x [48]byte) []byte {
+func FromBytes48(x [fieldparams.BLSPubkeyLength]byte) []byte {
 	return x[:]
 }
 
 // FromBytes48Array is a convenience method for converting an array of
 // fixed-size byte arrays to an array of byte slices.
-func FromBytes48Array(x [][48]byte) [][]byte {
+func FromBytes48Array(x [][fieldparams.BLSPubkeyLength]byte) [][]byte {
 	y := make([][]byte, len(x))
 	for i := range x {
 		y[i] = x[i][:]

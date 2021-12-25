@@ -52,7 +52,7 @@ func TestReadOnlyValidator_ExitEpoch(t *testing.T) {
 }
 
 func TestReadOnlyValidator_PublicKey(t *testing.T) {
-	key := [48]byte{0xFA, 0xCC}
+	key := [fieldparams.BLSPubkeyLength]byte{0xFA, 0xCC}
 	v, err := v1.NewValidator(&ethpb.Validator{PublicKey: key[:]})
 	require.NoError(t, err)
 	assert.Equal(t, key, v.PublicKey())

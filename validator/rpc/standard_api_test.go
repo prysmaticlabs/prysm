@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
@@ -157,7 +158,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		password := "12345678"
 		keystores := make([]*keymanager.Keystore, numKeystores)
 		passwords := make([]string, numKeystores)
-		publicKeys := make([][48]byte, numKeystores)
+		publicKeys := make([][fieldparams.BLSPubkeyLength]byte, numKeystores)
 		for i := 0; i < numKeystores; i++ {
 			keystores[i] = createRandomKeystore(t, password)
 			pubKey, err := hex.DecodeString(keystores[i].Pubkey)
@@ -261,7 +262,7 @@ func TestServer_DeleteKeystores(t *testing.T) {
 	})
 
 	// For ease of test setup, we'll give each public key a string identifier.
-	publicKeysWithId := map[string][48]byte{
+	publicKeysWithId := map[string][fieldparams.BLSPubkeyLength]byte{
 		"a": publicKeys[0],
 		"b": publicKeys[1],
 		"c": publicKeys[2],
