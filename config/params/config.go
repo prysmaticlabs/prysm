@@ -133,8 +133,8 @@ type BeaconChainConfig struct {
 	GenesisForkVersion          []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`  // GenesisForkVersion is used to track fork version between state transitions.
 	AltairForkVersion           []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`   // AltairForkVersion is used to represent the fork version for altair.
 	AltairForkEpoch             types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`     // AltairForkEpoch is used to represent the assigned fork epoch for altair.
-	MergeForkVersion            []byte                  `yaml:"MERGE_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for the merge.
-	MergeForkEpoch              types.Epoch             `yaml:"MERGE_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for the merge.
+	MergeForkVersion            []byte                  `yaml:"BELLATRIX_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for the merge.
+	MergeForkEpoch              types.Epoch             `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for the merge.
 	ShardingForkVersion         []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
 	ShardingForkEpoch           types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	ForkVersionSchedule         map[[4]byte]types.Epoch // Schedule of fork epochs by version.

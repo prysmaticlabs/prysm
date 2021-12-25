@@ -191,9 +191,9 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("AltairForkVersion")), v)
 		case "ALTAIR_FORK_EPOCH":
 			assert.Equal(t, "100", v)
-		case "MERGE_FORK_VERSION":
+		case "BELLATRIX_FORK_VERSION":
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("MergeForkVersion")), v)
-		case "MERGE_FORK_EPOCH":
+		case "BELLATRIX_FORK_EPOCH":
 			assert.Equal(t, "101", v)
 		case "SHARDING_FORK_VERSION":
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("ShardingForkVersion")), v)
