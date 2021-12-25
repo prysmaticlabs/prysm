@@ -47,8 +47,8 @@ func TestGetSpec(t *testing.T) {
 	config.GenesisForkVersion = []byte("GenesisForkVersion")
 	config.AltairForkVersion = []byte("AltairForkVersion")
 	config.AltairForkEpoch = 100
-	config.MergeForkVersion = []byte("MergeForkVersion")
-	config.MergeForkEpoch = 101
+	config.BellatrixForkVersion = []byte("BellatrixForkVersion")
+	config.BellatrixForkEpoch = 101
 	config.ShardingForkVersion = []byte("ShardingForkVersion")
 	config.ShardingForkEpoch = 102
 	config.MinAnchorPowBlockDifficulty = 1000
@@ -192,7 +192,7 @@ func TestGetSpec(t *testing.T) {
 		case "ALTAIR_FORK_EPOCH":
 			assert.Equal(t, "100", v)
 		case "BELLATRIX_FORK_VERSION":
-			assert.Equal(t, "0x"+hex.EncodeToString([]byte("MergeForkVersion")), v)
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("BellatrixForkVersion")), v)
 		case "BELLATRIX_FORK_EPOCH":
 			assert.Equal(t, "101", v)
 		case "SHARDING_FORK_VERSION":
