@@ -60,7 +60,7 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 	return epochStart && altairEpoch
 }
 
-// CanUpgradeToMerge returns true if the input `slot` can upgrade to Merge fork.
+// CanUpgradeToMerge returns true if the input `slot` can upgrade to Bellatrix fork.
 //
 // Spec code:
 // If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == BELLATRIX_FORK_EPOCH
