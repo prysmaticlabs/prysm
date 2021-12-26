@@ -355,5 +355,5 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	require.Equal(t, false, s.isInitialized())
+	require.Equal(t, true, s.isInitialized())
 }
