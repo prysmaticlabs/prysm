@@ -28,7 +28,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	mergeState, err := v3.InitializeFromProto(&ethpb.BeaconStateMerge{
+	mergeState, err := v3.InitializeFromProto(&ethpb.BeaconStateBellatrix{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,

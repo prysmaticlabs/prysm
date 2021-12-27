@@ -505,7 +505,7 @@ func testStateMerge() (state.BeaconState, error) {
 		}
 		return b
 	}
-	return v3.InitializeFromProto(&ethpb.BeaconStateMerge{
+	return v3.InitializeFromProto(&ethpb.BeaconStateBellatrix{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},

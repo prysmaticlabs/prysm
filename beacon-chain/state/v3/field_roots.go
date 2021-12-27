@@ -11,7 +11,7 @@ import (
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
 //nolint:deadcode
-func computeFieldRoots(ctx context.Context, state *ethpb.BeaconStateMerge) ([][]byte, error) {
+func computeFieldRoots(ctx context.Context, state *ethpb.BeaconStateBellatrix) ([][]byte, error) {
 	if features.Get().EnableSSZCache {
 		return stateutil.CachedHasher.ComputeFieldRootsWithHasherMerge(ctx, state)
 	}

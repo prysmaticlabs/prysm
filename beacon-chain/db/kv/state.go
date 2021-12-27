@@ -161,7 +161,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 				return err
 			}
 			validators = pbState.Validators
-		case *ethpb.BeaconStateMerge:
+		case *ethpb.BeaconStateBellatrix:
 			pbState, err := v3.ProtobufBeaconState(st.InnerStateUnsafe())
 			if err != nil {
 				return err
@@ -245,7 +245,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 				if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
 					return err
 				}
-			case *ethpb.BeaconStateMerge:
+			case *ethpb.BeaconStateBellatrix:
 				pbState, err := v3.ProtobufBeaconState(rawType)
 				if err != nil {
 					return err
@@ -416,7 +416,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 	switch {
 	case hasMergeKey(enc):
 		// Marshal state bytes to altair beacon state.
-		protoState := &ethpb.BeaconStateMerge{}
+		protoState := &ethpb.BeaconStateBellatrix{}
 		if err := protoState.UnmarshalSSZ(enc[len(mergeKey):]); err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal encoding for altair")
 		}
@@ -481,8 +481,8 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 			return nil, err
 		}
 		return snappy.Encode(nil, append(altairKey, rawObj...)), nil
-	case *ethpb.BeaconStateMerge:
-		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconStateMerge)
+	case *ethpb.BeaconStateBellatrix:
+		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}

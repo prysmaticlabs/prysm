@@ -14,14 +14,14 @@ func TestDeterministicGenesisStateMerge(t *testing.T) {
 	require.Equal(t, params.BeaconConfig().MaxCommitteesPerSlot, uint64(st.NumValidators()))
 }
 
-func TestGenesisBeaconStateMerge(t *testing.T) {
+func TestGenesisBeaconStateBellatrix(t *testing.T) {
 	ctx := context.Background()
 	deposits, _, err := DeterministicDepositsAndKeys(params.BeaconConfig().MaxCommitteesPerSlot)
 	require.NoError(t, err)
 	eth1Data, err := DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	gt := uint64(10000)
-	st, err := genesisBeaconStateMerge(ctx, deposits, gt, eth1Data)
+	st, err := genesisBeaconStateBellatrix(ctx, deposits, gt, eth1Data)
 	require.NoError(t, err)
 	require.Equal(t, gt, st.GenesisTime())
 	require.Equal(t, params.BeaconConfig().MaxCommitteesPerSlot, uint64(st.NumValidators()))

@@ -187,7 +187,7 @@ message SyncAggregatorSelectionData {
   uint64 subcommittee_index = 2;
 }
 
-message BeaconStateMerge {
+message BeaconStateBellatrix {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
