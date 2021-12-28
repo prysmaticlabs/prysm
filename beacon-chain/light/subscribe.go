@@ -28,7 +28,7 @@ func (s *Service) subscribeEvents(ctx context.Context) {
 		select {
 		case slot := <-slotTicker.C():
 			slotsPerPeriod := params.BeaconConfig().SlotsPerEpoch * types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)
-			if slot % slotsPerPeriod == 0 {
+			if slot%slotsPerPeriod == 0 {
 				if err := s.pruneUpdates(ctx, slot); err != nil {
 					log.WithError(err).Error("Could not prune updates")
 					continue
@@ -73,7 +73,7 @@ func (s *Service) subscribeEvents(ctx context.Context) {
 
 func (s *Service) pruneUpdates(ctx context.Context, startSlot types.Slot) error {
 	slotsPerSyncPeriod := params.BeaconConfig().SlotsPerEpoch * types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)
-	endSlot := startSlot + slotsPerSyncPeriod  - 1
+	endSlot := startSlot + slotsPerSyncPeriod - 1
 	f := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	updates, err := s.cfg.BeaconDB.LightClientUpdates(ctx, f)
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *Service) pruneUpdates(ctx context.Context, startSlot types.Slot) error 
 	log.WithFields(logrus.Fields{
 		"startSlot": startSlot,
 		"endSlot":   endSlot,
-		"count":      len(updates),
+		"count":     len(updates),
 	}).Info("Pruning updates")
 
 	var hasFinalized bool
@@ -92,12 +92,12 @@ func (s *Service) pruneUpdates(ctx context.Context, startSlot types.Slot) error 
 	var bestFinalizedUpdateBitCount uint64
 	var bestNonFinalizedUpdateSlot types.Slot
 	var bestNonFinalizedUpdateBitCount uint64
-	for i := len(updates)-1; i>=0; i-- {
+	for i := len(updates) - 1; i >= 0; i-- {
 		u := updates[i]
 		log.WithFields(logrus.Fields{
-			"slot": u.AttestedHeader.Slot,
-			"finalityHeaderSlot":   u.FinalityHeader.Slot,
-			"AggBitCount":      u.SyncAggregate.SyncCommitteeBits.Count(),
+			"slot":               u.AttestedHeader.Slot,
+			"finalityHeaderSlot": u.FinalityHeader.Slot,
+			"AggBitCount":        u.SyncAggregate.SyncCommitteeBits.Count(),
 		}).Info("Pruning update")
 
 		if !emptyHeader(u.FinalityHeader) {
@@ -110,7 +110,7 @@ func (s *Service) pruneUpdates(ctx context.Context, startSlot types.Slot) error 
 					break
 				}
 			}
-		    continue
+			continue
 		}
 
 		if !hasFinalized && !hasBestNonFinalized {
@@ -126,14 +126,13 @@ func (s *Service) pruneUpdates(ctx context.Context, startSlot types.Slot) error 
 	}
 
 	log.WithFields(logrus.Fields{
-		"hasFinalized": hasFinalized,
-		"hasBestNonFinalized":   hasBestNonFinalized,
-		"bestFinalizedUpdateSlot":      bestFinalizedUpdateSlot,
-		"bestFinalizedUpdateBitCount": bestFinalizedUpdateBitCount,
-		"bestNonFinalizedUpdateSlot":      bestNonFinalizedUpdateSlot,
+		"hasFinalized":                   hasFinalized,
+		"hasBestNonFinalized":            hasBestNonFinalized,
+		"bestFinalizedUpdateSlot":        bestFinalizedUpdateSlot,
+		"bestFinalizedUpdateBitCount":    bestFinalizedUpdateBitCount,
+		"bestNonFinalizedUpdateSlot":     bestNonFinalizedUpdateSlot,
 		"bestNonFinalizedUpdateBitCount": bestNonFinalizedUpdateBitCount,
 	}).Info("Deleting updates from db")
-
 
 	if hasFinalized {
 		slots := make([]types.Slot, startSlot-endSlot+1)
@@ -158,7 +157,7 @@ func (s *Service) pruneUpdates(ctx context.Context, startSlot types.Slot) error 
 
 		slots = make([]types.Slot, endSlot-bestFinalizedUpdateSlot)
 		i = 0
-		for slot := bestFinalizedUpdateSlot+1; slot <= endSlot; slot++ {
+		for slot := bestFinalizedUpdateSlot + 1; slot <= endSlot; slot++ {
 			slots[i] = slot
 			i++
 		}
@@ -178,7 +177,7 @@ func (s *Service) pruneUpdates(ctx context.Context, startSlot types.Slot) error 
 
 		slots = make([]types.Slot, endSlot-bestNonFinalizedUpdateSlot)
 		i = 0
-		for slot := bestNonFinalizedUpdateSlot+1; slot <= endSlot; slot++ {
+		for slot := bestNonFinalizedUpdateSlot + 1; slot <= endSlot; slot++ {
 			slots[i] = slot
 			i++
 		}

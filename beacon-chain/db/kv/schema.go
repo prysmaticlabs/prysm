@@ -7,18 +7,18 @@ package kv
 // it easy to scan for keys that have a certain shard number as a prefix and return those
 // corresponding attestations.
 var (
-	attestationsBucket      = []byte("attestations")
-	blocksBucket            = []byte("blocks")
-	stateBucket             = []byte("state")
-	stateSummaryBucket      = []byte("state-summary")
-	proposerSlashingsBucket = []byte("proposer-slashings")
-	attesterSlashingsBucket = []byte("attester-slashings")
-	voluntaryExitsBucket    = []byte("voluntary-exits")
-	chainMetadataBucket     = []byte("chain-metadata")
-	checkpointBucket        = []byte("check-point")
-	powchainBucket          = []byte("powchain")
-	stateValidatorsBucket   = []byte("state-validators")
-	lightClientUpdateBucket = []byte("light-client-update")
+	attestationsBucket               = []byte("attestations")
+	blocksBucket                     = []byte("blocks")
+	stateBucket                      = []byte("state")
+	stateSummaryBucket               = []byte("state-summary")
+	proposerSlashingsBucket          = []byte("proposer-slashings")
+	attesterSlashingsBucket          = []byte("attester-slashings")
+	voluntaryExitsBucket             = []byte("voluntary-exits")
+	chainMetadataBucket              = []byte("chain-metadata")
+	checkpointBucket                 = []byte("check-point")
+	powchainBucket                   = []byte("powchain")
+	stateValidatorsBucket            = []byte("state-validators")
+	lightClientUpdateBucket          = []byte("light-client-update")
 	lightClientFinalizedUpdateBucket = []byte("light-client-finalized-update")
 
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.

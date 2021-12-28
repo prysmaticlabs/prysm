@@ -119,7 +119,7 @@ func (s *Store) LatestLightClientUpdate(ctx context.Context) (*ethpb.LightClient
 
 // LatestFinalizedLightClientUpdate retrieves latest finalized light client update from the database.
 func (s *Store) LatestFinalizedLightClientUpdate(ctx context.Context) (*ethpb.LightClientUpdate, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LatestFinalizedLightClientUpdate")
+	_, span := trace.StartSpan(ctx, "BeaconDB.LatestFinalizedLightClientUpdate")
 	defer span.End()
 
 	var enc []byte
@@ -142,7 +142,7 @@ func (s *Store) LatestFinalizedLightClientUpdate(ctx context.Context) (*ethpb.Li
 
 // DeleteLightClientUpdates deletes light client updates from the database using input slots.
 func (s *Store) DeleteLightClientUpdates(ctx context.Context, slots []types.Slot) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteLightClientUpdates")
+	_, span := trace.StartSpan(ctx, "BeaconDB.DeleteLightClientUpdates")
 	defer span.End()
 
 	return s.db.Update(func(tx *bolt.Tx) error {
@@ -159,7 +159,7 @@ func (s *Store) DeleteLightClientUpdates(ctx context.Context, slots []types.Slot
 
 // DeleteLightClientFinalizedUpdates deletes light client finalized updates from the database using input slots.
 func (s *Store) DeleteLightClientFinalizedUpdates(ctx context.Context, slots []types.Slot) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteLightClientFinalizedUpdates")
+	_, span := trace.StartSpan(ctx, "BeaconDB.DeleteLightClientFinalizedUpdates")
 	defer span.End()
 
 	return s.db.Update(func(tx *bolt.Tx) error {

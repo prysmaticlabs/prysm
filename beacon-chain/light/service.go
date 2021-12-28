@@ -28,7 +28,7 @@ type Service struct {
 	cancel          context.CancelFunc
 	updateCache     *queue.PriorityQueue
 	updateCacheLock sync.RWMutex
-	genesisTime time.Time
+	genesisTime     time.Time
 }
 
 // New instantiates a new light service from configuration values.
@@ -54,7 +54,7 @@ func (s *Service) Stop() error {
 }
 
 // Status of the slasher service.
-func (_ *Service) Status() error {
+func (*Service) Status() error {
 	return nil
 }
 
@@ -91,4 +91,3 @@ func (s *Service) waitForChainInitialization() {
 		}
 	}
 }
-
