@@ -33,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/validator"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/light"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
@@ -290,6 +291,12 @@ func (s *Service) Start() {
 		BlockNotifier:     s.cfg.BlockNotifier,
 		OperationNotifier: s.cfg.OperationNotifier,
 	})
+	ethpbv1alpha1.RegisterLightUpdateServiceServer(s.grpcServer, &light.Server{
+		Ctx:         s.ctx,
+		BeaconDB:    s.cfg.BeaconDB,
+		TimeFetcher: s.cfg.GenesisTimeFetcher,
+	})
+
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debugv1alpha1.Server{

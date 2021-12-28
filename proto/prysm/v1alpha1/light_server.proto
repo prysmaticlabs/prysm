@@ -8,7 +8,6 @@ import "google/protobuf/empty.proto";
 
 import "proto/prysm/v1alpha1/beacon_state.proto";
 import "proto/prysm/v1alpha1/beacon_block.proto";
-import "proto/prysm/v1alpha1/sync_committee.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1alpha1";
 option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
@@ -16,6 +15,33 @@ option java_multiple_files = true;
 option java_outer_classname = "LightUpdate";
 option java_package = "org.ethereum.eth.v1alpha1";
 option php_namespace = "Ethereum\\Eth\\v1alpha1";
+
+service LightUpdateService {
+  rpc GetBestUpdates(GetBestUpdatesRequest) returns (LightClientUpdates) {
+    option (google.api.http) = {
+      get: "/eth/v1alpha1/light-update/best",
+    };
+  }
+  rpc GetLatestUpdateFinalized(google.protobuf.Empty) returns (LightClientUpdate) {
+    option (google.api.http) = {
+      get: "/eth/v1alpha1/light-update/latest-finalized",
+    };
+  }
+  rpc GetLatestUpdateUnFinalized(google.protobuf.Empty) returns (LightClientUpdate) {
+    option (google.api.http) = {
+      get: "/eth/v1alpha1/light-update/latest-unfinalized",
+    };
+  }
+}
+
+message GetBestUpdatesRequest {
+  uint64 from_period = 1;
+  uint64 to_period = 2;
+}
+
+message LightClientUpdates {
+  repeated LightClientUpdate updates = 1;
+}
 
 message LightClientUpdate {
   // The beacon block header that is attested to by the sync committee.
