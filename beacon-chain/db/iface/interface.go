@@ -85,8 +85,9 @@ type NoHeadAccessDatabase interface {
 
 	// Light client server support
 	SaveLightClientUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error
-	SaveLatestFinalizedLightClientUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error
+	SaveFinalizedLightClientUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error
 	DeleteLightClientUpdates(ctx context.Context, slots []types.Slot) error
+	DeleteLightClientFinalizedUpdates(ctx context.Context, slots []types.Slot) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error
 }

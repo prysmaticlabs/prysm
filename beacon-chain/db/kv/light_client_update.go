@@ -31,18 +31,19 @@ func (s *Store) SaveLightClientUpdate(ctx context.Context, update *ethpb.LightCl
 	})
 }
 
-// SaveLatestFinalizedLightClientUpdate saves latest finalized light client update to the database.
-func (s *Store) SaveLatestFinalizedLightClientUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLatestFinalizedLightClientUpdate")
+// SaveFinalizedLightClientUpdate saves latest finalized light client update to the database.
+func (s *Store) SaveFinalizedLightClientUpdate(ctx context.Context, update *ethpb.LightClientUpdate) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFinalizedLightClientUpdate")
 	defer span.End()
 
 	enc, err := encode(ctx, update)
 	if err != nil {
 		return err
 	}
+	slot := bytesutil.SlotToBytesBigEndian(update.AttestedHeader.Slot)
 	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(lightClientUpdateBucket)
-		return bkt.Put(latestFinalizedLightKey, enc)
+		bkt := tx.Bucket(lightClientFinalizedUpdateBucket)
+		return bkt.Put(slot, enc)
 	})
 }
 
@@ -54,7 +55,24 @@ func (s *Store) LightClientUpdates(ctx context.Context, f *filters.QueryFilter) 
 	updates := make([]*ethpb.LightClientUpdate, 0)
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(lightClientUpdateBucket)
-		keys, err := lightClientUpdateKeysByFilter(ctx, tx, f)
+		keys, err := lightClientUpdateKeysByFilter(ctx, tx, f, tx.Bucket(lightClientUpdateBucket))
+		if err != nil {
+			return err
+		}
+		for _, key := range keys {
+			enc := bkt.Get(key)
+			if len(enc) == 0 {
+				continue
+			}
+			update := &ethpb.LightClientUpdate{}
+			if err := decode(ctx, enc, update); err != nil {
+				continue
+			}
+			updates = append(updates, update)
+		}
+
+		bkt = tx.Bucket(lightClientFinalizedUpdateBucket)
+		keys, err = lightClientUpdateKeysByFilter(ctx, tx, f, tx.Bucket(lightClientFinalizedUpdateBucket))
 		if err != nil {
 			return err
 		}
@@ -106,16 +124,16 @@ func (s *Store) LatestFinalizedLightClientUpdate(ctx context.Context) (*ethpb.Li
 
 	var enc []byte
 	if err := s.db.View(func(tx *bolt.Tx) error {
-		enc = tx.Bucket(lightClientUpdateBucket).Get(latestFinalizedLightKey)
+		_, enc = tx.Bucket(lightClientFinalizedUpdateBucket).Cursor().Last()
 		return nil
 	}); err != nil {
 		return nil, err
 	}
 	if len(enc) == 0 {
-		return nil, errors.New("no finalized light client updates found")
+		return nil, errors.New("no latest finalized light client update found")
 	}
 
-	var update *ethpb.LightClientUpdate
+	update := &ethpb.LightClientUpdate{}
 	if err := decode(ctx, enc, update); err != nil {
 		return nil, err
 	}
@@ -139,8 +157,25 @@ func (s *Store) DeleteLightClientUpdates(ctx context.Context, slots []types.Slot
 	})
 }
 
+// DeleteLightClientFinalizedUpdates deletes light client finalized updates from the database using input slots.
+func (s *Store) DeleteLightClientFinalizedUpdates(ctx context.Context, slots []types.Slot) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteLightClientFinalizedUpdates")
+	defer span.End()
+
+	return s.db.Update(func(tx *bolt.Tx) error {
+		for _, slot := range slots {
+			slotBytes := bytesutil.SlotToBytesBigEndian(slot)
+			bkt := tx.Bucket(lightClientFinalizedUpdateBucket)
+			if err := bkt.Delete(slotBytes); err != nil {
+				continue
+			}
+		}
+		return nil
+	})
+}
+
 // lightClientUpdateKeysByFilter returns keys of light client updates from the database using query filter.
-func lightClientUpdateKeysByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFilter) ([][]byte, error) {
+func lightClientUpdateKeysByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFilter, bkt *bolt.Bucket) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.lightClientUpdateKeysByFilter")
 	defer span.End()
 
@@ -150,7 +185,7 @@ func lightClientUpdateKeysByFilter(ctx context.Context, tx *bolt.Tx, f *filters.
 	filtersMap := f.Filters()
 	updateKeys, err := keysBySlotRange(
 		ctx,
-		tx.Bucket(lightClientUpdateBucket),
+		bkt,
 		filtersMap[filters.StartSlot],
 		filtersMap[filters.EndSlot],
 		filtersMap[filters.StartEpoch],

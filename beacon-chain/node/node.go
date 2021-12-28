@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/beacon-chain/light"
 	"github.com/prysmaticlabs/prysm/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -196,6 +197,10 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerSlasherService(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerLightUpdateService(); err != nil {
 		return nil, err
 	}
 
@@ -669,6 +674,23 @@ func (b *BeaconNode) registerSlasherService() error {
 		return err
 	}
 	return b.services.RegisterService(slasherSrv)
+}
+
+func (b *BeaconNode) registerLightUpdateService() error {
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+	var syncService *initialsync.Service
+	if err := b.services.FetchService(&syncService); err != nil {
+		return err
+	}
+	svc := light.New(b.ctx, &light.Config{
+		BeaconDB:      b.db,
+		StateNotifier: b,
+	})
+
+	return b.services.RegisterService(svc)
 }
 
 func (b *BeaconNode) registerRPCService() error {

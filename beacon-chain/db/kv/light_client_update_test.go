@@ -43,25 +43,25 @@ func TestStore_LatestFinalizedLightClientUpdate(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	_, err := db.LatestFinalizedLightClientUpdate(ctx)
-	require.ErrorContains(t, "no finalized light client update found", err)
+	require.ErrorContains(t, "no latest finalized light client update found", err)
 
 	h := &ethpb.BeaconBlockHeader{Slot: 1}
 	u := &ethpb.LightClientUpdate{AttestedHeader: h}
-	require.NoError(t, db.SaveLatestFinalizedLightClientUpdate(ctx, u))
+	require.NoError(t, db.SaveFinalizedLightClientUpdate(ctx, u))
 	got, err := db.LatestFinalizedLightClientUpdate(ctx)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, u, got)
 
 	h1 := &ethpb.BeaconBlockHeader{Slot: 100}
 	u1 := &ethpb.LightClientUpdate{AttestedHeader: h1}
-	require.NoError(t, db.SaveLatestFinalizedLightClientUpdate(ctx, u1))
+	require.NoError(t, db.SaveFinalizedLightClientUpdate(ctx, u1))
 	got, err = db.LatestFinalizedLightClientUpdate(ctx)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, u1, got)
 
 	h2 := &ethpb.BeaconBlockHeader{Slot: 2}
 	u2 := &ethpb.LightClientUpdate{AttestedHeader: h2}
-	require.NoError(t, db.SaveLatestFinalizedLightClientUpdate(ctx, u2))
+	require.NoError(t, db.SaveFinalizedLightClientUpdate(ctx, u2))
 	got, err = db.LatestFinalizedLightClientUpdate(ctx)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, u1, got)
@@ -71,7 +71,12 @@ func TestStore_LightClientUpdates(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	for i := types.Slot(0); i < 5*slotsPerEpoch; i++ {
+	for i := types.Slot(0); i < 2*slotsPerEpoch; i++ {
+		h := &ethpb.BeaconBlockHeader{Slot: i}
+		u := &ethpb.LightClientUpdate{AttestedHeader: h}
+		require.NoError(t, db.SaveFinalizedLightClientUpdate(ctx, u))
+	}
+	for i := 2 * slotsPerEpoch; i < 5*slotsPerEpoch; i++ {
 		h := &ethpb.BeaconBlockHeader{Slot: i}
 		u := &ethpb.LightClientUpdate{AttestedHeader: h}
 		require.NoError(t, db.SaveLightClientUpdate(ctx, u))
@@ -121,6 +126,12 @@ func TestStore_LightClientUpdates(t *testing.T) {
 			name:   "epoch 1",
 			filter: filters.NewFilter().SetStartEpoch(1).SetEndEpoch(1),
 			want:   []types.Slot{32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63},
+		},
+		{
+			name:   "epoch 1 to epoch 2",
+			filter: filters.NewFilter().SetStartEpoch(1).SetEndEpoch(2),
+			want:   []types.Slot{32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+				64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95},
 		},
 		{
 			name:   "epoch 2 to epoch 3",

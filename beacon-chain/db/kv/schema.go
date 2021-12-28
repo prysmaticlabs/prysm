@@ -19,6 +19,7 @@ var (
 	powchainBucket          = []byte("powchain")
 	stateValidatorsBucket   = []byte("state-validators")
 	lightClientUpdateBucket = []byte("light-client-update")
+	lightClientFinalizedUpdateBucket = []byte("light-client-finalized-update")
 
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
 	slotsHasObjectBucket = []byte("slots-has-objects")
@@ -44,7 +45,6 @@ var (
 	justifiedCheckpointKey    = []byte("justified-checkpoint")
 	finalizedCheckpointKey    = []byte("finalized-checkpoint")
 	powchainDataKey           = []byte("powchain-data")
-	latestFinalizedLightKey   = []byte("latest-finalized-light")
 
 	// Below keys are used to identify objects are to be fork compatible.
 	// Objects that are only compatible with specific forks should be prefixed with such keys.

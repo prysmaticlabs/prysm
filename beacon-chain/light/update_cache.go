@@ -11,7 +11,7 @@ const maxUpdateQueueSize = 4
 
 func (s *Service) saveUpdate(root []byte, update *ethpb.LightClientUpdate) error {
 	if update == nil {
-		errors.New("nil update")
+		return errors.New("nil update")
 	}
 
 	s.updateCacheLock.Lock()
@@ -40,7 +40,7 @@ func (s *Service) getUpdate(root []byte) (*ethpb.LightClientUpdate, error) {
 
 	item := s.updateCache.RetrieveByKey(string(root))
 	if item == nil {
-		return nil, errors.New("item is nil")
+		return nil, nil
 	}
 
 	update, ok := item.Value.(*ethpb.LightClientUpdate)

@@ -4,6 +4,7 @@ package light
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -11,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/container/queue"
 )
 
-// config for the light service in the beacon node.
+// Config for the light service in the beacon node.
 // This struct allows us to specify required dependencies and
 // parameters to support light client to function as needed.
-type config struct {
+type Config struct {
 	BeaconDB      db.NoHeadAccessDatabase
 	StateNotifier statefeed.Notifier
 }
@@ -22,16 +23,20 @@ type config struct {
 // Service defining a light server implementation as part of
 // the beacon node.
 type Service struct {
-	cfg             *config
+	cfg             *Config
 	ctx             context.Context
 	cancel          context.CancelFunc
 	updateCache     *queue.PriorityQueue
 	updateCacheLock sync.RWMutex
+	genesisTime time.Time
 }
 
 // New instantiates a new light service from configuration values.
-func New(ctx context.Context, cfg *config) *Service {
+func New(ctx context.Context, cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
+		ctx:         ctx,
+		cancel:      cancel,
 		cfg:         cfg,
 		updateCache: queue.New(),
 	}
@@ -72,7 +77,8 @@ func (s *Service) waitForChainInitialization() {
 					log.Error("Could not receive chain start notification, want *statefeed.ChainStartedData")
 					return
 				}
-				log.WithField("genesisTime", data.StartTime).Info("Slasher received chain initialization event")
+				s.genesisTime = data.StartTime
+				log.WithField("genesisTime", data.StartTime).Info("Light service received chain initialization event")
 				return
 			}
 		case err := <-stateSub.Err():
@@ -85,3 +91,4 @@ func (s *Service) waitForChainInitialization() {
 		}
 	}
 }
+
