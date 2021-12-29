@@ -25,6 +25,7 @@ type Server struct {
 	Ctx         context.Context
 }
 
+// GetBestUpdates returns the best light client updates given request.
 func (s Server) GetBestUpdates(ctx context.Context, request *ethpb.GetBestUpdatesRequest) (*ethpb.LightClientUpdates, error) {
 	endPeriod := request.GetToPeriod()
 	startPeriod := request.GetFromPeriod()
@@ -92,6 +93,7 @@ func (s Server) GetBestUpdates(ctx context.Context, request *ethpb.GetBestUpdate
 	}, nil
 }
 
+// GetLatestUpdateFinalized returns the latest finalized update.
 func (s Server) GetLatestUpdateFinalized(ctx context.Context, empty *empty.Empty) (*ethpb.LightClientUpdate, error) {
 	update, err := s.BeaconDB.LatestFinalizedLightClientUpdate(ctx)
 	if err != nil {
@@ -100,6 +102,7 @@ func (s Server) GetLatestUpdateFinalized(ctx context.Context, empty *empty.Empty
 	return update, nil
 }
 
+// GetLatestUpdateUnFinalized returns the latest unfinalized update.
 func (s Server) GetLatestUpdateUnFinalized(ctx context.Context, empty *empty.Empty) (*ethpb.LightClientUpdate, error) {
 	update, err := s.BeaconDB.LatestLightClientUpdate(ctx)
 	if err != nil {

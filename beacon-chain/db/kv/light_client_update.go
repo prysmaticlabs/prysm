@@ -54,39 +54,31 @@ func (s *Store) LightClientUpdates(ctx context.Context, f *filters.QueryFilter) 
 
 	updates := make([]*ethpb.LightClientUpdate, 0)
 	if err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(lightClientUpdateBucket)
 		keys, err := lightClientUpdateKeysByFilter(ctx, tx, f, tx.Bucket(lightClientUpdateBucket))
 		if err != nil {
 			return err
 		}
-		for _, key := range keys {
-			enc := bkt.Get(key)
-			if len(enc) == 0 {
-				continue
+		fillUpdatesByKeys := func(updates []*ethpb.LightClientUpdate, keys [][]byte, bkt *bolt.Bucket) []*ethpb.LightClientUpdate {
+			for _, key := range keys {
+				enc := bkt.Get(key)
+				if enc == nil {
+					continue
+				}
+				update := &ethpb.LightClientUpdate{}
+				if err := decode(ctx, enc, update); err != nil {
+					continue
+				}
+				updates = append(updates, update)
 			}
-			update := &ethpb.LightClientUpdate{}
-			if err := decode(ctx, enc, update); err != nil {
-				continue
-			}
-			updates = append(updates, update)
+			return updates
 		}
+		updates = fillUpdatesByKeys(updates, keys, tx.Bucket(lightClientUpdateBucket))
 
-		bkt = tx.Bucket(lightClientFinalizedUpdateBucket)
 		keys, err = lightClientUpdateKeysByFilter(ctx, tx, f, tx.Bucket(lightClientFinalizedUpdateBucket))
 		if err != nil {
 			return err
 		}
-		for _, key := range keys {
-			enc := bkt.Get(key)
-			if len(enc) == 0 {
-				continue
-			}
-			update := &ethpb.LightClientUpdate{}
-			if err := decode(ctx, enc, update); err != nil {
-				continue
-			}
-			updates = append(updates, update)
-		}
+		updates = fillUpdatesByKeys(updates, keys, tx.Bucket(lightClientFinalizedUpdateBucket))
 		return nil
 	}); err != nil {
 		return nil, err
