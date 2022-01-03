@@ -25,7 +25,7 @@ func MergeComplete(st state.BeaconState) (bool, error) {
 }
 
 // IsMergeBlock returns true if the input block is the terminal merge block.
-// Meaning the header header in beacon state is  `ExecutionPayloadHeader()` (i.e. empty).
+// Meaning the header in beacon state is  `ExecutionPayloadHeader()` (i.e. empty).
 // And the input block has a non-empty header.
 //
 // Spec code:
@@ -89,10 +89,10 @@ func isEmptyPayload(p *ethpb.ExecutionPayload) bool {
 	if !bytes.Equal(p.BlockHash, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if p.Transactions != nil {
+	if len(p.Transactions) != 0 {
 		return false
 	}
-	if p.ExtraData != nil {
+	if len(p.ExtraData) != 0 {
 		return false
 	}
 	if p.BlockNumber != 0 {
@@ -138,7 +138,7 @@ func isEmptyHeader(h *ethpb.ExecutionPayloadHeader) bool {
 	if !bytes.Equal(h.TransactionsRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if h.ExtraData != nil {
+	if len(h.ExtraData) != 0 {
 		return false
 	}
 	if h.BlockNumber != 0 {
