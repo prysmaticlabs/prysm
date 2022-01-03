@@ -20,7 +20,7 @@ func TestExtractBlockDataType(t *testing.T) {
 	require.NoError(t, err)
 	altairDigest, err := signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
-	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, params.BeaconConfig().ZeroHash[:])
+	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
 
 	type args struct {

@@ -47,7 +47,7 @@ func (s *Service) CanSubscribe(topic string) bool {
 		log.WithError(err).Error("Could not determine altair fork digest")
 		return false
 	}
-	mergeForkDigest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().MergeForkEpoch, s.genesisValidatorsRoot)
+	mergeForkDigest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().BellatrixForkEpoch, s.genesisValidatorsRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not determine merge fork digest")
 		return false

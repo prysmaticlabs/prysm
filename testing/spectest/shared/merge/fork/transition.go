@@ -89,7 +89,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, err)
 
 			bc := params.BeaconConfig()
-			bc.MergeForkEpoch = types.Epoch(config.ForkEpoch)
+			bc.BellatrixForkEpoch = types.Epoch(config.ForkEpoch)
 			params.OverrideBeaconConfig(bc)
 
 			ctx := context.Background()

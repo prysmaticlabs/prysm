@@ -43,7 +43,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
 
 	// Merge Fork Parameters.
-	//e2eConfig.MergeForkVersion = MergeE2EForkEpoch  // TODO_MERGE: Add a proper merge fork version when e2e is ready for it.
+	//e2eConfig.BellatrixForkVersion = MergeE2EForkEpoch  // TODO_MERGE: Add a proper merge fork version when e2e is ready for it.
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]

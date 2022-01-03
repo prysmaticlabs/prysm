@@ -47,7 +47,7 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 		obtainedCtx = digest[:]
 	case version.Merge:
 		valRoot := chain.GenesisValidatorRoot()
-		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().MergeForkEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().BellatrixForkEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}

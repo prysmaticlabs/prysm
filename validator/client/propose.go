@@ -41,7 +41,7 @@ const signExitErr = "could not sign voluntary exit proposal"
 func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	currEpoch := slots.ToEpoch(slot)
 	switch {
-	case currEpoch >= params.BeaconConfig().MergeForkEpoch:
+	case currEpoch >= params.BeaconConfig().BellatrixForkEpoch:
 		v.proposeBlockMerge(ctx, slot, pubKey)
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
 		v.proposeBlockAltair(ctx, slot, pubKey)

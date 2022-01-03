@@ -16,7 +16,7 @@ func (s *Service) forkWatcher() {
 		case currSlot := <-slotTicker.C():
 			currEpoch := slots.ToEpoch(currSlot)
 			if currEpoch == params.BeaconConfig().AltairForkEpoch ||
-				currEpoch == params.BeaconConfig().MergeForkEpoch {
+				currEpoch == params.BeaconConfig().BellatrixForkEpoch {
 				// If we are in the fork epoch, we update our enr with
 				// the updated fork digest. These repeatedly does
 				// this over the epoch, which might be slightly wasteful
@@ -27,7 +27,7 @@ func (s *Service) forkWatcher() {
 				}
 
 				// from Merge Epoch, the MaxGossipSize and the MaxChunkSize is changed to 10MB.
-				if currEpoch == params.BeaconConfig().MergeForkEpoch {
+				if currEpoch == params.BeaconConfig().BellatrixForkEpoch {
 					encoder.MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSizeMerge
 					encoder.MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSizeMerge
 				}

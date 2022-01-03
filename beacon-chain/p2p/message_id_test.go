@@ -66,7 +66,7 @@ func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 
 func TestMessageIDFunction_HashesCorrectlyMerge(t *testing.T) {
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
-	d, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, genesisValidatorsRoot)
+	d, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot)
 	assert.NoError(t, err)
 	tpc := fmt.Sprintf(p2p.BlockSubnetTopicFormat, d)
 	topicLen := uint64(len(tpc))
