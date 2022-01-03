@@ -155,4 +155,3 @@ func isEmptyHeader(h *ethpb.ExecutionPayloadHeader) bool {
 	}
 	return true
 }
-
