@@ -90,7 +90,7 @@ func TestUpdateBalanceMergeVersion(t *testing.T) {
 		PrevEpochTargetAttested:    100 * params.BeaconConfig().EffectiveBalanceIncrement,
 		PrevEpochHeadAttested:      200 * params.BeaconConfig().EffectiveBalanceIncrement,
 	}
-	pBal := precompute.UpdateBalance(vp, &precompute.Balance{}, version.Merge)
+	pBal := precompute.UpdateBalance(vp, &precompute.Balance{}, version.Bellatrix)
 	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
 }
 

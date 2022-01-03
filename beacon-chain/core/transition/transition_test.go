@@ -560,10 +560,10 @@ func TestProcessSlots_OnlyMergeEpoch(t *testing.T) {
 
 	st, _ := util.DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
-	require.Equal(t, version.Merge, st.Version())
+	require.Equal(t, version.Bellatrix, st.Version())
 	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
 	require.NoError(t, err)
-	require.Equal(t, version.Merge, st.Version())
+	require.Equal(t, version.Bellatrix, st.Version())
 
 	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
 

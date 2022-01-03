@@ -457,7 +457,7 @@ func TestMergeSignedBeaconBlock_Version(t *testing.T) {
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{}})
 	require.NoError(t, err)
 
-	assert.Equal(t, version.Merge, wsb.Version())
+	assert.Equal(t, version.Bellatrix, wsb.Version())
 }
 
 func TestMergeBeaconBlock_Slot(t *testing.T) {
@@ -544,7 +544,7 @@ func TestMergeBeaconBlock_Version(t *testing.T) {
 	wb, err := wrapper.WrappedMergeBeaconBlock(&ethpb.BeaconBlockMerge{})
 	require.NoError(t, err)
 
-	assert.Equal(t, version.Merge, wb.Version())
+	assert.Equal(t, version.Bellatrix, wb.Version())
 }
 
 func TestMergeBeaconBlockBody_RandaoReveal(t *testing.T) {
