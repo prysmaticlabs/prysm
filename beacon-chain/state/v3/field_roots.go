@@ -13,7 +13,7 @@ import (
 //nolint:deadcode
 func computeFieldRoots(ctx context.Context, state *ethpb.BeaconStateBellatrix) ([][]byte, error) {
 	if features.Get().EnableSSZCache {
-		return stateutil.CachedHasher.ComputeFieldRootsWithHasherMerge(ctx, state)
+		return stateutil.CachedHasher.ComputeFieldRootsWithHasherBellatrix(ctx, state)
 	}
-	return stateutil.NocachedHasher.ComputeFieldRootsWithHasherMerge(ctx, state)
+	return stateutil.NocachedHasher.ComputeFieldRootsWithHasherBellatrix(ctx, state)
 }
