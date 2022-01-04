@@ -136,6 +136,7 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		log.Warn("Running on the Merge Testnet")
 		params.UseMergeTestConfig()
 		params.UseMergeTestNetworkConfig()
+		cfg.KintsugiTestnet = true
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
 		params.UseMainnetConfig()

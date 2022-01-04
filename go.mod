@@ -106,6 +106,7 @@ require (
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
+	github.com/urfave/cli v1.22.1 // indirect
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

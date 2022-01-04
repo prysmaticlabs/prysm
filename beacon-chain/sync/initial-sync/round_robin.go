@@ -281,18 +281,6 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		blockRoots[i] = blkRoot
 	}
 
-	bFunc = func(ctx context.Context, blks []block.SignedBeaconBlock, roots [][32]byte) error {
-		if len(blks) != len(roots) {
-			return errors.New("incorrect lengths")
-		}
-		for i, blk := range blks {
-			if err := s.cfg.Chain.ReceiveBlock(ctx, blk, roots[i]); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
 	return bFunc(ctx, blks, blockRoots)
 }
 

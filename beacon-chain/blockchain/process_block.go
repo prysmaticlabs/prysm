@@ -354,6 +354,63 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		if err != nil {
 			return nil, nil, err
 		}
+
+		if preState.Version() == version.Merge {
+			executionEnabled, err := blocks.ExecutionEnabled(preState, b.Block().Body())
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not check if execution is enabled")
+			}
+			if executionEnabled {
+				payload, err := b.Block().Body().ExecutionPayload()
+				if err != nil {
+					return nil, nil, errors.Wrap(err, "could not get body execution payload")
+				}
+				_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
+				if err != nil {
+					return nil, nil, errors.Wrap(err, "could not execute payload")
+				}
+
+				mergeBlock, err := blocks.IsMergeBlock(preState, b.Block().Body())
+				if err != nil {
+					return nil, nil, errors.Wrap(err, "could not check if merge block is terminal")
+				}
+				if mergeBlock {
+					if err := s.validateTerminalBlock(b); err != nil {
+						return nil, nil, err
+					}
+				}
+				headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
+				if err != nil {
+					return nil, nil, err
+
+				}
+				// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
+				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(preState.FinalizedCheckpoint().Root))
+				if err != nil {
+					return nil, nil, err
+
+				}
+				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
+				if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+					if err != nil {
+						return nil, nil, err
+
+					}
+					finalizedBlockHash = finalizedPayload.BlockHash
+				}
+
+				f := catalyst.ForkchoiceStateV1{
+					HeadBlockHash:      common.BytesToHash(headPayload.BlockHash),
+					SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
+					FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
+				}
+				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f); err != nil {
+					return nil, nil, err
+				}
+			}
+		}
+
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
@@ -363,6 +420,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
+
 		sigSet.Join(set)
 	}
 	verify, err := sigSet.Verify()
