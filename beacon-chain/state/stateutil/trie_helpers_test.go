@@ -27,6 +27,30 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 	assert.NoError(t, err)
 	newRoot := *layers[len(layers)-1][0]
 	assert.Equal(t, root, newRoot)
+
+	lastRoot := stateutil.ReturnTrieLayerVectorize(roots, uint64(len(roots)))
+	assert.Equal(t, root, lastRoot)
+}
+
+func BenchmarkReturnTrieLayer(b *testing.B) {
+	newState, _ := util.DeterministicGenesisState(b, 32)
+	root, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	require.NoError(b, err)
+	blockRts := newState.BlockRoots()
+	roots := make([][32]byte, 0, len(blockRts))
+	for _, rt := range blockRts {
+		roots = append(roots, bytesutil.ToBytes32(rt))
+	}
+	b.Run("Normal Algorithm", func(b *testing.B) {
+		layers, err := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
+		assert.NoError(b, err)
+		newRoot := *layers[len(layers)-1][0]
+		assert.Equal(b, root, newRoot)
+	})
+	b.Run("Vectorized Algorithm", func(b *testing.B) {
+		lastRoot := stateutil.ReturnTrieLayerVectorize(roots, uint64(len(roots)))
+		assert.Equal(b, root, lastRoot)
+	})
 }
 
 func TestReturnTrieLayerVariable_OK(t *testing.T) {

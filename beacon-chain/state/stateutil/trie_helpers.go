@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/math"
 )
@@ -38,6 +39,16 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) 
 		}
 	}
 	return refLayers, nil
+}
+
+func ReturnTrieLayerVectorize(elements [][32]byte, length uint64) [32]byte {
+	for {
+		elements = htr.VectorizedSha256(elements)
+		if len(elements) == 1 {
+			break
+		}
+	}
+	return elements[0]
 }
 
 // ReturnTrieLayerVariable returns the representation of a merkle trie when
