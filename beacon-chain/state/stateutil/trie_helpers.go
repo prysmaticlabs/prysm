@@ -41,14 +41,25 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) 
 	return refLayers, nil
 }
 
-func ReturnTrieLayerVectorize(elements [][32]byte, length uint64) [32]byte {
+func ReturnTrieLayerVectorize(elements [][32]byte, length uint64) [][]*[32]byte {
+	refLayers := make([][]*[32]byte, ssz.Depth(length)+1)
+	currLevel := 0
+	refLayers[currLevel] = make([]*[32]byte, len(elements))
+	for i := range elements {
+		refLayers[currLevel][i] = &elements[i]
+	}
 	for {
 		elements = htr.VectorizedSha256(elements)
+		currLevel++
+		refLayers[currLevel] = make([]*[32]byte, len(elements))
+		for i := range elements {
+			refLayers[currLevel][i] = &elements[i]
+		}
 		if len(elements) == 1 {
 			break
 		}
 	}
-	return elements[0]
+	return refLayers
 }
 
 // ReturnTrieLayerVariable returns the representation of a merkle trie when
@@ -72,6 +83,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	layers[0] = transformedLeaves
 	buffer := bytes.NewBuffer([]byte{})
 	buffer.Grow(64)
+
 	for i := 0; i < int(depth); i++ {
 		oddNodeLength := len(layers[i])%2 == 1
 		if oddNodeLength {
@@ -91,6 +103,37 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 			layers[i] = layers[i][:len(layers[i])-1]
 		}
 		layers[i+1] = updatedValues
+	}
+	return layers
+}
+
+func ReturnTrieLayerVariableVectorize(elements [][32]byte, length uint64) [][]*[32]byte {
+	depth := ssz.Depth(length)
+	layers := make([][]*[32]byte, depth+1)
+	// Return zerohash at depth
+	if len(elements) == 0 {
+		zerohash := trie.ZeroHashes[depth]
+		layers[len(layers)-1] = []*[32]byte{&zerohash}
+		return layers
+	}
+	transformedLeaves := make([]*[32]byte, len(elements))
+	for i := range elements {
+		arr := elements[i]
+		transformedLeaves[i] = &arr
+	}
+	layers[0] = transformedLeaves
+	for i := 0; i < int(depth); i++ {
+		oddNodeLength := len(layers[i])%2 == 1
+		if oddNodeLength {
+			zerohash := trie.ZeroHashes[i]
+			elements = append(elements, zerohash)
+		}
+		length := math.Max(uint64(len(layers[i])/2), 1)
+		layers[i+1] = make([]*[32]byte, length)
+		elements = htr.VectorizedSha256(elements)
+		for j := range elements {
+			layers[i+1][j] = &elements[j]
+		}
 	}
 	return layers
 }

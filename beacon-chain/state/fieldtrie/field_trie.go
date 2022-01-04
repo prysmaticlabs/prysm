@@ -44,10 +44,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 	}
 	switch dataType {
 	case types.BasicArray:
-		fl, err := stateutil.ReturnTrieLayer(fieldRoots, length)
-		if err != nil {
-			return nil, err
-		}
+		fl := stateutil.ReturnTrieLayerVectorize(fieldRoots, length)
 		return &FieldTrie{
 			fieldLayers: fl,
 			field:       field,
@@ -59,7 +56,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
-			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
+			fieldLayers: stateutil.ReturnTrieLayerVariableVectorize(fieldRoots, length),
 			field:       field,
 			dataType:    dataType,
 			reference:   stateutil.NewRef(1),

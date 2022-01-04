@@ -28,7 +28,8 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 	newRoot := *layers[len(layers)-1][0]
 	assert.Equal(t, root, newRoot)
 
-	lastRoot := stateutil.ReturnTrieLayerVectorize(roots, uint64(len(roots)))
+	layers = stateutil.ReturnTrieLayerVectorize(roots, uint64(len(roots)))
+	lastRoot := *layers[len(layers)-1][0]
 	assert.Equal(t, root, lastRoot)
 }
 
@@ -48,7 +49,8 @@ func BenchmarkReturnTrieLayer(b *testing.B) {
 		assert.Equal(b, root, newRoot)
 	})
 	b.Run("Vectorized Algorithm", func(b *testing.B) {
-		lastRoot := stateutil.ReturnTrieLayerVectorize(roots, uint64(len(roots)))
+		layers := stateutil.ReturnTrieLayerVectorize(roots, uint64(len(roots)))
+		lastRoot := *layers[len(layers)-1][0]
 		assert.Equal(b, root, lastRoot)
 	})
 }
@@ -70,6 +72,13 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 	newRoot, err = stateutil.AddInMixin(newRoot, uint64(len(validators)))
 	require.NoError(t, err)
 	assert.Equal(t, root, newRoot)
+
+	layers = stateutil.ReturnTrieLayerVariableVectorize(roots, params.BeaconConfig().ValidatorRegistryLimit)
+	lastRoot := *layers[len(layers)-1][0]
+	lastRoot, err = stateutil.AddInMixin(lastRoot, uint64(len(validators)))
+	require.NoError(t, err)
+	assert.Equal(t, root, lastRoot)
+
 }
 
 func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
