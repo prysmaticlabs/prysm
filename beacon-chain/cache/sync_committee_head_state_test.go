@@ -28,7 +28,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	mergeState, err := v3.InitializeFromProto(&ethpb.BeaconStateBellatrix{
+	bellatrixState, err := v3.InitializeFromProto(&ethpb.BeaconStateBellatrix{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -95,7 +95,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 			key:  types.Slot(2),
 			put: &put{
 				slot:  types.Slot(1),
-				state: mergeState,
+				state: bellatrixState,
 			},
 			wantErr: true,
 		},
@@ -104,9 +104,9 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 			key:  types.Slot(100),
 			put: &put{
 				slot:  types.Slot(100),
-				state: mergeState,
+				state: bellatrixState,
 			},
-			want: mergeState,
+			want: bellatrixState,
 		},
 	}
 	for _, tt := range tests {

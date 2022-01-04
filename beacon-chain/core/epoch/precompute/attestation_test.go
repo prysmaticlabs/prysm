@@ -70,7 +70,7 @@ func TestUpdateBalance(t *testing.T) {
 	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
 }
 
-func TestUpdateBalanceMergeVersion(t *testing.T) {
+func TestUpdateBalanceBellatrixVersion(t *testing.T) {
 	vp := []*precompute.Validator{
 		{IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
 		{IsCurrentEpochTargetAttester: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},

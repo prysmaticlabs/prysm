@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-func Test_MergeComplete(t *testing.T) {
+func Test_BellatrixComplete(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload *ethpb.ExecutionPayloadHeader
@@ -610,7 +610,7 @@ func Test_PayloadToHeader(t *testing.T) {
 	require.Equal(t, h.Timestamp, uint64(0))
 }
 
-func BenchmarkMergeComplete(b *testing.B) {
+func BenchmarkBellatrixComplete(b *testing.B) {
 	st, _ := util.DeterministicGenesisStateMerge(b, 1)
 	require.NoError(b, st.SetLatestExecutionPayloadHeader(emptyPayloadHeader()))
 

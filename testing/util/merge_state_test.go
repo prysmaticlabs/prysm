@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestDeterministicGenesisStateMerge(t *testing.T) {
+func TestDeterministicGenesisStateBellatrix(t *testing.T) {
 	st, k := DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxCommitteesPerSlot)
 	require.Equal(t, params.BeaconConfig().MaxCommitteesPerSlot, uint64(len(k)))
 	require.Equal(t, params.BeaconConfig().MaxCommitteesPerSlot, uint64(st.NumValidators()))

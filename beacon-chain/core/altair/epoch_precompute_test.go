@@ -238,8 +238,8 @@ func TestAttestationsDelta(t *testing.T) {
 	require.DeepEqual(t, want, penalties)
 }
 
-func TestAttestationsDeltaMerge(t *testing.T) {
-	s, err := testStateMerge()
+func TestAttestationsDeltaBellatrix(t *testing.T) {
+	s, err := testStateBellatrix()
 	require.NoError(t, err)
 	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
@@ -493,7 +493,7 @@ func testState() (state.BeaconState, error) {
 	})
 }
 
-func testStateMerge() (state.BeaconState, error) {
+func testStateBellatrix() (state.BeaconState, error) {
 	generateParticipation := func(flags ...uint8) byte {
 		b := byte(0)
 		var err error
