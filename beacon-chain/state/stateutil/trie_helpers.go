@@ -123,12 +123,14 @@ func ReturnTrieLayerVariableVectorize(elements [][32]byte, length uint64) [][]*[
 	}
 	layers[0] = transformedLeaves
 	for i := 0; i < int(depth); i++ {
-		oddNodeLength := len(layers[i])%2 == 1
+		layerLen := len(layers[i])
+		oddNodeLength := layerLen%2 == 1
 		if oddNodeLength {
 			zerohash := trie.ZeroHashes[i]
 			elements = append(elements, zerohash)
+			layerLen++
 		}
-		length := math.Max(uint64(len(layers[i])/2), 1)
+		length := math.Max(uint64(layerLen/2), 1)
 		layers[i+1] = make([]*[32]byte, length)
 		elements = htr.VectorizedSha256(elements)
 		for j := range elements {
