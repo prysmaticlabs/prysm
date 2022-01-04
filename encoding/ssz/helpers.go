@@ -50,11 +50,7 @@ func BitwiseMerkleize(hasher HashFn, chunks [][]byte, count, limit uint64) ([32]
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
-	hashFn := NewHasherFunc(hasher)
-	leafIndexer := func(i uint64) []byte {
-		return chunks[i]
-	}
-	return Merkleize(hashFn, count, limit, leafIndexer), nil
+	return MerkelizeList(chunks, limit), nil
 }
 
 // BitwiseMerkleizeArrays is used when a set of 32-byte root chunks are provided.
@@ -62,11 +58,7 @@ func BitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count, limit uint6
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
-	hashFn := NewHasherFunc(hasher)
-	leafIndexer := func(i uint64) []byte {
-		return chunks[i][:]
-	}
-	return Merkleize(hashFn, count, limit, leafIndexer), nil
+	return MerkelizeVector(chunks, limit), nil
 }
 
 // Pack a given byte array's final chunk with zeroes if needed.

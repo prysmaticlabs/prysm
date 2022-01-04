@@ -2,6 +2,7 @@ package ssz
 
 import (
 	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
 )
 
 // Merkleize.go is mostly a directly copy of the same filename from
@@ -64,6 +65,48 @@ func Depth(v uint64) (out uint8) {
 	}
 	out++
 	return
+}
+
+func MerkelizeVector(elements [][32]byte, length uint64) [32]byte {
+	depth := Depth(length)
+	// Return zerohash at depth
+	if len(elements) == 0 {
+		zerohash := trie.ZeroHashes[depth]
+		return zerohash
+	}
+	for i := 0; i < int(depth); i++ {
+		layerLen := len(elements)
+		oddNodeLength := layerLen%2 == 1
+		if oddNodeLength {
+			zerohash := trie.ZeroHashes[i]
+			elements = append(elements, zerohash)
+		}
+		elements = htr.VectorizedSha256(elements)
+	}
+	return elements[0]
+}
+
+func MerkelizeList(elements [][]byte, length uint64) [32]byte {
+	depth := Depth(length)
+	// Return zerohash at depth
+	if len(elements) == 0 {
+		zerohash := trie.ZeroHashes[depth]
+		return zerohash
+	}
+	newElems := make([][32]byte, len(elements))
+	for i := range elements {
+		copy(newElems[i][:], elements[i])
+	}
+	for i := 0; i < int(depth); i++ {
+		layerLen := len(newElems)
+		oddNodeLength := layerLen%2 == 1
+		if oddNodeLength {
+			zerohash := trie.ZeroHashes[i]
+			newElems = append(newElems, zerohash)
+		}
+		newElems = htr.VectorizedSha256(newElems)
+	}
+	return newElems[0]
 }
 
 // Merkleize with log(N) space allocation
