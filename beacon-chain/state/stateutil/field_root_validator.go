@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -24,18 +25,21 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
-	roots := make([][32]byte, len(validators))
+	roots := make([][32]byte, 0, len(validators)*8)
 	emptyKey := hash.FastSum256(hashKeyElements)
 	hasher := hash.CustomSHA256Hasher()
 	bytesProcessed := 0
 	for i := 0; i < len(validators); i++ {
-		val, err := h.validatorRoot(hasher, validators[i])
+		fRoots, err := ValidatorFieldRoots(hasher, validators[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
-		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], val[:])
-		roots[i] = val
+		roots = append(roots, fRoots...)
 		bytesProcessed += 32
+	}
+
+	for i := 0; i < 3; i++ {
+		roots = htr.VectorizedSha256(roots)
 	}
 
 	hashKey := hash.FastSum256(hashKeyElements)

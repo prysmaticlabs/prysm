@@ -31,6 +31,7 @@ var (
 		Name: "beacon_state_altair_count",
 		Help: "Count the number of active beacon state objects.",
 	})
+	Set = false
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
@@ -74,7 +75,9 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (*BeaconState, error
 		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
 		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
+	}
+	if !Set {
+		b.valMapHandler = stateutil.NewValMapHandler(st.Validators)
 	}
 
 	var err error
