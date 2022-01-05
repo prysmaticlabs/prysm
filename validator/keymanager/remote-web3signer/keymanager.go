@@ -24,7 +24,7 @@ type SetupConfig struct {
 	PublicKeysURL string
 
 	//Either URL or keylist must be set.
-	//a static list of public keys to be passed by the user to determine what accounts should sign.
+	// a static list of public keys to be passed by the user to determine what accounts should sign.
 	// This will provide a layer of safety against slashing if the web3signer is shared across validators.
 	ProvidedPublicKeys [][48]byte
 }
