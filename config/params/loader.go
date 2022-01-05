@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/math"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -116,7 +115,7 @@ func ReplaceHexStringWithYAMLFormat(line string) []string {
 		}
 		parts[1] = string(fixedByte)
 	case l > 32 && l <= 48:
-		var arr [fieldparams.BLSPubkeyLength]byte
+		var arr [48]byte
 		copy(arr[:], decoded)
 		fixedByte, err := yaml.Marshal(arr)
 		if err != nil {
