@@ -2,8 +2,15 @@ package userprompt
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
+
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
@@ -139,6 +146,95 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 	}
 	fmt.Printf("%s\n", newCfg)
 	return newCfg, nil
+}
+
+// InputWeb3SignerConfig via the cli.
+func InputWeb3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, error) {
+	signerURL := cliCtx.String(flags.Web3SignerURLFlag.Name)
+	validatorKeysOptionValue := cliCtx.String(flags.Web3SignerExternalPublicValidatorKeysFlag.Name)
+	log.Info("Input desired configuration")
+	var err error
+	if signerURL == "" {
+		signerURL, err = prompt.ValidatePrompt(
+			os.Stdin,
+			"Web3Signer URL (such as https://www.web3signer.com:9000)",
+			validateWeb3SignerURL)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if validatorKeysOptionValue == "" {
+		validatorKeysOptionValue, err = prompt.ValidatePrompt(
+			os.Stdin,
+			"External public validator keys listed separated by comma (such as 0x1,0x2,0x3) or an external Url (such as https://www.web3signer.com:9000/api/v1/eth2/publicKeys)",
+			validateWeb3SignerValidatorKeysOption)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var publicKeysURL string
+	u, err := url.Parse(validatorKeysOptionValue)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not parse %s as a URL", validatorKeysOptionValue)
+	}
+	if u != nil {
+		publicKeysURL = validatorKeysOptionValue
+	}
+
+	var validatorKeys [][48]byte
+	for _, key := range strings.Split(validatorKeysOptionValue, ",") {
+		decodedKey, err := hexutil.Decode(key)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode key %s", key)
+		}
+		validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
+	}
+
+	// genesis root is missing from the setup config at this point. it will be injected in during the keymanager initialization process
+	config := &remote_web3signer.SetupConfig{
+		BaseEndpoint:       signerURL,
+		PublicKeysURL:      publicKeysURL,
+		ProvidedPublicKeys: validatorKeys,
+	}
+	fmt.Printf("%s\n", config)
+	return config, nil
+}
+
+func validateWeb3SignerURL(input string) error {
+	if input == "" {
+		return errors.New("web3signer url cannot be empty")
+	}
+	_, err := url.Parse(input)
+	if err != nil {
+		return errors.Wrapf(err, "web3signer url %s is invalid", input)
+	}
+	return nil
+}
+
+func validateWeb3SignerValidatorKeysOption(input string) error {
+	if input == "" {
+		return nil
+	}
+	isURL := true
+	isList := true
+	_, err := url.Parse(input)
+	if err != nil {
+		isURL = false
+	}
+	for _, key := range strings.Split(input, ",") {
+		_, err := hexutil.Decode(key)
+		if err != nil {
+			isList = false
+			break
+		}
+	}
+	if isURL || isList {
+		return nil
+	} else {
+		return errors.New("validator keys option is invalid: must be a list of validator public keys ( hex encoded and comma delimited ) or a url to a list of validator public keys")
+	}
+
 }
 
 func validateCertPath(input string) error {

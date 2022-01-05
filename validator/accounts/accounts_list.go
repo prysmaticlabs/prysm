@@ -7,12 +7,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
+
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -73,6 +76,15 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 		if err := listRemoteKeymanagerAccounts(cliCtx.Context, w, km, km.KeymanagerOpts()); err != nil {
 			return errors.Wrap(err, "could not list validator accounts with remote keymanager")
 		}
+	case keymanager.Web3Signer:
+		km, ok := km.(*remote_web3signer.Keymanager)
+		if !ok {
+			return errors.New("could not assert keymanager interface to concrete type")
+		}
+		if err := listWeb3SignerKeymanagerAccounts(cliCtx.Context, w, km); err != nil {
+			return errors.Wrap(err, "could not list validator accounts with web3signer keymanager")
+		}
+
 	default:
 		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind().String())
 	}
@@ -212,6 +224,11 @@ func listRemoteKeymanagerAccounts(
 	} else {
 		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
 	}
+	displayRemotePublicKeys(validatingPubKeys)
+	return nil
+}
+
+func displayRemotePublicKeys(validatingPubKeys [][48]byte) {
 	for i := 0; i < len(validatingPubKeys); i++ {
 		fmt.Println("")
 		fmt.Printf(
@@ -221,6 +238,36 @@ func listRemoteKeymanagerAccounts(
 		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
 		fmt.Println(" ")
 	}
+}
+
+func listWeb3SignerKeymanagerAccounts(
+	ctx context.Context,
+	w *wallet.Wallet,
+	keymanager *remote_web3signer.Keymanager,
+) error {
+	au := aurora.NewAurora(true)
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("web3signer").Bold())
+	fmt.Printf(
+		"(configuration file path) %s\n",
+		au.BrightGreen(filepath.Join(w.AccountsDir(), wallet.KeymanagerConfigFileName)).Bold(),
+	)
+	fmt.Println(" ")
+	fmt.Printf("%s\n", au.BrightGreen("Setup Configuration").Bold())
+	fmt.Println(" ")
+	//TODO: add config options, may require refactor again
+	validatingPubKeys, err := keymanager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	if len(validatingPubKeys) == 1 {
+		fmt.Print("Showing 1 validator account\n")
+	} else if len(validatingPubKeys) == 0 {
+		fmt.Print("No accounts found\n")
+		return nil
+	} else {
+		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
+	}
+	displayRemotePublicKeys(validatingPubKeys)
 	return nil
 }
 

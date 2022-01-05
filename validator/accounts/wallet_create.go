@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
@@ -23,11 +25,12 @@ import (
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
 type CreateWalletConfig struct {
-	SkipMnemonicConfirm  bool
-	NumAccounts          int
-	RemoteKeymanagerOpts *remote.KeymanagerOpts
-	WalletCfg            *wallet.Config
-	Mnemonic25thWord     string
+	SkipMnemonicConfirm   bool
+	NumAccounts           int
+	RemoteKeymanagerOpts  *remote.KeymanagerOpts
+	Web3SignerSetupConfig *remote_web3signer.SetupConfig
+	WalletCfg             *wallet.Config
+	Mnemonic25thWord      string
 }
 
 // CreateAndSaveWalletCli from user input with a desired keymanager. If a
@@ -116,6 +119,13 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
 		)
+	case keymanager.Web3Signer:
+		if err = createWeb3SignerKeymanagerWallet(ctx, w, cfg.Web3SignerSetupConfig); err != nil {
+			return nil, errors.Wrap(err, "could not initialize wallet")
+		}
+		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
+			"Successfully created wallet with web3 signer configuration",
+		)
 	default:
 		return nil, errors.Wrapf(err, errKeymanagerNotSupported, w.KeymanagerKind())
 	}
@@ -193,6 +203,13 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		}
 		createWalletConfig.RemoteKeymanagerOpts = opts
 	}
+	if keymanagerKind == keymanager.Web3Signer {
+		config, err := userprompt.InputWeb3SignerConfig(cliCtx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not input web3 signer config")
+		}
+		createWalletConfig.Web3SignerSetupConfig = config
+	}
 	return createWalletConfig, nil
 }
 
@@ -250,6 +267,20 @@ func createRemoteKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet, op
 	return nil
 }
 
+func createWeb3SignerKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet, config *remote_web3signer.SetupConfig) error {
+	keymanagerConfig, err := remote_web3signer.MarshalConfigFile(ctx, config)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal web3signer config file")
+	}
+	if err := wallet.SaveWallet(); err != nil {
+		return errors.Wrap(err, "could not save wallet to disk")
+	}
+	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		return errors.Wrap(err, "could not write web3signer keymanager config to disk")
+	}
+	return nil
+}
+
 func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	if cliCtx.IsSet(flags.KeymanagerKindFlag.Name) {
 		return keymanager.ParseKind(cliCtx.String(flags.KeymanagerKindFlag.Name))
@@ -260,6 +291,7 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 			wallet.KeymanagerKindSelections[keymanager.Imported],
 			wallet.KeymanagerKindSelections[keymanager.Derived],
 			wallet.KeymanagerKindSelections[keymanager.Remote],
+			wallet.KeymanagerKindSelections[keymanager.Web3Signer],
 		},
 	}
 	selection, _, err := promptSelect.Run()

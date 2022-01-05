@@ -114,7 +114,11 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 	for {
 		select {
 		case w := <-walletChan:
-			keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
+			genesisRoot, err := v.db.GenesisValidatorsRoot(ctx)
+			if err != nil {
+				return errors.Wrap(err, "unable to retrieve genesis validators root")
+			}
+			keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true, GenesisValidatorsRoot: genesisRoot})
 			if err != nil {
 				return errors.Wrap(err, "could not read keymanager")
 			}

@@ -2,7 +2,10 @@ package remote_web3signer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -151,4 +154,35 @@ func (*Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription
 	return event.NewSubscription(func(i <-chan struct{}) error {
 		return nil
 	})
+}
+
+// reloadKeys reloads the public keys from the remote server
+func (km *Keymanager) reloadKeys() {
+	// Not used right now.
+	// The feature of needing to dynamically reload from the validator instead of from the web3signer is yet to be determined.
+	// In the future there may be an api provided to add remote sign keys to the static list or remove from the static list.
+}
+
+// UnmarshalConfigFile attempts to JSON unmarshal a keymanager
+// config file into a SetupConfig struct.
+func UnmarshalConfigFile(r io.ReadCloser) (*SetupConfig, error) {
+	enc, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read config")
+	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			log.Errorf("Could not close keymanager config file: %v", err)
+		}
+	}()
+	config := &SetupConfig{}
+	if err := json.Unmarshal(enc, config); err != nil {
+		return nil, errors.Wrap(err, "could not JSON unmarshal")
+	}
+	return config, nil
+}
+
+// MarshalConfigFile for the keymanager.
+func MarshalConfigFile(_ context.Context, config *SetupConfig) ([]byte, error) {
+	return json.MarshalIndent(config, "", "\t")
 }

@@ -34,11 +34,7 @@ var backOffPeriod = 10 * time.Second
 func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
-	if err := v.WaitForWalletInitialization(ctx); err != nil {
-		// log.Fatalf will prevent defer from being called
-		cleanup()
-		log.Fatalf("Wallet is not ready: %v", err)
-	}
+
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
@@ -61,6 +57,11 @@ func run(ctx context.Context, v iface.Validator) {
 		}
 		if err != nil {
 			log.Fatalf("Could not determine if beacon chain started: %v", err)
+		}
+		if err := v.WaitForWalletInitialization(ctx); err != nil {
+			// log.Fatalf will prevent defer from being called
+			cleanup()
+			log.Fatalf("Wallet is not ready: %v", err)
 		}
 		err = v.WaitForSync(ctx)
 		if isConnectionError(err) {

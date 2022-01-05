@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/io/file"
@@ -52,9 +54,10 @@ var (
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
-		keymanager.Imported: "Imported Wallet (Recommended)",
-		keymanager.Derived:  "HD Wallet",
-		keymanager.Remote:   "Remote Signing Wallet (Advanced)",
+		keymanager.Imported:   "Imported Wallet (Recommended)",
+		keymanager.Derived:    "HD Wallet",
+		keymanager.Remote:     "Remote Signing Wallet (Advanced)",
+		keymanager.Web3Signer: "Web3Signer (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {
@@ -289,6 +292,25 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote keymanager")
+		}
+	case keymanager.Web3Signer:
+		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read web3signer keymanager config")
+		}
+		config, err := remote_web3signer.UnmarshalConfigFile(configFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal web3signer keymanager config file")
+		}
+		// injected in the validator runner
+		if len(cfg.GenesisValidatorsRoot) != 0 {
+			config.GenesisValidatorsRoot = cfg.GenesisValidatorsRoot
+		} else {
+			return nil, errors.New("could not set genesis validators root")
+		}
+		km, err = remote_web3signer.NewKeymanager(ctx, config)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize web3signer keymanager")
 		}
 	default:
 		return nil, fmt.Errorf("keymanager kind not supported: %s", w.keymanagerKind)
