@@ -65,7 +65,11 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 // FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys.
 func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
 	if km.publicKeysURL != "" {
-		return km.client.GetPublicKeys(km.publicKeysURL)
+		providedPublicKeys, err := km.client.GetPublicKeys(km.publicKeysURL)
+		if err != nil {
+			return nil, err
+		}
+		km.providedPublicKeys = providedPublicKeys
 	}
 	return km.providedPublicKeys, nil
 }
@@ -76,15 +80,12 @@ func (km *Keymanager) Sign(_ context.Context, request *validatorpb.SignRequest) 
 	if request.Fork == nil {
 		return nil, errors.New("invalid sign request: Fork is nil")
 	}
-	if request.AggregationSlot == 0 {
-		return nil, errors.New("invalid sign request: AggregationSlot is 0")
-	}
 
-	// get new keys before signing
 	signRequestType, err := getSignRequestType(request)
 	if err != nil {
 		return nil, err
 	}
+
 	forkData := &Fork{
 		PreviousVersion: hexutil.Encode(request.Fork.PreviousVersion),
 		CurrentVersion:  hexutil.Encode(request.Fork.CurrentVersion),
@@ -117,7 +118,7 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 		return "AGGREGATION_SLOT", nil
 	case *validatorpb.SignRequest_BlockV2:
 		return "BLOCK_V2", nil
-	// Not supported in web3signer yet we need to add it once the merge is scheduled
+	// Not supported in web3signer yet we need to add it once the merge is scheduled.
 	//case *validatorpb.SignRequest_BlockV3:
 	//	return "BLOCK_V3", nil
 
