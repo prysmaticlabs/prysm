@@ -118,7 +118,7 @@ func TestCanUpgradeToAltair(t *testing.T) {
 func TestCanUpgradeToMerge(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bc := params.BeaconConfig()
-	bc.MergeForkEpoch = 5
+	bc.BellatrixForkEpoch = 5
 	params.OverrideBeaconConfig(bc)
 	tests := []struct {
 		name string
@@ -137,7 +137,7 @@ func TestCanUpgradeToMerge(t *testing.T) {
 		},
 		{
 			name: "merge epoch",
-			slot: types.Slot(params.BeaconConfig().MergeForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			slot: types.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
 			want: true,
 		},
 	}
