@@ -427,11 +427,15 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 			err:     nil,
 		},
 		{
-			name:    "validate passes",
-			payload: emptyPayload(),
+			name: "validate passes",
+			payload: func() *ethpb.ExecutionPayload {
+				p := emptyPayload()
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
 			header: func() *ethpb.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				h.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			err: nil,
@@ -439,13 +443,13 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 		{
 			name: "incorrect blockhash",
 			payload: func() *ethpb.ExecutionPayload {
-				h := emptyPayload()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return h
+				p := emptyPayload()
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
 			}(),
 			header: func() *ethpb.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				h.BlockHash = bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength)
 				return h
 			}(),
 			err: errors.New("incorrect block hash"),
