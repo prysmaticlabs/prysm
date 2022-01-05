@@ -52,9 +52,9 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 		StatusCode: 200,
 		Body:       r,
 	}}
-	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
+	cl := apiClient{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
 
-	resp, err := cl.Sign("a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", getClientMockSignRequest())
+	resp, err := cl.Sign(nil, "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", getClientMockSignRequest())
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9", fmt.Sprintf("%#x", resp.Marshal()))
@@ -69,8 +69,8 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 		StatusCode: 200,
 		Body:       r,
 	}}
-	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
-	resp, err := cl.GetPublicKeys("example.com/api/publickeys")
+	cl := apiClient{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
+	resp, err := cl.GetPublicKeys(nil, "example.com/api/publickeys")
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	// we would like them as 48byte base64 without 0x
@@ -83,8 +83,8 @@ func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
 		StatusCode: 200,
 		Body:       ioutil.NopCloser(bytes.NewReader(nil)),
 	}}
-	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
-	err := cl.ReloadSignerKeys()
+	cl := apiClient{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
+	err := cl.ReloadSignerKeys(nil)
 	assert.Nil(t, err)
 }
 
@@ -96,8 +96,8 @@ func TestClient_GetServerStatus_HappyPath(t *testing.T) {
 		StatusCode: 200,
 		Body:       r,
 	}}
-	cl := client{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
-	resp, err := cl.GetServerStatus()
+	cl := apiClient{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
+	resp, err := cl.GetServerStatus(nil)
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 }

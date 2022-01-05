@@ -31,7 +31,7 @@ type SetupConfig struct {
 
 // Keymanager defines the web3signer keymanager.
 type Keymanager struct {
-	client                Web3SignerClient
+	client                httpSignerClient
 	genesisValidatorsRoot []byte
 	publicKeysURL         string
 	providedPublicKeys    [][48]byte
@@ -49,12 +49,12 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if cfg.PublicKeysURL == "" && len(cfg.ProvidedPublicKeys) == 0 {
 		return nil, errors.New("no valid public key options provided")
 	}
-	client, err := newClient(cfg.BaseEndpoint)
+	client, err := newApiClient(cfg.BaseEndpoint)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not create client")
+		return nil, errors.Wrap(err, "could not create apiClient")
 	}
 	return &Keymanager{
-		client:                Web3SignerClient(client),
+		client:                httpSignerClient(client),
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
 		publicKeysURL:         cfg.PublicKeysURL,
@@ -63,9 +63,9 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys.
-func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	if km.publicKeysURL != "" {
-		providedPublicKeys, err := km.client.GetPublicKeys(km.publicKeysURL)
+		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +75,7 @@ func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, 
 }
 
 // Sign signs the message by using a remote web3signer server.
-func (km *Keymanager) Sign(_ context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
+func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
 	if request.Fork == nil {
 		return nil, errors.New("invalid sign request: Fork is nil")
 	}
@@ -101,7 +101,7 @@ func (km *Keymanager) Sign(_ context.Context, request *validatorpb.SignRequest) 
 		SigningRoot:     hexutil.Encode(request.SigningRoot),
 		AggregationSlot: aggregationSlotData,
 	}
-	return km.client.Sign(hexutil.Encode(request.PublicKey), &web3SignerRequest)
+	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), &web3SignerRequest)
 }
 
 // getSignRequestType returns the type of the sign request.
@@ -117,7 +117,7 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 		return "AGGREGATION_SLOT", nil
 	case *validatorpb.SignRequest_BlockV2:
 		return "BLOCK_V2", nil
-	// Not supported in web3signer yet we need to add it once the merge is scheduled.
+	// TODO(#10053): Need to add support for merge blocks.
 	/*
 		case *validatorpb.SignRequest_BlockV3:
 		return "BLOCK_V3", nil
@@ -139,17 +139,16 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 	case *validatorpb.SignRequest_ContributionAndProof:
 		return "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF", nil
 	default:
-		return "", errors.New("Web3signer sign request type not found")
+		return "", errors.New(fmt.Sprintf("Web3signer sign request type: %T  not found", request.Object))
 	}
 }
 
 // SubscribeAccountChanges returns the event subscription for changes to public keys.
 func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
 	// Not used right now.
-	// Returns a stub for the time being as there is a danger of being slashed if the client reloads keys dynamically.
+	// Returns a stub for the time being as there is a danger of being slashed if the apiClient reloads keys dynamically.
 	// Because there is no way to dynamically reload keys, add or remove remote keys we are returning a stub without any event updates for the time being.
 	return event.NewSubscription(func(i <-chan struct{}) error {
 		return nil
 	})
 }
-
