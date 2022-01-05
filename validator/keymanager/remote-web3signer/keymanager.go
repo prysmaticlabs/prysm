@@ -154,9 +154,3 @@ func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscript
 	})
 }
 
-// reloadKeys reloads the public keys from the remote server
-func (km *Keymanager) reloadKeys() {
-	// Not used right now.
-	// The feature of needing to dynamically reload from the validator instead of from the web3signer is yet to be determined.
-	// In the future there may be an api provided to add remote sign keys to the static list or remove from the static list.
-}
