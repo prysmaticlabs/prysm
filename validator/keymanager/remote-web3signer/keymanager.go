@@ -106,11 +106,6 @@ func (km *Keymanager) Sign(_ context.Context, request *validatorpb.SignRequest) 
 
 // getSignRequestType returns the type of the sign request.
 func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
-	//	*SignRequest_Slot // check where this is used
-	//	*SignRequest_Epoch // check where this is used
-	//	*SignRequest_SyncAggregatorSelectionData
-	//	*SignRequest_SyncMessageBlockRoot
-	//	*SignRequest_BlockV3 // check where this is used
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_Block:
 		return "BLOCK", nil
@@ -118,20 +113,25 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 		return "ATTESTATION", nil
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
 		return "AGGREGATE_AND_PROOF", nil
-	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
+	case *validatorpb.SignRequest_Slot:
 		return "AGGREGATION_SLOT", nil
 	case *validatorpb.SignRequest_BlockV2:
 		return "BLOCK_V2", nil
+	// Not supported in web3signer yet we need to add it once the merge is scheduled
+	//case *validatorpb.SignRequest_BlockV3:
+	//	return "BLOCK_V3", nil
+
+	// We do not support "DEPOSIT" type.
 	//case *validatorpb.:
 	//	return "DEPOSIT", nil
-	//case *validatorpb.:
-	//	return "RANDAO_REVEAL", nil
+	case *validatorpb.SignRequest_Epoch:
+		return "RANDAO_REVEAL", nil
 	case *validatorpb.SignRequest_Exit: //not sure
 		return "VOLUNTARY_EXIT", nil
-	//case *validatorpb.:
-	//	return "SYNC_COMMITTEE_MESSAGE", nil
-	//case *validatorpb.:
-	//	return "SYNC_COMMITTEE_SELECTION_PROOF", nil
+	case *validatorpb.SignRequest_SyncMessageBlockRoot:
+		return "SYNC_COMMITTEE_MESSAGE", nil
+	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
+		return "SYNC_COMMITTEE_SELECTION_PROOF", nil
 	case *validatorpb.SignRequest_ContributionAndProof:
 		return "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF", nil
 	default:
