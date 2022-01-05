@@ -76,7 +76,6 @@ func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, 
 
 // Sign signs the message by using a remote web3signer server.
 func (km *Keymanager) Sign(_ context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
-
 	if request.Fork == nil {
 		return nil, errors.New("invalid sign request: Fork is nil")
 	}
