@@ -316,7 +316,7 @@ func ProcessBlockForStateRoot(
 	}
 
 	if state.Version() == version.Merge {
-		enabled, err := b.Enabled(state, blk.Body())
+		enabled, err := b.ExecutionEnabled(state, blk.Body())
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not check if execution is enabled")
