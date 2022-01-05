@@ -130,7 +130,7 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 	*/
 	case *validatorpb.SignRequest_Epoch:
 		return "RANDAO_REVEAL", nil
-	case *validatorpb.SignRequest_Exit: //not sure
+	case *validatorpb.SignRequest_Exit:
 		return "VOLUNTARY_EXIT", nil
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
 		return "SYNC_COMMITTEE_MESSAGE", nil
