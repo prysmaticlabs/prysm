@@ -120,7 +120,7 @@ func TransactionsRoot(txs [][]byte) ([32]byte, error) {
 
 func transactionRoot(tx []byte) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	chunkedRoots, err := packChunks(tx)
+	chunkedRoots, err := PackChunks(tx)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -139,9 +139,9 @@ func transactionRoot(tx []byte) ([32]byte, error) {
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
-// Pack a given byte array into chunks. It'll pad the last chunk with zero bytes if
+// PackChunks a given byte array into chunks. It'll pad the last chunk with zero bytes if
 // it does not have length bytes per chunk.
-func packChunks(bytes []byte) ([][]byte, error) {
+func PackChunks(bytes []byte) ([][]byte, error) {
 	numItems := len(bytes)
 	var chunks [][]byte
 	for i := 0; i < numItems; i += 32 {
