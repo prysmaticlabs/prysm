@@ -116,3 +116,14 @@ func TestExtractGossipDigest(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkExtractGossipDigest(b *testing.B) {
+	topic := fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := ExtractGossipDigest(topic)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
