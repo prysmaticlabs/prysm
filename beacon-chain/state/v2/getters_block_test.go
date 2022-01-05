@@ -64,6 +64,6 @@ func TestBeaconState_BlockRootAtIndex(t *testing.T) {
 	require.NoError(t, err)
 	got, err = s.BlockRootAtIndex(0)
 	require.NoError(t, err)
-	want := [32]byte{'a'}
+	want := [fieldparams.RootLength]byte{'a'}
 	require.DeepSSZEqual(t, want, got)
 }

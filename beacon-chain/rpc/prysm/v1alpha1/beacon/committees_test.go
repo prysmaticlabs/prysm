@@ -80,7 +80,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, numValidators)
 
-	var mixes [fieldparams.RandaoMixesLength][32]byte
+	var mixes [fieldparams.RandaoMixesLength][fieldparams.RootLength]byte
 	require.NoError(t, headState.SetRandaoMixes(&mixes))
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 

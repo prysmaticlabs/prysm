@@ -135,7 +135,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	bodyRoot, err := (&ethpb.BeaconBlockBodyAltair{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: make([]byte, 32),
+			DepositRoot: make([]byte, fieldparams.RootLength),
 			BlockHash:   make([]byte, 32),
 		},
 		Graffiti: make([]byte, 32),
@@ -314,12 +314,12 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 	return &ethpb.SignedBeaconBlockAltair{
 		Block: &ethpb.BeaconBlockAltair{
-			ParentRoot: make([]byte, 32),
-			StateRoot:  make([]byte, 32),
+			ParentRoot: make([]byte, fieldparams.RootLength),
+			StateRoot:  make([]byte, fieldparams.RootLength),
 			Body: &ethpb.BeaconBlockBodyAltair{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot: make([]byte, 32),
+					DepositRoot: make([]byte, fieldparams.RootLength),
 					BlockHash:   make([]byte, 32),
 				},
 				Graffiti:          make([]byte, 32),

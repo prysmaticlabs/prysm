@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -383,7 +384,7 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 				&ethpb.DoppelGangerRequest_ValidatorRequest{
 					PublicKey:  copiedKey[:],
 					Epoch:      0,
-					SignedRoot: make([]byte, 32),
+					SignedRoot: make([]byte, fieldparams.RootLength),
 				})
 			continue
 		}

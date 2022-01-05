@@ -11,6 +11,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -105,7 +106,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("foo"),
 				},
-				Signature: bytesutil.PadTo([]byte("A"), params.BeaconConfig().BLSSignatureLength),
+				Signature: bytesutil.PadTo([]byte("A"), fieldparams.BLSSignatureLength),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
@@ -113,7 +114,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("bar"),
 				},
-				Signature: bytesutil.PadTo([]byte("B"), params.BeaconConfig().BLSSignatureLength),
+				Signature: bytesutil.PadTo([]byte("B"), fieldparams.BLSSignatureLength),
 			},
 		},
 	}
@@ -277,7 +278,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatusMerge(t *testing.T) {
 			newStateVals[1].ExitEpoch, beaconState.Validators()[1].ExitEpoch)
 	}
 
-	require.Equal(t, uint64(31500000000), newState.Balances()[1])
+	require.Equal(t, uint64(31000000000), newState.Balances()[1])
 	require.Equal(t, uint64(32000000000), newState.Balances()[2])
 }
 

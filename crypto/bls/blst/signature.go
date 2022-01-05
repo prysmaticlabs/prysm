@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	blst "github.com/supranational/blst/bindings/go"
@@ -31,8 +31,8 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 	if features.Get().SkipBLSVerify {
 		return &Signature{}, nil
 	}
-	if len(sig) != params.BeaconConfig().BLSSignatureLength {
-		return nil, fmt.Errorf("signature must be %d bytes", params.BeaconConfig().BLSSignatureLength)
+	if len(sig) != fieldparams.BLSSignatureLength {
+		return nil, fmt.Errorf("signature must be %d bytes", fieldparams.BLSSignatureLength)
 	}
 	signature := new(blstSignature).Uncompress(sig)
 	if signature == nil {
@@ -223,7 +223,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
 	if features.Get().SkipBLSVerify {
-		return make([]byte, params.BeaconConfig().BLSSignatureLength)
+		return make([]byte, fieldparams.BLSSignatureLength)
 	}
 
 	return s.s.Compress()

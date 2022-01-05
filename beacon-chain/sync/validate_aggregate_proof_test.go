@@ -20,6 +20,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -106,11 +107,11 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	})
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  bytesutil.PadTo([]byte{'A'}, params.BeaconConfig().BLSSignatureLength),
+		SelectionProof:  bytesutil.PadTo([]byte{'A'}, fieldparams.BLSSignatureLength),
 		Aggregate:       att,
 		AggregatorIndex: 0,
 	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, fieldparams.BLSSignatureLength)}
 
 	c := lruwrpr.New(10)
 	r := &Service{
@@ -169,14 +170,14 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, params.BeaconConfig().BLSSignatureLength),
+		Signature:       make([]byte, fieldparams.BLSSignatureLength),
 	}
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		Aggregate:      att,
-		SelectionProof: make([]byte, params.BeaconConfig().BLSSignatureLength),
+		SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, fieldparams.BLSSignatureLength)}
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
@@ -253,14 +254,14 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, params.BeaconConfig().BLSSignatureLength),
+		Signature:       make([]byte, fieldparams.BLSSignatureLength),
 	}
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		Aggregate:      att,
-		SelectionProof: make([]byte, params.BeaconConfig().BLSSignatureLength),
+		SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, fieldparams.BLSSignatureLength)}
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 	r := &Service{

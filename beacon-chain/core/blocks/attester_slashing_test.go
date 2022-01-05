@@ -302,6 +302,6 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusMerge(t *testing.T) {
 		)
 	}
 
-	require.Equal(t, uint64(31500000000), newState.Balances()[1])
+	require.Equal(t, uint64(31000000000), newState.Balances()[1])
 	require.Equal(t, uint64(32000000000), newState.Balances()[2])
 }

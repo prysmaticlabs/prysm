@@ -161,6 +161,12 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 				return err
 			}
 			validators = pbState.Validators
+		case *ethpb.BeaconStateMerge:
+			pbState, err := v3.ProtobufBeaconState(st.ToProtoUnsafe())
+			if err != nil {
+				return err
+			}
+			validators = pbState.Validators
 		default:
 			return errors.New("invalid state type")
 		}
@@ -232,6 +238,28 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 					return err
 				}
 				encodedState := snappy.Encode(nil, append(altairKey, rawObj...))
+				if err := bucket.Put(rt[:], encodedState); err != nil {
+					return err
+				}
+				pbState.Validators = valEntries
+				if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+					return err
+				}
+			case *ethpb.BeaconStateMerge:
+				pbState, err := v3.ProtobufBeaconState(rawType)
+				if err != nil {
+					return err
+				}
+				if pbState == nil {
+					return errors.New("nil state")
+				}
+				valEntries := pbState.Validators
+				pbState.Validators = make([]*ethpb.Validator, 0)
+				rawObj, err := pbState.MarshalSSZ()
+				if err != nil {
+					return err
+				}
+				encodedState := snappy.Encode(nil, append(mergeKey, rawObj...))
 				if err := bucket.Put(rt[:], encodedState); err != nil {
 					return err
 				}

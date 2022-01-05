@@ -16,6 +16,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
@@ -30,7 +31,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
-	genesisValidatorsRoot := [32]byte{'a'}
+	genesisValidatorsRoot := [fieldparams.RootLength]byte{'a'}
 	s := &Service{
 		cfg: &Config{
 			UDPPort:       uint(port),

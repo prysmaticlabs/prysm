@@ -22,7 +22,7 @@ func FillRootsNaturalOpt(state state.BeaconState) error {
 	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
 	roots := make([][]byte, rootsLen)
 	for i := types.Slot(0); i < rootsLen; i++ {
-		roots[i] = make([]byte, 32)
+		roots[i] = make([]byte, fieldparams.RootLength)
 	}
 	for j := 0; j < len(roots); j++ {
 		// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
@@ -76,7 +76,7 @@ func NewBeaconState(options ...func(beaconState state.BeaconState) error) (*v1.B
 		return nil, errors.Wrap(err, "could not set state roots")
 	}
 	if err = st.SetEth1Data(&ethpb.Eth1Data{
-		DepositRoot: make([]byte, 32),
+		DepositRoot: make([]byte, fieldparams.RootLength),
 		BlockHash:   make([]byte, 32),
 	}); err != nil {
 		return nil, errors.Wrap(err, "could not set eth1 data")
@@ -96,13 +96,13 @@ func NewBeaconState(options ...func(beaconState state.BeaconState) error) (*v1.B
 	if err = st.SetJustificationBits(bitfield.Bitvector4{0x0}); err != nil {
 		return nil, errors.Wrap(err, "could not set justification bits")
 	}
-	if err = st.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Root: make([]byte, 32)}); err != nil {
+	if err = st.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)}); err != nil {
 		return nil, errors.Wrap(err, "could not set previous justified checkpoint")
 	}
-	if err = st.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Root: make([]byte, 32)}); err != nil {
+	if err = st.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)}); err != nil {
 		return nil, errors.Wrap(err, "could not set current justified checkpoint")
 	}
-	if err = st.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: make([]byte, 32)}); err != nil {
+	if err = st.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)}); err != nil {
 		return nil, errors.Wrap(err, "could not set finalized checkpoint")
 	}
 
