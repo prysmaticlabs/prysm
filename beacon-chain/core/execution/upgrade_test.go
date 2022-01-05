@@ -49,7 +49,7 @@ func TestUpgradeToMerge(t *testing.T) {
 	f := mSt.Fork()
 	require.DeepSSZEqual(t, &ethpb.Fork{
 		PreviousVersion: st.Fork().CurrentVersion,
-		CurrentVersion:  params.BeaconConfig().MergeForkVersion,
+		CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
 		Epoch:           time.CurrentEpoch(st),
 	}, f)
 	csc, err := mSt.CurrentSyncCommittee()

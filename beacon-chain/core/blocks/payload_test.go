@@ -539,6 +539,7 @@ func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
+		ExtraData:        make([]byte, 0),
 	}
 }
 
@@ -552,5 +553,7 @@ func emptyPayload() *ethpb.ExecutionPayload {
 		Random:        make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		ExtraData:     make([]byte, 0),
 	}
 }

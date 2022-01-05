@@ -554,7 +554,7 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 func TestProcessSlots_OnlyMergeEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
 	conf := params.BeaconConfig()
-	conf.MergeForkEpoch = 5
+	conf.BellatrixForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
 	defer params.UseMainnetConfig()
 

@@ -146,10 +146,10 @@ func isEmptyPayload(p *ethpb.ExecutionPayload) bool {
 	if !bytes.Equal(p.BlockHash, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if p.Transactions != nil {
+	if len(p.Transactions) != 0 {
 		return false
 	}
-	if p.ExtraData != nil {
+	if len(p.ExtraData) != 0 {
 		return false
 	}
 	if p.BlockNumber != 0 {
@@ -195,7 +195,7 @@ func isEmptyHeader(h *ethpb.ExecutionPayloadHeader) bool {
 	if !bytes.Equal(h.TransactionsRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if h.ExtraData != nil {
+	if len(h.ExtraData) != 0 {
 		return false
 	}
 	if h.BlockNumber != 0 {
