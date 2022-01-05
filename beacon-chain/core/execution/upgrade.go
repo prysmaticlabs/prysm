@@ -53,7 +53,7 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 	}
 	if err = newState.SetFork(&ethpb.Fork{
 		PreviousVersion: state.Fork().CurrentVersion,
-		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+		CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
 		Epoch:           epoch,
 	}); err != nil {
 		return nil, errors.Wrap(err, "could not set fork")

@@ -125,7 +125,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 }
 
 func Initialize() (*BeaconState, error) {
-	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
 	sRoots := customtypes.StateRoots([fieldparams.StateRootsLength][32]byte{})
 	bRoots := customtypes.BlockRoots([fieldparams.BlockRootsLength][32]byte{})
 	mixes := customtypes.RandaoMixes([fieldparams.RandaoMixesLength][32]byte{})
