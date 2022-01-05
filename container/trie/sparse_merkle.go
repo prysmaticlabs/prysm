@@ -180,8 +180,8 @@ func (m *SparseMerkleTrie) ToProto() *protodb.SparseMerkleTrie {
 	return trie
 }
 
-// VerifyMerkleBranch verifies a Merkle branch against a root of a trie.
-func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, depth uint64) bool {
+// VerifyMerkleProofWithDepth verifies a Merkle branch against a root of a trie.
+func VerifyMerkleProofWithDepth(root, item []byte, merkleIndex int, proof [][]byte, depth uint64) bool {
 	if len(proof) != int(depth)+1 {
 		return false
 	}
@@ -194,6 +194,20 @@ func VerifyMerkleBranch(root, item []byte, merkleIndex int, proof [][]byte, dept
 		}
 	}
 
+	return bytes.Equal(root, node[:])
+}
+
+// VerifyMerkleProof given a trie root, a leaf, the generalized merkle index
+// of the leaf in the trie, and the proof itself.
+func VerifyMerkleProof(root, item []byte, merkleIndex uint64, proof [][]byte) bool {
+	node := bytesutil.ToBytes32(item)
+	for i := 0; i < len(proof); i++ {
+		if (merkleIndex / math.PowerOf2(uint64(i)) % 2) != 0 {
+			node = hash.Hash(append(proof[i], node[:]...))
+		} else {
+			node = hash.Hash(append(node[:], proof[i]...))
+		}
+	}
 	return bytes.Equal(root, node[:])
 }
 

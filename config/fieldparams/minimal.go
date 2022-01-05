@@ -15,4 +15,6 @@ const (
 	SyncCommitteeLength             = 32            // SYNC_COMMITTEE_SIZE
 	RootLength                      = 32            // RootLength defines the byte length of a Merkle root.
 	BLSSignatureLength              = 96            // BLSSignatureLength defines the byte length of a BLSSignature.
+	FeeRecipientLength              = 20            // FeeRecipientLength defines the byte length of a fee recipient.
+	LogsBloomLength                 = 256           // LogsBloomLength defines the byte length of a logs bloom.
 )
