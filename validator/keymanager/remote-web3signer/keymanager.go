@@ -41,7 +41,7 @@ type Keymanager struct {
 // NewKeymanager instantiates a new web3signer key manager.
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if cfg.BaseEndpoint == "" || len(cfg.GenesisValidatorsRoot) == 0 {
-		return nil, errors.New("invalid setup config, one or more configs are empty: " + fmt.Sprintf("BaseEndpoint: %v, GenesisValidatorsRoot: %v.", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot))
+		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %v", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
 	}
 	if cfg.PublicKeysURL != "" && len(cfg.ProvidedPublicKeys) != 0 {
 		return nil, errors.New("Either a provided list of public keys or a URL to a list of public keys must be provided, but not both")
