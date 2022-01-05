@@ -18,6 +18,14 @@ type BeaconState interface {
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	FutureForkStub
+	StateProver
+}
+
+// StateProver defines the ability to create Merkle proofs for beacon state fields.
+type StateProver interface {
+	FinalizedRootProof() ([][]byte, error)
+	CurrentSyncCommitteeProof() ([][]byte, error)
+	NextSyncCommitteeProof() ([][]byte, error)
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
@@ -65,6 +73,7 @@ type WriteOnlyBeaconState interface {
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
+	SetLatestExecutionPayloadHeader(payload *ethpb.ExecutionPayloadHeader) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
