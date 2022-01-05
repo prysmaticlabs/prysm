@@ -6,7 +6,7 @@ go_library(
         "altair.go",
         "phase0.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state-proto",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//contracts/deposit:__subpackages__",

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v1"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v2"
 	"github.com/prysmaticlabs/prysm/config/features"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"

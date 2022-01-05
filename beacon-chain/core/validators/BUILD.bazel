@@ -11,7 +11,7 @@ go_library(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state-native:go_default_library",
         "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//time/slots:go_default_library",
@@ -28,7 +28,6 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
         "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",

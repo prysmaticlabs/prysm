@@ -2,7 +2,7 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v2"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"

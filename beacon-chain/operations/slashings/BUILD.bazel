@@ -21,7 +21,7 @@ go_library(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state-native:go_default_library",
         "//config/params:go_default_library",
         "//container/slice:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
@@ -45,7 +45,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state-native:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",

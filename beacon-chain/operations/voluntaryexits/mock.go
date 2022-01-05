@@ -4,7 +4,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
