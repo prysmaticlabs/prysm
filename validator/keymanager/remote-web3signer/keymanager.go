@@ -11,7 +11,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 )
 
-// SetupConfig includes configuration values for initializing
+// SetupConfig includes configuration values for initializing.
 // a keymanager, such as passwords, the wallet, and more.
 // Web3Signer contains one public keys option. Either through a URL or a static key list.
 type SetupConfig struct {
@@ -29,7 +29,7 @@ type SetupConfig struct {
 	ProvidedPublicKeys [][48]byte
 }
 
-// Keymanager defines the web3signer keymanager
+// Keymanager defines the web3signer keymanager.
 type Keymanager struct {
 	client                Web3SignerClient
 	genesisValidatorsRoot []byte
@@ -38,7 +38,7 @@ type Keymanager struct {
 	accountsChangedFeed   *event.Feed
 }
 
-// NewKeymanager instantiates a new web3signer key manager
+// NewKeymanager instantiates a new web3signer key manager.
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if cfg.BaseEndpoint == "" || len(cfg.GenesisValidatorsRoot) == 0 {
 		return nil, errors.New("invalid setup config, one or more configs are empty: " + fmt.Sprintf("BaseEndpoint: %v, GenesisValidatorsRoot: %v.", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot))
@@ -62,7 +62,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	}, nil
 }
 
-// FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys
+// FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys.
 func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
 	if km.publicKeysURL != "" {
 		return km.client.GetPublicKeys(km.publicKeysURL)
@@ -70,7 +70,7 @@ func (km *Keymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, 
 	return km.providedPublicKeys, nil
 }
 
-// Sign signs the message by using a remote web3signer server
+// Sign signs the message by using a remote web3signer server.
 func (km *Keymanager) Sign(_ context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
 
 	if request.Fork == nil {
@@ -101,10 +101,10 @@ func (km *Keymanager) Sign(_ context.Context, request *validatorpb.SignRequest) 
 		SigningRoot:     hexutil.Encode(request.SigningRoot),
 		AggregationSlot: aggregationSlotData,
 	}
-	return km.client.Sign(string(request.PublicKey), &web3SignerRequest)
+	return km.client.Sign(hexutil.Encode(request.PublicKey), &web3SignerRequest)
 }
 
-// getSignRequestType returns the type of the sign request
+// getSignRequestType returns the type of the sign request.
 func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 	//	*SignRequest_Slot // check where this is used
 	//	*SignRequest_Epoch // check where this is used
@@ -139,11 +139,11 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 	}
 }
 
-// SubscribeAccountChanges returns the event subscription for changes to public keys
+// SubscribeAccountChanges returns the event subscription for changes to public keys.
 func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
-	// not used right now
-	// returns a stub for the time being as there is a danger of being slashed if the client reloads keys dynamically.
-	// because there is no way to dynamically reload keys, add or remove remote keys we are returning a stub without any event updates for the time being.
+	// Not used right now.
+	// Returns a stub for the time being as there is a danger of being slashed if the client reloads keys dynamically.
+	// Because there is no way to dynamically reload keys, add or remove remote keys we are returning a stub without any event updates for the time being.
 	return event.NewSubscription(func(i <-chan struct{}) error {
 		return nil
 	})
@@ -151,7 +151,7 @@ func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscript
 
 // reloadKeys reloads the public keys from the remote server
 func (km *Keymanager) reloadKeys() {
-	// not used right now
-	// the feature of needing to dynamically reload from the validator instead of from the web3signer is yet to be determined.
-	// in the future there may be an api provided to add remote sign keys to the static list or remove from the static list.
+	// Not used right now.
+	// The feature of needing to dynamically reload from the validator instead of from the web3signer is yet to be determined.
+	// In the future there may be an api provided to add remote sign keys to the static list or remove from the static list.
 }
