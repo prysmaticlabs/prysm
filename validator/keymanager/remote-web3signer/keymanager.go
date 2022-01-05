@@ -119,12 +119,16 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 	case *validatorpb.SignRequest_BlockV2:
 		return "BLOCK_V2", nil
 	// Not supported in web3signer yet we need to add it once the merge is scheduled.
-	//case *validatorpb.SignRequest_BlockV3:
-	//	return "BLOCK_V3", nil
+	/*
+		case *validatorpb.SignRequest_BlockV3:
+		return "BLOCK_V3", nil
+	*/
 
 	// We do not support "DEPOSIT" type.
-	//case *validatorpb.:
-	//	return "DEPOSIT", nil
+	/*
+		case *validatorpb.:
+		return "DEPOSIT", nil
+	*/
 	case *validatorpb.SignRequest_Epoch:
 		return "RANDAO_REVEAL", nil
 	case *validatorpb.SignRequest_Exit: //not sure
