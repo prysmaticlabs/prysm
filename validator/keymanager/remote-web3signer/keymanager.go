@@ -144,7 +144,7 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 }
 
 // SubscribeAccountChanges returns the event subscription for changes to public keys.
-func (km *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+func (_ *Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
 	// Not used right now.
 	// Returns a stub for the time being as there is a danger of being slashed if the apiClient reloads keys dynamically.
 	// Because there is no way to dynamically reload keys, add or remove remote keys we are returning a stub without any event updates for the time being.
