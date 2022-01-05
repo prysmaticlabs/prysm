@@ -1970,7 +1970,7 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_goTypes = []interface{}{
 	(*DepositMessage)(nil),              // 9: ethereum.eth.v1alpha1.DepositMessage
 	(*SyncCommittee)(nil),               // 10: ethereum.eth.v1alpha1.SyncCommittee
 	(*SyncAggregatorSelectionData)(nil), // 11: ethereum.eth.v1alpha1.SyncAggregatorSelectionData
-	(*BeaconStateBellatrix)(nil),            // 12: ethereum.eth.v1alpha1.BeaconStateBellatrix
+	(*BeaconStateBellatrix)(nil),        // 12: ethereum.eth.v1alpha1.BeaconStateBellatrix
 	(*ExecutionPayloadHeader)(nil),      // 13: ethereum.eth.v1alpha1.ExecutionPayloadHeader
 	(*BeaconBlockHeader)(nil),           // 14: ethereum.eth.v1alpha1.BeaconBlockHeader
 	(*Eth1Data)(nil),                    // 15: ethereum.eth.v1alpha1.Eth1Data

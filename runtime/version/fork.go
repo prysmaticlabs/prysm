@@ -12,7 +12,7 @@ func String(version int) string {
 		return "phase0"
 	case Altair:
 		return "altair"
-	case	Bellatrix:
+	case Bellatrix:
 		return "bellatrix"
 	default:
 		return "unknown version"
