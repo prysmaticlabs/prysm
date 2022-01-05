@@ -107,7 +107,7 @@ func (client *client) Sign(pubKey string, request *SignRequest) (bls.Signature, 
 	return bls.SignatureFromBytes(decoded)
 }
 
-// GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
+// GetPublicKeys is a wrapper method around the web3signer publickeys api.
 func (client *client) GetPublicKeys(url string) ([][48]byte, error) {
 	resp, err := client.doRequest(http.MethodGet, url, nil)
 	if err != nil {
