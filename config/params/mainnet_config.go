@@ -237,6 +237,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Light client
 	MinSyncCommitteeParticipants: 1,
 
-	// Merge
+	// Bellatrix
 	TerminalBlockHashActivationEpoch: math.MaxUint64,
 }

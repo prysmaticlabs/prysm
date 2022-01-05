@@ -120,7 +120,7 @@ type BeaconChainConfig struct {
 	GenesisCountdownInterval       time.Duration // How often to log the countdown until the genesis time is reached.
 	BeaconStateFieldCount          int           // BeaconStateFieldCount defines how many fields are in beacon state.
 	BeaconStateAltairFieldCount    int           // BeaconStateAltairFieldCount defines how many fields are in beacon state hard fork 1.
-	BeaconStateBellatrixFieldCount int           // BeaconStateBellatrixFieldCount defines how many fields are in beacon state post upgrade to the Merge.
+	BeaconStateBellatrixFieldCount int           // BeaconStateBellatrixFieldCount defines how many fields are in beacon state post upgrade to the Bellatrix.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -133,13 +133,13 @@ type BeaconChainConfig struct {
 	GenesisForkVersion          []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`   // GenesisForkVersion is used to track fork version between state transitions.
 	AltairForkVersion           []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`    // AltairForkVersion is used to represent the fork version for altair.
 	AltairForkEpoch             types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`      // AltairForkEpoch is used to represent the assigned fork epoch for altair.
-	BellatrixForkVersion        []byte                  `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for the merge.
-	BellatrixForkEpoch          types.Epoch             `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for the merge.
+	BellatrixForkVersion        []byte                  `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
+	BellatrixForkEpoch          types.Epoch             `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
 	ShardingForkVersion         []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
 	ShardingForkEpoch           types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	ForkVersionSchedule         map[[4]byte]types.Epoch // Schedule of fork epochs by version.
-	MinAnchorPowBlockDifficulty uint64                  `yaml:"MIN_ANCHOR_POW_BLOCK_DIFFICULTY" spec:"true"` // MinAnchorPowBlockDifficulty specifies the target chain difficulty at the time of the merge.
-	TransitionTotalDifficulty   uint64                  `yaml:"TRANSITION_TOTAL_DIFFICULTY" spec:"true"`     // TransitionTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
+	MinAnchorPowBlockDifficulty uint64                  `yaml:"MIN_ANCHOR_POW_BLOCK_DIFFICULTY" spec:"true"` // MinAnchorPowBlockDifficulty specifies the target chain difficulty at the time of bellatrix.
+	TransitionTotalDifficulty   uint64                  `yaml:"TRANSITION_TOTAL_DIFFICULTY" spec:"true"`     // TransitionTotalDifficulty is part of the experimental bellatrix spec. This value is not used (yet) and is expected to be a uint256.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
@@ -173,17 +173,17 @@ type BeaconChainConfig struct {
 	InactivityPenaltyQuotientAltair      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_ALTAIR" spec:"true"`      // InactivityPenaltyQuotientAltair for penalties during inactivity post Altair hard fork.
 	MinSlashingPenaltyQuotientAltair     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR" spec:"true"`    // MinSlashingPenaltyQuotientAltair for slashing penalties post Altair hard fork.
 	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties' multiplier post Alair hard fork.
-	MinSlashingPenaltyQuotientMerge      uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE" spec:"true"`     // MinSlashingPenaltyQuotientMerge for slashing penalties post Merge hard fork.
-	ProportionalSlashingMultiplierMerge  uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE" spec:"true"`  // ProportionalSlashingMultiplierMerge for slashing penalties' multiplier post Merge hard fork.
-	InactivityPenaltyQuotientMerge       uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_MERGE" spec:"true"`       // InactivityPenaltyQuotientMerge for penalties during inactivity post Merge hard fork.
+	MinSlashingPenaltyQuotientMerge      uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE" spec:"true"`     // MinSlashingPenaltyQuotientMerge for slashing penalties post Bellatrix hard fork.
+	ProportionalSlashingMultiplierMerge  uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE" spec:"true"`  // ProportionalSlashingMultiplierMerge for slashing penalties' multiplier post Bellatrix hard fork.
+	InactivityPenaltyQuotientMerge       uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_MERGE" spec:"true"`       // InactivityPenaltyQuotientMerge for penalties during inactivity post Bellatrix hard fork.
 
 	// Light client
 	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.
 
-	// Merge
+	// Bellatrix
 	TerminalBlockHash                common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`                  // TerminalBlockHash of beacon chain.
 	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
-	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of the experimental merge spec. This value is type is currently TBD: https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/beacon-chain.md#transition-settings
+	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of Bellatrixexperimental bellatrix spec. This value is type is currently TBD: https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/beacon-chain.md#transition-settings
 	FeeRecipient                     common.Address // FeeRecipient where the transaction fee goes to.
 }
 

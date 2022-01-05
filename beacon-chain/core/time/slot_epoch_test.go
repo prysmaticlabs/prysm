@@ -131,12 +131,12 @@ func TestCanUpgradeBellatrix(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "not merge epoch",
+			name: "not bellatrix epoch",
 			slot: params.BeaconConfig().SlotsPerEpoch,
 			want: false,
 		},
 		{
-			name: "merge epoch",
+			name: "bellatrix epoch",
 			slot: types.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
 			want: true,
 		},

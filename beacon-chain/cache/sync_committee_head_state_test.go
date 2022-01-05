@@ -91,7 +91,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 			want: beaconState,
 		},
 		{
-			name: "not found when non-existent key in non-empty cache (merge state)",
+			name: "not found when non-existent key in non-empty cache (bellatrix state)",
 			key:  types.Slot(2),
 			put: &put{
 				slot:  types.Slot(1),
@@ -100,7 +100,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "found with key (merge state)",
+			name: "found with key (bellatrix state)",
 			key:  types.Slot(100),
 			put: &put{
 				slot:  types.Slot(100),

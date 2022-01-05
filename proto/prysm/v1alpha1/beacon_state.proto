@@ -231,7 +231,7 @@ message BeaconStateBellatrix {
   SyncCommittee current_sync_committee = 9002; // [New in Altair]
   SyncCommittee next_sync_committee = 9003; // [New in Altair]
 
-  // Merge fields [10001-11000]
+  // Bellatrix fields [10001-11000]
   ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Merge]
 }
 

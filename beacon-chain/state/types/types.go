@@ -132,7 +132,7 @@ const (
 	InactivityScores
 	CurrentSyncCommittee
 	NextSyncCommittee
-	// State fields added in Merge.
+	// State fields added in Bellatrix.
 	LatestExecutionPayloadHeader
 )
 

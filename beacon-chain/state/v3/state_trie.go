@@ -25,7 +25,7 @@ import (
 
 var (
 	stateCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_state_merge_count",
+		Name: "beacon_state_bellatrix_count",
 		Help: "Count the number of active beacon state objects.",
 	})
 )
@@ -76,7 +76,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (*BeaconState, er
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Merge.
+	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Bellatrix.
 	stateCount.Inc()
 	return b, nil
 }

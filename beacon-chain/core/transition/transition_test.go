@@ -551,7 +551,7 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
 }
 
-func TestProcessSlots_OnlyMergeEpoch(t *testing.T) {
+func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
 	conf := params.BeaconConfig()
 	conf.BellatrixForkEpoch = 5

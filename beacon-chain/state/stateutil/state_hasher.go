@@ -370,7 +370,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	return fieldRoots, nil
 }
 
-// ComputeFieldRootsWithHasherBellatrix hashes the provided merge state and returns its respective field roots.
+// ComputeFieldRootsWithHasherBellatrix hashes the provided bellatrix state and returns its respective field roots.
 func (h *stateRootHasher) ComputeFieldRootsWithHasherBellatrix(ctx context.Context, state *ethpb.BeaconStateBellatrix) ([][]byte, error) {
 	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherBellatrix")
 	defer span.End()
