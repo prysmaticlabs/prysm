@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-func Test_BellatrixComplete(t *testing.T) {
+func Test_MergeComplete(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload *ethpb.ExecutionPayloadHeader
