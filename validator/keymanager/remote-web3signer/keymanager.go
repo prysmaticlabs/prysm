@@ -18,7 +18,7 @@ type SetupConfig struct {
 	BaseEndpoint          string
 	GenesisValidatorsRoot []byte
 
-	//Either URL or keylist must be set.
+	// Either URL or keylist must be set.
 	// If the URL is set, the keymanager will fetch the public keys from the URL.
 	// caution: this option is susceptible to slashing if the web3signer's validator keys are shared across validators
 	PublicKeysURL string
