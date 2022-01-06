@@ -6,6 +6,7 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -21,14 +22,18 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 
 // SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetBlockRoots(val *[fieldparams.BlockRootsLength][32]byte) error {
+func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[blockRoots].MinusRef()
 	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 
-	roots := customtypes.BlockRoots(*val)
+	var rootsArr [fieldparams.BlockRootsLength][32]byte
+	for i := 0; i < len(rootsArr); i++ {
+		rootsArr[i] = bytesutil.ToBytes32(val[i])
+	}
+	roots := customtypes.BlockRoots(rootsArr)
 	b.blockRoots = &roots
 	b.markFieldAsDirty(blockRoots)
 	b.rebuildTrie[blockRoots] = true

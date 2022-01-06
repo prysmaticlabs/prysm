@@ -8,7 +8,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -39,14 +38,14 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyBalances
 	ReadOnlyCheckpoint
 	ReadOnlyAttestations
-	ToProtoUnsafe() interface{}
-	ToProto() interface{}
+	InnerStateUnsafe() interface{}
+	CloneInnerState() interface{}
 	GenesisTime() uint64
-	GenesisValidatorRoot() [32]byte
+	GenesisValidatorRoot() []byte
 	Slot() types.Slot
 	Fork() *ethpb.Fork
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
-	HistoricalRoots() [][32]byte
+	HistoricalRoots() [][]byte
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
@@ -66,11 +65,11 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyCheckpoint
 	WriteOnlyAttestations
 	SetGenesisTime(val uint64) error
-	SetGenesisValidatorRoot(val [32]byte) error
+	SetGenesisValidatorRoot(val []byte) error
 	SetSlot(val types.Slot) error
 	SetFork(val *ethpb.Fork) error
 	SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error
-	SetHistoricalRoots(val [][32]byte) error
+	SetHistoricalRoots(val [][]byte) error
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
@@ -121,20 +120,20 @@ type ReadOnlyCheckpoint interface {
 
 // ReadOnlyBlockRoots defines a struct which only has read access to block roots methods.
 type ReadOnlyBlockRoots interface {
-	BlockRoots() *[fieldparams.BlockRootsLength][32]byte
-	BlockRootAtIndex(idx uint64) ([32]byte, error)
+	BlockRoots() [][]byte
+	BlockRootAtIndex(idx uint64) ([]byte, error)
 }
 
 // ReadOnlyStateRoots defines a struct which only has read access to state roots methods.
 type ReadOnlyStateRoots interface {
-	StateRoots() *[fieldparams.StateRootsLength][32]byte
-	StateRootAtIndex(idx uint64) ([32]byte, error)
+	StateRoots() [][]byte
+	StateRootAtIndex(idx uint64) ([]byte, error)
 }
 
 // ReadOnlyRandaoMixes defines a struct which only has read access to randao mixes methods.
 type ReadOnlyRandaoMixes interface {
-	RandaoMixes() *[fieldparams.RandaoMixesLength][32]byte
-	RandaoMixAtIndex(idx uint64) ([32]byte, error)
+	RandaoMixes() [][]byte
+	RandaoMixAtIndex(idx uint64) ([]byte, error)
 	RandaoMixesLength() int
 }
 
@@ -153,13 +152,12 @@ type ReadOnlyAttestations interface {
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
 type WriteOnlyBlockRoots interface {
-	SetBlockRoots(val *[fieldparams.BlockRootsLength][32]byte) error
+	SetBlockRoots(val [][]byte) error
 	UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error
 }
 
 // WriteOnlyStateRoots defines a struct which only has write access to state roots methods.
 type WriteOnlyStateRoots interface {
-	SetStateRoots(val *[fieldparams.StateRootsLength][32]byte) error
 	UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error
 }
 
@@ -188,8 +186,8 @@ type WriteOnlyBalances interface {
 
 // WriteOnlyRandaoMixes defines a struct which only has write access to randao mixes methods.
 type WriteOnlyRandaoMixes interface {
-	SetRandaoMixes(val *[fieldparams.RandaoMixesLength][32]byte) error
-	UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error
+	SetRandaoMixes(val [][]byte) error
+	UpdateRandaoMixesAtIndex(idx uint64, val []byte) error
 }
 
 // WriteOnlyCheckpoint defines a struct which only has write access to check point methods.

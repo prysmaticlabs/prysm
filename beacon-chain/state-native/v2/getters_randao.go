@@ -4,11 +4,10 @@ import (
 	"fmt"
 
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 // RandaoMixes of block proposers on the beacon chain.
-func (b *BeaconState) RandaoMixes() *[fieldparams.RandaoMixesLength][32]byte {
+func (b *BeaconState) RandaoMixes() [][]byte {
 	if b.randaoMixes == nil {
 		return nil
 	}
@@ -16,8 +15,13 @@ func (b *BeaconState) RandaoMixes() *[fieldparams.RandaoMixesLength][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	mixes := [fieldparams.RandaoMixesLength][32]byte(*b.randaoMixesInternal())
-	return &mixes
+	mixesArr := b.randaoMixesInternal()
+	mixes := make([][]byte, len(mixesArr))
+	for i, m := range mixesArr {
+		mixes[i] = m[:]
+	}
+
+	return mixes
 }
 
 // randaoMixesInternal of block proposers on the beacon chain.
@@ -28,15 +32,19 @@ func (b *BeaconState) randaoMixesInternal() *customtypes.RandaoMixes {
 
 // RandaoMixAtIndex retrieves a specific block root based on an
 // input index value.
-func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([32]byte, error) {
+func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	if b.randaoMixes == nil {
-		return [32]byte{}, nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.randaoMixAtIndex(idx)
+	m, err := b.randaoMixAtIndex(idx)
+	if err != nil {
+		return nil, err
+	}
+	return m[:], nil
 }
 
 // randaoMixAtIndex retrieves a specific block root based on an

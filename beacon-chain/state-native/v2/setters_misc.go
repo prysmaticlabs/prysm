@@ -7,6 +7,7 @@ import (
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -49,11 +50,11 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 }
 
 // SetGenesisValidatorRoot for the beacon state.
-func (b *BeaconState) SetGenesisValidatorRoot(val [32]byte) error {
+func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.genesisValidatorsRoot = val
+	b.genesisValidatorsRoot = bytesutil.ToBytes32(val)
 	b.markFieldAsDirty(genesisValidatorRoot)
 	return nil
 }
@@ -84,14 +85,18 @@ func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 
 // SetHistoricalRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetHistoricalRoots(val [][32]byte) error {
+func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[historicalRoots].MinusRef()
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
-	b.historicalRoots = val
+	roots := make([][32]byte, len(val))
+	for i, r := range val {
+		roots[i] = bytesutil.ToBytes32(r)
+	}
+	b.historicalRoots = roots
 	b.markFieldAsDirty(historicalRoots)
 	return nil
 }

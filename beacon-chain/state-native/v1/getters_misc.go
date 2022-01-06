@@ -23,11 +23,12 @@ func (b *BeaconState) genesisTimeInternal() uint64 {
 }
 
 // GenesisValidatorRoot of the beacon state.
-func (b *BeaconState) GenesisValidatorRoot() [32]byte {
+func (b *BeaconState) GenesisValidatorRoot() []byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisValidatorRootInternal()
+	r := b.genesisValidatorRootInternal()
+	return r[:]
 }
 
 // genesisValidatorRootInternal of the beacon state.
@@ -88,7 +89,7 @@ func (b *BeaconState) forkInternal() *ethpb.Fork {
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
-func (b *BeaconState) HistoricalRoots() [][32]byte {
+func (b *BeaconState) HistoricalRoots() [][]byte {
 	if b.historicalRoots == nil {
 		return nil
 	}
@@ -96,7 +97,13 @@ func (b *BeaconState) HistoricalRoots() [][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.historicalRootsInternal()
+	rootsArr := b.historicalRootsInternal()
+	roots := make([][]byte, len(rootsArr))
+	for i, r := range rootsArr {
+		roots[i] = r[:]
+	}
+
+	return roots
 }
 
 // historicalRootsInternal based on epochs stored in the beacon state.

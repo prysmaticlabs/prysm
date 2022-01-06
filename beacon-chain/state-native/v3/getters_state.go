@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -148,7 +147,7 @@ func (b *BeaconState) toProtoNoLock() interface{} {
 }
 
 // StateRoots kept track of in the beacon state.
-func (b *BeaconState) StateRoots() *[fieldparams.StateRootsLength][32]byte {
+func (b *BeaconState) StateRoots() [][]byte {
 	if b.stateRoots == nil {
 		return nil
 	}
@@ -156,8 +155,13 @@ func (b *BeaconState) StateRoots() *[fieldparams.StateRootsLength][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := [fieldparams.StateRootsLength][32]byte(*b.stateRootsInternal())
-	return &roots
+	rootsArr := b.stateRootsInternal()
+	roots := make([][]byte, len(rootsArr))
+	for i, r := range rootsArr {
+		roots[i] = r[:]
+	}
+
+	return roots
 }
 
 // stateRootsInternal kept track of in the beacon state.
@@ -168,15 +172,19 @@ func (b *BeaconState) stateRootsInternal() *customtypes.StateRoots {
 
 // StateRootAtIndex retrieves a specific state root based on an
 // input index value.
-func (b *BeaconState) StateRootAtIndex(idx uint64) ([32]byte, error) {
+func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 	if b.stateRoots == nil {
-		return [32]byte{}, nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.stateRootAtIndex(idx)
+	r, err := b.stateRootAtIndex(idx)
+	if err != nil {
+		return nil, err
+	}
+	return r[:], nil
 }
 
 // stateRootAtIndex retrieves a specific state root based on an
@@ -198,4 +206,15 @@ func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateMerge, error) {
 		return nil, errors.New("input is not type pb.BeaconStateMerge")
 	}
 	return pbState, nil
+}
+
+// InnerStateUnsafe returns the pointer value of the underlying
+// beacon state proto object, bypassing immutability. Use with care.
+func (b *BeaconState) InnerStateUnsafe() interface{} {
+	return nil
+}
+
+// CloneInnerState the beacon state into a protobuf for usage.
+func (b *BeaconState) CloneInnerState() interface{} {
+	return nil
 }
