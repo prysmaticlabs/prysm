@@ -26,6 +26,7 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
 	roots := make([][32]byte, 0, len(validators)*8)
+	pubkeyRoots := make([][32]byte, 0, len(validators)*2)
 	emptyKey := hash.FastSum256(hashKeyElements)
 	hasher := hash.CustomSHA256Hasher()
 	bytesProcessed := 0
@@ -34,8 +35,13 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
-		roots = append(roots, fRoots...)
+		roots = append(roots, fRoots[1:]...)
+		pubkeyRoots = append(pubkeyRoots, fRoots[:1]...)
 		bytesProcessed += 32
+	}
+	pubkeyRoots = htr.VectorizedSha256(pubkeyRoots)
+	for i, rt := range pubkeyRoots {
+		roots[i*8] = rt
 	}
 
 	for i := 0; i < 3; i++ {

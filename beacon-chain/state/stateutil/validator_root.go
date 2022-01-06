@@ -18,6 +18,9 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 	if err != nil {
 		return [32]byte{}, err
 	}
+	root := hash.Hash(append(fieldRoots[0][:], fieldRoots[1][:]...))
+	fieldRoots = fieldRoots[1:]
+	fieldRoots[0] = root
 	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
@@ -50,15 +53,11 @@ func ValidatorFieldRoots(hasher ssz.HashFn, validator *ethpb.Validator) ([][32]b
 		binary.LittleEndian.PutUint64(withdrawalBuf[:8], uint64(validator.WithdrawableEpoch))
 
 		// Public key.
-		pubKeyChunks, err := ssz.Pack([][]byte{pubkey[:]})
+		pubKeyChunks, err := ssz.PackByChunk([][]byte{pubkey[:]})
 		if err != nil {
 			return [][32]byte{}, err
 		}
-		pubKeyRoot, err := ssz.BitwiseMerkleizeOld(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
-		if err != nil {
-			return [][32]byte{}, err
-		}
-		fieldRoots = [][32]byte{pubKeyRoot, withdrawCreds, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
+		fieldRoots = [][32]byte{pubKeyChunks[0], pubKeyChunks[1], withdrawCreds, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
 			activationBuf, exitBuf, withdrawalBuf}
 	}
 	return fieldRoots, nil
