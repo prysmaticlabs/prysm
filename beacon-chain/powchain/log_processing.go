@@ -503,7 +503,7 @@ func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, bl
 
 // save all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
-	pbState, err := v1.ProtobufBeaconState(s.preGenesisState.ToProtoUnsafe())
+	pbState, err := v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}

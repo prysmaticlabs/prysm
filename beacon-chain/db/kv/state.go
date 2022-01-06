@@ -148,21 +148,21 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 	validatorKeys := make([][]byte, len(states))           // For every state, this stores a compressed list of validator keys.
 	for i, st := range states {
 		var validators []*ethpb.Validator
-		switch st.ToProtoUnsafe().(type) {
+		switch st.InnerStateUnsafe().(type) {
 		case *ethpb.BeaconState:
-			pbState, err := v1.ProtobufBeaconState(st.ToProtoUnsafe())
+			pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
 			if err != nil {
 				return err
 			}
 			validators = pbState.Validators
 		case *ethpb.BeaconStateAltair:
-			pbState, err := v2.ProtobufBeaconState(st.ToProtoUnsafe())
+			pbState, err := v2.ProtobufBeaconState(st.InnerStateUnsafe())
 			if err != nil {
 				return err
 			}
 			validators = pbState.Validators
 		case *ethpb.BeaconStateMerge:
-			pbState, err := v3.ProtobufBeaconState(st.ToProtoUnsafe())
+			pbState, err := v3.ProtobufBeaconState(st.InnerStateUnsafe())
 			if err != nil {
 				return err
 			}
@@ -201,7 +201,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 			// validator entries.To bring the gap closer, we empty the validators
 			// just before Put() and repopulate that state with original validators.
 			// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
-			switch rawType := states[i].ToProtoUnsafe().(type) {
+			switch rawType := states[i].InnerStateUnsafe().(type) {
 			case *ethpb.BeaconState:
 				pbState, err := v1.ProtobufBeaconState(rawType)
 				if err != nil {
@@ -461,15 +461,15 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 
 // marshal versioned state from struct type down to bytes.
 func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, error) {
-	switch st.ToProtoUnsafe().(type) {
+	switch st.InnerStateUnsafe().(type) {
 	case *ethpb.BeaconState:
-		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconState)
+		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconState)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
 		return encode(ctx, rState)
 	case *ethpb.BeaconStateAltair:
-		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateAltair)
+		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
@@ -482,7 +482,7 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 		}
 		return snappy.Encode(nil, append(altairKey, rawObj...)), nil
 	case *ethpb.BeaconStateMerge:
-		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateMerge)
+		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconStateMerge)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}

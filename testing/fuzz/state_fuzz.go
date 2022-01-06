@@ -43,7 +43,7 @@ func BeaconStateFuzz(input []byte) {
 }
 
 func validateStateHTR(s *v1.BeaconState) {
-	rawState, ok := s.ToProtoUnsafe().(*ethpb.BeaconState)
+	rawState, ok := s.InnerStateUnsafe().(*ethpb.BeaconState)
 	if !ok {
 		panic("non valid type assertion")
 	}

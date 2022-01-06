@@ -209,7 +209,7 @@ func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateAltair, error) {
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() interface{} {
-	return nil
+	return b.ToProtoUnsafe()
 }
 
 // CloneInnerState the beacon state into a protobuf for usage.
