@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -23,8 +24,8 @@ import (
 
 var (
 	lock              sync.RWMutex
-	orderedPublicKeys = make([][48]byte, 0)
-	secretKeysCache   = make(map[[48]byte]bls.SecretKey)
+	orderedPublicKeys = make([][fieldparams.BLSPubkeyLength]byte, 0)
+	secretKeysCache   = make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
 )
 
 const (
@@ -69,8 +70,8 @@ type AccountsKeystoreRepresentation struct {
 // ResetCaches for the keymanager.
 func ResetCaches() {
 	lock.Lock()
-	orderedPublicKeys = make([][48]byte, 0)
-	secretKeysCache = make(map[[48]byte]bls.SecretKey)
+	orderedPublicKeys = make([][fieldparams.BLSPubkeyLength]byte, 0)
+	secretKeysCache = make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
 	lock.Unlock()
 }
 
@@ -107,7 +108,7 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 		return nil, errors.Wrap(err, "could not generate interop keys")
 	}
 	lock.Lock()
-	pubKeys := make([][48]byte, numValidatorKeys)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidatorKeys)
 	for i := uint64(0); i < numValidatorKeys; i++ {
 		publicKey := bytesutil.ToBytes48(publicKeys[i].Marshal())
 		pubKeys[i] = publicKey
@@ -121,7 +122,7 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 // SubscribeAccountChanges creates an event subscription for a channel
 // to listen for public key changes at runtime, such as when new validator accounts
 // are imported into the keymanager while the validator process is running.
-func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return km.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
@@ -142,8 +143,8 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 	lock.Lock()
 	defer lock.Unlock()
 	count := len(km.accountsStore.PrivateKeys)
-	orderedPublicKeys = make([][48]byte, count)
-	secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
+	orderedPublicKeys = make([][fieldparams.BLSPubkeyLength]byte, count)
+	secretKeysCache = make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey, count)
 	for i, publicKey := range km.accountsStore.PublicKeys {
 		publicKey48 := bytesutil.ToBytes48(publicKey)
 		orderedPublicKeys[i] = publicKey48
@@ -157,13 +158,13 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 }
 
 // FetchValidatingPublicKeys fetches the list of active public keys from the imported account keystores.
-func (_ *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (_ *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	_, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
 	lock.RLock()
 	keys := orderedPublicKeys
-	result := make([][48]byte, len(keys))
+	result := make([][fieldparams.BLSPubkeyLength]byte, len(keys))
 	copy(result, keys)
 	lock.RUnlock()
 	return result, nil

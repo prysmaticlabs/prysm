@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -32,11 +33,11 @@ import (
 )
 
 type mockRemoteKeymanager struct {
-	publicKeys [][48]byte
+	publicKeys [][fieldparams.BLSPubkeyLength]byte
 	opts       *remote.KeymanagerOpts
 }
 
-func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
+func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	return m.publicKeys, nil
 }
 
@@ -44,7 +45,7 @@ func (_ *mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (
 	return nil, nil
 }
 
-func (_ *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
+func (_ *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return nil
 }
 
@@ -383,7 +384,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 	os.Stdout = writer
 
 	numAccounts := 3
-	pubKeys := make([][48]byte, numAccounts)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		key := make([]byte, 48)
 		copy(key, strconv.Itoa(i))
@@ -483,7 +484,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	defer ctrl.Finish()
 
 	numAccounts := 3
-	pubKeys := make([][48]byte, numAccounts)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numAccounts)
 	pks := make([][]byte, numAccounts)
 
 	for i := 0; i < numAccounts; i++ {

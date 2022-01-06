@@ -14,6 +14,7 @@ go_library(
     ],
     deps = [
         "//async/event:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/rand:go_default_library",
         "//io/prompt:go_default_library",
@@ -38,6 +39,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/rand:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
