@@ -29,7 +29,7 @@ go_library(
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
-        "//beacon-chain/state-proto:go_default_library",
+        "//beacon-chain/state-native:go_default_library",
         "//cache/lru:go_default_library",
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",

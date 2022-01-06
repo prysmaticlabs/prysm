@@ -45,7 +45,7 @@ go_library(
         "//tools/pcli:__pkg__",
     ],
     deps = [
-        "//beacon-chain/state-proto:go_default_library",
+        "//beacon-chain/state-native:go_default_library",
         "//beacon-chain/state-proto/fieldtrie:go_default_library",
         "//beacon-chain/state-proto/stateutil:go_default_library",
         "//beacon-chain/state-proto/types:go_default_library",

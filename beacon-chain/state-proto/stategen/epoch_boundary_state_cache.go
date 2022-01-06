@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
 	"k8s.io/client-go/tools/cache"
 )
 

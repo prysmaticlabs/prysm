@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
