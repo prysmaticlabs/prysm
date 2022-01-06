@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	wrapperv1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -24,7 +23,7 @@ import (
 type ForkConfig struct {
 	PostFork    string `json:"post_fork"`
 	ForkEpoch   int    `json:"fork_epoch"`
-	ForkBlock   int    `json:"fork_block"`
+	ForkBlock   *int   `json:"fork_block"`
 	BlocksCount int    `json:"blocks_count"`
 }
 
@@ -41,10 +40,10 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			config := &ForkConfig{}
 			require.NoError(t, utils.UnmarshalYaml(file, config), "Failed to Unmarshal")
 
-			preforkBlocks := make([]*ethpb.SignedBeaconBlockMerge, 0)
+			preforkBlocks := make([]*ethpb.SignedBeaconBlockAltair, 0)
 			postforkBlocks := make([]*ethpb.SignedBeaconBlockMerge, 0)
 			// Fork happens without any pre-fork blocks.
-			if config.ForkBlock == 0 {
+			if config.ForkBlock == nil {
 				for i := 0; i < config.BlocksCount; i++ {
 					fileName := fmt.Sprint("blocks_", i, ".ssz_snappy")
 					blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
@@ -57,17 +56,17 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				}
 				// Fork happens with pre-fork blocks.
 			} else {
-				for i := 0; i <= config.ForkBlock; i++ {
+				for i := 0; i <= *config.ForkBlock; i++ {
 					fileName := fmt.Sprint("blocks_", i, ".ssz_snappy")
 					blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 					require.NoError(t, err, "Failed to decompress")
-					block := &ethpb.SignedBeaconBlockMerge{}
+					block := &ethpb.SignedBeaconBlockAltair{}
 					require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 					preforkBlocks = append(preforkBlocks, block)
 				}
-				for i := config.ForkBlock + 1; i < config.BlocksCount; i++ {
+				for i := *config.ForkBlock + 1; i < config.BlocksCount; i++ {
 					fileName := fmt.Sprint("blocks_", i, ".ssz_snappy")
 					blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
 					require.NoError(t, err)
@@ -95,7 +94,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			ctx := context.Background()
 			var ok bool
 			for _, b := range preforkBlocks {
-				wsb, err := wrapperv1.WrappedMergeSignedBeaconBlock(b)
+				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
