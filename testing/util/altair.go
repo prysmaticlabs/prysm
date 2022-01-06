@@ -87,10 +87,10 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	var randaoMixes [fieldparams.RandaoMixesLength][32]byte
+	randaoMixes := make([][]byte, fieldparams.RandaoMixesLength)
 	for i := 0; i < len(randaoMixes); i++ {
-		var h [32]byte
-		copy(h[:], eth1Data.BlockHash)
+		h := make([]byte, 32)
+		copy(h, eth1Data.BlockHash)
 		randaoMixes[i] = h
 	}
 
@@ -102,14 +102,14 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		activeIndexRoots[i] = zeroHash
 	}
 
-	var blockRoots [fieldparams.BlockRootsLength][32]byte
+	blockRoots := make([][]byte, fieldparams.BlockRootsLength)
 	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = zeroHash32
+		blockRoots[i] = zeroHash32[:]
 	}
 
-	var stateRoots [fieldparams.StateRootsLength][32]byte
+	stateRoots := make([][]byte, fieldparams.StateRootsLength)
 	for i := 0; i < len(stateRoots); i++ {
-		stateRoots[i] = zeroHash32
+		stateRoots[i] = zeroHash32[:]
 	}
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
@@ -161,7 +161,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	if err = s.SetGenesisTime(genesisTime); err != nil {
 		return nil, errors.Wrap(err, "could not set genesis time")
 	}
-	if err = s.SetGenesisValidatorRoot(genesisValidatorsRoot); err != nil {
+	if err = s.SetGenesisValidatorRoot(genesisValidatorsRoot[:]); err != nil {
 		return nil, errors.Wrap(err, "could not set genesis validators root")
 	}
 	if err = s.SetSlot(0); err != nil {
@@ -181,13 +181,13 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	}); err != nil {
 		return nil, errors.Wrap(err, "could not set latest block header")
 	}
-	if err = s.SetBlockRoots(&blockRoots); err != nil {
+	if err = s.SetBlockRoots(blockRoots); err != nil {
 		return nil, errors.Wrap(err, "could not set block roots")
 	}
-	if err = s.SetStateRoots(&stateRoots); err != nil {
+	if err = s.SetStateRoots(stateRoots); err != nil {
 		return nil, errors.Wrap(err, "could not set state roots")
 	}
-	if err = s.SetHistoricalRoots([][32]byte{}); err != nil {
+	if err = s.SetHistoricalRoots([][]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set historical roots")
 	}
 	if err = s.SetEth1Data(eth1Data); err != nil {
@@ -208,7 +208,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	if err = s.SetBalances(preState.Balances()); err != nil {
 		return nil, errors.Wrap(err, "could not set balances")
 	}
-	if err = s.SetRandaoMixes(&randaoMixes); err != nil {
+	if err = s.SetRandaoMixes(randaoMixes); err != nil {
 		return nil, errors.Wrap(err, "could not set randao mixes")
 	}
 	if err = s.SetPreviousParticipationBits(prevEpochParticipation); err != nil {
@@ -276,7 +276,7 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 	}); err != nil {
 		return nil, errors.Wrap(err, "could not set fork")
 	}
-	if err = s.SetHistoricalRoots([][32]byte{}); err != nil {
+	if err = s.SetHistoricalRoots([][]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set historical roots")
 	}
 	if err = s.SetEth1Data(&ethpb.Eth1Data{}); err != nil {

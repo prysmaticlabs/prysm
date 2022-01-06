@@ -253,7 +253,7 @@ func (s *Service) headState(ctx context.Context) state.BeaconState {
 // This returns the genesis validator root of the head state.
 // This is a lock free version.
 func (s *Service) headGenesisValidatorRoot() [32]byte {
-	return s.head.state.GenesisValidatorRoot()
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
 // This returns the validator referenced by the provided index in

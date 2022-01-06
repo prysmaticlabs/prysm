@@ -11,7 +11,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -33,18 +32,10 @@ func FillRootsNaturalOpt(state state.BeaconState) error {
 		}
 		roots[j] = h
 	}
-	var stateRoots [fieldparams.StateRootsLength][32]byte
-	for i := range stateRoots {
-		stateRoots[i] = bytesutil.ToBytes32(roots[i])
-	}
-	if err := state.SetStateRoots(&stateRoots); err != nil {
+	if err := state.SetStateRoots(roots); err != nil {
 		return errors.Wrap(err, "could not set state roots")
 	}
-	var blockRoots [fieldparams.BlockRootsLength][32]byte
-	for i := range blockRoots {
-		blockRoots[i] = bytesutil.ToBytes32(roots[i])
-	}
-	if err := state.SetBlockRoots(&blockRoots); err != nil {
+	if err := state.SetBlockRoots(roots); err != nil {
 		return errors.Wrap(err, "could not set block roots")
 	}
 	return nil
@@ -66,13 +57,13 @@ func NewBeaconState(options ...func(beaconState state.BeaconState) error) (*v1.B
 	if err = st.SetLatestBlockHeader(HydrateBeaconHeader(&ethpb.BeaconBlockHeader{})); err != nil {
 		return nil, errors.Wrap(err, "could not set latest block header")
 	}
-	if err = st.SetHistoricalRoots([][32]byte{}); err != nil {
+	if err = st.SetHistoricalRoots([][]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set historical roots")
 	}
-	if err = st.SetBlockRoots(&[fieldparams.BlockRootsLength][32]byte{}); err != nil {
+	if err = st.SetBlockRoots([][]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set block roots")
 	}
-	if err = st.SetStateRoots(&[fieldparams.StateRootsLength][32]byte{}); err != nil {
+	if err = st.SetStateRoots([][]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set state roots")
 	}
 	if err = st.SetEth1Data(&ethpb.Eth1Data{
@@ -87,7 +78,7 @@ func NewBeaconState(options ...func(beaconState state.BeaconState) error) (*v1.B
 	if err = st.SetValidators(make([]*ethpb.Validator, 0)); err != nil {
 		return nil, errors.Wrap(err, "could not set validators")
 	}
-	if err = st.SetRandaoMixes(&[fieldparams.RandaoMixesLength][32]byte{}); err != nil {
+	if err = st.SetRandaoMixes([][]byte{}); err != nil {
 		return nil, errors.Wrap(err, "could not set randao mixes")
 	}
 	if err = st.SetSlashings(make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector)); err != nil {

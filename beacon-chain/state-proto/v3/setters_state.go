@@ -5,6 +5,24 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
 )
 
+// SetStateRoots for the beacon state. Updates the state roots
+// to a new value by overwriting the previous value.
+func (b *BeaconState) SetStateRoots(val [][]byte) error {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[stateRoots].MinusRef()
+	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
+
+	b.state.StateRoots = val
+	b.markFieldAsDirty(stateRoots)
+	b.rebuildTrie[stateRoots] = true
+	return nil
+}
+
 // UpdateStateRootAtIndex for the beacon state. Updates the state root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
