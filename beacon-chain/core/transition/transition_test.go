@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -265,7 +266,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
@@ -370,9 +371,9 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		Slashings:                  slashing,
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, 32)},
+		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
 	s, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
@@ -553,7 +554,7 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 func TestProcessSlots_OnlyMergeEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
 	conf := params.BeaconConfig()
-	conf.MergeForkEpoch = 5
+	conf.BellatrixForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
 	defer params.UseMainnetConfig()
 

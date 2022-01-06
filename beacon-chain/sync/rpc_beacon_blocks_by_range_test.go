@@ -19,6 +19,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -622,7 +623,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		blocks := make([]*ethpb.SignedBeaconBlock, req.Count)
 		// Populate the database with blocks that would match the request.
 		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
-			parentRoot := make([]byte, 32)
+			parentRoot := make([]byte, fieldparams.RootLength)
 			copy(parentRoot, previousRoot[:])
 			blocks[j] = util.NewBeaconBlock()
 			blocks[j].Block.Slot = i
@@ -668,7 +669,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		blocks := make([]*ethpb.SignedBeaconBlock, req.Count)
 		// Populate the database with blocks with non linear roots.
 		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
-			parentRoot := make([]byte, 32)
+			parentRoot := make([]byte, fieldparams.RootLength)
 			copy(parentRoot, previousRoot[:])
 			blocks[j] = util.NewBeaconBlock()
 			blocks[j].Block.Slot = i

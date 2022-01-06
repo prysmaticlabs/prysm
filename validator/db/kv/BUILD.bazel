@@ -27,6 +27,7 @@ go_library(
         "//async/abool:go_default_library",
         "//async/event:go_default_library",
         "//config/features:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",
