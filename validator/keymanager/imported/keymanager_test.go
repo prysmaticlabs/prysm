@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -28,7 +29,7 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
 	numAccounts := 10
-	wantedPubKeys := make([][48]byte, 0)
+	wantedPubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	for i := 0; i < numAccounts; i++ {
 		privKey, err := bls.RandKey()
 		require.NoError(t, err)
@@ -162,7 +163,7 @@ func TestImportedKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: []byte("hello world"),
 	}
-	secretKeysCache = make(map[[48]byte]bls.SecretKey)
+	secretKeysCache = make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
 	dr := &Keymanager{}
 	_, err := dr.Sign(context.Background(), req)
 	assert.ErrorContains(t, "no signing key found in keys cache", err)

@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -136,7 +137,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 
 	_, err = server.ProposeExit(context.Background(), req)
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for no signature exists")
-	req.Signature = bytesutil.FromBytes48([48]byte{})
+	req.Signature = bytesutil.FromBytes48([fieldparams.BLSPubkeyLength]byte{})
 
 	_, err = server.ProposeExit(context.Background(), req)
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for invalid signature length")

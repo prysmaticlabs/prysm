@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -103,7 +104,7 @@ func run(ctx context.Context, v iface.Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 
-	accountsChangedChan := make(chan [][48]byte, 1)
+	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
@@ -185,7 +186,7 @@ func run(ctx context.Context, v iface.Validator) {
 			for pubKey, roles := range allRoles {
 				wg.Add(len(roles))
 				for _, role := range roles {
-					go func(role iface.ValidatorRole, pubKey [48]byte) {
+					go func(role iface.ValidatorRole, pubKey [fieldparams.BLSPubkeyLength]byte) {
 						defer wg.Done()
 						switch role {
 						case iface.RoleAttester:

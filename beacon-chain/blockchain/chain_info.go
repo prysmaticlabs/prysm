@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -49,8 +50,8 @@ type HeadFetcher interface {
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
-	HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool)
-	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([48]byte, error)
+	HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
+	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
 	HeadSyncCommitteeFetcher
@@ -290,7 +291,7 @@ func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
 }
 
 // HeadPublicKeyToValidatorIndex returns the validator index of the `pubkey` in current head state.
-func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]byte) (types.ValidatorIndex, bool) {
+func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 	if !s.hasHeadState() {
@@ -300,15 +301,15 @@ func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [48]
 }
 
 // HeadValidatorIndexToPublicKey returns the pubkey of the validator `index`  in current head state.
-func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.ValidatorIndex) ([48]byte, error) {
+func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 	if !s.hasHeadState() {
-		return [48]byte{}, nil
+		return [fieldparams.BLSPubkeyLength]byte{}, nil
 	}
 	v, err := s.headValidatorAtIndex(index)
 	if err != nil {
-		return [48]byte{}, err
+		return [fieldparams.BLSPubkeyLength]byte{}, err
 	}
 	return v.PublicKey(), nil
 }
