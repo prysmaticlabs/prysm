@@ -90,7 +90,7 @@ go_test(
         "no-cache",
     ],
     deps = [
-        "//beacon-chain/state/stateutil:go_default_library",
+        "//beacon-chain/state-proto/stateutil:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

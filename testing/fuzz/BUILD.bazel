@@ -15,7 +15,7 @@ ssz_gen_marshal(
     name = "ssz_generated_files",
     srcs = ["inputs.go"],
     includes = [
-        "//beacon-chain/state/custom-types:go_default_library",
+        "//beacon-chain/state-native/custom-types:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
@@ -27,7 +27,7 @@ ssz_gen_marshal(
 IMPORT_PATH = "github.com/prysmaticlabs/prysm/fuzz"
 
 COMMON_DEPS = [
-    "//beacon-chain/state/v1:go_default_library",
+    "//beacon-chain/state-proto/v1:go_default_library",
     "//config/features:go_default_library",
 ] + SSZ_DEPS
 
@@ -85,7 +85,7 @@ go_fuzz_test(
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
-        "//beacon-chain/state/stategen:go_default_library",
+        "//beacon-chain/state-proto/stategen:go_default_library",
         "//crypto/rand:go_default_library",
     ] + COMMON_DEPS,
 )
@@ -184,8 +184,8 @@ go_library(
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/encoder:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
-        "//beacon-chain/state/stategen:go_default_library",
+        "//beacon-chain/state-proto/v1:go_default_library",
+        "//beacon-chain/state-proto/stategen:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//testing/fuzz/testing:go_default_library",
