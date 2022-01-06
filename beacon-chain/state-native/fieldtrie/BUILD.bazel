@@ -29,7 +29,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state-native/custom-types:go_default_library",
         "//beacon-chain/state-native/stateutil:go_default_library",
         "//beacon-chain/state-native/types:go_default_library",
         "//config/params:go_default_library",
