@@ -273,12 +273,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair:
-		state, err = altairOperations(ctx, state, signedBeaconBlock)
-		if err != nil {
-			return nil, err
-		}
-	case version.Merge:
+	case version.Altair, version.Merge:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
@@ -292,6 +287,16 @@ func ProcessOperationsNoVerifyAttsSigs(
 
 // ProcessBlockForStateRoot processes the state for state root computation. It skips proposer signature
 // and randao signature verifications.
+//
+// Spec pseudocode definition:
+// def process_block(state: BeaconState, block: BeaconBlock) -> None:
+//    process_block_header(state, block)
+//    if is_execution_enabled(state, block.body):
+//        process_execution_payload(state, block.body.execution_payload, EXECUTION_ENGINE)  # [New in Bellatrix]
+//    process_randao(state, block.body)
+//    process_eth1_data(state, block.body)
+//    process_operations(state, block.body)
+//    process_sync_aggregate(state, block.body.sync_aggregate)
 func ProcessBlockForStateRoot(
 	ctx context.Context,
 	state state.BeaconState,
@@ -318,7 +323,6 @@ func ProcessBlockForStateRoot(
 	if state.Version() == version.Merge {
 		enabled, err := b.ExecutionEnabled(state, blk.Body())
 		if err != nil {
-			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not check if execution is enabled")
 		}
 		if enabled {
