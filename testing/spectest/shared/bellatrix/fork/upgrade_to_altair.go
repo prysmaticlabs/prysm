@@ -16,9 +16,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// RunUpgradeToMerge is a helper function that runs bellatrix's fork spec tests.
-// It unmarshals a pre and post state to check `UpgradeToMerge` comply with spec implementation.
-func RunUpgradeToMerge(t *testing.T, config string) {
+// RunUpgradeToBellatrix is a helper function that runs bellatrix's fork spec tests.
+// It unmarshals a pre- and post-state to check `UpgradeToMerge` comply with spec implementation.
+func RunUpgradeToBellatrix(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "bellatrix", "fork/fork/pyspec_tests")

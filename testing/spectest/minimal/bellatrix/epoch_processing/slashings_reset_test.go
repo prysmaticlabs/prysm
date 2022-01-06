@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/epoch_processing"
 )
 
-func TestMinimal_Merge_EpochProcessing_SlashingsReset(t *testing.T) {
+func TestMinimal_Bellatrix_EpochProcessing_SlashingsReset(t *testing.T) {
 	epoch_processing.RunSlashingsResetTests(t, "minimal")
 }

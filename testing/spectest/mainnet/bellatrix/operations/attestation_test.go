@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/operations"
 )
 
-func TestMainnet_Merge_Operations_Attestation(t *testing.T) {
+func TestMainnet_Bellatrix_Operations_Attestation(t *testing.T) {
 	operations.RunAttestationTest(t, "mainnet")
 }

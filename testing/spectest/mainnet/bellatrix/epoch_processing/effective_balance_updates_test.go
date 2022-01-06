@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/epoch_processing"
 )
 
-func TestMainnet_Merge_EpochProcessing_EffectiveBalanceUpdates(t *testing.T) {
+func TestMainnet_Bellatrix_EpochProcessing_EffectiveBalanceUpdates(t *testing.T) {
 	epoch_processing.RunEffectiveBalanceUpdatesTests(t, "mainnet")
 }

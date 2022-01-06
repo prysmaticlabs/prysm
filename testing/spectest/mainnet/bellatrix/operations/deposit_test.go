@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/operations"
 )
 
-func TestMainnet_Merge_Operations_Deposit(t *testing.T) {
+func TestMainnet_Bellatrix_Operations_Deposit(t *testing.T) {
 	operations.RunDepositTest(t, "mainnet")
 }

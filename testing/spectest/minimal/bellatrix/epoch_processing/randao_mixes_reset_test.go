@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/epoch_processing"
 )
 
-func TestMinimal_Merge_EpochProcessing_RandaoMixesReset(t *testing.T) {
+func TestMinimal_Bellatrix_EpochProcessing_RandaoMixesReset(t *testing.T) {
 	epoch_processing.RunRandaoMixesResetTests(t, "minimal")
 }

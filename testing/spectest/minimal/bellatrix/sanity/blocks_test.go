@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/sanity"
 )
 
-func TestMinimal_Merge_Sanity_Blocks(t *testing.T) {
+func TestMinimal_Bellatrix_Sanity_Blocks(t *testing.T) {
 	sanity.RunBlockProcessingTest(t, "minimal", "sanity/blocks/pyspec_tests")
 }

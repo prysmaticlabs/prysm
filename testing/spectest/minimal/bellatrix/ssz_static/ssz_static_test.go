@@ -6,6 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/ssz_static"
 )
 
-func TestMinimal_Merge_SSZStatic(t *testing.T) {
+func TestMinimal_Bellatrix_SSZStatic(t *testing.T) {
 	ssz_static.RunSSZStaticTests(t, "minimal")
 }
