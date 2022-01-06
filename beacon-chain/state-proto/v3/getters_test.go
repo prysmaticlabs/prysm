@@ -29,9 +29,8 @@ func TestBeaconState_SlotDataRace(t *testing.T) {
 	wg.Wait()
 }
 
-func TestInitializedState_NoPanic(t *testing.T) {
-	st, err := Initialize()
-	require.NoError(t, err)
+func TestNilState_NoPanic(t *testing.T) {
+	var st *BeaconState
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Method panicked when it was not supposed to: %v\n%v\n", r, string(debug.Stack()))
@@ -47,7 +46,7 @@ func TestInitializedState_NoPanic(t *testing.T) {
 	_ = st.LatestBlockHeader()
 	_ = st.ParentRoot()
 	_ = st.BlockRoots()
-	_, err = st.BlockRootAtIndex(0)
+	_, err := st.BlockRootAtIndex(0)
 	_ = err
 	_ = st.StateRoots()
 	_ = st.HistoricalRoots()
@@ -87,8 +86,6 @@ func TestInitializedState_NoPanic(t *testing.T) {
 	_, err = st.CurrentSyncCommittee()
 	_ = err
 	_, err = st.NextSyncCommittee()
-	_ = err
-	_, err = st.LatestExecutionPayloadHeader()
 	_ = err
 }
 

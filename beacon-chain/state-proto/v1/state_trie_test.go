@@ -5,8 +5,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 
 func TestInitializeFromProto(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
-	pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
+	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -67,7 +67,7 @@ func TestInitializeFromProto(t *testing.T) {
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
-	pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
+	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -161,7 +161,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
+			pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {
@@ -170,7 +170,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			assert.DeepNotEqual(t, []byte{}, root[:], "Received empty hash tree root")
 			assert.DeepEqual(t, genericHTR[:], root[:], "Expected hash tree root to match generic")
 			if len(oldHTR) != 0 && bytes.Equal(root[:], oldHTR) {
-				t.Errorf("Expected HashTreeRoot to change, received %#x == old %#x", root, oldHTR)
+				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
 			}
 			oldHTR = root[:]
 		})
@@ -230,7 +230,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
+			pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {
@@ -239,7 +239,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			assert.DeepNotEqual(t, []byte{}, root[:], "Received empty hash tree root")
 			assert.DeepEqual(t, genericHTR[:], root[:], "Expected hash tree root to match generic")
 			if len(oldHTR) != 0 && bytes.Equal(root[:], oldHTR) {
-				t.Errorf("Expected HashTreeRoot to change, received %#x == old %#x", root, oldHTR)
+				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
 			}
 			oldHTR = root[:]
 		})

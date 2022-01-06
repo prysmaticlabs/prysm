@@ -3,7 +3,7 @@ package v2
 import (
 	"encoding/binary"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/fieldtrie"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -45,7 +45,7 @@ func (b *BeaconState) NextSyncCommitteeProof() ([][]byte, error) {
 func (b *BeaconState) FinalizedRootProof() ([][]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	cpt := b.finalizedCheckpoint
+	cpt := b.state.FinalizedCheckpoint
 	// The epoch field of a finalized checkpoint is the neighbor
 	// index of the finalized root field in its Merkle tree representation
 	// of the checkpoint. This neighbor is the first element added to the proof.

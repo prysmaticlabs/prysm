@@ -1,44 +1,47 @@
 package v1
 
 import (
-	"fmt"
-
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // LatestBlockHeader stored within the beacon state.
 func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
-	if b.latestBlockHeader == nil {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.LatestBlockHeader == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.latestBlockHeaderInternal()
+	return b.latestBlockHeader()
 }
 
-// latestBlockHeaderInternal stored within the beacon state.
+// latestBlockHeader stored within the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestBlockHeaderInternal() *ethpb.BeaconBlockHeader {
-	if b.latestBlockHeader == nil {
+func (b *BeaconState) latestBlockHeader() *ethpb.BeaconBlockHeader {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.LatestBlockHeader == nil {
 		return nil
 	}
 
 	hdr := &ethpb.BeaconBlockHeader{
-		Slot:          b.latestBlockHeader.Slot,
-		ProposerIndex: b.latestBlockHeader.ProposerIndex,
+		Slot:          b.state.LatestBlockHeader.Slot,
+		ProposerIndex: b.state.LatestBlockHeader.ProposerIndex,
 	}
 
-	parentRoot := make([]byte, len(b.latestBlockHeader.ParentRoot))
-	bodyRoot := make([]byte, len(b.latestBlockHeader.BodyRoot))
-	stateRoot := make([]byte, len(b.latestBlockHeader.StateRoot))
+	parentRoot := make([]byte, len(b.state.LatestBlockHeader.ParentRoot))
+	bodyRoot := make([]byte, len(b.state.LatestBlockHeader.BodyRoot))
+	stateRoot := make([]byte, len(b.state.LatestBlockHeader.StateRoot))
 
-	copy(parentRoot, b.latestBlockHeader.ParentRoot)
-	copy(bodyRoot, b.latestBlockHeader.BodyRoot)
-	copy(stateRoot, b.latestBlockHeader.StateRoot)
+	copy(parentRoot, b.state.LatestBlockHeader.ParentRoot)
+	copy(bodyRoot, b.state.LatestBlockHeader.BodyRoot)
+	copy(stateRoot, b.state.LatestBlockHeader.StateRoot)
 	hdr.ParentRoot = parentRoot
 	hdr.BodyRoot = bodyRoot
 	hdr.StateRoot = stateRoot
@@ -46,29 +49,37 @@ func (b *BeaconState) latestBlockHeaderInternal() *ethpb.BeaconBlockHeader {
 }
 
 // BlockRoots kept track of in the beacon state.
-func (b *BeaconState) BlockRoots() *[fieldparams.BlockRootsLength][32]byte {
-	if b.blockRoots == nil {
+func (b *BeaconState) BlockRoots() [][]byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	if b.state.BlockRoots == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := [fieldparams.BlockRootsLength][32]byte(*b.blockRootsInternal())
-	return &roots
+	return b.blockRoots()
 }
 
-// blockRootsInternal kept track of in the beacon state.
+// blockRoots kept track of in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRootsInternal() *customtypes.BlockRoots {
-	return b.blockRoots
+func (b *BeaconState) blockRoots() [][]byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	return bytesutil.SafeCopy2dBytes(b.state.BlockRoots)
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
 // input index value.
-func (b *BeaconState) BlockRootAtIndex(idx uint64) ([32]byte, error) {
-	if b.blockRoots == nil {
-		return [32]byte{}, nil
+func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
+	if !b.hasInnerState() {
+		return nil, ErrNilInnerState
+	}
+	if b.state.BlockRoots == nil {
+		return nil, nil
 	}
 
 	b.lock.RLock()
@@ -80,9 +91,9 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([32]byte, error) {
 // blockRootAtIndex retrieves a specific block root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
-	if uint64(len(b.blockRoots)) <= idx {
-		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
+func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
+	if !b.hasInnerState() {
+		return nil, ErrNilInnerState
 	}
-	return b.blockRoots[idx], nil
+	return bytesutil.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
 }

@@ -6,36 +6,50 @@ import (
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, error) {
-	if b.previousEpochAttestations == nil {
+	if !b.hasInnerState() {
+		return nil, nil
+	}
+	if b.state.PreviousEpochAttestations == nil {
 		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.previousEpochAttestationsInternal(), nil
+	return b.previousEpochAttestations(), nil
 }
 
-// previousEpochAttestationsInternal corresponding to blocks on the beacon chain.
+// previousEpochAttestations corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochAttestationsInternal() []*ethpb.PendingAttestation {
-	return ethpb.CopyPendingAttestationSlice(b.previousEpochAttestations)
+func (b *BeaconState) previousEpochAttestations() []*ethpb.PendingAttestation {
+	if !b.hasInnerState() {
+		return nil
+	}
+
+	return ethpb.CopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, error) {
-	if b.currentEpochAttestations == nil {
+	if !b.hasInnerState() {
+		return nil, nil
+	}
+	if b.state.CurrentEpochAttestations == nil {
 		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.currentEpochAttestationsInternal(), nil
+	return b.currentEpochAttestations(), nil
 }
 
 // currentEpochAttestations corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochAttestationsInternal() []*ethpb.PendingAttestation {
-	return ethpb.CopyPendingAttestationSlice(b.currentEpochAttestations)
+func (b *BeaconState) currentEpochAttestations() []*ethpb.PendingAttestation {
+	if !b.hasInnerState() {
+		return nil
+	}
+
+	return ethpb.CopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
 }

@@ -103,7 +103,7 @@ func (f FieldIndex) ElemsInChunk() (uint64, error) {
 // Below we define a set of useful enum values for the field
 // indices of the beacon state. For example, genesisTime is the
 // 0th field of the beacon state. This is helpful when we are
-// updating the merkle branches up the trie representation
+// updating the Merkle branches up the trie representation
 // of the beacon state. The below field indexes correspond
 // to the v1 state.
 const (

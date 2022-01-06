@@ -6,18 +6,25 @@ import (
 
 // LatestExecutionPayloadHeader of the beacon state.
 func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
-	if b.latestExecutionPayloadHeader == nil {
+	if !b.hasInnerState() {
+		return nil, nil
+	}
+	if b.state.LatestExecutionPayloadHeader == nil {
 		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.latestExecutionPayloadHeaderInternal(), nil
+	return b.latestExecutionPayloadHeader(), nil
 }
 
-// latestExecutionPayloadHeaderInternal of the beacon state.
+// latestExecutionPayloadHeader of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestExecutionPayloadHeaderInternal() *ethpb.ExecutionPayloadHeader {
-	return ethpb.CopyExecutionPayloadHeader(b.latestExecutionPayloadHeader)
+func (b *BeaconState) latestExecutionPayloadHeader() *ethpb.ExecutionPayloadHeader {
+	if !b.hasInnerState() {
+		return nil
+	}
+
+	return ethpb.CopyExecutionPayloadHeader(b.state.LatestExecutionPayloadHeader)
 }

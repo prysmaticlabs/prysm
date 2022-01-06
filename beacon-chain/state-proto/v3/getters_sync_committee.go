@@ -5,40 +5,56 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// currentSyncCommitteeInternal of the current sync committee in beacon chain state.
+// currentSyncCommittee of the current sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentSyncCommitteeInternal() *ethpb.SyncCommittee {
-	return CopySyncCommittee(b.currentSyncCommittee)
+func (b *BeaconState) currentSyncCommittee() *ethpb.SyncCommittee {
+	if !b.hasInnerState() {
+		return nil
+	}
+
+	return CopySyncCommittee(b.state.CurrentSyncCommittee)
 }
 
-// nextSyncCommitteeInternal of the next sync committee in beacon chain state.
+// nextSyncCommittee of the next sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) nextSyncCommitteeInternal() *ethpb.SyncCommittee {
-	return CopySyncCommittee(b.nextSyncCommittee)
+func (b *BeaconState) nextSyncCommittee() *ethpb.SyncCommittee {
+	if !b.hasInnerState() {
+		return nil
+	}
+
+	return CopySyncCommittee(b.state.NextSyncCommittee)
 }
 
 // CurrentSyncCommittee of the current sync committee in beacon chain state.
 func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	if b.currentSyncCommittee == nil {
+	if !b.hasInnerState() {
 		return nil, nil
 	}
 
-	return b.currentSyncCommitteeInternal(), nil
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	if b.state.CurrentSyncCommittee == nil {
+		return nil, nil
+	}
+
+	return b.currentSyncCommittee(), nil
 }
 
 // NextSyncCommittee of the next sync committee in beacon chain state.
 func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	if b.nextSyncCommittee == nil {
+	if !b.hasInnerState() {
 		return nil, nil
 	}
 
-	return b.nextSyncCommitteeInternal(), nil
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	if b.state.NextSyncCommittee == nil {
+		return nil, nil
+	}
+
+	return b.nextSyncCommittee(), nil
 }
 
 // CopySyncCommittee copies the provided sync committee object.

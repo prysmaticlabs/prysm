@@ -3,33 +3,36 @@ package v2
 import (
 	"fmt"
 
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // SetLatestBlockHeader in the beacon state.
 func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.latestBlockHeader = ethpb.CopyBeaconBlockHeader(val)
+	b.state.LatestBlockHeader = ethpb.CopyBeaconBlockHeader(val)
 	b.markFieldAsDirty(latestBlockHeader)
 	return nil
 }
 
 // SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetBlockRoots(val *[fieldparams.BlockRootsLength][32]byte) error {
+func (b *BeaconState) SetBlockRoots(val [][]byte) error {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[blockRoots].MinusRef()
 	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 
-	roots := customtypes.BlockRoots(*val)
-	b.blockRoots = &roots
+	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
 	b.rebuildTrie[blockRoots] = true
 	return nil
@@ -38,24 +41,26 @@ func (b *BeaconState) SetBlockRoots(val *[fieldparams.BlockRootsLength][32]byte)
 // UpdateBlockRootAtIndex for the beacon state. Updates the block root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error {
-	if uint64(len(b.blockRoots)) <= idx {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
+	if uint64(len(b.state.BlockRoots)) <= idx {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	r := b.blockRoots
+	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		roots := *b.blockRoots
-		rootsCopy := roots
-		r = &rootsCopy
+		r = make([][]byte, len(b.state.BlockRoots))
+		copy(r, b.state.BlockRoots)
 		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 	}
 
-	r[idx] = blockRoot
-	b.blockRoots = r
+	r[idx] = blockRoot[:]
+	b.state.BlockRoots = r
 
 	b.markFieldAsDirty(blockRoots)
 	b.addDirtyIndices(blockRoots, []uint64{idx})

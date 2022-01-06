@@ -35,7 +35,7 @@ func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 	got, exists, err = e.getByRoot([32]byte{'a'})
 	require.NoError(t, err)
 	assert.Equal(t, true, exists, "Should exist")
-	assert.DeepSSZEqual(t, s.ToProtoUnsafe(), got.state.ToProtoUnsafe(), "Should have the same state")
+	assert.DeepSSZEqual(t, s.InnerStateUnsafe(), got.state.InnerStateUnsafe(), "Should have the same state")
 
 	got, exists, err = e.getBySlot(2)
 	require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 	got, exists, err = e.getBySlot(1)
 	require.NoError(t, err)
 	assert.Equal(t, true, exists, "Should exist")
-	assert.DeepSSZEqual(t, s.ToProtoUnsafe(), got.state.ToProtoUnsafe(), "Should have the same state")
+	assert.DeepSSZEqual(t, s.InnerStateUnsafe(), got.state.InnerStateUnsafe(), "Should have the same state")
 }
 
 func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {

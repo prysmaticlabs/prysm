@@ -9,9 +9,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//beacon-chain/state-native/custom-types:go_default_library",
-        "//beacon-chain/state-native/stateutil:go_default_library",
-        "//beacon-chain/state-native/types:go_default_library",
+        "//beacon-chain/state-proto/stateutil:go_default_library",
+        "//beacon-chain/state-proto/types:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//encoding/ssz:go_default_library",
@@ -29,15 +28,12 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state-native/custom-types:go_default_library",
-        "//beacon-chain/state-native/fieldtrie:go_default_library",
-        "//beacon-chain/state-native/stateutil:go_default_library",
-        "//beacon-chain/state-native/types:go_default_library",
         "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@com_github_prysmaticlabs_prysm//beacon-chain/state/stateutil:go_default_library",
     ],
 )

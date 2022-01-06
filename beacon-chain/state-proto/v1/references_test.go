@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -36,7 +36,7 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[randaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
-	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, bytesutil.ToBytes32([]byte("bar"))))
+	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
 	if b.sharedFieldReferences[randaoMixes].Refs() != 1 || a.sharedFieldReferences[randaoMixes].Refs() != 1 {
 		t.Error("Expected 1 shared reference to RANDAO mix for both a and b")
 	}
@@ -64,70 +64,46 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	assertRefCount(t, a, stateRoots, 2)
 	assertRefCount(t, b, blockRoots, 2)
 	assertRefCount(t, b, stateRoots, 2)
+	assert.Equal(t, 1, len(b.state.GetBlockRoots()), "No block roots found")
+	assert.Equal(t, 1, len(b.state.GetStateRoots()), "No state roots found")
 
 	// Assert shared state.
-	bRootsA := make([][]byte, len(a.BlockRoots()))
-	for i, r := range a.BlockRoots() {
-		tmp := r
-		bRootsA[i] = tmp[:]
+	blockRootsA := a.state.GetBlockRoots()
+	stateRootsA := a.state.GetStateRoots()
+	blockRootsB := b.state.GetBlockRoots()
+	stateRootsB := b.state.GetStateRoots()
+	if len(blockRootsA) != len(blockRootsB) || len(blockRootsA) < 1 {
+		t.Errorf("Unexpected number of block roots, want: %v", 1)
 	}
-	sRootsA := make([][]byte, len(a.StateRoots()))
-	for i, r := range a.StateRoots() {
-		tmp := r
-		sRootsA[i] = tmp[:]
+	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 1 {
+		t.Errorf("Unexpected number of state roots, want: %v", 1)
 	}
-	bRootsB := make([][]byte, len(b.BlockRoots()))
-	for i, r := range b.BlockRoots() {
-		tmp := r
-		bRootsB[i] = tmp[:]
-	}
-	sRootsB := make([][]byte, len(b.StateRoots()))
-	for i, r := range b.StateRoots() {
-		tmp := r
-		sRootsB[i] = tmp[:]
-	}
-	assertValFound(t, bRootsA, root1[:])
-	assertValFound(t, bRootsB, root1[:])
-	assertValFound(t, sRootsA, root1[:])
-	assertValFound(t, sRootsB, root1[:])
+	assertValFound(t, blockRootsA, root1[:])
+	assertValFound(t, blockRootsB, root1[:])
+	assertValFound(t, stateRootsA, root1[:])
+	assertValFound(t, stateRootsB, root1[:])
 
 	// Mutator should only affect calling state: a.
 	require.NoError(t, a.UpdateBlockRootAtIndex(0, root2))
 	require.NoError(t, a.UpdateStateRootAtIndex(0, root2))
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
-	bRootsA = make([][]byte, len(a.BlockRoots()))
-	for i, r := range a.BlockRoots() {
-		tmp := r
-		bRootsA[i] = tmp[:]
+	assertValNotFound(t, a.state.GetBlockRoots(), root1[:])
+	assertValNotFound(t, a.state.GetStateRoots(), root1[:])
+	assertValFound(t, a.state.GetBlockRoots(), root2[:])
+	assertValFound(t, a.state.GetStateRoots(), root2[:])
+	assertValFound(t, b.state.GetBlockRoots(), root1[:])
+	assertValFound(t, b.state.GetStateRoots(), root1[:])
+	if len(blockRootsA) != len(blockRootsB) || len(blockRootsA) < 1 {
+		t.Errorf("Unexpected number of block roots, want: %v", 1)
 	}
-	sRootsA = make([][]byte, len(a.StateRoots()))
-	for i, r := range a.StateRoots() {
-		tmp := r
-		sRootsA[i] = tmp[:]
+	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 1 {
+		t.Errorf("Unexpected number of state roots, want: %v", 1)
 	}
-	blockRootsB := b.BlockRoots()
-	bRootsB = make([][]byte, len(b.BlockRoots()))
-	for i, r := range b.BlockRoots() {
-		tmp := r
-		bRootsB[i] = tmp[:]
-	}
-	stateRootsB := b.StateRoots()
-	sRootsB = make([][]byte, len(b.StateRoots()))
-	for i, r := range b.StateRoots() {
-		tmp := r
-		sRootsB[i] = tmp[:]
-	}
-	assertValNotFound(t, bRootsA, root1[:])
-	assertValNotFound(t, sRootsA, root1[:])
-	assertValFound(t, bRootsA, root2[:])
-	assertValFound(t, sRootsA, root2[:])
-	assertValFound(t, bRootsB, root1[:])
-	assertValFound(t, sRootsB, root1[:])
-	assert.DeepEqual(t, root2, a.BlockRoots()[0], "Expected mutation not found")
-	assert.DeepEqual(t, root2, a.StateRoots()[0], "Expected mutation not found")
-	assert.DeepEqual(t, root1, blockRootsB[0], "Unexpected mutation found")
-	assert.DeepEqual(t, root1, stateRootsB[0], "Unexpected mutation found")
+	assert.DeepEqual(t, root2[:], a.state.GetBlockRoots()[0], "Expected mutation not found")
+	assert.DeepEqual(t, root2[:], a.state.GetStateRoots()[0], "Expected mutation not found")
+	assert.DeepEqual(t, root1[:], blockRootsB[0], "Unexpected mutation found")
+	assert.DeepEqual(t, root1[:], stateRootsB[0], "Unexpected mutation found")
 
 	// Copy on write happened, reference counters are reset.
 	assertRefCount(t, a, blockRoots, 1)
@@ -138,10 +114,10 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 
 func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 
-	val1, val2 := bytesutil.ToBytes32([]byte("foo")), bytesutil.ToBytes32([]byte("bar"))
+	val1, val2 := []byte("foo"), []byte("bar")
 	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		RandaoMixes: [][]byte{
-			val1[:],
+			val1,
 		},
 	})
 	require.NoError(t, err)
@@ -153,43 +129,32 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, randaoMixes, 2)
 	assertRefCount(t, b, randaoMixes, 2)
+	assert.Equal(t, 1, len(b.state.GetRandaoMixes()), "No randao mixes found")
 
 	// Assert shared state.
-	mixesA := make([][]byte, len(a.RandaoMixes()))
-	for i, r := range a.RandaoMixes() {
-		tmp := r
-		mixesA[i] = tmp[:]
+	mixesA := a.state.GetRandaoMixes()
+	mixesB := b.state.GetRandaoMixes()
+	if len(mixesA) != len(mixesB) || len(mixesA) < 1 {
+		t.Errorf("Unexpected number of mix values, want: %v", 1)
 	}
-	mixesB := make([][]byte, len(b.RandaoMixes()))
-	for i, r := range b.RandaoMixes() {
-		tmp := r
-		mixesB[i] = tmp[:]
-	}
-	assertValFound(t, mixesA, val1[:])
-	assertValFound(t, mixesB, val1[:])
+	assertValFound(t, mixesA, val1)
+	assertValFound(t, mixesB, val1)
 
 	// Mutator should only affect calling state: a.
 	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2))
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
-	mixesA = make([][]byte, len(a.RandaoMixes()))
-	for i, r := range a.RandaoMixes() {
-		tmp := r
-		mixesA[i] = tmp[:]
+	if len(mixesA) != len(mixesB) || len(mixesA) < 1 {
+		t.Errorf("Unexpected number of mix values, want: %v", 1)
 	}
-	mixesB = make([][]byte, len(b.RandaoMixes()))
-	for i, r := range b.RandaoMixes() {
-		tmp := r
-		mixesB[i] = tmp[:]
-	}
-	assertValFound(t, mixesA, val2[:])
-	assertValNotFound(t, mixesA, val1[:])
-	assertValFound(t, mixesB, val1[:])
-	assertValNotFound(t, mixesB, val2[:])
-	assertValFound(t, mixesB, val1[:])
-	assertValNotFound(t, mixesB, val2[:])
-	assert.DeepEqual(t, bytesutil.ToBytes32(val2[:]), a.RandaoMixes()[0], "Expected mutation not found")
-	assert.DeepEqual(t, val1[:], mixesB[0], "Unexpected mutation found")
+	assertValFound(t, a.state.GetRandaoMixes(), val2)
+	assertValNotFound(t, a.state.GetRandaoMixes(), val1)
+	assertValFound(t, b.state.GetRandaoMixes(), val1)
+	assertValNotFound(t, b.state.GetRandaoMixes(), val2)
+	assertValFound(t, mixesB, val1)
+	assertValNotFound(t, mixesB, val2)
+	assert.DeepEqual(t, val2, a.state.GetRandaoMixes()[0], "Expected mutation not found")
+	assert.DeepEqual(t, val1, mixesB[0], "Unexpected mutation found")
 
 	// Copy on write happened, reference counters are reset.
 	assertRefCount(t, a, randaoMixes, 1)
@@ -243,26 +208,14 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 	assertRefCount(t, a, currentEpochAttestations, 2)
 	assertRefCount(t, b, previousEpochAttestations, 2)
 	assertRefCount(t, b, currentEpochAttestations, 2)
-	bPrevEpochAtts, err := b.PreviousEpochAttestations()
-	require.NoError(t, err)
-	bCurrEpochAtts, err := b.CurrentEpochAttestations()
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(bPrevEpochAtts), "Unexpected number of attestations")
-	assert.Equal(t, 1, len(bCurrEpochAtts), "Unexpected number of attestations")
+	assert.Equal(t, 1, len(b.state.GetPreviousEpochAttestations()), "Unexpected number of attestations")
+	assert.Equal(t, 1, len(b.state.GetCurrentEpochAttestations()), "Unexpected number of attestations")
 
 	// Assert shared state.
-	aCurrEpochAtts, err := a.CurrentEpochAttestations()
-	require.NoError(t, err)
-	curAttsA := aCurrEpochAtts
-	aPrevEpochAtts, err := a.PreviousEpochAttestations()
-	require.NoError(t, err)
-	prevAttsA := aPrevEpochAtts
-	bCurrEpochAtts, err = b.CurrentEpochAttestations()
-	require.NoError(t, err)
-	curAttsB := bCurrEpochAtts
-	bPrevEpochAtts, err = b.PreviousEpochAttestations()
-	require.NoError(t, err)
-	prevAttsB := bPrevEpochAtts
+	curAttsA := a.state.GetCurrentEpochAttestations()
+	prevAttsA := a.state.GetPreviousEpochAttestations()
+	curAttsB := b.state.GetCurrentEpochAttestations()
+	prevAttsB := b.state.GetPreviousEpochAttestations()
 	if len(curAttsA) != len(curAttsB) || len(curAttsA) < 1 {
 		t.Errorf("Unexpected number of attestations, want: %v", 1)
 	}
@@ -283,72 +236,52 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 	preAtt, err = a.PreviousEpochAttestations()
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(preAtt), "Unexpected number of attestations")
-	aCurrEpochAtts, err = a.CurrentEpochAttestations()
-	require.NoError(t, err)
-	aPrevEpochAtts, err = a.PreviousEpochAttestations()
-	require.NoError(t, err)
-	bCurrEpochAtts, err = b.CurrentEpochAttestations()
-	require.NoError(t, err)
-	bPrevEpochAtts, err = b.PreviousEpochAttestations()
-	require.NoError(t, err)
-	assertAttFound(aCurrEpochAtts, 1)
-	assertAttFound(aPrevEpochAtts, 1)
-	assertAttFound(aCurrEpochAtts, 2)
-	assertAttFound(aPrevEpochAtts, 2)
-	assertAttFound(bCurrEpochAtts, 1)
-	assertAttFound(bPrevEpochAtts, 1)
-	assertAttNotFound(bCurrEpochAtts, 2)
-	assertAttNotFound(bPrevEpochAtts, 2)
+	assertAttFound(a.state.GetCurrentEpochAttestations(), 1)
+	assertAttFound(a.state.GetPreviousEpochAttestations(), 1)
+	assertAttFound(a.state.GetCurrentEpochAttestations(), 2)
+	assertAttFound(a.state.GetPreviousEpochAttestations(), 2)
+	assertAttFound(b.state.GetCurrentEpochAttestations(), 1)
+	assertAttFound(b.state.GetPreviousEpochAttestations(), 1)
+	assertAttNotFound(b.state.GetCurrentEpochAttestations(), 2)
+	assertAttNotFound(b.state.GetPreviousEpochAttestations(), 2)
 
 	// Mutator should only affect calling state: a.
-	applyToEveryAttestation := func(state *BeaconState) {
+	applyToEveryAttestation := func(state *ethpb.BeaconState) {
 		// One MUST copy on write.
-		atts = make([]*ethpb.PendingAttestation, len(state.currentEpochAttestations))
-		copy(atts, state.currentEpochAttestations)
-		state.currentEpochAttestations = atts
-		currEpochAtts, err := state.CurrentEpochAttestations()
-		require.NoError(t, err)
-		for i := range currEpochAtts {
-			att := ethpb.CopyPendingAttestation(state.currentEpochAttestations[i])
+		atts = make([]*ethpb.PendingAttestation, len(state.CurrentEpochAttestations))
+		copy(atts, state.CurrentEpochAttestations)
+		state.CurrentEpochAttestations = atts
+		for i := range state.GetCurrentEpochAttestations() {
+			att := ethpb.CopyPendingAttestation(state.CurrentEpochAttestations[i])
 			att.AggregationBits = bitfield.NewBitlist(3)
-			state.currentEpochAttestations[i] = att
+			state.CurrentEpochAttestations[i] = att
 		}
 
-		atts = make([]*ethpb.PendingAttestation, len(state.previousEpochAttestations))
-		copy(atts, state.previousEpochAttestations)
-		state.previousEpochAttestations = atts
-		prevEpochAtts, err := state.PreviousEpochAttestations()
-		require.NoError(t, err)
-		for i := range prevEpochAtts {
-			att := ethpb.CopyPendingAttestation(state.previousEpochAttestations[i])
+		atts = make([]*ethpb.PendingAttestation, len(state.PreviousEpochAttestations))
+		copy(atts, state.PreviousEpochAttestations)
+		state.PreviousEpochAttestations = atts
+		for i := range state.GetPreviousEpochAttestations() {
+			att := ethpb.CopyPendingAttestation(state.PreviousEpochAttestations[i])
 			att.AggregationBits = bitfield.NewBitlist(3)
-			state.previousEpochAttestations[i] = att
+			state.PreviousEpochAttestations[i] = att
 		}
 	}
-	applyToEveryAttestation(a)
+	applyToEveryAttestation(a.state)
 
-	aCurrEpochAtts, err = a.CurrentEpochAttestations()
-	require.NoError(t, err)
-	aPrevEpochAtts, err = a.PreviousEpochAttestations()
-	require.NoError(t, err)
-	bCurrEpochAtts, err = b.CurrentEpochAttestations()
-	require.NoError(t, err)
-	bPrevEpochAtts, err = b.PreviousEpochAttestations()
-	require.NoError(t, err)
 	// Assert no shared state mutation occurred only on state a (copy on write).
-	assertAttFound(aCurrEpochAtts, 3)
-	assertAttFound(aPrevEpochAtts, 3)
-	assertAttNotFound(aCurrEpochAtts, 1)
-	assertAttNotFound(aPrevEpochAtts, 1)
-	assertAttNotFound(aCurrEpochAtts, 2)
-	assertAttNotFound(aPrevEpochAtts, 2)
+	assertAttFound(a.state.GetCurrentEpochAttestations(), 3)
+	assertAttFound(a.state.GetPreviousEpochAttestations(), 3)
+	assertAttNotFound(a.state.GetCurrentEpochAttestations(), 1)
+	assertAttNotFound(a.state.GetPreviousEpochAttestations(), 1)
+	assertAttNotFound(a.state.GetCurrentEpochAttestations(), 2)
+	assertAttNotFound(a.state.GetPreviousEpochAttestations(), 2)
 	// State b must be unaffected.
-	assertAttNotFound(bCurrEpochAtts, 3)
-	assertAttNotFound(bPrevEpochAtts, 3)
-	assertAttFound(bCurrEpochAtts, 1)
-	assertAttFound(bPrevEpochAtts, 1)
-	assertAttNotFound(bCurrEpochAtts, 2)
-	assertAttNotFound(bPrevEpochAtts, 2)
+	assertAttNotFound(b.state.GetCurrentEpochAttestations(), 3)
+	assertAttNotFound(b.state.GetPreviousEpochAttestations(), 3)
+	assertAttFound(b.state.GetCurrentEpochAttestations(), 1)
+	assertAttFound(b.state.GetPreviousEpochAttestations(), 1)
+	assertAttNotFound(b.state.GetCurrentEpochAttestations(), 2)
+	assertAttNotFound(b.state.GetPreviousEpochAttestations(), 2)
 
 	// Copy on write happened, reference counters are reset.
 	assertRefCount(t, a, currentEpochAttestations, 1)
@@ -377,7 +310,7 @@ func TestValidatorReferences_RemainsConsistent(t *testing.T) {
 	// Update First Validator.
 	assert.NoError(t, a.UpdateValidatorAtIndex(0, &ethpb.Validator{PublicKey: []byte{'Z'}}))
 
-	assert.DeepNotEqual(t, a.Validators()[0], b.Validators()[0], "validators are equal when they are supposed to be different")
+	assert.DeepNotEqual(t, a.state.Validators[0], b.state.Validators[0], "validators are equal when they are supposed to be different")
 	// Modify all validators from copied state.
 	assert.NoError(t, b.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		return true, &ethpb.Validator{PublicKey: []byte{'V'}}, nil

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
+	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -21,8 +21,8 @@ func TestBeaconState_RotateAttestations(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, st.RotateAttestations())
-	require.Equal(t, 0, len(st.currentEpochAttestationsInternal()))
-	require.Equal(t, types.Slot(456), st.previousEpochAttestationsInternal()[0].Data.Slot)
+	require.Equal(t, 0, len(st.currentEpochAttestations()))
+	require.Equal(t, types.Slot(456), st.previousEpochAttestations()[0].Data.Slot)
 }
 
 func TestAppendBeyondIndicesLimit(t *testing.T) {

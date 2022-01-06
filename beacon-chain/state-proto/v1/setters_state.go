@@ -2,32 +2,18 @@ package v1
 
 import (
 	"github.com/pkg/errors"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
 )
-
-// SetStateRoots for the beacon state. Updates the state roots
-// to a new value by overwriting the previous value.
-func (b *BeaconState) SetStateRoots(val *[fieldparams.StateRootsLength][32]byte) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	b.sharedFieldReferences[stateRoots].MinusRef()
-	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
-
-	roots := customtypes.StateRoots(*val)
-	b.stateRoots = &roots
-	b.markFieldAsDirty(stateRoots)
-	b.rebuildTrie[stateRoots] = true
-	return nil
-}
 
 // UpdateStateRootAtIndex for the beacon state. Updates the state root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
+
 	b.lock.RLock()
-	if uint64(len(b.stateRoots)) <= idx {
+	if uint64(len(b.state.StateRoots)) <= idx {
 		b.lock.RUnlock()
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -37,18 +23,17 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	defer b.lock.Unlock()
 
 	// Check if we hold the only reference to the shared state roots slice.
-	r := b.stateRoots
+	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		roots := *b.stateRoots
-		rootsCopy := roots
-		r = &rootsCopy
+		r = make([][]byte, len(b.state.StateRoots))
+		copy(r, b.state.StateRoots)
 		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 	}
 
-	r[idx] = stateRoot
-	b.stateRoots = r
+	r[idx] = stateRoot[:]
+	b.state.StateRoots = r
 
 	b.markFieldAsDirty(stateRoots)
 	b.addDirtyIndices(stateRoots, []uint64{idx})

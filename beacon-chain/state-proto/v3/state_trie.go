@@ -8,11 +8,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/fieldtrie"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -36,58 +35,16 @@ func InitializeFromProto(st *ethpb.BeaconStateMerge) (*BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateMerge))
 }
 
-// InitializeFromProtoUnsafe directly uses the beacon state protobuf fields
-// and sets them as fields of the BeaconState type.
+// InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
+// and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
 
-	var bRoots customtypes.BlockRoots
-	for i, r := range st.BlockRoots {
-		bRoots[i] = bytesutil.ToBytes32(r)
-	}
-	var sRoots customtypes.StateRoots
-	for i, r := range st.StateRoots {
-		sRoots[i] = bytesutil.ToBytes32(r)
-	}
-	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
-	for i, r := range st.HistoricalRoots {
-		hRoots[i] = bytesutil.ToBytes32(r)
-	}
-	var mixes customtypes.RandaoMixes
-	for i, m := range st.RandaoMixes {
-		mixes[i] = bytesutil.ToBytes32(m)
-	}
-
 	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
 	b := &BeaconState{
-		genesisTime:                  st.GenesisTime,
-		genesisValidatorsRoot:        bytesutil.ToBytes32(st.GenesisValidatorsRoot),
-		slot:                         st.Slot,
-		fork:                         st.Fork,
-		latestBlockHeader:            st.LatestBlockHeader,
-		blockRoots:                   &bRoots,
-		stateRoots:                   &sRoots,
-		historicalRoots:              hRoots,
-		eth1Data:                     st.Eth1Data,
-		eth1DataVotes:                st.Eth1DataVotes,
-		eth1DepositIndex:             st.Eth1DepositIndex,
-		validators:                   st.Validators,
-		balances:                     st.Balances,
-		randaoMixes:                  &mixes,
-		slashings:                    st.Slashings,
-		previousEpochParticipation:   st.PreviousEpochParticipation,
-		currentEpochParticipation:    st.CurrentEpochParticipation,
-		justificationBits:            st.JustificationBits,
-		previousJustifiedCheckpoint:  st.PreviousJustifiedCheckpoint,
-		currentJustifiedCheckpoint:   st.CurrentJustifiedCheckpoint,
-		finalizedCheckpoint:          st.FinalizedCheckpoint,
-		inactivityScores:             st.InactivityScores,
-		currentSyncCommittee:         st.CurrentSyncCommittee,
-		nextSyncCommittee:            st.NextSyncCommittee,
-		latestExecutionPayloadHeader: st.LatestExecutionPayloadHeader,
-
+		state:                 st,
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
@@ -124,92 +81,51 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 	return b, nil
 }
 
-func Initialize() (*BeaconState, error) {
-	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
-	sRoots := customtypes.StateRoots([fieldparams.StateRootsLength][32]byte{})
-	bRoots := customtypes.BlockRoots([fieldparams.BlockRootsLength][32]byte{})
-	mixes := customtypes.RandaoMixes([fieldparams.RandaoMixesLength][32]byte{})
-	b := &BeaconState{
-		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
-		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler([]*ethpb.Validator{}),
-		stateRoots:            &sRoots,
-		blockRoots:            &bRoots,
-		randaoMixes:           &mixes,
-	}
-
-	var err error
-	for i := 0; i < fieldCount; i++ {
-		b.dirtyFields[types.FieldIndex(i)] = true
-		b.rebuildTrie[types.FieldIndex(i)] = true
-		b.dirtyIndices[types.FieldIndex(i)] = []uint64{}
-		b.stateFieldLeaves[types.FieldIndex(i)], err = fieldtrie.NewFieldTrie(types.FieldIndex(i), types.BasicArray, nil, 0)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
-	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
-	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
-	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
-	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
-	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Merge.
-
-	stateCount.Inc()
-	return b, nil
-}
-
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() state.BeaconState {
+	if !b.hasInnerState() {
+		return nil
+	}
+
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
 
 	dst := &BeaconState{
-		// Primitive types, safe to copy.
-		genesisTime:      b.genesisTime,
-		slot:             b.slot,
-		eth1DepositIndex: b.eth1DepositIndex,
+		state: &ethpb.BeaconStateMerge{
+			// Primitive types, safe to copy.
+			GenesisTime:      b.state.GenesisTime,
+			Slot:             b.state.Slot,
+			Eth1DepositIndex: b.state.Eth1DepositIndex,
 
-		// Large arrays, infrequently changed, constant size.
-		randaoMixes:   b.randaoMixes,
-		stateRoots:    b.stateRoots,
-		blockRoots:    b.blockRoots,
-		slashings:     b.slashings,
-		eth1DataVotes: b.eth1DataVotes,
+			// Large arrays, infrequently changed, constant size.
+			RandaoMixes:   b.state.RandaoMixes,
+			StateRoots:    b.state.StateRoots,
+			BlockRoots:    b.state.BlockRoots,
+			Slashings:     b.state.Slashings,
+			Eth1DataVotes: b.state.Eth1DataVotes,
 
-		// Large arrays, increases over time.
-		validators:                 b.validators,
-		balances:                   b.balances,
-		historicalRoots:            b.historicalRoots,
-		previousEpochParticipation: b.previousEpochParticipation,
-		currentEpochParticipation:  b.currentEpochParticipation,
-		inactivityScores:           b.inactivityScores,
+			// Large arrays, increases over time.
+			Validators:                 b.state.Validators,
+			Balances:                   b.state.Balances,
+			HistoricalRoots:            b.state.HistoricalRoots,
+			PreviousEpochParticipation: b.state.PreviousEpochParticipation,
+			CurrentEpochParticipation:  b.state.CurrentEpochParticipation,
+			InactivityScores:           b.state.InactivityScores,
 
-		// Everything else, too small to be concerned about, constant size.
-		fork:                         b.fork,
-		latestBlockHeader:            b.latestBlockHeader,
-		eth1Data:                     b.eth1Data,
-		justificationBits:            b.justificationBits,
-		previousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
-		currentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
-		finalizedCheckpoint:          b.finalizedCheckpoint,
-		genesisValidatorsRoot:        b.genesisValidatorsRoot,
-		currentSyncCommittee:         b.currentSyncCommittee,
-		nextSyncCommittee:            b.nextSyncCommittee,
-		latestExecutionPayloadHeader: b.latestExecutionPayloadHeader,
-
+			// Everything else, too small to be concerned about, constant size.
+			Fork:                         b.fork(),
+			LatestBlockHeader:            b.latestBlockHeader(),
+			Eth1Data:                     b.eth1Data(),
+			JustificationBits:            b.justificationBits(),
+			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint(),
+			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint(),
+			FinalizedCheckpoint:          b.finalizedCheckpoint(),
+			GenesisValidatorsRoot:        b.genesisValidatorRoot(),
+			CurrentSyncCommittee:         b.currentSyncCommittee(),
+			NextSyncCommittee:            b.nextSyncCommittee(),
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader(),
+		},
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
 		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
@@ -294,7 +210,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	defer b.lock.Unlock()
 
 	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b)
+		fieldRoots, err := computeFieldRoots(ctx, b.state)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -338,27 +254,27 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 // IsNil checks if the state and the underlying proto
 // object are nil.
 func (b *BeaconState) IsNil() bool {
-	return b == nil
+	return b == nil || b.state == nil
 }
 
 func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
-		return ssz.Uint64Root(b.genesisTime), nil
+		return ssz.Uint64Root(b.state.GenesisTime), nil
 	case genesisValidatorRoot:
-		return b.genesisValidatorsRoot, nil
+		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
-		return ssz.Uint64Root(uint64(b.slot)), nil
+		return ssz.Uint64Root(uint64(b.state.Slot)), nil
 	case eth1DepositIndex:
-		return ssz.Uint64Root(b.eth1DepositIndex), nil
+		return ssz.Uint64Root(b.state.Eth1DepositIndex), nil
 	case fork:
-		return ssz.ForkRoot(b.fork)
+		return ssz.ForkRoot(b.state.Fork)
 	case latestBlockHeader:
-		return stateutil.BlockHeaderRoot(b.latestBlockHeader)
+		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.blockRoots, fieldparams.BlockRootsLength)
+			err := b.resetFieldTrie(field, b.state.BlockRoots, fieldparams.BlockRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -366,10 +282,10 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(blockRoots, b.blockRoots)
+		return b.recomputeFieldTrie(blockRoots, b.state.BlockRoots)
 	case stateRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.stateRoots, fieldparams.StateRootsLength)
+			err := b.resetFieldTrie(field, b.state.StateRoots, fieldparams.StateRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -377,20 +293,16 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(stateRoots, b.stateRoots)
+		return b.recomputeFieldTrie(stateRoots, b.state.StateRoots)
 	case historicalRoots:
-		hRoots := make([][]byte, len(b.historicalRoots))
-		for i := range hRoots {
-			hRoots[i] = b.historicalRoots[i][:]
-		}
-		return ssz.ByteArrayRootWithLimit(hRoots, fieldparams.HistoricalRootsLength)
+		return ssz.ByteArrayRootWithLimit(b.state.HistoricalRoots, fieldparams.HistoricalRootsLength)
 	case eth1Data:
-		return stateutil.Eth1Root(hasher, b.eth1Data)
+		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(
 				field,
-				b.eth1DataVotes,
+				b.state.Eth1DataVotes,
 				fieldparams.Eth1DataVotesLength,
 			)
 			if err != nil {
@@ -400,10 +312,10 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(field, b.eth1DataVotes)
+		return b.recomputeFieldTrie(field, b.state.Eth1DataVotes)
 	case validators:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.validators, fieldparams.ValidatorRegistryLimit)
+			err := b.resetFieldTrie(field, b.state.Validators, fieldparams.ValidatorRegistryLimit)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -411,12 +323,12 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			delete(b.rebuildTrie, validators)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(validators, b.validators)
+		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
+		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)
+			err := b.resetFieldTrie(field, b.state.RandaoMixes, fieldparams.RandaoMixesLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -424,29 +336,29 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return b.recomputeFieldTrie(randaoMixes, b.randaoMixes)
+		return b.recomputeFieldTrie(randaoMixes, b.state.RandaoMixes)
 	case slashings:
-		return ssz.SlashingsRoot(b.slashings)
+		return ssz.SlashingsRoot(b.state.Slashings)
 	case previousEpochParticipationBits:
-		return stateutil.ParticipationBitsRoot(b.previousEpochParticipation)
+		return stateutil.ParticipationBitsRoot(b.state.PreviousEpochParticipation)
 	case currentEpochParticipationBits:
-		return stateutil.ParticipationBitsRoot(b.currentEpochParticipation)
+		return stateutil.ParticipationBitsRoot(b.state.CurrentEpochParticipation)
 	case justificationBits:
-		return bytesutil.ToBytes32(b.justificationBits), nil
+		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
-		return ssz.CheckpointRoot(hasher, b.previousJustifiedCheckpoint)
+		return ssz.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
 	case currentJustifiedCheckpoint:
-		return ssz.CheckpointRoot(hasher, b.currentJustifiedCheckpoint)
+		return ssz.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
-		return ssz.CheckpointRoot(hasher, b.finalizedCheckpoint)
+		return ssz.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	case inactivityScores:
-		return stateutil.Uint64ListRootWithRegistryLimit(b.inactivityScores)
+		return stateutil.Uint64ListRootWithRegistryLimit(b.state.InactivityScores)
 	case currentSyncCommittee:
-		return stateutil.SyncCommitteeRoot(b.currentSyncCommittee)
+		return stateutil.SyncCommitteeRoot(b.state.CurrentSyncCommittee)
 	case nextSyncCommittee:
-		return stateutil.SyncCommitteeRoot(b.nextSyncCommittee)
+		return stateutil.SyncCommitteeRoot(b.state.NextSyncCommittee)
 	case latestExecutionPayloadHeader:
-		return b.latestExecutionPayloadHeader.HashTreeRoot()
+		return b.state.LatestExecutionPayloadHeader.HashTreeRoot()
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
