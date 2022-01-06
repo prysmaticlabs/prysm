@@ -63,6 +63,14 @@ func TestExtractGossipDigest(t *testing.T) {
 		error   error
 	}{
 		{
+			name:    "empty topic",
+			topic:   "",
+			want:    [4]byte{},
+			wantErr: true,
+			error:   errors.New("invalid topic format"),
+		},
+
+		{
 			name:    "too short topic",
 			topic:   "/eth2/",
 			want:    [4]byte{},
