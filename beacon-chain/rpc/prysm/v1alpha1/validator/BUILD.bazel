@@ -125,6 +125,7 @@ go_test(
         "//beacon-chain/powchain/testing:go_default_library",
         "//beacon-chain/state-native:go_default_library",
         "//beacon-chain/state-native/stategen:go_default_library",
+        "//beacon-chain/state-native/v1:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",

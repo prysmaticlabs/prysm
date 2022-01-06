@@ -66,6 +66,7 @@ go_test(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/state-native:go_default_library",
+        "//beacon-chain/state-native/v1:go_default_library",
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

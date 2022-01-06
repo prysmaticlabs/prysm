@@ -7,6 +7,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/testing/spectest/shared/altair/ssz_static",
     visibility = ["//testing/spectest:__subpackages__"],
     deps = [
+        "//beacon-chain/state-native/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
         "//testing/spectest/utils:go_default_library",

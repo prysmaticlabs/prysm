@@ -20,6 +20,7 @@ go_library(
         "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
         "//beacon-chain/rpc/statefetcher:go_default_library",
         "//beacon-chain/state-native:go_default_library",
+        "//beacon-chain/state-native/v1:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",

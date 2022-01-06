@@ -35,7 +35,7 @@ go_library(
         "//config:mainnet": ["beacon_state_mainnet.go"],
         "//config:minimal": ["beacon_state_minimal.go"],
     }),
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v2",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v2",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//proto/migration:__subpackages__",
