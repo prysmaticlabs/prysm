@@ -5,18 +5,23 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/wealdtech/go-bytesutil"
 )
 
 // SetStateRoots for the beacon state. Updates the state roots
 // to a new value by overwriting the previous value.
-func (b *BeaconState) SetStateRoots(val *[fieldparams.StateRootsLength][32]byte) error {
+func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[stateRoots].MinusRef()
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 
-	roots := customtypes.StateRoots(*val)
+	var rootsArr [fieldparams.StateRootsLength][32]byte
+	for i := 0; i < len(rootsArr); i++ {
+		rootsArr[i] = bytesutil.ToBytes32(val[i])
+	}
+	roots := customtypes.StateRoots(rootsArr)
 	b.stateRoots = &roots
 	b.markFieldAsDirty(stateRoots)
 	b.rebuildTrie[stateRoots] = true
