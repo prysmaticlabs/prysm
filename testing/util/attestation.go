@@ -70,7 +70,7 @@ func GenerateAttestations(
 		var headState state.BeaconState
 		switch bState.Version() {
 		case version.Phase0:
-			pbState, err := v1.ProtobufBeaconState(bState.ToProto())
+			pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
 			if err != nil {
 				return nil, err
 			}
@@ -80,7 +80,7 @@ func GenerateAttestations(
 			}
 			headState = state.BeaconState(genState)
 		case version.Altair:
-			pbState, err := v2.ProtobufBeaconState(bState.ToProto())
+			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
 			if err != nil {
 				return nil, err
 			}

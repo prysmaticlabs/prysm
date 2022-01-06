@@ -220,5 +220,5 @@ func (b *BeaconState) InnerStateUnsafe() interface{} {
 
 // CloneInnerState the beacon state into a protobuf for usage.
 func (b *BeaconState) CloneInnerState() interface{} {
-	return nil
+	return b.ToProto()
 }

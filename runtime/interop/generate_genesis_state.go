@@ -65,7 +65,7 @@ func GenerateGenesisStateFromDepositData(
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
 
-	pbState, err := v1.ProtobufBeaconState(beaconState.ToProto())
+	pbState, err := v1.ProtobufBeaconState(beaconState.CloneInnerState())
 	if err != nil {
 		return nil, nil, err
 	}
