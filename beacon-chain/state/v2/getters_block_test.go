@@ -3,6 +3,7 @@ package v2
 import (
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -54,6 +55,6 @@ func TestBeaconState_BlockRootAtIndex(t *testing.T) {
 	require.NoError(t, err)
 	got, err = s.BlockRootAtIndex(0)
 	require.NoError(t, err)
-	want := bytesutil.PadTo([]byte{'a'}, 32)
+	want := bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 	require.DeepSSZEqual(t, want, got)
 }

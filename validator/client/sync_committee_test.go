@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -358,7 +359,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 			SubnetId:  0,
 		},
 	).Return(&ethpb.SyncCommitteeContribution{
-		BlockRoot:       make([]byte, 32),
+		BlockRoot:       make([]byte, fieldparams.RootLength),
 		Signature:       make([]byte, 96),
 		AggregationBits: aggBits,
 	}, nil)
@@ -376,7 +377,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 			Message: &ethpb.ContributionAndProof{
 				AggregatorIndex: 7,
 				Contribution: &ethpb.SyncCommitteeContribution{
-					BlockRoot:         make([]byte, 32),
+					BlockRoot:         make([]byte, fieldparams.RootLength),
 					Signature:         make([]byte, 96),
 					AggregationBits:   bitfield.NewBitvector128(),
 					Slot:              1,
@@ -436,7 +437,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 			SubnetId:  0,
 		},
 	).Return(&ethpb.SyncCommitteeContribution{
-		BlockRoot:       make([]byte, 32),
+		BlockRoot:       make([]byte, fieldparams.RootLength),
 		Signature:       make([]byte, 96),
 		AggregationBits: aggBits,
 	}, nil)
