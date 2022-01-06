@@ -74,8 +74,9 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state-native/v1:go_default_library",
-        "//beacon-chain/state-native/v2:go_default_library",
+        "//beacon-chain/state-proto/stateutil:go_default_library",
+        "//beacon-chain/state-proto/types:go_default_library",
+        "//beacon-chain/state-proto/v1:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
@@ -88,6 +89,5 @@ go_test(
         "//testing/util:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "@com_github_prysmaticlabs_prysm//beacon-chain/state/stateutil:go_default_library",
     ],
 )

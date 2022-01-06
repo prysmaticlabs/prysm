@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
+	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
