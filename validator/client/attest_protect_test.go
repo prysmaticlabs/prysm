@@ -7,6 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -20,7 +21,7 @@ func Test_slashableAttestationCheck(t *testing.T) {
 	defer reset()
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -68,7 +69,7 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	ctx := context.Background()
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},

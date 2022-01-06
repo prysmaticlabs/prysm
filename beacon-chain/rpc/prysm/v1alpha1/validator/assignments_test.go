@@ -133,7 +133,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)-1))
 	require.NoError(t, helpers.UpdateSyncCommitteeCache(bs))
 
-	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	pubkeysAs48ByteType := make([][fieldparams.BLSPubkeyLength]byte, len(pubKeys))
 	for i, pk := range pubKeys {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
@@ -282,7 +282,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	pubKeys := make([][48]byte, len(deposits))
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
@@ -320,7 +320,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	pubKeys := make([][48]byte, len(deposits))
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
@@ -387,7 +387,7 @@ func TestStreamDuties_OK(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
-	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	pubkeysAs48ByteType := make([][fieldparams.BLSPubkeyLength]byte, len(pubKeys))
 	for i, pk := range pubKeys {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
@@ -444,7 +444,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
-	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	pubkeysAs48ByteType := make([][fieldparams.BLSPubkeyLength]byte, len(pubKeys))
 	for i, pk := range pubKeys {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
@@ -542,7 +542,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(b, err, "Could not get signing root")
 
-	pubKeys := make([][48]byte, len(deposits))
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)

@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -112,7 +113,7 @@ func TestSigningRoot_ComputeForkDigest(t *testing.T) {
 func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &ethpb.BeaconState{}
-	pubkey := [48]byte{}
+	pubkey := [fieldparams.BLSPubkeyLength]byte{}
 	sig := [96]byte{}
 	domain := [4]byte{}
 	var p []byte

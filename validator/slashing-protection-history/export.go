@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -53,7 +54,7 @@ func ExportStandardProtectionJSON(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve attested public keys from DB")
 	}
-	dataByPubKey := make(map[[48]byte]*format.ProtectionData)
+	dataByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]*format.ProtectionData)
 
 	// Extract the signed proposals by public key.
 	bar := progress.InitializeProgressBar(
@@ -129,7 +130,7 @@ func ExportStandardProtectionJSON(
 	return interchangeJSON, nil
 }
 
-func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedAttestation, error) {
+func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*format.SignedAttestation, error) {
 	// If a key does not have an attestation history in our database, we return nil.
 	// This way, a user will be able to export their slashing protection history
 	// even if one of their keys does not have a history of signed attestations.
@@ -171,7 +172,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 	return signedAttestations, nil
 }
 
-func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedBlock, error) {
+func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*format.SignedBlock, error) {
 	// If a key does not have a lowest or highest signed proposal history
 	// in our database, we return nil. This way, a user will be able to export their
 	// slashing protection history even if one of their keys does not have a history
