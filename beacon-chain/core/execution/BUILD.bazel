@@ -7,7 +7,6 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
-        "//testing/util:__pkg__",
         "//validator/client:__pkg__",
     ],
     deps = [
@@ -22,8 +21,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = ["upgrade_test.go"],
-    embed = [":go_default_library"],
     deps = [
+        ":go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
