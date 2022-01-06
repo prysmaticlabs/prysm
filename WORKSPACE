@@ -222,7 +222,7 @@ filegroup(
 )
     """,
     sha256 = "91434d5fd5e1c6eb7b0174fed2afe25e09bddf00e1e4c431db931b2cee4e7773",
-    url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
+    url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
 consensus_spec_version = "v1.1.8"
@@ -321,7 +321,7 @@ filegroup(
     """,
     sha256 = "4e8a18b21d056c4032605621b1a6632198eabab57cb90c61e273f344c287f1b2",
     strip_prefix = "eth2-networks-791a5369c5981e829698b17fbcdcdacbdaba97c8",
-    url = "https://github.com/eth2-clients/eth2-networks/archive/791a5369c5981e829698b17fbcdcdacbdaba97c8.tar.gz",
+    url = "https://github.com/eth-clients/eth2-networks/archive/791a5369c5981e829698b17fbcdcdacbdaba97c8.tar.gz",
 )
 
 http_archive(

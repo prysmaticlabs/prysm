@@ -109,6 +109,7 @@ func ValidatePayload(st state.BeaconState, payload *ethpb.ExecutionPayload) erro
 	if err != nil {
 		return err
 	}
+
 	if !bytes.Equal(payload.Random, random) {
 		return errors.New("incorrect random")
 	}
@@ -163,7 +164,7 @@ func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (stat
 		return nil, err
 	}
 
-	header, err := payloadToHeader(payload)
+	header, err := PayloadToHeader(payload)
 	if err != nil {
 		return nil, err
 	}
@@ -173,8 +174,8 @@ func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (stat
 	return st, nil
 }
 
-// This converts `payload` into execution payload header format.
-func payloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHeader, error) {
+// PayloadToHeader converts `payload` into execution payload header format.
+func PayloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHeader, error) {
 	txRoot, err := ssz.TransactionsRoot(payload.Transactions)
 	if err != nil {
 		return nil, err
