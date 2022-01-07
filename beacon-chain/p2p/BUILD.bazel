@@ -118,6 +118,7 @@ go_test(
         "options_test.go",
         "parameter_test.go",
         "pubsub_filter_test.go",
+        "pubsub_fuzz_test.go",
         "pubsub_test.go",
         "rpc_topic_mappings_test.go",
         "sender_test.go",
