@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
@@ -85,16 +87,16 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 		return nil, err
 	}
 
-	forkData := &Fork{
+	forkData := &v1.Fork{
 		PreviousVersion: hexutil.Encode(request.Fork.PreviousVersion),
 		CurrentVersion:  hexutil.Encode(request.Fork.CurrentVersion),
 		Epoch:           fmt.Sprint(request.Fork.Epoch),
 	}
-	forkInfoData := &ForkInfo{
+	forkInfoData := &v1.ForkInfo{
 		Fork:                  forkData,
 		GenesisValidatorsRoot: hexutil.Encode(km.genesisValidatorsRoot),
 	}
-	aggregationSlotData := &AggregationSlot{Slot: fmt.Sprint(request.AggregationSlot)}
+	aggregationSlotData := &v1.AggregationSlot{Slot: fmt.Sprint(request.AggregationSlot)}
 	web3SignerRequest := SignRequest{
 		Type:            signRequestType,
 		ForkInfo:        forkInfoData,

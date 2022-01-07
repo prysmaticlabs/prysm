@@ -1,6 +1,7 @@
-package remote_web3signer
+package v1
 
 /* Web3Signer Specs are found on the following link: https://consensys.github.io/web3signer/web3signer-eth2.html */
+// All Types represent version 1.0 of the Web3Signer specs i.e. /api/v1/eth2
 
 // AggregationSlotSignRequest is a request object for web3signer sign api.
 type AggregationSlotSignRequest struct {
@@ -299,7 +300,7 @@ type SyncCommitteeContribution struct {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-// signResponse the response object of the web3signer sign api.
-type signResponse struct {
+// SignResponse the response object of the web3signer sign api.
+type SignResponse struct {
 	Signature string `json:"signature"`
 }
