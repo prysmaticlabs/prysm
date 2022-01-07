@@ -73,7 +73,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	duties := make([]*ethpbv1.AttesterDuty, 0, len(req.Index))
 	for _, index := range req.Index {
 		pubkey := s.PubkeyAtIndex(index)
-		zeroPubkey := [48]byte{}
+		zeroPubkey := [fieldparams.BLSPubkeyLength]byte{}
 		if bytes.Equal(pubkey[:], zeroPubkey[:]) {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index")
 		}
@@ -230,7 +230,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 			return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
 		}
 	}
-	committeePubkeys := make(map[[48]byte][]uint64)
+	committeePubkeys := make(map[[fieldparams.BLSPubkeyLength]byte][]uint64)
 	for j, pubkey := range committee.Pubkeys {
 		pubkey48 := bytesutil.ToBytes48(pubkey)
 		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], uint64(j))
@@ -713,7 +713,7 @@ func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {
 func syncCommitteeDuties(
 	valIndices []types.ValidatorIndex,
 	st state.BeaconState,
-	committeePubkeys map[[48]byte][]uint64,
+	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]uint64,
 ) ([]*ethpbv2.SyncCommitteeDuty, error) {
 	duties := make([]*ethpbv2.SyncCommitteeDuty, 0)
 	for _, index := range valIndices {
@@ -721,7 +721,7 @@ func syncCommitteeDuties(
 			ValidatorIndex: index,
 		}
 		valPubkey48 := st.PubkeyAtIndex(index)
-		zeroPubkey := [48]byte{}
+		zeroPubkey := [fieldparams.BLSPubkeyLength]byte{}
 		if bytes.Equal(valPubkey48[:], zeroPubkey[:]) {
 			return nil, errInvalidValIndex
 		}

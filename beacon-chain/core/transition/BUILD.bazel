@@ -62,6 +62,7 @@ go_test(
     size = "small",
     srcs = [
         "altair_transition_no_verify_sig_test.go",
+        "bellatrix_transition_no_verify_sig_test.go",
         "benchmarks_test.go",
         "skip_slot_cache_test.go",
         "state_fuzz_test.go",

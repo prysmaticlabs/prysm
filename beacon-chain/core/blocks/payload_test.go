@@ -3,13 +3,18 @@ package blocks_test
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func Test_MergeComplete(t *testing.T) {
@@ -19,7 +24,7 @@ func Test_MergeComplete(t *testing.T) {
 		want    bool
 	}{
 		{
-			name:    "empty header header",
+			name:    "empty payload header",
 			payload: emptyPayloadHeader(),
 			want:    false,
 		},
@@ -407,6 +412,202 @@ func Test_ExecutionEnabled(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload *ethpb.ExecutionPayload
+		header  *ethpb.ExecutionPayloadHeader
+		err     error
+	}{
+		{
+			name:    "merge incomplete",
+			payload: emptyPayload(),
+			header:  emptyPayloadHeader(),
+			err:     nil,
+		},
+		{
+			name: "validate passes",
+			payload: func() *ethpb.ExecutionPayload {
+				p := emptyPayload()
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return h
+			}(),
+			err: nil,
+		},
+		{
+			name: "incorrect blockhash",
+			payload: func() *ethpb.ExecutionPayload {
+				p := emptyPayload()
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.BlockHash = bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength)
+				return h
+			}(),
+			err: errors.New("incorrect block hash"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st, _ := util.DeterministicGenesisStateMerge(t, 1)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
+			err := blocks.ValidatePayloadWhenMergeCompletes(st, tt.payload)
+			if err != nil {
+				require.Equal(t, tt.err.Error(), err.Error())
+			} else {
+				require.Equal(t, tt.err, err)
+			}
+		})
+	}
+}
+
+func Test_ValidatePayload(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateMerge(t, 1)
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	require.NoError(t, err)
+	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
+	require.NoError(t, err)
+	tests := []struct {
+		name    string
+		payload *ethpb.ExecutionPayload
+		err     error
+	}{
+		{
+			name: "validate passes",
+			payload: func() *ethpb.ExecutionPayload {
+				h := emptyPayload()
+				h.Random = random
+				h.Timestamp = uint64(ts.Unix())
+				return h
+			}(), err: nil,
+		},
+		{
+			name:    "incorrect random",
+			payload: emptyPayload(),
+			err:     errors.New("incorrect random"),
+		},
+		{
+			name: "incorrect timestamp",
+			payload: func() *ethpb.ExecutionPayload {
+				h := emptyPayload()
+				h.Random = random
+				h.Timestamp = 1
+				return h
+			}(),
+			err: errors.New("incorrect timestamp"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := blocks.ValidatePayload(st, tt.payload)
+			if err != nil {
+				require.Equal(t, tt.err.Error(), err.Error())
+			} else {
+				require.Equal(t, tt.err, err)
+			}
+		})
+	}
+}
+
+func Test_ProcessPayload(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateMerge(t, 1)
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	require.NoError(t, err)
+	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
+	require.NoError(t, err)
+	tests := []struct {
+		name    string
+		payload *ethpb.ExecutionPayload
+		err     error
+	}{
+		{
+			name: "process passes",
+			payload: func() *ethpb.ExecutionPayload {
+				h := emptyPayload()
+				h.Random = random
+				h.Timestamp = uint64(ts.Unix())
+				return h
+			}(), err: nil,
+		},
+		{
+			name:    "incorrect random",
+			payload: emptyPayload(),
+			err:     errors.New("incorrect random"),
+		},
+		{
+			name: "incorrect timestamp",
+			payload: func() *ethpb.ExecutionPayload {
+				h := emptyPayload()
+				h.Random = random
+				h.Timestamp = 1
+				return h
+			}(),
+			err: errors.New("incorrect timestamp"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st, err := blocks.ProcessPayload(st, tt.payload)
+			if err != nil {
+				require.Equal(t, tt.err.Error(), err.Error())
+			} else {
+				require.Equal(t, tt.err, err)
+				want, err := blocks.PayloadToHeader(tt.payload)
+				require.Equal(t, tt.err, err)
+				got, err := st.LatestExecutionPayloadHeader()
+				require.NoError(t, err)
+				require.DeepSSZEqual(t, want, got)
+			}
+		})
+	}
+}
+
+func Test_PayloadToHeader(t *testing.T) {
+	p := emptyPayload()
+	h, err := blocks.PayloadToHeader(p)
+	require.NoError(t, err)
+	txRoot, err := ssz.TransactionsRoot(p.Transactions)
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, txRoot, bytesutil.ToBytes32(h.TransactionsRoot))
+
+	// Verify copy works
+	b := []byte{'a'}
+	p.ParentHash = b
+	p.FeeRecipient = b
+	p.StateRoot = b
+	p.ReceiptRoot = b
+	p.LogsBloom = b
+	p.Random = b
+	p.ExtraData = b
+	p.BaseFeePerGas = b
+	p.BlockHash = b
+	p.BlockNumber = 1
+	p.GasUsed = 1
+	p.GasLimit = 1
+	p.Timestamp = 1
+
+	require.DeepSSZEqual(t, h.ParentHash, make([]byte, fieldparams.RootLength))
+	require.DeepSSZEqual(t, h.FeeRecipient, make([]byte, fieldparams.FeeRecipientLength))
+	require.DeepSSZEqual(t, h.StateRoot, make([]byte, fieldparams.RootLength))
+	require.DeepSSZEqual(t, h.ReceiptRoot, make([]byte, fieldparams.RootLength))
+	require.DeepSSZEqual(t, h.LogsBloom, make([]byte, fieldparams.LogsBloomLength))
+	require.DeepSSZEqual(t, h.Random, make([]byte, fieldparams.RootLength))
+	require.DeepSSZEqual(t, h.ExtraData, make([]byte, 0))
+	require.DeepSSZEqual(t, h.BaseFeePerGas, make([]byte, fieldparams.RootLength))
+	require.DeepSSZEqual(t, h.BlockHash, make([]byte, fieldparams.RootLength))
+	require.Equal(t, h.BlockNumber, uint64(0))
+	require.Equal(t, h.GasUsed, uint64(0))
+	require.Equal(t, h.GasLimit, uint64(0))
+	require.Equal(t, h.Timestamp, uint64(0))
 }
 
 func BenchmarkMergeComplete(b *testing.B) {

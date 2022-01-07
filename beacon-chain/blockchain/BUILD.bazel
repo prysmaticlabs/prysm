@@ -54,6 +54,7 @@ go_library(
         "//beacon-chain/state-native/stategen:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
         "//config/features:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
