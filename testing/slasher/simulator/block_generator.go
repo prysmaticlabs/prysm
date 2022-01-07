@@ -72,12 +72,11 @@ func (s *Simulator) signBlockHeader(
 	beaconState state.BeaconState,
 	header *ethpb.SignedBeaconBlockHeader,
 ) (bls.Signature, error) {
-	gvRoot := beaconState.GenesisValidatorRoot()
 	domain, err := signing.Domain(
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
-		gvRoot[:],
+		beaconState.GenesisValidatorRoot(),
 	)
 	if err != nil {
 		return nil, err
