@@ -9,7 +9,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -64,7 +63,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.Equal(t, latestRandaoMixesLength, types.Epoch(len(newState.RandaoMixes())), "Length of RandaoMixes was not correctly initialized")
 	mix, err := newState.RandaoMixAtIndex(0)
 	require.NoError(t, err)
-	assert.DeepEqual(t, bytesutil.ToBytes32(eth1Data.BlockHash), mix, "RandaoMixes was not correctly initialized")
+	assert.DeepEqual(t, eth1Data.BlockHash, mix, "RandaoMixes was not correctly initialized")
 
 	// Finality fields checks.
 	assert.Equal(t, genesisEpoch, newState.PreviousJustifiedCheckpoint().Epoch, "PreviousJustifiedCheckpoint.Epoch was not correctly initialized")
@@ -83,8 +82,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	zeroHash := params.BeaconConfig().ZeroHash
 	// History root checks.
-	assert.DeepEqual(t, zeroHash, newState.StateRoots()[0], "StateRoots was not correctly initialized")
-	assert.DeepEqual(t, zeroHash, newState.BlockRoots()[0], "BlockRoots was not correctly initialized")
+	assert.DeepEqual(t, zeroHash[:], newState.StateRoots()[0], "StateRoots was not correctly initialized")
+	assert.DeepEqual(t, zeroHash[:], newState.BlockRoots()[0], "BlockRoots was not correctly initialized")
 
 	// Deposit root checks.
 	assert.DeepEqual(t, eth1Data.DepositRoot, newState.Eth1Data().DepositRoot, "Eth1Data DepositRoot was not correctly initialized")
