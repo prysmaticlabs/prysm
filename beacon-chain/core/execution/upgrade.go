@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	statemerge "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v3"
+	statemerge "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )

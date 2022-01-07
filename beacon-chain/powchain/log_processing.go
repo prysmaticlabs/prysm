@@ -16,7 +16,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/crypto/hash"

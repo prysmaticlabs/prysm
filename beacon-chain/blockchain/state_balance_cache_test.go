@@ -8,7 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v2"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"

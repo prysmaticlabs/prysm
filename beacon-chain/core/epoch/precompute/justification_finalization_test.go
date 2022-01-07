@@ -6,7 +6,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"

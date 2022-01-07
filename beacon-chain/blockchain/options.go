@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 

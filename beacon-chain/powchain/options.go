@@ -6,7 +6,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
 	"github.com/prysmaticlabs/prysm/network"
 )
 
