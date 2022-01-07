@@ -326,34 +326,15 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("value                         : compressed size = %s", humanize.Bytes(mst.valueSize))
 		t := time.Unix(int64(st.GenesisTime()), 0)
 		log.Infof("genesis_time                  : %s", t.Format(time.UnixDate))
-		gvRoot := st.GenesisValidatorRoot()
-		log.Infof("genesis_validators_root       : %s", hexutils.BytesToHex(gvRoot[:]))
+		log.Infof("genesis_validators_root       : %s", hexutils.BytesToHex(st.GenesisValidatorRoot()))
 		log.Infof("slot                          : %d", st.Slot())
 		log.Infof("fork                          : previous_version = %b,  current_version = %b", st.Fork().PreviousVersion, st.Fork().CurrentVersion)
 		log.Infof("latest_block_header           : sizeSSZ = %s", humanize.Bytes(uint64(st.LatestBlockHeader().SizeSSZ())))
-		blockRoots := st.BlockRoots()
-		bRoots := make([][]byte, len(blockRoots))
-		for i := range bRoots {
-			tmp := blockRoots[i]
-			bRoots[i] = tmp[:]
-		}
-		size, count := sizeAndCountOfByteList(bRoots)
+		size, count := sizeAndCountOfByteList(st.BlockRoots())
 		log.Infof("block_roots                   : size = %s, count =  %d", humanize.Bytes(size), count)
-		stateRoots := st.StateRoots()
-		sRoots := make([][]byte, len(stateRoots))
-		for i := range sRoots {
-			tmp := stateRoots[i]
-			sRoots[i] = tmp[:]
-		}
-		size, count = sizeAndCountOfByteList(sRoots)
+		size, count = sizeAndCountOfByteList(st.StateRoots())
 		log.Infof("state_roots                   : size = %s, count = %d", humanize.Bytes(size), count)
-		historicalRoots := st.HistoricalRoots()
-		hRoots := make([][]byte, len(historicalRoots))
-		for i := range hRoots {
-			tmp := historicalRoots[i]
-			hRoots[i] = tmp[:]
-		}
-		size, count = sizeAndCountOfByteList(hRoots)
+		size, count = sizeAndCountOfByteList(st.HistoricalRoots())
 		log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
 		log.Infof("eth1_data                     : sizeSSZ = %s", humanize.Bytes(uint64(st.Eth1Data().SizeSSZ())))
 		size, count = sizeAndCountGeneric(st.Eth1DataVotes(), nil)
@@ -363,13 +344,7 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("validators                    : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfUin64List(st.Balances())
 		log.Infof("balances                      : size = %s, count = %d", humanize.Bytes(size), count)
-		randaoMixes := st.RandaoMixes()
-		mixes := make([][]byte, len(randaoMixes))
-		for i := range mixes {
-			tmp := randaoMixes[i]
-			mixes[i] = tmp[:]
-		}
-		size, count = sizeAndCountOfByteList(mixes)
+		size, count = sizeAndCountOfByteList(st.RandaoMixes())
 		log.Infof("randao_mixes                  : size = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfUin64List(st.Slashings())
 		log.Infof("slashings                     : size = %s, count = %d", humanize.Bytes(size), count)
