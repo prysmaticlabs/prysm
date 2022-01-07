@@ -294,7 +294,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	assert.DeepEqual(t, headBlock, headBlk.Proto(), "Head block incorrect")
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, c.HeadSlot(), headBlock.Block.Slot, "Head slot incorrect")
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
@@ -334,7 +334,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, c.startFromSavedState(headState))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	assert.DeepEqual(t, genesis, c.head.block.Proto())
 }
@@ -394,7 +394,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	require.NoError(t, c.startFromSavedState(headState))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
 	assert.DeepEqual(t, finalizedBlock, c.head.block.Proto())
@@ -415,7 +415,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	require.NoError(t, c.initializeHeadFromDB(ctx))
 	s, err = c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	// Head slot is far beyond the latest finalized checkpoint, head sync is triggered.
 	assert.DeepEqual(t, headBlock, c.head.block.Proto())

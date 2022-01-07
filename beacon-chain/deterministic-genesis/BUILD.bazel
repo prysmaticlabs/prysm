@@ -13,7 +13,7 @@ go_library(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/state-native:go_default_library",
-        "//beacon-chain/state-native/v1:go_default_library",
+        "//beacon-chain/state-proto/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime:go_default_library",
         "//runtime/interop:go_default_library",

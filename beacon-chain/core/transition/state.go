@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -81,29 +80,28 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	randaoMixes := make([][]byte, fieldparams.RandaoMixesLength)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		h := make([]byte, 32)
 		copy(h, eth1Data.BlockHash)
 		randaoMixes[i] = h
 	}
 
-	zeroHash32 := params.BeaconConfig().ZeroHash
-	zeroHash := zeroHash32[:]
+	zeroHash := params.BeaconConfig().ZeroHash[:]
 
 	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		activeIndexRoots[i] = zeroHash
 	}
 
-	blockRoots := make([][]byte, fieldparams.BlockRootsLength)
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = zeroHash32[:]
+		blockRoots[i] = zeroHash
 	}
 
-	stateRoots := make([][]byte, fieldparams.StateRootsLength)
+	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(stateRoots); i++ {
-		stateRoots[i] = zeroHash32[:]
+		stateRoots[i] = zeroHash
 	}
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
@@ -111,6 +109,53 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 	genesisValidatorsRoot, err := stateutil.ValidatorRegistryRoot(preState.Validators())
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
+	}
+
+	state := &ethpb.BeaconState{
+		// Misc fields.
+		Slot:                  0,
+		GenesisTime:           genesisTime,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
+
+		// Validator registry fields.
+		Validators: preState.Validators(),
+		Balances:   preState.Balances(),
+
+		// Randomness and committees.
+		RandaoMixes: randaoMixes,
+
+		// Finality.
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		JustificationBits: []byte{0},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+
+		HistoricalRoots:           [][]byte{},
+		BlockRoots:                blockRoots,
+		StateRoots:                stateRoots,
+		Slashings:                 slashings,
+		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
+		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
+
+		// Eth1 data.
+		Eth1Data:         eth1Data,
+		Eth1DataVotes:    []*ethpb.Eth1Data{},
+		Eth1DepositIndex: preState.Eth1DepositIndex(),
 	}
 
 	bodyRoot, err := (&ethpb.BeaconBlockBody{
@@ -125,126 +170,40 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
 	}
 
-	s, err := v1.Initialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize state from proto state")
-	}
-
-	if err = s.SetGenesisTime(genesisTime); err != nil {
-		return nil, errors.Wrap(err, "could not set genesis time")
-	}
-	if err = s.SetGenesisValidatorRoot(genesisValidatorsRoot[:]); err != nil {
-		return nil, errors.Wrap(err, "could not set genesis validators root")
-	}
-	if err = s.SetSlot(0); err != nil {
-		return nil, errors.Wrap(err, "could not set slot")
-	}
-	if err = s.SetFork(&ethpb.Fork{
-		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-		Epoch:           0,
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set fork")
-	}
-	if err = s.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		ParentRoot: zeroHash,
 		StateRoot:  zeroHash,
 		BodyRoot:   bodyRoot[:],
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set latest block header")
-	}
-	if err = s.SetBlockRoots(blockRoots); err != nil {
-		return nil, errors.Wrap(err, "could not set block roots")
-	}
-	if err = s.SetStateRoots(stateRoots); err != nil {
-		return nil, errors.Wrap(err, "could not set state roots")
-	}
-	if err = s.SetHistoricalRoots([][]byte{}); err != nil {
-		return nil, errors.Wrap(err, "could not set historical roots")
-	}
-	if err = s.SetEth1Data(eth1Data); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data")
-	}
-	if err = s.SetEth1DataVotes([]*ethpb.Eth1Data{}); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data votes")
-	}
-	if err = s.SetEth1DepositIndex(preState.Eth1DepositIndex()); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 deposit index")
-	}
-	if err = s.SetValidators(preState.Validators()); err != nil {
-		return nil, errors.Wrap(err, "could not set validators")
-	}
-	if err = s.SetBalances(preState.Balances()); err != nil {
-		return nil, errors.Wrap(err, "could not set balances")
-	}
-	if err = s.SetRandaoMixes(randaoMixes); err != nil {
-		return nil, errors.Wrap(err, "could not set randao mixes")
-	}
-	if err = s.SetSlashings(slashings); err != nil {
-		return nil, errors.Wrap(err, "could not set slashings")
-	}
-	if err = s.SetJustificationBits([]byte{0}); err != nil {
-		return nil, errors.Wrap(err, "could not set justification bits")
-	}
-	if err = s.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{
-		Epoch: 0,
-		Root:  params.BeaconConfig().ZeroHash[:],
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set previous justified checkpoint")
-	}
-	if err = s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
-		Epoch: 0,
-		Root:  params.BeaconConfig().ZeroHash[:],
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set current justified checkpoint")
-	}
-	if err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{
-		Epoch: 0,
-		Root:  params.BeaconConfig().ZeroHash[:],
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set finalized checkpoint")
 	}
 
-	return s, nil
+	return v1.InitializeFromProto(state)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
 func EmptyGenesisState() (state.BeaconState, error) {
-	s, err := v1.Initialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize state from proto state")
-	}
+	state := &ethpb.BeaconState{
+		// Misc fields.
+		Slot: 0,
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
+		// Validator registry fields.
+		Validators: []*ethpb.Validator{},
+		Balances:   []uint64{},
 
-	if err = s.SetSlot(0); err != nil {
-		return nil, errors.Wrap(err, "could not set slot")
-	}
-	if err = s.SetFork(&ethpb.Fork{
-		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-		Epoch:           0,
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set fork")
-	}
-	if err = s.SetHistoricalRoots([][]byte{}); err != nil {
-		return nil, errors.Wrap(err, "could not set historical roots")
-	}
-	if err = s.SetEth1Data(&ethpb.Eth1Data{}); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data")
-	}
-	if err = s.SetEth1DataVotes([]*ethpb.Eth1Data{}); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data votes")
-	}
-	if err = s.SetValidators([]*ethpb.Validator{}); err != nil {
-		return nil, errors.Wrap(err, "could not set validators")
-	}
-	if err = s.SetBalances([]uint64{}); err != nil {
-		return nil, errors.Wrap(err, "could not set balances")
-	}
-	if err = s.SetJustificationBits([]byte{0}); err != nil {
-		return nil, errors.Wrap(err, "could not set justification bits")
-	}
+		JustificationBits:         []byte{0},
+		HistoricalRoots:           [][]byte{},
+		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
+		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
 
-	return s, nil
+		// Eth1 data.
+		Eth1Data:         &ethpb.Eth1Data{},
+		Eth1DataVotes:    []*ethpb.Eth1Data{},
+		Eth1DepositIndex: 0,
+	}
+	return v1.InitializeFromProto(state)
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

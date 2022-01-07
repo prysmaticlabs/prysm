@@ -38,7 +38,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	bState, err = transition.ExecuteStateTransition(context.Background(), bState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not process state transition")
 
-	assert.DeepEqual(t, originalState.ToProto(), bState.CloneInnerState(), "Skipped slots cache leads to different states")
+	assert.DeepEqual(t, originalState.CloneInnerState(), bState.CloneInnerState(), "Skipped slots cache leads to different states")
 }
 
 func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {

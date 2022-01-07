@@ -3,7 +3,6 @@ package altair
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
@@ -68,82 +67,39 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 
 	numValidators := state.NumValidators()
 
-	newState, err := statealtair.Initialize()
+	s := &ethpb.BeaconStateAltair{
+		GenesisTime:           state.GenesisTime(),
+		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
+		Slot:                  state.Slot(),
+		Fork: &ethpb.Fork{
+			PreviousVersion: state.Fork().CurrentVersion,
+			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+			Epoch:           epoch,
+		},
+		LatestBlockHeader:           state.LatestBlockHeader(),
+		BlockRoots:                  state.BlockRoots(),
+		StateRoots:                  state.StateRoots(),
+		HistoricalRoots:             state.HistoricalRoots(),
+		Eth1Data:                    state.Eth1Data(),
+		Eth1DataVotes:               state.Eth1DataVotes(),
+		Eth1DepositIndex:            state.Eth1DepositIndex(),
+		Validators:                  state.Validators(),
+		Balances:                    state.Balances(),
+		RandaoMixes:                 state.RandaoMixes(),
+		Slashings:                   state.Slashings(),
+		PreviousEpochParticipation:  make([]byte, numValidators),
+		CurrentEpochParticipation:   make([]byte, numValidators),
+		JustificationBits:           state.JustificationBits(),
+		PreviousJustifiedCheckpoint: state.PreviousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:  state.CurrentJustifiedCheckpoint(),
+		FinalizedCheckpoint:         state.FinalizedCheckpoint(),
+		InactivityScores:            make([]uint64, numValidators),
+	}
+
+	newState, err := statealtair.InitializeFromProto(s)
 	if err != nil {
 		return nil, err
 	}
-
-	if err = newState.SetGenesisTime(state.GenesisTime()); err != nil {
-		return nil, errors.Wrap(err, "could not set genesis time")
-	}
-	if err = newState.SetGenesisValidatorRoot(state.GenesisValidatorRoot()); err != nil {
-		return nil, errors.Wrap(err, "could not set genesis validators root")
-	}
-	if err = newState.SetSlot(state.Slot()); err != nil {
-		return nil, errors.Wrap(err, "could not set slot")
-	}
-	if err = newState.SetFork(&ethpb.Fork{
-		PreviousVersion: state.Fork().CurrentVersion,
-		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
-		Epoch:           epoch,
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set fork")
-	}
-	if err = newState.SetLatestBlockHeader(state.LatestBlockHeader()); err != nil {
-		return nil, errors.Wrap(err, "could not set latest block header")
-	}
-	if err = newState.SetBlockRoots(state.BlockRoots()); err != nil {
-		return nil, errors.Wrap(err, "could not set block roots")
-	}
-	if err = newState.SetStateRoots(state.StateRoots()); err != nil {
-		return nil, errors.Wrap(err, "could not set state roots")
-	}
-	if err = newState.SetHistoricalRoots(state.HistoricalRoots()); err != nil {
-		return nil, errors.Wrap(err, "could not set historical roots")
-	}
-	if err = newState.SetEth1Data(state.Eth1Data()); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data")
-	}
-	if err = newState.SetEth1DataVotes(state.Eth1DataVotes()); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data votes")
-	}
-	if err = newState.SetEth1DepositIndex(state.Eth1DepositIndex()); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 deposit index")
-	}
-	if err = newState.SetValidators(state.Validators()); err != nil {
-		return nil, errors.Wrap(err, "could not set validators")
-	}
-	if err = newState.SetBalances(state.Balances()); err != nil {
-		return nil, errors.Wrap(err, "could not set balances")
-	}
-	if err = newState.SetRandaoMixes(state.RandaoMixes()); err != nil {
-		return nil, errors.Wrap(err, "could not set randao mixes")
-	}
-	if err = newState.SetSlashings(state.Slashings()); err != nil {
-		return nil, errors.Wrap(err, "could not set slashings")
-	}
-	if err = newState.SetJustificationBits(state.JustificationBits()); err != nil {
-		return nil, errors.Wrap(err, "could not set justification bits")
-	}
-	if err = newState.SetPreviousParticipationBits(make([]byte, numValidators)); err != nil {
-		return nil, errors.Wrap(err, "could not set previous participation bits")
-	}
-	if err = newState.SetCurrentParticipationBits(make([]byte, numValidators)); err != nil {
-		return nil, errors.Wrap(err, "could not set current participation bits")
-	}
-	if err = newState.SetInactivityScores(make([]uint64, numValidators)); err != nil {
-		return nil, errors.Wrap(err, "could not set inactivity scores")
-	}
-	if err = newState.SetPreviousJustifiedCheckpoint(state.PreviousJustifiedCheckpoint()); err != nil {
-		return nil, errors.Wrap(err, "could not set previous justified checkpoint")
-	}
-	if err = newState.SetCurrentJustifiedCheckpoint(state.CurrentJustifiedCheckpoint()); err != nil {
-		return nil, errors.Wrap(err, "could not set current justified checkpoint")
-	}
-	if err = newState.SetFinalizedCheckpoint(state.FinalizedCheckpoint()); err != nil {
-		return nil, errors.Wrap(err, "could not set finalized checkpoint")
-	}
-
 	prevEpochAtts, err := state.PreviousEpochAttestations()
 	if err != nil {
 		return nil, err

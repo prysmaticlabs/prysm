@@ -34,7 +34,7 @@ go_test(
     deps = [
         "//api/grpc:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
-        "//beacon-chain/state-native/v1:go_default_library",
+        "//beacon-chain/state-proto/v1:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//config/params:go_default_library",
         "//proto/eth/v1:go_default_library",

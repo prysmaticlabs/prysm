@@ -9,7 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/genesis"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/genesis"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v3"

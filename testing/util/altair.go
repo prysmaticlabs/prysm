@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v2"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -87,29 +87,28 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	randaoMixes := make([][]byte, fieldparams.RandaoMixesLength)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		h := make([]byte, 32)
 		copy(h, eth1Data.BlockHash)
 		randaoMixes[i] = h
 	}
 
-	zeroHash32 := params.BeaconConfig().ZeroHash
-	zeroHash := zeroHash32[:]
+	zeroHash := params.BeaconConfig().ZeroHash[:]
 
 	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		activeIndexRoots[i] = zeroHash
 	}
 
-	blockRoots := make([][]byte, fieldparams.BlockRootsLength)
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = zeroHash32[:]
+		blockRoots[i] = zeroHash
 	}
 
-	stateRoots := make([][]byte, fieldparams.StateRootsLength)
+	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(stateRoots); i++ {
-		stateRoots[i] = zeroHash32[:]
+		stateRoots[i] = zeroHash
 	}
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
@@ -131,6 +130,53 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	if err != nil {
 		return nil, err
 	}
+	st := &ethpb.BeaconStateAltair{
+		// Misc fields.
+		Slot:                  0,
+		GenesisTime:           genesisTime,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
+
+		// Validator registry fields.
+		Validators:                 preState.Validators(),
+		Balances:                   preState.Balances(),
+		PreviousEpochParticipation: prevEpochParticipation,
+		CurrentEpochParticipation:  currEpochParticipation,
+		InactivityScores:           scores,
+
+		// Randomness and committees.
+		RandaoMixes: randaoMixes,
+
+		// Finality.
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		JustificationBits: []byte{0},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+
+		HistoricalRoots: [][]byte{},
+		BlockRoots:      blockRoots,
+		StateRoots:      stateRoots,
+		Slashings:       slashings,
+
+		// Eth1 data.
+		Eth1Data:         eth1Data,
+		Eth1DataVotes:    []*ethpb.Eth1Data{},
+		Eth1DepositIndex: preState.Eth1DepositIndex(),
+	}
 
 	bodyRoot, err := (&ethpb.BeaconBlockBodyAltair{
 		RandaoReveal: make([]byte, 96),
@@ -148,166 +194,53 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
 	}
 
+	st.LatestBlockHeader = &ethpb.BeaconBlockHeader{
+		ParentRoot: zeroHash,
+		StateRoot:  zeroHash,
+		BodyRoot:   bodyRoot[:],
+	}
+
 	var pubKeys [][]byte
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
-
-	s, err := stateAltair.Initialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize state from proto state")
-	}
-
-	if err = s.SetGenesisTime(genesisTime); err != nil {
-		return nil, errors.Wrap(err, "could not set genesis time")
-	}
-	if err = s.SetGenesisValidatorRoot(genesisValidatorsRoot[:]); err != nil {
-		return nil, errors.Wrap(err, "could not set genesis validators root")
-	}
-	if err = s.SetSlot(0); err != nil {
-		return nil, errors.Wrap(err, "could not set slot")
-	}
-	if err = s.SetFork(&ethpb.Fork{
-		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-		Epoch:           0,
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set fork")
-	}
-	if err = s.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		ParentRoot: zeroHash,
-		StateRoot:  zeroHash,
-		BodyRoot:   bodyRoot[:],
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set latest block header")
-	}
-	if err = s.SetBlockRoots(blockRoots); err != nil {
-		return nil, errors.Wrap(err, "could not set block roots")
-	}
-	if err = s.SetStateRoots(stateRoots); err != nil {
-		return nil, errors.Wrap(err, "could not set state roots")
-	}
-	if err = s.SetHistoricalRoots([][]byte{}); err != nil {
-		return nil, errors.Wrap(err, "could not set historical roots")
-	}
-	if err = s.SetEth1Data(eth1Data); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data")
-	}
-	if err = s.SetEth1DataVotes([]*ethpb.Eth1Data{}); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data votes")
-	}
-	if err = s.SetEth1Data(eth1Data); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data")
-	}
-	if err = s.SetEth1DepositIndex(preState.Eth1DepositIndex()); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 deposit index")
-	}
-	if err = s.SetValidators(preState.Validators()); err != nil {
-		return nil, errors.Wrap(err, "could not set validators")
-	}
-	if err = s.SetBalances(preState.Balances()); err != nil {
-		return nil, errors.Wrap(err, "could not set balances")
-	}
-	if err = s.SetRandaoMixes(randaoMixes); err != nil {
-		return nil, errors.Wrap(err, "could not set randao mixes")
-	}
-	if err = s.SetPreviousParticipationBits(prevEpochParticipation); err != nil {
-		return nil, errors.Wrap(err, "could not set previous epoch participation")
-	}
-	if err = s.SetCurrentParticipationBits(currEpochParticipation); err != nil {
-		return nil, errors.Wrap(err, "could not set current epoch participation")
-	}
-	if err = s.SetInactivityScores(scores); err != nil {
-		return nil, errors.Wrap(err, "could not set inactivity scores")
-	}
-	if err = s.SetSlashings(slashings); err != nil {
-		return nil, errors.Wrap(err, "could not set slashings")
-	}
-	if err = s.SetJustificationBits([]byte{0}); err != nil {
-		return nil, errors.Wrap(err, "could not set justification bits")
-	}
-	if err = s.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{
-		Epoch: 0,
-		Root:  params.BeaconConfig().ZeroHash[:],
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set previous justified checkpoint")
-	}
-	if err = s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
-		Epoch: 0,
-		Root:  params.BeaconConfig().ZeroHash[:],
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set current justified checkpoint")
-	}
-	if err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{
-		Epoch: 0,
-		Root:  params.BeaconConfig().ZeroHash[:],
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set finalized checkpoint")
-	}
-	if err = s.SetCurrentSyncCommittee(&ethpb.SyncCommittee{
+	st.CurrentSyncCommittee = &ethpb.SyncCommittee{
 		Pubkeys:         pubKeys,
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set current sync committee")
 	}
-	if err = s.SetNextSyncCommittee(&ethpb.SyncCommittee{
+	st.NextSyncCommittee = &ethpb.SyncCommittee{
 		Pubkeys:         bytesutil.SafeCopy2dBytes(pubKeys),
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set next sync committee")
 	}
 
-	return s, nil
+	return stateAltair.InitializeFromProto(st)
 }
 
 func emptyGenesisState() (state.BeaconStateAltair, error) {
-	s, err := stateAltair.Initialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize state from proto state")
-	}
+	st := &ethpb.BeaconStateAltair{
+		// Misc fields.
+		Slot: 0,
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+			Epoch:           0,
+		},
+		// Validator registry fields.
+		Validators:       []*ethpb.Validator{},
+		Balances:         []uint64{},
+		InactivityScores: []uint64{},
 
-	if err = s.SetSlot(0); err != nil {
-		return nil, errors.Wrap(err, "could not set slot")
-	}
-	if err = s.SetFork(&ethpb.Fork{
-		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
-		Epoch:           0,
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not set fork")
-	}
-	if err = s.SetHistoricalRoots([][]byte{}); err != nil {
-		return nil, errors.Wrap(err, "could not set historical roots")
-	}
-	if err = s.SetEth1Data(&ethpb.Eth1Data{}); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data")
-	}
-	if err = s.SetEth1DataVotes([]*ethpb.Eth1Data{}); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 data votes")
-	}
-	if err = s.SetEth1DepositIndex(0); err != nil {
-		return nil, errors.Wrap(err, "could not set eth1 deposit index")
-	}
-	if err = s.SetValidators([]*ethpb.Validator{}); err != nil {
-		return nil, errors.Wrap(err, "could not set validators")
-	}
-	if err = s.SetBalances([]uint64{}); err != nil {
-		return nil, errors.Wrap(err, "could not set balances")
-	}
-	if err = s.SetInactivityScores([]uint64{}); err != nil {
-		return nil, errors.Wrap(err, "could not set inactivity scores")
-	}
-	if err = s.SetPreviousParticipationBits([]byte{}); err != nil {
-		return nil, errors.Wrap(err, "could not set previous participation bits")
-	}
-	if err = s.SetCurrentParticipationBits([]byte{}); err != nil {
-		return nil, errors.Wrap(err, "could not set current participation bits")
-	}
-	if err = s.SetJustificationBits([]byte{0}); err != nil {
-		return nil, errors.Wrap(err, "could not set justification bits")
-	}
+		JustificationBits:          []byte{0},
+		HistoricalRoots:            [][]byte{},
+		CurrentEpochParticipation:  []byte{},
+		PreviousEpochParticipation: []byte{},
 
-	return s, nil
+		// Eth1 data.
+		Eth1Data:         &ethpb.Eth1Data{},
+		Eth1DataVotes:    []*ethpb.Eth1Data{},
+		Eth1DepositIndex: 0,
+	}
+	return stateAltair.InitializeFromProto(st)
 }
 
 // NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.
