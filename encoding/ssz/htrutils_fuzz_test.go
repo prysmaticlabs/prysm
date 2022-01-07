@@ -34,7 +34,7 @@ func FuzzForkRoot(f *testing.F) {
 	f.Fuzz(func(t *testing.T, b []byte) {
 		frk := &pb.Fork{}
 		if err := frk.UnmarshalSSZ(b); err != nil {
-			if errors.Is(err, fssz.ErrSize){
+			if errors.Is(err, fssz.ErrSize) {
 				return
 			}
 			t.Fatal(err)
