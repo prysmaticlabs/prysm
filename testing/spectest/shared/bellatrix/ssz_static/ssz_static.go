@@ -92,6 +92,7 @@ func RunSSZStaticTests(t *testing.T, config string) {
 		}
 	}
 }
+
 // UnmarshalledSSZ unmarshalls serialized input.
 func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
