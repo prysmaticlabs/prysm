@@ -52,8 +52,7 @@ func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, pare
 		if !ok {
 			continue
 		}
-		gvRoot := st.GenesisValidatorRoot()
-		d, err := signing.Domain(st.Fork(), slots.ToEpoch(st.Slot()), params.BeaconConfig().DomainSyncCommittee, gvRoot[:])
+		d, err := signing.Domain(st.Fork(), slots.ToEpoch(st.Slot()), params.BeaconConfig().DomainSyncCommittee, st.GenesisValidatorRoot())
 		if err != nil {
 			return nil, err
 		}

@@ -2166,7 +2166,7 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	att1.Data.BeaconBlockRoot = rt[:]
 	br := beaconState.BlockRoots()
 	newRt := [32]byte{'B'}
-	br[0] = newRt
+	br[0] = newRt[:]
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att2.Data.Target.Root = rt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]

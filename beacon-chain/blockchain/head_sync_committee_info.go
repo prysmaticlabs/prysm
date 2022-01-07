@@ -130,8 +130,7 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, doma
 	if err != nil {
 		return nil, err
 	}
-	gvRoot := headState.GenesisValidatorRoot()
-	return signing.Domain(headState.Fork(), slots.ToEpoch(headState.Slot()), domain, gvRoot[:])
+	return signing.Domain(headState.Fork(), slots.ToEpoch(headState.Slot()), domain, headState.GenesisValidatorRoot())
 }
 
 // returns the head state that is advanced up to `slot`. It utilizes the cache `syncCommitteeHeadState` by retrieving using `slot` as key.

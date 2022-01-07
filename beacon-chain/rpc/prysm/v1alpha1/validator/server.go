@@ -162,11 +162,10 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
 	if head != nil && !head.IsNil() {
-		genesisValidatorRoot := head.GenesisValidatorRoot()
 		res := &ethpb.ChainStartResponse{
 			Started:               true,
 			GenesisTime:           head.GenesisTime(),
-			GenesisValidatorsRoot: genesisValidatorRoot[:],
+			GenesisValidatorsRoot: head.GenesisValidatorRoot(),
 		}
 		return stream.Send(res)
 	}

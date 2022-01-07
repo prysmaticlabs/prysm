@@ -5,7 +5,7 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/wealdtech/go-bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // SetStateRoots for the beacon state. Updates the state roots

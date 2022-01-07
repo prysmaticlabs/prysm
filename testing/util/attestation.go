@@ -151,8 +151,7 @@ func GenerateAttestations(
 		)
 	}
 
-	gvRoot := bState.GenesisValidatorRoot()
-	domain, err := signing.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, gvRoot[:])
+	domain, err := signing.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}

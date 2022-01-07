@@ -112,7 +112,7 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 func BenchmarkMarshalState_FullState(b *testing.B) {
 	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
-	natState, err := v1.ProtobufBeaconState(beaconState.ToProtoUnsafe())
+	natState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 	require.NoError(b, err)
 	b.Run("Proto_Marshal", func(b *testing.B) {
 		b.ResetTimer()
@@ -136,7 +136,7 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 func BenchmarkUnmarshalState_FullState(b *testing.B) {
 	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
-	natState, err := v1.ProtobufBeaconState(beaconState.ToProtoUnsafe())
+	natState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 	require.NoError(b, err)
 	protoObject, err := proto.Marshal(natState)
 	require.NoError(b, err)

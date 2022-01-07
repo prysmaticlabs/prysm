@@ -394,7 +394,7 @@ func TestLastSavedState_Genesis(t *testing.T) {
 
 	savedState, err := s.lastSavedState(ctx, 0)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, gState.ToProtoUnsafe(), savedState.ToProtoUnsafe())
+	require.DeepSSZEqual(t, gState.ToProtoUnsafe(), savedState.InnerStateUnsafe())
 }
 
 func TestLastSavedState_CanGet(t *testing.T) {
@@ -424,7 +424,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 
 	savedState, err := s.lastSavedState(ctx, s.finalizedInfo.slot+100)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedState.ToProtoUnsafe())
+	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedState.InnerStateUnsafe())
 }
 
 func TestLastSavedState_NoSavedBlockState(t *testing.T) {

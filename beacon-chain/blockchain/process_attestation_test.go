@@ -261,7 +261,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	cached, err = service.checkpointStateCache.StateByCheckpoint(newCheckpoint)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, returned.ToProtoUnsafe(), cached.ToProtoUnsafe())
+	require.DeepSSZEqual(t, returned.InnerStateUnsafe(), cached.InnerStateUnsafe())
 }
 
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {

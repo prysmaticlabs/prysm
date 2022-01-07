@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 
 func TestInitializeFromProto(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
-	pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
+	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -67,7 +67,7 @@ func TestInitializeFromProto(t *testing.T) {
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
-	pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
+	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -161,7 +161,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
+			pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {
@@ -230,7 +230,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := v1.ProtobufBeaconState(testState.ToProtoUnsafe())
+			pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {

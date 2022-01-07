@@ -29,7 +29,7 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 	s, err := InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	got := s.BlockRoots()
-	require.DeepEqual(t, [fieldparams.BlockRootsLength][32]byte{}, *got)
+	require.DeepEqual(t, [fieldparams.BlockRootsLength][32]byte{}, got)
 
 	want := [fieldparams.BlockRootsLength][32]byte{{'a'}}
 	bRoots := make([][]byte, len(want))
@@ -40,11 +40,11 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 	s, err = InitializeFromProto(&ethpb.BeaconState{BlockRoots: bRoots})
 	require.NoError(t, err)
 	got = s.BlockRoots()
-	require.DeepEqual(t, want, *got)
+	require.DeepEqual(t, want, got)
 
 	// Test copy does not mutate.
 	got[0][0] = 'b'
-	require.DeepNotEqual(t, want, *got)
+	require.DeepNotEqual(t, want, got)
 }
 
 func TestBeaconState_BlockRootAtIndex(t *testing.T) {

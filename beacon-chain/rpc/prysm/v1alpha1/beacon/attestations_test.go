@@ -642,8 +642,11 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	numValidators := uint64(128)
 	state, _ := util.DeterministicGenesisState(t, numValidators)
 
-	var mixes [fieldparams.RandaoMixesLength][fieldparams.RootLength]byte
-	require.NoError(t, state.SetRandaoMixes(&mixes))
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, fieldparams.RootLength)
+	}
+	require.NoError(t, state.SetRandaoMixes(randaoMixes))
 	require.NoError(t, state.SetSlot(startSlot))
 
 	// Next up we convert the test attestations to indexed form:
@@ -907,8 +910,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 					},
 				},
 			}
-			gvr := headState.GenesisValidatorRoot()
-			domain, err := signing.Domain(headState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, gvr[:])
+			domain, err := signing.Domain(headState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, headState.GenesisValidatorRoot())
 			require.NoError(t, err)
 			encoded, err := signing.ComputeSigningRoot(attExample.Data, domain)
 			require.NoError(t, err)

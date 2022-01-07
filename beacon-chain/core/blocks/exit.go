@@ -57,8 +57,7 @@ func ProcessVoluntaryExits(
 		if err != nil {
 			return nil, err
 		}
-		gvRoot := beaconState.GenesisValidatorRoot()
-		if err := VerifyExitAndSignature(val, beaconState.Slot(), beaconState.Fork(), exit, gvRoot[:]); err != nil {
+		if err := VerifyExitAndSignature(val, beaconState.Slot(), beaconState.Fork(), exit, beaconState.GenesisValidatorRoot()); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, err = v.InitiateValidatorExit(ctx, beaconState, exit.Exit.ValidatorIndex)

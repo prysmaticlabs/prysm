@@ -217,12 +217,11 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "could not verify initial checkpoint provided for chain sync")
 	}
 
-	gvr := saved.GenesisValidatorRoot()
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             s.genesisTime,
-			GenesisValidatorsRoot: gvr[:],
+			GenesisValidatorsRoot: saved.GenesisValidatorRoot(),
 		},
 	})
 
@@ -380,12 +379,11 @@ func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
 
 	// We send out a state initialized event to the rest of the services
 	// running in the beacon node.
-	genesisValidatorRoot := initializedState.GenesisValidatorRoot()
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             genesisTime,
-			GenesisValidatorsRoot: genesisValidatorRoot[:],
+			GenesisValidatorsRoot: initializedState.GenesisValidatorRoot(),
 		},
 	})
 }

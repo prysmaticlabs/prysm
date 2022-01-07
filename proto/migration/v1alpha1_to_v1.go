@@ -436,30 +436,9 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 		}
 	}
 
-	gvr := state.GenesisValidatorRoot()
-	bRoots := make([][]byte, len(state.BlockRoots()))
-	for i, r := range state.BlockRoots() {
-		tmp := r
-		bRoots[i] = tmp[:]
-	}
-	sRoots := make([][]byte, len(state.StateRoots()))
-	for i, r := range state.StateRoots() {
-		tmp := r
-		sRoots[i] = tmp[:]
-	}
-	hRoots := make([][]byte, len(state.HistoricalRoots()))
-	for i, r := range state.HistoricalRoots() {
-		tmp := r
-		hRoots[i] = tmp[:]
-	}
-	mixes := make([][]byte, len(state.RandaoMixes()))
-	for i, m := range state.RandaoMixes() {
-		tmp := m
-		mixes[i] = tmp[:]
-	}
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: gvr[:],
+		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
 		Slot:                  state.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
@@ -473,9 +452,9 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bRoots,
-		StateRoots:      sRoots,
-		HistoricalRoots: hRoots,
+		BlockRoots:      bytesutil.SafeCopy2dBytes(state.BlockRoots()),
+		StateRoots:      bytesutil.SafeCopy2dBytes(state.StateRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(state.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -485,7 +464,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 		Eth1DepositIndex:          state.Eth1DepositIndex(),
 		Validators:                resultValidators,
 		Balances:                  state.Balances(),
-		RandaoMixes:               mixes,
+		RandaoMixes:               bytesutil.SafeCopy2dBytes(state.RandaoMixes()),
 		Slashings:                 state.Slashings(),
 		PreviousEpochAttestations: resultPrevEpochAtts,
 		CurrentEpochAttestations:  resultCurrEpochAtts,

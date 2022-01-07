@@ -204,12 +204,11 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBea
 	if err := attestation.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 		return err
 	}
-	gvRoot := beaconState.GenesisValidatorRoot()
 	domain, err := signing.Domain(
 		beaconState.Fork(),
 		indexedAtt.Data.Target.Epoch,
 		params.BeaconConfig().DomainBeaconAttester,
-		gvRoot[:],
+		beaconState.GenesisValidatorRoot(),
 	)
 	if err != nil {
 		return err

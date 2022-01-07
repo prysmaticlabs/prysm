@@ -108,8 +108,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	gvr := beaconState.GenesisValidatorRoot()
-	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, gvr[:])
+	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
@@ -178,8 +177,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	gvr := beaconState.GenesisValidatorRoot()
-	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, gvr[:])
+	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
@@ -248,8 +246,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusMerge(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	gvr := beaconState.GenesisValidatorRoot()
-	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, gvr[:])
+	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")

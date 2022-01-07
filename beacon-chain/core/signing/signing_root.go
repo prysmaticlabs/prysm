@@ -23,8 +23,7 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
-	gvRoot := st.GenesisValidatorRoot()
-	d, err := Domain(st.Fork(), epoch, domain, gvRoot[:])
+	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +69,7 @@ func ComputeDomainVerifySigningRoot(st state.ReadOnlyBeaconState, index types.Va
 	if err != nil {
 		return err
 	}
-	gvRoot := st.GenesisValidatorRoot()
-	d, err := Domain(st.Fork(), epoch, domain, gvRoot[:])
+	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}

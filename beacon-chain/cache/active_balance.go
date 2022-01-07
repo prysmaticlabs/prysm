@@ -108,7 +108,7 @@ func balanceCacheKey(st state.ReadOnlyBeaconState) (string, error) {
 	// Mix in current epoch
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, uint64(currentEpoch))
-	key := append(r[:], b...)
+	key := append(r, b...)
 
 	// Mix in validator count
 	b = make([]byte, 8)

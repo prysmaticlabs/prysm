@@ -36,7 +36,7 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[randaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
-	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, bytesutil.ToBytes32([]byte("bar"))))
+	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
 	if b.sharedFieldReferences[randaoMixes].Refs() != 1 || a.sharedFieldReferences[randaoMixes].Refs() != 1 {
 		t.Error("Expected 1 shared reference to RANDAO mix for both a and b")
 	}
@@ -64,70 +64,46 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	assertRefCount(t, a, stateRoots, 2)
 	assertRefCount(t, b, blockRoots, 2)
 	assertRefCount(t, b, stateRoots, 2)
+	assert.Equal(t, 1, len(b.BlockRoots()), "No block roots found")
+	assert.Equal(t, 1, len(b.StateRoots()), "No state roots found")
 
 	// Assert shared state.
-	bRootsA := make([][]byte, len(a.BlockRoots()))
-	for i, r := range a.BlockRoots() {
-		tmp := r
-		bRootsA[i] = tmp[:]
+	blockRootsA := a.BlockRoots()
+	stateRootsA := a.StateRoots()
+	blockRootsB := b.BlockRoots()
+	stateRootsB := b.StateRoots()
+	if len(blockRootsA) != len(blockRootsB) || len(blockRootsA) < 1 {
+		t.Errorf("Unexpected number of block roots, want: %v", 1)
 	}
-	sRootsA := make([][]byte, len(a.StateRoots()))
-	for i, r := range a.StateRoots() {
-		tmp := r
-		sRootsA[i] = tmp[:]
+	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 1 {
+		t.Errorf("Unexpected number of state roots, want: %v", 1)
 	}
-	bRootsB := make([][]byte, len(b.BlockRoots()))
-	for i, r := range b.BlockRoots() {
-		tmp := r
-		bRootsB[i] = tmp[:]
-	}
-	sRootsB := make([][]byte, len(b.StateRoots()))
-	for i, r := range b.StateRoots() {
-		tmp := r
-		sRootsB[i] = tmp[:]
-	}
-	assertValFound(t, bRootsA, root1[:])
-	assertValFound(t, bRootsB, root1[:])
-	assertValFound(t, sRootsA, root1[:])
-	assertValFound(t, sRootsB, root1[:])
+	assertValFound(t, blockRootsA, root1[:])
+	assertValFound(t, blockRootsB, root1[:])
+	assertValFound(t, stateRootsA, root1[:])
+	assertValFound(t, stateRootsB, root1[:])
 
 	// Mutator should only affect calling state: a.
 	require.NoError(t, a.UpdateBlockRootAtIndex(0, root2))
 	require.NoError(t, a.UpdateStateRootAtIndex(0, root2))
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
-	bRootsA = make([][]byte, len(a.BlockRoots()))
-	for i, r := range a.BlockRoots() {
-		tmp := r
-		bRootsA[i] = tmp[:]
+	assertValNotFound(t, a.BlockRoots(), root1[:])
+	assertValNotFound(t, a.StateRoots(), root1[:])
+	assertValFound(t, a.BlockRoots(), root2[:])
+	assertValFound(t, a.StateRoots(), root2[:])
+	assertValFound(t, b.BlockRoots(), root1[:])
+	assertValFound(t, b.StateRoots(), root1[:])
+	if len(blockRootsA) != len(blockRootsB) || len(blockRootsA) < 1 {
+		t.Errorf("Unexpected number of block roots, want: %v", 1)
 	}
-	sRootsA = make([][]byte, len(a.StateRoots()))
-	for i, r := range a.StateRoots() {
-		tmp := r
-		sRootsA[i] = tmp[:]
+	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 1 {
+		t.Errorf("Unexpected number of state roots, want: %v", 1)
 	}
-	blockRootsB := b.BlockRoots()
-	bRootsB = make([][]byte, len(b.BlockRoots()))
-	for i, r := range b.BlockRoots() {
-		tmp := r
-		bRootsB[i] = tmp[:]
-	}
-	stateRootsB := b.StateRoots()
-	sRootsB = make([][]byte, len(b.StateRoots()))
-	for i, r := range b.StateRoots() {
-		tmp := r
-		sRootsB[i] = tmp[:]
-	}
-	assertValNotFound(t, bRootsA, root1[:])
-	assertValNotFound(t, sRootsA, root1[:])
-	assertValFound(t, bRootsA, root2[:])
-	assertValFound(t, sRootsA, root2[:])
-	assertValFound(t, bRootsB, root1[:])
-	assertValFound(t, sRootsB, root1[:])
-	assert.DeepEqual(t, root2, a.BlockRoots()[0], "Expected mutation not found")
-	assert.DeepEqual(t, root2, a.StateRoots()[0], "Expected mutation not found")
-	assert.DeepEqual(t, root1, blockRootsB[0], "Unexpected mutation found")
-	assert.DeepEqual(t, root1, stateRootsB[0], "Unexpected mutation found")
+	assert.DeepEqual(t, root2[:], a.BlockRoots()[0], "Expected mutation not found")
+	assert.DeepEqual(t, root2[:], a.StateRoots()[0], "Expected mutation not found")
+	assert.DeepEqual(t, root1[:], blockRootsB[0], "Unexpected mutation found")
+	assert.DeepEqual(t, root1[:], stateRootsB[0], "Unexpected mutation found")
 
 	// Copy on write happened, reference counters are reset.
 	assertRefCount(t, a, blockRoots, 1)
@@ -138,10 +114,10 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 
 func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 
-	val1, val2 := bytesutil.ToBytes32([]byte("foo")), bytesutil.ToBytes32([]byte("bar"))
+	val1, val2 := []byte("foo"), []byte("bar")
 	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		RandaoMixes: [][]byte{
-			val1[:],
+			val1,
 		},
 	})
 	require.NoError(t, err)
@@ -155,41 +131,29 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 	assertRefCount(t, b, randaoMixes, 2)
 
 	// Assert shared state.
-	mixesA := make([][]byte, len(a.RandaoMixes()))
-	for i, r := range a.RandaoMixes() {
-		tmp := r
-		mixesA[i] = tmp[:]
+	mixesA := a.RandaoMixes()
+	mixesB := b.RandaoMixes()
+	if len(mixesA) != len(mixesB) || len(mixesA) < 1 {
+		t.Errorf("Unexpected number of mix values, want: %v", 1)
 	}
-	mixesB := make([][]byte, len(b.RandaoMixes()))
-	for i, r := range b.RandaoMixes() {
-		tmp := r
-		mixesB[i] = tmp[:]
-	}
-	assertValFound(t, mixesA, val1[:])
-	assertValFound(t, mixesB, val1[:])
+	assertValFound(t, mixesA, val1)
+	assertValFound(t, mixesB, val1)
 
 	// Mutator should only affect calling state: a.
 	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2))
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
-	mixesA = make([][]byte, len(a.RandaoMixes()))
-	for i, r := range a.RandaoMixes() {
-		tmp := r
-		mixesA[i] = tmp[:]
+	if len(mixesA) != len(mixesB) || len(mixesA) < 1 {
+		t.Errorf("Unexpected number of mix values, want: %v", 1)
 	}
-	mixesB = make([][]byte, len(b.RandaoMixes()))
-	for i, r := range b.RandaoMixes() {
-		tmp := r
-		mixesB[i] = tmp[:]
-	}
-	assertValFound(t, mixesA, val2[:])
-	assertValNotFound(t, mixesA, val1[:])
-	assertValFound(t, mixesB, val1[:])
-	assertValNotFound(t, mixesB, val2[:])
-	assertValFound(t, mixesB, val1[:])
-	assertValNotFound(t, mixesB, val2[:])
-	assert.DeepEqual(t, bytesutil.ToBytes32(val2[:]), a.RandaoMixes()[0], "Expected mutation not found")
-	assert.DeepEqual(t, val1[:], mixesB[0], "Unexpected mutation found")
+	assertValFound(t, a.RandaoMixes(), val2)
+	assertValNotFound(t, a.RandaoMixes(), val1)
+	assertValFound(t, b.RandaoMixes(), val1)
+	assertValNotFound(t, b.RandaoMixes(), val2)
+	assertValFound(t, mixesB, val1)
+	assertValNotFound(t, mixesB, val2)
+	assert.DeepEqual(t, val2, a.RandaoMixes()[0], "Expected mutation not found")
+	assert.DeepEqual(t, val1, mixesB[0], "Unexpected mutation found")
 
 	// Copy on write happened, reference counters are reset.
 	assertRefCount(t, a, randaoMixes, 1)

@@ -20,17 +20,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	// 5 represents the enum value of state roots
 	trie, err := fieldtrie.NewFieldTrie(5, stateTypes.BasicArray, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
-	sRootsSlice := make([][]byte, len(newState.StateRoots()))
-	for i, r := range newState.StateRoots() {
-		tmp := r
-		sRootsSlice[i] = tmp[:]
-	}
-	sR := make([][]byte, len(newState.StateRoots()))
-	for i, r := range newState.StateRoots() {
-		tmp := r
-		sR[i] = tmp[:]
-	}
-	root, err := stateutil.RootsArrayHashTreeRoot(sR, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	require.NoError(t, err)
 	newRoot, err := trie.TrieRoot()
 	require.NoError(t, err)

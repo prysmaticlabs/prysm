@@ -62,7 +62,7 @@ func TestGetState(t *testing.T) {
 
 		bs, err := util.NewBeaconState(func(beaconState state.BeaconState) error {
 			bRoots := beaconState.BlockRoots()
-			bRoots[0] = r
+			bRoots[0] = r[:]
 			require.NoError(t, beaconState.SetBlockRoots(bRoots))
 			return nil
 		})
@@ -223,7 +223,7 @@ func TestGetStateRoot(t *testing.T) {
 
 		bs, err := util.NewBeaconState(func(beaconState state.BeaconState) error {
 			bRoots := beaconState.BlockRoots()
-			bRoots[0] = r
+			bRoots[0] = r[:]
 			require.NoError(t, beaconState.SetBlockRoots(bRoots))
 			return nil
 		})

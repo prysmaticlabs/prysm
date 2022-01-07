@@ -1790,7 +1790,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 
 	numValidators := uint64(64)
 	state, privKeys := util.DeterministicGenesisState(t, numValidators)
-	require.NoError(t, state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash))
+	require.NoError(t, state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
 	assert.NoError(t, state.SetSlot(1))
 
 	genesisRoot, err := genesis.Block.HashTreeRoot()

@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -15,17 +16,12 @@ import (
 
 func TestReturnTrieLayer_OK(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	bRootsSlice := make([][]byte, len(newState.BlockRoots()))
-	for i, r := range newState.BlockRoots() {
-		tmp := r
-		bRootsSlice[i] = tmp[:]
-	}
-	root, err := stateutil.RootsArrayHashTreeRoot(bRootsSlice, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	root, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
 	require.NoError(t, err)
 	blockRts := newState.BlockRoots()
 	roots := make([][32]byte, 0, len(blockRts))
 	for _, rt := range blockRts {
-		roots = append(roots, rt)
+		roots = append(roots, bytesutil.ToBytes32(rt))
 	}
 	layers, err := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
 	assert.NoError(t, err)
@@ -57,7 +53,7 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 	blockRts := newState.BlockRoots()
 	roots := make([][32]byte, 0, len(blockRts))
 	for _, rt := range blockRts {
-		roots = append(roots, rt)
+		roots = append(roots, bytesutil.ToBytes32(rt))
 	}
 	layers, err := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
 	require.NoError(t, err)
@@ -67,12 +63,7 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 	require.NoError(t, newState.UpdateBlockRootAtIndex(changedIdx[0], changedRoots[0]))
 	require.NoError(t, newState.UpdateBlockRootAtIndex(changedIdx[1], changedRoots[1]))
 
-	bRootsSlice := make([][]byte, len(newState.BlockRoots()))
-	for i, r := range newState.BlockRoots() {
-		tmp := r
-		bRootsSlice[i] = tmp[:]
-	}
-	expectedRoot, err := stateutil.RootsArrayHashTreeRoot(bRootsSlice, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	expectedRoot, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
 	require.NoError(t, err)
 	root, _, err := stateutil.RecomputeFromLayer(changedRoots, changedIdx, layers)
 	require.NoError(t, err)

@@ -50,5 +50,5 @@ func RandaoMix(state state.ReadOnlyBeaconState, epoch types.Epoch) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	return root[:], err
+	return root, err
 }
