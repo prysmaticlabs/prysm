@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -41,8 +42,8 @@ func TestImportedKeymanager_DeleteKeystores(t *testing.T) {
 	require.Equal(t, numAccounts, len(accounts))
 
 	t.Run("keys not found", func(t *testing.T) {
-		notFoundPubKey := [48]byte{1, 2, 3}
-		notFoundPubKey2 := [48]byte{4, 5, 6}
+		notFoundPubKey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3}
+		notFoundPubKey2 := [fieldparams.BLSPubkeyLength]byte{4, 5, 6}
 		statuses, err := dr.DeleteKeystores(ctx, [][]byte{notFoundPubKey[:], notFoundPubKey2[:]})
 		require.NoError(t, err)
 		require.Equal(t, 2, len(statuses))

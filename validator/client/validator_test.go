@@ -14,6 +14,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -41,7 +42,7 @@ var _ iface.Validator = (*validator)(nil)
 const cancelledCtx = "context has been canceled"
 
 func genMockKeymanager(numKeys int) *mockKeymanager {
-	km := make(map[[48]byte]bls.SecretKey, numKeys)
+	km := make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey, numKeys)
 	for i := 0; i < numKeys; i++ {
 		k, err := bls.RandKey()
 		if err != nil {
@@ -55,15 +56,15 @@ func genMockKeymanager(numKeys int) *mockKeymanager {
 
 type mockKeymanager struct {
 	lock                sync.RWMutex
-	keysMap             map[[48]byte]bls.SecretKey
+	keysMap             map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey
 	fetchNoKeys         bool
 	accountsChangedFeed *event.Feed
 }
 
-func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
+func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
-	keys := make([][48]byte, 0)
+	keys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	if m.fetchNoKeys {
 		m.fetchNoKeys = false
 		return keys, nil
@@ -75,7 +76,7 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byt
 }
 
 func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], req.PublicKey)
 	privKey, ok := m.keysMap[pubKey]
 	if !ok {
@@ -85,14 +86,14 @@ func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (
 	return sig, nil
 }
 
-func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	if m.accountsChangedFeed == nil {
 		m.accountsChangedFeed = &event.Feed{}
 	}
 	return m.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
-func (m *mockKeymanager) SimulateAccountChanges(newKeys [][48]byte) {
+func (m *mockKeymanager) SimulateAccountChanges(newKeys [][fieldparams.BLSPubkeyLength]byte) {
 	m.accountsChangedFeed.Send(newKeys)
 }
 
@@ -114,7 +115,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
-	db := dbTest.SetupDB(t, [][48]byte{})
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	v := validator{
 		validatorClient: client,
 		db:              db,
@@ -169,7 +170,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
-	db := dbTest.SetupDB(t, [][48]byte{})
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	v := validator{
 		validatorClient: client,
 		db:              db,
@@ -252,10 +253,10 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: make(map[[48]byte]bls.SecretKey),
+		keysMap: make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey),
 	}
 	v := validator{
 		validatorClient: client,
@@ -332,10 +333,10 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -369,10 +370,10 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -491,10 +492,10 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -529,10 +530,10 @@ func TestUpdateDuties_OK(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -586,12 +587,12 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
 
 	numValidators := 10
-	keysMap := make(map[[48]byte]bls.SecretKey)
-	blacklistedPublicKeys := make(map[[48]byte]bool)
+	keysMap := make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
+	blacklistedPublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	for i := 0; i < numValidators; i++ {
 		priv, err := bls.RandKey()
 		require.NoError(t, err)
-		pubKey := [48]byte{}
+		pubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(pubKey[:], priv.PublicKey().Marshal())
 		keysMap[pubKey] = priv
 		blacklistedPublicKeys[pubKey] = true
@@ -936,8 +937,8 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	// Create two different public keys
-	pubKey0 := [48]byte{1, 2, 3, 4}
-	pubKey1 := [48]byte{6, 7, 8, 9}
+	pubKey0 := [fieldparams.BLSPubkeyLength]byte{1, 2, 3, 4}
+	pubKey1 := [fieldparams.BLSPubkeyLength]byte{6, 7, 8, 9}
 	// This is the request expected from AllValidatorsAreExited()
 	request := &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: [][]byte{
@@ -955,7 +956,7 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 		request,      // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	keysMap := make(map[[48]byte]bls.SecretKey)
+	keysMap := make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
 	// secretKey below is just filler and is used multiple times
 	secretKeyBytes := [32]byte{1}
 	secretKey, err := bls.SecretKeyFromBytes(secretKeyBytes[:])
@@ -1282,7 +1283,7 @@ func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
 			},
 			BeaconBlockRoot: make([]byte, 32),
 		},
-		Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
 	}
 }
 

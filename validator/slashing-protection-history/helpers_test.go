@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 func Test_uint64FromString(t *testing.T) {
@@ -87,7 +88,7 @@ func Test_pubKeyFromHex(t *testing.T) {
 	tests := []struct {
 		name    string
 		str     string
-		want    [48]byte
+		want    [fieldparams.BLSPubkeyLength]byte
 		wantErr bool
 	}{
 		{
@@ -108,12 +109,12 @@ func Test_pubKeyFromHex(t *testing.T) {
 		{
 			name: "Works with 0x prefix and good public key",
 			str:  "0xb845089a1457f811bfc000588fbb4e713669be8ce060ea6be3c6ece09afc3794106c91ca73acda5e5457122d58723bed",
-			want: [48]byte{184, 69, 8, 154, 20, 87, 248, 17, 191, 192, 0, 88, 143, 187, 78, 113, 54, 105, 190, 140, 224, 96, 234, 107, 227, 198, 236, 224, 154, 252, 55, 148, 16, 108, 145, 202, 115, 172, 218, 94, 84, 87, 18, 45, 88, 114, 59, 237},
+			want: [fieldparams.BLSPubkeyLength]byte{184, 69, 8, 154, 20, 87, 248, 17, 191, 192, 0, 88, 143, 187, 78, 113, 54, 105, 190, 140, 224, 96, 234, 107, 227, 198, 236, 224, 154, 252, 55, 148, 16, 108, 145, 202, 115, 172, 218, 94, 84, 87, 18, 45, 88, 114, 59, 237},
 		},
 		{
 			name: "Works without 0x prefix and good public key",
 			str:  "b845089a1457f811bfc000588fbb4e713669be8ce060ea6be3c6ece09afc3794106c91ca73acda5e5457122d58723bed",
-			want: [48]byte{184, 69, 8, 154, 20, 87, 248, 17, 191, 192, 0, 88, 143, 187, 78, 113, 54, 105, 190, 140, 224, 96, 234, 107, 227, 198, 236, 224, 154, 252, 55, 148, 16, 108, 145, 202, 115, 172, 218, 94, 84, 87, 18, 45, 88, 114, 59, 237},
+			want: [fieldparams.BLSPubkeyLength]byte{184, 69, 8, 154, 20, 87, 248, 17, 191, 192, 0, 88, 143, 187, 78, 113, 54, 105, 190, 140, 224, 96, 234, 107, 227, 198, 236, 224, 154, 252, 55, 148, 16, 108, 145, 202, 115, 172, 218, 94, 84, 87, 18, 45, 88, 114, 59, 237},
 		},
 		{
 			name:    "0x prefix and wrong length public key fails",
@@ -235,7 +236,7 @@ func Test_rootToHexString(t *testing.T) {
 }
 
 func Test_pubKeyToHexString(t *testing.T) {
-	mockPubKey := [48]byte{1}
+	mockPubKey := [fieldparams.BLSPubkeyLength]byte{1}
 	tests := []struct {
 		name    string
 		pubKey  []byte

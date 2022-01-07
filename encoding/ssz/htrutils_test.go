@@ -1,8 +1,10 @@
 package ssz_test
 
 import (
+	"reflect"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -60,4 +62,99 @@ func TestSlashingsRoot(t *testing.T) {
 	result, err := ssz.SlashingsRoot(testSlashingsRoot)
 	require.NoError(t, err)
 	assert.Equal(t, expected, result)
+}
+
+func TestTransactionsRoot(t *testing.T) {
+	tests := []struct {
+		name    string
+		txs     [][]byte
+		want    [32]byte
+		wantErr bool
+	}{
+		{
+			name: "nil",
+			txs:  nil,
+			want: [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225},
+		},
+		{
+			name: "empty",
+			txs:  [][]byte{},
+			want: [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225},
+		},
+		{
+			name: "one tx",
+			txs:  [][]byte{{1, 2, 3}},
+			want: [32]byte{102, 209, 140, 87, 217, 28, 68, 12, 133, 42, 77, 136, 191, 18, 234, 105, 166, 228, 216, 235, 230, 95, 200, 73, 85, 33, 134, 254, 219, 97, 82, 209},
+		},
+		{
+			name: "max txs",
+			txs: func() [][]byte {
+				var txs [][]byte
+				for i := 0; i < fieldparams.MaxTxsPerPayloadLength; i++ {
+					txs = append(txs, []byte{})
+				}
+				return txs
+			}(),
+			want: [32]byte{13, 66, 254, 206, 203, 58, 48, 133, 78, 218, 48, 231, 120, 90, 38, 72, 73, 137, 86, 9, 31, 213, 185, 101, 103, 144, 0, 236, 225, 57, 47, 244},
+		},
+		{
+			name: "exceed max txs",
+			txs: func() [][]byte {
+				var txs [][]byte
+				for i := 0; i < fieldparams.MaxTxsPerPayloadLength+1; i++ {
+					txs = append(txs, []byte{})
+				}
+				return txs
+			}(),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ssz.TransactionsRoot(tt.txs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("TransactionsRoot() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("TransactionsRoot() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPackChunks(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+		want  [][]byte
+	}{
+		{
+			name:  "nil",
+			input: nil,
+			want:  [][]byte{},
+		},
+		{
+			name:  "empty",
+			input: []byte{},
+			want:  [][]byte{},
+		},
+		{
+			name:  "one",
+			input: []byte{1},
+			want:  [][]byte{{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		},
+		{
+			name:  "one, two",
+			input: []byte{1, 2},
+			want:  [][]byte{{1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ssz.PackChunks(tt.input)
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, tt.want, got)
+		})
+	}
 }
