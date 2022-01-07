@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -62,8 +63,8 @@ func (vs *Server) MultipleValidatorStatus(
 	}
 	responseCap := len(req.PublicKeys) + len(req.Indices)
 	pubKeys := make([][]byte, 0, responseCap)
-	filtered := make(map[[48]byte]bool)
-	filtered[[48]byte{}] = true // Filter out keys with all zeros.
+	filtered := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
+	filtered[[fieldparams.BLSPubkeyLength]byte{}] = true // Filter out keys with all zeros.
 	// Filter out duplicate public keys.
 	for _, pubKey := range req.PublicKeys {
 		pubkeyBytes := bytesutil.ToBytes48(pubKey)

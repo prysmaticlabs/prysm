@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -49,7 +50,7 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 func TestFuzzverifyDepositDataSigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	var ba []byte
-	pubkey := [48]byte{}
+	pubkey := [fieldparams.BLSPubkeyLength]byte{}
 	sig := [96]byte{}
 	domain := [4]byte{}
 	var p []byte

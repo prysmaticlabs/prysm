@@ -22,6 +22,7 @@ go_test(
     srcs = ["sparse_merkle_test.go"],
     deps = [
         ":go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//contracts/deposit:go_default_library",
         "//crypto/hash:go_default_library",

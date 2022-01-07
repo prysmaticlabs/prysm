@@ -63,6 +63,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//config/features:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/ssz:go_default_library",

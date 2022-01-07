@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -19,7 +20,7 @@ import (
 )
 
 // SubmitSyncCommitteeMessage submits the sync committee message to the beacon chain.
-func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitSyncCommitteeMessage")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
@@ -80,7 +81,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 }
 
 // SubmitSignedContributionAndProof submits the signed sync committee contribution and proof to the beacon chain.
-func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitSignedContributionAndProof")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
@@ -171,7 +172,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 }
 
 // Signs and returns selection proofs per validator for slot and pub key.
-func (v *validator) selectionProofs(ctx context.Context, slot types.Slot, pubKey [48]byte, indexRes *ethpb.SyncSubcommitteeIndexResponse) ([][]byte, error) {
+func (v *validator) selectionProofs(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte, indexRes *ethpb.SyncSubcommitteeIndexResponse) ([][]byte, error) {
 	selectionProofs := make([][]byte, len(indexRes.Indices))
 	cfg := params.BeaconConfig()
 	size := cfg.SyncCommitteeSize
@@ -189,7 +190,7 @@ func (v *validator) selectionProofs(ctx context.Context, slot types.Slot, pubKey
 }
 
 // Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.
-func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, index uint64, slot types.Slot) (signature []byte, err error) {
+func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, index uint64, slot types.Slot) (signature []byte, err error) {
 	domain, err := v.domainData(ctx, slots.ToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof[:])
 	if err != nil {
 		return nil, err
@@ -215,7 +216,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [48]byte, 
 }
 
 // This returns the signature of validator signing over sync committee contribution and proof object.
-func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *ethpb.ContributionAndProof) ([]byte, error) {
+func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, c *ethpb.ContributionAndProof) ([]byte, error) {
 	d, err := v.domainData(ctx, slots.ToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
 	if err != nil {
 		return nil, err

@@ -10,6 +10,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -302,7 +303,7 @@ func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
 	c := &Service{}
 	c.head = &head{state: s}
 
-	_, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [48]byte{})
+	_, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [fieldparams.BLSPubkeyLength]byte{})
 	require.Equal(t, false, e)
 
 	v, err := s.ValidatorAtIndex(0)
@@ -317,12 +318,12 @@ func TestService_HeadPublicKeyToValidatorIndexNil(t *testing.T) {
 	c := &Service{}
 	c.head = nil
 
-	idx, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [48]byte{})
+	idx, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [fieldparams.BLSPubkeyLength]byte{})
 	require.Equal(t, false, e)
 	require.Equal(t, types.ValidatorIndex(0), idx)
 
 	c.head = &head{state: nil}
-	i, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [48]byte{})
+	i, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [fieldparams.BLSPubkeyLength]byte{})
 	require.Equal(t, false, e)
 	require.Equal(t, types.ValidatorIndex(0), i)
 }
@@ -347,10 +348,10 @@ func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
 
 	p, err := c.HeadValidatorIndexToPublicKey(context.Background(), 0)
 	require.NoError(t, err)
-	require.Equal(t, [48]byte{}, p)
+	require.Equal(t, [fieldparams.BLSPubkeyLength]byte{}, p)
 
 	c.head = &head{state: nil}
 	p, err = c.HeadValidatorIndexToPublicKey(context.Background(), 0)
 	require.NoError(t, err)
-	require.Equal(t, [48]byte{}, p)
+	require.Equal(t, [fieldparams.BLSPubkeyLength]byte{}, p)
 }

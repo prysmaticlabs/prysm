@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -1013,7 +1014,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	for i := uint64(0); i < uint64(4*params.BeaconConfig().SlotsPerEpoch); i++ {
 		root := []byte(strconv.Itoa(int(i)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, &ethpb.Deposit{Data: &ethpb.Deposit_Data{
-			PublicKey:             bytesutil.FromBytes48([48]byte{}),
+			PublicKey:             bytesutil.FromBytes48([fieldparams.BLSPubkeyLength]byte{}),
 			WithdrawalCredentials: params.BeaconConfig().ZeroHash[:],
 			Amount:                0,
 			Signature:             zeroSig[:],
