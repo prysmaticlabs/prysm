@@ -5,7 +5,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -438,39 +437,37 @@ func Test_V1AttestationToV1Alpha1(t *testing.T) {
 	assert.DeepEqual(t, v1Root, v1Alpha1Root)
 }
 func TestBeaconStateToV1(t *testing.T) {
-	source, err := util.NewBeaconState(util.FillRootsNaturalOpt, func(state state.BeaconState) error {
-		require.NoError(t, state.SetGenesisTime(1))
-		require.NoError(t, state.SetGenesisValidatorRoot(bytesutil.ToBytes32([]byte("genesisvalidatorroot"))))
-		require.NoError(t, state.SetSlot(2))
-		require.NoError(t, state.SetFork(&ethpbalpha.Fork{
+	source, err := util.NewBeaconState(util.FillRootsNaturalOpt, func(state *ethpbalpha.BeaconState) error {
+		state.GenesisTime = 1
+		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorroot"), 32)
+		state.Slot = 2
+		state.Fork = &ethpbalpha.Fork{
 			PreviousVersion: bytesutil.PadTo([]byte("123"), 4),
 			CurrentVersion:  bytesutil.PadTo([]byte("456"), 4),
 			Epoch:           3,
-		}))
-		require.NoError(t, state.SetLatestBlockHeader(&ethpbalpha.BeaconBlockHeader{
+		}
+		state.LatestBlockHeader = &ethpbalpha.BeaconBlockHeader{
 			Slot:          4,
 			ProposerIndex: 5,
 			ParentRoot:    bytesutil.PadTo([]byte("lbhparentroot"), 32),
 			StateRoot:     bytesutil.PadTo([]byte("lbhstateroot"), 32),
 			BodyRoot:      bytesutil.PadTo([]byte("lbhbodyroot"), 32),
-		}))
-		bRoots := [fieldparams.BlockRootsLength][32]byte{bytesutil.ToBytes32([]byte("blockroots"))}
-		require.NoError(t, state.SetBlockRoots(&bRoots))
-		sRoots := [fieldparams.StateRootsLength][32]byte{bytesutil.ToBytes32([]byte("stateroots"))}
-		require.NoError(t, state.SetStateRoots(&sRoots))
-		require.NoError(t, state.SetHistoricalRoots([][32]byte{bytesutil.ToBytes32([]byte("historicalroots"))}))
-		require.NoError(t, state.SetEth1Data(&ethpbalpha.Eth1Data{
+		}
+		state.BlockRoots = [][]byte{bytesutil.PadTo([]byte("blockroots"), 32)}
+		state.StateRoots = [][]byte{bytesutil.PadTo([]byte("stateroots"), 32)}
+		state.HistoricalRoots = [][]byte{bytesutil.PadTo([]byte("historicalroots"), 32)}
+		state.Eth1Data = &ethpbalpha.Eth1Data{
 			DepositRoot:  bytesutil.PadTo([]byte("e1ddepositroot"), 32),
 			DepositCount: 6,
 			BlockHash:    bytesutil.PadTo([]byte("e1dblockhash"), 32),
-		}))
-		require.NoError(t, state.SetEth1DataVotes([]*ethpbalpha.Eth1Data{{
+		}
+		state.Eth1DataVotes = []*ethpbalpha.Eth1Data{{
 			DepositRoot:  bytesutil.PadTo([]byte("e1dvdepositroot"), 32),
 			DepositCount: 7,
 			BlockHash:    bytesutil.PadTo([]byte("e1dvblockhash"), 32),
-		}}))
-		require.NoError(t, state.SetEth1DepositIndex(8))
-		require.NoError(t, state.SetValidators([]*ethpbalpha.Validator{{
+		}}
+		state.Eth1DepositIndex = 8
+		state.Validators = []*ethpbalpha.Validator{{
 			PublicKey:                  bytesutil.PadTo([]byte("publickey"), 48),
 			WithdrawalCredentials:      bytesutil.PadTo([]byte("withdrawalcredentials"), 32),
 			EffectiveBalance:           9,
@@ -479,12 +476,11 @@ func TestBeaconStateToV1(t *testing.T) {
 			ActivationEpoch:            11,
 			ExitEpoch:                  12,
 			WithdrawableEpoch:          13,
-		}}))
-		require.NoError(t, state.SetBalances([]uint64{14}))
-		mixes := [fieldparams.RandaoMixesLength][32]byte{bytesutil.ToBytes32([]byte("randaomixes"))}
-		require.NoError(t, state.SetRandaoMixes(&mixes))
-		require.NoError(t, state.SetSlashings([]uint64{15}))
-		require.NoError(t, state.AppendPreviousEpochAttestations(&ethpbalpha.PendingAttestation{
+		}}
+		state.Balances = []uint64{14}
+		state.RandaoMixes = [][]byte{bytesutil.PadTo([]byte("randaomixes"), 32)}
+		state.Slashings = []uint64{15}
+		state.PreviousEpochAttestations = []*ethpbalpha.PendingAttestation{{
 			AggregationBits: bitfield.Bitlist{16},
 			Data: &ethpbalpha.AttestationData{
 				Slot:            17,
@@ -501,8 +497,8 @@ func TestBeaconStateToV1(t *testing.T) {
 			},
 			InclusionDelay: 21,
 			ProposerIndex:  22,
-		}))
-		require.NoError(t, state.AppendCurrentEpochAttestations(&ethpbalpha.PendingAttestation{
+		}}
+		state.CurrentEpochAttestations = []*ethpbalpha.PendingAttestation{{
 			AggregationBits: bitfield.Bitlist{23},
 			Data: &ethpbalpha.AttestationData{
 				Slot:            24,
@@ -519,20 +515,20 @@ func TestBeaconStateToV1(t *testing.T) {
 			},
 			InclusionDelay: 28,
 			ProposerIndex:  29,
-		}))
-		require.NoError(t, state.SetJustificationBits(bitfield.Bitvector4{1}))
-		require.NoError(t, state.SetPreviousJustifiedCheckpoint(&ethpbalpha.Checkpoint{
+		}}
+		state.JustificationBits = bitfield.Bitvector4{1}
+		state.PreviousJustifiedCheckpoint = &ethpbalpha.Checkpoint{
 			Epoch: 30,
 			Root:  bytesutil.PadTo([]byte("pjcroot"), 32),
-		}))
-		require.NoError(t, state.SetCurrentJustifiedCheckpoint(&ethpbalpha.Checkpoint{
+		}
+		state.CurrentJustifiedCheckpoint = &ethpbalpha.Checkpoint{
 			Epoch: 31,
 			Root:  bytesutil.PadTo([]byte("cjcroot"), 32),
-		}))
-		require.NoError(t, state.SetFinalizedCheckpoint(&ethpbalpha.Checkpoint{
+		}
+		state.FinalizedCheckpoint = &ethpbalpha.Checkpoint{
 			Epoch: 32,
 			Root:  bytesutil.PadTo([]byte("fcroot"), 32),
-		}))
+		}
 		return nil
 	})
 	require.NoError(t, err)
