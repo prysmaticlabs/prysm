@@ -275,7 +275,7 @@ func TestService_HeadGenesisValidatorRoot(t *testing.T) {
 
 	c.head = &head{state: s}
 	root = c.HeadGenesisValidatorRoot()
-	require.DeepEqual(t, root, s.GenesisValidatorRoot())
+	require.DeepEqual(t, root[:], s.GenesisValidatorRoot())
 }
 
 func TestService_ProtoArrayStore(t *testing.T) {

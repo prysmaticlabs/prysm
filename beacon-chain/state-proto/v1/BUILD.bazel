@@ -87,7 +87,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state-native:go_default_library",
-        "//beacon-chain/state-native/v1:go_default_library",
         "//beacon-chain/state-proto/stateutil:go_default_library",
         "//beacon-chain/state-proto/types:go_default_library",
         "//config/features:go_default_library",

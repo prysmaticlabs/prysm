@@ -167,7 +167,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
-		assert.DeepEqual(t, bs.BlockRoots()[31], bytesutil.ToBytes32(resp.DependentRoot))
+		assert.DeepEqual(t, bs.BlockRoots()[31], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
@@ -310,7 +310,7 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		resp, err := vs.GetProposerDuties(ctx, req)
 		require.NoError(t, err)
-		assert.DeepEqual(t, bs.BlockRoots()[31], bytesutil.ToBytes32(resp.DependentRoot))
+		assert.DeepEqual(t, bs.BlockRoots()[31], resp.DependentRoot)
 		assert.Equal(t, 32, len(resp.Data))
 		// We expect a proposer duty for slot 74.
 		var expectedDuty *ethpbv1.ProposerDuty

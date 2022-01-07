@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -66,42 +65,13 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
-	case types.BlockRoots:
-		val, ok := elements.(*customtypes.BlockRoots)
+	case types.BlockRoots, types.StateRoots, types.RandaoMixes:
+		val, ok := elements.([][]byte)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		roots := make([][]byte, len(val))
-		for i, r := range val {
-			tmp := r
-			roots[i] = tmp[:]
-		}
-		return handleByteArrays(roots, indices, convertAll)
-	case types.StateRoots:
-		val, ok := elements.(*customtypes.StateRoots)
-		if !ok {
-			return nil, errors.Errorf("Wanted type of %v but got %v",
-				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
-		}
-		roots := make([][]byte, len(val))
-		for i, r := range val {
-			tmp := r
-			roots[i] = tmp[:]
-		}
-		return handleByteArrays(roots, indices, convertAll)
-	case types.RandaoMixes:
-		val, ok := elements.(*customtypes.RandaoMixes)
-		if !ok {
-			return nil, errors.Errorf("Wanted type of %v but got %v",
-				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
-		}
-		mixes := make([][]byte, len(val))
-		for i, m := range val {
-			tmp := m
-			mixes[i] = tmp[:]
-		}
-		return handleByteArrays(mixes, indices, convertAll)
+		return handleByteArrays(val, indices, convertAll)
 	case types.Eth1DataVotes:
 		val, ok := elements.([]*ethpb.Eth1Data)
 		if !ok {
