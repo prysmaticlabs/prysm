@@ -47,35 +47,13 @@ func newApiClient(baseEndpoint string) (*apiClient, error) {
 	}, nil
 }
 
-// SignRequest is a request object for web3signer sign api.
+// TODO: will be removed and replaced in a future PR SignRequest is a request object for web3signer sign api.
+
 type SignRequest struct {
 	Type            string           `json:"type"`
 	ForkInfo        *ForkInfo        `json:"fork_info"`
 	SigningRoot     string           `json:"signingRoot"`
 	AggregationSlot *AggregationSlot `json:"aggregation_slot"`
-}
-
-// ForkInfo a sub property object of the Sign request,in the future before the merge to remove the need to send the entire block body and just use the block_body_root.
-type ForkInfo struct {
-	Fork                  *Fork  `json:"fork"`
-	GenesisValidatorsRoot string `json:"genesis_validators_root"`
-}
-
-// Fork a sub property of ForkInfo.
-type Fork struct {
-	PreviousVersion string `json:"previous_version"`
-	CurrentVersion  string `json:"current_version"`
-	Epoch           string `json:"epoch"`
-}
-
-// AggregationSlot a sub property of SignRequest.
-type AggregationSlot struct {
-	Slot string `json:"slot"`
-}
-
-// signResponse the response object of the web3signer sign api.
-type signResponse struct {
-	Signature string `json:"signature"`
 }
 
 // Sign is a wrapper method around the web3signer sign api.

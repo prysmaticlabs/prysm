@@ -1,9 +1,5 @@
 package remote_web3signer
 
-import (
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-)
-
 /* Web3Signer Specs are found on the following link: https://consensys.github.io/web3signer/web3signer-eth2.html */
 
 // AggregationSlotSignRequest is a request object for web3signer sign api.
@@ -32,10 +28,10 @@ type AttestationSignRequest struct {
 
 // BlockSignRequest is a request object for web3signer sign api.
 type BlockSignRequest struct {
-	Type        string                 `json:"type"`
-	ForkInfo    *ForkInfo              `json:"fork_info"`
-	SigningRoot string                 `json:"signingRoot"`
-	Block       *ethpb.BeaconBlockBody `json:"block"`
+	Type        string           `json:"type"`
+	ForkInfo    *ForkInfo        `json:"fork_info"`
+	SigningRoot string           `json:"signingRoot"`
+	Block       *BeaconBlockBody `json:"block"`
 }
 
 // BlockV2AltairSignRequest is a request object for web3signer sign api.
@@ -88,18 +84,18 @@ type SyncCommitteeMessageSignRequest struct {
 
 // SyncCommitteeSelectionProofSignRequest is a request object for web3signer sign api.
 type SyncCommitteeSelectionProofSignRequest struct {
-	Type          string `json:"type"`
-	ForkInfo      *ForkInfo
-	SigningRoot   string
-	SyncCommittee *SyncAggregatorSelectionData
+	Type          string                       `json:"type"`
+	ForkInfo      *ForkInfo                    `json:"fork_info"`
+	SigningRoot   string                       `json:"signingRoot"`
+	SyncCommittee *SyncAggregatorSelectionData `json:"sync_committee_selection_proof"`
 }
 
 // SyncCommitteeContributionAndProofSignRequest is a request object for web3signer sign api.
 type SyncCommitteeContributionAndProofSignRequest struct {
-	Type          string `json:"type"`
-	ForkInfo      *ForkInfo
-	SigningRoot   string
-	SyncCommittee *ethpb.ContributionAndProof
+	Type          string                `json:"type"`
+	ForkInfo      *ForkInfo             `json:"fork_info"`
+	SigningRoot   string                `json:"signingRoot"`
+	SyncCommittee *ContributionAndProof `json:"sync_committee_contribution_and_proof"`
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -233,8 +229,8 @@ type VoluntaryExit struct {
 
 // BeaconBlockAltairBlockV2 a sub property of BlockV2AltairSignRequest.
 type BeaconBlockAltairBlockV2 struct {
-	Version string                   `json:"version"`
-	Block   *ethpb.BeaconBlockAltair `json:"beacon_block"`
+	Version string             `json:"version"`
+	Block   *BeaconBlockAltair `json:"beacon_block"`
 }
 
 type BeaconBlockAltair struct {
