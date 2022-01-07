@@ -219,10 +219,10 @@ filegroup(
 )
     """,
     sha256 = "91434d5fd5e1c6eb7b0174fed2afe25e09bddf00e1e4c431db931b2cee4e7773",
-    url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
+    url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.1.5"
+consensus_spec_version = "v1.1.8"
 
 bls_test_version = "v0.1.1"
 
@@ -238,7 +238,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "a7d7173d953494c0dfde432c9fc064c25d46d666b024749b3474ae0cdfc50050",
+    sha256 = "e4d2b7830e85734442d7172887dcd4edc0985d6256bafedb3353ab477a1433c0",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -254,7 +254,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "f86872061588c0197516b23025d39e9365b4716c112218a618739dc0d6f4666a",
+    sha256 = "4a88d01ad12260220ab5c8efdeec6534bac48a47f29ba4f7977ea14c9d07b0fe",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -270,7 +270,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "7a06975360fd37fbb4694d0e06abb78d2a0835146c1d9b26d33569edff8b98f0",
+    sha256 = "0033fe107d9d2adb8d4fcb60dfb1c43fc5a54f0af970525c962124221757c266",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -285,7 +285,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "87d8089200163340484d61212fbdffbb5d9d03e1244622761dcb91e641a65761",
+    sha256 = "3fc3b8809d140a1ab61350fbd410f33add2851a63829d874dcb620babba603de",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -316,9 +316,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "9dc47bf6b14aed7fac8833e35ab83a69131b43fa5789b3256bf1ac3d4861aeb8",
-    strip_prefix = "eth2-networks-7fa1b868985ee24aad65567f9250cf7fa86f97b1",
-    url = "https://github.com/eth2-clients/eth2-networks/archive/7fa1b868985ee24aad65567f9250cf7fa86f97b1.tar.gz",
+    sha256 = "4e8a18b21d056c4032605621b1a6632198eabab57cb90c61e273f344c287f1b2",
+    strip_prefix = "eth2-networks-791a5369c5981e829698b17fbcdcdacbdaba97c8",
+    url = "https://github.com/eth-clients/eth2-networks/archive/791a5369c5981e829698b17fbcdcdacbdaba97c8.tar.gz",
 )
 
 http_archive(
@@ -359,9 +359,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "0a3d94428ea28916276694c517b82b364122063fdbf924f54ee9ae0bc500289f",
+    sha256 = "f196fe4367c2d2d01d36565c0dc6eecfa4f03adba1fc03a61d62953fce606e1f",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.1/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.2/prysm-web-ui.tar.gz",
     ],
 )
 
