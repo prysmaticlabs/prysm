@@ -1,4 +1,4 @@
-// +build libfuzzer
+// +build fuzz
 
 package cache
 

@@ -14,7 +14,6 @@ go_library(
         "//proto/testing:__subpackages__",
         "//slasher/rpc:__subpackages__",
         "//testing/benchmark:__pkg__",
-        "//testing/fuzz:__pkg__",
         "//testing/slasher/simulator:__pkg__",
         "//testing/spectest:__subpackages__",
         "//testing/util:__pkg__",
