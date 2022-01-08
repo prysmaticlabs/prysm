@@ -219,6 +219,12 @@ func (ns *Server) ListPeers(ctx context.Context, _ *empty.Empty) (*ethpb.Peers, 
 	}, nil
 }
 
+func (ns *Server) GetETH1ConnectionStatus(ctx context.Context, _ *empty.Empty) (*ethpb.ETH1ConnectionStatus, error) {
+	return nil, nil
+}
+
+// ETH1ConnectionStatus(google.protobuf.empty) returns (ETH1ConnectionStatus)
+
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
 func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream ethpb.Health_StreamBeaconLogsServer) error {
 	ch := make(chan []byte, ns.StreamLogsBufferSize)
