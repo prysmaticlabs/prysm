@@ -181,15 +181,15 @@ enum ConnectionState {
 // ETH1ConnectionStatus states the current address and error of the ETH1 API
 // endpoint. It also provides the addresses and errors for any fallback URLs. 
 message ETH1ConnectionStatus {
-    // Current ETH1 HTTP endpoint set by the --http-web3provider flag.
+    // Current ETH1 HTTP endpoint.
     string current_address = 1;
 
     // Current error (if any) of the current connection.
     string current_connection_error = 2;
 
-    // A list of fallback provider URLs. 
-    repeated string fallback_addresses = 3;
+    // A list of all provider URLs. 
+    repeated string addresses = 3;
 
-    // Current error (if any) of the fallback connections.
-    repeated string fallback_connection_errors = 4;
+    // Current error (if any) of the HTTP connections.
+    repeated string connection_errors = 4;
 }

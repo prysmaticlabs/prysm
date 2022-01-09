@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -39,6 +40,7 @@ type Server struct {
 	PeerManager          p2p.PeerManager
 	GenesisTimeFetcher   blockchain.TimeFetcher
 	GenesisFetcher       blockchain.GenesisFetcher
+	POWChainInfoFetcher  powchain.ChainInfoFetcher
 	BeaconMonitoringHost string
 	BeaconMonitoringPort int
 }
@@ -219,8 +221,20 @@ func (ns *Server) ListPeers(ctx context.Context, _ *empty.Empty) (*ethpb.Peers, 
 	}, nil
 }
 
+// GetETH1ConnectionStatus gets data about the ETH1 endpoints.
 func (ns *Server) GetETH1ConnectionStatus(ctx context.Context, _ *empty.Empty) (*ethpb.ETH1ConnectionStatus, error) {
-	return nil, nil
+	var errStrs []string
+	errs := ns.POWChainInfoFetcher.ConnectionErrors()
+	// Extract string version of the errors.
+	for _, err := range errs {
+		errStrs = append(errStrs, err.Error())
+	}
+	return &ethpb.ETH1ConnectionStatus{
+		CurrentAddress:         ns.POWChainInfoFetcher.CurrentEndpoint(),
+		CurrentConnectionError: ns.POWChainInfoFetcher.CurrentConnectionError().Error(),
+		Addresses:              ns.POWChainInfoFetcher.Endpoints(),
+		ConnectionErrors:       errStrs,
+	}, nil
 }
 
 // ETH1ConnectionStatus(google.protobuf.empty) returns (ETH1ConnectionStatus)

@@ -88,6 +88,10 @@ type ChainStartFetcher interface {
 type ChainInfoFetcher interface {
 	Eth2GenesisPowchainInfo() (uint64, *big.Int)
 	IsConnectedToETH1() bool
+	CurrentEndpoint() string
+	CurrentConnectionError() error
+	Endpoints() []string
+	ConnectionErrors() []error
 }
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
@@ -322,6 +326,37 @@ func (s *Service) updateConnectedETH1(state bool) {
 // IsConnectedToETH1 checks if the beacon node is connected to a ETH1 Node.
 func (s *Service) IsConnectedToETH1() bool {
 	return s.connectedETH1
+}
+
+// CurrentEndpoint returns the URL of the current ETH1 endpoint.
+func (s *Service) CurrentEndpoint() string {
+	return s.cfg.currHttpEndpoint.Url
+}
+
+// CurrentConnectionError returns the error (if any) of the current connection.
+func (s *Service) CurrentConnectionError() error {
+	_, _, err := s.dialETH1Nodes(s.cfg.currHttpEndpoint)
+	return err
+}
+
+// Endpoints returns the slice of HTTP endpoint URLs (default is 0th element).
+func (s *Service) Endpoints() []string {
+	var eps []string
+	for _, ep := range s.cfg.httpEndpoints {
+		eps = append(eps, ep.Url)
+	}
+	return eps
+}
+
+// ConnectionErrors returns a slice of errors for each HTTP endpoint. An error
+// of nil means the connection was successful.
+func (s *Service) ConnectionErrors() []error {
+	var errs []error
+	for _, ep := range s.cfg.httpEndpoints {
+		_, _, err := s.dialETH1Nodes(ep)
+		errs = append(errs, err)
+	}
+	return errs
 }
 
 // DepositRoot returns the Merkle root of the latest deposit trie
