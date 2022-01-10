@@ -55,7 +55,7 @@ type SignRequest struct {
 	AggregationSlot *AggregationSlot `json:"aggregation_slot"`
 }
 
-// ForkInfo a sub property object of the Sign request,in the future before the merge to remove the need to send the entire block body and just use the block_body_root.
+// ForkInfo a sub property object of the Sign request,in the future before bellatrix to remove the need to send the entire block body and just use the block_body_root.
 type ForkInfo struct {
 	Fork                  *Fork  `json:"fork"`
 	GenesisValidatorsRoot string `json:"genesis_validators_root"`
