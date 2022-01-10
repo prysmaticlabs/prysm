@@ -1,8 +1,5 @@
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
-load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
-load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
-# gazelle:ignore
 go_library(
     name = "go_default_library",
     srcs = [
@@ -30,12 +27,8 @@ go_library(
         "setters_validator.go",
         "state_trie.go",
         "types.go",
-        ":ssz_generated_files",  # keep
-    ] + select({
-        "//config:mainnet": ["beacon_state_mainnet.go"],
-        "//config:minimal": ["beacon_state_minimal.go"],
-    }),
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v2",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//proto/migration:__subpackages__",
@@ -45,11 +38,10 @@ go_library(
     deps = [
         "//beacon-chain/sharedstate:go_default_library",
         "//beacon-chain/state-native:go_default_library",
-        "//beacon-chain/state-native/custom-types:go_default_library",
-        "//beacon-chain/state-native/fieldtrie:go_default_library",
-        "//beacon-chain/state-native/stateutil:go_default_library",
-        "//beacon-chain/state-native/types:go_default_library",
-        "//beacon-chain/state-native/v1:go_default_library",
+        "//beacon-chain/state-proto/fieldtrie:go_default_library",
+        "//beacon-chain/state-proto/stateutil:go_default_library",
+        "//beacon-chain/state-proto/types:go_default_library",
+        "//beacon-chain/state-proto/v1:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
@@ -59,10 +51,7 @@ go_library(
         "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
-        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
@@ -84,9 +73,9 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state-native/stateutil:go_default_library",
-        "//beacon-chain/state-native/types:go_default_library",
-        "//beacon-chain/state-native/v1:go_default_library",
+        "//beacon-chain/state-proto/stateutil:go_default_library",
+        "//beacon-chain/state-proto/types:go_default_library",
+        "//beacon-chain/state-proto/v1:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
@@ -99,22 +88,5 @@ go_test(
         "//testing/util:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-    ],
-)
-
-ssz_gen_marshal(
-    name = "ssz_generated_files",
-    srcs = select({
-           "//config:mainnet": ["beacon_state_mainnet.go"],
-           "//config:minimal": ["beacon_state_minimal.go"],
-        }),
-    includes = [
-        "//beacon-chain/state-native/custom-types:go_default_library",
-        "//config/fieldparams:go_default_library",
-        "//proto/prysm/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-    ],
-    objs = [
-        "BeaconState[no-htr]",
     ],
 )

@@ -7,9 +7,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
-	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
+	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -81,7 +80,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	bals := make([]uint64, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [fieldparams.BLSPubkeyLength]byte{}
+		someKey := [48]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -179,7 +178,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
 	newRt := bytesutil.ToBytes32(st.merkleLayers[0][balances])
-	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.balances)
+	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.state.Balances)
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
 }

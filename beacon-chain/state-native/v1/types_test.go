@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -20,18 +20,14 @@ import (
 
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MinimalSpecConfig()
-	cfg.SlotsPerHistoricalRoot = fieldparams.BlockRootsLength
-	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
-	params.OverrideBeaconConfig(cfg)
-
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
 	customState, err := v1.InitializeFromProto(genesis)
 	require.NoError(t, err)
 	cloned, ok := proto.Clone(genesis).(*ethpb.BeaconState)
 	assert.Equal(t, true, ok, "Object is not of type *ethpb.BeaconState")
-	custom := customState.ToProto()
+	custom := customState.CloneInnerState()
 	assert.DeepSSZEqual(t, cloned, custom)
 
 	r1, err := customState.HashTreeRoot(ctx)
@@ -146,7 +142,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	require.NoError(b, err)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_ = st.ToProto()
+		_ = st.CloneInnerState()
 	}
 }
 
@@ -230,7 +226,7 @@ func TestForkManualCopy_OK(t *testing.T) {
 	}
 	require.NoError(t, a.SetFork(wantedFork))
 
-	pbState, err := v1.ProtobufBeaconState(a.ToProtoUnsafe())
+	pbState, err := v1.ProtobufBeaconState(a.InnerStateUnsafe())
 	require.NoError(t, err)
 	require.DeepEqual(t, pbState.Fork, wantedFork)
 }

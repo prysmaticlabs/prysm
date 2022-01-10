@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"

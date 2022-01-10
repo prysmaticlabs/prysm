@@ -4,7 +4,8 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -52,7 +53,7 @@ func TestReadOnlyValidator_ExitEpoch(t *testing.T) {
 }
 
 func TestReadOnlyValidator_PublicKey(t *testing.T) {
-	key := [48]byte{0xFA, 0xCC}
+	key := [fieldparams.BLSPubkeyLength]byte{0xFA, 0xCC}
 	v, err := v1.NewValidator(&ethpb.Validator{PublicKey: key[:]})
 	require.NoError(t, err)
 	assert.Equal(t, key, v.PublicKey())

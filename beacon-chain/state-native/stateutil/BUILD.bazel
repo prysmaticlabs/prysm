@@ -18,7 +18,7 @@ go_library(
         "validator_map_handler.go",
         "validator_root.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//proto/migration:__subpackages__",
@@ -63,7 +63,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//config/features:go_default_library",
-        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",

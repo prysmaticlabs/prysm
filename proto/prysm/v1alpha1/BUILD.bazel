@@ -53,7 +53,6 @@ ssz_gen_marshal(
     go_proto = ":go_proto",
     includes = [
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "//beacon-chain/state-native/custom-types:go_default_library",
     ],
     objs = [
         "BeaconBlockAltair",
@@ -114,7 +113,6 @@ go_proto_library(
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/state-native/custom-types:go_default_library",
         "//proto/eth/ext:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",

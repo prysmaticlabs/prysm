@@ -8,7 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -101,6 +101,12 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 func TestStateTrie_IsNil(t *testing.T) {
 	var emptyState *BeaconState
 	assert.Equal(t, true, emptyState.IsNil())
+
+	emptyProto := &BeaconState{state: nil}
+	assert.Equal(t, true, emptyProto.IsNil())
+
+	nonNilState := &BeaconState{state: &ethpb.BeaconState{}}
+	assert.Equal(t, false, nonNilState.IsNil())
 }
 
 func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
@@ -181,7 +187,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
 	newRt := bytesutil.ToBytes32(st.merkleLayers[0][balances])
-	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.balances)
+	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.state.Balances)
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
 }

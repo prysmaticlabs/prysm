@@ -1,10 +1,15 @@
 package v1
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // Ensure type BeaconState below implements BeaconState interface.
@@ -32,6 +37,20 @@ var fieldMap map[types.FieldIndex]types.DataType
 // ErrNilInnerState returns when the inner state is nil and no copy set or get
 // operations can be performed on state.
 var ErrNilInnerState = errors.New("nil inner state")
+
+// BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
+// getters and setters for its respective values and helpful functions such as HashTreeRoot().
+type BeaconState struct {
+	state                 *ethpb.BeaconState
+	lock                  sync.RWMutex
+	dirtyFields           map[types.FieldIndex]bool
+	dirtyIndices          map[types.FieldIndex][]uint64
+	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
+	rebuildTrie           map[types.FieldIndex]bool
+	valMapHandler         *stateutil.ValidatorMapHandler
+	merkleLayers          [][][]byte
+	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
+}
 
 // Field Aliases for values from the types package.
 const (

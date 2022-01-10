@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
@@ -64,7 +63,7 @@ func setupGenesisState(tb testing.TB, count uint64) *ethpb.BeaconState {
 	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [fieldparams.BLSPubkeyLength]byte{}
+		someKey := [48]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		genesisState.Validators = append(genesisState.Validators, &ethpb.Validator{

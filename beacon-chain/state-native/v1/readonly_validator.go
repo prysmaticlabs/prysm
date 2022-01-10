@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -64,8 +63,8 @@ func (v readOnlyValidator) ExitEpoch() types.Epoch {
 
 // PublicKey returns the public key of the
 // read only validator.
-func (v readOnlyValidator) PublicKey() [fieldparams.BLSPubkeyLength]byte {
-	var pubkey [fieldparams.BLSPubkeyLength]byte
+func (v readOnlyValidator) PublicKey() [48]byte {
+	var pubkey [48]byte
 	copy(pubkey[:], v.validator.PublicKey)
 	return pubkey
 }
