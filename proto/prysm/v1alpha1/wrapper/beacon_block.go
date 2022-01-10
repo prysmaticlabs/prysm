@@ -633,7 +633,7 @@ func (_ mergeSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, e
 
 // Version of the underlying protobuf object.
 func (_ mergeSignedBeaconBlock) Version() int {
-	return version.Merge
+	return version.Bellatrix
 }
 
 func (w mergeSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
@@ -735,7 +735,7 @@ func (w mergeBeaconBlock) Proto() proto.Message {
 
 // Version of the underlying protobuf object.
 func (_ mergeBeaconBlock) Version() int {
-	return version.Merge
+	return version.Bellatrix
 }
 
 // mergeBeaconBlockBody is a wrapper of a beacon block body.
