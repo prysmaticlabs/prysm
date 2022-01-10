@@ -11,8 +11,8 @@ func hasAltairKey(enc []byte) bool {
 }
 
 func hasMergeKey(enc []byte) bool {
-	if len(mergeKey) >= len(enc) {
+	if len(bellatrixKey) >= len(enc) {
 		return false
 	}
-	return bytes.Equal(enc[:len(mergeKey)], mergeKey)
+	return bytes.Equal(enc[:len(bellatrixKey)], bellatrixKey)
 }

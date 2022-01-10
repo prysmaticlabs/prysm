@@ -2,35 +2,27 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "process.go",
-        "upgrade.go",
-    ],
+    srcs = ["upgrade.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/execution",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
+        "//validator/client:__pkg__",
     ],
     deps = [
-        "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v3:go_default_library",
         "//config/params:go_default_library",
-        "//encoding/bytesutil:go_default_library",
-        "//encoding/ssz:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//time/slots:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
     srcs = ["upgrade_test.go"],
-    embed = [":go_default_library"],
     deps = [
+        ":go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

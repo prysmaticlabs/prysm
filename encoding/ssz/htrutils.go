@@ -92,12 +92,7 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	return BitwiseMerkleize(hash.CustomSHA256Hasher(), slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 }
 
-const (
-	maxBytesPerTransaction    = 1073741824
-	maxTransactionsPerPayload = 1048576
-)
-
-// TransactionsRoot computes the HTR for the Transactions property of the ExecutionPayload
+// TransactionsRoot computes the HTR for the Transactions' property of the ExecutionPayload
 // The code was largely copy/pasted from the code generated to compute the HTR of the entire
 // ExecutionPayload.
 func TransactionsRoot(txs [][]byte) ([32]byte, error) {
@@ -111,7 +106,7 @@ func TransactionsRoot(txs [][]byte) ([32]byte, error) {
 		listMarshaling = append(listMarshaling, rt[:])
 	}
 
-	bytesRoot, err := BitwiseMerkleize(hasher, listMarshaling, uint64(len(listMarshaling)), params.BeaconConfig().MaxTransactionsPerPayload)
+	bytesRoot, err := BitwiseMerkleize(hasher, listMarshaling, uint64(len(listMarshaling)), fieldparams.MaxTxsPerPayloadLength)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute  merkleization")
 	}
@@ -126,13 +121,13 @@ func TransactionsRoot(txs [][]byte) ([32]byte, error) {
 
 func transactionRoot(tx []byte) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	chunkedRoots, err := packChunks(tx)
+	chunkedRoots, err := PackChunks(tx)
 	if err != nil {
 		return [32]byte{}, err
 	}
 
-	maxLength := (params.BeaconConfig().MaxBytesPerTransaction + 31) / 32
-	bytesRoot, err := BitwiseMerkleize(hasher, chunkedRoots, uint64(len(chunkedRoots)), maxLength)
+	maxLength := (fieldparams.MaxBytesPerTxLength + 31) / 32
+	bytesRoot, err := BitwiseMerkleize(hasher, chunkedRoots, uint64(len(chunkedRoots)), uint64(maxLength))
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
 	}
@@ -145,9 +140,9 @@ func transactionRoot(tx []byte) ([32]byte, error) {
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
-// Pack a given byte array into chunks. It'll pad the last chunk with zero bytes if
+// PackChunks a given byte array into chunks. It'll pad the last chunk with zero bytes if
 // it does not have length bytes per chunk.
-func packChunks(bytes []byte) ([][]byte, error) {
+func PackChunks(bytes []byte) ([][]byte, error) {
 	numItems := len(bytes)
 	var chunks [][]byte
 	for i := 0; i < numItems; i += 32 {
