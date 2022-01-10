@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -141,11 +141,11 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 		},
 	}
-	var blockRoots [fieldparams.BlockRootsLength][32]byte
+	var blockRoots [][]byte
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
-		blockRoots[i] = [32]byte{byte(i)}
+		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	require.NoError(t, beaconState.SetBlockRoots(&blockRoots))
+	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	blockAtt := util.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
@@ -253,8 +253,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	gvr := beaconState.GenesisValidatorRoot()
-	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, gvr[:])
+	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)
@@ -286,11 +285,11 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		},
 	}
 
-	var blockRoots [fieldparams.BlockRootsLength][32]byte
+	var blockRoots [][]byte
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
-		blockRoots[i] = [32]byte{byte(i)}
+		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	require.NoError(t, beaconState.SetBlockRoots(&blockRoots))
+	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 
 	aggBits := bitfield.NewBitlist(1)
 	aggBits.SetBitAt(0, true)

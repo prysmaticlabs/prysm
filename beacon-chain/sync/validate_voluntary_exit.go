@@ -62,8 +62,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	gvRoot := headState.GenesisValidatorRoot()
-	if err := blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, gvRoot[:]); err != nil {
+	if err := blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorRoot()); err != nil {
 		return pubsub.ValidationReject, err
 	}
 

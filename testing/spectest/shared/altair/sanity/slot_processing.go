@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
@@ -52,7 +52,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			postState, err := transition.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)))
 			require.NoError(t, err)
 
-			pbState, err := stateAltair.ProtobufBeaconState(postState.ToProto())
+			pbState, err := stateAltair.ProtobufBeaconState(postState.CloneInnerState())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)

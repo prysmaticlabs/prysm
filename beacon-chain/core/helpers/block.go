@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -48,7 +48,7 @@ func BlockRootAtSlot(state state.ReadOnlyBeaconState, slot types.Slot) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	return root[:], err
+	return root, err
 }
 
 // StateRootAtSlot returns the cached state root at that particular slot. If no state
@@ -61,7 +61,7 @@ func StateRootAtSlot(state state.ReadOnlyBeaconState, slot types.Slot) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	return root[:], err
+	return root, err
 }
 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.

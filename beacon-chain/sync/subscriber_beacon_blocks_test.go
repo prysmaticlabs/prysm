@@ -58,7 +58,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		check     func(*testing.T, *Service)
 	}{
 		{
-			name: "valid block",
+			name: "invalid block does not remove attestations",
 			args: args{
 				msg: func() *ethpb.SignedBeaconBlock {
 					b := util.NewBeaconBlock()
@@ -66,6 +66,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 					return b
 				}(),
 			},
+			wantedErr: "nil inner state",
 			check: func(t *testing.T, s *Service) {
 				if s.cfg.attPool.AggregatedAttestationCount() != 0 {
 					t.Error("Expected no attestation in the pool")

@@ -13,8 +13,8 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -112,9 +112,9 @@ func TestGetAttestationData_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	blockRoots := beaconState.BlockRoots()
-	blockRoots[1] = blockRoot
-	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot
-	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot
+	blockRoots[1] = blockRoot[:]
+	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
+	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
@@ -212,9 +212,9 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	})
 	require.NoError(t, err)
 	blockRoots := beaconState.BlockRoots()
-	blockRoots[1] = blockRoot
-	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot
-	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot
+	blockRoots[1] = blockRoot[:]
+	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
+	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
@@ -369,10 +369,10 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	})
 	require.NoError(t, err)
 	blockRoots := beaconState.BlockRoots()
-	blockRoots[1] = blockRoot
-	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot
-	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot
-	blockRoots[3*params.BeaconConfig().SlotsPerEpoch] = blockRoot2
+	blockRoots[1] = blockRoot[:]
+	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
+	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
+	blockRoots[3*params.BeaconConfig().SlotsPerEpoch] = blockRoot2[:]
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 
 	beaconstate := beaconState.Copy()
@@ -445,9 +445,9 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	})
 	require.NoError(t, err)
 	blockRoots := beaconState.BlockRoots()
-	blockRoots[1] = blockRoot
-	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot
-	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot
+	blockRoots[1] = blockRoot[:]
+	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
+	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),

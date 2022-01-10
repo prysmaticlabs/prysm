@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -70,7 +70,7 @@ func GenerateAttestations(
 		var headState state.BeaconState
 		switch bState.Version() {
 		case version.Phase0:
-			pbState, err := v1.ProtobufBeaconState(bState.ToProto())
+			pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
 			if err != nil {
 				return nil, err
 			}
@@ -80,7 +80,7 @@ func GenerateAttestations(
 			}
 			headState = state.BeaconState(genState)
 		case version.Altair:
-			pbState, err := v2.ProtobufBeaconState(bState.ToProto())
+			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
 			if err != nil {
 				return nil, err
 			}
@@ -151,8 +151,7 @@ func GenerateAttestations(
 		)
 	}
 
-	gvRoot := bState.GenesisValidatorRoot()
-	domain, err := signing.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, gvRoot[:])
+	domain, err := signing.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}

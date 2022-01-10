@@ -14,7 +14,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -300,7 +300,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(3))
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
-	require.NoError(t, st.SetGenesisValidatorRoot(genesisValidatorsRoot))
+	require.NoError(t, st.SetGenesisValidatorRoot(genesisValidatorsRoot[:]))
 
 	chainService := &mockChain.ChainService{State: st, ValidatorsRoot: genesisValidatorsRoot}
 	Server := &Server{

@@ -11,8 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -26,8 +25,8 @@ func TestGetState(t *testing.T) {
 	ctx := context.Background()
 
 	headSlot := types.Slot(123)
-	fillSlot := func(beaconState state.BeaconState) error {
-		require.NoError(t, beaconState.SetSlot(headSlot))
+	fillSlot := func(state *ethpb.BeaconState) error {
+		state.Slot = headSlot
 		return nil
 	}
 	newBeaconState, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
@@ -60,10 +59,8 @@ func TestGetState(t *testing.T) {
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		bs, err := util.NewBeaconState(func(beaconState state.BeaconState) error {
-			bRoots := beaconState.BlockRoots()
-			bRoots[0] = r
-			require.NoError(t, beaconState.SetBlockRoots(bRoots))
+		bs, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
+			state.BlockRoots[0] = r[:]
 			return nil
 		})
 		require.NoError(t, err)
@@ -190,8 +187,8 @@ func TestGetStateRoot(t *testing.T) {
 	ctx := context.Background()
 
 	headSlot := types.Slot(123)
-	fillSlot := func(beaconState state.BeaconState) error {
-		require.NoError(t, beaconState.SetSlot(headSlot))
+	fillSlot := func(state *ethpb.BeaconState) error {
+		state.Slot = headSlot
 		return nil
 	}
 	newBeaconState, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
@@ -221,10 +218,8 @@ func TestGetStateRoot(t *testing.T) {
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		bs, err := util.NewBeaconState(func(beaconState state.BeaconState) error {
-			bRoots := beaconState.BlockRoots()
-			bRoots[0] = r
-			require.NoError(t, beaconState.SetBlockRoots(bRoots))
+		bs, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
+			state.BlockRoots[0] = r[:]
 			return nil
 		})
 		require.NoError(t, err)

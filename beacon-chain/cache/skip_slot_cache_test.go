@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -33,5 +33,5 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 
 	res, err := c.Get(ctx, r)
 	require.NoError(t, err)
-	assert.DeepEqual(t, res.ToProto(), s.ToProto(), "Expected equal protos to return from cache")
+	assert.DeepEqual(t, res.CloneInnerState(), s.CloneInnerState(), "Expected equal protos to return from cache")
 }

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -19,7 +19,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	transition.SkipSlotCache.Enable()
 	defer transition.SkipSlotCache.Disable()
 	bState, privs := util.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	pbState, err := v1.ProtobufBeaconState(bState.ToProto())
+	pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
 	require.NoError(t, err)
 	originalState, err := v1.InitializeFromProto(pbState)
 	require.NoError(t, err)
@@ -38,12 +38,12 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	bState, err = transition.ExecuteStateTransition(context.Background(), bState, wrapper.WrappedPhase0SignedBeaconBlock(blk))
 	require.NoError(t, err, "Could not process state transition")
 
-	assert.DeepEqual(t, originalState.ToProto(), bState.ToProto(), "Skipped slots cache leads to different states")
+	assert.DeepEqual(t, originalState.CloneInnerState(), bState.CloneInnerState(), "Skipped slots cache leads to different states")
 }
 
 func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	bState, privs := util.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	pbState, err := v1.ProtobufBeaconState(bState.ToProto())
+	pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
 	require.NoError(t, err)
 	originalState, err := v1.InitializeFromProto(pbState)
 	require.NoError(t, err)
@@ -120,7 +120,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	tmp1, err := transition.ProcessSlots(context.Background(), expected1.Copy(), problemSlot+1)
 	require.NoError(t, err)
 	gotRoot := tmp1.StateRoots()[problemSlot]
-	require.DeepEqual(t, expectedRoot1, gotRoot, "State roots for chain 1 are bad, expected root doesn't match")
+	require.DeepEqual(t, expectedRoot1[:], gotRoot, "State roots for chain 1 are bad, expected root doesn't match")
 
 	expected2, err := transition.ProcessSlots(context.Background(), s0.Copy(), problemSlot)
 	require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	tmp2, err := transition.ProcessSlots(context.Background(), expected2.Copy(), problemSlot+1)
 	require.NoError(t, err)
 	gotRoot = tmp2.StateRoots()[problemSlot]
-	require.DeepEqual(t, expectedRoot2, gotRoot, "State roots for chain 2 are bad, expected root doesn't match")
+	require.DeepEqual(t, expectedRoot2[:], gotRoot, "State roots for chain 2 are bad, expected root doesn't match")
 
 	var wg sync.WaitGroup
 	wg.Add(len(setups))
@@ -143,9 +143,9 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		roots := outState.StateRoots()
 		gotRoot := roots[problemSlot]
 		if i%2 == 0 {
-			assert.DeepEqual(t, expectedRoot1, gotRoot, "Unexpected root on chain 1")
+			assert.DeepEqual(t, expectedRoot1[:], gotRoot, "Unexpected root on chain 1")
 		} else {
-			assert.DeepEqual(t, expectedRoot2, gotRoot, "Unexpected root on chain 2")
+			assert.DeepEqual(t, expectedRoot2[:], gotRoot, "Unexpected root on chain 2")
 		}
 		wg.Done()
 	}

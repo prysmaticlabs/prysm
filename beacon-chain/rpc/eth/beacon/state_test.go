@@ -7,7 +7,6 @@ import (
 
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -92,12 +91,12 @@ func TestGetStateRoot(t *testing.T) {
 }
 
 func TestGetStateFork(t *testing.T) {
-	fillFork := func(beaconState state.BeaconState) error {
-		require.NoError(t, beaconState.SetFork(&ethpb.Fork{
+	fillFork := func(state *ethpb.BeaconState) error {
+		state.Fork = &ethpb.Fork{
 			PreviousVersion: []byte("prev"),
 			CurrentVersion:  []byte("curr"),
 			Epoch:           123,
-		}))
+		}
 		return nil
 	}
 	fakeState, err := util.NewBeaconState(fillFork)
@@ -120,19 +119,19 @@ func TestGetStateFork(t *testing.T) {
 }
 
 func TestGetFinalityCheckpoints(t *testing.T) {
-	fillCheckpoints := func(state state.BeaconState) error {
-		require.NoError(t, state.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{
+	fillCheckpoints := func(state *ethpb.BeaconState) error {
+		state.PreviousJustifiedCheckpoint = &ethpb.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("previous"), 32),
 			Epoch: 113,
-		}))
-		require.NoError(t, state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+		}
+		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("current"), 32),
 			Epoch: 123,
-		}))
-		require.NoError(t, state.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		}
+		state.FinalizedCheckpoint = &ethpb.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("finalized"), 32),
 			Epoch: 103,
-		}))
+		}
 		return nil
 	}
 	fakeState, err := util.NewBeaconState(fillCheckpoints)

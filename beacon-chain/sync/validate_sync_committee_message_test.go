@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -319,8 +319,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())
 
-				gvr := hState.GenesisValidatorRoot()
-				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, gvr[:])
+				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.chain = &mockChain.ChainService{
@@ -371,8 +370,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				numOfVals := hState.NumValidators()
 
 				chosenVal := numOfVals - 10
-				gvr := hState.GenesisValidatorRoot()
-				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, gvr[:])
+				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				rawBytes := p2ptypes.SSZBytes(headRoot[:])
 				sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)

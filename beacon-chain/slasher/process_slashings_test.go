@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -57,12 +57,11 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		AttestingIndices: []uint64{0},
 	})
 
-	gvr := beaconState.GenesisValidatorRoot()
 	domain, err := signing.Domain(
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconAttester,
-		gvr[:],
+		beaconState.GenesisValidatorRoot(),
 	)
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(firstAtt.Data, domain)
@@ -177,12 +176,11 @@ func TestService_processProposerSlashings(t *testing.T) {
 		},
 	})
 
-	gvr := beaconState.GenesisValidatorRoot()
 	domain, err := signing.Domain(
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
-		gvr[:],
+		beaconState.GenesisValidatorRoot(),
 	)
 	require.NoError(t, err)
 	htr, err := firstBlockHeader.Header.HashTreeRoot()

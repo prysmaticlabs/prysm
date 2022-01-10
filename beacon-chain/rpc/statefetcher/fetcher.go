@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -177,9 +177,9 @@ func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.B
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 	for i, root := range headState.StateRoots() {
-		if bytes.Equal(root[:], stateId) {
+		if bytes.Equal(root, stateId) {
 			blockRoot := headState.BlockRoots()[i]
-			return p.StateGenService.StateByRoot(ctx, blockRoot)
+			return p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
 		}
 	}
 
@@ -259,7 +259,7 @@ func (p *StateProvider) stateRootByHex(ctx context.Context, stateId []byte) ([]b
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 	for _, root := range headState.StateRoots() {
-		if root == stateRoot {
+		if bytes.Equal(root, stateRoot[:]) {
 			return stateRoot[:], nil
 		}
 	}

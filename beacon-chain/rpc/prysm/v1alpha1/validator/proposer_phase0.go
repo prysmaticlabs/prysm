@@ -152,8 +152,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 			log.WithError(err).Warn("Proposer: invalid exit")
 			continue
 		}
-		gvRoot := head.GenesisValidatorRoot()
-		if err := blocks.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, gvRoot[:]); err != nil {
+		if err := blocks.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, head.GenesisValidatorRoot()); err != nil {
 			log.WithError(err).Warn("Proposer: invalid exit")
 			continue
 		}

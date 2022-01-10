@@ -11,7 +11,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -253,7 +253,7 @@ func (s *Service) headState(ctx context.Context) state.BeaconState {
 // This returns the genesis validator root of the head state.
 // This is a lock free version.
 func (s *Service) headGenesisValidatorRoot() [32]byte {
-	return s.head.state.GenesisValidatorRoot()
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
 // This returns the validator referenced by the provided index in

@@ -16,7 +16,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -503,7 +503,7 @@ func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, bl
 
 // save all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
-	pbState, err := v1.ProtobufBeaconState(s.preGenesisState.ToProtoUnsafe())
+	pbState, err := v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}

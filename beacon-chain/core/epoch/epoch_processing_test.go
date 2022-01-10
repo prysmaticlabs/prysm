@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -256,7 +256,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	slashings[ce] = 0
 	require.NoError(t, s.SetSlashings(slashings))
 	mixes := s.RandaoMixes()
-	mixes[ce] = [32]byte{'A'}
+	mixes[ce] = []byte{'A'}
 	require.NoError(t, s.SetRandaoMixes(mixes))
 	newS, err := epoch.ProcessFinalUpdates(s)
 	require.NoError(t, err)

@@ -6,10 +6,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -64,7 +63,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	assert.Equal(t, latestRandaoMixesLength, types.Epoch(len(newState.RandaoMixes())), "Length of RandaoMixes was not correctly initialized")
 	mix, err := newState.RandaoMixAtIndex(0)
 	require.NoError(t, err)
-	assert.DeepEqual(t, bytesutil.ToBytes32(eth1Data.BlockHash), mix, "RandaoMixes was not correctly initialized")
+	assert.DeepEqual(t, eth1Data.BlockHash, mix, "RandaoMixes was not correctly initialized")
 
 	// Finality fields checks.
 	assert.Equal(t, genesisEpoch, newState.PreviousJustifiedCheckpoint().Epoch, "PreviousJustifiedCheckpoint.Epoch was not correctly initialized")
@@ -83,8 +82,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	zeroHash := params.BeaconConfig().ZeroHash
 	// History root checks.
-	assert.DeepEqual(t, zeroHash, newState.StateRoots()[0], "StateRoots was not correctly initialized")
-	assert.DeepEqual(t, zeroHash, newState.BlockRoots()[0], "BlockRoots was not correctly initialized")
+	assert.DeepEqual(t, zeroHash[:], newState.StateRoots()[0], "StateRoots was not correctly initialized")
+	assert.DeepEqual(t, zeroHash[:], newState.BlockRoots()[0], "BlockRoots was not correctly initialized")
 
 	// Deposit root checks.
 	assert.DeepEqual(t, eth1Data.DepositRoot, newState.Eth1Data().DepositRoot, "Eth1Data DepositRoot was not correctly initialized")
@@ -99,9 +98,9 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	state, err := transition.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
-	pbState1, err := v1.ProtobufBeaconState(state1.ToProto())
+	pbState1, err := v1.ProtobufBeaconState(state1.CloneInnerState())
 	require.NoError(t, err)
-	pbstate, err := v1.ProtobufBeaconState(state.ToProto())
+	pbstate, err := v1.ProtobufBeaconState(state.CloneInnerState())
 	require.NoError(t, err)
 
 	root1, err1 := hash.HashProto(pbState1)
@@ -123,7 +122,7 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	assert.Equal(t, want, got, "The slice underlying array capacity is wrong")
 
 	for _, h := range s.BlockRoots() {
-		assert.DeepEqual(t, params.BeaconConfig().ZeroHash, h, "Unexpected non-zero hash data")
+		assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], h, "Unexpected non-zero hash data")
 	}
 }
 

@@ -14,10 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
@@ -359,7 +358,7 @@ func ProcessRandaoMixesReset(state state.BeaconState) (state.BeaconState, error)
 	if err != nil {
 		return nil, err
 	}
-	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), bytesutil.ToBytes32(mix)); err != nil {
+	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), mix); err != nil {
 		return nil, err
 	}
 
@@ -386,13 +385,13 @@ func ProcessHistoricalRootsUpdate(state state.BeaconState) (state.BeaconState, e
 		bRoots := make([][]byte, len(blockRoots))
 		for i := range bRoots {
 			tmp := blockRoots[i]
-			bRoots[i] = tmp[:]
+			bRoots[i] = tmp
 		}
 		stateRoots := state.StateRoots()
 		sRoots := make([][]byte, len(stateRoots))
 		for i := range sRoots {
 			tmp := stateRoots[i]
-			sRoots[i] = tmp[:]
+			sRoots[i] = tmp
 		}
 		historicalBatch := &ethpb.HistoricalBatch{
 			BlockRoots: bRoots,

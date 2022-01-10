@@ -36,7 +36,7 @@ ssz_gen_marshal(
     go_proto = ":go_proto",
     includes = [
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "//beacon-chain/state/custom-types:go_default_library",
+        "//beacon-chain/state-native/custom-types:go_default_library",
     ],
     objs = [
         "AggregateAttestationAndProof",
@@ -71,7 +71,7 @@ go_proto_library(
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/state/custom-types:go_default_library",
+        "//beacon-chain/state-native/custom-types:go_default_library",
         "//proto/eth/ext:go_default_library",
         "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
         "@com_github_golang_protobuf//proto:go_default_library",

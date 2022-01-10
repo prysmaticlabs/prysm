@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
+	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"

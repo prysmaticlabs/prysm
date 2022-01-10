@@ -13,7 +13,7 @@ go_library(
         "//tools:__subpackages__",
     ],
     deps = [
-        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state-native:go_default_library",
         "//config/features:go_default_library",
         "//io/file:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",

@@ -101,7 +101,7 @@ func TestSameHead(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := [32]byte{'A'}
 	br := beaconState.BlockRoots()
-	br[0] = r
+	br[0] = r[:]
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att.Data.BeaconBlockRoot = r[:]
 	same, err := precompute.SameHead(beaconState, &ethpb.PendingAttestation{Data: att.Data})
@@ -121,7 +121,7 @@ func TestSameTarget(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := [32]byte{'A'}
 	br := beaconState.BlockRoots()
-	br[0] = r
+	br[0] = r[:]
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att.Data.Target.Root = r[:]
 	same, err := precompute.SameTarget(beaconState, &ethpb.PendingAttestation{Data: att.Data}, 0)
@@ -141,7 +141,7 @@ func TestAttestedPrevEpoch(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := [32]byte{'A'}
 	br := beaconState.BlockRoots()
-	br[0] = r
+	br[0] = r[:]
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att.Data.Target.Root = r[:]
 	att.Data.BeaconBlockRoot = r[:]
@@ -160,7 +160,7 @@ func TestAttestedCurrentEpoch(t *testing.T) {
 	r := [32]byte{'A'}
 
 	br := beaconState.BlockRoots()
-	br[params.BeaconConfig().SlotsPerEpoch] = r
+	br[params.BeaconConfig().SlotsPerEpoch] = r[:]
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att.Data.Target.Root = r[:]
 	att.Data.BeaconBlockRoot = r[:]
@@ -190,7 +190,7 @@ func TestProcessAttestations(t *testing.T) {
 	att1.Data.BeaconBlockRoot = rt[:]
 	br := beaconState.BlockRoots()
 	newRt := [32]byte{'B'}
-	br[0] = newRt
+	br[0] = newRt[:]
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att2.Data.Target.Root = newRt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]

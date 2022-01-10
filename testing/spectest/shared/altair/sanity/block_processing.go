@@ -13,8 +13,8 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -92,10 +92,10 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 
 				postBeaconState := &ethpb.BeaconStateAltair{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := stateAltair.ProtobufBeaconState(beaconState.ToProtoUnsafe())
+				pbState, err := stateAltair.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
-					diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)
+					diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}

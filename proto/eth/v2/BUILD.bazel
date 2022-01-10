@@ -33,7 +33,7 @@ ssz_gen_marshal(
     includes = [
         "//proto/eth/v1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
-        "//beacon-chain/state/custom-types:go_default_library",
+        "//beacon-chain/state-native/custom-types:go_default_library",
     ],
     objs = [
         "SignedBeaconBlockAltair",
@@ -50,7 +50,7 @@ go_proto_library(
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/state/custom-types:go_default_library",
+        "//beacon-chain/state-native/custom-types:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//proto/eth/v1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",

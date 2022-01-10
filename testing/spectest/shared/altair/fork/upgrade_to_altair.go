@@ -8,8 +8,8 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
+	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
@@ -40,7 +40,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			require.NoError(t, err)
 			postState, err := altair.UpgradeToAltair(context.Background(), preState)
 			require.NoError(t, err)
-			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.ToProtoUnsafe())
+			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.InnerStateUnsafe())
 			require.NoError(t, err)
 
 			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))

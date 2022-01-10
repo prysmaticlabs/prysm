@@ -2,7 +2,7 @@ package helpers
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -50,5 +50,5 @@ func RandaoMix(state state.ReadOnlyBeaconState, epoch types.Epoch) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	return root[:], err
+	return root, err
 }

@@ -17,9 +17,9 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/cmd"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -2166,7 +2166,7 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	att1.Data.BeaconBlockRoot = rt[:]
 	br := beaconState.BlockRoots()
 	newRt := [32]byte{'B'}
-	br[0] = newRt
+	br[0] = newRt[:]
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att2.Data.Target.Root = rt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]

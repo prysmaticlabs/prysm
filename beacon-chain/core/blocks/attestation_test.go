@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -416,7 +416,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		},
 	})
 	gvr := st.GenesisValidatorRoot()
-	prevDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch-1, params.BeaconConfig().DomainBeaconAttester, gvr[:])
+	prevDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch-1, params.BeaconConfig().DomainBeaconAttester, gvr)
 	require.NoError(t, err)
 	root, err := signing.ComputeSigningRoot(att1.Data, prevDomain)
 	require.NoError(t, err)
@@ -436,7 +436,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 			CommitteeIndex: 1,
 		},
 	})
-	currDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, gvr[:])
+	currDomain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, gvr)
 	require.NoError(t, err)
 	root, err = signing.ComputeSigningRoot(att2.Data, currDomain)
 	require.NoError(t, err)
@@ -475,8 +475,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 			Slot: 1,
 		},
 	})
-	gvr := st.GenesisValidatorRoot()
-	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, gvr[:])
+	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
 	root, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)
@@ -540,8 +539,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 			Slot: 1,
 		},
 	})
-	gvr := st.GenesisValidatorRoot()
-	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, gvr[:])
+	domain, err := signing.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	require.NoError(t, err)
 	root, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)
