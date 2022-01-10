@@ -47,7 +47,7 @@ var (
 	// Below keys are used to identify objects are to be fork compatible.
 	// Objects that are only compatible with specific forks should be prefixed with such keys.
 	altairKey    = []byte("altair")
-	bellatrixKey = []byte("bellatrix")
+	bellatrixKey = []byte("merge")
 	// block root included in the beacon state used by weak subjectivity initial sync
 	originBlockRootKey = []byte("origin-block-root")
 
