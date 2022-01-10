@@ -10,12 +10,16 @@ package service
 
 import (
 	"context"
+	"io"
+	"net/http"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/proto/eth/v1"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -23,8 +27,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"io"
-	"net/http"
 )
 
 // Suppress "imported and not used" errors

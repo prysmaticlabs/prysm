@@ -7,15 +7,16 @@
 package eth
 
 import (
-	proto "github.com/golang/protobuf/proto"
-	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
-	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
-	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	proto "github.com/golang/protobuf/proto"
+	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
+	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
+	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
