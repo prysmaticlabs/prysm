@@ -6451,13 +6451,13 @@ func (s *SyncAggregatorSelectionData) HashTreeRootWith(hh *ssz.Hasher) (err erro
 	return
 }
 
-// MarshalSSZ ssz marshals the BeaconStateMerge object
-func (b *BeaconStateMerge) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the BeaconStateBellatrix object
+func (b *BeaconStateBellatrix) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(b)
 }
 
-// MarshalSSZTo ssz marshals the BeaconStateMerge object to a target array
-func (b *BeaconStateMerge) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the BeaconStateBellatrix object to a target array
+func (b *BeaconStateBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(2736633)
 
@@ -6706,8 +6706,8 @@ func (b *BeaconStateMerge) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the BeaconStateMerge object
-func (b *BeaconStateMerge) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the BeaconStateBellatrix object
+func (b *BeaconStateBellatrix) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 2736633 {
@@ -6994,8 +6994,8 @@ func (b *BeaconStateMerge) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconStateMerge object
-func (b *BeaconStateMerge) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the BeaconStateBellatrix object
+func (b *BeaconStateBellatrix) SizeSSZ() (size int) {
 	size = 2736633
 
 	// Field (7) 'HistoricalRoots'
@@ -7028,13 +7028,13 @@ func (b *BeaconStateMerge) SizeSSZ() (size int) {
 	return
 }
 
-// HashTreeRoot ssz hashes the BeaconStateMerge object
-func (b *BeaconStateMerge) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the BeaconStateBellatrix object
+func (b *BeaconStateBellatrix) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
 }
 
-// HashTreeRootWith ssz hashes the BeaconStateMerge object with a hasher
-func (b *BeaconStateMerge) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the BeaconStateBellatrix object with a hasher
+func (b *BeaconStateBellatrix) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'GenesisTime'
