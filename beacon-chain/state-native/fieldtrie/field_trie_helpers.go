@@ -6,8 +6,8 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"

@@ -3,8 +3,8 @@ package v3
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
-	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
+	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

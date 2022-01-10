@@ -3,7 +3,7 @@ package v2
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 

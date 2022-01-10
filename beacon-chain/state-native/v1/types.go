@@ -5,9 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/fieldtrie"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )

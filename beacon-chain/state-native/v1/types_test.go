@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-native/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"

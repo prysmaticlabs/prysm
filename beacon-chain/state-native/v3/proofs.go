@@ -3,7 +3,7 @@ package v3
 import (
 	"encoding/binary"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/fieldtrie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 

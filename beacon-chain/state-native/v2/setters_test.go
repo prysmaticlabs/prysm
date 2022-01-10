@@ -7,8 +7,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
-	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
+	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"

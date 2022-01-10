@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/types"
 )
 
 // FieldTrie is the representation of the representative

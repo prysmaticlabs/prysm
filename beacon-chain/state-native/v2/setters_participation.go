@@ -1,7 +1,7 @@
 package v2
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/stateutil"
 )
 
 // SetPreviousParticipationBits for the beacon state. Updates the entire

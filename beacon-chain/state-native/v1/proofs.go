@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state-native/fieldtrie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
