@@ -214,7 +214,7 @@ var (
 	// FeeRecipient specifies the fee recipient for the transaction fees.
 	FeeRecipient = &cli.StringFlag{
 		Name:  "fee-recipient",
-		Usage: "Post merge, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst merge is in development state.",
+		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state.",
 		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
 	}
 )

@@ -33,7 +33,7 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Altair fork beacon block.
         SignedBeaconBlockAltair altair = 2;
 
-        // Representing a signed, post-Merge fork beacon block.
+        // Representing a signed, post-Bellatrix fork beacon block.
         SignedBeaconBlockMerge merge = 3;
     }
 }
@@ -46,7 +46,7 @@ message GenericBeaconBlock {
         // Representing a post-Altair fork beacon block.
         BeaconBlockAltair altair = 2;
 
-        // Representing a post-Merge fork beacon block.
+        // Representing a post-Bellatrix fork beacon block.
         BeaconBlockMerge merge = 3;
     }
 }
@@ -354,7 +354,7 @@ message BeaconBlockBodyMerge {
     // Sync aggregate object for the beacon chain to track sync committee votes. New in Altair network upgrade.
     SyncAggregate sync_aggregate = 9;
 
-    // Execution payload from the execution chain. New in Merge network upgrade.
+    // Execution payload from the execution chain. New in Bellatrix network upgrade.
     ExecutionPayload execution_payload = 10;
 }
 
