@@ -152,7 +152,7 @@ func CalculateStateRoot(
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
-	if signed.Version() == version.Altair || signed.Version() == version.Merge {
+	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return [32]byte{}, err
@@ -198,7 +198,7 @@ func ProcessBlockNoVerifyAnySig(
 	if err != nil {
 		return nil, nil, err
 	}
-	if signed.Version() == version.Altair || signed.Version() == version.Merge {
+	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return nil, nil, err
@@ -273,7 +273,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Merge:
+	case version.Altair, version.Bellatrix:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
@@ -320,7 +320,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	if state.Version() == version.Merge {
+	if state.Version() == version.Bellatrix {
 		enabled, err := b.ExecutionEnabled(state, blk.Body())
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if execution is enabled")

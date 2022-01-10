@@ -42,7 +42,7 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 	}
-	st, err := InitializeFromProto(&ethpb.BeaconStateMerge{
+	st, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{
 		Slot:                         1,
 		CurrentEpochParticipation:    []byte{},
 		PreviousEpochParticipation:   []byte{},
@@ -56,7 +56,7 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	require.NoError(t, err)
 	_, err = st.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	for i := stateTypes.FieldIndex(0); i < stateTypes.FieldIndex(params.BeaconConfig().BeaconStateMergeFieldCount); i++ {
+	for i := stateTypes.FieldIndex(0); i < stateTypes.FieldIndex(params.BeaconConfig().BeaconStateBellatrixFieldCount); i++ {
 		st.dirtyFields[i] = true
 	}
 	_, err = st.HashTreeRoot(context.Background())
@@ -124,7 +124,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 	}
-	st, err := InitializeFromProto(&ethpb.BeaconStateMerge{
+	st, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{
 		Slot:                  1,
 		GenesisValidatorsRoot: make([]byte, 32),
 		Fork: &ethpb.Fork{

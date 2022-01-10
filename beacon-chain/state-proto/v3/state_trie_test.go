@@ -52,7 +52,7 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 func TestInitializeFromProto(t *testing.T) {
 	type test struct {
 		name  string
-		state *ethpb.BeaconStateMerge
+		state *ethpb.BeaconStateBellatrix
 		error string
 	}
 	initTests := []test{
@@ -63,14 +63,14 @@ func TestInitializeFromProto(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &ethpb.BeaconStateMerge{
+			state: &ethpb.BeaconStateBellatrix{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &ethpb.BeaconStateMerge{},
+			state: &ethpb.BeaconStateBellatrix{},
 		},
 	}
 	for _, tt := range initTests {
@@ -104,7 +104,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconStateMerge{
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconStateBellatrix{
 		Validators: vals,
 	})
 	assert.NoError(t, err)
@@ -142,7 +142,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 func TestInitializeFromProtoUnsafe(t *testing.T) {
 	type test struct {
 		name  string
-		state *ethpb.BeaconStateMerge
+		state *ethpb.BeaconStateBellatrix
 		error string
 	}
 	initTests := []test{
@@ -153,14 +153,14 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 		},
 		{
 			name: "nil validators",
-			state: &ethpb.BeaconStateMerge{
+			state: &ethpb.BeaconStateBellatrix{
 				Slot:       4,
 				Validators: nil,
 			},
 		},
 		{
 			name:  "empty state",
-			state: &ethpb.BeaconStateMerge{},
+			state: &ethpb.BeaconStateBellatrix{},
 		},
 		// TODO: Add full state. Blocked by testutil migration.
 	}

@@ -69,7 +69,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		return nil, errors.Wrap(err, "could not process registry updates")
 	}
 
-	// Modified in Altair and Merge.
+	// Modified in Altair and Bellatrix.
 	cfg := params.BeaconConfig()
 	switch state.Version() {
 	case version.Altair:
@@ -77,7 +77,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		if err != nil {
 			return nil, err
 		}
-	case version.Merge:
+	case version.Bellatrix:
 		state, err = e.ProcessSlashings(state, cfg.ProportionalSlashingMultiplierMerge)
 		if err != nil {
 			return nil, err

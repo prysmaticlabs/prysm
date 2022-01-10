@@ -26,7 +26,7 @@ func DeterministicGenesisStateMerge(t testing.TB, numValidators uint64) (state.B
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get eth1data for %d deposits", numValidators))
 	}
-	beaconState, err := genesisBeaconStateMerge(context.Background(), deposits, uint64(0), eth1Data)
+	beaconState, err := genesisBeaconStateBellatrix(context.Background(), deposits, uint64(0), eth1Data)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}
@@ -34,8 +34,8 @@ func DeterministicGenesisStateMerge(t testing.TB, numValidators uint64) (state.B
 	return beaconState, privKeys
 }
 
-// genesisBeaconStateMerge returns the genesis beacon state.
-func genesisBeaconStateMerge(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+// genesisBeaconStateBellatrix returns the genesis beacon state.
+func genesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	st, err := emptyGenesisStateMerge()
 	if err != nil {
 		return nil, err
@@ -52,12 +52,12 @@ func genesisBeaconStateMerge(ctx context.Context, deposits []*ethpb.Deposit, gen
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
 
-	return buildGenesisBeaconStateMerge(genesisTime, st, st.Eth1Data())
+	return buildGenesisBeaconStateBellatrix(genesisTime, st, st.Eth1Data())
 }
 
 // emptyGenesisStateMerge returns an empty genesis state in Merge format.
 func emptyGenesisStateMerge() (state.BeaconState, error) {
-	st := &ethpb.BeaconStateMerge{
+	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.
 		Slot: 0,
 		Fork: &ethpb.Fork{
@@ -85,7 +85,7 @@ func emptyGenesisStateMerge() (state.BeaconState, error) {
 	return v3.InitializeFromProto(st)
 }
 
-func buildGenesisBeaconStateMerge(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -133,7 +133,7 @@ func buildGenesisBeaconStateMerge(genesisTime uint64, preState state.BeaconState
 	if err != nil {
 		return nil, err
 	}
-	st := &ethpb.BeaconStateMerge{
+	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
