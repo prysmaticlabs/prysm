@@ -72,7 +72,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			}
 			if keepTrackOf.rLockSelector != nil {
 				if keepTrackOf.foundRLock > 0 {
-					if keepTrackOf.foundRLock > 0 && keepTrackOf.rLockSelector.isEqual(selMap, 0) {
+					if keepTrackOf.rLockSelector.isEqual(selMap, 0) {
 						pass.Reportf(
 							node.Pos(),
 							fmt.Sprintf(
@@ -80,7 +80,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 								errNestedRLock,
 							),
 						)
-					} else if keepTrackOf.foundRLock > 0 {
+					} else {
 						if stack := hasNestedRLock(keepTrackOf.rLockSelector, selMap, call, inspect, pass, make(map[string]bool)); stack != "" {
 							pass.Reportf(
 								node.Pos(),
@@ -331,9 +331,6 @@ func interfaceMethod(s *types.Signature) bool {
 // hasNestedRLock finds a nested or recursive RLock by recursively calling itself on any functions called by the function/method represented
 // by callInfo.
 func hasNestedRLock(fullRLockSelector *selIdentList, compareMap *selIdentList, call *callInfo, inspect *inspector.Inspector, pass *analysis.Pass, hist map[string]bool) (retStack string) {
-	// debug := debugHelper{
-	// 	pass: pass,
-	// }
 	var rLockSelector *selIdentList
 	f := pass.Fset
 	tInfo := pass.TypesInfo
