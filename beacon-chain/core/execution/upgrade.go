@@ -42,7 +42,7 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
-			CurrentVersion:  params.BeaconConfig().MergeForkVersion,
+			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:           state.LatestBlockHeader(),

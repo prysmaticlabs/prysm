@@ -331,6 +331,65 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 	})
 }
 
+func TestStreamEvents_CommaSeparatedTopics(t *testing.T) {
+	ctx := context.Background()
+	srv, ctrl, mockStream := setupServer(ctx, t)
+	defer ctrl.Finish()
+
+	wantedHead := &ethpb.EventHead{
+		Slot:                      8,
+		Block:                     make([]byte, 32),
+		State:                     make([]byte, 32),
+		EpochTransition:           true,
+		PreviousDutyDependentRoot: make([]byte, 32),
+		CurrentDutyDependentRoot:  make([]byte, 32),
+	}
+	headGenericResponse, err := anypb.New(wantedHead)
+	require.NoError(t, err)
+	wantedHeadMessage := &gateway.EventSource{
+		Event: HeadTopic,
+		Data:  headGenericResponse,
+	}
+
+	assertFeedSendAndReceive(ctx, &assertFeedArgs{
+		t:             t,
+		srv:           srv,
+		topics:        []string{HeadTopic + "," + FinalizedCheckpointTopic},
+		stream:        mockStream,
+		shouldReceive: wantedHeadMessage,
+		itemToSend: &feed.Event{
+			Type: statefeed.NewHead,
+			Data: wantedHead,
+		},
+		feed: srv.StateNotifier.StateFeed(),
+	})
+
+	wantedCheckpoint := &ethpb.EventFinalizedCheckpoint{
+		Block: make([]byte, 32),
+		State: make([]byte, 32),
+		Epoch: 8,
+	}
+	checkpointGenericResponse, err := anypb.New(wantedCheckpoint)
+	require.NoError(t, err)
+	wantedCheckpointMessage := &gateway.EventSource{
+		Event: FinalizedCheckpointTopic,
+		Data:  checkpointGenericResponse,
+	}
+
+	assertFeedSendAndReceive(ctx, &assertFeedArgs{
+		t:             t,
+		srv:           srv,
+		topics:        []string{HeadTopic + "," + FinalizedCheckpointTopic},
+		stream:        mockStream,
+		shouldReceive: wantedCheckpointMessage,
+		itemToSend: &feed.Event{
+			Type: statefeed.FinalizedCheckpoint,
+			Data: wantedCheckpoint,
+		},
+		feed: srv.StateNotifier.StateFeed(),
+	})
+}
+
 func setupServer(ctx context.Context, t testing.TB) (*Server, *gomock.Controller, *mock.MockEvents_StreamEventsServer) {
 	srv := &Server{
 		BlockNotifier:     &mockChain.MockBlockNotifier{},
