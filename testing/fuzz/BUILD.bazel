@@ -15,7 +15,6 @@ ssz_gen_marshal(
     name = "ssz_generated_files",
     srcs = ["inputs.go"],
     includes = [
-        "//beacon-chain/state-native/custom-types:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
