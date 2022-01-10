@@ -4,7 +4,11 @@ go_library(
     name = "go_default_library",
     srcs = ["upgrade.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/execution",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//testing/spectest:__subpackages__",
+        "//validator/client:__pkg__",
+    ],
     deps = [
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state-native:go_default_library",
