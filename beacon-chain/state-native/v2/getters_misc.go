@@ -136,7 +136,8 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	rootsArr := b.historicalRootsInternal()
 	roots := make([][]byte, len(rootsArr))
 	for i, r := range rootsArr {
-		roots[i] = r[:]
+		tmp := r
+		roots[i] = tmp[:]
 	}
 	return roots
 }

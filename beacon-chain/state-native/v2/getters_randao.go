@@ -18,7 +18,8 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	mixesArr := b.randaoMixesInternal()
 	mixes := make([][]byte, len(mixesArr))
 	for i, m := range mixesArr {
-		mixes[i] = m[:]
+		tmp := m
+		mixes[i] = tmp[:]
 	}
 
 	return mixes

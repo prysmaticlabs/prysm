@@ -56,7 +56,8 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	rootsArr := b.blockRootsInternal()
 	roots := make([][]byte, len(rootsArr))
 	for i, r := range rootsArr {
-		roots[i] = r[:]
+		tmp := r
+		roots[i] = tmp[:]
 	}
 	return roots
 }

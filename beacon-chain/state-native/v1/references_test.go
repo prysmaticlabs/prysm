@@ -64,8 +64,8 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	assertRefCount(t, a, stateRoots, 2)
 	assertRefCount(t, b, blockRoots, 2)
 	assertRefCount(t, b, stateRoots, 2)
-	assert.Equal(t, 1, len(b.BlockRoots()), "No block roots found")
-	assert.Equal(t, 1, len(b.StateRoots()), "No state roots found")
+	assert.Equal(t, 8192, len(b.BlockRoots()), "Wrong number of block roots found")
+	assert.Equal(t, 8192, len(b.StateRoots()), "Wrong number of state roots found")
 
 	// Assert shared state.
 	blockRootsA := a.BlockRoots()
@@ -114,7 +114,7 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 
 func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 
-	val1, val2 := []byte("foo"), []byte("bar")
+	val1, val2 := bytesutil.PadTo([]byte("foo"), 32), bytesutil.PadTo([]byte("bar"), 32)
 	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		RandaoMixes: [][]byte{
 			val1,
