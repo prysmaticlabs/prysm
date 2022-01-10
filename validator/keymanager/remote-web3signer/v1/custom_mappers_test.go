@@ -4,6 +4,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/testing/util"
+
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -17,7 +21,22 @@ func TestMapAggregateAndProof(t *testing.T) {
 		want    *AggregateAndProof
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "HappyPathTest",
+			args: args{
+				from: &ethpb.AggregateAttestationAndProof{
+					AggregatorIndex: 0,
+					Aggregate:       util.NewAttestation(),
+					SelectionProof:  make([]byte, fieldparams.BLSSignatureLength),
+				},
+			},
+			want: &AggregateAndProof{
+				AggregatorIndex: "0",
+				Aggregate:       MockAttestation(),
+				SelectionProof:  hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -26,8 +45,8 @@ func TestMapAggregateAndProof(t *testing.T) {
 				t.Errorf("MapAggregateAndProof() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapAggregateAndProof() got = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got.Aggregate, tt.want.Aggregate) {
+				t.Errorf("MapAggregateAndProof() got = %v, want %v", got.Aggregate, tt.want.Aggregate)
 			}
 		})
 	}
@@ -43,7 +62,14 @@ func TestMapAttestation(t *testing.T) {
 		want    *Attestation
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "HappyPathTest",
+			args: args{
+				attestation: util.NewAttestation(),
+			},
+			want:    MockAttestation(),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -69,7 +95,14 @@ func TestMapAttestationData(t *testing.T) {
 		want    *AttestationData
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "HappyPathTest",
+			args: args{
+				data: util.NewAttestation().Data,
+			},
+			want:    MockAttestation().Data,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -95,7 +128,28 @@ func TestMapAttesterSlashing(t *testing.T) {
 		want    *AttesterSlashing
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "HappyPathTest",
+			args: args{
+				slashing: &ethpb.AttesterSlashing{
+					Attestation_1: &ethpb.IndexedAttestation{
+						AttestingIndices: []uint64{0, 1, 2},
+						Data:             util.NewAttestation().Data,
+						Signature:        make([]byte, fieldparams.BLSSignatureLength),
+					},
+					Attestation_2: &ethpb.IndexedAttestation{
+						AttestingIndices: []uint64{0, 1, 2},
+						Data:             util.NewAttestation().Data,
+						Signature:        make([]byte, fieldparams.BLSSignatureLength),
+					},
+				},
+			},
+			want: &AttesterSlashing{
+				Attestation_1: MockIndexedAttestation(),
+				Attestation_2: MockIndexedAttestation(),
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -104,8 +158,8 @@ func TestMapAttesterSlashing(t *testing.T) {
 				t.Errorf("MapAttesterSlashing() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapAttesterSlashing() got = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got.Attestation_1, tt.want.Attestation_1) {
+				t.Errorf("MapAttesterSlashing() got = %v, want %v", got.Attestation_1, tt.want.Attestation_1)
 			}
 		})
 	}
@@ -121,7 +175,93 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 		want    *BeaconBlockAltair
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Happy Path Test",
+			args: args{
+				block: &ethpb.BeaconBlockAltair{
+					Slot:          0,
+					ProposerIndex: 0,
+					ParentRoot:    make([]byte, fieldparams.RootLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					Body: &ethpb.BeaconBlockBodyAltair{
+						RandaoReveal: make([]byte, 32),
+						Eth1Data: &ethpb.Eth1Data{
+							DepositRoot:  make([]byte, fieldparams.RootLength),
+							DepositCount: 0,
+							BlockHash:    make([]byte, 32),
+						},
+						Graffiti: make([]byte, 32),
+						ProposerSlashings: []*ethpb.ProposerSlashing{
+							{
+								Header_1: &ethpb.SignedBeaconBlockHeader{
+									Header: &ethpb.BeaconBlockHeader{
+										Slot:          0,
+										ProposerIndex: 0,
+										ParentRoot:    make([]byte, fieldparams.RootLength),
+										StateRoot:     make([]byte, fieldparams.RootLength),
+										BodyRoot:      make([]byte, fieldparams.RootLength),
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
+								},
+								Header_2: &ethpb.SignedBeaconBlockHeader{
+									Header: &ethpb.BeaconBlockHeader{
+										Slot:          0,
+										ProposerIndex: 0,
+										ParentRoot:    make([]byte, fieldparams.RootLength),
+										StateRoot:     make([]byte, fieldparams.RootLength),
+										BodyRoot:      make([]byte, fieldparams.RootLength),
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
+								},
+							},
+						},
+						AttesterSlashings: []*ethpb.AttesterSlashing{
+							&ethpb.AttesterSlashing{
+								Attestation_1: &ethpb.IndexedAttestation{
+									AttestingIndices: []uint64{0, 1, 2},
+									Data:             util.NewAttestation().Data,
+									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								},
+								Attestation_2: &ethpb.IndexedAttestation{
+									AttestingIndices: []uint64{0, 1, 2},
+									Data:             util.NewAttestation().Data,
+									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								},
+							},
+						},
+						Attestations: []*ethpb.Attestation{
+							util.NewAttestation(),
+						},
+						Deposits: []*ethpb.Deposit{
+							&ethpb.Deposit{
+								Proof: [][]byte{[]byte("A")},
+								Data: &ethpb.Deposit_Data{
+									PublicKey:             make([]byte, fieldparams.BLSPubkeyLength),
+									WithdrawalCredentials: make([]byte, 32),
+									Amount:                0,
+									Signature:             make([]byte, fieldparams.BLSSignatureLength),
+								},
+							},
+						},
+						VoluntaryExits: []*ethpb.SignedVoluntaryExit{
+							&ethpb.SignedVoluntaryExit{
+								Exit: &ethpb.VoluntaryExit{
+									Epoch:          0,
+									ValidatorIndex: 0,
+								},
+								Signature: make([]byte, fieldparams.BLSSignatureLength),
+							},
+						},
+						SyncAggregate: &ethpb.SyncAggregate{
+							SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+							SyncCommitteeBits:      make([]byte, 64),
+						},
+					},
+				},
+			},
+			want:    MockBeaconBlockAltair(),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -130,8 +270,8 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 				t.Errorf("MapBeaconBlockAltair() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapBeaconBlockAltair() got = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got.Body, tt.want.Body) {
+				t.Errorf("MapBeaconBlockAltair() got = %v, want %v", got.Body.SyncAggregate, tt.want.Body.SyncAggregate)
 			}
 		})
 	}
@@ -147,7 +287,83 @@ func TestMapBeaconBlockBody(t *testing.T) {
 		want    *BeaconBlockBody
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Happy Path Test",
+			args: args{
+				body: &ethpb.BeaconBlockBody{
+					RandaoReveal: make([]byte, 32),
+					Eth1Data: &ethpb.Eth1Data{
+						DepositRoot:  make([]byte, fieldparams.RootLength),
+						DepositCount: 0,
+						BlockHash:    make([]byte, 32),
+					},
+					Graffiti: make([]byte, 32),
+					ProposerSlashings: []*ethpb.ProposerSlashing{
+						{
+							Header_1: &ethpb.SignedBeaconBlockHeader{
+								Header: &ethpb.BeaconBlockHeader{
+									Slot:          0,
+									ProposerIndex: 0,
+									ParentRoot:    make([]byte, fieldparams.RootLength),
+									StateRoot:     make([]byte, fieldparams.RootLength),
+									BodyRoot:      make([]byte, fieldparams.RootLength),
+								},
+								Signature: make([]byte, fieldparams.BLSSignatureLength),
+							},
+							Header_2: &ethpb.SignedBeaconBlockHeader{
+								Header: &ethpb.BeaconBlockHeader{
+									Slot:          0,
+									ProposerIndex: 0,
+									ParentRoot:    make([]byte, fieldparams.RootLength),
+									StateRoot:     make([]byte, fieldparams.RootLength),
+									BodyRoot:      make([]byte, fieldparams.RootLength),
+								},
+								Signature: make([]byte, fieldparams.BLSSignatureLength),
+							},
+						},
+					},
+					AttesterSlashings: []*ethpb.AttesterSlashing{
+						&ethpb.AttesterSlashing{
+							Attestation_1: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{0, 1, 2},
+								Data:             util.NewAttestation().Data,
+								Signature:        make([]byte, fieldparams.BLSSignatureLength),
+							},
+							Attestation_2: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{0, 1, 2},
+								Data:             util.NewAttestation().Data,
+								Signature:        make([]byte, fieldparams.BLSSignatureLength),
+							},
+						},
+					},
+					Attestations: []*ethpb.Attestation{
+						util.NewAttestation(),
+					},
+					Deposits: []*ethpb.Deposit{
+						&ethpb.Deposit{
+							Proof: [][]byte{[]byte("A")},
+							Data: &ethpb.Deposit_Data{
+								PublicKey:             make([]byte, fieldparams.BLSPubkeyLength),
+								WithdrawalCredentials: make([]byte, 32),
+								Amount:                0,
+								Signature:             make([]byte, fieldparams.BLSSignatureLength),
+							},
+						},
+					},
+					VoluntaryExits: []*ethpb.SignedVoluntaryExit{
+						&ethpb.SignedVoluntaryExit{
+							Exit: &ethpb.VoluntaryExit{
+								Epoch:          0,
+								ValidatorIndex: 0,
+							},
+							Signature: make([]byte, fieldparams.BLSSignatureLength),
+						},
+					},
+				},
+			},
+			want:    MockBeaconBlockBody(),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -163,58 +379,6 @@ func TestMapBeaconBlockBody(t *testing.T) {
 	}
 }
 
-func TestMapBeaconBlockBodyAltair(t *testing.T) {
-	type args struct {
-		body *ethpb.BeaconBlockBodyAltair
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *BeaconBlockBodyAltair
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapBeaconBlockBodyAltair(tt.args.body)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MapBeaconBlockBodyAltair() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapBeaconBlockBodyAltair() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMapCheckPoint(t *testing.T) {
-	type args struct {
-		checkpoint *ethpb.Checkpoint
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *Checkpoint
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapCheckPoint(tt.args.checkpoint)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MapCheckPoint() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapCheckPoint() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestMapContributionAndProof(t *testing.T) {
 	type args struct {
 		contribution *ethpb.ContributionAndProof
@@ -225,7 +389,23 @@ func TestMapContributionAndProof(t *testing.T) {
 		want    *ContributionAndProof
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Happy Path Test",
+			args: args{
+				contribution: &ethpb.ContributionAndProof{
+					AggregatorIndex: 0,
+					Contribution: &ethpb.SyncCommitteeContribution{
+						Slot:              0,
+						BlockRoot:         make([]byte, fieldparams.RootLength),
+						SubcommitteeIndex: 0,
+						AggregationBits:   make([]byte, 64),
+						Signature:         make([]byte, fieldparams.BLSSignatureLength),
+					},
+					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
+				},
+			},
+			want: MockContributionAndProof(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -241,44 +421,31 @@ func TestMapContributionAndProof(t *testing.T) {
 	}
 }
 
-func TestMapDeposit(t *testing.T) {
-	type args struct {
-		deposit *ethpb.Deposit
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *Deposit
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapDeposit(tt.args.deposit)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MapDeposit() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapDeposit() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestMapForkInfo(t *testing.T) {
 	type args struct {
 		from                  *ethpb.Fork
 		genesisValidatorsRoot []byte
 	}
+
 	tests := []struct {
 		name    string
 		args    args
 		want    *ForkInfo
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Happy Path Test",
+			args: args{
+				from: &ethpb.Fork{
+					PreviousVersion: make([]byte, 4),
+					CurrentVersion:  make([]byte, 4),
+					Epoch:           0,
+				},
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+			},
+			want:    MockForkInfo(),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -294,110 +461,6 @@ func TestMapForkInfo(t *testing.T) {
 	}
 }
 
-func TestMapIndexedAttestation(t *testing.T) {
-	type args struct {
-		attestation *ethpb.IndexedAttestation
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *IndexedAttestation
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapIndexedAttestation(tt.args.attestation)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MapIndexedAttestation() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapIndexedAttestation() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMapProposerSlashing(t *testing.T) {
-	type args struct {
-		slashing *ethpb.ProposerSlashing
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *ProposerSlashing
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapProposerSlashing(tt.args.slashing)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MapProposerSlashing() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapProposerSlashing() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMapSignedBeaconBlockHeader(t *testing.T) {
-	type args struct {
-		signedHeader *ethpb.SignedBeaconBlockHeader
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *SignedBeaconBlockHeader
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapSignedBeaconBlockHeader(tt.args.signedHeader)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MapSignedBeaconBlockHeader() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapSignedBeaconBlockHeader() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMapSignedVoluntaryExit(t *testing.T) {
-	type args struct {
-		signedVoluntaryExit *ethpb.SignedVoluntaryExit
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *SignedVoluntaryExit
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapSignedVoluntaryExit(tt.args.signedVoluntaryExit)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MapSignedVoluntaryExit() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapSignedVoluntaryExit() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestMapSyncAggregatorSelectionData(t *testing.T) {
 	type args struct {
 		data *ethpb.SyncAggregatorSelectionData
@@ -408,7 +471,20 @@ func TestMapSyncAggregatorSelectionData(t *testing.T) {
 		want    *SyncAggregatorSelectionData
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Happy Path Test",
+			args: args{
+				data: &ethpb.SyncAggregatorSelectionData{
+					Slot:              0,
+					SubcommitteeIndex: 0,
+				},
+			},
+			want: &SyncAggregatorSelectionData{
+				Slot:              "0",
+				SubcommitteeIndex: "0",
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -434,7 +510,22 @@ func TestMapSyncCommitteeMessage(t *testing.T) {
 		want    *SyncCommitteeMessage
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Happy Path Test",
+			args: args{
+				message: &ethpb.SyncCommitteeMessage{
+					Slot:           0,
+					BlockRoot:      make([]byte, fieldparams.RootLength),
+					ValidatorIndex: 0,
+					Signature:      make([]byte, fieldparams.BLSSignatureLength),
+				},
+			},
+			want: &SyncCommitteeMessage{
+				Slot:            "0",
+				BeaconBlockRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

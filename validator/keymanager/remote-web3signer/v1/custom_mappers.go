@@ -98,8 +98,9 @@ func MapBeaconBlockBody(body *ethpb.BeaconBlockBody) (*BeaconBlockBody, error) {
 	block := &BeaconBlockBody{
 		RandaoReveal: hexutil.Encode(body.RandaoReveal),
 		Eth1Data: &Eth1Data{
-			DepositRoot: hexutil.Encode(body.Eth1Data.DepositRoot),
-			BlockHash:   hexutil.Encode(body.Eth1Data.BlockHash),
+			DepositRoot:  hexutil.Encode(body.Eth1Data.DepositRoot),
+			DepositCount: fmt.Sprint(0),
+			BlockHash:    hexutil.Encode(body.Eth1Data.BlockHash),
 		},
 		Graffiti:          hexutil.Encode(body.Graffiti),
 		ProposerSlashings: make([]*ProposerSlashing, len(body.ProposerSlashings)),
@@ -225,6 +226,7 @@ func MapIndexedAttestation(attestation *ethpb.IndexedAttestation) (*IndexedAttes
 	return &IndexedAttestation{
 		AttestingIndices: attestingIndices,
 		Data:             attestationData,
+		Signature:        hexutil.Encode(attestation.Signature),
 	}, nil
 }
 
@@ -234,8 +236,8 @@ func MapDeposit(deposit *ethpb.Deposit) (*Deposit, error) {
 		return nil, fmt.Errorf("deposit is nil")
 	}
 	proof := make([]string, len(deposit.Proof))
-	for i, p := range proof {
-		proof[i] = fmt.Sprint(p)
+	for i, p := range deposit.Proof {
+		proof[i] = hexutil.Encode(p)
 	}
 	return &Deposit{
 		Proof: proof,
@@ -300,8 +302,9 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 	block := &BeaconBlockBodyAltair{
 		RandaoReveal: hexutil.Encode(body.RandaoReveal),
 		Eth1Data: &Eth1Data{
-			DepositRoot: hexutil.Encode(body.Eth1Data.DepositRoot),
-			BlockHash:   hexutil.Encode(body.Eth1Data.BlockHash),
+			DepositRoot:  hexutil.Encode(body.Eth1Data.DepositRoot),
+			DepositCount: fmt.Sprint(body.Eth1Data.DepositCount),
+			BlockHash:    hexutil.Encode(body.Eth1Data.BlockHash),
 		},
 		Graffiti:          hexutil.Encode(body.Graffiti),
 		ProposerSlashings: make([]*ProposerSlashing, len(body.ProposerSlashings)),
@@ -310,7 +313,7 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 		Deposits:          make([]*Deposit, len(body.Deposits)),
 		VoluntaryExits:    make([]*SignedVoluntaryExit, len(body.VoluntaryExits)),
 		SyncAggregate: &SyncAggregate{
-			SyncCommitteeBits:      fmt.Sprint(body.SyncAggregate.SyncCommitteeBits),
+			SyncCommitteeBits:      hexutil.Encode(body.SyncAggregate.SyncCommitteeBits),
 			SyncCommitteeSignature: hexutil.Encode(body.SyncAggregate.SyncCommitteeSignature),
 		},
 	}
