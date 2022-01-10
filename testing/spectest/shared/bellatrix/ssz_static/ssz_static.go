@@ -50,9 +50,9 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 					// Custom hash tree root for beacon state.
 					var htr func(interface{}) ([32]byte, error)
-					if _, ok := object.(*ethpb.BeaconStateMerge); ok {
+					if _, ok := object.(*ethpb.BeaconStateBellatrix); ok {
 						htr = func(s interface{}) ([32]byte, error) {
-							beaconState, err := v3.InitializeFromProto(s.(*ethpb.BeaconStateMerge))
+							beaconState, err := v3.InitializeFromProto(s.(*ethpb.BeaconStateBellatrix))
 							require.NoError(t, err)
 							return beaconState.HashTreeRoot(context.Background())
 						}
@@ -116,7 +116,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
-		obj = &ethpb.BeaconStateMerge{}
+		obj = &ethpb.BeaconStateBellatrix{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
