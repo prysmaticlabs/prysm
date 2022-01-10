@@ -42,7 +42,7 @@ func (s *Service) CanSubscribe(topic string) bool {
 		log.WithError(err).Error("Could not determine fork digest")
 		return false
 	}
-	digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, s.genesisValidatorsRoot[:])
+	digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, s.genesisValidatorsRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not determine next fork digest")
 		return false

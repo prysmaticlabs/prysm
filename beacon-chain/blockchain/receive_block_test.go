@@ -30,7 +30,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
 		blk, err := util.GenerateFullBlock(genesis, keys, conf, slot)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		return blk
 	}
 	params.SetupTestConfigCleanup(t)

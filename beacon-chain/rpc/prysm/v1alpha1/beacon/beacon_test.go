@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 )
 
@@ -12,10 +11,7 @@ func TestMain(m *testing.M) {
 	// Use minimal config to reduce test setup time.
 	prevConfig := params.BeaconConfig().Copy()
 	defer params.OverrideBeaconConfig(prevConfig)
-	cfg := params.MinimalSpecConfig()
-	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
-	cfg.SlotsPerHistoricalRoot = fieldparams.BlockRootsLength
-	params.OverrideBeaconConfig(cfg)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	resetFlags := flags.Get()
 	flags.Init(&flags.GlobalFlags{

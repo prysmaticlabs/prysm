@@ -100,7 +100,7 @@ func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 	}
 }
 
-func TestFuzzverifyOperationLengths_10000(t *testing.T) {
+func TestFuzzverifyOperationLengths_10000(_ *testing.T) {
 	SkipSlotCache.Disable()
 	defer SkipSlotCache.Enable()
 	state := &v1.BeaconState{}
@@ -115,7 +115,7 @@ func TestFuzzverifyOperationLengths_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzCanProcessEpoch_10000(t *testing.T) {
+func TestFuzzCanProcessEpoch_10000(_ *testing.T) {
 	SkipSlotCache.Disable()
 	defer SkipSlotCache.Enable()
 	state := &v1.BeaconState{}

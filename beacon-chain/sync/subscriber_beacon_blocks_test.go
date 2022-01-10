@@ -68,10 +68,11 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			},
 			wantedErr: "nil inner state",
 			check: func(t *testing.T, s *Service) {
-				if s.cfg.attPool.AggregatedAttestationCount() != 0 {
-					t.Error("Expected no attestation in the pool")
+				if s.cfg.attPool.AggregatedAttestationCount() == 0 {
+					t.Error("Expected at least 1 aggregated attestation in the pool")
 				}
-				if s.cfg.attPool.UnaggregatedAttestationCount() != 0 {
+				if s.cfg.attPool.UnaggregatedAttestationCount() == 0 {
+					t.Error("Expected at least 1 unaggregated attestation in the pool")
 					t.Error("Expected no attestation in the pool")
 				}
 			},

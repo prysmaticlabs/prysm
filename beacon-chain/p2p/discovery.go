@@ -299,7 +299,7 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 	nodeENR := node.Record()
 	// Decide whether or not to connect to peer that does not
 	// match the proper fork ENR data with our local node.
-	if s.genesisValidatorsRoot != params.BeaconConfig().ZeroHash {
+	if s.genesisValidatorsRoot != nil {
 		if err := s.compareForkENR(nodeENR); err != nil {
 			log.WithError(err).Trace("Fork ENR mismatches between peer and local node")
 			return false

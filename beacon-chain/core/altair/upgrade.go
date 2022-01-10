@@ -66,7 +66,6 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	epoch := time.CurrentEpoch(state)
 
 	numValidators := state.NumValidators()
-
 	s := &ethpb.BeaconStateAltair{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),

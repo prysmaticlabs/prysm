@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -83,7 +82,7 @@ type Service struct {
 	ctx                   context.Context
 	host                  host.Host
 	genesisTime           time.Time
-	genesisValidatorsRoot [32]byte
+	genesisValidatorsRoot []byte
 	activeValidatorCount  uint64
 }
 
@@ -143,7 +142,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(func(pmsg *pubsubpb.Message) string {
-			return MsgID(s.genesisValidatorsRoot[:], pmsg)
+			return MsgID(s.genesisValidatorsRoot, pmsg)
 		}),
 		pubsub.WithSubscriptionFilter(s),
 		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),
@@ -416,7 +415,7 @@ func (s *Service) awaitStateInitialized() {
 					log.Fatalf("Received wrong data over state initialized feed: %v", data)
 				}
 				s.genesisTime = data.StartTime
-				s.genesisValidatorsRoot = bytesutil.ToBytes32(data.GenesisValidatorsRoot)
+				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
 				_, err := s.currentForkDigest() // initialize fork digest cache
 				if err != nil {
 					log.WithError(err).Error("Could not initialize fork digest")

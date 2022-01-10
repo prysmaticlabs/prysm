@@ -51,15 +51,15 @@ func validateStateHTR(s *v1.BeaconState) {
 	nxtRt, err2 := rawState.HashTreeRoot()
 
 	if err == nil && err2 != nil {
-		panic("HashTreeRoot from state had only and error from cached state HashTreeRoot method")
+		panic("HTR from state had only and error from cached state HTR method")
 	}
 	if err != nil && err2 == nil {
-		panic("HashTreeRoot from state had only and error from fast-ssz HashTreeRoot method")
+		panic("HTR from state had only and error from fast-ssz HTR method")
 	}
 	if err != nil && err2 != nil {
 		return
 	}
 	if rt != nxtRt {
-		panic(fmt.Sprintf("cached HashTreeRoot gave a root of %#x while fast-ssz gave a root of %#x", rt, nxtRt))
+		panic(fmt.Sprintf("cached HTR gave a root of %#x while fast-ssz gave a root of %#x", rt, nxtRt))
 	}
 }

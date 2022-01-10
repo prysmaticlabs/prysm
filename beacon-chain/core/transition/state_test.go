@@ -80,10 +80,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, []*ethpb.PendingAttestation{}, prevAtt, "PreviousEpochAttestations was not correctly initialized")
 
-	zeroHash := params.BeaconConfig().ZeroHash
+	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.
-	assert.DeepEqual(t, zeroHash[:], newState.StateRoots()[0], "StateRoots was not correctly initialized")
-	assert.DeepEqual(t, zeroHash[:], newState.BlockRoots()[0], "BlockRoots was not correctly initialized")
+	assert.DeepEqual(t, zeroHash, newState.StateRoots()[0], "StateRoots was not correctly initialized")
+	assert.DeepEqual(t, zeroHash, newState.BlockRoots()[0], "BlockRoots was not correctly initialized")
 
 	// Deposit root checks.
 	assert.DeepEqual(t, eth1Data.DepositRoot, newState.Eth1Data().DepositRoot, "Eth1Data DepositRoot was not correctly initialized")

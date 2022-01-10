@@ -44,11 +44,7 @@ func BlockRootAtSlot(state state.ReadOnlyBeaconState, slot types.Slot) ([]byte, 
 	if slot >= state.Slot() || state.Slot() > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.Errorf("slot %d out of bounds", slot)
 	}
-	root, err := state.BlockRootAtIndex(uint64(slot % params.BeaconConfig().SlotsPerHistoricalRoot))
-	if err != nil {
-		return nil, err
-	}
-	return root, err
+	return state.BlockRootAtIndex(uint64(slot % params.BeaconConfig().SlotsPerHistoricalRoot))
 }
 
 // StateRootAtSlot returns the cached state root at that particular slot. If no state
@@ -57,11 +53,7 @@ func StateRootAtSlot(state state.ReadOnlyBeaconState, slot types.Slot) ([]byte, 
 	if slot >= state.Slot() || state.Slot() > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.Errorf("slot %d out of bounds", slot)
 	}
-	root, err := state.StateRootAtIndex(uint64(slot % params.BeaconConfig().SlotsPerHistoricalRoot))
-	if err != nil {
-		return nil, err
-	}
-	return root, err
+	return state.StateRootAtIndex(uint64(slot % params.BeaconConfig().SlotsPerHistoricalRoot))
 }
 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.

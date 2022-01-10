@@ -25,7 +25,7 @@ func (s *Service) currentForkDigest() ([4]byte, error) {
 	if !s.isInitialized() {
 		return [4]byte{}, errors.New("state is not initialized")
 	}
-	return forks.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot[:])
+	return forks.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
 }
 
 // Compares fork ENRs between an incoming peer's record and our node's
@@ -82,9 +82,9 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 func addForkEntry(
 	node *enode.LocalNode,
 	genesisTime time.Time,
-	genesisValidatorsRoot [32]byte,
+	genesisValidatorsRoot []byte,
 ) (*enode.LocalNode, error) {
-	digest, err := forks.CreateForkDigest(genesisTime, genesisValidatorsRoot[:])
+	digest, err := forks.CreateForkDigest(genesisTime, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}

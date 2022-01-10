@@ -115,7 +115,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	require.NoError(t, err)
 	expectedRoot1, err := expected1.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	t.Logf("chain 1 (even i) expected root %x at slot %d", expectedRoot1, problemSlot)
+	t.Logf("chain 1 (even i) expected root %x at slot %d", expectedRoot1[:], problemSlot)
 
 	tmp1, err := transition.ProcessSlots(context.Background(), expected1.Copy(), problemSlot+1)
 	require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	require.NoError(t, err)
 	expectedRoot2, err := expected2.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	t.Logf("chain 2 (odd i) expected root %x at slot %d", expectedRoot2, problemSlot)
+	t.Logf("chain 2 (odd i) expected root %x at slot %d", expectedRoot2[:], problemSlot)
 
 	tmp2, err := transition.ProcessSlots(context.Background(), expected2.Copy(), problemSlot+1)
 	require.NoError(t, err)

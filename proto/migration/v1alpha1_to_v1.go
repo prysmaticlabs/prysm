@@ -438,7 +438,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
+		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(state.GenesisValidatorRoot()),
 		Slot:                  state.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),

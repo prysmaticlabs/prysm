@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
@@ -40,7 +41,7 @@ func TestService_Broadcast(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: [32]byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 
 	msg := &ethpb.Fork{
@@ -91,7 +92,7 @@ func TestService_Broadcast(t *testing.T) {
 func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 	p := Service{
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: [32]byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 	}
 	assert.ErrorContains(t, ErrMessageNotMapped.Error(), p.Broadcast(context.Background(), &testpb.AddressBook{}))
 }
@@ -153,7 +154,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: [32]byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -210,9 +211,11 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
 	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:         cfg,
-		genesisTime: genesisTime,
+		cfg:                   cfg,
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
@@ -242,8 +245,9 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		cfg.UDPPort = uint(port + i)
 		cfg.TCPPort = uint(port + i)
 		s := &Service{
-			cfg:         cfg,
-			genesisTime: genesisTime,
+			cfg:                   cfg,
+			genesisTime:           genesisTime,
+			genesisValidatorsRoot: genesisValidatorsRoot,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		// Set for 2nd peer
@@ -293,7 +297,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: [32]byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -309,7 +313,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: [32]byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
@@ -374,7 +378,7 @@ func TestService_BroadcastSyncCommittee(t *testing.T) {
 		joinedTopics:          map[string]*pubsub.Topic{},
 		cfg:                   &Config{},
 		genesisTime:           time.Now(),
-		genesisValidatorsRoot: [32]byte{'A'},
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		subnetsLockLock:       sync.Mutex{},
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{

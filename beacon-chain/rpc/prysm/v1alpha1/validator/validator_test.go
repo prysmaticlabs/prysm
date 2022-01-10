@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/sirupsen/logrus"
 )
@@ -15,9 +14,7 @@ func TestMain(m *testing.M) {
 	// Use minimal config to reduce test setup time.
 	prevConfig := params.BeaconConfig().Copy()
 	defer params.OverrideBeaconConfig(prevConfig)
-	cfg := params.MinimalSpecConfig()
-	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
-	params.OverrideBeaconConfig(cfg)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	m.Run()
 }

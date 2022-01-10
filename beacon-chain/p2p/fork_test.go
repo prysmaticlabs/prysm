@@ -31,7 +31,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
-	genesisValidatorsRoot := [fieldparams.RootLength]byte{'a'}
+	genesisValidatorsRoot := make([]byte, fieldparams.RootLength)
 	s := &Service{
 		cfg: &Config{
 			UDPPort:       uint(port),
@@ -65,7 +65,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 		s = &Service{
 			cfg:                   cfg,
 			genesisTime:           genesisTime,
-			genesisValidatorsRoot: bytesutil.ToBytes32(root),
+			genesisValidatorsRoot: root,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		assert.NoError(t, err, "Could not start discovery for node")
@@ -96,7 +96,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	s, err = NewService(context.Background(), cfg)
 	require.NoError(t, err)
 	s.genesisTime = genesisTime
-	s.genesisValidatorsRoot = genesisValidatorsRoot
+	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
 	var addrs []ma.Multiaddr
 
@@ -119,7 +119,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
-	genesisValidatorsRoot := [32]byte{'a'}
+	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
 		cfg:                   &Config{UDPPort: uint(port)},
 		genesisTime:           genesisTime,
@@ -188,7 +188,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	require.NoError(t, err)
 
 	s.genesisTime = genesisTime
-	s.genesisValidatorsRoot = genesisValidatorsRoot
+	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
 	var addrs []ma.Multiaddr
 
@@ -270,7 +270,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	params.OverrideBeaconConfig(bCfg)
 
 	localNode := enode.NewLocalNode(db, pkey)
-	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), [32]byte{'A', 'B', 'C', 'D'})
+	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytesutil.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))
 	require.NoError(t, err)
 	forkEntry, err := forkEntry(localNode.Node().Record())
 	require.NoError(t, err)

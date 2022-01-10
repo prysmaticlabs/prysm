@@ -91,7 +91,7 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 
 	result := &ethpbv2.BeaconStateV2{
 		GenesisTime:           altairState.GenesisTime(),
-		GenesisValidatorsRoot: altairState.GenesisValidatorRoot(),
+		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(altairState.GenesisValidatorRoot()),
 		Slot:                  altairState.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),

@@ -1488,6 +1488,43 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 	assert.ErrorContains(t, wanted, err)
 }
 
+func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+
+	ctx := context.Background()
+	headState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, headState.SetSlot(0))
+	epoch := types.Epoch(50)
+	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))
+	mockStateGen := &stategen.MockStateManager{
+		StatesBySlot: map[types.Slot]state.BeaconState{
+			0: (*v1.BeaconState)(nil),
+		},
+	}
+	bs := &Server{
+		BeaconDB: beaconDB,
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			Genesis: time.Now().Add(time.Duration(-1*int64(slots)) * time.Second),
+		},
+		StateGen: mockStateGen,
+	}
+
+	wanted := "Could not set up pre compute instance: failed to initialize precompute: nil inner state"
+	_, err = bs.GetValidatorParticipation(
+		ctx,
+		&ethpb.GetValidatorParticipationRequest{
+			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+				Epoch: 1,
+			},
+		},
+	)
+	assert.ErrorContains(t, wanted, err)
+}
+
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	helpers.ClearCache()
 	beaconDB := dbTest.SetupDB(t)
