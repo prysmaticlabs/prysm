@@ -52,6 +52,7 @@ go_library(
         "//tools/pcli:__pkg__",
     ],
     deps = [
+        "//beacon-chain/sharedstate:go_default_library",
         "//beacon-chain/state-native:go_default_library",
         "//beacon-chain/state-native/custom-types:go_default_library",
         "//beacon-chain/state-native/fieldtrie:go_default_library",
