@@ -165,6 +165,7 @@ func MapProposerSlashing(slashing *ethpb.ProposerSlashing) (*ProposerSlashing, e
 	}, nil
 }
 
+// MapAttesterSlashing maps the eth2.AttesterSlashing proto to the Web3Signer spec.
 func MapSignedBeaconBlockHeader(signedHeader *ethpb.SignedBeaconBlockHeader) (*SignedBeaconBlockHeader, error) {
 	if signedHeader == nil {
 		return nil, fmt.Errorf("signed beacon block header is nil")
@@ -189,6 +190,7 @@ func MapSignedBeaconBlockHeader(signedHeader *ethpb.SignedBeaconBlockHeader) (*S
 	}, nil
 }
 
+// MapAttesterSlashing maps the eth2.AttesterSlashing proto to the Web3Signer spec.
 func MapAttesterSlashing(slashing *ethpb.AttesterSlashing) (*AttesterSlashing, error) {
 	if slashing == nil {
 		return nil, fmt.Errorf("attester slashing is nil")
@@ -207,6 +209,7 @@ func MapAttesterSlashing(slashing *ethpb.AttesterSlashing) (*AttesterSlashing, e
 	}, nil
 }
 
+// MapIndexedAttestation maps the eth2.IndexedAttestation proto to the Web3Signer spec.
 func MapIndexedAttestation(attestation *ethpb.IndexedAttestation) (*IndexedAttestation, error) {
 	if attestation == nil {
 		return nil, fmt.Errorf("indexed attestation is nil")
@@ -225,6 +228,7 @@ func MapIndexedAttestation(attestation *ethpb.IndexedAttestation) (*IndexedAttes
 	}, nil
 }
 
+// MapDeposit maps the eth2.Deposit proto to the Web3Signer spec.
 func MapDeposit(deposit *ethpb.Deposit) (*Deposit, error) {
 	if deposit == nil {
 		return nil, fmt.Errorf("deposit is nil")
@@ -250,6 +254,7 @@ func MapDeposit(deposit *ethpb.Deposit) (*Deposit, error) {
 	}, nil
 }
 
+// MapSignedVoluntaryExit maps the eth2.SignedVoluntaryExit proto to the Web3Signer spec.
 func MapSignedVoluntaryExit(signedVoluntaryExit *ethpb.SignedVoluntaryExit) (*SignedVoluntaryExit, error) {
 	if signedVoluntaryExit == nil {
 		return nil, fmt.Errorf("signed voluntary exit is nil")
@@ -262,5 +267,128 @@ func MapSignedVoluntaryExit(signedVoluntaryExit *ethpb.SignedVoluntaryExit) (*Si
 		Signature: hexutil.Encode(
 			signedVoluntaryExit.Signature,
 		),
+	}, nil
+}
+
+// MapBeaconBlockAltair maps the eth2.BeaconBlockAltair proto to the Web3Signer spec.
+func MapBeaconBlockAltair(block *ethpb.BeaconBlockAltair) (*BeaconBlockAltair, error) {
+	if block == nil {
+		return nil, fmt.Errorf("beacon block altair is nil")
+	}
+	body, err := MapBeaconBlockBodyAltair(block.Body)
+	if err != nil {
+		return nil, err
+	}
+	return &BeaconBlockAltair{
+		Slot: fmt.Sprint(block.Slot),
+		Body: body,
+		ParentRoot: hexutil.Encode(
+			block.ParentRoot,
+		),
+		StateRoot: hexutil.Encode(
+			block.StateRoot,
+		),
+	}, nil
+}
+
+// MapBeaconBlockBodyAltair maps the eth2.BeaconBlockBodyAltair proto to the Web3Signer spec.
+func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBodyAltair, error) {
+	if body == nil {
+		return nil, fmt.Errorf("beacon block body altair is nil")
+	}
+
+	block := &BeaconBlockBodyAltair{
+		RandaoReveal: hexutil.Encode(body.RandaoReveal),
+		Eth1Data: &Eth1Data{
+			DepositRoot: hexutil.Encode(body.Eth1Data.DepositRoot),
+			BlockHash:   hexutil.Encode(body.Eth1Data.BlockHash),
+		},
+		Graffiti:          hexutil.Encode(body.Graffiti),
+		ProposerSlashings: make([]*ProposerSlashing, len(body.ProposerSlashings)),
+		AttesterSlashings: make([]*AttesterSlashing, len(body.AttesterSlashings)),
+		Attestations:      make([]*Attestation, len(body.Attestations)),
+		Deposits:          make([]*Deposit, len(body.Deposits)),
+		VoluntaryExits:    make([]*SignedVoluntaryExit, len(body.VoluntaryExits)),
+		SyncAggregate: &SyncAggregate{
+			SyncCommitteeBits:      fmt.Sprint(body.SyncAggregate.SyncCommitteeBits),
+			SyncCommitteeSignature: hexutil.Encode(body.SyncAggregate.SyncCommitteeSignature),
+		},
+	}
+	for i, slashing := range body.ProposerSlashings {
+		proposer, err := MapProposerSlashing(slashing)
+		if err != nil {
+			return nil, err
+		}
+		block.ProposerSlashings[i] = proposer
+	}
+	for i, slashing := range body.AttesterSlashings {
+		attesterSlashing, err := MapAttesterSlashing(slashing)
+		if err != nil {
+			return nil, err
+		}
+		block.AttesterSlashings[i] = attesterSlashing
+	}
+	for i, attestation := range body.Attestations {
+		attestation, err := MapAttestation(attestation)
+		if err != nil {
+			return nil, err
+		}
+		block.Attestations[i] = attestation
+	}
+	for i, deposit := range body.Deposits {
+		deposit, err := MapDeposit(deposit)
+		if err != nil {
+			return nil, err
+		}
+		block.Deposits[i] = deposit
+	}
+	for i, exit := range body.VoluntaryExits {
+
+		exit, err := MapSignedVoluntaryExit(exit)
+		if err != nil {
+			return nil, err
+		}
+		block.VoluntaryExits[i] = exit
+	}
+	return block, nil
+}
+
+// MapSyncCommitteeMessage maps the eth2.SyncCommitteeMessage proto to the Web3Signer spec.
+func MapSyncCommitteeMessage(message *ethpb.SyncCommitteeMessage) (*SyncCommitteeMessage, error) {
+	if message == nil {
+		return nil, fmt.Errorf("sync committee message is nil")
+	}
+	return &SyncCommitteeMessage{
+		BeaconBlockRoot: hexutil.Encode(message.BlockRoot),
+		Slot:            fmt.Sprint(message.Slot),
+	}, nil
+}
+
+// MapSyncAggregatorSelectionData maps the eth2.SyncAggregatorSelectionData proto to the Web3Signer spec.
+func MapSyncAggregatorSelectionData(data *ethpb.SyncAggregatorSelectionData) (*SyncAggregatorSelectionData, error) {
+	if data == nil {
+		return nil, fmt.Errorf("sync aggregator selection data is nil")
+	}
+	return &SyncAggregatorSelectionData{
+		Slot:              fmt.Sprint(data.Slot),
+		SubcommitteeIndex: fmt.Sprint(data.SubcommitteeIndex),
+	}, nil
+}
+
+// MapContributionAndProof maps the eth2.ContributionAndProof proto to the Web3Signer spec.
+func MapContributionAndProof(contribution *ethpb.ContributionAndProof) (*ContributionAndProof, error) {
+	if contribution == nil {
+		return nil, fmt.Errorf("contribution and proof is nil")
+	}
+	return &ContributionAndProof{
+		AggregatorIndex: fmt.Sprint(contribution.AggregatorIndex),
+		SelectionProof:  hexutil.Encode(contribution.SelectionProof),
+		Contribution: &SyncCommitteeContribution{
+			Slot:              fmt.Sprint(contribution.Contribution.Slot),
+			BeaconBlockRoot:   hexutil.Encode(contribution.Contribution.BlockRoot),
+			SubcommitteeIndex: fmt.Sprint(contribution.Contribution.SubcommitteeIndex),
+			AggregationBits:   hexutil.Encode(contribution.Contribution.AggregationBits),
+			Signature:         hexutil.Encode(contribution.Contribution.Signature),
+		},
 	}, nil
 }

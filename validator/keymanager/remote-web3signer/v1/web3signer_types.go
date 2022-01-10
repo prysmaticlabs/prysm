@@ -128,12 +128,14 @@ type AggregateAndProof struct {
 	SelectionProof  string       `json:"selection_proof"`
 }
 
+// Attestation a sub property of AggregateAndProofSignRequest.
 type Attestation struct {
 	AggregationBits string           `json:"aggregation_bits"`
 	Data            *AttestationData `json:"data"`
 	Signature       string           `json:"signature"`
 }
 
+// AttestationData a sub property of Attestation.
 type AttestationData struct {
 	Slot string `json:"slot"`
 	// Prysm uses CommitteeIndex but web3signer uses index.
@@ -143,11 +145,13 @@ type AttestationData struct {
 	Target          *Checkpoint `json:"target"`
 }
 
+// Checkpoint a sub property of AttestationData.
 type Checkpoint struct {
 	Epoch string `json:"epoch"`
 	Root  string `json:"root"`
 }
 
+// BeaconBlock a sub property of BeaconBlockBlockV2.
 type BeaconBlock struct {
 	Slot          string           `json:"slot"`
 	ProposerIndex string           `json:"proposer_index"`
@@ -156,6 +160,7 @@ type BeaconBlock struct {
 	Body          *BeaconBlockBody `json:"body"`
 }
 
+// BeaconBlockBody a sub property of BeaconBlock.
 type BeaconBlockBody struct {
 	RandaoReveal      string                 `json:"randao_reveal"`
 	Eth1Data          *Eth1Data              `json:"eth1_data"`
@@ -167,12 +172,14 @@ type BeaconBlockBody struct {
 	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits"`
 }
 
+// Eth1Data a sub property of BeaconBlockBody.
 type Eth1Data struct {
 	DepositRoot  string `json:"deposit_root"`
 	DepositCount string `json:"deposit_count"` /* uint64 */
 	BlockHash    string `json:"block_hash"`
 }
 
+// ProposerSlashing a sub property of BeaconBlockBody.
 type ProposerSlashing struct {
 	// Prysm uses Header_1 but web3signer uses signed_header_1.
 	SignedHeader_1 *SignedBeaconBlockHeader `json:"signed_header_1"`
@@ -180,11 +187,13 @@ type ProposerSlashing struct {
 	SignedHeader_2 *SignedBeaconBlockHeader `json:"signed_header_2"`
 }
 
+// SignedBeaconBlockHeader is a sub property of ProposerSlashing.
 type SignedBeaconBlockHeader struct {
 	Message   *BeaconBlockHeader
 	Signature string `json:"signature"`
 }
 
+// BeaconBlockHeader is a sub property of SignedBeaconBlockHeader.
 type BeaconBlockHeader struct {
 	Slot          string `json:"slot"`           /* uint64 */
 	ProposerIndex string `json:"proposer_index"` /* uint64 */
@@ -193,23 +202,27 @@ type BeaconBlockHeader struct {
 	BodyRoot      string `json:"body_root"`      /* Hash32 */
 }
 
+// AttesterSlashing a sub property of BeaconBlockBody.
 type AttesterSlashing struct {
 	Attestation_1 *IndexedAttestation `json:"attestation_1"`
 	Attestation_2 *IndexedAttestation `json:"attestation_2"`
 }
 
+// IndexedAttestation a sub property of AttesterSlashing.
 type IndexedAttestation struct {
 	AttestingIndices []string         `json:"attesting_indices"` /* uint64[] */
 	Data             *AttestationData `json:"data"`
 	Signature        string           `json:"signature"`
 }
 
+// Deposit a sub property of DepositSignRequest.
 type Deposit struct {
 	Proof []string     `json:"proof"`
 	Data  *DepositData `json:"data"`
 }
 
-// Prysm uses Deposit_data instead of DepositData which is inconsistent naming
+// DepositData a sub property of Deposit.
+// DepositData :Prysm uses Deposit_data instead of DepositData which is inconsistent naming
 type DepositData struct {
 	PublicKey             string `json:"public_key"`
 	WithdrawalCredentials string `json:"withdrawal_credentials"`
@@ -217,12 +230,14 @@ type DepositData struct {
 	Signature             string `json:"signature"`
 }
 
+// SignedVoluntaryExit is a sub property of BeaconBlockBody.
 type SignedVoluntaryExit struct {
 	// Prysm uses Exit instead of Message
 	Message   *VoluntaryExit `json:"message"`
 	Signature string         `json:"signature"`
 }
 
+// VoluntaryExit a sub property of SignedVoluntaryExit.
 type VoluntaryExit struct {
 	Epoch          string `json:"epoch"`           /* uint64 */
 	ValidatorIndex string `json:"validator_index"` /* uint64 */
@@ -234,6 +249,7 @@ type BeaconBlockAltairBlockV2 struct {
 	Block   *BeaconBlockAltair `json:"beacon_block"`
 }
 
+// BeaconBlockAltair a sub property of BeaconBlockAltairBlockV2.
 type BeaconBlockAltair struct {
 	Slot          string                 `json:"slot"`
 	ProposerIndex string                 `json:"proposer_index"`
@@ -242,6 +258,7 @@ type BeaconBlockAltair struct {
 	Body          *BeaconBlockBodyAltair `json:"body"`
 }
 
+// BeaconBlockBodyAltair a sub property of BeaconBlockAltair.
 type BeaconBlockBodyAltair struct {
 	RandaoReveal      string                 `json:"randao_reveal"`
 	Eth1Data          *Eth1Data              `json:"eth1_data"`
@@ -254,6 +271,7 @@ type BeaconBlockBodyAltair struct {
 	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
 }
 
+// SyncAggregate is a sub property of BeaconBlockBodyAltair.
 type SyncAggregate struct {
 	SyncCommitteeBits      string `json:"sync_committee_bits"`      /* SSZ hexadecimal string */
 	SyncCommitteeSignature string `json:"sync_committee_signature"` /* 96 byte hexadecimal string */
@@ -270,26 +288,30 @@ type RandaoReveal struct {
 	Epoch string `json:"epoch"` /* uint64 */
 }
 
+// SyncCommitteeMessage a sub property of SyncCommitteeSignRequest.
 type SyncCommitteeMessage struct {
 	BeaconBlockRoot string `json:"beacon_block_root"` /* Hash32 */
 	Slot            string `json:"slot"`              /* uint64 */
-	// Prysm uses v2/syncommittee and has the following extra properties : ValidatorIndex, Signature
+	// Prysm uses BlockRoot instead of BeaconBlockRoot and has the following extra properties : ValidatorIndex, Signature
 }
 
+// SyncAggregatorSelectionData a sub property of SyncAggregatorSelectionSignRequest.
 type SyncAggregatorSelectionData struct {
 	Slot              string `json:"slot"`               /* uint64 */
 	SubcommitteeIndex string `json:"subcommittee_index"` /* uint64 */
 }
 
+// ContributionAndProof a sub property of AggregatorSelectionSignRequest.
 type ContributionAndProof struct {
 	AggregatorIndex string `json:"aggregator_index"` /* uint64 */
 	SelectionProof  string `json:"selection_proof"`  /* 96 byte hexadecimal */
 	Contribution    *SyncCommitteeContribution
 }
 
+// SyncCommitteeContribution a sub property of AggregatorSelectionSignRequest.
 type SyncCommitteeContribution struct {
 	Slot string `json:"slot"` /* uint64 */
-	// Prysm uses v2/validator
+	// Prysm uses BlockRoot instead of BeaconBlockRoot
 	BeaconBlockRoot   string `json:"block_root"`         /* Hash32 */
 	SubcommitteeIndex string `json:"subcommittee_index"` /* uint64 */
 	AggregationBits   string `json:"aggregation_bits"`   /* SSZ hexadecimal string */
