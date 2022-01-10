@@ -42,15 +42,17 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 		require.NoError(t, st.SetFinalizedCheckpoint(cpt))
 
 		// Produce a proof for the finalized root.
-		_, err = st.FinalizedRootProof(ctx)
+		proof, err := st.FinalizedRootProof(ctx)
 		require.NoError(t, err)
 
 		// We expect the previous step to have triggered
 		// a recomputation of dirty fields in the beacon state, resulting
 		// in a new hash tree root as the finalized checkpoint had previously
 		// changed and should have been marked as a dirty state field.
-		newRoot, err := st.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		require.DeepNotEqual(t, currentRoot, newRoot)
+		// The proof should verify.
+		finalizedRoot := st.FinalizedCheckpoint().Root
+		gIndex := v1.FinalizedRootGeneralizedIndex()
+		valid := trie.VerifyMerkleProof(currentRoot[:], finalizedRoot, gIndex, proof)
+		require.Equal(t, true, valid)
 	})
 }
