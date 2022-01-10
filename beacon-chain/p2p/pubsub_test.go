@@ -63,8 +63,22 @@ func TestExtractGossipDigest(t *testing.T) {
 		error   error
 	}{
 		{
+			name:    "empty topic",
+			topic:   "",
+			want:    [4]byte{},
+			wantErr: true,
+			error:   errors.New("invalid topic format"),
+		},
+		{
 			name:    "too short topic",
 			topic:   "/eth2/",
+			want:    [4]byte{},
+			wantErr: true,
+			error:   errors.New("invalid topic format"),
+		},
+		{
+			name:    "bogus topic prefix",
+			topic:   "/eth3/b5303f2a/beacon_coin",
 			want:    [4]byte{},
 			wantErr: true,
 			error:   errors.New("invalid topic format"),
@@ -84,6 +98,13 @@ func TestExtractGossipDigest(t *testing.T) {
 			error:   errors.New("invalid digest length wanted"),
 		},
 		{
+			name:    "too short topic, missing suffixes",
+			topic:   "/eth2/b5303f2a",
+			want:    [4]byte{},
+			wantErr: true,
+			error:   errors.New("invalid topic format"),
+		},
+		{
 			name:    "valid topic",
 			topic:   fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy,
 			want:    [4]byte{0xb5, 0x30, 0x3f, 0x2a},
@@ -100,5 +121,16 @@ func TestExtractGossipDigest(t *testing.T) {
 			}
 			assert.DeepEqual(t, tt.want, got)
 		})
+	}
+}
+
+func BenchmarkExtractGossipDigest(b *testing.B) {
+	topic := fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := ExtractGossipDigest(topic)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }

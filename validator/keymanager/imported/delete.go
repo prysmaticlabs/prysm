@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/sirupsen/logrus"
@@ -19,7 +20,7 @@ func (km *Keymanager) DeleteKeystores(
 	ctx context.Context, publicKeys [][]byte,
 ) ([]*ethpbservice.DeletedKeystoreStatus, error) {
 	// Check for duplicate keys and filter them out.
-	trackedPublicKeys := make(map[[48]byte]bool)
+	trackedPublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	statuses := make([]*ethpbservice.DeletedKeystoreStatus, 0, len(publicKeys))
 	var store *AccountsKeystoreRepresentation
 	var err error
