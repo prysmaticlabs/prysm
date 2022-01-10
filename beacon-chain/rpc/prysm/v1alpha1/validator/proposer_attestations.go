@@ -98,7 +98,7 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 			}
 			return altair.ProcessAttestationNoVerifySignature(ctx, st, attestation, totalBalance)
 		}
-	case version.Merge:
+	case version.Bellatrix:
 		// Use a wrapper here, as go needs strong typing for the function signature.
 		attestationProcessor = func(ctx context.Context, st state.BeaconState, attestation *ethpb.Attestation) (state.BeaconState, error) {
 			totalBalance, err := helpers.TotalActiveBalance(st)

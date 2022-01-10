@@ -113,7 +113,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 		return nil, err
 	}
 	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-	if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+	if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
 		finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 		if err != nil {
 			return nil, err

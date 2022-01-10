@@ -114,7 +114,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	if postState.Version() == version.Merge {
+	if postState.Version() == version.Bellatrix {
 		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
 		if err != nil {
 			return errors.Wrap(err, "could not check if execution is enabled")
@@ -200,7 +200,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Notify execution layer with fork choice head update if this is post merge block.
-	if postState.Version() == version.Merge {
+	if postState.Version() == version.Bellatrix {
 		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
 		if err != nil {
 			return errors.Wrap(err, "could not check if execution is enabled")
@@ -220,7 +220,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 					return
 				}
 				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-				if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+				if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
 					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 					if err != nil {
 						log.WithError(err)
@@ -355,7 +355,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 			return nil, nil, err
 		}
 
-		if preState.Version() == version.Merge {
+		if preState.Version() == version.Bellatrix {
 			executionEnabled, err := blocks.ExecutionEnabled(preState, b.Block().Body())
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not check if execution is enabled")
@@ -391,7 +391,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 
 				}
 				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-				if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+				if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
 					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 					if err != nil {
 						return nil, nil, err

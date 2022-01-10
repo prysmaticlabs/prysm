@@ -162,7 +162,7 @@ func executeStateTransitionStateGen(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block")
 	}
-	if signed.Version() == version.Altair || signed.Version() == version.Merge {
+	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return nil, err
@@ -213,7 +213,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 				if err != nil {
 					return nil, errors.Wrap(err, "could not process epoch with optimization")
 				}
-			case version.Merge:
+			case version.Bellatrix:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not process epoch with optimization")

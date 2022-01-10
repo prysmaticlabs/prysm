@@ -383,7 +383,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	var sig bls.Signature
 	switch b.Version() {
 
-	case version.Merge:
+	case version.Bellatrix:
 		block, ok := b.Proto().(*ethpb.BeaconBlockMerge)
 		if !ok {
 			return nil, nil, errors.New("could not convert obj to beacon block merge")
