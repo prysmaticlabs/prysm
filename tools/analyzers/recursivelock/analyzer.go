@@ -353,7 +353,7 @@ func hasNestedRLock(fullRLockSelector *selIdentList, compareMap *selIdentList, c
 		node = findCallDeclarationNode(call, inspect, pass.TypesInfo)
 		if node == (*ast.FuncDecl)(nil) {
 			return ""
-		} else if castedNode := node.(*ast.FuncDecl); castedNode.Recv != nil {
+		} else if castedNode, ok := node.(*ast.FuncDecl); ok && castedNode.Recv != nil {
 			recv = castedNode.Recv.List[0].Names[0]
 			rLockSelector.changeRoot(recv, pass.TypesInfo.ObjectOf(recv))
 		}
@@ -397,7 +397,10 @@ func findCallDeclarationNode(c *callInfo, inspect *inspector.Inspector, tInfo *t
 		(*ast.FuncDecl)(nil),
 	}
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
-		funcDec, _ := node.(*ast.FuncDecl)
+		funcDec, ok := node.(*ast.FuncDecl)
+		if !ok {
+			return
+		}
 		compareId := tInfo.ObjectOf(funcDec.Name).String()
 		if c.id == compareId {
 			retNode = funcDec
