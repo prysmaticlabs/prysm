@@ -335,7 +335,7 @@ func TestPhase0SignedBeaconBlock_Header(t *testing.T) {
 	assert.DeepEqual(t, signature, header.Signature)
 }
 
-func TestMergeSignedBeaconBlock_Header(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_Header(t *testing.T) {
 	root := bytesutil.PadTo([]byte("root"), 32)
 	signature := bytesutil.PadTo([]byte("sig"), 96)
 	body := &ethpb.BeaconBlockBodyMerge{}
@@ -365,7 +365,7 @@ func TestMergeSignedBeaconBlock_Header(t *testing.T) {
 	assert.DeepEqual(t, signature, header.Signature)
 }
 
-func TestMergeSignedBeaconBlock_Signature(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_Signature(t *testing.T) {
 	sig := []byte{0x11, 0x22}
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{}, Signature: sig})
 	require.NoError(t, err)
@@ -375,7 +375,7 @@ func TestMergeSignedBeaconBlock_Signature(t *testing.T) {
 	}
 }
 
-func TestMergeSignedBeaconBlock_Block(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_Block(t *testing.T) {
 	blk := &ethpb.BeaconBlockMerge{Slot: 54}
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: blk})
 	require.NoError(t, err)
@@ -383,7 +383,7 @@ func TestMergeSignedBeaconBlock_Block(t *testing.T) {
 	assert.DeepEqual(t, blk, wsb.Block().Proto())
 }
 
-func TestMergeSignedBeaconBlock_IsNil(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_IsNil(t *testing.T) {
 	_, err := wrapper.WrappedMergeSignedBeaconBlock(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
@@ -393,11 +393,11 @@ func TestMergeSignedBeaconBlock_IsNil(t *testing.T) {
 	assert.Equal(t, false, wsb.IsNil())
 }
 
-func TestMergeSignedBeaconBlock_Copy(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_Copy(t *testing.T) {
 	t.Skip("TODO: Missing mutation evaluation helpers")
 }
 
-func TestMergeSignedBeaconBlock_Proto(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_Proto(t *testing.T) {
 	sb := &ethpb.SignedBeaconBlockMerge{
 		Block:     &ethpb.BeaconBlockMerge{Slot: 66},
 		Signature: []byte{0x11, 0x22},
@@ -408,7 +408,7 @@ func TestMergeSignedBeaconBlock_Proto(t *testing.T) {
 	assert.Equal(t, sb, wsb.Proto())
 }
 
-func TestMergeSignedBeaconBlock_PbPhase0Block(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_PbPhase0Block(t *testing.T) {
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{}})
 	require.NoError(t, err)
 
@@ -417,7 +417,7 @@ func TestMergeSignedBeaconBlock_PbPhase0Block(t *testing.T) {
 	}
 }
 
-func TestMergeSignedBeaconBlock_PbMergeBlock(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_PbMergeBlock(t *testing.T) {
 	sb := &ethpb.SignedBeaconBlockMerge{
 		Block:     &ethpb.BeaconBlockMerge{Slot: 66},
 		Signature: []byte{0x11, 0x22},
@@ -430,7 +430,7 @@ func TestMergeSignedBeaconBlock_PbMergeBlock(t *testing.T) {
 	assert.Equal(t, sb, got)
 }
 
-func TestMergeSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(util.HydrateSignedBeaconBlockMerge(&ethpb.SignedBeaconBlockMerge{}))
 	assert.NoError(t, err)
 
@@ -440,7 +440,7 @@ func TestMergeSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
 	assert.NotEqual(t, 0, len(b))
 }
 
-func TestMergeSignedBeaconBlock_SSZ(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_SSZ(t *testing.T) {
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(util.HydrateSignedBeaconBlockMerge(&ethpb.SignedBeaconBlockMerge{}))
 	assert.NoError(t, err)
 
@@ -453,14 +453,14 @@ func TestMergeSignedBeaconBlock_SSZ(t *testing.T) {
 	assert.NoError(t, wsb.UnmarshalSSZ(b))
 }
 
-func TestMergeSignedBeaconBlock_Version(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_Version(t *testing.T) {
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{}})
 	require.NoError(t, err)
 
-	assert.Equal(t, version.Merge, wsb.Version())
+	assert.Equal(t, version.Bellatrix, wsb.Version())
 }
 
-func TestMergeBeaconBlock_Slot(t *testing.T) {
+func TestBellatrixBeaconBlock_Slot(t *testing.T) {
 	slot := types.Slot(546)
 	wb, err := wrapper.WrappedMergeBeaconBlock(&ethpb.BeaconBlockMerge{Slot: slot})
 	require.NoError(t, err)
@@ -468,7 +468,7 @@ func TestMergeBeaconBlock_Slot(t *testing.T) {
 	assert.Equal(t, slot, wb.Slot())
 }
 
-func TestMergeBeaconBlock_ProposerIndex(t *testing.T) {
+func TestBellatrixBeaconBlock_ProposerIndex(t *testing.T) {
 	pi := types.ValidatorIndex(555)
 	wb, err := wrapper.WrappedMergeBeaconBlock(&ethpb.BeaconBlockMerge{ProposerIndex: pi})
 	require.NoError(t, err)
@@ -476,7 +476,7 @@ func TestMergeBeaconBlock_ProposerIndex(t *testing.T) {
 	assert.Equal(t, pi, wb.ProposerIndex())
 }
 
-func TestMergeBeaconBlock_ParentRoot(t *testing.T) {
+func TestBellatrixBeaconBlock_ParentRoot(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
 	wb, err := wrapper.WrappedMergeBeaconBlock(&ethpb.BeaconBlockMerge{ParentRoot: root})
 	require.NoError(t, err)
@@ -484,7 +484,7 @@ func TestMergeBeaconBlock_ParentRoot(t *testing.T) {
 	assert.DeepEqual(t, root, wb.ParentRoot())
 }
 
-func TestMergeBeaconBlock_StateRoot(t *testing.T) {
+func TestBellatrixBeaconBlock_StateRoot(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
 	wb, err := wrapper.WrappedMergeBeaconBlock(&ethpb.BeaconBlockMerge{StateRoot: root})
 	require.NoError(t, err)
@@ -492,7 +492,7 @@ func TestMergeBeaconBlock_StateRoot(t *testing.T) {
 	assert.DeepEqual(t, root, wb.StateRoot())
 }
 
-func TestMergeBeaconBlock_Body(t *testing.T) {
+func TestBellatrixBeaconBlock_Body(t *testing.T) {
 	body := &ethpb.BeaconBlockBodyMerge{Graffiti: []byte{0x44}}
 	wb, err := wrapper.WrappedMergeBeaconBlock(&ethpb.BeaconBlockMerge{Body: body})
 	require.NoError(t, err)
@@ -500,7 +500,7 @@ func TestMergeBeaconBlock_Body(t *testing.T) {
 	assert.Equal(t, body, wb.Body().Proto())
 }
 
-func TestMergeBeaconBlock_IsNil(t *testing.T) {
+func TestBellatrixBeaconBlock_IsNil(t *testing.T) {
 	_, err := wrapper.WrappedMergeBeaconBlock(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
@@ -510,7 +510,7 @@ func TestMergeBeaconBlock_IsNil(t *testing.T) {
 	assert.Equal(t, false, wb.IsNil())
 }
 
-func TestMergeBeaconBlock_HashTreeRoot(t *testing.T) {
+func TestBellatrixBeaconBlock_HashTreeRoot(t *testing.T) {
 	wb, err := wrapper.WrappedMergeBeaconBlock(util.HydrateBeaconBlockMerge(&ethpb.BeaconBlockMerge{}))
 	require.NoError(t, err)
 
@@ -519,7 +519,7 @@ func TestMergeBeaconBlock_HashTreeRoot(t *testing.T) {
 	assert.NotEmpty(t, rt)
 }
 
-func TestMergeBeaconBlock_Proto(t *testing.T) {
+func TestBellatrixBeaconBlock_Proto(t *testing.T) {
 	blk := &ethpb.BeaconBlockMerge{ProposerIndex: 234}
 	wb, err := wrapper.WrappedMergeBeaconBlock(blk)
 	require.NoError(t, err)
@@ -527,7 +527,7 @@ func TestMergeBeaconBlock_Proto(t *testing.T) {
 	assert.Equal(t, blk, wb.Proto())
 }
 
-func TestMergeBeaconBlock_SSZ(t *testing.T) {
+func TestBellatrixBeaconBlock_SSZ(t *testing.T) {
 	wb, err := wrapper.WrappedMergeBeaconBlock(util.HydrateBeaconBlockMerge(&ethpb.BeaconBlockMerge{}))
 	assert.NoError(t, err)
 
@@ -540,14 +540,14 @@ func TestMergeBeaconBlock_SSZ(t *testing.T) {
 	assert.NoError(t, wb.UnmarshalSSZ(b))
 }
 
-func TestMergeBeaconBlock_Version(t *testing.T) {
+func TestBellatrixBeaconBlock_Version(t *testing.T) {
 	wb, err := wrapper.WrappedMergeBeaconBlock(&ethpb.BeaconBlockMerge{})
 	require.NoError(t, err)
 
-	assert.Equal(t, version.Merge, wb.Version())
+	assert.Equal(t, version.Bellatrix, wb.Version())
 }
 
-func TestMergeBeaconBlockBody_RandaoReveal(t *testing.T) {
+func TestBellatrixBeaconBlockBody_RandaoReveal(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
 	wbb, err := wrapper.WrappedMergeBeaconBlockBody(&ethpb.BeaconBlockBodyMerge{RandaoReveal: root})
 	require.NoError(t, err)
@@ -555,7 +555,7 @@ func TestMergeBeaconBlockBody_RandaoReveal(t *testing.T) {
 	assert.DeepEqual(t, root, wbb.RandaoReveal())
 }
 
-func TestMergeBeaconBlockBody_Eth1Data(t *testing.T) {
+func TestBellatrixBeaconBlockBody_Eth1Data(t *testing.T) {
 	data := &ethpb.Eth1Data{}
 	body := &ethpb.BeaconBlockBodyMerge{
 		Eth1Data: data,
@@ -565,7 +565,7 @@ func TestMergeBeaconBlockBody_Eth1Data(t *testing.T) {
 	assert.Equal(t, data, wbb.Eth1Data())
 }
 
-func TestMergeBeaconBlockBody_Graffiti(t *testing.T) {
+func TestBellatrixBeaconBlockBody_Graffiti(t *testing.T) {
 	graffiti := []byte{0x66, 0xAA}
 	body := &ethpb.BeaconBlockBodyMerge{Graffiti: graffiti}
 	wbb, err := wrapper.WrappedMergeBeaconBlockBody(body)
@@ -574,7 +574,7 @@ func TestMergeBeaconBlockBody_Graffiti(t *testing.T) {
 	assert.DeepEqual(t, graffiti, wbb.Graffiti())
 }
 
-func TestMergeBeaconBlockBody_ProposerSlashings(t *testing.T) {
+func TestBellatrixBeaconBlockBody_ProposerSlashings(t *testing.T) {
 	ps := []*ethpb.ProposerSlashing{
 		{Header_1: &ethpb.SignedBeaconBlockHeader{
 			Signature: []byte{0x11, 0x20},
@@ -587,7 +587,7 @@ func TestMergeBeaconBlockBody_ProposerSlashings(t *testing.T) {
 	assert.DeepEqual(t, ps, wbb.ProposerSlashings())
 }
 
-func TestMergeBeaconBlockBody_AttesterSlashings(t *testing.T) {
+func TestBellatrixBeaconBlockBody_AttesterSlashings(t *testing.T) {
 	as := []*ethpb.AttesterSlashing{
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte{0x11}}},
 	}
@@ -598,7 +598,7 @@ func TestMergeBeaconBlockBody_AttesterSlashings(t *testing.T) {
 	assert.DeepEqual(t, as, wbb.AttesterSlashings())
 }
 
-func TestMergeBeaconBlockBody_Attestations(t *testing.T) {
+func TestBellatrixBeaconBlockBody_Attestations(t *testing.T) {
 	atts := []*ethpb.Attestation{{Signature: []byte{0x88}}}
 
 	body := &ethpb.BeaconBlockBodyMerge{Attestations: atts}
@@ -608,7 +608,7 @@ func TestMergeBeaconBlockBody_Attestations(t *testing.T) {
 	assert.DeepEqual(t, atts, wbb.Attestations())
 }
 
-func TestMergeBeaconBlockBody_Deposits(t *testing.T) {
+func TestBellatrixBeaconBlockBody_Deposits(t *testing.T) {
 	deposits := []*ethpb.Deposit{
 		{Proof: [][]byte{{0x54, 0x10}}},
 	}
@@ -619,7 +619,7 @@ func TestMergeBeaconBlockBody_Deposits(t *testing.T) {
 	assert.DeepEqual(t, deposits, wbb.Deposits())
 }
 
-func TestMergeBeaconBlockBody_VoluntaryExits(t *testing.T) {
+func TestBellatrixBeaconBlockBody_VoluntaryExits(t *testing.T) {
 	exits := []*ethpb.SignedVoluntaryExit{
 		{Exit: &ethpb.VoluntaryExit{Epoch: 54}},
 	}
@@ -630,7 +630,7 @@ func TestMergeBeaconBlockBody_VoluntaryExits(t *testing.T) {
 	assert.DeepEqual(t, exits, wbb.VoluntaryExits())
 }
 
-func TestMergeBeaconBlockBody_IsNil(t *testing.T) {
+func TestBellatrixBeaconBlockBody_IsNil(t *testing.T) {
 	_, err := wrapper.WrappedMergeBeaconBlockBody(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
@@ -640,7 +640,7 @@ func TestMergeBeaconBlockBody_IsNil(t *testing.T) {
 
 }
 
-func TestMergeBeaconBlockBody_HashTreeRoot(t *testing.T) {
+func TestBellatrixBeaconBlockBody_HashTreeRoot(t *testing.T) {
 	wb, err := wrapper.WrappedMergeBeaconBlockBody(util.HydrateBeaconBlockBodyMerge(&ethpb.BeaconBlockBodyMerge{}))
 	assert.NoError(t, err)
 
@@ -649,7 +649,7 @@ func TestMergeBeaconBlockBody_HashTreeRoot(t *testing.T) {
 	assert.NotEmpty(t, rt)
 }
 
-func TestMergeBeaconBlockBody_Proto(t *testing.T) {
+func TestBellatrixBeaconBlockBody_Proto(t *testing.T) {
 	body := &ethpb.BeaconBlockBodyMerge{Graffiti: []byte{0x66, 0xAA}}
 	wbb, err := wrapper.WrappedMergeBeaconBlockBody(body)
 	require.NoError(t, err)
@@ -657,7 +657,7 @@ func TestMergeBeaconBlockBody_Proto(t *testing.T) {
 	assert.Equal(t, body, wbb.Proto())
 }
 
-func TestMergeBeaconBlockBody_ExecutionPayload(t *testing.T) {
+func TestBellatrixBeaconBlockBody_ExecutionPayload(t *testing.T) {
 	payloads := &ethpb.ExecutionPayload{
 		BlockNumber: 100,
 	}

@@ -242,7 +242,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Merge:
+			case version.Altair, version.Bellatrix:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
@@ -265,7 +265,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			}
 		}
 
-		if time.CanUpgradeToMerge(state.Slot()) {
+		if time.CanUpgradeToBellatrix(state.Slot()) {
 			state, err = execution.UpgradeToMerge(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)

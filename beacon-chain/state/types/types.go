@@ -59,12 +59,12 @@ func (f FieldIndex) String(stateVersion int) string {
 	case Slashings:
 		return "slashings"
 	case PreviousEpochAttestations:
-		if version.Altair == stateVersion || version.Merge == stateVersion {
+		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
 			return "previousEpochParticipationBits"
 		}
 		return "previousEpochAttestations"
 	case CurrentEpochAttestations:
-		if version.Altair == stateVersion || version.Merge == stateVersion {
+		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
 			return "currentEpochParticipationBits"
 		}
 		return "currentEpochAttestations"
@@ -132,7 +132,7 @@ const (
 	InactivityScores
 	CurrentSyncCommittee
 	NextSyncCommittee
-	// State fields added in Merge.
+	// State fields added in Bellatrix.
 	LatestExecutionPayloadHeader
 )
 
