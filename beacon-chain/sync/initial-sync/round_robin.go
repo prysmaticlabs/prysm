@@ -280,7 +280,6 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 		blockRoots[i] = blkRoot
 	}
-
 	return bFunc(ctx, blks, blockRoots)
 }
 
