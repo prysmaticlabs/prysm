@@ -3,10 +3,10 @@ package accounts
 import (
 	"os"
 
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/tos"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -27,9 +27,9 @@ var Commands = &cli.Command{
 				flags.WalletDirFlag,
 				flags.WalletPasswordFileFlag,
 				flags.DeletePublicKeysFlag,
-				featureconfig.Mainnet,
-				featureconfig.PyrmontTestnet,
-				featureconfig.PraterTestnet,
+				features.Mainnet,
+				features.PyrmontTestnet,
+				features.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -39,7 +39,7 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
+				features.ConfigureValidator(cliCtx)
 				if err := accounts.DeleteAccountCli(cliCtx); err != nil {
 					log.Fatalf("Could not delete account: %v", err)
 				}
@@ -61,9 +61,9 @@ var Commands = &cli.Command{
 				flags.GrpcHeadersFlag,
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
-				featureconfig.Mainnet,
-				featureconfig.PyrmontTestnet,
-				featureconfig.PraterTestnet,
+				features.Mainnet,
+				features.PyrmontTestnet,
+				features.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -73,7 +73,7 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
+				features.ConfigureValidator(cliCtx)
 				if err := accounts.ListAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not list accounts: %v", err)
 				}
@@ -92,9 +92,9 @@ var Commands = &cli.Command{
 				flags.BackupDirFlag,
 				flags.BackupPublicKeysFlag,
 				flags.BackupPasswordFile,
-				featureconfig.Mainnet,
-				featureconfig.PyrmontTestnet,
-				featureconfig.PraterTestnet,
+				features.Mainnet,
+				features.PyrmontTestnet,
+				features.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -104,7 +104,7 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
+				features.ConfigureValidator(cliCtx)
 				if err := accounts.BackupAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not backup accounts: %v", err)
 				}
@@ -120,9 +120,9 @@ var Commands = &cli.Command{
 				flags.WalletPasswordFileFlag,
 				flags.AccountPasswordFileFlag,
 				flags.ImportPrivateKeyFileFlag,
-				featureconfig.Mainnet,
-				featureconfig.PyrmontTestnet,
-				featureconfig.PraterTestnet,
+				features.Mainnet,
+				features.PyrmontTestnet,
+				features.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -132,7 +132,7 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
+				features.ConfigureValidator(cliCtx)
 				if err := accounts.ImportAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not import accounts: %v", err)
 				}
@@ -154,9 +154,9 @@ var Commands = &cli.Command{
 				flags.GrpcRetriesFlag,
 				flags.GrpcRetryDelayFlag,
 				flags.ExitAllFlag,
-				featureconfig.Mainnet,
-				featureconfig.PyrmontTestnet,
-				featureconfig.PraterTestnet,
+				features.Mainnet,
+				features.PyrmontTestnet,
+				features.PraterTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -166,7 +166,7 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				featureconfig.ConfigureValidator(cliCtx)
+				features.ConfigureValidator(cliCtx)
 				if err := accounts.ExitAccountsCli(cliCtx, os.Stdin); err != nil {
 					log.Fatalf("Could not perform voluntary exit: %v", err)
 				}

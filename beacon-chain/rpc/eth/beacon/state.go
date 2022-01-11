@@ -6,13 +6,13 @@ import (
 	"strconv"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,7 +27,7 @@ type stateRequest struct {
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
 func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.GenesisResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetGenesis")
+	_, span := trace.StartSpan(ctx, "beacon.GetGenesis")
 	defer span.End()
 
 	genesisTime := bs.GenesisTimeFetcher.GenesisTime()
@@ -54,7 +54,7 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Gene
 
 // GetStateRoot calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
 func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateRootResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetStateRoot")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetStateRoot")
 	defer span.End()
 
 	var (
@@ -81,20 +81,20 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 
 // GetStateFork returns Fork object for state with given 'stateId'.
 func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateForkResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetStateFork")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetStateFork")
 	defer span.End()
 
 	var (
-		state state.BeaconState
-		err   error
+		st  state.BeaconState
+		err error
 	)
 
-	state, err = bs.StateFetcher.State(ctx, req.StateId)
+	st, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	fork := state.Fork()
+	fork := st.Fork()
 	return &ethpb.StateForkResponse{
 		Data: &ethpb.Fork{
 			PreviousVersion: fork.PreviousVersion,
@@ -107,15 +107,15 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 // GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
 // not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
 func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateFinalityCheckpointResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetFinalityCheckpoints")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetFinalityCheckpoints")
 	defer span.End()
 
 	var (
-		state state.BeaconState
-		err   error
+		st  state.BeaconState
+		err error
 	)
 
-	state, err = bs.StateFetcher.State(ctx, req.StateId)
+	st, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
@@ -127,16 +127,16 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 
 	return &ethpb.StateFinalityCheckpointResponse{
 		Data: &ethpb.StateFinalityCheckpointResponse_StateFinalityCheckpoint{
-			PreviousJustified: checkpoint(state.PreviousJustifiedCheckpoint()),
-			CurrentJustified:  checkpoint(state.CurrentJustifiedCheckpoint()),
-			Finalized:         checkpoint(state.FinalizedCheckpoint()),
+			PreviousJustified: checkpoint(st.PreviousJustifiedCheckpoint()),
+			CurrentJustified:  checkpoint(st.CurrentJustifiedCheckpoint()),
+			Finalized:         checkpoint(st.FinalizedCheckpoint()),
 		},
 	}, nil
 }
 
 func (bs *Server) stateFromRequest(ctx context.Context, req *stateRequest) (state.BeaconState, error) {
 	if req.epoch != nil {
-		slot, err := core.StartSlot(*req.epoch)
+		slot, err := slots.EpochStart(*req.epoch)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,

@@ -1,14 +1,12 @@
 package types
 
 import (
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"google.golang.org/protobuf/proto"
 )
 
 func init() {
@@ -24,9 +22,6 @@ var (
 	// BlockMap maps the fork-version to the underlying data type for that
 	// particular fork period.
 	BlockMap map[[4]byte]func() (block.SignedBeaconBlock, error)
-	// StateMap maps the fork-version to the underlying data type for that
-	// particular fork period.
-	StateMap map[[4]byte]proto.Message
 	// MetaDataMap maps the fork-version to the underlying data type for that
 	// particular fork period.
 	MetaDataMap map[[4]byte]func() metadata.Metadata
@@ -38,17 +33,11 @@ func InitializeDataMaps() {
 	// Reset our block map.
 	BlockMap = map[[4]byte]func() (block.SignedBeaconBlock, error){
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (block.SignedBeaconBlock, error) {
-			return wrapper.WrappedPhase0SignedBeaconBlock(&eth.SignedBeaconBlock{}), nil
+			return wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{}), nil
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (block.SignedBeaconBlock, error) {
 			return wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 		},
-	}
-
-	// Reset our state map.
-	StateMap = map[[4]byte]proto.Message{
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): &ethpb.BeaconState{},
-		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion):  &ethpb.BeaconStateAltair{},
 	}
 
 	// Reset our metadata map.

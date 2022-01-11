@@ -5,31 +5,28 @@ import (
 	"errors"
 
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
 
 // MockSlasher mocks the slasher rpc server.
 type MockSlasher struct {
-	SlashAttestation                     bool
-	SlashBlock                           bool
-	IsSlashableAttestationCalled         bool
-	IsSlashableAttestationNoUpdateCalled bool
-	IsSlashableBlockCalled               bool
-	IsSlashableBlockNoUpdateCalled       bool
+	SlashAttestation             bool
+	SlashBlock                   bool
+	IsSlashableAttestationCalled bool
+	IsSlashableBlockCalled       bool
 }
 
 // HighestAttestations will return an empty array of attestations.
-func (ms MockSlasher) HighestAttestations(ctx context.Context, req *slashpb.HighestAttestationRequest, _ ...grpc.CallOption) (*slashpb.HighestAttestationResponse, error) {
-	return &slashpb.HighestAttestationResponse{
+func (MockSlasher) HighestAttestations(ctx context.Context, req *eth.HighestAttestationRequest, _ ...grpc.CallOption) (*eth.HighestAttestationResponse, error) {
+	return &eth.HighestAttestationResponse{
 		Attestations: nil,
 	}, nil
 }
 
 // IsSlashableAttestation returns slashbale attestation if slash attestation is set to true.
-func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*slashpb.AttesterSlashingResponse, error) {
-	ms.IsSlashableAttestationCalled = true
+func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*eth.AttesterSlashingResponse, error) {
+	ms.IsSlashableAttestationCalled = true // skipcq: RVV-B0006
 	if ms.SlashAttestation {
 
 		slashingAtt, ok := proto.Clone(in).(*eth.IndexedAttestation)
@@ -42,25 +39,16 @@ func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedA
 			Attestation_2: slashingAtt,
 		},
 		}
-		return &slashpb.AttesterSlashingResponse{
+		return &eth.AttesterSlashingResponse{
 			AttesterSlashings: slashings,
 		}, nil
 	}
 	return nil, nil
 }
 
-// IsSlashableAttestationNoUpdate returns slashbale if slash attestation is set to true.
-func (ms MockSlasher) IsSlashableAttestationNoUpdate(_ context.Context, _ *eth.IndexedAttestation, _ ...grpc.CallOption) (*slashpb.Slashable, error) {
-	ms.IsSlashableAttestationNoUpdateCalled = true
-	return &slashpb.Slashable{
-		Slashable: ms.SlashAttestation,
-	}, nil
-
-}
-
 // IsSlashableBlock returns proposer slashing if slash block is set to true.
-func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBlockHeader, _ ...grpc.CallOption) (*slashpb.ProposerSlashingResponse, error) {
-	ms.IsSlashableBlockCalled = true
+func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBlockHeader, _ ...grpc.CallOption) (*eth.ProposerSlashingResponse, error) {
+	ms.IsSlashableBlockCalled = true // skipcq: RVV-B0006
 	if ms.SlashBlock {
 		slashingBlk, ok := proto.Clone(in).(*eth.SignedBeaconBlockHeader)
 		if !ok {
@@ -72,17 +60,9 @@ func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBl
 			Header_2: slashingBlk,
 		},
 		}
-		return &slashpb.ProposerSlashingResponse{
+		return &eth.ProposerSlashingResponse{
 			ProposerSlashings: slashings,
 		}, nil
 	}
 	return nil, nil
-}
-
-// IsSlashableBlockNoUpdate returns slashbale if slash block is set to true.
-func (ms MockSlasher) IsSlashableBlockNoUpdate(_ context.Context, _ *eth.BeaconBlockHeader, _ ...grpc.CallOption) (*slashpb.Slashable, error) {
-	ms.IsSlashableBlockNoUpdateCalled = true
-	return &slashpb.Slashable{
-		Slashable: ms.SlashBlock,
-	}, nil
 }

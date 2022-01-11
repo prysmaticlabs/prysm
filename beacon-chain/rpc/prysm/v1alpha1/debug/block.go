@@ -3,15 +3,16 @@ package debug
 import (
 	"context"
 	"fmt"
+	"math"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -61,7 +62,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 		return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 	}
 
-	inclusionSlot := types.Slot(1<<64 - 1)
+	inclusionSlot := types.Slot(math.MaxUint64)
 	targetStates := make(map[[32]byte]state.ReadOnlyBeaconState)
 	for _, blk := range blks {
 		for _, a := range blk.Block().Body().Attestations() {
@@ -74,11 +75,11 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 				}
 				targetStates[tr] = s
 			}
-			c, err := helpers.BeaconCommitteeFromState(s, a.Data.Slot, a.Data.CommitteeIndex)
+			c, err := helpers.BeaconCommitteeFromState(ctx, s, a.Data.Slot, a.Data.CommitteeIndex)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get committee: %v", err)
 			}
-			indices, err := attestationutil.AttestingIndices(a.AggregationBits, c)
+			indices, err := attestation.AttestingIndices(a.AggregationBits, c)
 			if err != nil {
 				return nil, err
 			}

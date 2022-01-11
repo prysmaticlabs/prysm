@@ -8,11 +8,12 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/asyncutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -22,9 +23,9 @@ import (
 // library to listen for file-system changes and debounces these events to
 // ensure we can handle thousands of events fired in a short time-span.
 func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
-	debounceFileChangesInterval := featureconfig.Get().KeystoreImportDebounceInterval
+	debounceFileChangesInterval := features.Get().KeystoreImportDebounceInterval
 	accountsFilePath := filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
-	if !fileutil.FileExists(accountsFilePath) {
+	if !file.FileExists(accountsFilePath) {
 		return
 	}
 	watcher, err := fsnotify.NewWatcher()
@@ -49,7 +50,7 @@ func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
 	// We debounce events sent over the file changes channel by an interval
 	// to ensure we are not overwhelmed by a ton of events fired over the channel in
 	// a short span of time.
-	go asyncutil.Debounce(ctx, debounceFileChangesInterval, fileChangesChan, func(event interface{}) {
+	go async.Debounce(ctx, debounceFileChangesInterval, fileChangesChan, func(event interface{}) {
 		ev, ok := event.(fsnotify.Event)
 		if !ok {
 			log.Errorf("Type %T is not a valid file system event", event)
@@ -106,7 +107,7 @@ func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepre
 	if len(newAccountsStore.PublicKeys) != len(newAccountsStore.PrivateKeys) {
 		return errors.New("number of public and private keys in keystore do not match")
 	}
-	pubKeys := make([][48]byte, len(newAccountsStore.PublicKeys))
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, len(newAccountsStore.PublicKeys))
 	for i := 0; i < len(newAccountsStore.PrivateKeys); i++ {
 		privKey, err := bls.SecretKeyFromBytes(newAccountsStore.PrivateKeys[i])
 		if err != nil {

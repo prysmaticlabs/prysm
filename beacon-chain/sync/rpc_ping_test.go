@@ -18,9 +18,9 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestPingRPCHandler_ReceivesPing(t *testing.T) {
@@ -41,9 +41,9 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:  d,
-			P2P: p1,
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -61,7 +61,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, stream)
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
@@ -70,7 +70,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 
 	assert.NoError(t, r.pingHandler(context.Background(), &seqNumber, stream1))
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -98,10 +98,10 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p1,
-			Chain: &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
+			chain:    &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -113,10 +113,10 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.Peers().SetMetadata(p1.BHost.ID(), p1.LocalMetadata)
 
 	r2 := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p2,
-			Chain: &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p2,
+			chain:    &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
@@ -130,14 +130,14 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r2.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r2.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
 	})
 
 	assert.NoError(t, r.sendPingRequest(context.Background(), p2.BHost.ID()))
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -165,9 +165,9 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:  d,
-			P2P: p1,
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -198,7 +198,7 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	err = r.pingHandler(context.Background(), &wantedSeq, stream1)
 	assert.ErrorContains(t, p2ptypes.ErrInvalidSequenceNum.Error(), err)
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 

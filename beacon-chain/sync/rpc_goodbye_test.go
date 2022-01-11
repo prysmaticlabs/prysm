@@ -14,9 +14,9 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
@@ -28,9 +28,9 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:  d,
-			P2P: p1,
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -51,7 +51,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream1))
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -73,9 +73,9 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:  d,
-			P2P: p1,
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -96,7 +96,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream1))
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -123,7 +123,7 @@ func TestGoodByeRPCHandler_BackOffPeer(t *testing.T) {
 
 	assert.NoError(t, r.goodbyeRPCHandler(context.Background(), &failureCode, stream2))
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -148,10 +148,10 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p1,
-			Chain: &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
+			chain:    &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -166,7 +166,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
 	})
@@ -174,7 +174,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	err := r.sendGoodByeMessage(context.Background(), failureCode, p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -193,10 +193,10 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	r := &Service{
-		cfg: &Config{
-			DB:    d,
-			P2P:   p1,
-			Chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
+		cfg: &config{
+			beaconDB: d,
+			p2p:      p1,
+			chain:    &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -211,7 +211,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, failureCode, *out)
 		assert.NoError(t, stream.Close())
 	})
@@ -222,7 +222,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 		t.Error("Peer is still not disconnected despite sending a goodbye message")
 	}
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 

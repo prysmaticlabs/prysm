@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/emicklei/dot"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 )
 
 const template = `<html>

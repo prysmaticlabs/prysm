@@ -7,10 +7,13 @@ go_library(
         "notifier.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//testing/slasher/simulator:__subpackages__",
+    ],
     deps = [
+        "//async/event:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
-        "//shared/event:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

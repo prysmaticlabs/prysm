@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -10,14 +11,15 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -43,62 +45,61 @@ import (
 // [REJECT] The signature is valid for the message beacon_block_root for the validator referenced by validator_index.
 func (s *Service) validateSyncCommitteeMessage(
 	ctx context.Context, pid peer.ID, msg *pubsub.Message,
-) pubsub.ValidationResult {
+) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateSyncCommitteeMessage")
 	defer span.End()
 
-	if pid == s.cfg.P2P.PeerID() {
-		return pubsub.ValidationAccept
+	if pid == s.cfg.p2p.PeerID() {
+		return pubsub.ValidationAccept, nil
 	}
 
 	// Basic validations before proceeding.
-	if s.cfg.InitialSync.Syncing() {
-		return pubsub.ValidationIgnore
+	if s.cfg.initialSync.Syncing() {
+		return pubsub.ValidationIgnore, nil
 	}
 	if msg.Topic == nil {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, errInvalidTopic
 	}
 
 	// Read the data from the pubsub message, and reject if there is an error.
 	m, err := s.readSyncCommitteeMessage(msg)
 	if err != nil {
-		log.WithError(err).Debug("Could not decode message")
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
+		tracing.AnnotateError(span, err)
+		return pubsub.ValidationReject, err
 	}
 
 	// Validate sync message times before proceeding.
 	// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
 	if err := altair.ValidateSyncMessageTime(
 		m.Slot,
-		s.cfg.Chain.GenesisTime(),
+		s.cfg.chain.GenesisTime(),
 		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
 	); err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
+		tracing.AnnotateError(span, err)
+		return pubsub.ValidationIgnore, err
 	}
 
-	committeeIndices, err := s.cfg.Chain.HeadCurrentSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
+	committeeIndices, err := s.cfg.chain.HeadSyncCommitteeIndices(ctx, m.ValidatorIndex, m.Slot)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
+		tracing.AnnotateError(span, err)
+		return pubsub.ValidationIgnore, err
 	}
 
 	// Validate the message's data according to the p2p specification.
-	if result := validationPipeline(
+	if result, err := validationPipeline(
 		ctx,
 		ignoreEmptyCommittee(committeeIndices),
 		s.rejectIncorrectSyncCommittee(committeeIndices, *msg.Topic),
 		s.ignoreHasSeenSyncMsg(m, committeeIndices),
 		s.rejectInvalidSyncCommitteeSignature(m),
 	); result != pubsub.ValidationAccept {
-		return result
+		return result, err
 	}
 
 	s.markSyncCommitteeMessagesSeen(committeeIndices, m)
 
 	msg.ValidatorData = m
-	return pubsub.ValidationAccept
+	return pubsub.ValidationAccept, nil
 }
 
 // Parse a sync committee message from a pubsub message.
@@ -153,14 +154,14 @@ func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.Va
 func (s *Service) rejectIncorrectSyncCommittee(
 	committeeIndices []types.CommitteeIndex, topic string,
 ) validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
+	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		_, span := trace.StartSpan(ctx, "sync.rejectIncorrectSyncCommittee")
 		defer span.End()
 		isValid := false
 		digest, err := s.currentForkDigest()
 		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationIgnore
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationIgnore, err
 		}
 
 		format := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
@@ -174,9 +175,9 @@ func (s *Service) rejectIncorrectSyncCommittee(
 			}
 		}
 		if !isValid {
-			return pubsub.ValidationReject
+			return pubsub.ValidationReject, errors.New("sync committee message references a different subnet")
 		}
-		return pubsub.ValidationAccept
+		return pubsub.ValidationAccept, nil
 	}
 }
 
@@ -186,7 +187,7 @@ func (s *Service) rejectIncorrectSyncCommittee(
 func (s *Service) ignoreHasSeenSyncMsg(
 	m *ethpb.SyncCommitteeMessage, committeeIndices []types.CommitteeIndex,
 ) validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
+	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		var isValid bool
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 		for _, idx := range committeeIndices {
@@ -197,68 +198,80 @@ func (s *Service) ignoreHasSeenSyncMsg(
 			}
 		}
 		if !isValid {
-			return pubsub.ValidationIgnore
+			return pubsub.ValidationIgnore, nil
 		}
-		return pubsub.ValidationAccept
+		return pubsub.ValidationAccept, nil
 	}
 }
 
 func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMessage) validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
+	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		ctx, span := trace.StartSpan(ctx, "sync.rejectInvalidSyncCommitteeSignature")
 		defer span.End()
 
 		// Ignore the message if it is not possible to retrieve the signing root.
 		// For internal errors, the correct behaviour is to ignore rather than reject outright,
 		// since the failure is locally derived.
-		d, err := s.cfg.Chain.HeadSyncCommitteeDomain(ctx, m.Slot)
+		d, err := s.cfg.chain.HeadSyncCommitteeDomain(ctx, m.Slot)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationIgnore
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationIgnore, err
 		}
 		rawBytes := p2ptypes.SSZBytes(m.BlockRoot)
-		sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
+		sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationIgnore
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationIgnore, err
 		}
 
 		// Reject for a validator index that is not found, as we should not remain peered with a node
 		// that is on such a different fork than our chain.
-		pubKey, err := s.cfg.Chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
+		pubKey, err := s.cfg.chain.HeadValidatorIndexToPublicKey(ctx, m.ValidatorIndex)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationReject
-		}
-
-		// We reject a malformed signature from bytes according to the p2p specification.
-		blsSig, err := bls.SignatureFromBytes(m.Signature)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationReject
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationReject, err
 		}
 
 		// Ignore a malformed public key from bytes according to the p2p specification.
 		pKey, err := bls.PublicKeyFromBytes(pubKey[:])
 		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return pubsub.ValidationIgnore
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationIgnore, err
+		}
+
+		// Batch verify message signature before unmarshalling
+		// the signature to a G2 point if batch verification is
+		// enabled.
+		if features.Get().EnableBatchVerification {
+			set := &bls.SignatureBatch{
+				Messages:   [][32]byte{sigRoot},
+				PublicKeys: []bls.PublicKey{pKey},
+				Signatures: [][]byte{m.Signature},
+			}
+			return s.validateWithBatchVerifier(ctx, "sync committee message", set)
+		}
+
+		// We reject a malformed signature from bytes according to the p2p specification.
+		blsSig, err := bls.SignatureFromBytes(m.Signature)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationReject, err
 		}
 
 		verified := blsSig.Verify(pKey, sigRoot[:])
 		if !verified {
-			return pubsub.ValidationReject
+			return pubsub.ValidationReject, errors.New("signature failed verification")
 		}
-		return pubsub.ValidationAccept
+		return pubsub.ValidationAccept, nil
 	}
 }
 
 func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
-	return func(ctx context.Context) pubsub.ValidationResult {
+	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		if len(indices) == 0 {
-			return pubsub.ValidationIgnore
+			return pubsub.ValidationIgnore, nil
 		}
-		return pubsub.ValidationAccept
+		return pubsub.ValidationAccept, nil
 	}
 }
 
@@ -268,11 +281,11 @@ func seenSyncCommitteeKey(slot types.Slot, valIndex types.ValidatorIndex, subCom
 	return string(b)
 }
 
-func validationPipeline(ctx context.Context, fns ...validationFn) pubsub.ValidationResult {
+func validationPipeline(ctx context.Context, fns ...validationFn) (pubsub.ValidationResult, error) {
 	for _, fn := range fns {
-		if result := fn(ctx); result != pubsub.ValidationAccept {
-			return result
+		if result, err := fn(ctx); result != pubsub.ValidationAccept {
+			return result, err
 		}
 	}
-	return pubsub.ValidationAccept
+	return pubsub.ValidationAccept, nil
 }

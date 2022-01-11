@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
@@ -18,7 +18,7 @@ func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 
 	received := db.ArchivedPointRoot(ctx, i1)
 	require.NotEqual(t, r1, received, "Should not have been saved")
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(i1))
 	require.NoError(t, db.SaveState(ctx, st, r1))
@@ -33,7 +33,7 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, types.Slot(0), i, "Did not get correct index")
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	assert.NoError(t, db.SaveState(ctx, st, [32]byte{'A'}))
 	assert.Equal(t, [32]byte{'A'}, db.LastArchivedRoot(ctx), "Did not get wanted root")

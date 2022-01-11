@@ -14,19 +14,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -192,7 +193,7 @@ func (is *infostream) handleMessage(msg *ethpb.ValidatorChangeSet) {
 func (is *infostream) handleAddValidatorKeys(reqPubKeys [][]byte) error {
 	is.pubKeysMutex.Lock()
 	// Create existence map to ensure we don't duplicate keys.
-	pubKeysMap := make(map[[48]byte]bool, len(is.pubKeys))
+	pubKeysMap := make(map[[fieldparams.BLSPubkeyLength]byte]bool, len(is.pubKeys))
 	for _, pubKey := range is.pubKeys {
 		pubKeysMap[bytesutil.ToBytes48(pubKey)] = true
 	}
@@ -222,7 +223,7 @@ func (is *infostream) handleSetValidatorKeys(reqPubKeys [][]byte) error {
 func (is *infostream) handleRemoveValidatorKeys(reqPubKeys [][]byte) {
 	is.pubKeysMutex.Lock()
 	// Create existence map to track what we have to delete.
-	pubKeysMap := make(map[[48]byte]bool, len(reqPubKeys))
+	pubKeysMap := make(map[[fieldparams.BLSPubkeyLength]byte]bool, len(reqPubKeys))
 	for _, pubKey := range reqPubKeys {
 		pubKeysMap[bytesutil.ToBytes48(pubKey)] = true
 	}
@@ -319,7 +320,7 @@ func (is *infostream) generateValidatorInfo(
 		return is.generatePendingValidatorInfo(info)
 	}
 	// Status and progression timestamp
-	info.Status, info.TransitionTimestamp = is.calculateStatusAndTransition(validator, core.CurrentEpoch(headState))
+	info.Status, info.TransitionTimestamp = is.calculateStatusAndTransition(validator, coreTime.CurrentEpoch(headState))
 
 	// Balance
 	info.Balance = headState.Balances()[info.Index]
@@ -376,7 +377,7 @@ func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*
 
 func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.ValidatorInfo, headState state.ReadOnlyBeaconState, epoch types.Epoch) error {
 	// pendingValidatorsMap is map from the validator pubkey to the index in our return array
-	pendingValidatorsMap := make(map[[48]byte]int)
+	pendingValidatorsMap := make(map[[fieldparams.BLSPubkeyLength]byte]int)
 	for i, info := range res {
 		if info.Status == ethpb.ValidatorStatus_PENDING {
 			pendingValidatorsMap[bytesutil.ToBytes48(info.PublicKey)] = i

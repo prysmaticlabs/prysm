@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"gopkg.in/yaml.v2"
 )
 
@@ -52,7 +52,7 @@ func ParseGraffitiFile(f string) (*Graffiti, error) {
 	}
 
 	g.Default = ParseHexGraffiti(g.Default)
-	g.Hash = hashutil.Hash(yamlFile)
+	g.Hash = hash.Hash(yamlFile)
 
 	return g, nil
 }

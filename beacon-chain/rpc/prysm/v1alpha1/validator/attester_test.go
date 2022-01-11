@@ -10,22 +10,22 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -37,7 +37,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
-	head := testutil.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 999
 	head.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	root, err := head.Block.HashTreeRoot()
@@ -53,7 +53,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 		}
 	}
 
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
 	require.NoError(t, state.SetValidators(validators))
@@ -82,18 +82,18 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	req := testutil.HydrateAttestation(&ethpb.Attestation{})
+	req := util.HydrateAttestation(&ethpb.Attestation{})
 	wanted := "Incorrect attestation signature"
 	_, err := attesterServer.ProposeAttestation(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }
 
 func TestGetAttestationData_OK(t *testing.T) {
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
-	targetBlock := testutil.NewBeaconBlock()
+	targetBlock := util.NewBeaconBlock()
 	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
-	justifiedBlock := testutil.NewBeaconBlock()
+	justifiedBlock := util.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
 	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
@@ -102,7 +102,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
@@ -185,14 +185,14 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	cfg.HistoricalRootsLimit = 8192
 	params.OverrideBeaconConfig(cfg)
 
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.Slot = 10000
-	epochBoundaryBlock := testutil.NewBeaconBlock()
+	epochBoundaryBlock := util.NewBeaconBlock()
 	var err error
-	epochBoundaryBlock.Block.Slot, err = core.StartSlot(core.SlotToEpoch(10000))
+	epochBoundaryBlock.Block.Slot, err = slots.EpochStart(slots.ToEpoch(10000))
 	require.NoError(t, err)
-	justifiedBlock := testutil.NewBeaconBlock()
-	justifiedBlock.Block.Slot, err = core.StartSlot(core.SlotToEpoch(1500))
+	justifiedBlock := util.NewBeaconBlock()
+	justifiedBlock.Block.Slot, err = slots.EpochStart(slots.ToEpoch(1500))
 	require.NoError(t, err)
 	justifiedBlock.Block.Slot -= 2 // Imagine two skip block
 	blockRoot, err := block.Block.HashTreeRoot()
@@ -203,11 +203,11 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	require.NoError(t, err, "Could not hash justified block")
 	slot := types.Slot(10000)
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
-		Epoch: core.SlotToEpoch(1500),
+		Epoch: slots.ToEpoch(1500),
 		Root:  justifiedBlockRoot[:],
 	})
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		Slot:            req.Slot,
 		BeaconBlockRoot: blockRoot[:],
 		Source: &ethpb.Checkpoint{
-			Epoch: core.SlotToEpoch(1500),
+			Epoch: slots.ToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
 		},
 		Target: &ethpb.Checkpoint{
@@ -336,13 +336,13 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	db := dbutil.SetupDB(t)
 
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.Slot = slot
-	block2 := testutil.NewBeaconBlock()
+	block2 := util.NewBeaconBlock()
 	block2.Block.Slot = slot - 1
-	targetBlock := testutil.NewBeaconBlock()
+	targetBlock := util.NewBeaconBlock()
 	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
-	justifiedBlock := testutil.NewBeaconBlock()
+	justifiedBlock := util.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
 	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
@@ -354,12 +354,12 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix()-offset)))
-	err = beaconState.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+	err = beaconState.SetLatestBlockHeader(util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		ParentRoot: blockRoot2[:],
 	}))
 	require.NoError(t, err)
@@ -423,11 +423,11 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 
 func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	slot := types.Slot(5)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.Slot = slot
-	targetBlock := testutil.NewBeaconBlock()
+	targetBlock := util.NewBeaconBlock()
 	targetBlock.Block.Slot = 0
-	justifiedBlock := testutil.NewBeaconBlock()
+	justifiedBlock := util.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 0
 	blockRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash beacon block")
@@ -436,7 +436,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for target block")
 
-	beaconState, err := testutil.NewBeaconState()
+	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(slot))
 	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
@@ -463,7 +463,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		FinalizationFetcher: &mock.ChainService{
 			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
-		TimeFetcher:   &mock.ChainService{Genesis: timeutils.Now().Add(time.Duration(-1*offset) * time.Second)},
+		TimeFetcher:   &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier: chainService.StateNotifier(),
 	}
 
@@ -556,7 +556,7 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 		}
 	}
 
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 

@@ -8,19 +8,20 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	wrapper "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -38,8 +39,8 @@ const signExitErr = "could not sign voluntary exit proposal"
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
-	currEpoch := core.SlotToEpoch(slot)
+func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
+	currEpoch := slots.ToEpoch(slot)
 	switch {
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
 		v.proposeBlockAltair(ctx, slot, pubKey)
@@ -48,12 +49,12 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [4
 	}
 }
 
-func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
-	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockPhase0")
@@ -110,7 +111,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 		Signature: sig,
 	}
 
-	signingRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
+	signingRoot, err := signing.ComputeSigningRoot(b, domain.SignatureDomain)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -119,16 +120,9 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 		return
 	}
 
-	if err := v.preBlockSignValidations(ctx, pubKey, wrapper.WrappedPhase0BeaconBlock(b), signingRoot); err != nil {
+	if err := v.slashableProposalCheck(ctx, pubKey, wrapper.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
 		log.WithFields(
 			blockLogFields(pubKey, wrapper.WrappedPhase0BeaconBlock(b), nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		return
-	}
-
-	if err := v.postBlockSignUpdate(ctx, pubKey, wrapper.WrappedPhase0SignedBeaconBlock(blk), signingRoot); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, wrapper.WrappedPhase0BeaconBlock(b), sig),
 		).WithError(err).Error("Failed block slashing protection check")
 		return
 	}
@@ -164,7 +158,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 }
 
 // This is a routine to propose altair compatible beacon blocks.
-func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
@@ -172,7 +166,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockAltair")
 	defer span.End()
 
-	lock := mputil.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -243,22 +237,12 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		Signature: sig,
 	}
 
-	signingRoot, err := helpers.ComputeSigningRoot(altairBlk.Altair, domain.SignatureDomain)
+	signingRoot, err := signing.ComputeSigningRoot(altairBlk.Altair, domain.SignatureDomain)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		log.WithError(err).Error("Failed to compute signing root for block")
-		return
-	}
-
-	if err := v.preBlockSignValidations(ctx, pubKey, wb, signingRoot); err != nil {
-		log.WithFields(
-			blockLogFields(pubKey, wb, nil),
-		).WithError(err).Error("Failed block slashing protection check")
-		if v.emitAccountMetrics {
-			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-		}
 		return
 	}
 
@@ -270,9 +254,10 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		}
 		return
 	}
-	if err := v.postBlockSignUpdate(ctx, pubKey, wsb, signingRoot); err != nil {
+
+	if err := v.slashableProposalCheck(ctx, pubKey, wsb, signingRoot); err != nil {
 		log.WithFields(
-			blockLogFields(pubKey, wb, sig),
+			blockLogFields(pubKey, wb, nil),
 		).WithError(err).Error("Failed block slashing protection check")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -333,7 +318,7 @@ func ProposeExit(
 	if err != nil {
 		return errors.Wrap(err, "gRPC call to get genesis time failed")
 	}
-	totalSecondsPassed := timeutils.Now().Unix() - genesisResponse.GenesisTime.Seconds
+	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
 	currentEpoch := types.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
 
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
@@ -356,7 +341,7 @@ func ProposeExit(
 }
 
 // Sign randao reveal with randao domain and private key.
-func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch types.Epoch) ([]byte, error) {
+func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
@@ -367,7 +352,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 
 	var randaoReveal bls.Signature
 	sszUint := types.SSZUint64(epoch)
-	root, err := helpers.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
+	root, err := signing.ComputeSigningRoot(&sszUint, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +369,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.Epoch, b block.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, b block.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, domainDataErr)
@@ -400,7 +385,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 		if !ok {
 			return nil, nil, errors.New("could not convert obj to beacon block altair")
 		}
-		blockRoot, err := helpers.ComputeSigningRoot(block, domain.SignatureDomain)
+		blockRoot, err := signing.ComputeSigningRoot(block, domain.SignatureDomain)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, signingRootErr)
 		}
@@ -419,7 +404,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch types.
 		if !ok {
 			return nil, nil, errors.New("could not convert obj to beacon block phase 0")
 		}
-		blockRoot, err := helpers.ComputeSigningRoot(block, domain.SignatureDomain)
+		blockRoot, err := signing.ComputeSigningRoot(block, domain.SignatureDomain)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, signingRootErr)
 		}
@@ -459,7 +444,7 @@ func signVoluntaryExit(
 		return nil, errors.New(domainDataErr)
 	}
 
-	exitRoot, err := helpers.ComputeSigningRoot(exit, domain.SignatureDomain)
+	exitRoot, err := signing.ComputeSigningRoot(exit, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, signingRootErr)
 	}
@@ -477,7 +462,7 @@ func signVoluntaryExit(
 }
 
 // Gets the graffiti from cli or file for the validator public key.
-func (v *validator) getGraffiti(ctx context.Context, pubKey [48]byte) ([]byte, error) {
+func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	// When specified, default graffiti from the command line takes the first priority.
 	if len(v.graffiti) != 0 {
 		return v.graffiti, nil

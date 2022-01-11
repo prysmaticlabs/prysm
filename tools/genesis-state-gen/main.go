@@ -12,10 +12,10 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 )
 
 // DepositDataJSON representing a json object of hex string and uint64 values for
@@ -58,7 +58,7 @@ func main() {
 	var err error
 	if *depositJSONFile != "" {
 		inputFile := *depositJSONFile
-		expanded, err := fileutil.ExpandPath(inputFile)
+		expanded, err := file.ExpandPath(inputFile)
 		if err != nil {
 			log.Printf("Could not expand file path %s: %v", inputFile, err)
 			return
@@ -98,7 +98,7 @@ func main() {
 			log.Printf("Could not ssz marshal the genesis beacon state: %v", err)
 			return
 		}
-		if err := fileutil.WriteFile(*sszOutputFile, encodedState); err != nil {
+		if err := file.WriteFile(*sszOutputFile, encodedState); err != nil {
 			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
 			return
 		}
@@ -110,7 +110,7 @@ func main() {
 			log.Printf("Could not yaml marshal the genesis beacon state: %v", err)
 			return
 		}
-		if err := fileutil.WriteFile(*yamlOutputFile, encodedState); err != nil {
+		if err := file.WriteFile(*yamlOutputFile, encodedState); err != nil {
 			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
 			return
 		}
@@ -122,7 +122,7 @@ func main() {
 			log.Printf("Could not json marshal the genesis beacon state: %v", err)
 			return
 		}
-		if err := fileutil.WriteFile(*jsonOutputFile, encodedState); err != nil {
+		if err := file.WriteFile(*jsonOutputFile, encodedState); err != nil {
 			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
 			return
 		}

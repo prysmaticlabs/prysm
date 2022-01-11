@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	"github.com/tyler-smith/go-bip39"
@@ -98,11 +99,11 @@ func TestDerivedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(publicKeys))
 
-	wantedPubKeys := make([][48]byte, numAccounts)
+	wantedPubKeys := make([][fieldparams.BLSPubkeyLength]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		privKey, err := util.PrivateKeyFromSeedAndPath(derivedSeed, fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i))
 		require.NoError(t, err)
-		pubKey := [48]byte{}
+		pubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(pubKey[:], privKey.PublicKey().Marshal())
 		wantedPubKeys[i] = pubKey
 	}

@@ -30,17 +30,17 @@ func (m *PoolMock) InsertAttesterSlashing(_ context.Context, _ state.ReadOnlyBea
 }
 
 // InsertProposerSlashing --
-func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ state.BeaconState, slashing *ethpb.ProposerSlashing) error {
+func (m *PoolMock) InsertProposerSlashing(_ context.Context, _ state.ReadOnlyBeaconState, slashing *ethpb.ProposerSlashing) error {
 	m.PendingPropSlashings = append(m.PendingPropSlashings, slashing)
 	return nil
 }
 
 // MarkIncludedAttesterSlashing --
-func (m *PoolMock) MarkIncludedAttesterSlashing(_ *ethpb.AttesterSlashing) {
+func (*PoolMock) MarkIncludedAttesterSlashing(_ *ethpb.AttesterSlashing) {
 	panic("implement me")
 }
 
 // MarkIncludedProposerSlashing --
-func (m *PoolMock) MarkIncludedProposerSlashing(_ *ethpb.ProposerSlashing) {
+func (*PoolMock) MarkIncludedProposerSlashing(_ *ethpb.ProposerSlashing) {
 	panic("implement me")
 }

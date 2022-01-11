@@ -21,17 +21,15 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	p2pWrapper "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -43,9 +41,9 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	root := [32]byte{'C'}
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				Fork: &ethpb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -70,8 +68,8 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, stream)
-		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		out := &ethpb.Status{}
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.DeepEqual(t, root[:], out.FinalizedRoot)
 		assert.NoError(t, stream.Close())
 	})
@@ -84,19 +82,19 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl2, func(stream network.Stream) {
 		defer wg2.Done()
 		msg := new(types.SSZUint64)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, msg))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg))
 		assert.Equal(t, p2ptypes.GoodbyeCodeWrongNetwork, *msg)
 		assert.NoError(t, stream.Close())
 	})
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	assert.NoError(t, r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: bytesutil.PadTo([]byte("f"), 4), HeadRoot: make([]byte, 32), FinalizedRoot: make([]byte, 32)}, stream1))
+	assert.NoError(t, r.statusRPCHandler(context.Background(), &ethpb.Status{ForkDigest: bytesutil.PadTo([]byte("f"), 4), HeadRoot: make([]byte, 32), FinalizedRoot: make([]byte, 32)}, stream1))
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
-	if testutil.WaitTimeout(&wg2, 1*time.Second) {
+	if util.WaitTimeout(&wg2, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -111,9 +109,9 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 	root := [32]byte{}
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				Fork: &ethpb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -138,8 +136,8 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, stream)
-		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		out := &ethpb.Status{}
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.DeepEqual(t, root[:], out.FinalizedRoot)
 	})
 
@@ -148,10 +146,10 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 	digest, err := r.currentForkDigest()
 	require.NoError(t, err)
 
-	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: digest[:], FinalizedRoot: params.BeaconConfig().ZeroHash[:]}, stream1)
+	err = r.statusRPCHandler(context.Background(), &ethpb.Status{ForkDigest: digest[:], FinalizedRoot: params.BeaconConfig().ZeroHash[:]}, stream1)
 	assert.NoError(t, err)
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -166,12 +164,12 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	head := testutil.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalized := testutil.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalized.Block.Slot = blkSlot
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -189,9 +187,9 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	genTime := time.Now().Unix() - totalSec
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -202,7 +200,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 				ValidatorsRoot: [32]byte{'A'},
 				Genesis:        time.Unix(genTime, 0),
 			},
-			DB: db,
+			beaconDB: db,
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -218,9 +216,9 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, stream)
-		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
-		expected := &pb.Status{
+		out := &ethpb.Status{}
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		expected := &ethpb.Status{
 			ForkDigest:     digest[:],
 			HeadSlot:       genesisState.Slot(),
 			HeadRoot:       headRoot[:],
@@ -234,14 +232,14 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
 
-	err = r.statusRPCHandler(context.Background(), &pb.Status{
+	err = r.statusRPCHandler(context.Background(), &ethpb.Status{
 		ForkDigest:     digest[:],
 		FinalizedRoot:  finalizedRoot[:],
 		FinalizedEpoch: 3,
 	}, stream1)
 	assert.NoError(t, err)
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 }
@@ -253,12 +251,12 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	db := testingDB.SetupDB(t)
 
-	p1.LocalMetadata = p2pWrapper.WrappedMetadataV0(&pb.MetaDataV0{
+	p1.LocalMetadata = wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bytesutil.PadTo([]byte{'A', 'B'}, 8),
 	})
 
-	p2.LocalMetadata = p2pWrapper.WrappedMetadataV0(&pb.MetaDataV0{
+	p2.LocalMetadata = wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bytesutil.PadTo([]byte{'C', 'D'}, 8),
 	})
@@ -267,16 +265,16 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		Slot: 5,
 	})
 	require.NoError(t, err)
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               st,
 				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
 				Fork: &ethpb.Fork{
@@ -287,7 +285,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 				ValidatorsRoot: [32]byte{'A'},
 				Root:           make([]byte, 32),
 			},
-			DB: db,
+			beaconDB: db,
 		},
 		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
@@ -296,11 +294,11 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	require.NoError(t, err)
 
 	r2 := &Service{
-		cfg: &Config{
-			Chain: &mock.ChainService{
+		cfg: &config{
+			chain: &mock.ChainService{
 				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
 			},
-			P2P: p2,
+			p2p: p2,
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
@@ -317,14 +315,14 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		out := &ethpb.Status{}
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		log.WithField("status", out).Warn("received status")
-		resp := &pb.Status{HeadSlot: 100, HeadRoot: make([]byte, 32), ForkDigest: p2.Digest[:],
+		resp := &ethpb.Status{HeadSlot: 100, HeadRoot: make([]byte, 32), ForkDigest: p2.Digest[:],
 			FinalizedRoot: finalizedRoot[:], FinalizedEpoch: 0}
 		_, err := stream.Write([]byte{responseCodeSuccess})
 		assert.NoError(t, err)
-		_, err = r.cfg.P2P.Encoding().EncodeWithMaxLength(stream, resp)
+		_, err = r.cfg.p2p.Encoding().EncodeWithMaxLength(stream, resp)
 		assert.NoError(t, err)
 		log.WithField("status", out).Warn("sending status")
 		if err := stream.Close(); err != nil {
@@ -340,7 +338,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg2.Done()
 		out := new(types.SSZUint64)
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
 		assert.NoError(t, stream.Close())
@@ -357,10 +355,10 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2.Peers().Add(new(enr.Record), p1.BHost.ID(), p1.BHost.Addrs()[0], network.DirUnknown)
 	p2.Peers().SetMetadata(p1.BHost.ID(), p1.LocalMetadata)
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
-	if testutil.WaitTimeout(&wg2, 1*time.Second) {
+	if util.WaitTimeout(&wg2, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -390,11 +388,11 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	head := testutil.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
-	finalized := testutil.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalized.Block.Slot = 40
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -408,9 +406,9 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	}
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -434,11 +432,11 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		out := &ethpb.Status{}
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		digest, err := r.currentForkDigest()
 		assert.NoError(t, err)
-		expected := &pb.Status{
+		expected := &ethpb.Status{
 			ForkDigest:     digest[:],
 			HeadSlot:       genesisState.Slot(),
 			HeadRoot:       headRoot[:],
@@ -453,7 +451,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p1.AddConnectionHandler(r.sendRPCStatusRequest, nil)
 	p1.Connect(p2)
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -466,12 +464,12 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	head := testutil.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalized := testutil.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalized.Block.Slot = blkSlot
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -479,7 +477,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = blkSlot
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
@@ -490,9 +488,9 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	totalSec := int64(params.BeaconConfig().SlotsPerEpoch.Mul(5 * params.BeaconConfig().SecondsPerSlot))
 	genTime := time.Now().Unix() - totalSec
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -509,9 +507,9 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	}
 
 	r2 := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -522,7 +520,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 				Genesis:        time.Unix(genTime, 0),
 				ValidatorsRoot: [32]byte{'A'},
 			},
-			DB: db,
+			beaconDB: db,
 		},
 		ctx:         context.Background(),
 		rateLimiter: newRateLimiter(p1),
@@ -536,15 +534,15 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+		out := &ethpb.Status{}
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.NoError(t, r2.validateStatusMessage(context.Background(), out))
 	})
 
 	p1.AddConnectionHandler(r.sendRPCStatusRequest, nil)
 	p1.Connect(p2)
 
-	if testutil.WaitTimeout(&wg, 1*time.Second) {
+	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -557,7 +555,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	bState, err := transition.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
 	genRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -663,9 +661,9 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		totalSec := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch) * params.BeaconConfig().SecondsPerSlot))
 		genTime := time.Now().Unix() - int64(totalSec)
 		r := &Service{
-			cfg: &Config{
-				P2P: p1,
-				Chain: &mock.ChainService{
+			cfg: &config{
+				p2p: p1,
+				chain: &mock.ChainService{
 					State:               nState,
 					FinalizedCheckPoint: remoteFinalizedChkpt,
 					Root:                rHeadRoot[:],
@@ -682,9 +680,9 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 
 		r2 := &Service{
-			cfg: &Config{
-				P2P: p2,
-				Chain: &mock.ChainService{
+			cfg: &config{
+				p2p: p2,
+				chain: &mock.ChainService{
 					State:               nState,
 					FinalizedCheckPoint: finalizedCheckpt,
 					Root:                headRoot[:],
@@ -695,7 +693,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 					Genesis:        time.Unix(genTime, 0),
 					ValidatorsRoot: [32]byte{'A'},
 				},
-				DB: db,
+				beaconDB: db,
 			},
 
 			ctx:         context.Background(),
@@ -710,15 +708,15 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		wg.Add(1)
 		p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 			defer wg.Done()
-			out := &pb.Status{}
-			assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
+			out := &ethpb.Status{}
+			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 			assert.Equal(t, tt.expectError, r2.validateStatusMessage(context.Background(), out) != nil)
 		})
 
 		p1.AddConnectionHandler(r.sendRPCStatusRequest, nil)
 		p1.Connect(p2)
 
-		if testutil.WaitTimeout(&wg, 1*time.Second) {
+		if util.WaitTimeout(&wg, 1*time.Second) {
 			t.Fatal("Did not receive stream within 1 sec")
 		}
 
@@ -733,11 +731,11 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	head := testutil.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
-	finalized := testutil.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
 	genesisState, err := transition.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
@@ -750,9 +748,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	}
 
 	r := &Service{
-		cfg: &Config{
-			P2P: p1,
-			Chain: &mock.ChainService{
+		cfg: &config{
+			p2p: p1,
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -779,9 +777,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.Status{}
-		assert.NoError(t, r.cfg.P2P.Encoding().DecodeWithMaxLength(stream, out))
-		expected := &pb.Status{
+		out := &ethpb.Status{}
+		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
+		expected := &ethpb.Status{
 			ForkDigest:     []byte{1, 1, 1, 1},
 			HeadSlot:       genesisState.Slot(),
 			HeadRoot:       headRoot[:],
@@ -791,14 +789,14 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			log.WithError(err).Debug("Could not write to stream")
 		}
-		_, err := r.cfg.P2P.Encoding().EncodeWithMaxLength(stream, expected)
+		_, err := r.cfg.p2p.Encoding().EncodeWithMaxLength(stream, expected)
 		assert.NoError(t, err)
 	})
 
 	assert.Equal(t, false, p1.Peers().Scorers().IsBadPeer(p2.PeerID()), "Peer is marked as bad")
 	p1.Connect(p2)
 
-	if testutil.WaitTimeout(&wg, time.Second) {
+	if util.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 	time.Sleep(100 * time.Millisecond)
@@ -812,12 +810,12 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 
 func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	// Set up a head state with data we expect.
-	head := testutil.NewBeaconBlock()
+	head := util.NewBeaconBlock()
 	head.Block.Slot = 111
 	headRoot, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalized := testutil.NewBeaconBlock()
+	finalized := util.NewBeaconBlock()
 	finalized.Block.Slot = blkSlot
 	finalizedRoot, err := finalized.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -830,8 +828,8 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 		Root:  finalizedRoot[:],
 	}
 	r := &Service{
-		cfg: &Config{
-			Chain: &mock.ChainService{
+		cfg: &config{
+			chain: &mock.ChainService{
 				State:               genesisState,
 				FinalizedCheckPoint: finalizedCheckpt,
 				Root:                headRoot[:],
@@ -849,7 +847,7 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	require.NoError(t, err)
 	// There should be no error for a status message
 	// with a genesis checkpoint.
-	err = r.validateStatusMessage(r.ctx, &pb.Status{
+	err = r.validateStatusMessage(r.ctx, &ethpb.Status{
 		ForkDigest:     digest[:],
 		FinalizedRoot:  params.BeaconConfig().ZeroHash[:],
 		FinalizedEpoch: 0,
@@ -874,7 +872,7 @@ func TestShouldResync(t *testing.T) {
 			name: "genesis epoch should not resync when syncing is true",
 			args: args{
 				headSlot: 31,
-				genesis:  timeutils.Now(),
+				genesis:  prysmTime.Now(),
 				syncing:  true,
 			},
 			want: false,
@@ -883,7 +881,7 @@ func TestShouldResync(t *testing.T) {
 			name: "genesis epoch should not resync when syncing is false",
 			args: args{
 				headSlot: 31,
-				genesis:  timeutils.Now(),
+				genesis:  prysmTime.Now(),
 				syncing:  false,
 			},
 			want: false,
@@ -892,7 +890,7 @@ func TestShouldResync(t *testing.T) {
 			name: "two epochs behind, resync ok",
 			args: args{
 				headSlot: 31,
-				genesis:  timeutils.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesis:  prysmTime.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 				syncing:  false,
 			},
 			want: true,
@@ -901,7 +899,7 @@ func TestShouldResync(t *testing.T) {
 			name: "two epochs behind, already syncing",
 			args: args{
 				headSlot: 31,
-				genesis:  timeutils.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				genesis:  prysmTime.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 				syncing:  true,
 			},
 			want: false,
@@ -912,12 +910,12 @@ func TestShouldResync(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, headState.SetSlot(tt.args.headSlot))
 		r := &Service{
-			cfg: &Config{
-				Chain: &mock.ChainService{
+			cfg: &config{
+				chain: &mock.ChainService{
 					State:   headState,
 					Genesis: tt.args.genesis,
 				},
-				InitialSync: &mockSync.Sync{IsSyncing: tt.args.syncing},
+				initialSync: &mockSync.Sync{IsSyncing: tt.args.syncing},
 			},
 			ctx: context.Background(),
 		}
@@ -935,7 +933,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = testutil.NewBeaconBlock()
+		blocks[j-i] = util.NewBeaconBlock()
 		blocks[j-i].Block.Slot = types.Slot(j + 1)
 		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error

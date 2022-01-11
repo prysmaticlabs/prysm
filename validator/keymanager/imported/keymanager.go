@@ -1,7 +1,6 @@
 package imported
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,22 +9,23 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/petnames"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"go.opencensus.io/trace"
 )
 
 var (
 	lock              sync.RWMutex
-	orderedPublicKeys = make([][48]byte, 0)
-	secretKeysCache   = make(map[[48]byte]bls.SecretKey)
+	orderedPublicKeys = make([][fieldparams.BLSPubkeyLength]byte, 0)
+	secretKeysCache   = make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
 )
 
 const (
@@ -70,8 +70,8 @@ type AccountsKeystoreRepresentation struct {
 // ResetCaches for the keymanager.
 func ResetCaches() {
 	lock.Lock()
-	orderedPublicKeys = make([][48]byte, 0)
-	secretKeysCache = make(map[[48]byte]bls.SecretKey)
+	orderedPublicKeys = make([][fieldparams.BLSPubkeyLength]byte, 0)
+	secretKeysCache = make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
 	lock.Unlock()
 }
 
@@ -108,7 +108,7 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 		return nil, errors.Wrap(err, "could not generate interop keys")
 	}
 	lock.Lock()
-	pubKeys := make([][48]byte, numValidatorKeys)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidatorKeys)
 	for i := uint64(0); i < numValidatorKeys; i++ {
 		publicKey := bytesutil.ToBytes48(publicKeys[i].Marshal())
 		pubKeys[i] = publicKey
@@ -122,12 +122,12 @@ func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*
 // SubscribeAccountChanges creates an event subscription for a channel
 // to listen for public key changes at runtime, such as when new validator accounts
 // are imported into the keymanager while the validator process is running.
-func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return km.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
 // ValidatingAccountNames for a imported keymanager.
-func (km *Keymanager) ValidatingAccountNames() ([]string, error) {
+func (_ *Keymanager) ValidatingAccountNames() ([]string, error) {
 	lock.RLock()
 	names := make([]string, len(orderedPublicKeys))
 	for i, pubKey := range orderedPublicKeys {
@@ -143,8 +143,8 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 	lock.Lock()
 	defer lock.Unlock()
 	count := len(km.accountsStore.PrivateKeys)
-	orderedPublicKeys = make([][48]byte, count)
-	secretKeysCache = make(map[[48]byte]bls.SecretKey, count)
+	orderedPublicKeys = make([][fieldparams.BLSPubkeyLength]byte, count)
+	secretKeysCache = make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey, count)
 	for i, publicKey := range km.accountsStore.PublicKeys {
 		publicKey48 := bytesutil.ToBytes48(publicKey)
 		orderedPublicKeys[i] = publicKey48
@@ -157,60 +157,14 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 	return nil
 }
 
-// DeleteAccounts takes in public keys and removes the accounts entirely. This includes their disk keystore and cached keystore.
-func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
-	for _, publicKey := range publicKeys {
-		var index int
-		var found bool
-		for i, pubKey := range km.accountsStore.PublicKeys {
-			if bytes.Equal(pubKey, publicKey) {
-				index = i
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("could not find public key %#x", publicKey)
-		}
-		deletedPublicKey := km.accountsStore.PublicKeys[index]
-		accountName := petnames.DeterministicName(deletedPublicKey, "-")
-		km.accountsStore.PrivateKeys = append(km.accountsStore.PrivateKeys[:index], km.accountsStore.PrivateKeys[index+1:]...)
-		km.accountsStore.PublicKeys = append(km.accountsStore.PublicKeys[:index], km.accountsStore.PublicKeys[index+1:]...)
-
-		newStore, err := km.CreateAccountsKeystore(ctx, km.accountsStore.PrivateKeys, km.accountsStore.PublicKeys)
-		if err != nil {
-			return errors.Wrap(err, "could not rewrite accounts keystore")
-		}
-
-		// Write the encoded keystore.
-		encoded, err := json.MarshalIndent(newStore, "", "\t")
-		if err != nil {
-			return err
-		}
-		if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encoded); err != nil {
-			return errors.Wrap(err, "could not write keystore file for accounts")
-		}
-
-		log.WithFields(logrus.Fields{
-			"name":      accountName,
-			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(deletedPublicKey)),
-		}).Info("Successfully deleted validator account")
-		err = km.initializeKeysCachesFromKeystore()
-		if err != nil {
-			return errors.Wrap(err, "failed to initialize keys caches")
-		}
-	}
-	return nil
-}
-
 // FetchValidatingPublicKeys fetches the list of active public keys from the imported account keystores.
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
+func (_ *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	_, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
 	lock.RLock()
 	keys := orderedPublicKeys
-	result := make([][48]byte, len(keys))
+	result := make([][fieldparams.BLSPubkeyLength]byte, len(keys))
 	copy(result, keys)
 	lock.RUnlock()
 	return result, nil
@@ -236,8 +190,8 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 }
 
 // Sign signs a message using a validator key.
-func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	ctx, span := trace.StartSpan(ctx, "keymanager.Sign")
+func (_ *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	_, span := trace.StartSpan(ctx, "keymanager.Sign")
 	defer span.End()
 
 	publicKey := req.PublicKey
@@ -271,7 +225,7 @@ func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 	password := km.wallet.Password()
 	decryptor := keystorev4.New()
 	enc, err := decryptor.Decrypt(keystoreFile.Crypto, password)
-	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
+	if err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
 		return errors.Wrap(err, "wrong password for wallet entered")
 	} else if err != nil {
 		return errors.Wrap(err, "could not decrypt keystore")

@@ -7,7 +7,8 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -28,14 +29,14 @@ import (
 //    process_historical_roots_update(state)
 //    process_participation_flag_updates(state)  # [New in Altair]
 //    process_sync_committee_updates(state)  # [New in Altair]
-func ProcessEpoch(ctx context.Context, state state.BeaconStateAltair) (state.BeaconStateAltair, error) {
+func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconStateAltair, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessEpoch")
 	defer span.End()
 
 	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
-	vp, bp, err := InitializeEpochValidators(ctx, state)
+	vp, bp, err := InitializePrecomputeValidators(ctx, state)
 	if err != nil {
 		return nil, err
 	}
@@ -63,15 +64,26 @@ func ProcessEpoch(ctx context.Context, state state.BeaconStateAltair) (state.Bea
 		return nil, errors.Wrap(err, "could not process rewards and penalties")
 	}
 
-	state, err = e.ProcessRegistryUpdates(state)
+	state, err = e.ProcessRegistryUpdates(ctx, state)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process registry updates")
 	}
 
-	// Modified in Altair.
-	state, err = e.ProcessSlashings(state, params.BeaconConfig().ProportionalSlashingMultiplierAltair)
-	if err != nil {
-		return nil, err
+	// Modified in Altair and Bellatrix.
+	cfg := params.BeaconConfig()
+	switch state.Version() {
+	case version.Altair:
+		state, err = e.ProcessSlashings(state, cfg.ProportionalSlashingMultiplierAltair)
+		if err != nil {
+			return nil, err
+		}
+	case version.Bellatrix:
+		state, err = e.ProcessSlashings(state, cfg.ProportionalSlashingMultiplierMerge)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, errors.Errorf("invalid state type version: %T", state.Version())
 	}
 
 	state, err = e.ProcessEth1DataReset(state)

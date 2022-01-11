@@ -9,20 +9,22 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
@@ -101,7 +103,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 
 	ctx := context.Background()
 
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 32)
 	att0, err := generateUnaggregatedAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -135,7 +137,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	ctx := context.Background()
 
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
 	att1, err := generateAtt(beaconState, 2, privKeys)
@@ -180,7 +182,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 
 	ctx := context.Background()
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 
 	aggregatorServer := &Server{
@@ -209,15 +211,15 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	aggBits.SetBitAt(index+1, true)
-	att := testutil.HydrateAttestation(&ethpb.Attestation{
+	att := util.HydrateAttestation(&ethpb.Attestation{
 		Data:            &ethpb.AttestationData{CommitteeIndex: 1},
 		AggregationBits: aggBits,
 	})
-	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +229,7 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 	att.Signature = zeroSig[:]
 
 	for i, indice := range attestingIndices {
-		sb, err := helpers.ComputeDomainAndSign(state, 0, att.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
+		sb, err := signing.ComputeDomainAndSign(state, 0, att.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
 		if err != nil {
 			return nil, err
 		}
@@ -246,21 +248,21 @@ func generateAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.S
 func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
-	att := testutil.HydrateAttestation(&ethpb.Attestation{
+	att := util.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			CommitteeIndex: 1,
 		},
 		AggregationBits: aggBits,
 	})
-	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		return nil, err
 	}
-	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
+	domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +272,7 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 	att.Signature = zeroSig[:]
 
 	for i, indice := range attestingIndices {
-		hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+		hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, domain)
 		if err != nil {
 			return nil, err
 		}
@@ -294,18 +296,18 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	// This test creates 3 attestations. 0 and 2 have the same attestation data and can be
 	// aggregated. 1 has the validator's signature making this request and that is the expected
 	// attestation to sign, even though the aggregated 0&2 would have more aggregated bits.
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 32)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att0.AggregationBits = bitfield.Bitlist{0b11100}
 	att1, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), 32)
+	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), fieldparams.RootLength)
 	att1.AggregationBits = bitfield.Bitlist{0b11001}
 	att2, err := generateAtt(beaconState, 2, privKeys)
 	require.NoError(t, err)
-	att2.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att2.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att2.AggregationBits = bitfield.Bitlist{0b11110}
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -348,14 +350,14 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 
 	// This test creates two distinct attestations, neither of which contain the validator's index,
 	// index 0. This test should choose the most bits attestation, att1.
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	beaconState, privKeys := util.DeterministicGenesisState(t, fieldparams.RootLength)
 	att0, err := generateAtt(beaconState, 0, privKeys)
 	require.NoError(t, err)
-	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), 32)
+	att0.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("foo"), fieldparams.RootLength)
 	att0.AggregationBits = bitfield.Bitlist{0b11100}
 	att1, err := generateAtt(beaconState, 2, privKeys)
 	require.NoError(t, err)
-	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), 32)
+	att1.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("bar"), fieldparams.RootLength)
 	att1.AggregationBits = bitfield.Bitlist{0b11110}
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -391,7 +393,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 	aggregatorServer := &Server{}
 	req := &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
-			Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
+			Signature: make([]byte, fieldparams.BLSSignatureLength),
 			Message: &ethpb.AggregateAttestationAndProof{
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{},
@@ -409,7 +411,7 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 				Aggregate: &ethpb.Attestation{
 					Data: &ethpb.AttestationData{},
 				},
-				SelectionProof: make([]byte, params.BeaconConfig().BLSSignatureLength),
+				SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 			},
 		},
 	}

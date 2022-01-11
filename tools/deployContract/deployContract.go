@@ -11,12 +11,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -148,18 +147,12 @@ func main() {
 			txOps.Context = context.Background()
 		}
 
-		drain := txOps.From
-		if drainAddress != "" {
-			drain = common.HexToAddress(drainAddress)
-		}
-
 		txOps.GasPrice = big.NewInt(10 * 1e9 /* 10 gwei */)
 
 		// Deploy validator registration contract
 		addr, tx, _, err := contracts.DeployDepositContract(
 			txOps,
 			client,
-			drain,
 		)
 
 		if err != nil {
@@ -181,9 +174,8 @@ func main() {
 		if k8sConfigMapName != "" {
 			if err := updateKubernetesConfigMap(context.Background(), addr.Hex()); err != nil {
 				log.Fatalf("Failed to update kubernetes config map: %v", err)
-			} else {
-				log.Printf("Updated config map %s", k8sConfigMapName)
 			}
+			log.Printf("Updated config map %s", k8sConfigMapName)
 		}
 		return nil
 	}

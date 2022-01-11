@@ -12,17 +12,19 @@ import (
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
+	"github.com/prysmaticlabs/prysm/cmd"
+	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/journald"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
-	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
-	"github.com/prysmaticlabs/prysm/shared/tos"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/io/logs"
+	"github.com/prysmaticlabs/prysm/monitoring/journald"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
+	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/runtime/tos"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -36,10 +38,10 @@ var appFlags = []cli.Flag{
 	flags.RPCPort,
 	flags.CertFlag,
 	flags.KeyFlag,
+	flags.HTTPModules,
 	flags.DisableGRPCGateway,
 	flags.GRPCGatewayHost,
 	flags.GRPCGatewayPort,
-	flags.EthApiPort,
 	flags.GPRCGatewayCorsDomain,
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
@@ -62,6 +64,11 @@ var appFlags = []cli.Flag{
 	flags.WeakSubjectivityCheckpt,
 	flags.Eth1HeaderReqLimit,
 	flags.GenesisStatePath,
+	flags.MinPeersPerSubnet,
+	flags.TerminalTotalDifficultyOverride,
+	flags.TerminalBlockHashOverride,
+	flags.TerminalBlockHashActivationEpochOverride,
+	flags.FeeRecipient,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
@@ -111,10 +118,11 @@ var appFlags = []cli.Flag{
 	cmd.RestoreSourceFileFlag,
 	cmd.RestoreTargetDirFlag,
 	cmd.BoltMMapInitialSizeFlag,
+	cmd.ValidatorMonitorIndicesFlag,
 }
 
 func init() {
-	appFlags = cmd.WrapFlags(append(appFlags, featureconfig.BeaconChainFlags...))
+	appFlags = cmd.WrapFlags(append(appFlags, features.BeaconChainFlags...))
 }
 
 func main() {
@@ -163,7 +171,7 @@ func main() {
 
 		logFileName := ctx.String(cmd.LogFileName.Name)
 		if logFileName != "" {
-			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
+			if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
@@ -197,7 +205,7 @@ func main() {
 
 func startNode(ctx *cli.Context) error {
 	// Fix data dir for Windows users.
-	outdatedDataDir := filepath.Join(fileutil.HomeDir(), "AppData", "Roaming", "Eth2")
+	outdatedDataDir := filepath.Join(file.HomeDir(), "AppData", "Roaming", "Eth2")
 	currentDataDir := ctx.String(cmd.DataDirFlag.Name)
 	if err := cmd.FixDefaultDataDir(outdatedDataDir, currentDataDir); err != nil {
 		return err
@@ -223,7 +231,19 @@ func startNode(ctx *cli.Context) error {
 		gethlog.Root().SetHandler(glogger)
 	}
 
-	beacon, err := node.New(ctx)
+	blockchainFlagOpts, err := blockchaincmd.FlagOptions(ctx)
+	if err != nil {
+		return nil
+	}
+	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
+	if err != nil {
+		return nil
+	}
+	opts := []node.Option{
+		node.WithBlockchainFlagOptions(blockchainFlagOpts),
+		node.WithPowchainFlagOptions(powchainFlagOpts),
+	}
+	beacon, err := node.New(ctx, opts...)
 	if err != nil {
 		return err
 	}

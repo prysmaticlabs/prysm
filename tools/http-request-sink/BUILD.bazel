@@ -9,7 +9,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/prysmaticlabs/prysm/tools/http-request-sink",
     visibility = ["//visibility:private"],
-    deps = ["//shared/params:go_default_library"],
+    deps = ["//config/params:go_default_library"],
 )
 
 go_binary(
@@ -50,7 +50,7 @@ go_test(
     srcs = ["main_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/params:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//config/params:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )

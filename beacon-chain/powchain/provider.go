@@ -4,16 +4,16 @@ import (
 	"encoding/base64"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/httputils"
-	"github.com/prysmaticlabs/prysm/shared/httputils/authorizationmethod"
+	"github.com/prysmaticlabs/prysm/network"
+	"github.com/prysmaticlabs/prysm/network/authorization"
 )
 
 // HttpEndpoint extracts an httputils.Endpoint from the provider parameter.
-func HttpEndpoint(eth1Provider string) httputils.Endpoint {
-	endpoint := httputils.Endpoint{
+func HttpEndpoint(eth1Provider string) network.Endpoint {
+	endpoint := network.Endpoint{
 		Url: "",
-		Auth: httputils.AuthorizationData{
-			Method: authorizationmethod.None,
+		Auth: network.AuthorizationData{
+			Method: authorization.None,
 			Value:  "",
 		}}
 
@@ -24,24 +24,24 @@ func HttpEndpoint(eth1Provider string) httputils.Endpoint {
 			"ETH1 endpoint string can contain one comma for specifying the authorization header to access the provider."+
 				" String contains too many commas: %d. Skipping authorization.", len(authValues)-1)
 	} else if len(authValues) == 2 {
-		switch httputils.Method(strings.TrimSpace(authValues[1])) {
-		case authorizationmethod.Basic:
+		switch network.Method(strings.TrimSpace(authValues[1])) {
+		case authorization.Basic:
 			basicAuthValues := strings.Split(strings.TrimSpace(authValues[1]), " ")
 			if len(basicAuthValues) != 2 {
 				log.Errorf("Basic Authentication has incorrect format. Skipping authorization.")
 			} else {
-				endpoint.Auth.Method = authorizationmethod.Basic
+				endpoint.Auth.Method = authorization.Basic
 				endpoint.Auth.Value = base64.StdEncoding.EncodeToString([]byte(basicAuthValues[1]))
 			}
-		case authorizationmethod.Bearer:
+		case authorization.Bearer:
 			bearerAuthValues := strings.Split(strings.TrimSpace(authValues[1]), " ")
 			if len(bearerAuthValues) != 2 {
 				log.Errorf("Bearer Authentication has incorrect format. Skipping authorization.")
 			} else {
-				endpoint.Auth.Method = authorizationmethod.Bearer
+				endpoint.Auth.Method = authorization.Bearer
 				endpoint.Auth.Value = bearerAuthValues[1]
 			}
-		case authorizationmethod.None:
+		case authorization.None:
 			log.Errorf("Authorization has incorrect format or authorization type is not supported.")
 		}
 	}

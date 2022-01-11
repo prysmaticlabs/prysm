@@ -3,7 +3,7 @@ package protoarray
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"go.opencensus.io/trace"
 )
 
@@ -15,7 +15,7 @@ func computeDeltas(
 	votes []Vote,
 	oldBalances, newBalances []uint64,
 ) ([]int, []Vote, error) {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.computeDeltas")
+	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.computeDeltas")
 	defer span.End()
 
 	deltas := make([]int, len(blockIndices))

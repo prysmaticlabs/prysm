@@ -1,17 +1,19 @@
 package altair
 
 import (
+	"context"
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ProcessSyncAggregate verifies sync committee aggregate signature signing over the previous slot block root.
@@ -42,7 +44,7 @@ import (
 //            increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 //        else:
 //            decrease_balance(state, participant_index, participant_reward)
-func ProcessSyncAggregate(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (state.BeaconStateAltair, error) {
+func ProcessSyncAggregate(ctx context.Context, s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (state.BeaconStateAltair, error) {
 	votedKeys, votedIndices, didntVoteIndices, err := FilterSyncCommitteeVotes(s, sync)
 	if err != nil {
 		return nil, err
@@ -52,7 +54,7 @@ func ProcessSyncAggregate(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) 
 		return nil, err
 	}
 
-	return ApplySyncRewardsPenalties(s, votedIndices, didntVoteIndices)
+	return ApplySyncRewardsPenalties(ctx, s, votedIndices, didntVoteIndices)
 }
 
 // FilterSyncCommitteeVotes filters the validator public keys and indices for the ones that voted and didn't vote.
@@ -99,8 +101,8 @@ func FilterSyncCommitteeVotes(s state.BeaconStateAltair, sync *ethpb.SyncAggrega
 
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
 func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey, syncSig []byte) error {
-	ps := core.PrevSlot(s.Slot())
-	d, err := helpers.Domain(s.Fork(), core.SlotToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
+	ps := slots.PrevSlot(s.Slot())
+	d, err := signing.Domain(s.Fork(), slots.ToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
@@ -109,7 +111,7 @@ func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey,
 		return err
 	}
 	sszBytes := p2pType.SSZBytes(pbr)
-	r, err := helpers.ComputeSigningRoot(&sszBytes, d)
+	r, err := signing.ComputeSigningRoot(&sszBytes, d)
 	if err != nil {
 		return err
 	}
@@ -124,7 +126,7 @@ func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey,
 }
 
 // ApplySyncRewardsPenalties applies rewards and penalties for proposer and sync committee participants.
-func ApplySyncRewardsPenalties(s state.BeaconStateAltair, votedIndices, didntVoteIndices []types.ValidatorIndex) (state.BeaconStateAltair, error) {
+func ApplySyncRewardsPenalties(ctx context.Context, s state.BeaconStateAltair, votedIndices, didntVoteIndices []types.ValidatorIndex) (state.BeaconStateAltair, error) {
 	activeBalance, err := helpers.TotalActiveBalance(s)
 	if err != nil {
 		return nil, err
@@ -143,7 +145,7 @@ func ApplySyncRewardsPenalties(s state.BeaconStateAltair, votedIndices, didntVot
 		earnedProposerReward += proposerReward
 	}
 	// Apply proposer rewards.
-	proposerIndex, err := helpers.BeaconProposerIndex(s)
+	proposerIndex, err := helpers.BeaconProposerIndex(ctx, s)
 	if err != nil {
 		return nil, err
 	}

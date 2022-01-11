@@ -5,25 +5,30 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/math"
 )
 
 // ReturnTrieLayer returns the representation of a merkle trie when
 // provided with the elements of a fixed sized trie and the corresponding depth of
 // it.
-func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
-	hasher := hashutil.CustomSHA256Hasher()
+func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) {
+	hasher := hash.CustomSHA256Hasher()
 	leaves := elements
 
 	if len(leaves) == 1 {
-		return [][]*[32]byte{{&leaves[0]}}
+		return [][]*[32]byte{{&leaves[0]}}, nil
 	}
 	hashLayer := leaves
-	layers := make([][][32]byte, htrutils.Depth(length)+1)
+	layers := make([][][32]byte, ssz.Depth(length)+1)
 	layers[0] = hashLayer
-	layers, _ = merkleizeTrieLeaves(layers, hashLayer, hasher)
+	var err error
+	layers, _, err = MerkleizeTrieLeaves(layers, hashLayer, hasher)
+	if err != nil {
+		return nil, err
+	}
 	refLayers := make([][]*[32]byte, len(layers))
 	for i, val := range layers {
 		refLayers[i] = make([]*[32]byte, len(val))
@@ -32,45 +37,19 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
 			refLayers[i][j] = &newVal
 		}
 	}
-	return refLayers
-}
-
-func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
-	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
-	// We keep track of the hash layers of a Merkle trie until we reach
-	// the top layer of length 1, which contains the single root element.
-	//        [Root]      -> Top layer has length 1.
-	//    [E]       [F]   -> This layer has length 2.
-	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
-	i := 1
-	chunkBuffer := bytes.NewBuffer([]byte{})
-	chunkBuffer.Grow(64)
-	for len(hashLayer) > 1 && i < len(layers) {
-		layer := make([][32]byte, len(hashLayer)/2)
-		for j := 0; j < len(hashLayer); j += 2 {
-			chunkBuffer.Write(hashLayer[j][:])
-			chunkBuffer.Write(hashLayer[j+1][:])
-			hashedChunk := hasher(chunkBuffer.Bytes())
-			layer[j/2] = hashedChunk
-			chunkBuffer.Reset()
-		}
-		hashLayer = layer
-		layers[i] = hashLayer
-		i++
-	}
-	return layers, hashLayer
+	return refLayers, nil
 }
 
 // ReturnTrieLayerVariable returns the representation of a merkle trie when
 // provided with the elements of a variable sized trie and the corresponding depth of
 // it.
 func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
-	hasher := hashutil.CustomSHA256Hasher()
-	depth := htrutils.Depth(length)
+	hasher := hash.CustomSHA256Hasher()
+	depth := ssz.Depth(length)
 	layers := make([][]*[32]byte, depth+1)
 	// Return zerohash at depth
 	if len(elements) == 0 {
-		zerohash := trieutil.ZeroHashes[depth]
+		zerohash := trie.ZeroHashes[depth]
 		layers[len(layers)-1] = []*[32]byte{&zerohash}
 		return layers
 	}
@@ -85,7 +64,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	for i := 0; i < int(depth); i++ {
 		oddNodeLength := len(layers[i])%2 == 1
 		if oddNodeLength {
-			zerohash := trieutil.ZeroHashes[i]
+			zerohash := trie.ZeroHashes[i]
 			layers[i] = append(layers[i], &zerohash)
 		}
 		updatedValues := make([]*[32]byte, 0, len(layers[i])/2)
@@ -107,7 +86,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 
 // RecomputeFromLayer recomputes specific branches of a fixed sized trie depending on the provided changed indexes.
 func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	for i, idx := range changedIdx {
 		layer[0][idx] = &changedLeaves[i]
 	}
@@ -140,7 +119,7 @@ func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][
 
 // RecomputeFromLayerVariable recomputes specific branches of a variable sized trie depending on the provided changed indexes.
 func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
+	hasher := hash.CustomSHA256Hasher()
 	if len(changedIdx) == 0 {
 		return *layer[0][0], layer, nil
 	}
@@ -205,7 +184,7 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte,
 	hasher func([]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
 	for idx >= len(layers[0]) {
-		zerohash := trieutil.ZeroHashes[0]
+		zerohash := trie.ZeroHashes[0]
 		layers[0] = append(layers[0], &zerohash)
 	}
 	layers[0][idx] = &item
@@ -218,7 +197,7 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 
 		neighbor := [32]byte{}
 		if neighborIdx >= len(layers[i]) {
-			neighbor = trieutil.ZeroHashes[i]
+			neighbor = trie.ZeroHashes[i]
 		} else {
 			neighbor = *layers[i][neighborIdx]
 		}
@@ -252,15 +231,15 @@ func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 	// We need to mix in the length of the slice.
 	rootBufRoot := make([]byte, 32)
 	copy(rootBufRoot, rootBuf.Bytes())
-	return htrutils.MixInLength(root, rootBufRoot), nil
+	return ssz.MixInLength(root, rootBufRoot), nil
 }
 
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
 // the resulting layers of the trie based on the appropriate depth. This function
 // pads the leaves to a length of 32.
 func Merkleize(leaves [][]byte) [][][]byte {
-	hashFunc := hashutil.CustomSHA256Hasher()
-	layers := make([][][]byte, htrutils.Depth(uint64(len(leaves)))+1)
+	hashFunc := hash.CustomSHA256Hasher()
+	layers := make([][][]byte, ssz.Depth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
 	}
@@ -288,7 +267,7 @@ func Merkleize(leaves [][]byte) [][][]byte {
 
 // MerkleizeTrieLeaves merkleize the trie leaves.
 func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
-	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
+	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte, error) {
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
 	//        [Root]      -> Top layer has length 1.
@@ -299,6 +278,9 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 	chunkBuffer.Grow(64)
 	for len(hashLayer) > 1 && i < len(layers) {
 		layer := make([][32]byte, len(hashLayer)/2)
+		if !math.IsPowerOf2(uint64(len(hashLayer))) {
+			return nil, nil, errors.Errorf("hash layer is a non power of 2: %d", len(hashLayer))
+		}
 		for j := 0; j < len(hashLayer); j += 2 {
 			chunkBuffer.Write(hashLayer[j][:])
 			chunkBuffer.Write(hashLayer[j+1][:])
@@ -310,5 +292,5 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 		layers[i] = hashLayer
 		i++
 	}
-	return layers, hashLayer
+	return layers, hashLayer, nil
 }

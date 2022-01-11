@@ -5,8 +5,8 @@ import (
 	"io"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/client-stats/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/urfave/cli/v2"
 )
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/config/features"
 )
 
 var _ Scorer = (*Service)(nil)
@@ -16,7 +17,9 @@ var _ Scorer = (*Service)(nil)
 const ScoreRoundingFactor = 10000
 
 // BadPeerScore defines score that is returned for a bad peer (all other metrics are ignored).
-const BadPeerScore = -1.00
+// The bad peer score was decided to be based on our determined gossip threshold, so that
+// all the other scoring services have their relevant penalties on similar scales.
+const BadPeerScore = gossipThreshold
 
 // Scorer defines minimum set of methods every peer scorer must expose.
 type Scorer interface {
@@ -55,13 +58,13 @@ func NewService(ctx context.Context, store *peerdata.Store, config *Config) *Ser
 
 	// Register scorers.
 	s.scorers.badResponsesScorer = newBadResponsesScorer(store, config.BadResponsesScorerConfig)
-	s.setScorerWeight(s.scorers.badResponsesScorer, 1.0)
+	s.setScorerWeight(s.scorers.badResponsesScorer, 0.3)
 	s.scorers.blockProviderScorer = newBlockProviderScorer(store, config.BlockProviderScorerConfig)
-	s.setScorerWeight(s.scorers.blockProviderScorer, 1.0)
+	s.setScorerWeight(s.scorers.blockProviderScorer, 0.0)
 	s.scorers.peerStatusScorer = newPeerStatusScorer(store, config.PeerStatusScorerConfig)
-	s.setScorerWeight(s.scorers.peerStatusScorer, 0.0)
+	s.setScorerWeight(s.scorers.peerStatusScorer, 0.3)
 	s.scorers.gossipScorer = newGossipScorer(store, config.GossipScorerConfig)
-	s.setScorerWeight(s.scorers.gossipScorer, 0.0)
+	s.setScorerWeight(s.scorers.gossipScorer, 0.4)
 
 	// Start background tasks.
 	go s.loop(ctx)
@@ -104,7 +107,11 @@ func (s *Service) ActiveScorersCount() int {
 func (s *Service) Score(pid peer.ID) float64 {
 	s.store.RLock()
 	defer s.store.RUnlock()
+	return s.ScoreNoLock(pid)
+}
 
+// ScoreNoLock is a lock-free version of Score.
+func (s *Service) ScoreNoLock(pid peer.ID) float64 {
 	score := float64(0)
 	if _, ok := s.store.PeerData(pid); !ok {
 		return 0
@@ -120,19 +127,22 @@ func (s *Service) Score(pid peer.ID) float64 {
 func (s *Service) IsBadPeer(pid peer.ID) bool {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.isBadPeer(pid)
+	return s.IsBadPeerNoLock(pid)
 }
 
-// isBadPeer is a lock-free version of isBadPeer.
-func (s *Service) isBadPeer(pid peer.ID) bool {
+// IsBadPeerNoLock is a lock-free version of IsBadPeer.
+func (s *Service) IsBadPeerNoLock(pid peer.ID) bool {
 	if s.scorers.badResponsesScorer.isBadPeer(pid) {
 		return true
 	}
 	if s.scorers.peerStatusScorer.isBadPeer(pid) {
 		return true
 	}
-	// TODO(#6043): Hook in gossip scorer's relevant
-	// method to check if peer has a bad gossip score.
+	if features.Get().EnablePeerScorer {
+		if s.scorers.gossipScorer.isBadPeer(pid) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -143,7 +153,7 @@ func (s *Service) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid := range s.store.Peers() {
-		if s.isBadPeer(pid) {
+		if s.IsBadPeerNoLock(pid) {
 			badPeers = append(badPeers, pid)
 		}
 	}
@@ -173,8 +183,16 @@ func (s *Service) loop(ctx context.Context) {
 	for {
 		select {
 		case <-decayBadResponsesStats.C:
+			// Exit early if context is canceled.
+			if ctx.Err() != nil {
+				return
+			}
 			s.scorers.badResponsesScorer.Decay()
 		case <-decayBlockProviderStats.C:
+			// Exit early if context is canceled.
+			if ctx.Err() != nil {
+				return
+			}
 			s.scorers.blockProviderScorer.Decay()
 		case <-ctx.Done():
 			return

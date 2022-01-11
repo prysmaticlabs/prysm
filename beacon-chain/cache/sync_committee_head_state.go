@@ -6,8 +6,10 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 )
 
 // SyncCommitteeHeadStateCache for the latest head state requested by a sync committee participant.
@@ -31,10 +33,12 @@ func (c *SyncCommitteeHeadStateCache) Put(slot types.Slot, st state.BeaconState)
 	if st == nil || st.IsNil() {
 		return ErrNilValueProvided
 	}
-	_, ok := st.(*stateAltair.BeaconState)
-	if !ok {
+
+	_, ok := st.(*v1.BeaconState)
+	if ok {
 		return ErrIncorrectType
 	}
+
 	c.cache.Add(slot, st)
 	return nil
 }
@@ -47,9 +51,13 @@ func (c *SyncCommitteeHeadStateCache) Get(slot types.Slot) (state.BeaconState, e
 	if !exists {
 		return nil, ErrNotFound
 	}
-	st, ok := val.(*stateAltair.BeaconState)
+	var st state.BeaconState
+	st, ok := val.(*v2.BeaconState)
 	if !ok {
-		return nil, ErrIncorrectType
+		st, ok = val.(*v3.BeaconState)
+		if !ok {
+			return nil, ErrIncorrectType
+		}
 	}
 	return st, nil
 }

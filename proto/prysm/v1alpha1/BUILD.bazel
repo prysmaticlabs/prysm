@@ -58,6 +58,9 @@ ssz_gen_marshal(
         "BeaconBlockAltair",
         "BeaconBlockBodyAltair",
         "SignedBeaconBlockAltair",
+        "BeaconBlockMerge",
+        "BeaconBlockBodyMerge",
+        "SignedBeaconBlockMerge",
         "SyncAggregate",
         "SyncCommitteeMessage",
         "SyncCommitteeContribution",
@@ -94,6 +97,7 @@ ssz_gen_marshal(
         "Status",
         "BeaconState",
         "BeaconStateAltair",
+        "BeaconStateBellatrix",
         "SigningData",
         "SyncCommittee",
         "SyncAggregatorSelectionData",
@@ -159,7 +163,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
         "//proto/eth/ext:go_default_library",
-        "//shared/bytesutil:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
@@ -199,6 +203,6 @@ go_test(
     srcs = ["cloners_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/testutil/assert:go_default_library",
+        "//testing/assert:go_default_library",
     ],
 )

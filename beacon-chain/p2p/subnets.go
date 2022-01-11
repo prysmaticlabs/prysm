@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"go.opencensus.io/trace"
 
+	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
@@ -33,12 +33,11 @@ const syncLockerVal = 100
 // subscribed to a particular subnet. Then we try to connect
 // with those peers. This method will block until the required amount of
 // peers are found, the method only exits in the event of context timeouts.
-func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
-	index, threshold uint64) (bool, error) {
+func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, subIndex, threshold uint64) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
-	span.AddAttributes(trace.Int64Attribute("index", int64(index)))
+	span.AddAttributes(trace.Int64Attribute("index", int64(subIndex)))
 
 	if s.dv5Listener == nil {
 		// return if discovery isn't set
@@ -49,9 +48,9 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	iterator := s.dv5Listener.RandomNodes()
 	switch {
 	case strings.Contains(topic, GossipAttestationMessage):
-		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(index))
+		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(subIndex))
 	case strings.Contains(topic, GossipSyncCommitteeMessage):
-		iterator = filterNodes(ctx, iterator, s.filterPeerForSyncSubnet(index))
+		iterator = filterNodes(ctx, iterator, s.filterPeerForSyncSubnet(subIndex))
 	default:
 		return false, errors.New("no subnet exists for provided topic")
 	}

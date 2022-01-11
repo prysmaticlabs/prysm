@@ -14,8 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestPeer_AtMaxLimit(t *testing.T) {
@@ -104,7 +104,7 @@ func TestService_RejectInboundPeersBeyondLimit(t *testing.T) {
 			ScorerParams: &scorers.Config{},
 		}),
 		host: mockp2p.NewTestP2P(t).BHost,
-		cfg:  &Config{MaxPeers: uint(limit)},
+		cfg:  &Config{MaxPeers: uint64(limit)},
 	}
 	var err error
 	s.addrFilter, err = configureFilter(&Config{})

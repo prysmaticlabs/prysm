@@ -13,13 +13,14 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
+	"github.com/prysmaticlabs/prysm/async/event"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -27,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
-	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -64,7 +64,6 @@ type ValidatorService struct {
 	withCert              string
 	endpoint              string
 	validator             iface.Validator
-	protector             slashingiface.Protector
 	ctx                   context.Context
 	keyManager            keymanager.IKeymanager
 	grpcHeaders           []string
@@ -82,7 +81,6 @@ type Config struct {
 	GrpcRetriesFlag            uint
 	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Protector                  slashingiface.Protector
 	Endpoint                   string
 	Validator                  iface.Validator
 	ValDB                      db.Database
@@ -112,7 +110,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcRetries:           cfg.GrpcRetriesFlag,
 		grpcRetryDelay:        cfg.GrpcRetryDelay,
 		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
-		protector:             cfg.Protector,
 		validator:             cfg.Validator,
 		db:                    cfg.ValDB,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
@@ -135,7 +132,7 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	v.ctx = grpcutils.AppendHeaders(v.ctx, v.grpcHeaders)
+	v.ctx = grpcutil.AppendHeaders(v.ctx, v.grpcHeaders)
 
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
 	if err != nil {
@@ -163,7 +160,7 @@ func (v *ValidatorService) Start() {
 		log.Errorf("Could not read slashable public keys from disk: %v", err)
 		return
 	}
-	slashablePublicKeys := make(map[[48]byte]bool)
+	slashablePublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	for _, pubKey := range sPubKeys {
 		slashablePublicKeys[pubKey] = true
 	}
@@ -178,17 +175,17 @@ func (v *ValidatorService) Start() {
 		db:                             v.db,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
+		slashingProtectionClient:       ethpb.NewSlasherClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
 		keyManager:                     v.keyManager,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
-		startBalances:                  make(map[[48]byte]uint64),
-		prevBalance:                    make(map[[48]byte]uint64),
+		startBalances:                  make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
+		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		protector:                      v.protector,
 		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
 		useWeb:                         v.useWeb,
 		walletInitializedFeed:          v.walletInitializedFeed,
@@ -232,7 +229,7 @@ func (v *ValidatorService) Status() error {
 }
 
 func (v *ValidatorService) recheckKeys(ctx context.Context) {
-	var validatingKeys [][48]byte
+	var validatingKeys [][fieldparams.BLSPubkeyLength]byte
 	var err error
 	if v.useWeb {
 		initializedChan := make(chan *wallet.Wallet)
@@ -302,10 +299,10 @@ func ConstructDialOptions(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			grpcutils.LogRequests,
+			grpcutil.LogRequests,
 		)),
 		grpc.WithChainStreamInterceptor(
-			grpcutils.LogStream,
+			grpcutil.LogStream,
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
 			grpc_retry.StreamClientInterceptor(),
@@ -341,7 +338,7 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 	if !ok {
 		return
 	}
-	validatingPubKeysChan := make(chan [][48]byte, 1)
+	validatingPubKeysChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
 	defer func() {
 		sub.Unsubscribe()

@@ -2,10 +2,11 @@ package precompute
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
@@ -25,7 +26,7 @@ import (
 //    current_target_balance = get_attesting_balance(state, current_attestations)
 //    weigh_justification_and_finalization(state, total_active_balance, previous_target_balance, current_target_balance)
 func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal *Balance) (state.BeaconState, error) {
-	canProcessSlot, err := core.StartSlot(2 /*epoch*/)
+	canProcessSlot, err := slots.EpochStart(2 /*epoch*/)
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +79,8 @@ func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal
 //        state.finalized_checkpoint = old_current_justified_checkpoint
 func weighJustificationAndFinalization(state state.BeaconState,
 	totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) (state.BeaconState, error) {
-	prevEpoch := core.PrevEpoch(state)
-	currentEpoch := core.CurrentEpoch(state)
+	prevEpoch := time.PrevEpoch(state)
+	currentEpoch := time.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
 	oldCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint()
 

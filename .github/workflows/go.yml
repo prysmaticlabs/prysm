@@ -24,7 +24,7 @@ jobs:
         uses: ./.github/actions/gofmt
         with:
           path: ./
-      
+
       - name: GoImports checker
         id: goimports
         uses: Jerome1337/goimports-action@v1.0.2
@@ -34,7 +34,13 @@ jobs:
       - name: Gosec security scanner
         uses: securego/gosec@master
         with:
-          args: '-exclude-dir=shared/bls/herumi ./...'
+          args: '-exclude=G307 -exclude-dir=crypto/bls/herumi ./...'
+
+      - name: Golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          args: --print-issued-lines --sort-results --no-config --timeout=10m --disable-all -E deadcode  -E errcheck -E gosimple --skip-files=validator/web/site_data.go
+
   build:
     name: Build
     runs-on: ubuntu-latest

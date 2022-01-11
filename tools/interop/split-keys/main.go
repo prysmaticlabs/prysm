@@ -20,7 +20,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	log.Printf("Splitting %d keys across %d wallets\n", len(privKeys), *numberOfWalletsFlag)
-	wPass, err := fileutil.ReadFileAsBytes(*walletPasswordFileFlag)
+	wPass, err := file.ReadFileAsBytes(*walletPasswordFileFlag)
 	if err != nil {
 		log.Fatal(err)
 	}

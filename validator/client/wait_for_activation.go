@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/math"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 )
@@ -22,10 +23,10 @@ import (
 // from the gRPC server.
 //
 // If the channel parameter is nil, WaitForActivation creates and manages its own channel.
-func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error {
+func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan chan [][fieldparams.BLSPubkeyLength]byte) error {
 	// Monitor the key manager for updates.
 	if accountsChangedChan == nil {
-		accountsChangedChan = make(chan [][48]byte, 1)
+		accountsChangedChan = make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 		sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
 		defer func() {
 			sub.Unsubscribe()
@@ -43,7 +44,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 // the accountsChangedChan. When an event signal is received, restart the waitForActivation routine.
 // 4) If the stream is reset in error, restart the routine.
 // 5) If the stream returns a response indicating one or more validators are active, exit the routine.
-func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan [][48]byte) error {
+func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 
@@ -80,12 +81,12 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		attempts := streamAttempts(ctx)
 		log.WithError(err).WithField("attempts", attempts).
 			Error("Stream broken while waiting for activation. Reconnecting...")
 		// Reconnection attempt backoff, up to 60s.
-		time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
+		time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
 		return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
 
@@ -150,12 +151,12 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 					return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 				}
 				if err != nil {
-					traceutil.AnnotateError(span, err)
+					tracing.AnnotateError(span, err)
 					attempts := streamAttempts(ctx)
 					log.WithError(err).WithField("attempts", attempts).
 						Error("Stream broken while waiting for activation. Reconnecting...")
 					// Reconnection attempt backoff, up to 60s.
-					time.Sleep(time.Second * time.Duration(mathutil.Min(uint64(attempts), 60)))
+					time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
 					return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
 				}
 
@@ -179,7 +180,7 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 		}
 	}
 
-	v.ticker = slotutil.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	return nil
 }
 

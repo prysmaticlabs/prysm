@@ -4,21 +4,20 @@ import (
 	"reflect"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
 
 // gossipTopicMappings represent the protocol ID to protobuf message type map for easy
 // lookup.
 var gossipTopicMappings = map[string]proto.Message{
-	BlockSubnetTopicFormat:                    &pb.SignedBeaconBlock{},
-	AttestationSubnetTopicFormat:              &pb.Attestation{},
-	ExitSubnetTopicFormat:                     &pb.SignedVoluntaryExit{},
-	ProposerSlashingSubnetTopicFormat:         &pb.ProposerSlashing{},
-	AttesterSlashingSubnetTopicFormat:         &pb.AttesterSlashing{},
-	AggregateAndProofSubnetTopicFormat:        &pb.SignedAggregateAttestationAndProof{},
+	BlockSubnetTopicFormat:                    &ethpb.SignedBeaconBlock{},
+	AttestationSubnetTopicFormat:              &ethpb.Attestation{},
+	ExitSubnetTopicFormat:                     &ethpb.SignedVoluntaryExit{},
+	ProposerSlashingSubnetTopicFormat:         &ethpb.ProposerSlashing{},
+	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{},
+	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{},
 	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
 }
@@ -35,7 +34,7 @@ func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
 // AllTopics returns all topics stored in our
 // gossip mapping.
 func AllTopics() []string {
-	topics := []string{}
+	var topics []string
 	for k := range gossipTopicMappings {
 		topics = append(topics, k)
 	}

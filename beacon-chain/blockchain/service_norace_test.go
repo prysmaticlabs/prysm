@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,7 +18,7 @@ func init() {
 func TestChainService_SaveHead_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg: &Config{BeaconDB: beaconDB},
+		cfg: &config{BeaconDB: beaconDB},
 	}
 	go func() {
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))

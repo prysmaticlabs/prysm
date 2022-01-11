@@ -13,11 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/stretchr/testify/require"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 func TestService_CanSubscribe(t *testing.T) {
@@ -25,7 +25,7 @@ func TestService_CanSubscribe(t *testing.T) {
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
 	valRoot := [32]byte{}
-	digest, err := p2putils.CreateForkDigest(genesisTime, valRoot[:])
+	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type test struct {
 		name  string
@@ -116,7 +116,7 @@ func TestService_CanSubscribe(t *testing.T) {
 
 func TestService_CanSubscribe_uninitialized(t *testing.T) {
 	s := &Service{}
-	require.False(t, s.CanSubscribe("foo"))
+	require.Equal(t, false, s.CanSubscribe("foo"))
 }
 
 func Test_scanfcheck(t *testing.T) {
@@ -211,7 +211,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
 	valRoot := [32]byte{}
-	digest, err := p2putils.CreateForkDigest(genesisTime, valRoot[:])
+	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type args struct {
 		id   peer.ID
@@ -336,7 +336,7 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.False(t, s.isInitialized())
+	require.Equal(t, false, s.isInitialized())
 
 	go s.awaitStateInitialized()
 
@@ -347,7 +347,7 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 		n = notifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
-				StartTime:             timeutils.Now(),
+				StartTime:             prysmTime.Now(),
 				GenesisValidatorsRoot: bytesutil.PadTo([]byte("genesis"), 32),
 			},
 		})
@@ -355,5 +355,5 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	require.True(t, s.isInitialized())
+	require.Equal(t, true, s.isInitialized())
 }

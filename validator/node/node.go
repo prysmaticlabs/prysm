@@ -16,22 +16,24 @@ import (
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/monitoring/backup"
+	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
+	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/backuputil"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/prereq"
-	"github.com/prysmaticlabs/prysm/shared/prometheus"
-	"github.com/prysmaticlabs/prysm/shared/tracing"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
+	"github.com/prysmaticlabs/prysm/runtime/prereqs"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
@@ -40,8 +42,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
+	validatorMiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -55,7 +56,7 @@ type ValidatorClient struct {
 	ctx               context.Context
 	cancel            context.CancelFunc
 	db                *kv.Store
-	services          *shared.ServiceRegistry // Lifecycle and service store.
+	services          *runtime.ServiceRegistry // Lifecycle and service store.
 	lock              sync.RWMutex
 	wallet            *wallet.Wallet
 	walletInitialized *event.Feed
@@ -64,7 +65,7 @@ type ValidatorClient struct {
 
 // NewValidatorClient creates a new instance of the Prysm validator client.
 func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
-	if err := tracing.Setup(
+	if err := tracing2.Setup(
 		"validator", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
 		cliCtx.String(cmd.TracingEndpointFlag.Name),
@@ -82,9 +83,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	logrus.SetLevel(level)
 
 	// Warn if user's platform is not supported
-	prereq.WarnIfPlatformNotSupported(cliCtx.Context)
+	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
 
-	registry := shared.NewServiceRegistry()
+	registry := runtime.NewServiceRegistry()
 	ctx, cancel := context.WithCancel(cliCtx.Context)
 	validatorClient := &ValidatorClient{
 		cliCtx:            cliCtx,
@@ -95,7 +96,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		stop:              make(chan struct{}),
 	}
 
-	featureconfig.ConfigureValidator(cliCtx)
+	features.ConfigureValidator(cliCtx)
 	cmd.ConfigureValidator(cliCtx)
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
@@ -226,7 +227,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		}
 	} else {
 		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		if !fileutil.FileExists(dataFile) {
+		if !file.FileExists(dataFile) {
 			log.Warnf("Slashing protection file %s is missing.\n"+
 				"If you changed your --wallet-dir or --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
 				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
@@ -248,11 +249,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := c.registerPrometheusService(cliCtx); err != nil {
-			return err
-		}
-	}
-	if featureconfig.Get().SlasherProtection {
-		if err := c.registerSlasherService(); err != nil {
 			return err
 		}
 	}
@@ -340,11 +336,6 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if featureconfig.Get().SlasherProtection {
-		if err := c.registerSlasherService(); err != nil {
-			return err
-		}
-	}
 	if err := c.registerValidatorService(keyManager); err != nil {
 		return err
 	}
@@ -370,7 +361,7 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: backuputil.BackupHandler(c.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
+				Handler: backup.BackupHandler(c.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}
@@ -395,12 +386,6 @@ func (c *ValidatorClient) registerValidatorService(
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	var sp *slashingprotection.Service
-	var protector iface.Protector
-	if err := c.services.FetchService(&sp); err == nil {
-		protector = sp
-	}
-
 	gStruct := &g.Graffiti{}
 	var err error
 	if c.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
@@ -423,7 +408,6 @@ func (c *ValidatorClient) registerValidatorService(
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcRetryDelay:             grpcRetryDelay,
 		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
-		Protector:                  protector,
 		ValDB:                      c.db,
 		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
 		WalletInitializedFeed:      c.walletInitialized,
@@ -435,29 +419,6 @@ func (c *ValidatorClient) registerValidatorService(
 	}
 
 	return c.services.RegisterService(v)
-}
-func (c *ValidatorClient) registerSlasherService() error {
-	endpoint := c.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
-	if endpoint == "" {
-		return errors.New("external slasher feature flag is set but no slasher endpoint is configured")
-
-	}
-	cert := c.cliCtx.String(flags.SlasherCertFlag.Name)
-	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	sp, err := slashingprotection.NewService(c.cliCtx.Context, &slashingprotection.Config{
-		Endpoint:                   endpoint,
-		CertFlag:                   cert,
-		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
-		GrpcRetriesFlag:            grpcRetries,
-		GrpcRetryDelay:             grpcRetryDelay,
-		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not initialize slasher service")
-	}
-	return c.services.RegisterService(sp)
 }
 
 func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
@@ -525,15 +486,18 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		validatorpb.RegisterAuthHandler,
 		validatorpb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
+		validatorpb.RegisterHealthHandler,
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,
+		ethpbservice.RegisterKeyManagementHandler,
 	}
-	mux := gwruntime.NewServeMux(
+	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 			Marshaler: &gwruntime.JSONPb{
 				MarshalOptions: protojson.MarshalOptions{
 					EmitUnpopulated: true,
+					UseProtoNames:   true,
 				},
 				UnmarshalOptions: protojson.UnmarshalOptions{
 					DiscardUnknown: true,
@@ -544,37 +508,51 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 			"text/event-stream", &gwruntime.EventSourceJSONPb{},
 		),
 	)
-	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
-		if strings.HasPrefix(req.URL.Path, "/api") {
-			http.StripPrefix("/api", h).ServeHTTP(w, req)
+	muxHandler := func(apiMware *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
+		// The validator gateway handler requires this special logic as it serves two kinds of APIs, namely
+		// the standard validator keymanager API under the /eth namespace, and the Prysm internal
+		// validator API under the /api namespace. Finally, it also serves requests to host the validator web UI.
+		if strings.HasPrefix(req.URL.Path, "/api/eth/") {
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			// If the prefix has /eth/, we handle it with the standard API gateway middleware.
+			apiMware.ServeHTTP(w, req)
+		} else if strings.HasPrefix(req.URL.Path, "/api") {
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			// Else, we handle with the Prysm API gateway without a middleware.
+			h(w, req)
 		} else {
+			// Finally, we handle with the web server.
 			web.Handler(w, req)
 		}
 	}
 
-	pbHandler := gateway.PbMux{
+	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
-		Patterns:      []string{"/accounts/", "/v2/"},
-		Mux:           mux,
+		Patterns:      []string{"/accounts/", "/v2/", "/internal/eth/v1/"},
+		Mux:           gwmux,
 	}
-
-	gw := gateway.New(
-		cliCtx.Context,
-		[]gateway.PbMux{pbHandler},
-		muxHandler,
-		rpcAddr,
-		gatewayAddress,
-	).WithAllowedOrigins(allowedOrigins).WithMaxCallRecvMsgSize(maxCallSize)
-
+	opts := []gateway.Option{
+		gateway.WithRemoteAddr(rpcAddr),
+		gateway.WithGatewayAddr(gatewayAddress),
+		gateway.WithMaxCallRecvMsgSize(maxCallSize),
+		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
+		gateway.WithAllowedOrigins(allowedOrigins),
+		gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}),
+		gateway.WithMuxHandler(muxHandler),
+	}
+	gw, err := gateway.New(cliCtx.Context, opts...)
+	if err != nil {
+		return err
+	}
 	return c.services.RegisterService(gw)
 }
 
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if fileutil.FileExists(defaultWalletPasswordFilePath) {
+	if file.FileExists(defaultWalletPasswordFilePath) {
 		// Ensure file has proper permissions.
-		hasPerms, err := fileutil.HasReadWritePermissions(defaultWalletPasswordFilePath)
+		hasPerms, err := file.HasReadWritePermissions(defaultWalletPasswordFilePath)
 		if err != nil {
 			return err
 		}

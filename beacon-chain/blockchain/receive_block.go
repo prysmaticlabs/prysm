@@ -5,13 +5,12 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -33,36 +32,14 @@ type BlockReceiver interface {
 func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
-	receivedTime := timeutils.Now()
+	receivedTime := time.Now()
 	blockCopy := block.Copy()
 
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
 		err := errors.Wrap(err, "could not process block")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
-	}
-
-	// Update and save head block after fork choice.
-	if !featureconfig.Get().UpdateHeadTimely {
-		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			log.WithError(err).Warn("Could not update head")
-		}
-
-		if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, block); err != nil {
-			return err
-		}
-
-		// Send notification of the processed block to the state feed.
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{
-				Slot:        blockCopy.Block().Slot(),
-				BlockRoot:   blockRoot,
-				SignedBlock: blockCopy,
-				Verified:    true,
-			},
-		})
 	}
 
 	// Handle post block operations such as attestations and exits.
@@ -99,14 +76,14 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 	fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 
 	for i, b := range blocks {
 		blockCopy := b.Copy()
 		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 		// Send notification of the processed block to the state feed.
@@ -124,7 +101,10 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 	}
 
-	if err := s.VerifyWeakSubjectivityRoot(s.ctx); err != nil {
+	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		return err
+	}
+	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, s.finalizedCheckpt.Epoch); err != nil {
 		// log.Fatalf will prevent defer from being called
 		span.End()
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
@@ -165,7 +145,7 @@ func (s *Service) handlePostBlockOperations(b block.BeaconBlock) error {
 // This checks whether it's time to start saving hot state to DB.
 // It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
 func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
-	currentEpoch := core.SlotToEpoch(s.CurrentSlot())
+	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality types.Epoch
 	if currentEpoch > s.finalizedCheckpt.Epoch {

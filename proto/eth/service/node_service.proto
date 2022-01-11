@@ -34,34 +34,34 @@ option php_namespace = "Ethereum\\Eth\\Service";
 service BeaconNode {
   // GetIdentity retrieves data about the node's network presence.
   rpc GetIdentity(google.protobuf.Empty) returns (v1.IdentityResponse) {
-    option (google.api.http) = {get: "/eth/v1/node/identity"};
+    option (google.api.http) = {get: "/internal/eth/v1/node/identity"};
   }
 
   // ListPeers retrieves data about the node's network peers.
   rpc ListPeers(v1.PeersRequest) returns (v1.PeersResponse) {
-    option (google.api.http) = {get: "/eth/v1/node/peers"};
+    option (google.api.http) = {get: "/internal/eth/v1/node/peers"};
   }
 
   // GetPeer retrieves data about the given peer.
   rpc GetPeer(v1.PeerRequest) returns (v1.PeerResponse) {
-    option (google.api.http) = {get: "/eth/v1/node/peers/{peer_id}"};
+    option (google.api.http) = {get: "/internal/eth/v1/node/peers/{peer_id}"};
   }
 
   // PeerCount retrieves number of known peers.
   rpc PeerCount(google.protobuf.Empty) returns (v1.PeerCountResponse) {
-    option (google.api.http) = {get: "/eth/v1/node/peer_count"};
+    option (google.api.http) = {get: "/internal/eth/v1/node/peer_count"};
   }
 
   // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
   // if it is, what block it is up to.
   rpc GetSyncStatus(google.protobuf.Empty) returns (v1.SyncingResponse) {
-    option (google.api.http) = {get: "/eth/v1/node/syncing"};
+    option (google.api.http) = {get: "/internal/eth/v1/node/syncing"};
   }
 
   // GetVersion requests that the beacon node identify information about its implementation in a
   // format similar to a HTTP User-Agent field.
   rpc GetVersion(google.protobuf.Empty) returns (v1.VersionResponse) {
-    option (google.api.http) = {get: "/eth/v1/node/version"};
+    option (google.api.http) = {get: "/internal/eth/v1/node/version"};
   }
 
   // GetHealth returns node health status in http status codes. Useful for load balancers.
@@ -73,6 +73,6 @@ service BeaconNode {
   //    "503":
   //      description: Node not initialized or having issues
   rpc GetHealth(google.protobuf.Empty) returns (google.protobuf.Empty) {
-    option (google.api.http) = {get: "/eth/v1/node/health"};
+    option (google.api.http) = {get: "/internal/eth/v1/node/health"};
   }
 }

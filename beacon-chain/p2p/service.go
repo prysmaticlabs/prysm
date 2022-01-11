@@ -22,22 +22,22 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/runtime"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-var _ shared.Service = (*Service)(nil)
+var _ runtime.Service = (*Service)(nil)
 
 // In the event that we are at our peer limit, we
 // stop looking for new peers and instead poll
@@ -46,10 +46,14 @@ var _ shared.Service = (*Service)(nil)
 var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
-var refreshRate = slotutil.DivideSlotBy(2)
+var refreshRate = slots.DivideSlotBy(2)
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
+
+// pubsubQueueSize is the size that we assign to our validation queue and outbound message queue for
+// gossipsub.
+const pubsubQueueSize = 600
 
 // maxDialTimeout is the timeout for a single peer dial.
 var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
@@ -141,8 +145,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 			return MsgID(s.genesisValidatorsRoot, pmsg)
 		}),
 		pubsub.WithSubscriptionFilter(s),
-		pubsub.WithPeerOutboundQueueSize(256),
-		pubsub.WithValidateQueueSize(256),
+		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),
+		pubsub.WithValidateQueueSize(pubsubQueueSize),
 		pubsub.WithPeerScore(peerScoringParams()),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 		pubsub.WithGossipSubParams(pubsubGossipParam()),
@@ -231,15 +235,15 @@ func (s *Service) Start() {
 	s.RefreshENR()
 
 	// Periodic functions.
-	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
+	async.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
 		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
 	})
-	runutil.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
-	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
-	runutil.RunEvery(s.ctx, refreshRate, func() {
+	async.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
+	async.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
+	async.RunEvery(s.ctx, refreshRate, func() {
 		s.RefreshENR()
 	})
-	runutil.RunEvery(s.ctx, 1*time.Minute, func() {
+	async.RunEvery(s.ctx, 1*time.Minute, func() {
 		log.WithFields(logrus.Fields{
 			"inbound":     len(s.peers.InboundConnected()),
 			"outbound":    len(s.peers.OutboundConnected()),
@@ -299,7 +303,7 @@ func (s *Service) Started() bool {
 }
 
 // Encoding returns the configured networking encoding.
-func (s *Service) Encoding() encoder.NetworkEncoding {
+func (_ *Service) Encoding() encoder.NetworkEncoding {
 	return &encoder.SszNetworkEncoder{}
 }
 

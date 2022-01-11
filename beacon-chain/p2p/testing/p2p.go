@@ -225,7 +225,7 @@ func (p *TestP2P) LeaveTopic(topic string) error {
 }
 
 // Encoding returns ssz encoding.
-func (p *TestP2P) Encoding() encoder.NetworkEncoding {
+func (_ *TestP2P) Encoding() encoder.NetworkEncoding {
 	return &encoder.SszNetworkEncoder{}
 }
 
@@ -252,12 +252,12 @@ func (p *TestP2P) Host() host.Host {
 }
 
 // ENR returns the enr of the local peer.
-func (p *TestP2P) ENR() *enr.Record {
+func (_ *TestP2P) ENR() *enr.Record {
 	return new(enr.Record)
 }
 
 // DiscoveryAddresses --
-func (p *TestP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
+func (_ *TestP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 	return nil, nil
 }
 
@@ -339,7 +339,7 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 }
 
 // Started always returns true.
-func (p *TestP2P) Started() bool {
+func (_ *TestP2P) Started() bool {
 	return true
 }
 
@@ -349,12 +349,12 @@ func (p *TestP2P) Peers() *peers.Status {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (p *TestP2P) FindPeersWithSubnet(_ context.Context, _ string, _, _ uint64) (bool, error) {
+func (_ *TestP2P) FindPeersWithSubnet(_ context.Context, _ string, _, _ uint64) (bool, error) {
 	return false, nil
 }
 
 // RefreshENR mocks the p2p func.
-func (p *TestP2P) RefreshENR() {}
+func (_ *TestP2P) RefreshENR() {}
 
 // ForkDigest mocks the p2p func.
 func (p *TestP2P) ForkDigest() ([4]byte, error) {
@@ -372,31 +372,31 @@ func (p *TestP2P) MetadataSeq() uint64 {
 }
 
 // AddPingMethod mocks the p2p func.
-func (p *TestP2P) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {
+func (_ *TestP2P) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {
 	// no-op
 }
 
 // InterceptPeerDial .
-func (p *TestP2P) InterceptPeerDial(peer.ID) (allow bool) {
+func (_ *TestP2P) InterceptPeerDial(peer.ID) (allow bool) {
 	return true
 }
 
 // InterceptAddrDial .
-func (p *TestP2P) InterceptAddrDial(peer.ID, multiaddr.Multiaddr) (allow bool) {
+func (_ *TestP2P) InterceptAddrDial(peer.ID, multiaddr.Multiaddr) (allow bool) {
 	return true
 }
 
 // InterceptAccept .
-func (p *TestP2P) InterceptAccept(_ network.ConnMultiaddrs) (allow bool) {
+func (_ *TestP2P) InterceptAccept(_ network.ConnMultiaddrs) (allow bool) {
 	return true
 }
 
 // InterceptSecured .
-func (p *TestP2P) InterceptSecured(network.Direction, peer.ID, network.ConnMultiaddrs) (allow bool) {
+func (_ *TestP2P) InterceptSecured(network.Direction, peer.ID, network.ConnMultiaddrs) (allow bool) {
 	return true
 }
 
 // InterceptUpgraded .
-func (p *TestP2P) InterceptUpgraded(network.Conn) (allow bool, reason control.DisconnectReason) {
+func (_ *TestP2P) InterceptUpgraded(network.Conn) (allow bool, reason control.DisconnectReason) {
 	return true, 0
 }

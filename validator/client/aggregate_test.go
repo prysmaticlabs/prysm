@@ -8,14 +8,15 @@ import (
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -25,7 +26,7 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.SubmitAggregateAndProof(context.Background(), 0, pubKey)
 
@@ -35,7 +36,7 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
@@ -56,7 +57,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
+			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: make([]byte, 1),
 			}),
 			SelectionProof: make([]byte, 96),
@@ -74,7 +75,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
@@ -95,7 +96,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
+			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: make([]byte, 1),
 			}),
 			SelectionProof: make([]byte, 96),
@@ -118,30 +119,30 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
-	currentTime := timeutils.Now()
+	currentTime := time.Now()
 	numOfSlots := types.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
-	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
+	oneThird := slots.DivideSlotBy(3 /* one third of slot duration */)
 	timeToSleep := oneThird + oneThird
 
 	twoThirdTime := currentTime.Add(timeToSleep)
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
-	currentTime = timeutils.Now()
+	currentTime = time.Now()
 	assert.Equal(t, twoThirdTime.Unix(), currentTime.Unix())
 }
 
 func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
-	currentTime := timeutils.Now()
+	currentTime := time.Now()
 	numOfSlots := types.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 
-	expectedTime := timeutils.Now()
+	expectedTime := time.Now()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validator.waitToSlotTwoThirds(ctx, numOfSlots)
-	currentTime = timeutils.Now()
+	currentTime = time.Now()
 	assert.Equal(t, expectedTime.Unix(), currentTime.Unix())
 }
 
@@ -149,7 +150,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -158,7 +159,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 
 	agg := &ethpb.AggregateAttestationAndProof{
 		AggregatorIndex: 0,
-		Aggregate: testutil.HydrateAttestation(&ethpb.Attestation{
+		Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 			AggregationBits: bitfield.NewBitlist(1),
 		}),
 		SelectionProof: make([]byte, 96),

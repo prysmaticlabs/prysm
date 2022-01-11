@@ -7,8 +7,8 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestDebugServer_GetPeer(t *testing.T) {
@@ -40,11 +40,19 @@ func TestDebugServer_ListPeers(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(res.Responses))
 
-	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Responses[0].Direction), "Expected 1st peer to be an inbound")
+	direction1 := res.Responses[0].Direction
+	direction2 := res.Responses[1].Direction
+	assert.Equal(t,
+		true,
+		direction1 == ethpb.PeerDirection_INBOUND || direction2 == ethpb.PeerDirection_INBOUND,
+		"Expected an inbound peer")
+	assert.Equal(t,
+		true,
+		direction1 == ethpb.PeerDirection_OUTBOUND || direction2 == ethpb.PeerDirection_OUTBOUND,
+		"Expected an outbound peer")
 	if len(res.Responses[0].ListeningAddresses) == 0 {
 		t.Errorf("Expected 1st peer to have a multiaddress, instead they have no addresses")
 	}
-	assert.Equal(t, ethpb.PeerDirection_OUTBOUND, res.Responses[1].Direction, "Expected 2st peer to be an outbound connection")
 	if len(res.Responses[1].ListeningAddresses) == 0 {
 		t.Errorf("Expected 2nd peer to have a multiaddress, instead they have no addresses")
 	}

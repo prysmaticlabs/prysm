@@ -6,15 +6,16 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	bolt "go.etcd.io/bbolt"
 )
 
 func TestPruneAttestations_NoPruning(t *testing.T) {
-	pubKey := [48]byte{1}
-	validatorDB := setupDB(t, [][48]byte{pubKey})
+	pubKey := [fieldparams.BLSPubkeyLength]byte{1}
+	validatorDB := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 
 	// Write attesting history for every single epoch
 	// since genesis to a specified number of epochs.
@@ -39,8 +40,8 @@ func TestPruneAttestations_NoPruning(t *testing.T) {
 }
 
 func TestPruneAttestations_OK(t *testing.T) {
-	numKeys := uint64(2048)
-	pks := make([][48]byte, 0, numKeys)
+	numKeys := uint64(64)
+	pks := make([][fieldparams.BLSPubkeyLength]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
 		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
 	}
@@ -89,7 +90,7 @@ func TestPruneAttestations_OK(t *testing.T) {
 
 func BenchmarkPruneAttestations(b *testing.B) {
 	numKeys := uint64(8)
-	pks := make([][48]byte, 0, numKeys)
+	pks := make([][fieldparams.BLSPubkeyLength]byte, 0, numKeys)
 	for i := uint64(0); i < numKeys; i++ {
 		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
 	}
@@ -113,7 +114,7 @@ func BenchmarkPruneAttestations(b *testing.B) {
 
 // Saves attesting history for every (source, target = source + 1) pairs since genesis
 // up to a given number of epochs for a validator public key.
-func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48]byte, numEpochs types.Epoch) error {
+func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [fieldparams.BLSPubkeyLength]byte, numEpochs types.Epoch) error {
 	return validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
@@ -152,7 +153,7 @@ func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [48
 func checkAttestingHistoryAfterPruning(
 	t testing.TB,
 	validatorDB *Store,
-	pubKey [48]byte,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
 	startEpoch,
 	numEpochs types.Epoch,
 	shouldBePruned bool,

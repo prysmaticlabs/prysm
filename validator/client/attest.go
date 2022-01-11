@@ -10,18 +10,19 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -31,7 +32,7 @@ import (
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
@@ -41,16 +42,16 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 	var b strings.Builder
 	if err := b.WriteByte(byte(iface.RoleAttester)); err != nil {
 		log.WithError(err).Error("Could not write role byte for lock key")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
 	_, err := b.Write(pubKey[:])
 	if err != nil {
 		log.WithError(err).Error("Could not write pubkey bytes for lock key")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
-	lock := mputil.NewMultilock(b.String())
+	lock := async.NewMultilock(b.String())
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -62,7 +63,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
 	if len(duty.Committee) == 0 {
@@ -80,7 +81,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
 
@@ -95,7 +96,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
 
@@ -105,7 +106,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
 
@@ -141,7 +142,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 		log.WithFields(
 			attestationLogFields(pubKey, indexedAtt),
 		).Debug("Attempted slashable attestation details")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
@@ -150,7 +151,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
 
@@ -159,7 +160,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return
 	}
 
@@ -180,7 +181,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 }
 
 // Given the validator public key, this gets the validator assignment.
-func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
+func (v *validator) duty(pubKey [fieldparams.BLSPubkeyLength]byte) (*ethpb.DutiesResponse_Duty, error) {
 	if v.duties == nil {
 		return nil, errors.New("no duties for validators")
 	}
@@ -195,7 +196,7 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 }
 
 // Given validator's public key, this function returns the signature of an attestation data and its signing root.
-func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, [32]byte, error) {
+func (v *validator) signAtt(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, data *ethpb.AttestationData) ([]byte, [32]byte, error) {
 	domain, root, err := v.getDomainAndSigningRoot(ctx, data)
 	if err != nil {
 		return nil, [32]byte{}, err
@@ -219,7 +220,7 @@ func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.Att
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
+	root, err := signing.ComputeSigningRoot(data, domain.SignatureDomain)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -232,7 +233,7 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index t
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
 
-	h, err := hashutil.HashProto(data)
+	h, err := hash.HashProto(data)
 	if err != nil {
 		return err
 	}
@@ -257,10 +258,10 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 		return
 	}
 
-	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
-	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
+	delay := slots.DivideSlotBy(3 /* a third of the slot duration */)
+	startTime := slots.StartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
-	wait := timeutils.Until(finalTime)
+	wait := prysmTime.Until(finalTime)
 	if wait <= 0 {
 		return
 	}
@@ -274,13 +275,13 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 	for {
 		select {
 		case b := <-bChannel:
-			if featureconfig.Get().AttestTimely {
+			if features.Get().AttestTimely {
 				if slot <= b.Block().Slot() {
 					return
 				}
 			}
 		case <-ctx.Done():
-			traceutil.AnnotateError(span, ctx.Err())
+			tracing.AnnotateError(span, ctx.Err())
 			return
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
@@ -291,7 +292,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 	}
 }
 
-func attestationLogFields(pubKey [48]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {
+func attestationLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, indexedAtt *ethpb.IndexedAttestation) logrus.Fields {
 	return logrus.Fields{
 		"attesterPublicKey": fmt.Sprintf("%#x", pubKey),
 		"attestationSlot":   indexedAtt.Data.Slot,

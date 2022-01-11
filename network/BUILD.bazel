@@ -1,0 +1,26 @@
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "endpoint.go",
+        "external_ip.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/network",
+    visibility = ["//visibility:public"],
+    deps = ["//network/authorization:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "endpoint_test.go",
+        "external_ip_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//network/authorization:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
+    ],
+)

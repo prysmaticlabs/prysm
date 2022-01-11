@@ -35,14 +35,15 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 const (
@@ -320,13 +321,20 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.ChainStateLastUpdated, nil
 	}
-	return timeutils.Now(), peerdata.ErrPeerUnknown
+	return prysmTime.Now(), peerdata.ErrPeerUnknown
 }
 
 // IsBad states if the peer is to be considered bad (by *any* of the registered scorers).
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
 func (p *Status) IsBad(pid peer.ID) bool {
-	return p.isfromBadIP(pid) || p.scorers.IsBadPeer(pid)
+	p.store.RLock()
+	defer p.store.RUnlock()
+	return p.isBad(pid)
+}
+
+// isBad is the lock-free version of IsBad.
+func (p *Status) isBad(pid peer.ID) bool {
+	return p.isfromBadIP(pid) || p.scorers.IsBadPeerNoLock(pid)
 }
 
 // NextValidTime gets the earliest possible time it is to contact/dial
@@ -339,7 +347,7 @@ func (p *Status) NextValidTime(pid peer.ID) (time.Time, error) {
 	if peerData, ok := p.store.PeerData(pid); ok {
 		return peerData.NextValidTime, nil
 	}
-	return timeutils.Now(), peerdata.ErrPeerUnknown
+	return prysmTime.Now(), peerdata.ErrPeerUnknown
 }
 
 // SetNextValidTime sets the earliest possible time we are
@@ -535,6 +543,58 @@ func (p *Status) Prune() {
 	p.store.Lock()
 	defer p.store.Unlock()
 
+	// Default to old method if flag isnt enabled.
+	if !features.Get().EnablePeerScorer {
+		p.deprecatedPrune()
+		return
+	}
+	// Exit early if there is nothing to prune.
+	if len(p.store.Peers()) <= p.store.Config().MaxPeers {
+		return
+	}
+	notBadPeer := func(pid peer.ID) bool {
+		return !p.isBad(pid)
+	}
+	type peerResp struct {
+		pid   peer.ID
+		score float64
+	}
+	peersToPrune := make([]*peerResp, 0)
+	// Select disconnected peers with a smaller bad response count.
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerDisconnected && notBadPeer(pid) {
+			peersToPrune = append(peersToPrune, &peerResp{
+				pid:   pid,
+				score: p.Scorers().ScoreNoLock(pid),
+			})
+		}
+	}
+
+	// Sort peers in descending order, so the peers with the
+	// highest score are pruned first. This
+	// is to protect the node from malicious/lousy peers so
+	// that their memory is still kept.
+	sort.Slice(peersToPrune, func(i, j int) bool {
+		return peersToPrune[i].score > peersToPrune[j].score
+	})
+
+	limitDiff := len(p.store.Peers()) - p.store.Config().MaxPeers
+	if limitDiff > len(peersToPrune) {
+		limitDiff = len(peersToPrune)
+	}
+
+	peersToPrune = peersToPrune[:limitDiff]
+
+	// Delete peers from map.
+	for _, peerData := range peersToPrune {
+		p.store.DeletePeerData(peerData.pid)
+	}
+	p.tallyIPTracker()
+}
+
+// Deprecated: This is the old peer pruning method based on
+// bad response counts.
+func (p *Status) deprecatedPrune() {
 	// Exit early if there is nothing to prune.
 	if len(p.store.Peers()) <= p.store.Config().MaxPeers {
 		return
@@ -570,9 +630,7 @@ func (p *Status) Prune() {
 	if limitDiff > len(peersToPrune) {
 		limitDiff = len(peersToPrune)
 	}
-
 	peersToPrune = peersToPrune[:limitDiff]
-
 	// Delete peers from map.
 	for _, peerData := range peersToPrune {
 		p.store.DeletePeerData(peerData.pid)
@@ -638,7 +696,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch types.Epoch) (typ
 
 // BestNonFinalized returns the highest known epoch, higher than ours,
 // and is shared by at least minPeers.
-func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types.Epoch, []peer.ID) {
+func (p *Status) BestNonFinalized(minPeers uint64, ourHeadEpoch types.Epoch) (types.Epoch, []peer.ID) {
 	connected := p.Connected()
 	epochVotes := make(map[types.Epoch]uint64)
 	pidEpoch := make(map[peer.ID]types.Epoch, len(connected))
@@ -649,7 +707,7 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourHeadSlot {
-			epoch := core.SlotToEpoch(peerChainState.HeadSlot)
+			epoch := slots.ToEpoch(peerChainState.HeadSlot)
 			epochVotes[epoch]++
 			pidEpoch[pid] = epoch
 			pidHead[pid] = peerChainState.HeadSlot
@@ -687,6 +745,70 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types
 // bad response count. In the future scoring will be used
 // to determine the most suitable peers to take out.
 func (p *Status) PeersToPrune() []peer.ID {
+	if !features.Get().EnablePeerScorer {
+		return p.deprecatedPeersToPrune()
+	}
+	connLimit := p.ConnectedPeerLimit()
+	inBoundLimit := p.InboundLimit()
+	activePeers := p.Active()
+	numInboundPeers := len(p.InboundConnected())
+	// Exit early if we are still below our max
+	// limit.
+	if len(activePeers) <= int(connLimit) {
+		return []peer.ID{}
+	}
+	p.store.Lock()
+	defer p.store.Unlock()
+
+	type peerResp struct {
+		pid   peer.ID
+		score float64
+	}
+	peersToPrune := make([]*peerResp, 0)
+	// Select connected and inbound peers to prune.
+	for pid, peerData := range p.store.Peers() {
+		if peerData.ConnState == PeerConnected &&
+			peerData.Direction == network.DirInbound {
+			peersToPrune = append(peersToPrune, &peerResp{
+				pid:   pid,
+				score: p.scorers.ScoreNoLock(pid),
+			})
+		}
+	}
+
+	// Sort in ascending order to favour pruning peers with a
+	// lower score.
+	sort.Slice(peersToPrune, func(i, j int) bool {
+		return peersToPrune[i].score < peersToPrune[j].score
+	})
+
+	// Determine amount of peers to prune using our
+	// max connection limit.
+	amountToPrune := len(activePeers) - int(connLimit)
+
+	// Also check for inbound peers above our limit.
+	excessInbound := 0
+	if numInboundPeers > inBoundLimit {
+		excessInbound = numInboundPeers - inBoundLimit
+	}
+	// Prune the largest amount between excess peers and
+	// excess inbound peers.
+	if excessInbound > amountToPrune {
+		amountToPrune = excessInbound
+	}
+	if amountToPrune < len(peersToPrune) {
+		peersToPrune = peersToPrune[:amountToPrune]
+	}
+	ids := make([]peer.ID, 0, len(peersToPrune))
+	for _, pr := range peersToPrune {
+		ids = append(ids, pr.pid)
+	}
+	return ids
+}
+
+// Deprecated: Is used to represent the older method
+// of pruning which utilized bad response counts.
+func (p *Status) deprecatedPeersToPrune() []peer.ID {
 	connLimit := p.ConnectedPeerLimit()
 	inBoundLimit := p.InboundLimit()
 	activePeers := p.Active()
@@ -724,7 +846,6 @@ func (p *Status) PeersToPrune() []peer.ID {
 	// Determine amount of peers to prune using our
 	// max connection limit.
 	amountToPrune := len(activePeers) - int(connLimit)
-
 	// Also check for inbound peers above our limit.
 	excessInbound := 0
 	if numInboundPeers > inBoundLimit {
@@ -755,7 +876,7 @@ func (p *Status) HighestEpoch() types.Epoch {
 			highestSlot = peerData.ChainState.HeadSlot
 		}
 	}
-	return core.SlotToEpoch(highestSlot)
+	return slots.ToEpoch(highestSlot)
 }
 
 // ConnectedPeerLimit returns the peer limit of
@@ -768,10 +889,9 @@ func (p *Status) ConnectedPeerLimit() uint64 {
 	return uint64(maxLim) - maxLimitBuffer
 }
 
+// this method assumes the store lock is acquired before
+// executing the method.
 func (p *Status) isfromBadIP(pid peer.ID) bool {
-	p.store.RLock()
-	defer p.store.RUnlock()
-
 	peerData, ok := p.store.PeerData(pid)
 	if !ok {
 		return false

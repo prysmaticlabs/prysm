@@ -12,11 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/backuputil"
 )
 
 // ReadOnlyDatabase defines a struct which only has read access to database methods.
@@ -39,17 +37,9 @@ type ReadOnlyDatabase interface {
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]state.ReadOnlyBeaconState, error)
-	// Slashing operations.
-	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
-	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.AttesterSlashing, error)
-	HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) bool
-	HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool
-	// Block operations.
-	VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*eth.VoluntaryExit, error)
-	HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool
 	// Checkpoint operations.
-	JustifiedCheckpoint(ctx context.Context) (*eth.Checkpoint, error)
-	FinalizedCheckpoint(ctx context.Context) (*eth.Checkpoint, error)
+	JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
+	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
 	HasArchivedPoint(ctx context.Context, slot types.Slot) bool
 	LastArchivedRoot(ctx context.Context) [32]byte
@@ -57,7 +47,10 @@ type ReadOnlyDatabase interface {
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
-	PowchainData(ctx context.Context) (*v2.ETH1ChainData, error)
+	PowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
+
+	// origin checkpoint sync support
+	OriginBlockRoot(ctx context.Context) ([32]byte, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.
@@ -75,18 +68,13 @@ type NoHeadAccessDatabase interface {
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error
 	SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error
-	// Slashing operations.
-	SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error
-	SaveAttesterSlashing(ctx context.Context, slashing *eth.AttesterSlashing) error
-	// Block operations.
-	SaveVoluntaryExit(ctx context.Context, exit *eth.VoluntaryExit) error
 	// Checkpoint operations.
-	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
-	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
+	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
+	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
-	SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) error
+	SavePowchainData(ctx context.Context, data *ethpb.ETH1ChainData) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 
@@ -105,13 +93,16 @@ type HeadAccessDatabase interface {
 	LoadGenesis(ctx context.Context, r io.Reader) error
 	SaveGenesisData(ctx context.Context, state state.BeaconState) error
 	EnsureEmbeddedGenesis(ctx context.Context) error
+
+	// initialization method needed for origin checkpoint sync
+	SaveOrigin(ctx context.Context, state io.Reader, block io.Reader) error
 }
 
 // SlasherDatabase interface for persisting data related to detecting slashable offenses on Ethereum.
 type SlasherDatabase interface {
 	io.Closer
-	SaveLastEpochWrittenForValidators(
-		ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
+	SaveLastEpochsWrittenForValidators(
+		ctx context.Context, epochByValidator map[types.ValidatorIndex]types.Epoch,
 	) error
 	SaveAttestationRecordsForValidators(
 		ctx context.Context,
@@ -129,6 +120,9 @@ type SlasherDatabase interface {
 	AttestationRecordForValidator(
 		ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 	) (*slashertypes.IndexedAttestationWrapper, error)
+	BlockProposalForValidator(
+		ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
+	) (*slashertypes.SignedBlockHeaderWrapper, error)
 	CheckAttesterDoubleVotes(
 		ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 	) ([]*slashertypes.AttesterDoubleVote, error)
@@ -137,13 +131,17 @@ type SlasherDatabase interface {
 	) ([][]uint16, []bool, error)
 	CheckDoubleBlockProposals(
 		ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
-	) ([]*eth.ProposerSlashing, error)
+	) ([]*ethpb.ProposerSlashing, error)
 	PruneAttestationsAtEpoch(
 		ctx context.Context, maxEpoch types.Epoch,
 	) (numPruned uint, err error)
 	PruneProposalsAtEpoch(
 		ctx context.Context, maxEpoch types.Epoch,
 	) (numPruned uint, err error)
+	HighestAttestations(
+		ctx context.Context,
+		indices []types.ValidatorIndex,
+	) ([]*ethpb.HighestAttestation, error)
 	DatabasePath() string
 	ClearDB() error
 }
@@ -151,7 +149,7 @@ type SlasherDatabase interface {
 // Database interface with full access.
 type Database interface {
 	io.Closer
-	backuputil.BackupExporter
+	backup.BackupExporter
 	HeadAccessDatabase
 
 	DatabasePath() string

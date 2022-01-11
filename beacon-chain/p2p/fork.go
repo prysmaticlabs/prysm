@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,7 +25,7 @@ func (s *Service) currentForkDigest() ([4]byte, error) {
 	if !s.isInitialized() {
 		return [4]byte{}, errors.New("state is not initialized")
 	}
-	return p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
+	return forks.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
 }
 
 // Compares fork ENRs between an incoming peer's record and our node's
@@ -84,16 +84,16 @@ func addForkEntry(
 	genesisTime time.Time,
 	genesisValidatorsRoot []byte,
 ) (*enode.LocalNode, error) {
-	digest, err := p2putils.CreateForkDigest(genesisTime, genesisValidatorsRoot)
+	digest, err := forks.CreateForkDigest(genesisTime, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
-	currentSlot := core.SlotsSince(genesisTime)
-	currentEpoch := core.SlotToEpoch(currentSlot)
-	if timeutils.Now().Before(genesisTime) {
+	currentSlot := slots.Since(genesisTime)
+	currentEpoch := slots.ToEpoch(currentSlot)
+	if prysmTime.Now().Before(genesisTime) {
 		currentEpoch = 0
 	}
-	nextForkVersion, nextForkEpoch, err := p2putils.NextForkData(currentEpoch)
+	nextForkVersion, nextForkEpoch, err := forks.NextForkData(currentEpoch)
 	if err != nil {
 		return nil, err
 	}

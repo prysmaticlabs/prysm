@@ -3,15 +3,13 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -53,7 +51,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	previousFinalizedCheckpoint := &ethpb.Checkpoint{}
 	if b := bkt.Get(previousFinalizedCheckpointKey); b != nil {
 		if err := decode(ctx, b, previousFinalizedCheckpoint); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 	}
@@ -63,12 +61,12 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 		SetEndEpoch(checkpoint.Epoch+1),
 	)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 	for _, root := range blockRoots {
 		if err := bkt.Delete(root[:]); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 	}
@@ -82,46 +80,45 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 
 		signedBlock, err := s.Block(ctx, bytesutil.ToBytes32(root))
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
-		if signedBlock == nil || signedBlock.IsNil() || signedBlock.Block().IsNil() {
-			err := fmt.Errorf("missing block in database: block root=%#x", root)
-			traceutil.AnnotateError(span, err)
+		if err := helpers.BeaconBlockIsNil(signedBlock); err != nil {
+			tracing.AnnotateError(span, err)
 			return err
 		}
 		block := signedBlock.Block()
 
-		container := &dbpb.FinalizedBlockRootContainer{
+		container := &ethpb.FinalizedBlockRootContainer{
 			ParentRoot: block.ParentRoot(),
 			ChildRoot:  previousRoot,
 		}
 
 		enc, err := encode(ctx, container)
 		if err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 		if err := bkt.Put(root, enc); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 
 		// Found parent, loop exit condition.
 		if parentBytes := bkt.Get(block.ParentRoot()); parentBytes != nil {
-			parent := &dbpb.FinalizedBlockRootContainer{}
+			parent := &ethpb.FinalizedBlockRootContainer{}
 			if err := decode(ctx, parentBytes, parent); err != nil {
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				return err
 			}
 			parent.ChildRoot = root
 			enc, err := encode(ctx, parent)
 			if err != nil {
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				return err
 			}
 			if err := bkt.Put(block.ParentRoot(), enc); err != nil {
-				traceutil.AnnotateError(span, err)
+				tracing.AnnotateError(span, err)
 				return err
 			}
 			break
@@ -133,7 +130,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	// Upsert blocks from the current finalized epoch.
 	roots, err := s.BlockRoots(ctx, filters.NewFilter().SetStartEpoch(checkpoint.Epoch).SetEndEpoch(checkpoint.Epoch+1))
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 	for _, root := range roots {
@@ -142,7 +139,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			continue
 		}
 		if err := bkt.Put(root, containerFinalizedButNotCanonical); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 	}
@@ -150,7 +147,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	// Update previous checkpoint
 	enc, err := encode(ctx, checkpoint)
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 
@@ -162,7 +159,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 // Note: beacon blocks from the latest finalized epoch return true, whether or not they are
 // considered canonical in the "head view" of the beacon node.
 func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
+	_, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
 	defer span.End()
 
 	var exists bool
@@ -176,7 +173,7 @@ func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 		return nil
 	})
 	if err != nil {
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 	}
 	return exists
 }
@@ -188,7 +185,7 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (bl
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 
-	var blk *ethpb.SignedBeaconBlock
+	var blk block.SignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		blkBytes := tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:])
 		if blkBytes == nil {
@@ -197,18 +194,19 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (bl
 		if bytes.Equal(blkBytes, containerFinalizedButNotCanonical) {
 			return nil
 		}
-		ctr := &dbpb.FinalizedBlockRootContainer{}
+		ctr := &ethpb.FinalizedBlockRootContainer{}
 		if err := decode(ctx, blkBytes, ctr); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 		enc := tx.Bucket(blocksBucket).Get(ctr.ChildRoot)
 		if enc == nil {
 			return nil
 		}
-		blk = &ethpb.SignedBeaconBlock{}
-		return decode(ctx, enc, blk)
+		var err error
+		blk, err = unmarshalBlock(ctx, enc)
+		return err
 	})
-	traceutil.AnnotateError(span, err)
-	return wrapper.WrappedPhase0SignedBeaconBlock(blk), err
+	tracing.AnnotateError(span, err)
+	return blk, err
 }

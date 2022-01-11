@@ -10,20 +10,20 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestServer_GetBlock(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 100
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	blockRoot, err := b.Block.HashTreeRoot()
@@ -31,7 +31,7 @@ func TestServer_GetBlock(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 	}
-	res, err := bs.GetBlock(ctx, &pbrpc.BlockRequestByRoot{
+	res, err := bs.GetBlock(ctx, &ethpb.BlockRequestByRoot{
 		BlockRoot: blockRoot[:],
 	})
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestServer_GetBlock(t *testing.T) {
 
 	// Checking for nil block.
 	blockRoot = [32]byte{}
-	res, err = bs.GetBlock(ctx, &pbrpc.BlockRequestByRoot{
+	res, err = bs.GetBlock(ctx, &ethpb.BlockRequestByRoot{
 		BlockRoot: blockRoot[:],
 	})
 	require.NoError(t, err)
@@ -58,10 +58,10 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 
-	s, _ := testutil.DeterministicGenesisState(t, 2048)
+	s, _ := util.DeterministicGenesisState(t, 2048)
 	tr := [32]byte{'a'}
 	require.NoError(t, bs.StateGen.SaveState(ctx, tr, s))
-	c, err := helpers.BeaconCommitteeFromState(s, 1, 0)
+	c, err := helpers.BeaconCommitteeFromState(context.Background(), s, 1, 0)
 	require.NoError(t, err)
 
 	a := &ethpb.Attestation{
@@ -72,16 +72,16 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 			Slot:            1,
 		},
 		AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
-		Signature:       make([]byte, 96),
+		Signature:       make([]byte, fieldparams.BLSSignatureLength),
 	}
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
 	b.Block.Body.Attestations = []*ethpb.Attestation{a}
 	require.NoError(t, bs.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	res, err := bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: uint64(c[0])})
+	res, err := bs.GetInclusionSlot(ctx, &ethpb.InclusionSlotRequest{Slot: 1, Id: uint64(c[0])})
 	require.NoError(t, err)
 	require.Equal(t, b.Block.Slot, res.Slot)
-	res, err = bs.GetInclusionSlot(ctx, &pbrpc.InclusionSlotRequest{Slot: 1, Id: 9999999})
+	res, err = bs.GetInclusionSlot(ctx, &ethpb.InclusionSlotRequest{Slot: 1, Id: 9999999})
 	require.NoError(t, err)
 	require.Equal(t, params.BeaconConfig().FarFutureSlot, res.Slot)
 }

@@ -6,6 +6,7 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -99,7 +100,7 @@ func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 	}
 }
 
-func TestFuzzverifyOperationLengths_10000(t *testing.T) {
+func TestFuzzverifyOperationLengths_10000(_ *testing.T) {
 	SkipSlotCache.Disable()
 	defer SkipSlotCache.Enable()
 	state := &v1.BeaconState{}
@@ -114,7 +115,7 @@ func TestFuzzverifyOperationLengths_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzCanProcessEpoch_10000(t *testing.T) {
+func TestFuzzCanProcessEpoch_10000(_ *testing.T) {
 	SkipSlotCache.Disable()
 	defer SkipSlotCache.Enable()
 	state := &v1.BeaconState{}
@@ -122,7 +123,7 @@ func TestFuzzCanProcessEpoch_10000(t *testing.T) {
 	fuzzer.NilChance(0.1)
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
-		CanProcessEpoch(state)
+		time.CanProcessEpoch(state)
 	}
 }
 

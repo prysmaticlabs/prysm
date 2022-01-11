@@ -7,16 +7,16 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestInitializeFromProto(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
+	testState, _ := util.DeterministicGenesisStateAltair(t, 64)
 	pbState, err := stateAltair.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
@@ -59,7 +59,7 @@ func TestInitializeFromProto(t *testing.T) {
 }
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
+	testState, _ := util.DeterministicGenesisStateAltair(t, 64)
 	pbState, err := stateAltair.ProtobufBeaconState(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
@@ -102,7 +102,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
+	testState, _ := util.DeterministicGenesisStateAltair(t, 64)
 	type test struct {
 		name        string
 		stateModify func(beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error)
@@ -170,7 +170,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 }
 
 func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
-	testState, _ := testutil.DeterministicGenesisStateAltair(t, 64)
+	testState, _ := util.DeterministicGenesisStateAltair(t, 64)
 
 	type test struct {
 		name        string
@@ -240,7 +240,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 
 func TestBeaconStateAltair_ProtoBeaconStateCompatibility(t *testing.T) {
 	ctx := context.Background()
-	s, _ := testutil.DeterministicGenesisStateAltair(t, 6)
+	s, _ := util.DeterministicGenesisStateAltair(t, 6)
 	inner := s.InnerStateUnsafe()
 	genesis, err := stateAltair.ProtobufBeaconState(inner)
 	require.NoError(t, err)

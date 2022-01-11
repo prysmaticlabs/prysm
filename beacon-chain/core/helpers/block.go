@@ -5,16 +5,16 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// VerifyNilBeaconBlock checks if any composite field of input signed beacon block is nil.
+// BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
-func VerifyNilBeaconBlock(b block.SignedBeaconBlock) error {
+func BeaconBlockIsNil(b block.SignedBeaconBlock) error {
 	if b == nil || b.IsNil() {
 		return errors.New("signed beacon block can't be nil")
 	}
@@ -65,7 +65,7 @@ func StateRootAtSlot(state state.ReadOnlyBeaconState, slot types.Slot) ([]byte, 
 //    """
 //    return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
 func BlockRoot(state state.ReadOnlyBeaconState, epoch types.Epoch) ([]byte, error) {
-	s, err := core.StartSlot(epoch)
+	s, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, err
 	}

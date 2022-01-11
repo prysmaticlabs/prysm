@@ -15,18 +15,18 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	noise "github.com/libp2p/go-libp2p-noise"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/async/event"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -154,7 +154,7 @@ func TestListenForNewNodes(t *testing.T) {
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
-	genesisTime := timeutils.Now()
+	genesisTime := prysmTime.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
 		cfg:                   cfg,
@@ -305,7 +305,7 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 // initializeStateWithForkDigest sets up the state feed initialized event and returns the fork
 // digest associated with that genesis event.
 func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.Feed) [4]byte {
-	gt := timeutils.Now()
+	gt := prysmTime.Now()
 	gvr := bytesutil.PadTo([]byte("genesis validator root"), 32)
 	for n := 0; n == 0; {
 		if ctx.Err() != nil {
@@ -320,7 +320,7 @@ func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.
 		})
 	}
 
-	fd, err := p2putils.CreateForkDigest(gt, gvr)
+	fd, err := forks.CreateForkDigest(gt, gvr)
 	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond) // wait for pubsub filter to initialize.

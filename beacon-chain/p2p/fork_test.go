@@ -15,13 +15,14 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -30,7 +31,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
-	genesisValidatorsRoot := make([]byte, 32)
+	genesisValidatorsRoot := make([]byte, fieldparams.RootLength)
 	s := &Service{
 		cfg: &Config{
 			UDPPort:       uint(port),
@@ -219,7 +220,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
-	digest, err := p2putils.CreateForkDigest(genesisTime, make([]byte, 32))
+	digest, err := forks.CreateForkDigest(genesisTime, make([]byte, 32))
 	require.NoError(t, err)
 	enrForkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],
@@ -242,7 +243,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	localNode := enode.NewLocalNode(db, pkey)
 	localNode.Set(entry)
 
-	want, err := helpers.ComputeForkDigest([]byte{0, 0, 0, 0}, genesisValidatorsRoot)
+	want, err := signing.ComputeForkDigest([]byte{0, 0, 0, 0}, genesisValidatorsRoot)
 	require.NoError(t, err)
 
 	resp, err := forkEntry(localNode.Node().Record())

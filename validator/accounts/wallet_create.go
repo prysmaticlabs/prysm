@@ -10,9 +10,9 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -127,17 +127,17 @@ func extractKeymanagerKindFromCli(cliCtx *cli.Context) (keymanager.Kind, error) 
 }
 
 func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keymanager.Kind) (*CreateWalletConfig, error) {
-	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
+	walletDir, err := userprompt.InputDirectory(cliCtx, userprompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return nil, err
 	}
-	walletPassword, err := promptutil.InputPassword(
+	walletPassword, err := prompt.InputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
 		wallet.NewWalletPasswordPromptText,
 		wallet.ConfirmPasswordPromptText,
 		true, /* Should confirm password */
-		promptutil.ValidatePasswordInput,
+		prompt.ValidatePasswordInput,
 	)
 	if err != nil {
 		return nil, err
@@ -160,14 +160,14 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		createWalletConfig.NumAccounts = int(numAccounts)
 	}
 	if keymanagerKind == keymanager.Derived && !skipMnemonic25thWord && !has25thWordFile {
-		resp, err := promptutil.ValidatePrompt(
-			os.Stdin, newMnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
+		resp, err := prompt.ValidatePrompt(
+			os.Stdin, newMnemonicPassphraseYesNoText, prompt.ValidateYesOrNo,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not validate choice")
 		}
 		if strings.EqualFold(resp, "y") {
-			mnemonicPassphrase, err := promptutil.InputPassword(
+			mnemonicPassphrase, err := prompt.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,
 				newMnemonicPassphrasePromptText,
@@ -187,7 +187,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		}
 	}
 	if keymanagerKind == keymanager.Remote {
-		opts, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
+		opts, err := userprompt.InputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not input remote keymanager config")
 		}
@@ -196,7 +196,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 	return createWalletConfig, nil
 }
 
-func createImportedKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) error {
+func createImportedKeymanagerWallet(_ context.Context, wallet *wallet.Wallet) error {
 	if wallet == nil {
 		return errors.New("nil wallet")
 	}
@@ -264,7 +264,7 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
-		return keymanager.Imported, fmt.Errorf("could not select wallet type: %w", prompt.FormatPromptError(err))
+		return keymanager.Imported, fmt.Errorf("could not select wallet type: %w", userprompt.FormatPromptError(err))
 	}
 	return keymanager.Kind(selection), nil
 }

@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -129,33 +129,6 @@ func TestImport_DuplicateKeys(t *testing.T) {
 
 	// There should only be 1 account as the duplicate keystore was ignored
 	assert.Equal(t, 1, len(keys))
-}
-
-// TestImport_NonImportedWallet is a regression test that ensures non-silent failure when importing to non-imported wallets
-func TestImport_NonImportedWallet(t *testing.T) {
-	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
-	keysDir := filepath.Join(t.TempDir(), "keysDir")
-	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:          walletDir,
-		passwordsDir:       passwordsDir,
-		keysDir:            keysDir,
-		keymanagerKind:     keymanager.Derived,
-		walletPasswordFile: passwordFilePath,
-	})
-	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: password,
-		},
-	})
-	require.NoError(t, err)
-
-	// Create a key
-	createKeystore(t, keysDir)
-	require.ErrorContains(t, "only imported wallets", ImportAccountsCli(cliCtx))
 }
 
 func TestImport_Noninteractive_RandomName(t *testing.T) {
@@ -403,7 +376,7 @@ func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
 	require.NoError(t, err)
 	// Write the encoded keystore to disk with the timestamp appended
-	createdAt := timeutils.Now().Unix()
+	createdAt := prysmTime.Now().Unix()
 	fullPath := filepath.Join(path, fmt.Sprintf(imported.KeystoreFileNameFormat, createdAt))
 	require.NoError(t, ioutil.WriteFile(fullPath, encoded, os.ModePerm))
 	return keystoreFile, fullPath

@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestShuffleList_InvalidValidatorCount(t *testing.T) {
@@ -155,8 +155,8 @@ func TestSplitIndicesAndOffset_OK(t *testing.T) {
 	chunks := uint64(6)
 	split := SplitIndices(l, chunks)
 	for i := uint64(0); i < chunks; i++ {
-		if !reflect.DeepEqual(split[i], l[sliceutil.SplitOffset(uint64(len(l)), chunks, i):sliceutil.SplitOffset(uint64(len(l)), chunks, i+1)]) {
-			t.Errorf("Want: %v got: %v", l[sliceutil.SplitOffset(uint64(len(l)), chunks, i):sliceutil.SplitOffset(uint64(len(l)), chunks, i+1)], split[i])
+		if !reflect.DeepEqual(split[i], l[slice.SplitOffset(uint64(len(l)), chunks, i):slice.SplitOffset(uint64(len(l)), chunks, i+1)]) {
+			t.Errorf("Want: %v got: %v", l[slice.SplitOffset(uint64(len(l)), chunks, i):slice.SplitOffset(uint64(len(l)), chunks, i+1)], split[i])
 			break
 		}
 	}

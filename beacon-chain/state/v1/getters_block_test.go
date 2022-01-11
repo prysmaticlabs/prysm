@@ -3,19 +3,18 @@ package v1
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBeaconState_LatestBlockHeader(t *testing.T) {
 	s, err := InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	got := s.LatestBlockHeader()
-	require.DeepEqual(t, (*v1alpha1.BeaconBlockHeader)(nil), got)
+	require.DeepEqual(t, (*ethpb.BeaconBlockHeader)(nil), got)
 
-	want := &v1alpha1.BeaconBlockHeader{Slot: 100}
+	want := &ethpb.BeaconBlockHeader{Slot: 100}
 	s, err = InitializeFromProto(&ethpb.BeaconState{LatestBlockHeader: want})
 	require.NoError(t, err)
 	got = s.LatestBlockHeader()

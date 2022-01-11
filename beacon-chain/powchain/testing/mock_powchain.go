@@ -13,12 +13,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // POWChain defines a properly functioning mock for the powchain service.
@@ -55,8 +55,8 @@ func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 }
 
 // DepositTrie --
-func (m *POWChain) DepositTrie() *trieutil.SparseMerkleTrie {
-	return &trieutil.SparseMerkleTrie{}
+func (_ *POWChain) DepositTrie() *trie.SparseMerkleTrie {
+	return &trie.SparseMerkleTrie{}
 }
 
 // BlockExists --
@@ -104,13 +104,13 @@ func (m *POWChain) BlockByTimestamp(_ context.Context, time uint64) (*types.Head
 }
 
 // DepositRoot --
-func (m *POWChain) DepositRoot() [32]byte {
+func (_ *POWChain) DepositRoot() [32]byte {
 	root := []byte("depositroot")
 	return bytesutil.ToBytes32(root)
 }
 
 // ChainStartDeposits --
-func (m *POWChain) ChainStartDeposits() []*ethpb.Deposit {
+func (_ *POWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
@@ -125,12 +125,12 @@ func (m *POWChain) PreGenesisState() state.BeaconState {
 }
 
 // ClearPreGenesisData --
-func (m *POWChain) ClearPreGenesisData() {
+func (_ *POWChain) ClearPreGenesisData() {
 	// no-op
 }
 
 // IsConnectedToETH1 --
-func (m *POWChain) IsConnectedToETH1() bool {
+func (_ *POWChain) IsConnectedToETH1() bool {
 	return true
 }
 

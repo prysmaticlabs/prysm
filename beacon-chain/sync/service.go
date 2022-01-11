@@ -15,8 +15,10 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/async/abool"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -28,18 +30,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/abool"
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/runtime"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-var _ shared.Service = (*Service)(nil)
+var _ runtime.Service = (*Service)(nil)
 
 const rangeLimit = 1024
 const seenBlockSize = 1000
@@ -56,7 +56,7 @@ var (
 	// Seconds in one epoch.
 	pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
 	// time to allow processing early blocks.
-	earlyBlockProcessingTolerance = slotutil.MultiplySlotBy(2)
+	earlyBlockProcessingTolerance = slots.MultiplySlotBy(2)
 	// time to allow processing early attestations.
 	earlyAttestationProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
 	errWrongMessage                     = errors.New("wrong pubsub message")
@@ -64,22 +64,25 @@ var (
 )
 
 // Common type for functional p2p validation options.
-type validationFn func(ctx context.Context) pubsub.ValidationResult
+type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
-// Config to set up the regular sync service.
-type Config struct {
-	P2P               p2p.P2P
-	DB                db.NoHeadAccessDatabase
-	AttPool           attestations.Pool
-	ExitPool          voluntaryexits.PoolManager
-	SlashingPool      slashings.PoolManager
-	SyncCommsPool     synccommittee.Pool
-	Chain             blockchainService
-	InitialSync       Checker
-	StateNotifier     statefeed.Notifier
-	BlockNotifier     blockfeed.Notifier
-	OperationNotifier operation.Notifier
-	StateGen          *stategen.State
+// config to hold dependencies for the sync service.
+type config struct {
+	attestationNotifier     operation.Notifier
+	p2p                     p2p.P2P
+	beaconDB                db.NoHeadAccessDatabase
+	attPool                 attestations.Pool
+	exitPool                voluntaryexits.PoolManager
+	slashingPool            slashings.PoolManager
+	syncCommsPool           synccommittee.Pool
+	chain                   blockchainService
+	initialSync             Checker
+	stateNotifier           statefeed.Notifier
+	blockNotifier           blockfeed.Notifier
+	operationNotifier       operation.Notifier
+	stateGen                *stategen.State
+	slasherAttestationsFeed *event.Feed
+	slasherBlockHeadersFeed *event.Feed
 }
 
 // This defines the interface for interacting with block chain service
@@ -97,7 +100,7 @@ type blockchainService interface {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	cfg                              *Config
+	cfg                              *config
 	ctx                              context.Context
 	cancel                           context.CancelFunc
 	slotToPendingBlocks              *gcache.Cache
@@ -127,27 +130,33 @@ type Service struct {
 	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
+	signatureChan                    chan *signatureVerifier
 }
 
 // NewService initializes new regular sync service.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func NewService(ctx context.Context, opts ...Option) *Service {
 	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
-
-	rLimiter := newRateLimiter(cfg.P2P)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
-		cfg:                  cfg,
 		ctx:                  ctx,
 		cancel:               cancel,
 		chainStarted:         abool.New(),
+		cfg:                  &config{},
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		subHandler:           newSubTopicHandler(),
-		rateLimiter:          rLimiter,
+		signatureChan:        make(chan *signatureVerifier, verifierLimit),
 	}
+	for _, opt := range opts {
+		if err := opt(r); err != nil {
+			return nil
+		}
+	}
+	r.subHandler = newSubTopicHandler()
+	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 
 	go r.registerHandlers()
+	go r.verifierRoutine()
 
 	return r
 }
@@ -156,12 +165,12 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 func (s *Service) Start() {
 	s.initCaches()
 
-	s.cfg.P2P.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
-	s.cfg.P2P.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
+	s.cfg.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
+	s.cfg.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
 		// no-op
 		return nil
 	})
-	s.cfg.P2P.AddPingMethod(s.sendPingRequest)
+	s.cfg.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
@@ -170,7 +179,7 @@ func (s *Service) Start() {
 	}
 
 	// Update sync metrics.
-	runutil.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
+	async.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
 }
 
 // Stop the regular sync service.
@@ -181,11 +190,11 @@ func (s *Service) Stop() error {
 		}
 	}()
 	// Removing RPC Stream handlers.
-	for _, p := range s.cfg.P2P.Host().Mux().Protocols() {
-		s.cfg.P2P.Host().RemoveStreamHandler(protocol.ID(p))
+	for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
+		s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(p))
 	}
 	// Deregister Topic Subscribers.
-	for _, t := range s.cfg.P2P.PubSub().GetTopics() {
+	for _, t := range s.cfg.p2p.PubSub().GetTopics() {
 		s.unSubscribeFromTopic(t)
 	}
 	defer s.cancel()
@@ -196,8 +205,8 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
-	if headEpoch := core.SlotToEpoch(s.cfg.Chain.HeadSlot()); headEpoch+1 < core.SlotToEpoch(s.cfg.Chain.CurrentSlot()) &&
-		headEpoch+1 < s.cfg.P2P.Peers().HighestEpoch() {
+	if headEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(s.cfg.chain.CurrentSlot()) &&
+		headEpoch+1 < s.cfg.p2p.Peers().HighestEpoch() {
 		return errors.New("out of sync")
 	}
 	return nil
@@ -220,7 +229,7 @@ func (s *Service) initCaches() {
 func (s *Service) registerHandlers() {
 	// Wait until chain start.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 	for {
 		select {
@@ -239,8 +248,8 @@ func (s *Service) registerHandlers() {
 				s.registerRPCHandlers()
 				// Wait for chainstart in separate routine.
 				go func() {
-					if startTime.After(timeutils.Now()) {
-						time.Sleep(timeutils.Until(startTime))
+					if startTime.After(prysmTime.Now()) {
+						time.Sleep(prysmTime.Until(startTime))
 					}
 					log.WithField("starttime", startTime).Debug("Chain started in sync service")
 					s.markForChainStart()
@@ -257,7 +266,7 @@ func (s *Service) registerHandlers() {
 					log.WithError(err).Error("Could not retrieve current fork digest")
 					return
 				}
-				currentEpoch := core.SlotToEpoch(core.CurrentSlot(uint64(s.cfg.Chain.GenesisTime().Unix())))
+				currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.chain.GenesisTime().Unix())))
 				s.registerSubscribers(currentEpoch, digest)
 				go s.forkWatcher()
 				return

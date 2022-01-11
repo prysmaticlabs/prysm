@@ -3,10 +3,10 @@ package p2p
 import (
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
 )
 
 // MsgID is a content addressable ID function.
@@ -36,7 +36,7 @@ func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
 		copy(msg, "invalid")
 		return string(msg)
 	}
-	_, fEpoch, err := p2putils.RetrieveForkDataFromDigest(digest, genesisValidatorsRoot)
+	_, fEpoch, err := forks.RetrieveForkDataFromDigest(digest, genesisValidatorsRoot)
 	if err != nil {
 		// Impossible condition that should
 		// never be hit.
@@ -50,11 +50,11 @@ func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
 	decodedData, err := encoder.DecodeSnappy(pmsg.Data, params.BeaconNetworkConfig().GossipMaxSize)
 	if err != nil {
 		combinedData := append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], pmsg.Data...)
-		h := hashutil.Hash(combinedData)
+		h := hash.Hash(combinedData)
 		return string(h[:20])
 	}
 	combinedData := append(params.BeaconNetworkConfig().MessageDomainValidSnappy[:], decodedData...)
-	h := hashutil.Hash(combinedData)
+	h := hash.Hash(combinedData)
 	return string(h[:20])
 }
 
@@ -82,7 +82,7 @@ func altairMsgID(pmsg *pubsub_pb.Message) string {
 		combinedData = append(combinedData, topicLenBytes...)
 		combinedData = append(combinedData, topic...)
 		combinedData = append(combinedData, pmsg.Data...)
-		h := hashutil.Hash(combinedData)
+		h := hash.Hash(combinedData)
 		return string(h[:20])
 	}
 	totalLength := len(params.BeaconNetworkConfig().MessageDomainValidSnappy) + len(topicLenBytes) + int(topicLen) + len(decodedData)
@@ -91,6 +91,6 @@ func altairMsgID(pmsg *pubsub_pb.Message) string {
 	combinedData = append(combinedData, topicLenBytes...)
 	combinedData = append(combinedData, topic...)
 	combinedData = append(combinedData, decodedData...)
-	h := hashutil.Hash(combinedData)
+	h := hash.Hash(combinedData)
 	return string(h[:20])
 }

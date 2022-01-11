@@ -1,6 +1,7 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//proto:compiler.bzl", "go_proto_compiler")
 
 # gazelle:ignore
 proto_library(
@@ -11,6 +12,7 @@ proto_library(
         "events_service.proto",
         "node_service.proto",
         "validator_service.proto",
+        "key_management.proto",
     ],
     visibility = ["//visibility:public"],
     deps = [
@@ -44,10 +46,32 @@ go_proto_library(
     ],
 )
 
+go_proto_compiler(
+    name = "allow_delete_body_gateway_compiler",
+    options = [
+        "logtostderr=true",
+        "allow_repeated_fields_in_body=true",
+        "allow_delete_body=true",
+    ],
+    plugin = "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:protoc-gen-grpc-gateway",
+    suffix = ".pb.gw.go",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//grpclog:go_default_library",
+        "@org_golang_google_grpc//metadata:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
+    ],
+)
+
 go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+        "allow_delete_body_gateway_compiler",
     ],
     embed = [":go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",

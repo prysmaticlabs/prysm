@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
@@ -97,7 +99,7 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 }
 
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	return km.importedKM.FetchValidatingPublicKeys(ctx)
 }
 
@@ -106,14 +108,23 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 	return km.importedKM.FetchValidatingPrivateKeys(ctx)
 }
 
-// DeleteAccounts for a derived keymanager.
-func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
-	return km.importedKM.DeleteAccounts(ctx, publicKeys)
+// ImportKeystores for a derived keymanager.
+func (km *Keymanager) ImportKeystores(
+	ctx context.Context, keystores []*keymanager.Keystore, passwords []string,
+) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+	return km.importedKM.ImportKeystores(ctx, keystores, passwords)
+}
+
+// DeleteKeystores for a derived keymanager.
+func (km *Keymanager) DeleteKeystores(
+	ctx context.Context, publicKeys [][]byte,
+) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return km.importedKM.DeleteKeystores(ctx, publicKeys)
 }
 
 // SubscribeAccountChanges creates an event subscription for a channel
 // to listen for public key changes at runtime, such as when new validator accounts
 // are imported into the keymanager while the validator process is running.
-func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return km.importedKM.SubscribeAccountChanges(pubKeysChan)
 }

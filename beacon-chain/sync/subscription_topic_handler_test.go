@@ -8,8 +8,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/network/forks"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestSubTopicHandler_CRUD(t *testing.T) {
@@ -18,7 +18,7 @@ func TestSubTopicHandler_CRUD(t *testing.T) {
 	assert.Equal(t, false, h.topicExists("junk"))
 	assert.Equal(t, false, h.digestExists([4]byte{}))
 
-	digest, err := p2putils.CreateForkDigest(time.Now(), make([]byte, 32))
+	digest, err := forks.CreateForkDigest(time.Now(), make([]byte, 32))
 	assert.NoError(t, err)
 	enc := encoder.SszNetworkEncoder{}
 

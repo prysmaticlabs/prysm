@@ -11,12 +11,11 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
@@ -52,9 +51,17 @@ func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 
 	attestedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
 	require.NoError(t, err)
-	require.Equal(t, true, len(attestedEpochs) == 0)
+	require.Equal(t, true, len(attestedEpochs) == len(indices))
+	for _, item := range attestedEpochs {
+		require.Equal(t, types.Epoch(0), item.Epoch)
+	}
 
-	err = beaconDB.SaveLastEpochWrittenForValidators(ctx, indices, epoch)
+	epochsByValidator := map[types.ValidatorIndex]types.Epoch{
+		1: epoch,
+		2: epoch,
+		3: epoch,
+	}
+	err = beaconDB.SaveLastEpochsWrittenForValidators(ctx, epochsByValidator)
 	require.NoError(t, err)
 
 	retrievedEpochs, err := beaconDB.LastEpochWrittenForValidators(ctx, indices)
@@ -181,6 +188,21 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 		require.Equal(t, true, exists)
 		require.DeepEqual(t, chunks[i], retrievedChunks[i])
 	}
+}
+
+func TestStore_SlasherChunk_PreventsSavingWrongLength(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := setupDB(t)
+	totalChunks := 64
+	chunkKeys := make([][]byte, totalChunks)
+	chunks := make([][]uint16, totalChunks)
+	for i := 0; i < totalChunks; i++ {
+		chunks[i] = []uint16{}
+		chunkKeys[i] = ssz.MarshalUint64(make([]byte, 0), uint64(i))
+	}
+	// We should get an error if saving empty chunks.
+	err := beaconDB.SaveSlasherChunks(ctx, slashertypes.MinSpan, chunkKeys, chunks)
+	require.ErrorContains(t, "cannot encode empty chunk", err)
 }
 
 func TestStore_ExistingBlockProposals(t *testing.T) {
@@ -323,7 +345,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 	tests := []struct {
 		name             string
 		attestationsInDB []*slashertypes.IndexedAttestationWrapper
-		expected         []*slashpb.HighestAttestation
+		expected         []*ethpb.HighestAttestation
 		indices          []types.ValidatorIndex
 		wantErr          bool
 	}{
@@ -333,7 +355,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 				createAttestationWrapper(0, 3, []uint64{1}, []byte{1}),
 			},
 			indices: []types.ValidatorIndex{1},
-			expected: []*slashpb.HighestAttestation{
+			expected: []*ethpb.HighestAttestation{
 				{
 					ValidatorIndex:     1,
 					HighestSourceEpoch: 0,
@@ -350,7 +372,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 				createAttestationWrapper(5, 6, []uint64{5}, []byte{4}),
 			},
 			indices: []types.ValidatorIndex{2, 3, 4, 5},
-			expected: []*slashpb.HighestAttestation{
+			expected: []*ethpb.HighestAttestation{
 				{
 					ValidatorIndex:     2,
 					HighestSourceEpoch: 0,
@@ -382,7 +404,7 @@ func TestStore_HighestAttestations(t *testing.T) {
 				createAttestationWrapper(6, 7, []uint64{5}, []byte{4}),
 			},
 			indices: []types.ValidatorIndex{2, 3, 4, 5},
-			expected: []*slashpb.HighestAttestation{
+			expected: []*ethpb.HighestAttestation{
 				{
 					ValidatorIndex:     2,
 					HighestSourceEpoch: 4,

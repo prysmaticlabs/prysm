@@ -1,7 +1,7 @@
 package flags
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/urfave/cli/v2"
 )
 
@@ -12,9 +12,10 @@ type GlobalFlags struct {
 	DisableSync                bool
 	DisableDiscv5              bool
 	SubscribeToAllSubnets      bool
-	MinimumSyncPeers           int
-	BlockBatchLimit            int
-	BlockBatchLimitBurstFactor int
+	MinimumSyncPeers           uint64
+	MinimumPeersPerSubnet      uint64
+	BlockBatchLimit            uint64
+	BlockBatchLimitBurstFactor uint64
 }
 
 var globalConfig *GlobalFlags
@@ -49,16 +50,17 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 		cfg.SubscribeToAllSubnets = true
 	}
 	cfg.DisableDiscv5 = ctx.Bool(DisableDiscv5.Name)
-	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
-	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
+	cfg.BlockBatchLimit = ctx.Uint64(BlockBatchLimit.Name)
+	cfg.BlockBatchLimitBurstFactor = ctx.Uint64(BlockBatchLimitBurstFactor.Name)
+	cfg.MinimumPeersPerSubnet = ctx.Uint64(MinPeersPerSubnet.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)
 }
 
 func configureMinimumPeers(ctx *cli.Context, cfg *GlobalFlags) {
-	cfg.MinimumSyncPeers = ctx.Int(MinSyncPeers.Name)
-	maxPeers := ctx.Int(cmd.P2PMaxPeers.Name)
+	cfg.MinimumSyncPeers = ctx.Uint64(MinSyncPeers.Name)
+	maxPeers := ctx.Uint64(cmd.P2PMaxPeers.Name)
 	if cfg.MinimumSyncPeers > maxPeers {
 		log.Warnf("Changing Minimum Sync Peers to %d", maxPeers)
 		cfg.MinimumSyncPeers = maxPeers

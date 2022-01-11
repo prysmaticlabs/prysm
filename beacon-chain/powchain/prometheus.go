@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prysmaticlabs/prysm/shared/clientstats"
+	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 )
 
 type BeaconNodeStatsUpdater interface {
@@ -148,6 +148,6 @@ func NewPowchainCollector(ctx context.Context) (*PowchainCollector, error) {
 
 type NopBeaconNodeStatsUpdater struct{}
 
-func (nop *NopBeaconNodeStatsUpdater) Update(stats clientstats.BeaconNodeStats) {}
+func (_ *NopBeaconNodeStatsUpdater) Update(_ clientstats.BeaconNodeStats) {}
 
 var _ BeaconNodeStatsUpdater = &NopBeaconNodeStatsUpdater{}

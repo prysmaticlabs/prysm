@@ -6,6 +6,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -35,19 +36,18 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
-	WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error
-	SlasherReady(ctx context.Context) error
+	WaitForActivation(ctx context.Context, accountsChangedChan chan [][fieldparams.BLSPubkeyLength]byte) error
 	CanonicalHeadSlot(ctx context.Context) (types.Slot, error)
 	NextSlot() <-chan types.Slot
 	SlotDeadline(slot types.Slot) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error
 	UpdateDuties(ctx context.Context, slot types.Slot) error
-	RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
-	SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [48]byte)
-	ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte)
-	SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte)
-	SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [48]byte)
-	SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte)
+	RolesAt(ctx context.Context, slot types.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]ValidatorRole, error) // validator pubKey -> roles
+	SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	ProposeBlock(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
+	SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
 	LogAttestationsSubmitted()
 	LogNextDutyTimeLeft(slot types.Slot) error
 	UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
@@ -55,6 +55,6 @@ type Validator interface {
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	GetKeymanager() keymanager.IKeymanager
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
-	HandleKeyReload(ctx context.Context, newKeys [][48]byte) (bool, error)
+	HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
 }

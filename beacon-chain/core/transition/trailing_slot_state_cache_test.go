@@ -6,8 +6,8 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestTrailingSlotState_RoundTrip(t *testing.T) {
@@ -17,7 +17,7 @@ func TestTrailingSlotState_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, nil, s)
 
-	s, _ = testutil.DeterministicGenesisState(t, 1)
+	s, _ = util.DeterministicGenesisState(t, 1)
 	require.NoError(t, transition.UpdateNextSlotCache(ctx, r, s))
 	s, err = transition.NextSlotState(ctx, r)
 	require.NoError(t, err)

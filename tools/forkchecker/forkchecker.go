@@ -17,8 +17,8 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -28,7 +28,7 @@ var log = logrus.WithField("prefix", "forkchoice_checker")
 
 type endpoint []string
 
-func (e *endpoint) String() string {
+func (_ *endpoint) String() string {
 	return "gRPC endpoints"
 }
 

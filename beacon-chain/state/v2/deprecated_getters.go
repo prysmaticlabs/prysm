@@ -6,11 +6,16 @@ import (
 )
 
 // PreviousEpochAttestations is not supported for HF1 beacon state.
-func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, error) {
+func (*BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, error) {
 	return nil, errors.New("PreviousEpochAttestations is not supported for hard fork 1 beacon state")
 }
 
 // CurrentEpochAttestations is not supported for HF1 beacon state.
-func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, error) {
+func (*BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, error) {
 	return nil, errors.New("CurrentEpochAttestations is not supported for hard fork 1 beacon state")
+}
+
+// LatestExecutionPayloadHeader is not supported for hard fork 1 beacon state.
+func (*BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
+	return nil, errors.New("LatestExecutionPayloadHeader is not supported for hard fork 1 beacon state")
 }

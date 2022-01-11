@@ -11,38 +11,24 @@ type MockProtector struct {
 	AllowAttestation        bool
 	AllowBlock              bool
 	VerifyAttestationCalled bool
-	CommitAttestationCalled bool
 	VerifyBlockCalled       bool
-	CommitBlockCalled       bool
 	StatusCalled            bool
 }
 
 // CheckAttestationSafety returns bool with allow attestation value.
 func (mp MockProtector) CheckAttestationSafety(_ context.Context, _ *eth.IndexedAttestation) bool {
-	mp.VerifyAttestationCalled = true
-	return mp.AllowAttestation
-}
-
-// CommitAttestation returns bool with allow attestation value.
-func (mp MockProtector) CommitAttestation(_ context.Context, _ *eth.IndexedAttestation) bool {
-	mp.CommitAttestationCalled = true
+	mp.VerifyAttestationCalled = true // skipcq: RVV-B0006
 	return mp.AllowAttestation
 }
 
 // CheckBlockSafety returns bool with allow block value.
-func (mp MockProtector) CheckBlockSafety(_ context.Context, _ *eth.BeaconBlockHeader) bool {
-	mp.VerifyBlockCalled = true
+func (mp MockProtector) CheckBlockSafety(_ context.Context, _ *eth.SignedBeaconBlockHeader) bool {
+	mp.VerifyBlockCalled = true // skipcq: RVV-B0006
 	return mp.AllowBlock
-}
-
-// CommitBlock returns bool with allow block value.
-func (mp MockProtector) CommitBlock(_ context.Context, _ *eth.SignedBeaconBlockHeader) (bool, error) {
-	mp.CommitBlockCalled = true
-	return mp.AllowBlock, nil
 }
 
 // Status returns nil.
 func (mp MockProtector) Status() error {
-	mp.StatusCalled = true
+	mp.StatusCalled = true // skipcq: RVV-B0006
 	return nil
 }

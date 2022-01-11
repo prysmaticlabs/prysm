@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,7 +27,7 @@ func (bs *Server) ListBeaconCommittees(
 	var requestedSlot types.Slot
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListCommitteesRequest_Epoch:
-		startSlot, err := core.StartSlot(q.Epoch)
+		startSlot, err := slots.EpochStart(q.Epoch)
 		if err != nil {
 			return nil, err
 		}
@@ -37,8 +38,8 @@ func (bs *Server) ListBeaconCommittees(
 		requestedSlot = currentSlot
 	}
 
-	requestedEpoch := core.SlotToEpoch(requestedSlot)
-	currentEpoch := core.SlotToEpoch(currentSlot)
+	requestedEpoch := slots.ToEpoch(requestedSlot)
+	currentEpoch := slots.ToEpoch(currentSlot)
 	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -69,7 +70,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	ctx context.Context,
 	epoch types.Epoch,
 ) (SlotToCommiteesMap, []types.ValidatorIndex, error) {
-	startSlot, err := core.StartSlot(epoch)
+	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -81,17 +82,17 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, "Could not get seed")
 	}
-	activeIndices, err := helpers.ActiveValidatorIndices(requestedState, epoch)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, requestedState, epoch)
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, "Could not get active indices")
 	}
 
-	committeesListsBySlot, err := computeCommittees(startSlot, activeIndices, seed)
+	committeesListsBySlot, err := computeCommittees(ctx, startSlot, activeIndices, seed)
 	if err != nil {
 		return nil, nil, status.Errorf(
 			codes.InvalidArgument,
 			"Could not compute committees for epoch %d: %v",
-			core.SlotToEpoch(startSlot),
+			slots.ToEpoch(startSlot),
 			err,
 		)
 	}
@@ -109,21 +110,21 @@ func (bs *Server) retrieveCommitteesForRoot(
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, fmt.Sprintf("Could not get state: %v", err))
 	}
-	epoch := core.CurrentEpoch(requestedState)
+	epoch := time.CurrentEpoch(requestedState)
 	seed, err := helpers.Seed(requestedState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, "Could not get seed")
 	}
-	activeIndices, err := helpers.ActiveValidatorIndices(requestedState, epoch)
+	activeIndices, err := helpers.ActiveValidatorIndices(ctx, requestedState, epoch)
 	if err != nil {
 		return nil, nil, status.Error(codes.Internal, "Could not get active indices")
 	}
 
-	startSlot, err := core.StartSlot(epoch)
+	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, nil, err
 	}
-	committeesListsBySlot, err := computeCommittees(startSlot, activeIndices, seed)
+	committeesListsBySlot, err := computeCommittees(ctx, startSlot, activeIndices, seed)
 	if err != nil {
 		return nil, nil, status.Errorf(
 			codes.InvalidArgument,
@@ -138,6 +139,7 @@ func (bs *Server) retrieveCommitteesForRoot(
 // Compute committees given a start slot, active validator indices, and
 // the attester seeds value.
 func computeCommittees(
+	ctx context.Context,
 	startSlot types.Slot,
 	activeIndices []types.ValidatorIndex,
 	attesterSeed [32]byte,
@@ -153,7 +155,7 @@ func computeCommittees(
 		}
 		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
 		for committeeIndex := uint64(0); committeeIndex < countAtSlot; committeeIndex++ {
-			committee, err := helpers.BeaconCommittee(activeIndices, attesterSeed, slot, types.CommitteeIndex(committeeIndex))
+			committee, err := helpers.BeaconCommittee(ctx, activeIndices, attesterSeed, slot, types.CommitteeIndex(committeeIndex))
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,

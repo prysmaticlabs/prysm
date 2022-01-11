@@ -7,15 +7,15 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,6 +27,42 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 	ctx, span := trace.StartSpan(ctx, "beacon.ListSyncCommittees")
 	defer span.End()
 
+	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(currentSlot)
+	currentPeriodStartEpoch, err := slots.SyncCommitteePeriodStartEpoch(currentEpoch)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not calculate start period for slot %d: %v",
+			currentSlot,
+			err,
+		)
+	}
+
+	requestNextCommittee := false
+	if req.Epoch != nil {
+		reqPeriodStartEpoch, err := slots.SyncCommitteePeriodStartEpoch(*req.Epoch)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not calculate start period for epoch %d: %v",
+				*req.Epoch,
+				err,
+			)
+		}
+		if reqPeriodStartEpoch > currentPeriodStartEpoch+params.BeaconConfig().EpochsPerSyncCommitteePeriod {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not fetch sync committee too far in the future. Requested epoch: %d, current epoch: %d",
+				*req.Epoch, currentEpoch,
+			)
+		}
+		if reqPeriodStartEpoch > currentPeriodStartEpoch {
+			requestNextCommittee = true
+			req.Epoch = &currentPeriodStartEpoch
+		}
+	}
+
 	st, err := bs.stateFromRequest(ctx, &stateRequest{
 		epoch:   req.Epoch,
 		stateId: req.StateId,
@@ -35,10 +71,20 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		return nil, status.Errorf(codes.Internal, "Could not fetch beacon state using request: %v", err)
 	}
 
-	// Get the current sync committee and sync committee indices from the state.
-	committeeIndices, committee, err := currentCommitteeIndicesFromState(st)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync committee indices from state: %v", err)
+	var committeeIndices []types.ValidatorIndex
+	var committee *ethpbalpha.SyncCommittee
+	if requestNextCommittee {
+		// Get the next sync committee and sync committee indices from the state.
+		committeeIndices, committee, err = nextCommitteeIndicesFromState(st)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get next sync committee indices: %v", err)
+		}
+	} else {
+		// Get the current sync committee and sync committee indices from the state.
+		committeeIndices, committee, err = currentCommitteeIndicesFromState(st)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get current sync committee indices: %v", err)
+		}
 	}
 	subcommittees, err := extractSyncSubcommittees(st, committee)
 	if err != nil {
@@ -75,7 +121,29 @@ func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIn
 	return committeeIndices, committee, nil
 }
 
-func extractSyncSubcommittees(st state.BeaconState, committee *ethpbalpha.SyncCommittee) ([]*eth.SyncSubcommitteeValidators, error) {
+func nextCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
+	committee, err := st.NextSyncCommittee()
+	if err != nil {
+		return nil, nil, fmt.Errorf(
+			"could not get sync committee: %v", err,
+		)
+	}
+
+	committeeIndices := make([]types.ValidatorIndex, len(committee.Pubkeys))
+	for i, key := range committee.Pubkeys {
+		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
+		if !ok {
+			return nil, nil, fmt.Errorf(
+				"validator index not found for pubkey %#x",
+				bytesutil.Trunc(key),
+			)
+		}
+		committeeIndices[i] = index
+	}
+	return committeeIndices, committee, nil
+}
+
+func extractSyncSubcommittees(st state.BeaconState, committee *ethpbalpha.SyncCommittee) ([]*ethpbv2.SyncSubcommitteeValidators, error) {
 	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
 	subcommittees := make([]*ethpbv2.SyncSubcommitteeValidators, subcommitteeCount)
 	for i := uint64(0); i < subcommitteeCount; i++ {
@@ -135,7 +203,7 @@ func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *et
 
 	if len(msgFailures) > 0 {
 		failuresContainer := &helpers.IndexedVerificationFailure{Failures: msgFailures}
-		err := grpcutils.AppendCustomErrorHeader(ctx, failuresContainer)
+		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.InvalidArgument,
@@ -150,11 +218,11 @@ func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *et
 }
 
 func validateSyncCommitteeMessage(msg *ethpbv2.SyncCommitteeMessage) error {
-	if !bytesutil.IsHexOfLen(msg.BeaconBlockRoot, 64) {
-		return errors.New("invalid block root format")
+	if len(msg.BeaconBlockRoot) != 32 {
+		return errors.New("invalid block root length")
 	}
-	if !bytesutil.IsHexOfLen(msg.Signature, 192) {
-		return errors.New("invalid signature format")
+	if len(msg.Signature) != 96 {
+		return errors.New("invalid signature length")
 	}
 	return nil
 }

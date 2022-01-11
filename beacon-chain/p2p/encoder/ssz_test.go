@@ -10,11 +10,11 @@ import (
 
 	gogo "github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -107,7 +107,7 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 
 func TestSszNetworkEncoder_DecodeWithMultipleFrames(t *testing.T) {
 	buf := new(bytes.Buffer)
-	st, _ := testutil.DeterministicGenesisState(t, 100)
+	st, _ := util.DeterministicGenesisState(t, 100)
 	e := &encoder.SszNetworkEncoder{}
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconNetworkConfig()

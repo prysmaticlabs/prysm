@@ -13,9 +13,9 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
 func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
@@ -118,7 +118,7 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 		capacityWeight  float64
 	}
 
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 	tests := []struct {
 		name   string
 		args   args
@@ -324,29 +324,29 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			peersIn: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "b",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 			},
 			peersOut: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "b",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 			},
 		},
@@ -356,25 +356,25 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			peersIn: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "b",
-					accessed: timeutils.Now().Add(-peerLockMaxAge),
+					accessed: prysmTime.Now().Add(-peerLockMaxAge),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 			},
 			peersOut: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now(),
+					accessed: prysmTime.Now(),
 				},
 			},
 		},
@@ -384,15 +384,15 @@ func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 			peersIn: []peerData{
 				{
 					peerID:   "a",
-					accessed: timeutils.Now().Add(-peerLockMaxAge),
+					accessed: prysmTime.Now().Add(-peerLockMaxAge),
 				},
 				{
 					peerID:   "b",
-					accessed: timeutils.Now().Add(-peerLockMaxAge),
+					accessed: prysmTime.Now().Add(-peerLockMaxAge),
 				},
 				{
 					peerID:   "c",
-					accessed: timeutils.Now().Add(-peerLockMaxAge),
+					accessed: prysmTime.Now().Add(-peerLockMaxAge),
 				},
 			},
 			peersOut: []peerData{},

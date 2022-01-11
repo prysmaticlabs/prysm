@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"context"
 	"math"
 	"reflect"
 	"strings"
@@ -9,9 +10,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -102,13 +103,13 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 	case strings.Contains(topic, GossipBlockMessage):
 		return defaultBlockTopicParams(), nil
 	case strings.Contains(topic, GossipAggregateAndProofMessage):
-		return defaultAggregateTopicParams(activeValidators)
+		return defaultAggregateTopicParams(activeValidators), nil
 	case strings.Contains(topic, GossipAttestationMessage):
-		return defaultAggregateSubnetTopicParams(activeValidators)
+		return defaultAggregateSubnetTopicParams(activeValidators), nil
 	case strings.Contains(topic, GossipSyncCommitteeMessage):
-		return defaultSyncSubnetTopicParams(activeValidators)
+		return defaultSyncSubnetTopicParams(activeValidators), nil
 	case strings.Contains(topic, GossipContributionAndProofMessage):
-		return defaultSyncContributionTopicParams()
+		return defaultSyncContributionTopicParams(), nil
 	case strings.Contains(topic, GossipExitMessage):
 		return defaultVoluntaryExitTopicParams(), nil
 	case strings.Contains(topic, GossipProposerSlashingMessage):
@@ -133,7 +134,7 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 		if genState == nil || genState.IsNil() {
 			return 0, errors.New("no genesis state exists")
 		}
-		activeVals, err := helpers.ActiveValidatorCount(genState, core.CurrentEpoch(genState))
+		activeVals, err := helpers.ActiveValidatorCount(context.Background(), genState, coreTime.CurrentEpoch(genState))
 		if err != nil {
 			return 0, err
 		}
@@ -148,7 +149,7 @@ func (s *Service) retrieveActiveValidators() (uint64, error) {
 	if bState == nil || bState.IsNil() {
 		return 0, errors.Errorf("no state with root %#x exists", rt)
 	}
-	activeVals, err := helpers.ActiveValidatorCount(bState, core.CurrentEpoch(bState))
+	activeVals, err := helpers.ActiveValidatorCount(context.Background(), bState, coreTime.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}
@@ -190,19 +191,19 @@ func defaultBlockTopicParams() *pubsub.TopicScoreParams {
 	}
 }
 
-func defaultAggregateTopicParams(activeValidators uint64) (*pubsub.TopicScoreParams, error) {
+func defaultAggregateTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
 	// Determine the expected message rate for the particular gossip topic.
 	aggPerSlot := aggregatorsPerSlot(activeValidators)
 	firstMessageCap, err := decayLimit(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/gossipSubD))
 	if err != nil {
 		log.Warnf("skipping initializing topic scoring: %v", err)
-		return nil, nil
+		return nil
 	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
 	meshThreshold, err := decayThreshold(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot)/dampeningFactor)
 	if err != nil {
 		log.Warnf("skipping initializing topic scoring: %v", err)
-		return nil, nil
+		return nil
 	}
 	meshWeight := -scoreByWeight(aggregateWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
@@ -229,22 +230,22 @@ func defaultAggregateTopicParams(activeValidators uint64) (*pubsub.TopicScorePar
 		MeshFailurePenaltyDecay:         scoreDecay(1 * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / aggregateWeight,
 		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
-	}, nil
+	}
 }
 
-func defaultSyncContributionTopicParams() (*pubsub.TopicScoreParams, error) {
+func defaultSyncContributionTopicParams() *pubsub.TopicScoreParams {
 	// Determine the expected message rate for the particular gossip topic.
 	aggPerSlot := params.BeaconConfig().SyncCommitteeSubnetCount * params.BeaconConfig().TargetAggregatorsPerSyncSubcommittee
 	firstMessageCap, err := decayLimit(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot*2/gossipSubD))
 	if err != nil {
 		log.Warnf("skipping initializing topic scoring: %v", err)
-		return nil, nil
+		return nil
 	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
 	meshThreshold, err := decayThreshold(scoreDecay(1*oneEpochDuration()), float64(aggPerSlot)/dampeningFactor)
 	if err != nil {
 		log.Warnf("skipping initializing topic scoring: %v", err)
-		return nil, nil
+		return nil
 	}
 	meshWeight := -scoreByWeight(syncContributionWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
@@ -271,23 +272,23 @@ func defaultSyncContributionTopicParams() (*pubsub.TopicScoreParams, error) {
 		MeshFailurePenaltyDecay:         scoreDecay(1 * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / syncContributionWeight,
 		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
-	}, nil
+	}
 }
 
-func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScoreParams, error) {
+func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
 	subnetCount := params.BeaconNetworkConfig().AttestationSubnetCount
 	// Get weight for each specific subnet.
 	topicWeight := attestationTotalWeight / float64(subnetCount)
 	subnetWeight := activeValidators / subnetCount
 	if subnetWeight == 0 {
 		log.Warn("Subnet weight is 0, skipping initializing topic scoring")
-		return nil, nil
+		return nil
 	}
 	// Determine the amount of validators expected in a subnet in a single slot.
 	numPerSlot := time.Duration(subnetWeight / uint64(params.BeaconConfig().SlotsPerEpoch))
 	if numPerSlot == 0 {
 		log.Warn("numPerSlot is 0, skipping initializing topic scoring")
-		return nil, nil
+		return nil
 	}
 	comsPerSlot := committeeCountPerSlot(activeValidators)
 	exceedsThreshold := comsPerSlot >= 2*subnetCount/uint64(params.BeaconConfig().SlotsPerEpoch)
@@ -300,20 +301,20 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 	rate := numPerSlot * 2 / gossipSubD
 	if rate == 0 {
 		log.Warn("rate is 0, skipping initializing topic scoring")
-		return nil, nil
+		return nil
 	}
 	// Determine expected first deliveries based on the message rate.
 	firstMessageCap, err := decayLimit(scoreDecay(firstDecay*oneEpochDuration()), float64(rate))
 	if err != nil {
 		log.Warnf("skipping initializing topic scoring: %v", err)
-		return nil, nil
+		return nil
 	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
 	// Determine expected mesh deliveries based on message rate applied with a dampening factor.
 	meshThreshold, err := decayThreshold(scoreDecay(meshDecay*oneEpochDuration()), float64(numPerSlot)/dampeningFactor)
 	if err != nil {
 		log.Warnf("skipping initializing topic scoring: %v", err)
-		return nil, nil
+		return nil
 	}
 	meshWeight := -scoreByWeight(topicWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
@@ -340,10 +341,10 @@ func defaultAggregateSubnetTopicParams(activeValidators uint64) (*pubsub.TopicSc
 		MeshFailurePenaltyDecay:         scoreDecay(meshDecay * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / topicWeight,
 		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
-	}, nil
+	}
 }
 
-func defaultSyncSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScoreParams, error) {
+func defaultSyncSubnetTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
 	subnetCount := params.BeaconConfig().SyncCommitteeSubnetCount
 	// Get weight for each specific subnet.
 	topicWeight := syncCommitteesTotalWeight / float64(subnetCount)
@@ -355,7 +356,7 @@ func defaultSyncSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScorePa
 	subnetWeight := activeValidators / subnetCount
 	if subnetWeight == 0 {
 		log.Warn("Subnet weight is 0, skipping initializing topic scoring")
-		return nil, nil
+		return nil
 	}
 	firstDecay := time.Duration(1)
 	meshDecay := time.Duration(4)
@@ -363,20 +364,20 @@ func defaultSyncSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScorePa
 	rate := subnetWeight * 2 / gossipSubD
 	if rate == 0 {
 		log.Warn("rate is 0, skipping initializing topic scoring")
-		return nil, nil
+		return nil
 	}
 	// Determine expected first deliveries based on the message rate.
 	firstMessageCap, err := decayLimit(scoreDecay(firstDecay*oneEpochDuration()), float64(rate))
 	if err != nil {
 		log.WithError(err).Warn("Skipping initializing topic scoring")
-		return nil, nil
+		return nil
 	}
 	firstMessageWeight := maxFirstDeliveryScore / firstMessageCap
 	// Determine expected mesh deliveries based on message rate applied with a dampening factor.
 	meshThreshold, err := decayThreshold(scoreDecay(meshDecay*oneEpochDuration()), float64(subnetWeight)/dampeningFactor)
 	if err != nil {
 		log.WithError(err).Warn("Skipping initializing topic scoring")
-		return nil, nil
+		return nil
 	}
 	meshWeight := -scoreByWeight(topicWeight, meshThreshold)
 	meshCap := 4 * meshThreshold
@@ -403,7 +404,7 @@ func defaultSyncSubnetTopicParams(activeValidators uint64) (*pubsub.TopicScorePa
 		MeshFailurePenaltyDecay:         scoreDecay(meshDecay * oneEpochDuration()),
 		InvalidMessageDeliveriesWeight:  -maxScore() / topicWeight,
 		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
-	}, nil
+	}
 }
 
 func defaultAttesterSlashingTopicParams() *pubsub.TopicScoreParams {

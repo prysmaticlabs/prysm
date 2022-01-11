@@ -6,34 +6,37 @@ import (
 	"testing"
 	"time"
 
+	"github.com/d4l3k/messagediff"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	ctx := context.Background()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err, "Could not generate deposits and keys")
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -76,7 +79,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -126,7 +129,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -167,11 +170,11 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	// Pending active because activation epoch is still defaulted at far future slot.
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(5000))
 	err = state.SetValidators([]*ethpb.Validator{
@@ -194,7 +197,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -239,7 +242,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -249,7 +252,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.ActivationExitEpoch(0)
 
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -300,10 +303,10 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 
 	// Initiated exit because validator exit epoch and withdrawable epoch are not FAR_FUTURE_EPOCH
 	slot := types.Slot(10000)
-	epoch := core.SlotToEpoch(slot)
+	epoch := slots.ToEpoch(slot)
 	exitEpoch := helpers.ActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -326,7 +329,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -360,8 +363,8 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 
 	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
 	slot := types.Slot(10000)
-	epoch := core.SlotToEpoch(slot)
-	block := testutil.NewBeaconBlock()
+	epoch := slots.ToEpoch(slot)
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -383,7 +386,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -417,13 +420,13 @@ func TestValidatorStatus_Exited(t *testing.T) {
 
 	// Exit because only exit epoch is =< current epoch.
 	slot := types.Slot(10000)
-	epoch := core.SlotToEpoch(slot)
-	block := testutil.NewBeaconBlock()
+	epoch := slots.ToEpoch(slot)
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(slot))
 	err = state.SetValidators([]*ethpb.Validator{{
@@ -441,7 +444,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -495,7 +498,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 func TestActivationStatus_OK(t *testing.T) {
 	ctx := context.Background()
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(4)
+	deposits, _, err := util.DeterministicDepositsAndKeys(4)
 	require.NoError(t, err)
 	pubKeys := [][]byte{deposits[0].Data.PublicKey, deposits[1].Data.PublicKey, deposits[2].Data.PublicKey, deposits[3].Data.PublicKey}
 	stateObj, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{
@@ -520,11 +523,11 @@ func TestActivationStatus_OK(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	dep := deposits[0]
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -532,7 +535,7 @@ func TestActivationStatus_OK(t *testing.T) {
 	assert.NoError(t, depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 
 	dep = deposits[2]
-	depositTrie.Insert(dep.Data.Signature, 15)
+	assert.NoError(t, depositTrie.Insert(dep.Data.Signature, 15))
 	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.HashTreeRoot()))
 
 	vs := &Server{
@@ -584,7 +587,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	ctx := context.Background()
 
 	pbKey := pubKey(5)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	currentSlot := types.Slot(5000)
@@ -633,12 +636,12 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(currentSlot))
 
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -682,7 +685,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	ctx := context.Background()
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(6)
+	deposits, _, err := util.DeterministicDepositsAndKeys(6)
 	require.NoError(t, err)
 	pubKeys := [][]byte{
 		deposits[0].Data.PublicKey,
@@ -725,10 +728,10 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -736,7 +739,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	dep := deposits[0]
 	assert.NoError(t, depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.HashTreeRoot()))
 	dep = deposits[2]
-	depositTrie.Insert(dep.Data.Signature, 15)
+	assert.NoError(t, depositTrie.Insert(dep.Data.Signature, 15))
 	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.HashTreeRoot()))
 
 	vs := &Server{
@@ -790,7 +793,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 
 func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	slot := types.Slot(10000)
-	epoch := core.SlotToEpoch(slot)
+	epoch := slots.ToEpoch(slot)
 	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4), pubKey(5), pubKey(6), pubKey(7)}
 	beaconState := &ethpb.BeaconState{
 		Slot: 4000,
@@ -831,7 +834,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	}
 	stateObj, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -886,12 +889,12 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 
 func TestValidatorStatus_Invalid(t *testing.T) {
 	ctx := context.Background()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err, "Could not generate deposits and keys")
 	deposit := deposits[0]
 	pubKey1 := deposit.Data.PublicKey
 	deposit.Data.Signature = deposit.Data.Signature[1:]
-	depositTrie, err := trieutil.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
@@ -944,14 +947,14 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 100 gwei, to mock an inactivity leak
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+100))
+					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+1000000000))
 				}
 				// Older Epoch State
 				for i := 0; i < 3; i++ {
 					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 200 gwei, to mock an inactivity leak
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+200))
+					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+2000000000))
 				}
 				vs := &Server{
 					StateGen: mockGen,
@@ -990,24 +993,24 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 100 gwei, to mock an inactivity leak
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+100))
+					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+1000000000))
 				}
 				bal, err := ps.BalanceAtIndex(types.ValidatorIndex(2))
 				assert.NoError(t, err)
 				// Sub 100 gwei, to mock an active validator.
-				assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-100))
+				assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-1000000000))
 
 				// Older Epoch State
 				for i := 0; i < 2; i++ {
 					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 200 gwei, to mock an inactivity leak
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+200))
+					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+2000000000))
 				}
 				bal, err = os.BalanceAtIndex(types.ValidatorIndex(2))
 				assert.NoError(t, err)
 				// Sub 100 gwei, to mock an active validator.
-				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-100))
+				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-1000000000))
 
 				vs := &Server{
 					StateGen: mockGen,
@@ -1057,24 +1060,24 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 100 gwei, to mock an inactivity leak
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+100))
+					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+1000000000))
 				}
 				bal, err := ps.BalanceAtIndex(types.ValidatorIndex(2))
 				assert.NoError(t, err)
 				// Sub 100 gwei, to mock an active validator.
-				assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-100))
+				assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-1000000000))
 
 				// Older Epoch State
 				for i := 0; i < 2; i++ {
 					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 200 gwei, to mock an inactivity leak
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+200))
+					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+2000000000))
 				}
 				bal, err = os.BalanceAtIndex(types.ValidatorIndex(2))
 				assert.NoError(t, err)
 				// Sub 200 gwei, to mock an active validator.
-				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-200))
+				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-2000000000))
 
 				vs := &Server{
 					StateGen: mockGen,
@@ -1124,7 +1127,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 100 gwei, to mock an inactivity leak
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-100))
+					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-1000000000))
 				}
 
 				// Older Epoch State
@@ -1132,7 +1135,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
 					assert.NoError(t, err)
 					// Add 200 gwei, to mock an inactivity leak
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-200))
+					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-2000000000))
 				}
 
 				vs := &Server{
@@ -1146,17 +1149,6 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
 				}
 				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
-				for i := 0; i < 10; i++ {
-					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
-						PublicKey:  keys[i].PublicKey().Marshal(),
-						Epoch:      1,
-						SignedRoot: []byte{'A'},
-					})
-					response.Responses = append(response.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{
-						PublicKey:       keys[i].PublicKey().Marshal(),
-						DuplicateExists: false,
-					})
-				}
 				for i := 10; i < 15; i++ {
 					// Add in for duplicate validator
 					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
@@ -1179,25 +1171,10 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				mockGen := stategen.NewMockService()
 
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
-				// Previous Epoch State
-				for i := 10; i < 15; i++ {
-					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
-					assert.NoError(t, err)
-					// Add 100 gwei, to mock an active validator
-					assert.NoError(t, ps.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-100))
-				}
-
-				// Older Epoch State
-				for i := 10; i < 15; i++ {
-					bal, err := os.BalanceAtIndex(types.ValidatorIndex(i))
-					assert.NoError(t, err)
-					// Add 200 gwei, to mock an active validator
-					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal-200))
-				}
+				hs, _, _, keys := createStateSetup(t, 4, mockGen)
 
 				vs := &Server{
-					StateGen: mockGen,
+					StateGen: nil,
 					HeadFetcher: &mockChain.ChainService{
 						State: hs,
 					},
@@ -1232,7 +1209,8 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, resp) {
-				t.Errorf("CheckDoppelGanger() got = %v, want %v", got.String(), resp.String())
+				diff, _ := messagediff.PrettyDiff(resp, got)
+				t.Errorf("CheckDoppelGanger() difference = %v", diff)
 			}
 		})
 	}
@@ -1240,26 +1218,104 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 
 func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStateManager) (state.BeaconState,
 	state.BeaconState, state.BeaconState, []bls.SecretKey) {
-	gs, keys := testutil.DeterministicGenesisState(t, 64)
+	gs, keys := util.DeterministicGenesisState(t, 64)
 	hs := gs.Copy()
 	// Head State
 	headEpoch := head
 	headSlot := types.Slot(headEpoch) * params.BeaconConfig().SlotsPerEpoch
 	assert.NoError(t, hs.SetSlot(headSlot))
+	assingments, _, err := helpers.CommitteeAssignments(context.Background(), hs, headEpoch)
+	assert.NoError(t, err)
+	for _, ctr := range assingments {
+		pendingAtt := &ethpb.PendingAttestation{
+			AggregationBits: bitfield.NewBitlist64(uint64(len(ctr.Committee))).ToBitlist().Not(),
+			Data: &ethpb.AttestationData{
+				Slot:            ctr.AttesterSlot,
+				CommitteeIndex:  ctr.CommitteeIndex,
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				Source: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  make([]byte, fieldparams.RootLength),
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  make([]byte, fieldparams.RootLength),
+				},
+			},
+			InclusionDelay: 1,
+			ProposerIndex:  10,
+		}
+		assert.NoError(t, hs.AppendCurrentEpochAttestations(pendingAtt))
+
+	}
 	mockgen.StatesBySlot[headSlot] = hs
 
 	// Previous Epoch State
 	prevEpoch := headEpoch - 1
 	ps := gs.Copy()
-	prevSlot := types.Slot(prevEpoch) * params.BeaconConfig().SlotsPerEpoch
+	prevSlot, err := slots.EpochEnd(prevEpoch)
+	assert.NoError(t, err)
 	assert.NoError(t, ps.SetSlot(prevSlot))
+	assingments, _, err = helpers.CommitteeAssignments(context.Background(), ps, prevEpoch)
+	assert.NoError(t, err)
+	for _, ctr := range assingments {
+		pendingAtt := &ethpb.PendingAttestation{
+			AggregationBits: bitfield.NewBitlist64(uint64(len(ctr.Committee))).ToBitlist().Not(),
+			Data: &ethpb.AttestationData{
+				Slot:            ctr.AttesterSlot,
+				CommitteeIndex:  ctr.CommitteeIndex,
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				Source: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  make([]byte, fieldparams.RootLength),
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  make([]byte, fieldparams.RootLength),
+				},
+			},
+			InclusionDelay: 1,
+			ProposerIndex:  10,
+		}
+		assert.NoError(t, ps.AppendCurrentEpochAttestations(pendingAtt))
+
+	}
 	mockgen.StatesBySlot[prevSlot] = ps
 
 	// Older Epoch State
 	olderEpoch := prevEpoch - 1
 	os := gs.Copy()
-	olderSlot := types.Slot(olderEpoch) * params.BeaconConfig().SlotsPerEpoch
+	olderSlot, err := slots.EpochEnd(olderEpoch)
+	assert.NoError(t, err)
 	assert.NoError(t, os.SetSlot(olderSlot))
+	assingments, _, err = helpers.CommitteeAssignments(context.Background(), os, olderEpoch)
+	assert.NoError(t, err)
+	for _, ctr := range assingments {
+		attSlot := ctr.AttesterSlot
+		if attSlot == olderSlot {
+			continue
+		}
+		pendingAtt := &ethpb.PendingAttestation{
+			AggregationBits: bitfield.NewBitlist64(uint64(len(ctr.Committee))).ToBitlist().Not(),
+			Data: &ethpb.AttestationData{
+				Slot:            attSlot,
+				CommitteeIndex:  ctr.CommitteeIndex,
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				Source: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  make([]byte, fieldparams.RootLength),
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  make([]byte, fieldparams.RootLength),
+				},
+			},
+			InclusionDelay: 1,
+			ProposerIndex:  10,
+		}
+		assert.NoError(t, os.AppendCurrentEpochAttestations(pendingAtt))
+
+	}
 	mockgen.StatesBySlot[olderSlot] = os
 	return hs, ps, os, keys
 }

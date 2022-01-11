@@ -43,9 +43,13 @@ var (
 	justifiedCheckpointKey    = []byte("justified-checkpoint")
 	finalizedCheckpointKey    = []byte("finalized-checkpoint")
 	powchainDataKey           = []byte("powchain-data")
-	// Altair key used to identify object is altair compatible.
-	// Objects that are only compatible with altair should be prefixed with such key.
-	altairKey = []byte("altair")
+
+	// Below keys are used to identify objects are to be fork compatible.
+	// Objects that are only compatible with specific forks should be prefixed with such keys.
+	altairKey    = []byte("altair")
+	bellatrixKey = []byte("merge")
+	// block root included in the beacon state used by weak subjectivity initial sync
+	originBlockRootKey = []byte("origin-block-root")
 
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
 	lastArchivedIndexKey = []byte("last-archived")

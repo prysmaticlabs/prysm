@@ -10,14 +10,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestScorers_Service_Init(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 
 	t.Run("default config", func(t *testing.T) {
 		peerStatuses := peers.NewStatus(ctx, &peers.StatusConfig{
@@ -82,12 +82,20 @@ func TestScorers_Service_Score(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	batchSize := uint64(flags.Get().BlockBatchLimit)
+	batchSize := flags.Get().BlockBatchLimit
 
 	peerScores := func(s *scorers.Service, pids []peer.ID) map[string]float64 {
 		scores := make(map[string]float64, len(pids))
 		for _, pid := range pids {
 			scores[string(pid)] = s.Score(pid)
+		}
+		return scores
+	}
+
+	blkProviderScorers := func(s *scorers.Service, pids []peer.ID) map[string]float64 {
+		scores := make(map[string]float64, len(pids))
+		for _, pid := range pids {
+			scores[string(pid)] = s.BlockProviderScorer().Score(pid)
 		}
 		return scores
 	}
@@ -116,9 +124,7 @@ func TestScorers_Service_Score(t *testing.T) {
 		pids := []peer.ID{"peer1", "peer2", "peer3"}
 		for _, pid := range pids {
 			peerStatuses.Add(nil, pid, nil, network.DirUnknown)
-			// Not yet used peer gets boosted score.
-			startScore := s.BlockProviderScorer().MaxScore()
-			assert.Equal(t, startScore/float64(s.ActiveScorersCount()), s.Score(pid), "Unexpected score for not yet used peer")
+			assert.Equal(t, float64(0), s.Score(pid), "Unexpected score for not yet used peer")
 		}
 		return s, pids
 	}
@@ -136,8 +142,8 @@ func TestScorers_Service_Score(t *testing.T) {
 	t.Run("bad responses score", func(t *testing.T) {
 		s, pids := setupScorer()
 		// Peers start with boosted start score (new peers are boosted by block provider).
-		startScore := s.BlockProviderScorer().MaxScore() / float64(s.ActiveScorersCount())
-		penalty := (-1 / float64(s.BadResponsesScorer().Params().Threshold)) / float64(s.ActiveScorersCount())
+		startScore := float64(0)
+		penalty := (-10 / float64(s.BadResponsesScorer().Params().Threshold)) * 0.3
 
 		// Update peers' stats and test the effect on peer order.
 		s.BadResponsesScorer().Increment("peer2")
@@ -156,54 +162,53 @@ func TestScorers_Service_Score(t *testing.T) {
 	t.Run("block providers score", func(t *testing.T) {
 		s, pids := setupScorer()
 		s1 := s.BlockProviderScorer()
-		startScore := s.BlockProviderScorer().MaxScore() / 2
-		batchWeight := s1.Params().ProcessedBatchWeight / 2
+		startScore := s.BlockProviderScorer().MaxScore()
+		batchWeight := s1.Params().ProcessedBatchWeight
 
 		// Partial batch.
 		s1.IncrementProcessedBlocks("peer1", batchSize/4)
-		assert.Equal(t, 0.0, s.Score("peer1"), "Unexpected %q score", "peer1")
+		assert.Equal(t, 0.0, s.BlockProviderScorer().Score("peer1"), "Unexpected %q score", "peer1")
 
 		// Single batch.
 		s1.IncrementProcessedBlocks("peer1", batchSize)
-		assert.DeepEqual(t, pack(s, batchWeight, startScore, startScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, startScore, startScore), blkProviderScorers(s, pids), "Unexpected scores")
 
 		// Multiple batches.
 		s1.IncrementProcessedBlocks("peer2", batchSize*4)
-		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, startScore), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, startScore), blkProviderScorers(s, pids), "Unexpected scores")
 
 		// Partial batch.
 		s1.IncrementProcessedBlocks("peer3", batchSize/2)
-		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, 0), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, 0), blkProviderScorers(s, pids), "Unexpected scores")
 
 		// See effect of decaying.
 		assert.Equal(t, batchSize+batchSize/4, s1.ProcessedBlocks("peer1"))
 		assert.Equal(t, batchSize*4, s1.ProcessedBlocks("peer2"))
 		assert.Equal(t, batchSize/2, s1.ProcessedBlocks("peer3"))
-		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, 0), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, batchWeight, batchWeight*4, 0), blkProviderScorers(s, pids), "Unexpected scores")
 		s1.Decay()
 		assert.Equal(t, batchSize/4, s1.ProcessedBlocks("peer1"))
 		assert.Equal(t, batchSize*3, s1.ProcessedBlocks("peer2"))
 		assert.Equal(t, uint64(0), s1.ProcessedBlocks("peer3"))
-		assert.DeepEqual(t, pack(s, 0, batchWeight*3, 0), peerScores(s, pids), "Unexpected scores")
+		assert.DeepEqual(t, pack(s, 0, batchWeight*3, 0), blkProviderScorers(s, pids), "Unexpected scores")
 	})
 
 	t.Run("overall score", func(t *testing.T) {
 		s, _ := setupScorer()
 		s1 := s.BlockProviderScorer()
 		s2 := s.BadResponsesScorer()
-		batchWeight := s1.Params().ProcessedBatchWeight / float64(s.ActiveScorersCount())
-		penalty := (-1 / float64(s.BadResponsesScorer().Params().Threshold)) / float64(s.ActiveScorersCount())
+		penalty := (-10 / float64(s.BadResponsesScorer().Params().Threshold)) * 0.3
 
 		// Full score, no penalty.
 		s1.IncrementProcessedBlocks("peer1", batchSize*5)
-		assert.Equal(t, roundScore(batchWeight*5), s.Score("peer1"))
+		assert.Equal(t, float64(0), s.Score("peer1"))
 		// Now, adjust score by introducing penalty for bad responses.
 		s2.Increment("peer1")
 		s2.Increment("peer1")
-		assert.Equal(t, roundScore(batchWeight*5+2*penalty), s.Score("peer1"), "Unexpected overall score")
+		assert.Equal(t, roundScore(2*penalty), s.Score("peer1"), "Unexpected overall score")
 		// If peer continues to misbehave, score becomes negative.
 		s2.Increment("peer1")
-		assert.Equal(t, roundScore(batchWeight*5+3*penalty), s.Score("peer1"), "Unexpected overall score")
+		assert.Equal(t, roundScore(3*penalty), s.Score("peer1"), "Unexpected overall score")
 	})
 }
 

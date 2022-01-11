@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,7 +19,7 @@ var responseCodeInvalidRequest = byte(0x01)
 var responseCodeServerError = byte(0x02)
 
 func (s *Service) generateErrorResponse(code byte, reason string) ([]byte, error) {
-	return createErrorResponse(code, reason, s.cfg.P2P)
+	return createErrorResponse(code, reason, s.cfg.p2p)
 }
 
 // ReadStatusCode response from a RPC stream.

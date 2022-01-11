@@ -12,19 +12,18 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pm "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
@@ -104,7 +103,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 				}
 			}
 		}()
-		if testutil.WaitTimeout(&wg, 5*time.Second) {
+		if util.WaitTimeout(&wg, 5*time.Second) {
 			t.Errorf("Isolated non-skipped slot not found in %d iterations: %v", i, expectedSlot)
 		} else {
 			log.Debugf("Isolated non-skipped slot found in %d iterations", i)
@@ -130,7 +129,7 @@ func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 				p2p:   p2p,
 			},
 		)
-		mc.FinalizedCheckPoint = &eth.Checkpoint{
+		mc.FinalizedCheckPoint = &ethpb.Checkpoint{
 			Epoch: 10,
 		}
 		require.NoError(t, mc.State.SetSlot(12*params.BeaconConfig().SlotsPerEpoch))
@@ -159,22 +158,22 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	p2p := p2pt.NewTestP2P(t)
 
 	// Chain contains blocks from 8 epochs (from 0 to 7, 256 is the start slot of epoch8).
-	chain1 := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 250)
+	chain1 := extendBlockSequence(t, []*ethpb.SignedBeaconBlock{}, 250)
 	finalizedSlot := types.Slot(63)
-	finalizedEpoch := core.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
 		Root:  genesisRoot[:],
 		DB:    beaconDB,
-		FinalizedCheckPoint: &eth.Checkpoint{
+		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: finalizedEpoch,
 			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
 		},
@@ -201,10 +200,10 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		peers = append(peers, connectPeerHavingBlocks(t, p2p, chain1, finalizedSlot, p2p.Peers()))
 	}
 
-	blockBatchLimit := uint64(flags.Get().BlockBatchLimit) * 2
+	blockBatchLimit := flags.Get().BlockBatchLimit * 2
 	pidInd := 0
 	for i := uint64(1); i < uint64(len(chain1)); i += blockBatchLimit {
-		req := &p2ppb.BeaconBlocksByRangeRequest{
+		req := &ethpb.BeaconBlocksByRangeRequest{
 			StartSlot: types.Slot(i),
 			Step:      1,
 			Count:     blockBatchLimit,
@@ -227,7 +226,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	assert.Equal(t, types.Slot(250), mc.HeadSlot())
 
 	// Assert no blocks on further requests, disallowing to progress.
-	req := &p2ppb.BeaconBlocksByRangeRequest{
+	req := &ethpb.BeaconBlocksByRangeRequest{
 		StartSlot: 251,
 		Step:      1,
 		Count:     blockBatchLimit,
@@ -243,7 +242,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 
 	// Add peer that has blocks after 250, but those blocks are orphaned i.e. they do not have common
 	// ancestor with what we already have. So, error is expected.
-	chain1a := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 265)
+	chain1a := extendBlockSequence(t, []*ethpb.SignedBeaconBlock{}, 265)
 	connectPeerHavingBlocks(t, p2p, chain1a, finalizedSlot, p2p.Peers())
 	fork, err = fetcher.findFork(ctx, 251)
 	require.ErrorContains(t, errNoPeersWithAltBlocks.Error(), err)
@@ -314,13 +313,13 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	p1 := p2pt.NewTestP2P(t)
 
-	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
+	knownBlocks := extendBlockSequence(t, []*ethpb.SignedBeaconBlock{}, 128)
 	genesisBlock := knownBlocks[0]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State:          st,
@@ -365,7 +364,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		defer func() {
 			assert.NoError(t, p1.Disconnect(p2.PeerID()))
 		}()
-		p1.Peers().SetChainState(p2.PeerID(), &p2ppb.Status{
+		p1.Peers().SetChainState(p2.PeerID(), &ethpb.Status{
 			HeadRoot: nil,
 			HeadSlot: 0,
 		})
@@ -396,7 +395,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	})
 
 	t.Run("first block is diverging - no common ancestor", func(t *testing.T) {
-		altBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
+		altBlocks := extendBlockSequence(t, []*ethpb.SignedBeaconBlock{}, 128)
 		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
 		defer func() {
 			assert.NoError(t, p1.Disconnect(p2))
@@ -423,22 +422,22 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	p2p := p2pt.NewTestP2P(t)
 
-	knownBlocks := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
+	knownBlocks := extendBlockSequence(t, []*ethpb.SignedBeaconBlock{}, 128)
 	finalizedSlot := types.Slot(63)
-	finalizedEpoch := core.SlotToEpoch(finalizedSlot)
+	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := knownBlocks[0]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	mc := &mock.ChainService{
 		State: st,
 		Root:  genesisRoot[:],
 		DB:    beaconDB,
-		FinalizedCheckPoint: &eth.Checkpoint{
+		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: finalizedEpoch,
 			Root:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
 		},
@@ -571,7 +570,7 @@ func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 					p2p:   p2p,
 				},
 			)
-			mc.FinalizedCheckPoint = &eth.Checkpoint{
+			mc.FinalizedCheckPoint = &ethpb.Checkpoint{
 				Epoch: tt.ourFinalizedEpoch,
 			}
 			require.NoError(t, mc.State.SetSlot(tt.ourHeadSlot))
