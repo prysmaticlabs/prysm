@@ -204,27 +204,44 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
-	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b.state)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		layers := stateutil.Merkleize(fieldRoots)
-		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return [32]byte{}, err
 	}
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return [32]byte{}, err
+	}
+	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+}
 
+// Initializes the Merkle layers for the beacon state if they are empty.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
+	if len(b.merkleLayers) > 0 {
+		return nil
+	}
+	fieldRoots, err := computeFieldRoots(ctx, b.state)
+	if err != nil {
+		return err
+	}
+	layers := stateutil.Merkleize(fieldRoots)
+	b.merkleLayers = layers
+	b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
+	return nil
+}
+
+// Recomputes the Merkle layers for the dirty fields in the state.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 	for field := range b.dirtyFields {
 		root, err := b.rootSelector(ctx, field)
 		if err != nil {
-			return [32]byte{}, err
+			return err
 		}
 		b.merkleLayers[0][field] = root[:]
 		b.recomputeRoot(int(field))
 		delete(b.dirtyFields, field)
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	return nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This
