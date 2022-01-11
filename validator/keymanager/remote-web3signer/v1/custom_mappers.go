@@ -45,6 +45,9 @@ func MapAttestation(attestation *ethpb.Attestation) (*Attestation, error) {
 	if attestation == nil {
 		return nil, fmt.Errorf("attestation is nil")
 	}
+	if attestation.AggregationBits == nil {
+		return nil, fmt.Errorf("aggregation bits in attestation is nil")
+	}
 	data, err := MapAttestationData(attestation.Data)
 	if err != nil {
 		return nil, err
@@ -93,6 +96,9 @@ func MapCheckPoint(checkpoint *ethpb.Checkpoint) (*Checkpoint, error) {
 func MapBeaconBlockBody(body *ethpb.BeaconBlockBody) (*BeaconBlockBody, error) {
 	if body == nil {
 		return nil, fmt.Errorf("beacon block body is nil")
+	}
+	if body.Eth1Data == nil {
+		return nil, fmt.Errorf("eth1 data in Beacon Block Body is nil")
 	}
 	block := &BeaconBlockBody{
 		RandaoReveal: hexutil.Encode(body.RandaoReveal),
@@ -169,6 +175,9 @@ func MapProposerSlashing(slashing *ethpb.ProposerSlashing) (*ProposerSlashing, e
 func MapSignedBeaconBlockHeader(signedHeader *ethpb.SignedBeaconBlockHeader) (*SignedBeaconBlockHeader, error) {
 	if signedHeader == nil {
 		return nil, fmt.Errorf("signed beacon block header is nil")
+	}
+	if signedHeader.Header == nil {
+		return nil, fmt.Errorf("signed beacon block header message is nil")
 	}
 	return &SignedBeaconBlockHeader{
 		Message: &BeaconBlockHeader{
@@ -260,6 +269,9 @@ func MapSignedVoluntaryExit(signedVoluntaryExit *ethpb.SignedVoluntaryExit) (*Si
 	if signedVoluntaryExit == nil {
 		return nil, fmt.Errorf("signed voluntary exit is nil")
 	}
+	if signedVoluntaryExit.Exit == nil {
+		return nil, fmt.Errorf("exit in signed voluntary exit is nil")
+	}
 	return &SignedVoluntaryExit{
 		Message: &VoluntaryExit{
 			Epoch:          fmt.Sprint(signedVoluntaryExit.Exit.Epoch),
@@ -296,6 +308,12 @@ func MapBeaconBlockAltair(block *ethpb.BeaconBlockAltair) (*BeaconBlockAltair, e
 func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBodyAltair, error) {
 	if body == nil {
 		return nil, fmt.Errorf("beacon block body altair is nil")
+	}
+	if body.SyncAggregate == nil {
+		return nil, fmt.Errorf("sync aggregate in beacon block body altair is nil")
+	}
+	if body.SyncAggregate.SyncCommitteeBits == nil {
+		return nil, fmt.Errorf("sync committee bits in sync aggregate in beacon block body altair is nil")
 	}
 
 	block := &BeaconBlockBodyAltair{
@@ -381,6 +399,12 @@ func MapSyncAggregatorSelectionData(data *ethpb.SyncAggregatorSelectionData) (*S
 func MapContributionAndProof(contribution *ethpb.ContributionAndProof) (*ContributionAndProof, error) {
 	if contribution == nil {
 		return nil, fmt.Errorf("contribution and proof is nil")
+	}
+	if contribution.Contribution == nil {
+		return nil, fmt.Errorf("contribution in ContributionAndProof is nil")
+	}
+	if contribution.Contribution.AggregationBits == nil {
+		return nil, fmt.Errorf("aggregation bits in ContributionAndProof is nil")
 	}
 	return &ContributionAndProof{
 		AggregatorIndex: fmt.Sprint(contribution.AggregatorIndex),
