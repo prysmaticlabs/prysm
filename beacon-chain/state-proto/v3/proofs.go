@@ -1,6 +1,7 @@
 package v3
 
 import (
+	"context"
 	"encoding/binary"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/fieldtrie"
@@ -27,24 +28,46 @@ func NextSyncCommitteeGeneralizedIndex() uint64 {
 }
 
 // CurrentSyncCommitteeProof from the state's Merkle trie representation.
-func (b *BeaconState) CurrentSyncCommitteeProof() ([][]byte, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+func (b *BeaconState) CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	// In case the Merkle layers of the trie are not populated, we need
+	// to perform some initialization.
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return nil, err
+	}
+	// Our beacon state uses a "dirty" fields pattern which requires us to
+	// recompute branches of the Merkle layers that are marked as dirty.
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return nil, err
+	}
 	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, currentSyncCommittee), nil
 }
 
 // NextSyncCommitteeProof from the state's Merkle trie representation.
-func (b *BeaconState) NextSyncCommitteeProof() ([][]byte, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+func (b *BeaconState) NextSyncCommitteeProof(ctx context.Context) ([][]byte, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return nil, err
+	}
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return nil, err
+	}
 	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, nextSyncCommittee), nil
 }
 
 // FinalizedRootProof crafts a Merkle proof for the finalized root
 // contained within the finalized checkpoint of a beacon state.
-func (b *BeaconState) FinalizedRootProof() ([][]byte, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+func (b *BeaconState) FinalizedRootProof(ctx context.Context) ([][]byte, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return nil, err
+	}
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return nil, err
+	}
 	cpt := b.state.FinalizedCheckpoint
 	// The epoch field of a finalized checkpoint is the neighbor
 	// index of the finalized root field in its Merkle tree representation

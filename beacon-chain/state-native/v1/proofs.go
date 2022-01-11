@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"encoding/binary"
 
 	"github.com/pkg/errors"
@@ -18,20 +19,26 @@ func FinalizedRootGeneralizedIndex() uint64 {
 }
 
 // CurrentSyncCommitteeProof from the state's Merkle trie representation.
-func (*BeaconState) CurrentSyncCommitteeProof() ([][]byte, error) {
+func (*BeaconState) CurrentSyncCommitteeProof(_ context.Context) ([][]byte, error) {
 	return nil, errors.New("CurrentSyncCommitteeProof() unsupported for v1 beacon state")
 }
 
 // NextSyncCommitteeProof from the state's Merkle trie representation.
-func (*BeaconState) NextSyncCommitteeProof() ([][]byte, error) {
+func (*BeaconState) NextSyncCommitteeProof(_ context.Context) ([][]byte, error) {
 	return nil, errors.New("NextSyncCommitteeProof() unsupported for v1 beacon state")
 }
 
 // FinalizedRootProof crafts a Merkle proof for the finalized root
 // contained within the finalized checkpoint of a beacon state.
-func (b *BeaconState) FinalizedRootProof() ([][]byte, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+func (b *BeaconState) FinalizedRootProof(ctx context.Context) ([][]byte, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return nil, err
+	}
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return nil, err
+	}
 	cpt := b.state.FinalizedCheckpoint
 	// The epoch field of a finalized checkpoint is the neighbor
 	// index of the finalized root field in its Merkle tree representation
