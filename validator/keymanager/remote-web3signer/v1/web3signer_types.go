@@ -1,6 +1,6 @@
 package v1
 
-/* Web3Signer Specs are found on the following link: https://consensys.github.io/web3signer/web3signer-eth2.html */
+/* Web3Signer Specs are found on conensys website: google Consensys' Web3Signer API specification*/
 // All Types represent version 1.0 of the Web3Signer specs i.e. /api/v1/eth2
 
 // AggregationSlotSignRequest is a request object for web3signer sign api.
@@ -53,11 +53,6 @@ type BlockV2SignRequest struct {
 
 // DepositSignRequest Not currently supported by Prysm.
 // DepositSignRequest is a request object for web3signer sign api.
-//type DepositSignRequest struct {
-//	Type        string   `json:"type"`
-//	SigningRoot string   `json:"signingRoot"`
-//	Deposit     *Deposit `json:"deposit"`
-//}
 
 // RandaoRevealSignRequest is a request object for web3signer sign api.
 type RandaoRevealSignRequest struct {
