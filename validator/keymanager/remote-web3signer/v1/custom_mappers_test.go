@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/testing/util"
 
@@ -254,7 +255,7 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 						},
 						SyncAggregate: &ethpb.SyncAggregate{
 							SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
-							SyncCommitteeBits:      make([]byte, 64),
+							SyncCommitteeBits:      bitfield.NewBitvector512(),
 						},
 					},
 				},
@@ -398,7 +399,7 @@ func TestMapContributionAndProof(t *testing.T) {
 						Slot:              0,
 						BlockRoot:         make([]byte, fieldparams.RootLength),
 						SubcommitteeIndex: 0,
-						AggregationBits:   make([]byte, 64),
+						AggregationBits:   bitfield.NewBitvector128(),
 						Signature:         make([]byte, fieldparams.BLSSignatureLength),
 					},
 					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
