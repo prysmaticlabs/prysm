@@ -7,8 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 )
 
