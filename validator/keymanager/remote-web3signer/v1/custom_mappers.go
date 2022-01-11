@@ -3,6 +3,8 @@ package v1
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -64,11 +66,11 @@ func MapAttestationData(data *ethpb.AttestationData) (*AttestationData, error) {
 	}
 	source, err := MapCheckPoint(data.Source)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not map source for attestation data")
 	}
 	target, err := MapCheckPoint(data.Target)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not map target for attestation data")
 	}
 	return &AttestationData{
 		Slot:            fmt.Sprint(data.Slot),
@@ -112,35 +114,35 @@ func MapBeaconBlockBody(body *ethpb.BeaconBlockBody) (*BeaconBlockBody, error) {
 	for i, slashing := range body.ProposerSlashings {
 		slashing, err := MapProposerSlashing(slashing)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map proposer slashing at index %v: %v", i, err)
 		}
 		block.ProposerSlashings[i] = slashing
 	}
 	for i, slashing := range body.AttesterSlashings {
 		slashing, err := MapAttesterSlashing(slashing)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map attester slashing at index %v: %v", i, err)
 		}
 		block.AttesterSlashings[i] = slashing
 	}
 	for i, attestation := range body.Attestations {
 		attestation, err := MapAttestation(attestation)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map attestation at index %v: %v", i, err)
 		}
 		block.Attestations[i] = attestation
 	}
 	for i, Deposit := range body.Deposits {
 		deposit, err := MapDeposit(Deposit)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map deposit at index %v: %v", i, err)
 		}
 		block.Deposits[i] = deposit
 	}
 	for i, signedVoluntaryExit := range body.VoluntaryExits {
 		signedVoluntaryExit, err := MapSignedVoluntaryExit(signedVoluntaryExit)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map signed voluntary exit at index %v: %v", i, err)
 		}
 		block.VoluntaryExits[i] = signedVoluntaryExit
 	}
@@ -154,11 +156,11 @@ func MapProposerSlashing(slashing *ethpb.ProposerSlashing) (*ProposerSlashing, e
 	}
 	signedHeader1, err := MapSignedBeaconBlockHeader(slashing.Header_1)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not map signed header 1")
 	}
 	signedHeader2, err := MapSignedBeaconBlockHeader(slashing.Header_2)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not map signed header 2")
 	}
 	return &ProposerSlashing{
 		SignedHeader_1: signedHeader1,
@@ -198,11 +200,11 @@ func MapAttesterSlashing(slashing *ethpb.AttesterSlashing) (*AttesterSlashing, e
 	}
 	attestation1, err := MapIndexedAttestation(slashing.Attestation_1)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not map attestation 1")
 	}
 	attestation2, err := MapIndexedAttestation(slashing.Attestation_2)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not map attestation 2")
 	}
 	return &AttesterSlashing{
 		Attestation_1: attestation1,
@@ -221,7 +223,7 @@ func MapIndexedAttestation(attestation *ethpb.IndexedAttestation) (*IndexedAttes
 	}
 	attestationData, err := MapAttestationData(attestation.Data)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not map attestation data to IndexedAttestation")
 	}
 	return &IndexedAttestation{
 		AttestingIndices: attestingIndices,
@@ -279,7 +281,7 @@ func MapBeaconBlockAltair(block *ethpb.BeaconBlockAltair) (*BeaconBlockAltair, e
 	}
 	body, err := MapBeaconBlockBodyAltair(block.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not map beacon block body for altair")
 	}
 	return &BeaconBlockAltair{
 		Slot: fmt.Sprint(block.Slot),
@@ -320,28 +322,28 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 	for i, slashing := range body.ProposerSlashings {
 		proposer, err := MapProposerSlashing(slashing)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map proposer slashing at index %v: %v", i, err)
 		}
 		block.ProposerSlashings[i] = proposer
 	}
 	for i, slashing := range body.AttesterSlashings {
 		attesterSlashing, err := MapAttesterSlashing(slashing)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map attester slashing at index %v: %v", i, err)
 		}
 		block.AttesterSlashings[i] = attesterSlashing
 	}
 	for i, attestation := range body.Attestations {
 		attestation, err := MapAttestation(attestation)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map attestation at index %v: %v", i, err)
 		}
 		block.Attestations[i] = attestation
 	}
 	for i, deposit := range body.Deposits {
 		deposit, err := MapDeposit(deposit)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map deposit at index %v: %v", i, err)
 		}
 		block.Deposits[i] = deposit
 	}
@@ -349,7 +351,7 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 
 		exit, err := MapSignedVoluntaryExit(exit)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not map signed voluntary exit at index %v: %v", i, err)
 		}
 		block.VoluntaryExits[i] = exit
 	}
