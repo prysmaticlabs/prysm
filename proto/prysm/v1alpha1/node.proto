@@ -89,7 +89,7 @@ service Node {
     // // Retrieve the status of the ETH1 connections.
     rpc GetETH1ConnectionStatus(google.protobuf.Empty) returns (ETH1ConnectionStatus) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/node/eth1connections"
+            get: "/eth/v1alpha1/node/eth1/connections"
         };
     }
 }
