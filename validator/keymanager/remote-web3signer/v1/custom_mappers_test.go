@@ -216,7 +216,7 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 							},
 						},
 						AttesterSlashings: []*ethpb.AttesterSlashing{
-							&ethpb.AttesterSlashing{
+							{
 								Attestation_1: &ethpb.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
 									Data:             util.NewAttestation().Data,
@@ -233,7 +233,7 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 							util.NewAttestation(),
 						},
 						Deposits: []*ethpb.Deposit{
-							&ethpb.Deposit{
+							{
 								Proof: [][]byte{[]byte("A")},
 								Data: &ethpb.Deposit_Data{
 									PublicKey:             make([]byte, fieldparams.BLSPubkeyLength),
@@ -244,7 +244,7 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 							},
 						},
 						VoluntaryExits: []*ethpb.SignedVoluntaryExit{
-							&ethpb.SignedVoluntaryExit{
+							{
 								Exit: &ethpb.VoluntaryExit{
 									Epoch:          0,
 									ValidatorIndex: 0,
@@ -323,7 +323,7 @@ func TestMapBeaconBlockBody(t *testing.T) {
 						},
 					},
 					AttesterSlashings: []*ethpb.AttesterSlashing{
-						&ethpb.AttesterSlashing{
+						{
 							Attestation_1: &ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{0, 1, 2},
 								Data:             util.NewAttestation().Data,
@@ -340,7 +340,7 @@ func TestMapBeaconBlockBody(t *testing.T) {
 						util.NewAttestation(),
 					},
 					Deposits: []*ethpb.Deposit{
-						&ethpb.Deposit{
+						{
 							Proof: [][]byte{[]byte("A")},
 							Data: &ethpb.Deposit_Data{
 								PublicKey:             make([]byte, fieldparams.BLSPubkeyLength),
@@ -351,7 +351,7 @@ func TestMapBeaconBlockBody(t *testing.T) {
 						},
 					},
 					VoluntaryExits: []*ethpb.SignedVoluntaryExit{
-						&ethpb.SignedVoluntaryExit{
+						{
 							Exit: &ethpb.VoluntaryExit{
 								Epoch:          0,
 								ValidatorIndex: 0,

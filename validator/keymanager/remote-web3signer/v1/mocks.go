@@ -75,7 +75,7 @@ func MockBeaconBlockAltair() *BeaconBlockAltair {
 			},
 			Graffiti: hexutil.Encode(make([]byte, 32)),
 			ProposerSlashings: []*ProposerSlashing{
-				&ProposerSlashing{
+				{
 					SignedHeader_1: &SignedBeaconBlockHeader{
 						Message: &BeaconBlockHeader{
 							Slot:          "0",
@@ -99,7 +99,7 @@ func MockBeaconBlockAltair() *BeaconBlockAltair {
 				},
 			},
 			AttesterSlashings: []*AttesterSlashing{
-				&AttesterSlashing{
+				{
 					Attestation_1: MockIndexedAttestation(),
 					Attestation_2: MockIndexedAttestation(),
 				},
@@ -108,7 +108,7 @@ func MockBeaconBlockAltair() *BeaconBlockAltair {
 				MockAttestation(),
 			},
 			Deposits: []*Deposit{
-				&Deposit{
+				{
 					Proof: []string{"0x41"},
 					Data: &DepositData{
 						PublicKey:             hexutil.Encode(make([]byte, fieldparams.BLSPubkeyLength)),
@@ -119,7 +119,7 @@ func MockBeaconBlockAltair() *BeaconBlockAltair {
 				},
 			},
 			VoluntaryExits: []*SignedVoluntaryExit{
-				&SignedVoluntaryExit{
+				{
 					Message: &VoluntaryExit{
 						Epoch:          "0",
 						ValidatorIndex: "0",
@@ -145,7 +145,7 @@ func MockBeaconBlockBody() *BeaconBlockBody {
 		},
 		Graffiti: hexutil.Encode(make([]byte, 32)),
 		ProposerSlashings: []*ProposerSlashing{
-			&ProposerSlashing{
+			{
 				SignedHeader_1: &SignedBeaconBlockHeader{
 					Message: &BeaconBlockHeader{
 						Slot:          "0",
@@ -169,7 +169,7 @@ func MockBeaconBlockBody() *BeaconBlockBody {
 			},
 		},
 		AttesterSlashings: []*AttesterSlashing{
-			&AttesterSlashing{
+			{
 				Attestation_1: MockIndexedAttestation(),
 				Attestation_2: MockIndexedAttestation(),
 			},
@@ -178,7 +178,7 @@ func MockBeaconBlockBody() *BeaconBlockBody {
 			MockAttestation(),
 		},
 		Deposits: []*Deposit{
-			&Deposit{
+			{
 				Proof: []string{"0x41"},
 				Data: &DepositData{
 					PublicKey:             hexutil.Encode(make([]byte, fieldparams.BLSPubkeyLength)),
@@ -189,7 +189,7 @@ func MockBeaconBlockBody() *BeaconBlockBody {
 			},
 		},
 		VoluntaryExits: []*SignedVoluntaryExit{
-			&SignedVoluntaryExit{
+			{
 				Message: &VoluntaryExit{
 					Epoch:          "0",
 					ValidatorIndex: "0",

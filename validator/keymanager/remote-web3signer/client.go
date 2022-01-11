@@ -10,11 +10,11 @@ import (
 	"net/url"
 	"time"
 
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
 const (
