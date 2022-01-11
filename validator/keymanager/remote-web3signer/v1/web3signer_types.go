@@ -1,7 +1,6 @@
+// Package v1 defines mappings of types as defined by the web3signer official specification for its v1 version i.e. /api/v1/eth2
+/* Web3Signer Specs are found by searching Consensys' Web3Signer API specification*/
 package v1
-
-/* Web3Signer Specs are found on conensys website: google Consensys' Web3Signer API specification*/
-// All Types represent version 1.0 of the Web3Signer specs i.e. /api/v1/eth2
 
 // AggregationSlotSignRequest is a request object for web3signer sign api.
 type AggregationSlotSignRequest struct {

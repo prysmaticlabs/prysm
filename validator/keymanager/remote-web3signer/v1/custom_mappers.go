@@ -3,11 +3,10 @@ package v1
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
-
 
 // MapForkInfo maps the eth2.ForkInfo proto to the Web3Signer spec.
 func MapForkInfo(from *ethpb.Fork, genesisValidatorsRoot []byte) (*ForkInfo, error) {
@@ -52,7 +51,7 @@ func MapAttestation(attestation *ethpb.Attestation) (*Attestation, error) {
 	}
 	return &Attestation{
 		Data:            data,
-		AggregationBits: hexutil.Encode(attestation.AggregationBits),
+		AggregationBits: hexutil.Encode(attestation.AggregationBits.Bytes()),
 		Signature:       hexutil.Encode(attestation.Signature),
 	}, nil
 }
@@ -313,7 +312,7 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 		Deposits:          make([]*Deposit, len(body.Deposits)),
 		VoluntaryExits:    make([]*SignedVoluntaryExit, len(body.VoluntaryExits)),
 		SyncAggregate: &SyncAggregate{
-			SyncCommitteeBits:      hexutil.Encode(body.SyncAggregate.SyncCommitteeBits),
+			SyncCommitteeBits:      hexutil.Encode(body.SyncAggregate.SyncCommitteeBits.Bytes()),
 			SyncCommitteeSignature: hexutil.Encode(body.SyncAggregate.SyncCommitteeSignature),
 		},
 	}
@@ -390,7 +389,7 @@ func MapContributionAndProof(contribution *ethpb.ContributionAndProof) (*Contrib
 			Slot:              fmt.Sprint(contribution.Contribution.Slot),
 			BeaconBlockRoot:   hexutil.Encode(contribution.Contribution.BlockRoot),
 			SubcommitteeIndex: fmt.Sprint(contribution.Contribution.SubcommitteeIndex),
-			AggregationBits:   hexutil.Encode(contribution.Contribution.AggregationBits),
+			AggregationBits:   hexutil.Encode(contribution.Contribution.AggregationBits.Bytes()),
 			Signature:         hexutil.Encode(contribution.Contribution.Signature),
 		},
 	}, nil
