@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// All Mappings represent version 1.0 of the Web3Signer specs i.e. /api/v1/eth2
 
 // MapForkInfo maps the eth2.ForkInfo proto to the Web3Signer spec.
 func MapForkInfo(from *ethpb.Fork, genesisValidatorsRoot []byte) (*ForkInfo, error) {
