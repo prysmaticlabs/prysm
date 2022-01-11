@@ -551,7 +551,7 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
 }
 
-func TestProcessSlots_OnlyMergeEpoch(t *testing.T) {
+func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
 	conf := params.BeaconConfig()
 	conf.BellatrixForkEpoch = 5
@@ -560,10 +560,10 @@ func TestProcessSlots_OnlyMergeEpoch(t *testing.T) {
 
 	st, _ := util.DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
-	require.Equal(t, version.Merge, st.Version())
+	require.Equal(t, version.Bellatrix, st.Version())
 	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
 	require.NoError(t, err)
-	require.Equal(t, version.Merge, st.Version())
+	require.Equal(t, version.Bellatrix, st.Version())
 
 	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
 
@@ -586,6 +586,21 @@ func TestProcessSlots_OnlyMergeEpoch(t *testing.T) {
 	sc, err = st.NextSyncCommittee()
 	require.NoError(t, err)
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+}
+
+func TestProcessSlots_ThroughMergeEpoch(t *testing.T) {
+	transition.SkipSlotCache.Disable()
+	params.SetupTestConfigCleanup(t)
+	conf := params.BeaconConfig()
+	conf.BellatrixForkEpoch = 5
+	params.OverrideBeaconConfig(conf)
+
+	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	require.NoError(t, err)
+	require.Equal(t, version.Bellatrix, st.Version())
+
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
 }
 
 func TestProcessSlotsUsingNextSlotCache(t *testing.T) {

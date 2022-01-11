@@ -49,8 +49,6 @@ func newApiClient(baseEndpoint string) (*apiClient, error) {
 	}, nil
 }
 
-// TODO: will be removed and replaced in a future PR SignRequest is a request object for web3signer sign api.
-
 type SignRequest struct {
 	Type            string              `json:"type"`
 	ForkInfo        *v1.ForkInfo        `json:"fork_info"`
