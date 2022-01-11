@@ -11,7 +11,6 @@ import (
 	"time"
 
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
