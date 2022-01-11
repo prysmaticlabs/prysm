@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
-
 	"github.com/stretchr/testify/assert"
 )
 
