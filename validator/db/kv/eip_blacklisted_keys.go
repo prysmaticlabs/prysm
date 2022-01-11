@@ -3,22 +3,23 @@ package kv
 import (
 	"context"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
 // EIPImportBlacklistedPublicKeys returns keys that were marked as blacklisted during EIP-3076 slashing
 // protection imports, ensuring that we can prevent these keys from having duties at runtime.
-func (s *Store) EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (s *Store) EIPImportBlacklistedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	_, span := trace.StartSpan(ctx, "Validator.EIPImportBlacklistedPublicKeys")
 	defer span.End()
 	var err error
-	publicKeys := make([][48]byte, 0)
+	publicKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	err = s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(slashablePublicKeysBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			if key != nil {
-				pubKeyBytes := [48]byte{}
+				pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
 				copy(pubKeyBytes[:], key)
 				publicKeys = append(publicKeys, pubKeyBytes)
 			}
@@ -30,7 +31,7 @@ func (s *Store) EIPImportBlacklistedPublicKeys(ctx context.Context) ([][48]byte,
 
 // SaveEIPImportBlacklistedPublicKeys stores a list of blacklisted public keys that
 // were determined during EIP-3076 slashing protection imports.
-func (s *Store) SaveEIPImportBlacklistedPublicKeys(ctx context.Context, publicKeys [][48]byte) error {
+func (s *Store) SaveEIPImportBlacklistedPublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) error {
 	_, span := trace.StartSpan(ctx, "Validator.SaveEIPImportBlacklistedPublicKeys")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {

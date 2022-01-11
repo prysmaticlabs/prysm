@@ -781,7 +781,7 @@ func checkStateReadTime(b *testing.B, saveCount int) {
 	}
 }
 
-func TestStateMerge_CanSaveRetrieveValidatorEntries(t *testing.T) {
+func TestStateBellatrix_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
@@ -833,7 +833,7 @@ func TestStateMerge_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestMergeState_CanSaveRetrieve(t *testing.T) {
+func TestBellatrixState_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 
 	r := [32]byte{'A'}
@@ -856,7 +856,7 @@ func TestMergeState_CanSaveRetrieve(t *testing.T) {
 	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
-func TestMergeState_CanDelete(t *testing.T) {
+func TestBellatrixState_CanDelete(t *testing.T) {
 	db := setupDB(t)
 
 	r := [32]byte{'A'}

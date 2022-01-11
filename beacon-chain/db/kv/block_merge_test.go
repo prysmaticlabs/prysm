@@ -18,7 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestStore_SaveMergeBlock_NoDuplicates(t *testing.T) {
+func TestStore_SaveBellatrixBlock_NoDuplicates(t *testing.T) {
 	BlockCacheSize = 1
 	db := setupDB(t)
 	slot := types.Slot(20)
@@ -49,7 +49,7 @@ func TestStore_SaveMergeBlock_NoDuplicates(t *testing.T) {
 	BlockCacheSize = 256
 }
 
-func TestStore_MergeBlocksCRUD(t *testing.T) {
+func TestStore_BellatrixBlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -73,7 +73,7 @@ func TestStore_MergeBlocksCRUD(t *testing.T) {
 	assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
 }
 
-func TestStore_MergeBlocksBatchDelete(t *testing.T) {
+func TestStore_BellatrixBlocksBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
@@ -112,7 +112,7 @@ func TestStore_MergeBlocksBatchDelete(t *testing.T) {
 	}
 }
 
-func TestStore_MergeBlocksHandleZeroCase(t *testing.T) {
+func TestStore_BellatrixBlocksHandleZeroCase(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
@@ -134,7 +134,7 @@ func TestStore_MergeBlocksHandleZeroCase(t *testing.T) {
 	assert.Equal(t, 1, len(retrieved), "Unexpected number of blocks received, expected one")
 }
 
-func TestStore_MergeBlocksHandleInvalidEndSlot(t *testing.T) {
+func TestStore_BellatrixBlocksHandleInvalidEndSlot(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 10
@@ -161,7 +161,7 @@ func TestStore_MergeBlocksHandleInvalidEndSlot(t *testing.T) {
 	assert.Equal(t, 1, len(requested), "Unexpected number of blocks received, only expected two")
 }
 
-func TestStore_MergeBlocksCRUD_NoCache(t *testing.T) {
+func TestStore_BellatrixBlocksCRUD_NoCache(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	block := util.NewBeaconBlockMerge()
@@ -184,7 +184,7 @@ func TestStore_MergeBlocksCRUD_NoCache(t *testing.T) {
 	assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
 }
 
-func TestStore_MergeBlocks_FiltersCorrectly(t *testing.T) {
+func TestStore_BellatrixBlocks_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
 	b4 := util.NewBeaconBlockMerge()
 	b4.Block.Slot = 4
@@ -272,7 +272,7 @@ func TestStore_MergeBlocks_FiltersCorrectly(t *testing.T) {
 	}
 }
 
-func TestStore_MergeBlocks_VerifyBlockRoots(t *testing.T) {
+func TestStore_BellatrixBlocks_VerifyBlockRoots(t *testing.T) {
 	ctx := context.Background()
 	db := setupDB(t)
 	b1 := util.NewBeaconBlockMerge()
@@ -297,7 +297,7 @@ func TestStore_MergeBlocks_VerifyBlockRoots(t *testing.T) {
 	assert.DeepEqual(t, [][32]byte{r1, r2}, roots)
 }
 
-func TestStore_MergeBlocks_Retrieve_SlotRange(t *testing.T) {
+func TestStore_BellatrixBlocks_Retrieve_SlotRange(t *testing.T) {
 	db := setupDB(t)
 	totalBlocks := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
@@ -315,7 +315,7 @@ func TestStore_MergeBlocks_Retrieve_SlotRange(t *testing.T) {
 	assert.Equal(t, 300, len(retrieved))
 }
 
-func TestStore_MergeBlocks_Retrieve_Epoch(t *testing.T) {
+func TestStore_BellatrixBlocks_Retrieve_Epoch(t *testing.T) {
 	db := setupDB(t)
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(7)
 	totalBlocks := make([]block.SignedBeaconBlock, slots)
@@ -339,7 +339,7 @@ func TestStore_MergeBlocks_Retrieve_Epoch(t *testing.T) {
 	assert.Equal(t, uint64(want), uint64(len(retrieved)))
 }
 
-func TestStore_MergeBlocks_Retrieve_SlotRangeWithStep(t *testing.T) {
+func TestStore_BellatrixBlocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	db := setupDB(t)
 	totalBlocks := make([]block.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
@@ -361,7 +361,7 @@ func TestStore_MergeBlocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	}
 }
 
-func TestStore_SaveMergeBlock_CanGetHighestAt(t *testing.T) {
+func TestStore_SaveBellatrixBlock_CanGetHighestAt(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -400,7 +400,7 @@ func TestStore_SaveMergeBlock_CanGetHighestAt(t *testing.T) {
 	assert.Equal(t, true, proto.Equal(block2, highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
 }
 
-func TestStore_GenesisMergeBlock_CanGetHighestAt(t *testing.T) {
+func TestStore_GenesisBellatrixBlock_CanGetHighestAt(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -428,7 +428,7 @@ func TestStore_GenesisMergeBlock_CanGetHighestAt(t *testing.T) {
 	assert.Equal(t, true, proto.Equal(genesisBlock, highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
 }
 
-func TestStore_SaveMergeBlocks_HasCachedBlocks(t *testing.T) {
+func TestStore_SaveBellatrixBlocks_HasCachedBlocks(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -451,7 +451,7 @@ func TestStore_SaveMergeBlocks_HasCachedBlocks(t *testing.T) {
 	assert.Equal(t, 500, len(blks), "Did not get wanted blocks")
 }
 
-func TestStore_SaveMergeBlocks_HasRootsMatched(t *testing.T) {
+func TestStore_SaveBellatrixBlocks_HasRootsMatched(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -479,7 +479,7 @@ func TestStore_SaveMergeBlocks_HasRootsMatched(t *testing.T) {
 	}
 }
 
-func TestStore_MergeBlocksBySlot_BlockRootsBySlot(t *testing.T) {
+func TestStore_BellatrixBlocksBySlot_BlockRootsBySlot(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 

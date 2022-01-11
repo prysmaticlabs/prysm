@@ -8,6 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -23,9 +24,9 @@ type BeaconState interface {
 
 // StateProver defines the ability to create Merkle proofs for beacon state fields.
 type StateProver interface {
-	FinalizedRootProof() ([][]byte, error)
-	CurrentSyncCommitteeProof() ([][]byte, error)
-	NextSyncCommitteeProof() ([][]byte, error)
+	FinalizedRootProof(ctx context.Context) ([][]byte, error)
+	CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error)
+	NextSyncCommitteeProof(ctx context.Context) ([][]byte, error)
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
@@ -83,7 +84,7 @@ type ReadOnlyValidator interface {
 	ActivationEpoch() types.Epoch
 	WithdrawableEpoch() types.Epoch
 	ExitEpoch() types.Epoch
-	PublicKey() [48]byte
+	PublicKey() [fieldparams.BLSPubkeyLength]byte
 	WithdrawalCredentials() []byte
 	Slashed() bool
 	IsNil() bool
@@ -94,8 +95,8 @@ type ReadOnlyValidators interface {
 	Validators() []*ethpb.Validator
 	ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validator, error)
 	ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (ReadOnlyValidator, error)
-	ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex, bool)
-	PubkeyAtIndex(idx types.ValidatorIndex) [48]byte
+	ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
+	PubkeyAtIndex(idx types.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte
 	NumValidators() int
 	ReadFromEveryValidator(f func(idx int, val ReadOnlyValidator) error) error
 }
