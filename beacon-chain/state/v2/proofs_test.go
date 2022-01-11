@@ -75,25 +75,31 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 	t.Run("recomputes root on dirty fields", func(t *testing.T) {
 		currentRoot, err := st.HashTreeRoot(ctx)
 		require.NoError(t, err)
-		nextSC, err := st.NextSyncCommittee()
+		cpt := st.FinalizedCheckpoint()
 		require.NoError(t, err)
 
-		// Edit the sync committee.
-		privKey, err := bls.RandKey()
-		require.NoError(t, err)
-		nextSC.AggregatePubkey = privKey.PublicKey().Marshal()
-		require.NoError(t, st.SetNextSyncCommittee(nextSC))
+		// Edit the checkpoint.
+		cpt.Epoch = 100
+		require.NoError(t, st.SetFinalizedCheckpoint(cpt))
 
-		// Produce a proof for the next sync committee.
-		_, err = st.NextSyncCommitteeProof(ctx)
+		// Produce a proof for the finalized root.
+		proof, err := st.FinalizedRootProof(ctx)
 		require.NoError(t, err)
 
 		// We expect the previous step to have triggered
 		// a recomputation of dirty fields in the beacon state, resulting
-		// in a new hash tree root as the next sync committee had previously
+		// in a new hash tree root as the finalized checkpoint had previously
 		// changed and should have been marked as a dirty state field.
+		// The proof validity should be false for the old root, but true for the new.
+		finalizedRoot := st.FinalizedCheckpoint().Root
+		gIndex := v2.FinalizedRootGeneralizedIndex()
+		valid := trie.VerifyMerkleProof(currentRoot[:], finalizedRoot, gIndex, proof)
+		require.Equal(t, false, valid)
+
 		newRoot, err := st.HashTreeRoot(ctx)
 		require.NoError(t, err)
-		require.DeepNotEqual(t, currentRoot, newRoot)
+
+		valid = trie.VerifyMerkleProof(newRoot[:], finalizedRoot, gIndex, proof)
+		require.Equal(t, true, valid)
 	})
 }

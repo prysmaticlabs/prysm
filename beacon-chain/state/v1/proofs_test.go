@@ -49,10 +49,16 @@ func TestBeaconStateMerkleProofs(t *testing.T) {
 		// a recomputation of dirty fields in the beacon state, resulting
 		// in a new hash tree root as the finalized checkpoint had previously
 		// changed and should have been marked as a dirty state field.
-		// The proof should verify.
+		// The proof validity should be false for the old root, but true for the new.
 		finalizedRoot := st.FinalizedCheckpoint().Root
 		gIndex := v1.FinalizedRootGeneralizedIndex()
 		valid := trie.VerifyMerkleProof(currentRoot[:], finalizedRoot, gIndex, proof)
+		require.Equal(t, false, valid)
+
+		newRoot, err := st.HashTreeRoot(ctx)
+		require.NoError(t, err)
+
+		valid = trie.VerifyMerkleProof(newRoot[:], finalizedRoot, gIndex, proof)
 		require.Equal(t, true, valid)
 	})
 }
