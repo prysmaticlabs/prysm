@@ -16,7 +16,8 @@ import (
 var _ NetworkEncoding = (*SszNetworkEncoder)(nil)
 
 // MaxGossipSize allowed for gossip messages.
-var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib
+var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib.
+var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize   // 1 Mib.
 
 // This pool defines the sync pool for our buffered snappy writers, so that they
 // can be constantly reused.
@@ -59,11 +60,11 @@ func (_ SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg fastssz.Marshale
 	if err != nil {
 		return 0, err
 	}
-	if uint64(len(b)) > params.BeaconNetworkConfig().MaxChunkSize {
+	if uint64(len(b)) > MaxChunkSize {
 		return 0, fmt.Errorf(
 			"size of encoded message is %d which is larger than the provided max limit of %d",
 			len(b),
-			params.BeaconNetworkConfig().MaxChunkSize,
+			MaxChunkSize,
 		)
 	}
 	// write varint first
@@ -110,11 +111,11 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to fastssz.Unmarshal
 	if err != nil {
 		return err
 	}
-	if msgLen > params.BeaconNetworkConfig().MaxChunkSize {
+	if msgLen > MaxChunkSize {
 		return fmt.Errorf(
 			"remaining bytes %d goes over the provided max limit of %d",
 			msgLen,
-			params.BeaconNetworkConfig().MaxChunkSize,
+			MaxChunkSize,
 		)
 	}
 	msgMax, err := e.MaxLength(msgLen)

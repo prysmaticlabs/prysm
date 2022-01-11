@@ -37,17 +37,24 @@ func (s *Service) CanSubscribe(topic string) bool {
 	if parts[1] != "eth2" {
 		return false
 	}
-	fd, err := s.currentForkDigest()
+	phase0ForkDigest, err := s.currentForkDigest()
 	if err != nil {
 		log.WithError(err).Error("Could not determine fork digest")
 		return false
 	}
-	digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, s.genesisValidatorsRoot)
+	altairForkDigest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, s.genesisValidatorsRoot)
 	if err != nil {
-		log.WithError(err).Error("Could not determine next fork digest")
+		log.WithError(err).Error("Could not determine altair fork digest")
 		return false
 	}
-	if parts[2] != fmt.Sprintf("%x", fd) && parts[2] != fmt.Sprintf("%x", digest) {
+	mergeForkDigest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().BellatrixForkEpoch, s.genesisValidatorsRoot)
+	if err != nil {
+		log.WithError(err).Error("Could not determine merge fork digest")
+		return false
+	}
+	if parts[2] != fmt.Sprintf("%x", phase0ForkDigest) &&
+		parts[2] != fmt.Sprintf("%x", altairForkDigest) &&
+		parts[2] != fmt.Sprintf("%x", mergeForkDigest) {
 		return false
 	}
 	if parts[4] != encoder.ProtocolSuffixSSZSnappy {
