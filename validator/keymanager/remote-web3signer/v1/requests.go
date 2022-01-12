@@ -8,6 +8,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 )
 
+// GetBlockSignRequest maps the request for signing type BLOCK.
 func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockSignRequest, error) {
 	beaconBlock := request.Object.(*validatorpb.SignRequest_Block)
 	if beaconBlock == nil {
@@ -35,6 +36,7 @@ func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot
 	}, nil
 }
 
+// GetAggregationSlotSignRequest maps the request for signing type AGGREGATION_SLOT.
 func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AggregationSlotSignRequest, error) {
 	aggregationSlot := request.Object.(*validatorpb.SignRequest_Slot)
 	if aggregationSlot == nil {
@@ -54,6 +56,7 @@ func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisVali
 	}, nil
 }
 
+// GetAggregateAndProofSignRequest maps the request for signing type AGGREGATE_AND_PROOF.
 func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AggregateAndProofSignRequest, error) {
 	aggregateAttestationAndProof := request.Object.(*validatorpb.SignRequest_AggregateAttestationAndProof)
 	if aggregateAttestationAndProof == nil {
@@ -75,6 +78,7 @@ func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisVa
 	}, nil
 }
 
+// GetAttestationSignRequest maps the request for signing type ATTESTATION.
 func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AttestationSignRequest, error) {
 	attestation := request.Object.(*validatorpb.SignRequest_AttestationData)
 	if attestation == nil {
@@ -96,6 +100,7 @@ func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidato
 	}, nil
 }
 
+// GetBlockV2AltairSignRequest maps the request for signing type BLOCK_V2.
 func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2AltairSignRequest, error) {
 	beaconBlockV2 := request.Object.(*validatorpb.SignRequest_BlockV2)
 	if beaconBlockV2 == nil {
@@ -120,6 +125,7 @@ func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValida
 	}, nil
 }
 
+// GetRandaoRevealSignRequest maps the request for signing type RANDAO_REVEAL.
 func GetRandaoRevealSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*RandaoRevealSignRequest, error) {
 	randaoReveal := request.Object.(*validatorpb.SignRequest_Epoch)
 	if randaoReveal == nil {
@@ -139,6 +145,7 @@ func GetRandaoRevealSignRequest(request *validatorpb.SignRequest, genesisValidat
 	}, nil
 }
 
+// GetVoluntaryExitSignRequest maps the request for signing type VOLUNTARY_EXIT.
 func GetVoluntaryExitSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*VoluntaryExitSignRequest, error) {
 	voluntaryExit := request.Object.(*validatorpb.SignRequest_Exit).Exit
 	if voluntaryExit == nil {
@@ -159,6 +166,7 @@ func GetVoluntaryExitSignRequest(request *validatorpb.SignRequest, genesisValida
 	}, nil
 }
 
+// GetSyncCommitteeMessageSignRequest maps the request for signing type SYNC_COMMITTEE_MESSAGE.
 func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeMessageSignRequest, error) {
 	syncCommitteeMessage := request.Object.(*validatorpb.SignRequest_SyncMessageBlockRoot)
 	if syncCommitteeMessage == nil || syncCommitteeMessage.SyncMessageBlockRoot == nil {
@@ -179,6 +187,7 @@ func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesi
 	}, nil
 }
 
+// GetSyncCommitteeSelectionProofSignRequest maps the request for signing type SYNC_COMMITTEE_SELECTION_PROOF.
 func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeSelectionProofSignRequest, error) {
 	syncCommitteeSelectionProof := request.Object.(*validatorpb.SignRequest_SyncAggregatorSelectionData)
 	if syncCommitteeSelectionProof == nil {
@@ -200,6 +209,7 @@ func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest,
 	}, nil
 }
 
+// GetSyncCommitteeContributionAndProofSignRequest maps the request for signing type SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF.
 func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeContributionAndProofSignRequest, error) {
 	syncCommitteeContributionAndProof := request.Object.(*validatorpb.SignRequest_ContributionAndProof)
 	if syncCommitteeContributionAndProof == nil {
