@@ -685,7 +685,7 @@ var file_proto_eth_v2_beacon_state_proto_goTypes = []interface{}{
 	(*v1.Eth1Data)(nil),              // 7: ethereum.eth.v1.Eth1Data
 	(*v1.Validator)(nil),             // 8: ethereum.eth.v1.Validator
 	(*v1.Checkpoint)(nil),            // 9: ethereum.eth.v1.Checkpoint
-	(*SyncCommittee)(nil),            // 10: ethereum.eth.v2.SyncCommitteeSelectionProof
+	(*SyncCommittee)(nil),            // 10: ethereum.eth.v2.SyncCommittee
 	(Version)(0),                     // 11: ethereum.eth.v2.Version
 	(*v1.BeaconState)(nil),           // 12: ethereum.eth.v1.BeaconState
 }
@@ -698,8 +698,8 @@ var file_proto_eth_v2_beacon_state_proto_depIdxs = []int32{
 	9,  // 5: ethereum.eth.v2.BeaconStateV2.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
 	9,  // 6: ethereum.eth.v2.BeaconStateV2.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
 	9,  // 7: ethereum.eth.v2.BeaconStateV2.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	10, // 8: ethereum.eth.v2.BeaconStateV2.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommitteeSelectionProof
-	10, // 9: ethereum.eth.v2.BeaconStateV2.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommitteeSelectionProof
+	10, // 8: ethereum.eth.v2.BeaconStateV2.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	10, // 9: ethereum.eth.v2.BeaconStateV2.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
 	11, // 10: ethereum.eth.v2.BeaconStateResponseV2.version:type_name -> ethereum.eth.v2.Version
 	4,  // 11: ethereum.eth.v2.BeaconStateResponseV2.data:type_name -> ethereum.eth.v2.BeaconStateContainer
 	11, // 12: ethereum.eth.v2.BeaconStateSSZResponseV2.version:type_name -> ethereum.eth.v2.Version

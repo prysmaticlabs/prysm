@@ -18,7 +18,7 @@ func HydrateSyncCommittee(s *ethpb.SyncCommitteeMessage) *ethpb.SyncCommitteeMes
 	return s
 }
 
-// ConvertToCommittee takes a list of pubkeys and returns a SyncCommitteeSelectionProof with
+// ConvertToCommittee takes a list of pubkeys and returns a SyncCommittee with
 // these keys as members. Some keys may appear repeated
 func ConvertToCommittee(inputKeys [][]byte) *ethpb.SyncCommittee {
 	var pubKeys [][]byte
