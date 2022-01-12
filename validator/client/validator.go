@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -69,9 +70,9 @@ type validator struct {
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	ticker                             slots.Ticker
-	prevBalance                        map[[48]byte]uint64
+	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
 	duties                             *ethpb.DutiesResponse
-	startBalances                      map[[48]byte]uint64
+	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	attLogs                            map[[32]byte]*attSubmitted
 	node                               ethpb.NodeClient
 	keyManager                         keymanager.IKeymanager
@@ -83,7 +84,7 @@ type validator struct {
 	voteStats                          voteStats
 	graffitiStruct                     *graffiti.Graffiti
 	graffitiOrderedIndex               uint64
-	eipImportBlacklistedPublicKeys     map[[48]byte]bool
+	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
 }
 
 type validatorStatus struct {
@@ -383,7 +384,7 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 				&ethpb.DoppelGangerRequest_ValidatorRequest{
 					PublicKey:  copiedKey[:],
 					Epoch:      0,
-					SignedRoot: make([]byte, 32),
+					SignedRoot: make([]byte, fieldparams.RootLength),
 				})
 			continue
 		}
@@ -414,7 +415,7 @@ func buildDuplicateError(response []*ethpb.DoppelGangerResponse_ValidatorRespons
 	duplicates := make([][]byte, 0)
 	for _, valRes := range response {
 		if valRes.DuplicateExists {
-			copiedKey := [48]byte{}
+			copiedKey := [fieldparams.BLSPubkeyLength]byte{}
 			copy(copiedKey[:], valRes.PublicKey)
 			duplicates = append(duplicates, copiedKey[:])
 		}
@@ -472,7 +473,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 	}
 
 	// Filter out the slashable public keys from the duties request.
-	filteredKeys := make([][48]byte, 0, len(validatingKeys))
+	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0, len(validatingKeys))
 	v.slashableKeysLock.RLock()
 	for _, pubKey := range validatingKeys {
 		if ok := v.eipImportBlacklistedPublicKeys[pubKey]; !ok {
@@ -581,8 +582,8 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]iface.ValidatorRole, error) {
-	rolesAt := make(map[[48]byte][]iface.ValidatorRole)
+func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole, error) {
+	rolesAt := make(map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole)
 	for validator, duty := range v.duties.Duties {
 		var roles []iface.ValidatorRole
 
@@ -639,7 +640,7 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 			roles = append(roles, iface.RoleUnknown)
 		}
 
-		var pubKey [48]byte
+		var pubKey [fieldparams.BLSPubkeyLength]byte
 		copy(pubKey[:], duty.PublicKey)
 		rolesAt[pubKey] = roles
 	}
@@ -653,7 +654,7 @@ func (v *validator) GetKeymanager() keymanager.IKeymanager {
 
 // isAggregator checks if a validator is an aggregator of a given slot and committee,
 // it uses a modulo calculated by validator count in committee and samples randomness around it.
-func (v *validator) isAggregator(ctx context.Context, committee []types.ValidatorIndex, slot types.Slot, pubKey [48]byte) (bool, error) {
+func (v *validator) isAggregator(ctx context.Context, committee []types.ValidatorIndex, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
@@ -676,7 +677,7 @@ func (v *validator) isAggregator(ctx context.Context, committee []types.Validato
 // def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
 //    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
-func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Slot, pubKey [48]byte) (bool, error) {
+func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) (bool, error) {
 	res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,

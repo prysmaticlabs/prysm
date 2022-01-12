@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -265,7 +266,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
@@ -370,9 +371,9 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		Slashings:                  slashing,
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, 32)},
+		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
 	s, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
@@ -548,6 +549,58 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 	sc, err = st.NextSyncCommittee()
 	require.NoError(t, err)
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+}
+
+func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
+	transition.SkipSlotCache.Disable()
+	conf := params.BeaconConfig()
+	conf.BellatrixForkEpoch = 5
+	params.OverrideBeaconConfig(conf)
+	defer params.UseMainnetConfig()
+
+	st, _ := util.DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
+	require.Equal(t, version.Bellatrix, st.Version())
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	require.NoError(t, err)
+	require.Equal(t, version.Bellatrix, st.Version())
+
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
+
+	s, err := st.InactivityScores()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(s)))
+
+	p, err := st.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	p, err = st.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	sc, err := st.CurrentSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+
+	sc, err = st.NextSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+}
+
+func TestProcessSlots_ThroughMergeEpoch(t *testing.T) {
+	transition.SkipSlotCache.Disable()
+	params.SetupTestConfigCleanup(t)
+	conf := params.BeaconConfig()
+	conf.BellatrixForkEpoch = 5
+	params.OverrideBeaconConfig(conf)
+
+	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	require.NoError(t, err)
+	require.Equal(t, version.Bellatrix, st.Version())
+
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
 }
 
 func TestProcessSlotsUsingNextSlotCache(t *testing.T) {

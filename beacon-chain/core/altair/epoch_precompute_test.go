@@ -238,8 +238,8 @@ func TestAttestationsDelta(t *testing.T) {
 	require.DeepEqual(t, want, penalties)
 }
 
-func TestAttestationsDeltaMerge(t *testing.T) {
-	s, err := testStateMerge()
+func TestAttestationsDeltaBellatrix(t *testing.T) {
+	s, err := testStateBellatrix()
 	require.NoError(t, err)
 	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
@@ -263,7 +263,7 @@ func TestAttestationsDeltaMerge(t *testing.T) {
 	// Last index should have 0 penalty.
 	require.Equal(t, uint64(0), penalties[len(penalties)-1])
 
-	want := []uint64{0, 9782, 1172534, 1485582}
+	want := []uint64{0, 939146, 2101898, 2414946}
 	require.DeepEqual(t, want, rewards)
 	want = []uint64{3577700, 2325505, 0, 0}
 	require.DeepEqual(t, want, penalties)
@@ -493,7 +493,7 @@ func testState() (state.BeaconState, error) {
 	})
 }
 
-func testStateMerge() (state.BeaconState, error) {
+func testStateBellatrix() (state.BeaconState, error) {
 	generateParticipation := func(flags ...uint8) byte {
 		b := byte(0)
 		var err error
@@ -505,7 +505,7 @@ func testStateMerge() (state.BeaconState, error) {
 		}
 		return b
 	}
-	return v3.InitializeFromProto(&ethpb.BeaconStateMerge{
+	return v3.InitializeFromProto(&ethpb.BeaconStateBellatrix{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},

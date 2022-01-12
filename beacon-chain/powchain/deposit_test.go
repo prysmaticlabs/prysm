@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -146,7 +147,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 
 	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	var fakeSig [96]byte
+	var fakeSig [fieldparams.BLSSignatureLength]byte
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = fakeSig[:]
 
@@ -216,7 +217,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		Data: &ethpb.Deposit_Data{
 			Amount:                params.BeaconConfig().EffectiveBalanceIncrement, // incomplete deposit
 			WithdrawalCredentials: bytesutil.PadTo([]byte("testing"), 32),
-			Signature:             bytesutil.PadTo([]byte("test"), params.BeaconConfig().BLSSignatureLength),
+			Signature:             bytesutil.PadTo([]byte("test"), fieldparams.BLSSignatureLength),
 		},
 	}
 

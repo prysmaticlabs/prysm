@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -20,7 +21,7 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 	vals := make([]*ethpb.Validator, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -48,7 +49,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	vals := make([]*ethpb.Validator, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -114,7 +115,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	bals := make([]uint64, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -152,9 +153,9 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 			Epoch:           0,
 		},
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{
-			ParentRoot: make([]byte, 32),
-			StateRoot:  make([]byte, 32),
-			BodyRoot:   make([]byte, 32),
+			ParentRoot: make([]byte, fieldparams.RootLength),
+			StateRoot:  make([]byte, fieldparams.RootLength),
+			BodyRoot:   make([]byte, fieldparams.RootLength),
 		},
 		Validators: vals,
 		Balances:   bals,
@@ -166,9 +167,9 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		StateRoots:                  mockstateRoots,
 		RandaoMixes:                 mockrandaoMixes,
 		JustificationBits:           bitfield.NewBitvector4(),
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, 32)},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 	})
 	assert.NoError(t, err)

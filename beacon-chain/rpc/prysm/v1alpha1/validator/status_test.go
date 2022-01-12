@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -1231,14 +1232,14 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStat
 			Data: &ethpb.AttestationData{
 				Slot:            ctr.AttesterSlot,
 				CommitteeIndex:  ctr.CommitteeIndex,
-				BeaconBlockRoot: make([]byte, 32),
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 				Source: &ethpb.Checkpoint{
 					Epoch: 0,
-					Root:  make([]byte, 32),
+					Root:  make([]byte, fieldparams.RootLength),
 				},
 				Target: &ethpb.Checkpoint{
 					Epoch: 1,
-					Root:  make([]byte, 32),
+					Root:  make([]byte, fieldparams.RootLength),
 				},
 			},
 			InclusionDelay: 1,
@@ -1263,14 +1264,14 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStat
 			Data: &ethpb.AttestationData{
 				Slot:            ctr.AttesterSlot,
 				CommitteeIndex:  ctr.CommitteeIndex,
-				BeaconBlockRoot: make([]byte, 32),
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 				Source: &ethpb.Checkpoint{
 					Epoch: 0,
-					Root:  make([]byte, 32),
+					Root:  make([]byte, fieldparams.RootLength),
 				},
 				Target: &ethpb.Checkpoint{
 					Epoch: 1,
-					Root:  make([]byte, 32),
+					Root:  make([]byte, fieldparams.RootLength),
 				},
 			},
 			InclusionDelay: 1,
@@ -1299,14 +1300,14 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *stategen.MockStat
 			Data: &ethpb.AttestationData{
 				Slot:            attSlot,
 				CommitteeIndex:  ctr.CommitteeIndex,
-				BeaconBlockRoot: make([]byte, 32),
+				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 				Source: &ethpb.Checkpoint{
 					Epoch: 0,
-					Root:  make([]byte, 32),
+					Root:  make([]byte, fieldparams.RootLength),
 				},
 				Target: &ethpb.Checkpoint{
 					Epoch: 1,
-					Root:  make([]byte, 32),
+					Root:  make([]byte, fieldparams.RootLength),
 				},
 			},
 			InclusionDelay: 1,

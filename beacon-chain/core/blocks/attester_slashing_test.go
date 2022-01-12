@@ -234,7 +234,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	require.Equal(t, uint64(32000000000), newState.Balances()[2])
 }
 
-func TestProcessAttesterSlashings_AppliesCorrectStatusMerge(t *testing.T) {
+func TestProcessAttesterSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
 	for _, vv := range beaconState.Validators() {
 		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch)
@@ -299,6 +299,6 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusMerge(t *testing.T) {
 		)
 	}
 
-	require.Equal(t, uint64(31500000000), newState.Balances()[1])
+	require.Equal(t, uint64(31000000000), newState.Balances()[1])
 	require.Equal(t, uint64(32000000000), newState.Balances()[2])
 }

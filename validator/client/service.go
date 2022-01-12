@@ -16,6 +16,7 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/async/event"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -159,7 +160,7 @@ func (v *ValidatorService) Start() {
 		log.Errorf("Could not read slashable public keys from disk: %v", err)
 		return
 	}
-	slashablePublicKeys := make(map[[48]byte]bool)
+	slashablePublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	for _, pubKey := range sPubKeys {
 		slashablePublicKeys[pubKey] = true
 	}
@@ -180,8 +181,8 @@ func (v *ValidatorService) Start() {
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
-		startBalances:                  make(map[[48]byte]uint64),
-		prevBalance:                    make(map[[48]byte]uint64),
+		startBalances:                  make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
+		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -228,7 +229,7 @@ func (v *ValidatorService) Status() error {
 }
 
 func (v *ValidatorService) recheckKeys(ctx context.Context) {
-	var validatingKeys [][48]byte
+	var validatingKeys [][fieldparams.BLSPubkeyLength]byte
 	var err error
 	if v.useWeb {
 		initializedChan := make(chan *wallet.Wallet)
@@ -337,7 +338,7 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 	if !ok {
 		return
 	}
-	validatingPubKeysChan := make(chan [][48]byte, 1)
+	validatingPubKeysChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
 	defer func() {
 		sub.Unsubscribe()
