@@ -62,7 +62,12 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
-		Object:          &validatorpb.SignRequest_SyncMessageBlockRoot{SyncMessageBlockRoot: res.Root},
+		Object:          &validatorpb.SignRequest_SyncMessageBlockRoot{
+			SyncMessageBlockRoot: &validatorpb.SyncMessageBlockRoot{
+				Slot:                 slot,
+				SyncMessageBlockRoot: res.Root,
+			},
+		},
 		Fork:            fork,
 	})
 	if err != nil {
