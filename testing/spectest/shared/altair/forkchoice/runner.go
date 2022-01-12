@@ -56,7 +56,9 @@ func RunTest(t *testing.T, config string) {
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork_choice/on_block/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			t.Log(folder.Name())
+			if folder.Name() != "basic" {
+				t.Skip("skipping non-basic test")
+			}
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 			require.NoError(t, err)
 			var steps []Step
@@ -82,30 +84,29 @@ func RunTest(t *testing.T, config string) {
 			require.NoError(t, err)
 
 			service := newBlockchainService(t, beaconState, b)
-			t.Error(service.GenesisTime())
-			t.Error(service.CurrentJustifiedCheckpt())
-			t.Error(service.FinalizedCheckpt())
-			//for _, step := range steps {
-			//	if step.Tick != nil {
-			//		t.Error(*step.Tick)
-			//	}
-			//	if step.Block != nil {
-			//		fileName := fmt.Sprint(*step.Block, ".ssz_snappy")
-			//		blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
-			//		require.NoError(t, err)
-			//		blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
-			//		require.NoError(t, err, "Failed to decompress")
-			//		block := &ethpb.SignedBeaconBlockAltair{}
-			//		require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-			//		t.Error("block is  ", block.Block.Slot)
-			//	}
-			//	if step.Attestation != nil {
-			//		t.Error(*step.Attestation)
-			//	}
-			//	if step.Check != nil {
-			//		t.Error(*step.Check)
-			//	}
-			//}
+			require.NoError(t, service.InitializeStore(context.Background(), beaconState, b))
+			for _, step := range steps {
+				if step.Tick != nil {
+					require.NoError(t, service.OnTick(context.Background(), uint64(*step.Tick)))
+				}
+				if step.Block != nil {
+					// Process block
+					//fileName := fmt.Sprint(*step.Block, ".ssz_snappy")
+					//blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
+					//require.NoError(t, err)
+					//blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
+					//require.NoError(t, err, "Failed to decompress")
+					//block := &ethpb.SignedBeaconBlockAltair{}
+					//require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
+					//t.Error("block is  ", block.Block.Slot)
+				}
+				if step.Attestation != nil {
+					// Process attestation
+				}
+				if step.Check != nil {
+					// Check
+				}
+			}
 		})
 	}
 }
