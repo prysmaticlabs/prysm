@@ -6,10 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
-
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 
 	"github.com/logrusorgru/aurora"
