@@ -69,7 +69,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 
 // FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	if km.publicKeysURL != "" {
+	if km.publicKeysURL != "" && len(km.providedPublicKeys) == 0 {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
 		if err != nil {
 			return nil, err
