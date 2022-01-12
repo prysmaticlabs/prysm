@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -19,9 +18,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8s "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 func main() {
@@ -30,7 +26,6 @@ func main() {
 	var passwordFile string
 	var httpPath string
 	var privKeyString string
-	var k8sConfigMapName string
 	var drainAddress string
 
 	customFormatter := new(prefixed.TextFormatter)
@@ -70,11 +65,6 @@ func main() {
 			Name:        "privKey",
 			Usage:       "Private key to unlock account",
 			Destination: &privKeyString,
-		},
-		&cli.StringFlag{
-			Name:        "k8sConfig",
-			Usage:       "Name of kubernetes config map to update with the contract address",
-			Destination: &k8sConfigMapName,
 		},
 		&cli.StringFlag{
 			Name:        "drainAddress",
@@ -171,12 +161,6 @@ func main() {
 			"address": addr.Hex(),
 		}).Info("New contract deployed")
 
-		if k8sConfigMapName != "" {
-			if err := updateKubernetesConfigMap(context.Background(), addr.Hex()); err != nil {
-				log.Fatalf("Failed to update kubernetes config map: %v", err)
-			}
-			log.Printf("Updated config map %s", k8sConfigMapName)
-		}
 		return nil
 	}
 
@@ -184,32 +168,4 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-// updateKubernetesConfigMap in the beacon-chain namespace. This specifically
-// updates the data value for DEPOSIT_CONTRACT_ADDRESS.
-func updateKubernetesConfigMap(ctx context.Context, contractAddr string) error {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return err
-	}
-
-	client, err := k8s.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	cm, err := client.CoreV1().ConfigMaps("beacon-chain").Get(ctx, "beacon-config", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	if cm.Data["DEPOSIT_CONTRACT_ADDRESS"] != "0x0" {
-		return fmt.Errorf("existing vcr address in config map = %v", cm.Data["DEPOSIT_CONTRACT_ADDRESS"])
-	}
-	cm.Data["DEPOSIT_CONTRACT_ADDRESS"] = contractAddr
-
-	_, err = client.CoreV1().ConfigMaps("beacon-chain").Update(ctx, cm, metav1.UpdateOptions{})
-
-	return err
 }
