@@ -44,7 +44,6 @@ ssz_gen_marshal(
         "AttesterSlashing",
         "BeaconBlock",
         "BeaconBlockHeader",
-        "BeaconState",
         "Checkpoint",
         "Deposit",
         "DepositData",

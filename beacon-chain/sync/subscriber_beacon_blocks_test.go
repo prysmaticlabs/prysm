@@ -73,7 +73,6 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 				}
 				if s.cfg.attPool.UnaggregatedAttestationCount() == 0 {
 					t.Error("Expected at least 1 unaggregated attestation in the pool")
-					t.Error("Expected no attestation in the pool")
 				}
 			},
 		},

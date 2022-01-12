@@ -228,16 +228,6 @@ func SafeCopy2dBytes(ary [][]byte) [][]byte {
 	return nil
 }
 
-// SafeCopy2d32Bytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
-func SafeCopy2d32Bytes(ary [][32]byte) [][32]byte {
-	if ary != nil {
-		copied := make([][32]byte, len(ary))
-		copy(copied, ary)
-		return copied
-	}
-	return nil
-}
-
 // ReverseBytes32Slice will reverse the provided slice's order.
 func ReverseBytes32Slice(arr [][32]byte) [][32]byte {
 	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
