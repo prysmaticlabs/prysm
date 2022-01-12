@@ -49,6 +49,7 @@ func RunSSZStaticTests(t *testing.T, config string) {
 					require.NoError(t, utils.UnmarshalYaml(rootsYamlFile, rootsYaml), "Failed to Unmarshal")
 
 					// Custom hash tree root for beacon state.
+					// TODO(https://github.com/ferranbt/fastssz/issues/67): Test Prysm's custom HTR for beacon state AND the generated SSZ HTR.
 					var htr func(interface{}) ([32]byte, error)
 					if _, ok := object.(*ethpb.BeaconStateAltair); ok {
 						htr = func(s interface{}) ([32]byte, error) {
