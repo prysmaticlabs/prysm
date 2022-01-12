@@ -181,7 +181,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 	}
 
-	bodyRoot, err := (&ethpb.BeaconBlockBodyMerge{
+	bodyRoot, err := (&ethpb.BeaconBlockBodyBellatrix{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, 32),

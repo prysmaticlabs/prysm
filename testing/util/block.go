@@ -636,15 +636,15 @@ func HydrateBeaconBlockMerge(b *ethpb.BeaconBlockMerge) *ethpb.BeaconBlockMerge 
 	if b.StateRoot == nil {
 		b.StateRoot = make([]byte, 32)
 	}
-	b.Body = HydrateBeaconBlockBodyMerge(b.Body)
+	b.Body = HydrateBeaconBlockBodyBellatrix(b.Body)
 	return b
 }
 
-// HydrateBeaconBlockBodyMerge hydrates a beacon block body with correct field length sizes
+// HydrateBeaconBlockBodyBellatrix hydrates a beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockBodyMerge(b *ethpb.BeaconBlockBodyMerge) *ethpb.BeaconBlockBodyMerge {
+func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.BeaconBlockBodyBellatrix {
 	if b == nil {
-		b = &ethpb.BeaconBlockBodyMerge{}
+		b = &ethpb.BeaconBlockBodyBellatrix{}
 	}
 	if b.RandaoReveal == nil {
 		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)

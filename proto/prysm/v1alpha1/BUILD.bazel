@@ -59,7 +59,7 @@ ssz_gen_marshal(
         "BeaconBlockBodyAltair",
         "SignedBeaconBlockAltair",
         "BeaconBlockMerge",
-        "BeaconBlockBodyMerge",
+        "BeaconBlockBodyBellatrix",
         "SignedBeaconBlockMerge",
         "SyncAggregate",
         "SyncCommitteeMessage",

@@ -91,7 +91,7 @@ message BeaconBlockMerge {
   bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
 
   // The block body itself.
-  BeaconBlockBodyMerge body = 5;
+  BeaconBlockBodyBellatrix body = 5;
 }
 
 
@@ -113,7 +113,7 @@ message BeaconBlockAltair {
   BeaconBlockBodyAltair body = 5;
 }
 
-message BeaconBlockBodyMerge {
+message BeaconBlockBodyBellatrix {
   // The validators RANDAO reveal 96 byte value.
   bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
 

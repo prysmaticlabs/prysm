@@ -28,7 +28,7 @@ type blockOperation func(context.Context, state.BeaconState, block.SignedBeaconB
 func RunBlockOperationTest(
 	t *testing.T,
 	folderPath string,
-	body *ethpb.BeaconBlockBodyMerge,
+	body *ethpb.BeaconBlockBodyBellatrix,
 	operationFn blockOperation,
 ) {
 	preBeaconStateFile, err := util.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))

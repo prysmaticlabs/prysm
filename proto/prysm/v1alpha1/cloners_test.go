@@ -341,9 +341,9 @@ func TestCopyBeaconBlockBellatrix(t *testing.T) {
 func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
 	bb := genBeaconBlockBodyBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockBodyMerge(bb)
+	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
 	if !reflect.DeepEqual(got, bb) {
-		t.Errorf("CopyBeaconBlockBodyMerge() = %v, want %v", got, bb)
+		t.Errorf("CopyBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
 	}
 	assert.NotEmpty(t, bb, "Copied beacon block body Merge has empty fields")
 }
@@ -604,8 +604,8 @@ func genSignedBeaconBlockAltair() *v1alpha1.SignedBeaconBlockAltair {
 	}
 }
 
-func genBeaconBlockBodyBellatrix() *v1alpha1.BeaconBlockBodyMerge {
-	return &v1alpha1.BeaconBlockBodyMerge{
+func genBeaconBlockBodyBellatrix() *v1alpha1.BeaconBlockBodyBellatrix {
+	return &v1alpha1.BeaconBlockBodyBellatrix{
 		RandaoReveal:      bytes(),
 		Eth1Data:          genEth1Data(),
 		Graffiti:          bytes(),

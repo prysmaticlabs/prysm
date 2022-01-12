@@ -762,12 +762,12 @@ func (_ mergeBeaconBlock) Version() int {
 
 // mergeBeaconBlockBody is a wrapper of a beacon block body.
 type mergeBeaconBlockBody struct {
-	b *eth.BeaconBlockBodyMerge
+	b *eth.BeaconBlockBodyBellatrix
 }
 
 // WrappedMergeBeaconBlockBody is constructor which wraps a protobuf merge object
 // with the block wrapper.
-func WrappedMergeBeaconBlockBody(b *eth.BeaconBlockBodyMerge) (block.BeaconBlockBody, error) {
+func WrappedMergeBeaconBlockBody(b *eth.BeaconBlockBodyBellatrix) (block.BeaconBlockBody, error) {
 	w := mergeBeaconBlockBody{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped

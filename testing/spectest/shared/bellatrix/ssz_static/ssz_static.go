@@ -48,7 +48,7 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "BeaconBlock":
 		obj = &ethpb.BeaconBlockMerge{}
 	case "BeaconBlockBody":
-		obj = &ethpb.BeaconBlockBodyMerge{}
+		obj = &ethpb.BeaconBlockBodyBellatrix{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":

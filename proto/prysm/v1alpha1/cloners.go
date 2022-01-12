@@ -398,16 +398,16 @@ func CopyBeaconBlockMerge(block *BeaconBlockMerge) *BeaconBlockMerge {
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
 		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
-		Body:          CopyBeaconBlockBodyMerge(block.Body),
+		Body:          CopyBeaconBlockBodyBellatrix(block.Body),
 	}
 }
 
-// CopyBeaconBlockBodyMerge copies the provided BeaconBlockBodyMerge.
-func CopyBeaconBlockBodyMerge(body *BeaconBlockBodyMerge) *BeaconBlockBodyMerge {
+// CopyBeaconBlockBodyBellatrix copies the provided BeaconBlockBodyBellatrix.
+func CopyBeaconBlockBodyBellatrix(body *BeaconBlockBodyBellatrix) *BeaconBlockBodyBellatrix {
 	if body == nil {
 		return nil
 	}
-	return &BeaconBlockBodyMerge{
+	return &BeaconBlockBodyBellatrix{
 		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
 		Eth1Data:          CopyETH1Data(body.Eth1Data),
 		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),

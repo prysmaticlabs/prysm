@@ -227,7 +227,7 @@ func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
 			ProposerIndex: altairBlk.Block.ProposerIndex,
 			ParentRoot:    altairBlk.Block.ParentRoot,
 			StateRoot:     altairBlk.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyMerge{
+			Body: &ethpb.BeaconBlockBodyBellatrix{
 				RandaoReveal:      altairBlk.Block.Body.RandaoReveal,
 				Eth1Data:          altairBlk.Block.Body.Eth1Data,
 				Graffiti:          altairBlk.Block.Body.Graffiti,
