@@ -190,6 +190,7 @@ go_test(
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//cache/lru:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/rand:go_default_library",

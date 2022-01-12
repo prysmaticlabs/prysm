@@ -39,7 +39,7 @@ type ValidatorLatestPerformance struct {
 }
 
 // ValidatorAggregatedPerformance keeps track of the accumulated performance of
-// the validator since launch
+// the tracked validator since start of monitor service.
 type ValidatorAggregatedPerformance struct {
 	startEpoch                     types.Epoch
 	startBalance                   uint64
@@ -56,7 +56,7 @@ type ValidatorAggregatedPerformance struct {
 }
 
 // ValidatorMonitorConfig contains the list of validator indices that the
-// monitor service tracks, as well as the event feed notifier that the
+// monitor service tracks, and the event feed notifier that the
 // monitor needs to subscribe.
 type ValidatorMonitorConfig struct {
 	StateNotifier       statefeed.Notifier
@@ -84,7 +84,7 @@ type Service struct {
 	lastSyncedEpoch             types.Epoch
 }
 
-// NewService sets up a new validator monitor instance when given a list of validator indices to track.
+// NewService sets up a new validator monitor service instance when given a list of validator indices to track.
 func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []types.ValidatorIndex) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
@@ -282,8 +282,7 @@ func (s *Service) monitorRoutine(stateChannel chan *feed.Event, stateSub event.S
 	}
 }
 
-// TrackedIndex returns if the given validator index corresponds to one of the
-// validators we follow.
+// TrackedIndex returns true if input  validator index exists in tracked validator list.
 // It assumes the caller holds the service Lock
 func (s *Service) trackedIndex(idx types.ValidatorIndex) bool {
 	_, ok := s.TrackedValidators[idx]

@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -68,7 +68,7 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
 	}
-	maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
+	maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
 	elemSize := uint64(8)
 	balLimit := (maxBalCap*elemSize + 31) / 32
 	if balLimit == 0 {

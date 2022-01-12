@@ -318,8 +318,8 @@ func TestCopyPayloadHeader(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
 }
 
-func TestCopySignedBeaconBlockMerge(t *testing.T) {
-	sbb := genSignedBeaconBlockMerge()
+func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
+	sbb := genSignedBeaconBlockBellatrix()
 
 	got := v1alpha1.CopySignedBeaconBlockMerge(sbb)
 	if !reflect.DeepEqual(got, sbb) {
@@ -328,8 +328,8 @@ func TestCopySignedBeaconBlockMerge(t *testing.T) {
 	assert.NotEmpty(t, sbb, "Copied signed beacon block Merge has empty fields")
 }
 
-func TestCopyBeaconBlockMerge(t *testing.T) {
-	b := genBeaconBlockMerge()
+func TestCopyBeaconBlockBellatrix(t *testing.T) {
+	b := genBeaconBlockBellatrix()
 
 	got := v1alpha1.CopyBeaconBlockMerge(b)
 	if !reflect.DeepEqual(got, b) {
@@ -338,8 +338,8 @@ func TestCopyBeaconBlockMerge(t *testing.T) {
 	assert.NotEmpty(t, b, "Copied beacon block Merge has empty fields")
 }
 
-func TestCopyBeaconBlockBodyMerge(t *testing.T) {
-	bb := genBeaconBlockBodyMerge()
+func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
+	bb := genBeaconBlockBodyBellatrix()
 
 	got := v1alpha1.CopyBeaconBlockBodyMerge(bb)
 	if !reflect.DeepEqual(got, bb) {
@@ -604,7 +604,7 @@ func genSignedBeaconBlockAltair() *v1alpha1.SignedBeaconBlockAltair {
 	}
 }
 
-func genBeaconBlockBodyMerge() *v1alpha1.BeaconBlockBodyMerge {
+func genBeaconBlockBodyBellatrix() *v1alpha1.BeaconBlockBodyMerge {
 	return &v1alpha1.BeaconBlockBodyMerge{
 		RandaoReveal:      bytes(),
 		Eth1Data:          genEth1Data(),
@@ -619,19 +619,19 @@ func genBeaconBlockBodyMerge() *v1alpha1.BeaconBlockBodyMerge {
 	}
 }
 
-func genBeaconBlockMerge() *v1alpha1.BeaconBlockMerge {
+func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockMerge {
 	return &v1alpha1.BeaconBlockMerge{
 		Slot:          123455,
 		ProposerIndex: 55433,
 		ParentRoot:    bytes(),
 		StateRoot:     bytes(),
-		Body:          genBeaconBlockBodyMerge(),
+		Body:          genBeaconBlockBodyBellatrix(),
 	}
 }
 
-func genSignedBeaconBlockMerge() *v1alpha1.SignedBeaconBlockMerge {
+func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockMerge {
 	return &v1alpha1.SignedBeaconBlockMerge{
-		Block:     genBeaconBlockMerge(),
+		Block:     genBeaconBlockBellatrix(),
 		Signature: bytes(),
 	}
 }

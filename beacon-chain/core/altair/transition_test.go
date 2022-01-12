@@ -42,7 +42,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
 }
 
-func TestProcessEpoch_CanProcessMerge(t *testing.T) {
+func TestProcessEpoch_CanProcessBellatrix(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(10*params.BeaconConfig().SlotsPerEpoch))
 	newState, err := altair.ProcessEpoch(context.Background(), st)
@@ -51,7 +51,7 @@ func TestProcessEpoch_CanProcessMerge(t *testing.T) {
 
 	b := st.Balances()
 	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(b)))
-	require.Equal(t, uint64(31999841265), b[0])
+	require.Equal(t, uint64(31999839993), b[0])
 
 	s, err := st.InactivityScores()
 	require.NoError(t, err)

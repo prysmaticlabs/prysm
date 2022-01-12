@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -15,14 +16,14 @@ import (
 func TestUpdateLogAggregateStats(t *testing.T) {
 	v := &validator{
 		logValidatorBalances: true,
-		startBalances:        make(map[[48]byte]uint64),
-		prevBalance:          make(map[[48]byte]uint64),
+		startBalances:        make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
+		prevBalance:          make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		voteStats: voteStats{
 			startEpoch: 0, // this would otherwise have been previously set in LogValidatorGainsAndLosses()
 		},
 	}
 
-	pubKeyBytes := [][48]byte{
+	pubKeyBytes := [][fieldparams.BLSPubkeyLength]byte{
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000012345678")),
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000099999999")),
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000055555555")),
@@ -95,14 +96,14 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 func TestUpdateLogAltairAggregateStats(t *testing.T) {
 	v := &validator{
 		logValidatorBalances: true,
-		startBalances:        make(map[[48]byte]uint64),
-		prevBalance:          make(map[[48]byte]uint64),
+		startBalances:        make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
+		prevBalance:          make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		voteStats: voteStats{
 			startEpoch: params.BeaconConfig().AltairForkEpoch, // this would otherwise have been previously set in LogValidatorGainsAndLosses()
 		},
 	}
 
-	pubKeyBytes := [][48]byte{
+	pubKeyBytes := [][fieldparams.BLSPubkeyLength]byte{
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000012345678")),
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000099999999")),
 		bytesutil.ToBytes48([]byte("000000000000000000000000000000000000000055555555")),

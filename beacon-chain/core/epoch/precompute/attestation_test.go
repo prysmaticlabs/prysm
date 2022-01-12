@@ -70,6 +70,30 @@ func TestUpdateBalance(t *testing.T) {
 	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
 }
 
+func TestUpdateBalanceBellatrixVersion(t *testing.T) {
+	vp := []*precompute.Validator{
+		{IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochTargetAttester: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+	}
+	wantedPBal := &precompute.Balance{
+		ActiveCurrentEpoch:         params.BeaconConfig().EffectiveBalanceIncrement,
+		ActivePrevEpoch:            params.BeaconConfig().EffectiveBalanceIncrement,
+		CurrentEpochAttested:       200 * params.BeaconConfig().EffectiveBalanceIncrement,
+		CurrentEpochTargetAttested: 200 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochAttested:          params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochTargetAttested:    100 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochHeadAttested:      200 * params.BeaconConfig().EffectiveBalanceIncrement,
+	}
+	pBal := precompute.UpdateBalance(vp, &precompute.Balance{}, version.Bellatrix)
+	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
+}
+
 func TestSameHead(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, 100)
 	require.NoError(t, beaconState.SetSlot(1))

@@ -151,6 +151,16 @@ func TestProcessOperationsNoVerifyAttsSigs_OK(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestProcessOperationsNoVerifyAttsSigsBellatrix_OK(t *testing.T) {
+	beaconState, block := createFullBellatrixBlockWithOperations(t)
+	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(block)
+	require.NoError(t, err)
+	beaconState, err = transition.ProcessSlots(context.Background(), beaconState, wsb.Block().Slot())
+	require.NoError(t, err)
+	_, err = transition.ProcessOperationsNoVerifyAttsSigs(context.Background(), beaconState, wsb)
+	require.NoError(t, err)
+}
+
 func TestCalculateStateRootAltair_OK(t *testing.T) {
 	beaconState, block := createFullAltairBlockWithOperations(t)
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
