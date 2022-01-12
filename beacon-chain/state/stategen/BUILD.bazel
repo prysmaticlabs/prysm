@@ -21,6 +21,7 @@ go_library(
         "//testing/endtoend:__subpackages__",
         "//testing/fuzz:__pkg__",
         "//testing/slasher/simulator:__pkg__",
+        "//testing/spectest:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/altair:go_default_library",

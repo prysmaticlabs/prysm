@@ -27,6 +27,7 @@ go_library(
         "//cmd/beacon-chain:__subpackages__",
         "//testing/fuzz:__pkg__",
         "//testing/slasher/simulator:__pkg__",
+        "//testing/spectest:__subpackages__",
     ],
     deps = [
         "//async:go_default_library",

@@ -67,6 +67,7 @@ type Service struct {
 	//justifiedBalances     []uint64
 	justifiedBalances *stateBalanceCache
 	wsVerifier        *WeakSubjectivityVerifier
+	store             store
 }
 
 // config options for the service.
@@ -87,6 +88,24 @@ type config struct {
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	FinalizedStateAtStartUp state.BeaconState
+}
+
+// store is the store defend in the fork choice consensus spec:
+//
+// class Store(object):
+//    time: uint64
+//    genesis_time: uint64
+//    justified_checkpoint: Checkpoint
+//    finalized_checkpoint: Checkpoint
+//    best_justified_checkpoint: Checkpoint
+//    proposerBoostRoot: Root
+type store struct {
+	time                 uint64
+	genesisTime          uint64
+	justifiedCheckpt     *ethpb.Checkpoint
+	finalizedCheckpt     *ethpb.Checkpoint
+	bestJustifiedCheckpt *ethpb.Checkpoint
+	proposerBoostRoot    [32]byte
 }
 
 // NewService instantiates a new block service instance that will

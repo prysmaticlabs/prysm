@@ -15,6 +15,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/fuzz:__pkg__",
+        "//testing/spectest:__subpackages__",
     ],
     deps = [
         "//config/params:go_default_library",
