@@ -15,15 +15,10 @@ syntax = "proto3";
 
 package ethereum.eth.storage;
 
-import "proto/prysm/storage/version.proto";
-
-
-// BeaconStateForStorage is used only inside db/kv package and it there for the sole purpose of
-// storing the state objects efficiently. With normalizing the fields in the "state" bucket
-// it also stores some indexes and other metadata fields that cannot be stored in the
-// BeaconState object itself.
-message BeaconStateForStorage {
-  Version version = 1001;           // Used to identify the state object
-  bytes validatorIndexes = 1002;    // stores the compressed indexes of the validator entry hashes
-  bytes state = 2000;               // store the ssz marshalled state
+// The version of stored blocks
+enum Version {
+  UNKNOWN = 0; // since enums should start with value 0 in proto3, we add this.
+  PHASE0 = 1;
+  ALTAIR = 2;
+  MERGE = 3;
 }

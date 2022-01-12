@@ -5,7 +5,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 # gazelle:ignore
 proto_library(
     name = "proto",
-    srcs = ["beacon_storage.proto"],
+    srcs = [
+        "beacon_storage.proto",
+        "version.proto",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//proto/eth/v2:proto",
