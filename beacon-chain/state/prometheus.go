@@ -1,4 +1,4 @@
-package sharedstate
+package state
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
