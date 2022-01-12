@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -146,4 +148,29 @@ func TestNodeServer_ListPeers(t *testing.T) {
 	assert.Equal(t, 2, len(res.Peers))
 	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Peers[0].Direction))
 	assert.Equal(t, ethpb.PeerDirection_OUTBOUND, res.Peers[1].Direction)
+}
+
+func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
+	server := grpc.NewServer()
+	eps := []string{"foo", "bar"}
+	errs := []error{fmt.Errorf("error 1"), fmt.Errorf("error 2")}
+	errStrs := []string{"error 1", "error 2"}
+	mockFetcher := &mockPOW.POWChain{
+		CurrEndpoint: eps[0],
+		CurrError:    errs[0],
+		Endpoints:    eps,
+		Errors:       errs,
+	}
+	ns := &Server{
+		POWChainInfoFetcher: mockFetcher,
+	}
+	ethpb.RegisterNodeServer(server, ns)
+	reflection.Register(server)
+
+	res, err := ns.GetETH1ConnectionStatus(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
+	assert.Equal(t, eps[0], res.CurrentAddress)
+	assert.Equal(t, errStrs[0], res.CurrentConnectionError)
+	assert.DeepSSZEqual(t, eps, res.Addresses)
+	assert.DeepSSZEqual(t, errStrs, res.ConnectionErrors)
 }
