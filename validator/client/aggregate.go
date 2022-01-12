@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/network/forks"
+
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -84,7 +86,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 		return
 	}
 
-	sig, err := v.aggregateAndProofSig(ctx, pubKey, res.AggregateAndProof)
+	sig, err := v.aggregateAndProofSig(ctx, pubKey, res.AggregateAndProof, slot)
 	if err != nil {
 		log.Errorf("Could not sign aggregate and proof: %v", err)
 		return
@@ -129,11 +131,16 @@ func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [fiel
 	if err != nil {
 		return nil, err
 	}
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
+	}
 	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Slot{Slot: slot},
+		Fork:            fork,
 	})
 	if err != nil {
 		return nil, err
@@ -172,7 +179,11 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot types.Slot) {
 
 // This returns the signature of validator signing over aggregate and
 // proof object.
+<<<<<<< Updated upstream
 func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, agg *ethpb.AggregateAttestationAndProof) ([]byte, error) {
+=======
+func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [48]byte, agg *ethpb.AggregateAttestationAndProof, slot types.Slot) ([]byte, error) {
+>>>>>>> Stashed changes
 	d, err := v.domainData(ctx, slots.ToEpoch(agg.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof[:])
 	if err != nil {
 		return nil, err
@@ -182,11 +193,16 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 	if err != nil {
 		return nil, err
 	}
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
+	}
 	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
 		Object:          &validatorpb.SignRequest_AggregateAttestationAndProof{AggregateAttestationAndProof: agg},
+		Fork:            fork,
 	})
 	if err != nil {
 		return nil, err

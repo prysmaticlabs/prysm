@@ -6,6 +6,20 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
+func MockAggregationSlotSignRequest() *AggregationSlotSignRequest {
+	forkInfoData := MockForkInfo()
+
+	AggregationSlotData := &AggregationSlot{Slot: "0"}
+	// remember to replace signing root with hex encoding remove 0x
+	web3SignerRequest := &AggregationSlotSignRequest{
+		Type:            "foo",
+		ForkInfo:        forkInfoData,
+		SigningRoot:     hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		AggregationSlot: AggregationSlotData,
+	}
+	return web3SignerRequest
+}
+
 // MockForkInfo is a mock implementation of the ForkInfo.
 func MockForkInfo() *ForkInfo {
 	return &ForkInfo{

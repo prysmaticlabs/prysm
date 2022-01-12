@@ -20,7 +20,7 @@ type MockClient struct {
 	PublicKeys []string
 }
 
-func (mc *MockClient) Sign(_ context.Context, _ string, _ *SignRequest) (bls.Signature, error) {
+func (mc *MockClient) Sign(_ context.Context, _ string, _ []byte) (bls.Signature, error) {
 	decoded, err := hex.DecodeString(strings.TrimPrefix(mc.Signature, "0x"))
 	if err != nil {
 		return nil, err

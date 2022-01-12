@@ -164,7 +164,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 		}),
 		SelectionProof: make([]byte, 96),
 	}
-	sig, err := validator.aggregateAndProofSig(context.Background(), pubKey, agg)
+	sig, err := validator.aggregateAndProofSig(context.Background(), pubKey, agg, 0)
 	require.NoError(t, err)
 	_, err = bls.SignatureFromBytes(sig)
 	require.NoError(t, err)

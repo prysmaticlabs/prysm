@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/network/forks"
+
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -51,11 +53,17 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not get sync committee message signing root")
 		return
 	}
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		log.WithError(err).Errorf("Could not get fork on current slot: %d", slot)
+		return
+	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
 		Object:          &validatorpb.SignRequest_SyncMessageBlockRoot{SyncMessageBlockRoot: res.Root},
+		Fork:            fork,
 	})
 	if err != nil {
 		log.WithError(err).Error("Could not sign sync committee message")
@@ -147,7 +155,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			Contribution:    contribution,
 			SelectionProof:  selectionProofs[i],
 		}
-		sig, err := v.signContributionAndProof(ctx, pubKey, contributionAndProof)
+		sig, err := v.signContributionAndProof(ctx, pubKey, contributionAndProof, slot)
 		if err != nil {
 			log.Errorf("Could not sign contribution and proof: %v", err)
 			return
@@ -203,11 +211,16 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldpara
 	if err != nil {
 		return nil, err
 	}
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
+	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_SyncAggregatorSelectionData{SyncAggregatorSelectionData: data},
+		Fork:            fork,
 	})
 	if err != nil {
 		return nil, err
@@ -216,7 +229,11 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldpara
 }
 
 // This returns the signature of validator signing over sync committee contribution and proof object.
+<<<<<<< Updated upstream
 func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, c *ethpb.ContributionAndProof) ([]byte, error) {
+=======
+func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *ethpb.ContributionAndProof, slot types.Slot) ([]byte, error) {
+>>>>>>> Stashed changes
 	d, err := v.domainData(ctx, slots.ToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
 	if err != nil {
 		return nil, err
@@ -225,11 +242,16 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldp
 	if err != nil {
 		return nil, err
 	}
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
+	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
 		Object:          &validatorpb.SignRequest_ContributionAndProof{ContributionAndProof: c},
+		Fork:            fork,
 	})
 	if err != nil {
 		return nil, err

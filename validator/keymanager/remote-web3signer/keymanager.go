@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
 // SetupConfig includes configuration values for initializing.
@@ -84,66 +83,134 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 		return nil, errors.New("invalid sign request: Fork is nil")
 	}
 
-	signRequestType, err := getSignRequestType(request)
+	signRequest, err := getSignRequestJson(request)
 	if err != nil {
 		return nil, err
 	}
 
-	forkData := &v1.Fork{
-		PreviousVersion: hexutil.Encode(request.Fork.PreviousVersion),
-		CurrentVersion:  hexutil.Encode(request.Fork.CurrentVersion),
-		Epoch:           fmt.Sprint(request.Fork.Epoch),
-	}
-	forkInfoData := &v1.ForkInfo{
-		Fork:                  forkData,
-		GenesisValidatorsRoot: hexutil.Encode(km.genesisValidatorsRoot),
-	}
-	aggregationSlotData := &v1.AggregationSlot{Slot: fmt.Sprint(request.AggregationSlot)}
-	web3SignerRequest := SignRequest{
-		Type:            signRequestType,
-		ForkInfo:        forkInfoData,
-		SigningRoot:     hexutil.Encode(request.SigningRoot),
-		AggregationSlot: aggregationSlotData,
-	}
-	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), &web3SignerRequest)
+	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), signRequest)
+
 }
 
-// getSignRequestType returns the type of the sign request.
-func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
+// getSignRequestJson returns the type of the sign request.
+func getSignRequestJson(request *validatorpb.SignRequest) ([]byte, error) {
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_Block:
-		return "BLOCK", nil
-	case *validatorpb.SignRequest_AttestationData:
-		return "ATTESTATION", nil
-	case *validatorpb.SignRequest_AggregateAttestationAndProof:
-		return "AGGREGATE_AND_PROOF", nil
-	case *validatorpb.SignRequest_Slot:
-		return "AGGREGATION_SLOT", nil
-	case *validatorpb.SignRequest_BlockV2:
-		return "BLOCK_V2", nil
-	// TODO(#10053): Need to add support for merge blocks.
-	/*
-		case *validatorpb.SignRequest_BlockV3:
-		return "BLOCK_V3", nil
-	*/
+		//return "BLOCK", nil
 
-	// We do not support "DEPOSIT" type.
-	/*
-		case *validatorpb.:
-		return "DEPOSIT", nil
-	*/
+		//forkData := &v1.Fork{
+		//	PreviousVersion: hexutil.Encode(request.Fork.PreviousVersion),
+		//	CurrentVersion:  hexutil.Encode(request.Fork.CurrentVersion),
+		//	Epoch:           fmt.Sprint(request.Fork.Epoch),
+		//}
+		//forkInfoData := &v1.ForkInfo{
+		//	Fork:                  forkData,
+		//	GenesisValidatorsRoot: hexutil.Encode(km.genesisValidatorsRoot),
+		//}
+		//aggregationSlotData := &v1.AggregationSlot{Slot: fmt.Sprint(request.AggregationSlot)}
+		//web3SignerRequest := SignRequest{
+		//	Type:            signRequestType,
+		//	ForkInfo:        forkInfoData,
+		//	SigningRoot:     hexutil.Encode(request.SigningRoot),
+		//	AggregationSlot: aggregationSlotData,
+
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
+	case *validatorpb.SignRequest_AttestationData:
+		//return "ATTESTATION", nil
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
+	case *validatorpb.SignRequest_AggregateAttestationAndProof:
+		//return "AGGREGATE_AND_PROOF", nil
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
+	case *validatorpb.SignRequest_Slot:
+		//"AGGREGATION_SLOT"
+		//forkData := &ethpb.Fork{
+		//	PreviousVersion: hexutil.Encode(request.Fork.PreviousVersion),
+		//	CurrentVersion:  hexutil.Encode(request.Fork.CurrentVersion),
+		//	Epoch:           fmt.Sprint(request.Fork.Epoch),
+		//}
+		//forkInfoData := &ForkInfo{
+		//	Fork:                  forkData,
+		//	GenesisValidatorsRoot: hexutil.Encode(km.genesisValidatorsRoot),
+		//}
+		//aggregationSlotData := &AggregationSlot{Slot: fmt.Sprint(request.AggregationSlot)}
+		//web3SignerRequest := AggregationSlotSignRequest{
+		//	Type:            signRequestType,
+		//	ForkInfo:        forkInfoData,
+		//	SigningRoot:     hexutil.Encode(request.SigningRoot),
+		//	AggregationSlot: aggregationSlotData,
+		//}
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
+	case *validatorpb.SignRequest_BlockV2:
+		//return "BLOCK_V2", nil
+		// TODO(#10053): Need to add support for merge blocks.
+		/*
+			case *validatorpb.SignRequest_BlockV3:
+			return "BLOCK_V3", nil
+		*/
+
+		// We do not support "DEPOSIT" type.
+		/*
+			case *validatorpb.:
+			return "DEPOSIT", nil
+		*/
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_Epoch:
-		return "RANDAO_REVEAL", nil
+		//return "RANDAO_REVEAL", nil
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_Exit:
-		return "VOLUNTARY_EXIT", nil
+		//return "VOLUNTARY_EXIT", nil
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
-		return "SYNC_COMMITTEE_MESSAGE", nil
+		//return "SYNC_COMMITTEE_MESSAGE", nil
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
-		return "SYNC_COMMITTEE_SELECTION_PROOF", nil
+		//return "SYNC_COMMITTEE_SELECTION_PROOF", nil
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_ContributionAndProof:
-		return "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF", nil
+		//return "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF", nil
+		jsonRequest, err := json.Marshal(request)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	default:
-		return "", errors.New(fmt.Sprintf("Web3signer sign request type: %T  not found", request.Object))
+		return nil, errors.New(fmt.Sprintf("Web3signer sign request type: %T  not found", request.Object))
 	}
 }
 

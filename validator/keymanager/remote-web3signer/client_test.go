@@ -3,6 +3,7 @@ package remote_web3signer
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -22,41 +23,23 @@ func (m *mockTransport) RoundTrip(*http.Request) (*http.Response, error) {
 	return m.mockResponse, nil
 }
 
-func getClientMockSignRequest() *SignRequest {
-	forkData := &v1.Fork{
-		PreviousVersion: "",
-		CurrentVersion:  "",
-		Epoch:           "",
-	}
-	forkInfoData := &v1.ForkInfo{
-		Fork:                  forkData,
-		GenesisValidatorsRoot: "",
-	}
-
-	AggregationSlotData := &v1.AggregationSlot{Slot: ""}
-	// remember to replace signing root with hex encoding remove 0x
-	web3SignerRequest := SignRequest{
-		Type:            "foo",
-		ForkInfo:        forkInfoData,
-		SigningRoot:     "0xfasd0fjsa0dfjas0dfjasdf",
-		AggregationSlot: AggregationSlotData,
-	}
-	return &web3SignerRequest
-}
-
 func TestClient_Sign_HappyPath(t *testing.T) {
-	json := `{
+	jsonSig := `{
   		"signature": "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9"
 	}`
 	// create a new reader with that JSON
-	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
+	r := ioutil.NopCloser(bytes.NewReader([]byte(jsonSig)))
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
 		Body:       r,
 	}}
 	cl := apiClient{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
-
-	resp, err := cl.Sign(context.Background(), "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", getClientMockSignRequest())
+	request := v1.MockAggregationSlotSignRequest()
+	jsonRequest, err := json.Marshal(request)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	resp, err := cl.Sign(context.Background(), "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", jsonRequest)
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9", fmt.Sprintf("%#x", resp.Marshal()))

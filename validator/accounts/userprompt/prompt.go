@@ -191,7 +191,7 @@ func InputWeb3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig,
 		validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
 	}
 
-	// genesis root is missing from the setup config at this point. it will be injected in during the keymanager initialization process
+	// Genesis root is missing from the setup config at this point. it will be injected in during the keymanager initialization process (validator.go file).
 	config := &remote_web3signer.SetupConfig{
 		BaseEndpoint:       signerURL,
 		PublicKeysURL:      publicKeysURL,
