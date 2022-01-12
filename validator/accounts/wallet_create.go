@@ -7,8 +7,6 @@ import (
 	"os"
 	"strings"
 
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
-
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
@@ -20,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/urfave/cli/v2"
 )
 
