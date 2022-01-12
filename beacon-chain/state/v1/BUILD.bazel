@@ -68,7 +68,6 @@ go_library(
     ],
 )
 
-# gazelle:exclude types_bench_test.go
 go_test(
     name = "go_default_test",
     srcs = [

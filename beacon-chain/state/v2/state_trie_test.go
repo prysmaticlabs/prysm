@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestMain(m *testing.M) {
@@ -47,43 +46,6 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 	val1, _ := handler.Get(bytesutil.ToBytes48([]byte(wantedPubkey)))
 	val2, _ := newHandler.Get(bytesutil.ToBytes48([]byte(wantedPubkey)))
 	assert.NotEqual(t, val1, val2, "Values are supposed to be unequal due to copy")
-}
-
-func TestInitializeFromProto(t *testing.T) {
-	type test struct {
-		name  string
-		state *ethpb.BeaconStateAltair
-		error string
-	}
-	initTests := []test{
-		{
-			name:  "nil state",
-			state: nil,
-			error: "received nil state",
-		},
-		{
-			name: "nil validators",
-			state: &ethpb.BeaconStateAltair{
-				Slot:       4,
-				Validators: nil,
-			},
-		},
-		{
-			name:  "empty state",
-			state: &ethpb.BeaconStateAltair{},
-		},
-		// TODO: Add full state. Blocked by testutil migration.
-	}
-	for _, tt := range initTests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := InitializeFromProto(tt.state)
-			if tt.error != "" {
-				require.ErrorContains(t, tt.error, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
 }
 
 func TestBeaconState_NoDeadlock(t *testing.T) {
@@ -138,32 +100,4 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	}
 	// Test will not terminate in the event of a deadlock.
 	wg.Wait()
-}
-
-func TestInitializeFromProtoUnsafe(t *testing.T) {
-	type test struct {
-		name  string
-		state *ethpb.BeaconStateAltair
-		error string
-	}
-	initTests := []test{
-		{
-			name:  "nil state",
-			state: nil,
-			error: "received nil state",
-		},
-		{
-			name: "nil validators",
-			state: &ethpb.BeaconStateAltair{
-				Slot:       4,
-				Validators: nil,
-			},
-		},
-		{
-			name:  "empty state",
-			state: &ethpb.BeaconStateAltair{},
-		},
-		// TODO: Add full state. Blocked by testutil migration.
-	}
-	_ = initTests
 }
