@@ -62,7 +62,7 @@ message SignedBeaconBlockContainerV2 {
   bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message SignedBeaconBlockMerge {
+message SignedBeaconBlockBellatrix {
   BeaconBlockMerge message = 1;
 
   // 96 byte BLS signature from the validator that produced this block.

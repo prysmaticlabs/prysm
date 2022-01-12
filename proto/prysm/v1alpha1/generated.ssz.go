@@ -2922,13 +2922,13 @@ func (s *SyncAggregate) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the SignedBeaconBlockMerge object
-func (s *SignedBeaconBlockMerge) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the SignedBeaconBlockBellatrix object
+func (s *SignedBeaconBlockBellatrix) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(s)
 }
 
-// MarshalSSZTo ssz marshals the SignedBeaconBlockMerge object to a target array
-func (s *SignedBeaconBlockMerge) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the SignedBeaconBlockBellatrix object to a target array
+func (s *SignedBeaconBlockBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(100)
 
@@ -2954,8 +2954,8 @@ func (s *SignedBeaconBlockMerge) MarshalSSZTo(buf []byte) (dst []byte, err error
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the SignedBeaconBlockMerge object
-func (s *SignedBeaconBlockMerge) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the SignedBeaconBlockBellatrix object
+func (s *SignedBeaconBlockBellatrix) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 100 {
@@ -2993,8 +2993,8 @@ func (s *SignedBeaconBlockMerge) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the SignedBeaconBlockMerge object
-func (s *SignedBeaconBlockMerge) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the SignedBeaconBlockBellatrix object
+func (s *SignedBeaconBlockBellatrix) SizeSSZ() (size int) {
 	size = 100
 
 	// Field (0) 'Block'
@@ -3006,13 +3006,13 @@ func (s *SignedBeaconBlockMerge) SizeSSZ() (size int) {
 	return
 }
 
-// HashTreeRoot ssz hashes the SignedBeaconBlockMerge object
-func (s *SignedBeaconBlockMerge) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the SignedBeaconBlockBellatrix object
+func (s *SignedBeaconBlockBellatrix) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(s)
 }
 
-// HashTreeRootWith ssz hashes the SignedBeaconBlockMerge object with a hasher
-func (s *SignedBeaconBlockMerge) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the SignedBeaconBlockBellatrix object with a hasher
+func (s *SignedBeaconBlockBellatrix) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Block'

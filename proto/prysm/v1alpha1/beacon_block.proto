@@ -34,7 +34,7 @@ message GenericSignedBeaconBlock {
         SignedBeaconBlockAltair altair = 2;
 
         // Representing a signed, post-Bellatrix fork beacon block.
-        SignedBeaconBlockMerge merge = 3;
+        SignedBeaconBlockBellatrix merge = 3;
     }
 }
 
@@ -297,7 +297,7 @@ message SyncAggregate {
     bytes sync_committee_signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message SignedBeaconBlockMerge {
+message SignedBeaconBlockBellatrix {
     // The unsigned beacon block itself.
     BeaconBlockMerge block = 1;
 

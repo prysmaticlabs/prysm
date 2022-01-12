@@ -614,9 +614,9 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 	return b
 }
 
-// HydrateSignedBeaconBlockMerge hydrates a signed beacon block with correct field length sizes
+// HydrateSignedBeaconBlockBellatrix hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateSignedBeaconBlockMerge(b *ethpb.SignedBeaconBlockMerge) *ethpb.SignedBeaconBlockMerge {
+func HydrateSignedBeaconBlockBellatrix(b *ethpb.SignedBeaconBlockBellatrix) *ethpb.SignedBeaconBlockBellatrix {
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}

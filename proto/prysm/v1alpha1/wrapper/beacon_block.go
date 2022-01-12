@@ -110,7 +110,7 @@ func (_ Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, 
 }
 
 // PbMergeBlock is a stub.
-func (_ Phase0SignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
+func (_ Phase0SignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return nil, errors.New("unsupported merge block")
 }
 
@@ -382,7 +382,7 @@ func (_ altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 }
 
 // PbMergeBlock is a stub.
-func (_ altairSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
+func (_ altairSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return nil, errors.New("unsupported merge block")
 }
 
@@ -578,12 +578,12 @@ func (_ altairBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error)
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
 type mergeSignedBeaconBlock struct {
-	b *eth.SignedBeaconBlockMerge
+	b *eth.SignedBeaconBlockBellatrix
 }
 
 // WrappedMergeSignedBeaconBlock is constructor which wraps a protobuf merge block with the block wrapper.
 // Deprecated: use WrappedSignedBeaconBlock instead.
-func WrappedMergeSignedBeaconBlock(b *eth.SignedBeaconBlockMerge) (block.SignedBeaconBlock, error) {
+func WrappedMergeSignedBeaconBlock(b *eth.SignedBeaconBlockBellatrix) (block.SignedBeaconBlock, error) {
 	w := mergeSignedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -608,7 +608,7 @@ func (w mergeSignedBeaconBlock) IsNil() bool {
 
 // Copy performs a deep copy of the signed beacon block object.
 func (w mergeSignedBeaconBlock) Copy() block.SignedBeaconBlock {
-	return mergeSignedBeaconBlock{b: eth.CopySignedBeaconBlockMerge(w.b)}
+	return mergeSignedBeaconBlock{b: eth.CopySignedBeaconBlockBellatrix(w.b)}
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz form.
@@ -639,7 +639,7 @@ func (w mergeSignedBeaconBlock) Proto() proto.Message {
 }
 
 // PbMergeBlock returns the underlying protobuf object.
-func (w mergeSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockMerge, error) {
+func (w mergeSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return w.b, nil
 }
 

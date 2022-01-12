@@ -219,9 +219,9 @@ func TestProcessEpoch_BadBalanceBellatrix(t *testing.T) {
 }
 
 func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
-	*ethpb.SignedBeaconBlockMerge) {
+	*ethpb.SignedBeaconBlockBellatrix) {
 	_, altairBlk := createFullAltairBlockWithOperations(t)
-	blk := &ethpb.SignedBeaconBlockMerge{
+	blk := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockMerge{
 			Slot:          altairBlk.Block.Slot,
 			ProposerIndex: altairBlk.Block.ProposerIndex,

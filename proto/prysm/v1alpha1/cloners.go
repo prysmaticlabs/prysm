@@ -377,12 +377,12 @@ func CopySyncAggregate(a *SyncAggregate) *SyncAggregate {
 	}
 }
 
-// CopySignedBeaconBlockMerge copies the provided SignedBeaconBlockMerge.
-func CopySignedBeaconBlockMerge(sigBlock *SignedBeaconBlockMerge) *SignedBeaconBlockMerge {
+// CopySignedBeaconBlockBellatrix copies the provided SignedBeaconBlockBellatrix.
+func CopySignedBeaconBlockBellatrix(sigBlock *SignedBeaconBlockBellatrix) *SignedBeaconBlockBellatrix {
 	if sigBlock == nil {
 		return nil
 	}
-	return &SignedBeaconBlockMerge{
+	return &SignedBeaconBlockBellatrix{
 		Block:     CopyBeaconBlockMerge(sigBlock.Block),
 		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
 	}
