@@ -237,8 +237,6 @@ func (ns *Server) GetETH1ConnectionStatus(ctx context.Context, _ *empty.Empty) (
 	}, nil
 }
 
-// ETH1ConnectionStatus(google.protobuf.empty) returns (ETH1ConnectionStatus)
-
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
 func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream ethpb.Health_StreamBeaconLogsServer) error {
 	ch := make(chan []byte, ns.StreamLogsBufferSize)
