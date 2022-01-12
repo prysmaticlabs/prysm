@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
-func TestUpgradeToMerge(t *testing.T) {
+func TestUpgradeToBellatrix(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	preForkState := st.Copy()
 	mSt, err := execution.UpgradeToMerge(context.Background(), st)
