@@ -79,7 +79,6 @@ message SignRequest {
         ethereum.eth.v1alpha1.BeaconBlockMerge blockV3 = 111;
     }
     ethereum.eth.v1alpha1.Fork fork = 4;
-    uint64 aggregation_slot = 5;
 }
 
 // SignResponse returned by a RemoteSigner gRPC service.
