@@ -110,7 +110,6 @@ require (
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	k8s.io/apimachinery v0.18.3
 	k8s.io/klog/v2 v2.3.0 // indirect
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )

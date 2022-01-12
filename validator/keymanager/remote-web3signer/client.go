@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
 const (
@@ -47,35 +48,11 @@ func newApiClient(baseEndpoint string) (*apiClient, error) {
 	}, nil
 }
 
-// SignRequest is a request object for web3signer sign api.
 type SignRequest struct {
-	Type            string           `json:"type"`
-	ForkInfo        *ForkInfo        `json:"fork_info"`
-	SigningRoot     string           `json:"signingRoot"`
-	AggregationSlot *AggregationSlot `json:"aggregation_slot"`
-}
-
-// ForkInfo a sub property object of the Sign request,in the future before bellatrix to remove the need to send the entire block body and just use the block_body_root.
-type ForkInfo struct {
-	Fork                  *Fork  `json:"fork"`
-	GenesisValidatorsRoot string `json:"genesis_validators_root"`
-}
-
-// Fork a sub property of ForkInfo.
-type Fork struct {
-	PreviousVersion string `json:"previous_version"`
-	CurrentVersion  string `json:"current_version"`
-	Epoch           string `json:"epoch"`
-}
-
-// AggregationSlot a sub property of SignRequest.
-type AggregationSlot struct {
-	Slot string `json:"slot"`
-}
-
-// signResponse the response object of the web3signer sign api.
-type signResponse struct {
-	Signature string `json:"signature"`
+	Type            string              `json:"type"`
+	ForkInfo        *v1.ForkInfo        `json:"fork_info"`
+	SigningRoot     string              `json:"signingRoot"`
+	AggregationSlot *v1.AggregationSlot `json:"aggregation_slot"`
 }
 
 // Sign is a wrapper method around the web3signer sign api.
@@ -95,7 +72,7 @@ func (client *apiClient) Sign(_ context.Context, pubKey string, request *SignReq
 	if resp.StatusCode == 412 {
 		return nil, errors.Wrap(err, "signing operation failed due to slashing protection rules")
 	}
-	signResp := &signResponse{}
+	signResp := &v1.SignResponse{}
 	if err := client.unmarshalResponse(resp.Body, &signResp); err != nil {
 		return nil, err
 	}
