@@ -46,14 +46,14 @@ func ValidateNilSyncContribution(s *ethpb.SignedContributionAndProof) error {
 // NextSyncCommittee returns the next sync committee for a given state.
 //
 // Spec code:
-// def get_next_sync_committee(state: BeaconState) -> SyncCommittee:
+// def get_next_sync_committee(state: BeaconState) -> SyncCommitteeSelectionProof:
 //    """
 //    Return the next sync committee, with possible pubkey duplicates.
 //    """
 //    indices = get_next_sync_committee_indices(state)
 //    pubkeys = [state.validators[index].pubkey for index in indices]
 //    aggregate_pubkey = bls.AggregatePKs(pubkeys)
-//    return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
+//    return SyncCommitteeSelectionProof(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
 func NextSyncCommittee(ctx context.Context, s state.BeaconStateAltair) (*ethpb.SyncCommittee, error) {
 	indices, err := NextSyncCommitteeIndices(ctx, s)
 	if err != nil {

@@ -179,11 +179,7 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot types.Slot) {
 
 // This returns the signature of validator signing over aggregate and
 // proof object.
-<<<<<<< Updated upstream
-func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, agg *ethpb.AggregateAttestationAndProof) ([]byte, error) {
-=======
 func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [48]byte, agg *ethpb.AggregateAttestationAndProof, slot types.Slot) ([]byte, error) {
->>>>>>> Stashed changes
 	d, err := v.domainData(ctx, slots.ToEpoch(agg.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof[:])
 	if err != nil {
 		return nil, err

@@ -373,17 +373,6 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 	return block, nil
 }
 
-// MapSyncCommitteeMessage maps the eth2.SyncCommitteeMessage proto to the Web3Signer spec.
-func MapSyncCommitteeMessage(message *ethpb.SyncCommitteeMessage) (*SyncCommitteeMessage, error) {
-	if message == nil {
-		return nil, fmt.Errorf("sync committee message is nil")
-	}
-	return &SyncCommitteeMessage{
-		BeaconBlockRoot: hexutil.Encode(message.BlockRoot),
-		Slot:            fmt.Sprint(message.Slot),
-	}, nil
-}
-
 // MapSyncAggregatorSelectionData maps the eth2.SyncAggregatorSelectionData proto to the Web3Signer spec.
 func MapSyncAggregatorSelectionData(data *ethpb.SyncAggregatorSelectionData) (*SyncAggregatorSelectionData, error) {
 	if data == nil {

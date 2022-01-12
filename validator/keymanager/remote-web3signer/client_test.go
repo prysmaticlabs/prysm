@@ -34,7 +34,7 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 		Body:       r,
 	}}
 	cl := apiClient{BasePath: "example.com", restClient: &http.Client{Transport: mock}}
-	request := v1.MockAggregationSlotSignRequest()
+	request := v1.MockAggregationSlotSignRequest() // could be any request
 	jsonRequest, err := json.Marshal(request)
 	if err != nil {
 		fmt.Printf("error: %v", err)
