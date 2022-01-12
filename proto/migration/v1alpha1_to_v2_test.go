@@ -98,3 +98,31 @@ func Test_AltairToV1Alpha1SignedBlock(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, v2Root, alphaRoot)
 }
+
+func Test_V1Alpha1BeaconBlockBellatrixToV2(t *testing.T) {
+	alphaBlock := util.HydrateBeaconBlockMerge(&ethpbalpha.BeaconBlockMerge{})
+	alphaBlock.Slot = slot
+	alphaBlock.ProposerIndex = validatorIndex
+	alphaBlock.ParentRoot = parentRoot
+	alphaBlock.StateRoot = stateRoot
+	alphaBlock.Body.RandaoReveal = randaoReveal
+	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
+		DepositRoot:  depositRoot,
+		DepositCount: depositCount,
+		BlockHash:    blockHash,
+	}
+	syncCommitteeBits := bitfield.NewBitvector512()
+	syncCommitteeBits.SetBitAt(100, true)
+	alphaBlock.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
+		SyncCommitteeBits:      syncCommitteeBits,
+		SyncCommitteeSignature: signature,
+	}
+
+	v2Block, err := V1Alpha1BeaconBlockBellatrixToV2(alphaBlock)
+	require.NoError(t, err)
+	alphaRoot, err := alphaBlock.HashTreeRoot()
+	require.NoError(t, err)
+	v2Root, err := v2Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, alphaRoot, v2Root)
+}
