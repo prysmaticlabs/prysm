@@ -95,7 +95,7 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 }
 
 // getSignRequestJson returns a json request based on the SignRequest type.
-func (km *Keymanager) getSignRequestJson(request *validatorpb.SignRequest) ([]byte, error) {
+func (km *Keymanager) getSignRequestJson(request *validatorpb.SignRequest) (SignRequestJson, error) {
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_Block:
 		bockSignRequest, err := v1.GetBlockSignRequest(request, km.genesisValidatorsRoot)

@@ -20,7 +20,7 @@ type MockClient struct {
 	PublicKeys []string
 }
 
-func (mc *MockClient) Sign(_ context.Context, _ string, _ []byte) (bls.Signature, error) {
+func (mc *MockClient) Sign(_ context.Context, _ string, _ SignRequestJson) (bls.Signature, error) {
 	decoded, err := hex.DecodeString(strings.TrimPrefix(mc.Signature, "0x"))
 	if err != nil {
 		return nil, err
@@ -41,9 +41,8 @@ func (mc *MockClient) GetPublicKeys(_ context.Context, _ string) ([][48]byte, er
 
 func getMockSignRequest() *validatorpb.SignRequest {
 	return &validatorpb.SignRequest{
-		Object:          &validatorpb.SignRequest_Block{},
-		Fork:            &v1alpha1.Fork{Epoch: 0},
-		AggregationSlot: 9999,
+		Object: &validatorpb.SignRequest_Block{},
+		Fork:   &v1alpha1.Fork{Epoch: 0},
 	}
 }
 

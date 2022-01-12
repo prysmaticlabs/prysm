@@ -22,9 +22,11 @@ const (
 	maxTimeout      = 3 * time.Second
 )
 
+type SignRequestJson []byte
+
 // httpSignerClient defines the interface for interacting with a remote web3signer.
 type httpSignerClient interface {
-	Sign(ctx context.Context, pubKey string, request []byte) (bls.Signature, error)
+	Sign(ctx context.Context, pubKey string, request SignRequestJson) (bls.Signature, error)
 	GetPublicKeys(ctx context.Context, url string) ([][48]byte, error)
 }
 
@@ -49,7 +51,7 @@ func newApiClient(baseEndpoint string) (*apiClient, error) {
 }
 
 // Sign is a wrapper method around the web3signer sign api.
-func (client *apiClient) Sign(_ context.Context, pubKey string, request []byte) (bls.Signature, error) {
+func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequestJson) (bls.Signature, error) {
 	requestPath := ethApiNamespace + pubKey
 	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(request))
 	if err != nil {
