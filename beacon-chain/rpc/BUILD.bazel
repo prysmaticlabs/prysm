@@ -33,7 +33,7 @@ go_library(
         "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
         "//beacon-chain/rpc/statefetcher:go_default_library",
         "//beacon-chain/slasher:go_default_library",
-        "//beacon-chain/state-proto/stategen:go_default_library",
+        "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//config/features:go_default_library",
         "//config/params:go_default_library",

@@ -9,7 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/signing",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/state-native:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
@@ -30,7 +30,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
-        "//beacon-chain/state-native:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",

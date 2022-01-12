@@ -10,7 +10,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v3"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-proto/v3"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
