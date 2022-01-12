@@ -14,6 +14,9 @@ func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot
 		return nil, errors.New("invalid sign request: BeaconBlock is nil")
 	}
 	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not map fork info")
+	}
 	beaconBlockBody, err := MapBeaconBlockBody(beaconBlock.Block.Body)
 	if err != nil {
 		return nil, err

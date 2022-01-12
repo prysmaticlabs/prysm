@@ -59,11 +59,14 @@ func run(ctx context.Context, v iface.Validator) {
 		if err != nil {
 			log.Fatalf("Could not determine if beacon chain started: %v", err)
 		}
-		if err := v.WaitForWalletInitialization(ctx); err != nil {
+
+		err = v.WaitForWalletInitialization(ctx)
+		if err != nil {
 			// log.Fatalf will prevent defer from being called
 			cleanup()
 			log.Fatalf("Wallet is not ready: %v", err)
 		}
+
 		err = v.WaitForSync(ctx)
 		if isConnectionError(err) {
 			log.Warnf("Could not determine if beacon chain started: %v", err)
