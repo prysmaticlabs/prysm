@@ -99,7 +99,7 @@ message SignResponse {
     Status status = 2;
 }
 
-message SignMessageBlockRoot {
+message SyncMessageBlockRoot {
     uint64 slot = 1  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
     bytes sync_message_block_root  = 2;
 }
