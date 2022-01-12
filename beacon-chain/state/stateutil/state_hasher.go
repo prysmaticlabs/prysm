@@ -18,8 +18,8 @@ import (
 
 var (
 	// Set the map size as equal to that of the latest state field count.
-	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateMergeFieldCount)
-	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateMergeFieldCount)
+	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	lock        sync.RWMutex
 )
 
@@ -370,16 +370,16 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	return fieldRoots, nil
 }
 
-// ComputeFieldRootsWithHasherMerge hashes the provided merge state and returns its respective field roots.
-func (h *stateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, state *ethpb.BeaconStateMerge) ([][]byte, error) {
-	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherMerge")
+// ComputeFieldRootsWithHasherBellatrix hashes the provided bellatrix state and returns its respective field roots.
+func (h *stateRootHasher) ComputeFieldRootsWithHasherBellatrix(ctx context.Context, state *ethpb.BeaconStateBellatrix) ([][]byte, error) {
+	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherBellatrix")
 	defer span.End()
 
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
 	hasher := hash.CustomSHA256Hasher()
-	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateMergeFieldCount)
+	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 
 	// Genesis time root.
 	genesisRoot := ssz.Uint64Root(state.GenesisTime)

@@ -89,12 +89,13 @@ func (m *ApiProxyMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request)
 
 // WithMiddleware wraps the given endpoint handler with the middleware logic.
 func (m *ApiProxyMiddleware) WithMiddleware(path string) http.HandlerFunc {
-	endpoint, err := m.EndpointCreator.Create(path)
-	if err != nil {
-		log.WithError(err).Errorf("Could not create endpoint for path: %s", path)
-		return nil
-	}
 	return func(w http.ResponseWriter, req *http.Request) {
+		endpoint, err := m.EndpointCreator.Create(path)
+		if err != nil {
+			log.WithError(err).Errorf("Could not create endpoint for path: %s", path)
+			return
+		}
+
 		for _, handler := range endpoint.CustomHandlers {
 			if handler(m, *endpoint, w, req) {
 				return

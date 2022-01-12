@@ -638,7 +638,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, err
 		return wrapper.WrappedAltairSignedBeaconBlock(rawBlock)
 	case hasMergeKey(enc):
 		rawBlock := &ethpb.SignedBeaconBlockMerge{}
-		err := rawBlock.UnmarshalSSZ(enc[len(mergeKey):])
+		err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):])
 		if err != nil {
 			return nil, err
 		}
@@ -661,8 +661,8 @@ func marshalBlock(_ context.Context, blk block.SignedBeaconBlock) ([]byte, error
 		return nil, err
 	}
 	switch blk.Version() {
-	case version.Merge:
-		return snappy.Encode(nil, append(mergeKey, obj...)), nil
+	case version.Bellatrix:
+		return snappy.Encode(nil, append(bellatrixKey, obj...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, obj...)), nil
 	case version.Phase0:
