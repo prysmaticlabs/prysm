@@ -999,7 +999,7 @@ func (x *SyncCommittee) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SyncCommitteeSelectionProof.ProtoReflect.Descriptor instead.
+// Deprecated: Use SyncCommittee.ProtoReflect.Descriptor instead.
 func (*SyncCommittee) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_state_proto_rawDescGZIP(), []int{10}
 }
@@ -1968,7 +1968,7 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_goTypes = []interface{}{
 	(*ForkData)(nil),                    // 7: ethereum.eth.v1alpha1.ForkData
 	(*CheckPtInfo)(nil),                 // 8: ethereum.eth.v1alpha1.CheckPtInfo
 	(*DepositMessage)(nil),              // 9: ethereum.eth.v1alpha1.DepositMessage
-	(*SyncCommittee)(nil),               // 10: ethereum.eth.v1alpha1.SyncCommitteeSelectionProof
+	(*SyncCommittee)(nil),               // 10: ethereum.eth.v1alpha1.SyncCommittee
 	(*SyncAggregatorSelectionData)(nil), // 11: ethereum.eth.v1alpha1.SyncAggregatorSelectionData
 	(*BeaconStateBellatrix)(nil),        // 12: ethereum.eth.v1alpha1.BeaconStateBellatrix
 	(*ExecutionPayloadHeader)(nil),      // 13: ethereum.eth.v1alpha1.ExecutionPayloadHeader
@@ -1997,8 +1997,8 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_depIdxs = []int32{
 	17, // 15: ethereum.eth.v1alpha1.BeaconStateAltair.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
 	17, // 16: ethereum.eth.v1alpha1.BeaconStateAltair.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
 	17, // 17: ethereum.eth.v1alpha1.BeaconStateAltair.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	10, // 18: ethereum.eth.v1alpha1.BeaconStateAltair.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommitteeSelectionProof
-	10, // 19: ethereum.eth.v1alpha1.BeaconStateAltair.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommitteeSelectionProof
+	10, // 18: ethereum.eth.v1alpha1.BeaconStateAltair.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	10, // 19: ethereum.eth.v1alpha1.BeaconStateAltair.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
 	18, // 20: ethereum.eth.v1alpha1.PendingAttestation.data:type_name -> ethereum.eth.v1alpha1.AttestationData
 	2,  // 21: ethereum.eth.v1alpha1.CheckPtInfo.fork:type_name -> ethereum.eth.v1alpha1.Fork
 	2,  // 22: ethereum.eth.v1alpha1.BeaconStateBellatrix.fork:type_name -> ethereum.eth.v1alpha1.Fork
@@ -2009,8 +2009,8 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_depIdxs = []int32{
 	17, // 27: ethereum.eth.v1alpha1.BeaconStateBellatrix.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
 	17, // 28: ethereum.eth.v1alpha1.BeaconStateBellatrix.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
 	17, // 29: ethereum.eth.v1alpha1.BeaconStateBellatrix.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	10, // 30: ethereum.eth.v1alpha1.BeaconStateBellatrix.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommitteeSelectionProof
-	10, // 31: ethereum.eth.v1alpha1.BeaconStateBellatrix.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommitteeSelectionProof
+	10, // 30: ethereum.eth.v1alpha1.BeaconStateBellatrix.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	10, // 31: ethereum.eth.v1alpha1.BeaconStateBellatrix.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
 	13, // 32: ethereum.eth.v1alpha1.BeaconStateBellatrix.latest_execution_payload_header:type_name -> ethereum.eth.v1alpha1.ExecutionPayloadHeader
 	33, // [33:33] is the sub-list for method output_type
 	33, // [33:33] is the sub-list for method input_type

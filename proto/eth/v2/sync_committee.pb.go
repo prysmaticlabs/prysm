@@ -111,7 +111,7 @@ func (x *SyncCommittee) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SyncCommitteeSelectionProof.ProtoReflect.Descriptor instead.
+// Deprecated: Use SyncCommittee.ProtoReflect.Descriptor instead.
 func (*SyncCommittee) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_sync_committee_proto_rawDescGZIP(), []int{1}
 }
@@ -558,7 +558,7 @@ func file_proto_eth_v2_sync_committee_proto_rawDescGZIP() []byte {
 var file_proto_eth_v2_sync_committee_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_proto_eth_v2_sync_committee_proto_goTypes = []interface{}{
 	(*SubmitSyncCommitteeSignaturesRequest)(nil), // 0: ethereum.eth.v2.SubmitSyncCommitteeSignaturesRequest
-	(*SyncCommittee)(nil),                        // 1: ethereum.eth.v2.SyncCommitteeSelectionProof
+	(*SyncCommittee)(nil),                        // 1: ethereum.eth.v2.SyncCommittee
 	(*SubmitPoolSyncCommitteeSignatures)(nil),    // 2: ethereum.eth.v2.SubmitPoolSyncCommitteeSignatures
 	(*SyncCommitteeMessage)(nil),                 // 3: ethereum.eth.v2.SyncCommitteeMessage
 	(*StateSyncCommitteesRequest)(nil),           // 4: ethereum.eth.v2.StateSyncCommitteesRequest
