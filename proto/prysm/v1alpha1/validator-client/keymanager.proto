@@ -73,12 +73,13 @@ message SignRequest {
         ethereum.eth.v1alpha1.BeaconBlockAltair blockV2 = 107;
         ethereum.eth.v1alpha1.SyncAggregatorSelectionData sync_aggregator_selection_data = 108;
         ethereum.eth.v1alpha1.ContributionAndProof contribution_and_proof = 109;
-        SyncMessageBlockRoot sync_message_block_root  = 110;
+        bytes sync_message_block_root  = 110;
 
         // Bellatrix objects.
         ethereum.eth.v1alpha1.BeaconBlockMerge blockV3 = 111;
     }
     ethereum.eth.v1alpha1.Fork fork = 4;
+    uint64 aggregation_slot = 5;
 }
 
 // SignResponse returned by a RemoteSigner gRPC service.
@@ -97,9 +98,4 @@ message SignResponse {
     // to ensure different remote signing servers follow the
     // same conventions.
     Status status = 2;
-}
-
-message SyncMessageBlockRoot {
-    uint64 slot = 1  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-    bytes sync_message_block_root  = 2;
 }
