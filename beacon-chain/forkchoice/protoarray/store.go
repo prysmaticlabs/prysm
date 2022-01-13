@@ -416,11 +416,7 @@ func (s *Store) applyWeightChanges(
 		// we then decrease the delta by the required score amount.
 		s.proposerBoostLock.Lock()
 		if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash && s.previousProposerBoostRoot == n.root {
-			nodeDelta, err = safeSubDelta(nodeDelta, int(s.previousProposerBoostScore))
-			if err != nil {
-				s.proposerBoostLock.Unlock()
-				return err
-			}
+			nodeDelta -= int(s.previousProposerBoostScore)
 		}
 
 		if s.proposerBoostScore == params.BeaconConfig().ProposerScoreBoost {
