@@ -6,3 +6,11 @@
 
 # Anyone on prylabs team can approve dependency updates.
 deps.bzl @prysmaticlabs/core-team
+
+# Radek and Nishant are responsible for changes that can affect the native state feature.
+# See https://www.notion.so/prysmaticlabs/Native-Beacon-State-Redesign-6cc9744b4ec1439bb34fa829b36a35c1
+/beacon-chain/state/fieldtrie/ @rkapka @nisdas
+/beacon-chain/state/v1/ @rkapka @nisdas
+/beacon-chain/state/v2/ @rkapka @nisdas
+/beacon-chain/state/v3/ @rkapka @nisdas
+/beacon-chain/state/state-native/ @rkapka @nisdas
