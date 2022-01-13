@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -18,7 +19,7 @@ import (
 //  is_before_attesting_interval = time_into_slot < SECONDS_PER_SLOT // INTERVALS_PER_SLOT
 //  if get_current_slot(store) == block.slot and is_before_attesting_interval:
 //      store.proposer_boost_root = hash_tree_root(block)
-func (f *ForkChoice) BoostProposerRoot(ctx context.Context, blockSlot types.Slot, blockRoot [32]byte, genesisTime time.Time) error {
+func (f *ForkChoice) BoostProposerRoot(_ context.Context, blockSlot types.Slot, blockRoot [32]byte, genesisTime time.Time) error {
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	timeIntoSlot := uint64(time.Since(genesisTime).Seconds()) % secondsPerSlot
 	isBeforeAttestingInterval := timeIntoSlot < secondsPerSlot/params.BeaconConfig().IntervalsPerSlot
@@ -31,6 +32,14 @@ func (f *ForkChoice) BoostProposerRoot(ctx context.Context, blockSlot types.Slot
 		f.store.proposerBoostRoot = blockRoot
 		f.store.proposerBoostLock.Unlock()
 	}
+	return nil
+}
+
+// ResetBoostedProposerRoot sets the value of the proposer boosted root to zeros.
+func (f *ForkChoice) ResetBoostedProposerRoot(_ context.Context) error {
+	f.store.proposerBoostLock.Lock()
+	f.store.proposerBoostRoot = [32]byte{}
+	f.store.proposerBoostLock.Unlock()
 	return nil
 }
 
@@ -48,6 +57,11 @@ func computeProposerBoostScore(justifiedStateBalances []uint64) (score uint64, e
 		}
 		totalActiveBalance += balance
 		numActive += 1
+	}
+	if numActive == 0 {
+		// Should never happen.
+		err = errors.New("no active validators")
+		return
 	}
 	avgBalance := totalActiveBalance / numActive
 	committeeSize := numActive / uint64(params.BeaconConfig().SlotsPerEpoch)

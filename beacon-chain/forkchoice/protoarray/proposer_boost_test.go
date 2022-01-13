@@ -75,3 +75,36 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		require.DeepEqual(t, [32]byte{'A'}, f.store.proposerBoostRoot)
 	})
 }
+
+func TestForkChoice_computeProposerBoostScore(t *testing.T) {
+	type args struct {
+		justifiedStateBalances []uint64
+	}
+	tests := []struct {
+		name      string
+		args      args
+		wantScore uint64
+		wantErr   bool
+	}{
+		{
+			name: "no active validators returns error",
+			args: args{
+				justifiedStateBalances: nil,
+			},
+			wantScore: 0,
+			wantErr:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotScore, err := computeProposerBoostScore(tt.args.justifiedStateBalances)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("computeProposerBoostScore() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotScore != tt.wantScore {
+				t.Errorf("computeProposerBoostScore() gotScore = %v, want %v", gotScore, tt.wantScore)
+			}
+		})
+	}
+}

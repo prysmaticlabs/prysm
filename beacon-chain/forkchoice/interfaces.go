@@ -41,6 +41,7 @@ type Pruner interface {
 // ProposerBooster is able to boost the proposer's root score during fork choice.
 type ProposerBooster interface {
 	BoostProposerRoot(ctx context.Context, blockSlot types.Slot, blockRoot [32]byte, genesisTime time.Time) error
+	ResetBoostedProposerRoot(ctx context.Context) error
 }
 
 // Getter returns fork choice related information.
