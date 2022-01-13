@@ -114,7 +114,6 @@ func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
 	for {
 		select {
 		case w := <-walletChan:
-			// Web3Signer requires this value to be set.
 			genesisRoot, err := v.db.GenesisValidatorsRoot(ctx)
 			if err != nil {
 				return errors.Wrap(err, "unable to retrieve genesis validators root")
