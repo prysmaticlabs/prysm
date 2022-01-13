@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-proto/v2"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"

@@ -9,7 +9,7 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-proto/v3"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"

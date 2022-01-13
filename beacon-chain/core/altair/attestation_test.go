@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/state-proto/v2"
+	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"

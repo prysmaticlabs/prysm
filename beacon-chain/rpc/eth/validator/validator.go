@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-proto/v1"
+	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-proto/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"

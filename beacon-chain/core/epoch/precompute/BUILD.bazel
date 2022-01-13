@@ -47,7 +47,7 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/state-proto/v1:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//math:go_default_library",

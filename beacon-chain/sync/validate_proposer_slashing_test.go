@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-proto/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/params"
