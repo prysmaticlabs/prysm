@@ -331,9 +331,9 @@ func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 func TestCopyBeaconBlockBellatrix(t *testing.T) {
 	b := genBeaconBlockBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockMerge(b)
+	got := v1alpha1.CopyBeaconBlockBellatrix(b)
 	if !reflect.DeepEqual(got, b) {
-		t.Errorf("CopyBeaconBlockMerge() = %v, want %v", got, b)
+		t.Errorf("CopyBeaconBlockBellatrix() = %v, want %v", got, b)
 	}
 	assert.NotEmpty(t, b, "Copied beacon block Merge has empty fields")
 }
