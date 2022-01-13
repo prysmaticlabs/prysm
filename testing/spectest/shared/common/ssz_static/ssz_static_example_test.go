@@ -2,6 +2,7 @@ package ssz_static_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	fssz "github.com/ferranbt/fastssz"
@@ -29,7 +30,7 @@ func ExampleRunSSZStaticTests() {
 			t.Skip("Unused type")
 			return nil, nil
 		default:
-			return nil, errors.New("unsupported type")
+			return nil, fmt.Errorf("unsupported type: %s", objectName)
 		}
 		var err error
 		if o, ok := obj.(fssz.Unmarshaler); ok {

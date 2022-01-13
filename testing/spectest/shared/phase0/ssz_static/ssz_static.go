@@ -12,12 +12,6 @@ import (
 	common "github.com/prysmaticlabs/prysm/testing/spectest/shared/common/ssz_static"
 )
 
-// SSZRoots --
-type SSZRoots struct {
-	Root        string `json:"root"`
-	SigningRoot string `json:"signing_root"`
-}
-
 // RunSSZStaticTests executes "ssz_static" tests.
 func RunSSZStaticTests(t *testing.T, config string) {
 	common.RunSSZStaticTests(t, config, "phase0", unmarshalledSSZ, customHtr)
