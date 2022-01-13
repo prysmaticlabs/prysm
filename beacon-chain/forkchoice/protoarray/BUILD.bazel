@@ -8,6 +8,7 @@ go_library(
         "helpers.go",
         "metrics.go",
         "node.go",
+        "proposer_boost.go",
         "store.go",
         "types.go",
     ],
@@ -18,6 +19,7 @@ go_library(
     ],
     deps = [
         "//config/params:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
@@ -33,6 +35,7 @@ go_test(
         "helpers_test.go",
         "no_vote_test.go",
         "node_test.go",
+        "proposer_boost_test.go",
         "store_test.go",
         "vote_test.go",
     ],
