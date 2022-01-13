@@ -11,9 +11,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
-
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
 // SetupConfig includes configuration values for initializing.
