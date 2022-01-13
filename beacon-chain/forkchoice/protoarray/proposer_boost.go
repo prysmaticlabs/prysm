@@ -34,10 +34,15 @@ func (f *ForkChoice) BoostProposerRoot(ctx context.Context, blockSlot types.Slot
 	return nil
 }
 
-func computeProposerBoostScore(balances []uint64) (score uint64, err error) {
+// Given a list of active balances, we compute the proposer boost score
+// that should be given to a proposer based on their committee weight, derived from
+// the total active balances, the size of a committee, and a boost score constant.
+func computeProposerBoostScore(justifiedStateBalances []uint64) (score uint64, err error) {
 	totalActiveBalance := uint64(0)
 	numActive := uint64(0)
-	for _, balance := range balances {
+	for _, balance := range justifiedStateBalances {
+		// We only consider balances > 0. THe justifiedStateBalances slice should be constructed
+		// as balance > 0 for all active validators and 0 for inactive ones.
 		if balance == 0 {
 			continue
 		}
