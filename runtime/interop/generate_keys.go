@@ -2,16 +2,14 @@ package interop
 
 import (
 	"encoding/binary"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"math/big"
 	"sync"
-
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 const (
