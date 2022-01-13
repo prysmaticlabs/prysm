@@ -2,8 +2,10 @@ package forkchoice
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -56,6 +58,7 @@ func RunTest(t *testing.T, config string) {
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork_choice/on_block/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
+			ctx := context.Background()
 			if folder.Name() != "basic" {
 				t.Skip("skipping non-basic test")
 			}
@@ -72,7 +75,6 @@ func RunTest(t *testing.T, config string) {
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
 			beaconState, err := v2.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
-
 			blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "anchor_block.ssz_snappy")
 			require.NoError(t, err)
 			blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
@@ -84,27 +86,36 @@ func RunTest(t *testing.T, config string) {
 			require.NoError(t, err)
 
 			service := newBlockchainService(t, beaconState, b)
-			require.NoError(t, service.InitializeStore(context.Background(), beaconState, b))
+			require.NoError(t, service.InitializeStore(ctx, beaconState, b))
+			t.Error("1")
 			for _, step := range steps {
 				if step.Tick != nil {
-					require.NoError(t, service.OnTick(context.Background(), uint64(*step.Tick)))
+					require.NoError(t, service.OnTick(ctx, uint64(*step.Tick)))
 				}
 				if step.Block != nil {
 					// Process block
-					//fileName := fmt.Sprint(*step.Block, ".ssz_snappy")
-					//blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
-					//require.NoError(t, err)
-					//blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
-					//require.NoError(t, err, "Failed to decompress")
-					//block := &ethpb.SignedBeaconBlockAltair{}
-					//require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-					//t.Error("block is  ", block.Block.Slot)
+					fileName := fmt.Sprint(*step.Block, ".ssz_snappy")
+					blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
+					require.NoError(t, err)
+					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
+					require.NoError(t, err, "Failed to decompress")
+					block := &ethpb.SignedBeaconBlockAltair{}
+					require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
+					r, err := block.Block.HashTreeRoot()
+					require.NoError(t, err)
+					wrappedBlock, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+					require.NoError(t, err)
+					require.NoError(t, service.ReceiveBlock(ctx, wrappedBlock, r))
 				}
 				if step.Attestation != nil {
 					// Process attestation
 				}
 				if step.Check != nil {
-					// Check
+					r, err := service.HeadRoot(ctx)
+					require.NoError(t, err)
+					s := service.HeadSlot()
+					t.Error(s, step.Check.Head.Slot)
+					t.Error(r, common.FromHex(step.Check.Head.Root))
 				}
 			}
 		})
@@ -118,6 +129,7 @@ func newBlockchainService(t *testing.T, st state.BeaconState, block block.Signed
 	r, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, d.SaveGenesisBlockRoot(ctx, r))
+	require.NoError(t, d.SaveState(ctx, st, r))
 	s, err := attestations.NewService(ctx, &attestations.Config{
 		Pool: attestations.NewPool(),
 	})
@@ -129,7 +141,8 @@ func newBlockchainService(t *testing.T, st state.BeaconState, block block.Signed
 		blockchain.WithAttestationService(s),
 		blockchain.WithForkChoiceStore(protoarray.New(0, 0, params.BeaconConfig().ZeroHash)),
 		blockchain.WithStateGen(stategen.New(d)),
-		blockchain.WithStateNotifier(&mock.MockStateNotifier{RecordEvents: true}),
+		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
+		blockchain.WithAttestationPool(attestations.NewPool()),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)

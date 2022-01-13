@@ -141,6 +141,20 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			return err
 		}
 	}
+	p := postState.CurrentJustifiedCheckpoint()
+	e := p.Epoch
+	if e > s.store.justifiedCheckpt.Epoch {
+		if e > s.store.bestJustifiedCheckpt.Epoch {
+			s.store.bestJustifiedCheckpt = p
+		}
+		canUpdate, err := s.shouldUpdateCurrentJustifiedNew(ctx, p)
+		if err != nil {
+			return err
+		}
+		if canUpdate {
+			s.store.justifiedCheckpt = p
+		}
+	}
 
 	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
 	if newFinalized {
@@ -149,6 +163,12 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+	}
+	p = postState.FinalizedCheckpoint()
+	e = p.Epoch
+	if e > s.store.finalizedCheckpt.Epoch {
+		s.store.finalizedCheckpt = p
+		s.store.justifiedCheckpt = postState.CurrentJustifiedCheckpoint()
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
