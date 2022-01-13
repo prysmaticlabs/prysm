@@ -136,3 +136,23 @@ func (s *Service) OnTick(ctx context.Context, time uint64) error {
 func (s *Service) slotInStore() types.Slot {
 	return types.Slot((s.store.time - s.store.genesisTime) / params.BeaconConfig().SecondsPerSlot)
 }
+
+// StoreTime returns the time in the store.
+func (s *Service) StoreTime() uint64 {
+	return s.store.time
+}
+
+// JustifiedCheckpoint returns the justified checkpoint in the store.
+func (s *Service) JustifiedCheckpoint() *ethpb.Checkpoint {
+	return s.store.justifiedCheckpt
+}
+
+// BestJustifiedCheckpoint returns the best justified checkpoint in the store.
+func (s *Service) BestJustifiedCheckpoint() *ethpb.Checkpoint {
+	return s.store.bestJustifiedCheckpt
+}
+
+// FinalizedCheckpoint returns the finalized checkpoint in the store.
+func (s *Service) FinalizedCheckpoint() *ethpb.Checkpoint {
+	return s.store.finalizedCheckpt
+}

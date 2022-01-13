@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -87,7 +88,6 @@ func RunTest(t *testing.T, config string) {
 
 			service := newBlockchainService(t, beaconState, b)
 			require.NoError(t, service.InitializeStore(ctx, beaconState, b))
-			t.Error("1")
 			for _, step := range steps {
 				if step.Tick != nil {
 					require.NoError(t, service.OnTick(ctx, uint64(*step.Tick)))
@@ -111,11 +111,27 @@ func RunTest(t *testing.T, config string) {
 					// Process attestation
 				}
 				if step.Check != nil {
+					c := step.Check
+					require.Equal(t, uint64(c.Time), service.StoreTime())
+					require.Equal(t, types.Slot(c.Head.Slot), service.HeadSlot())
 					r, err := service.HeadRoot(ctx)
 					require.NoError(t, err)
-					s := service.HeadSlot()
-					t.Error(s, step.Check.Head.Slot)
-					t.Error(r, common.FromHex(step.Check.Head.Root))
+					require.DeepEqual(t, common.FromHex(c.Head.Root), r)
+					cp := &ethpb.Checkpoint{
+						Epoch: types.Epoch(c.JustifiedCheckPoint.Epoch),
+						Root:  common.FromHex(c.JustifiedCheckPoint.Root),
+					}
+					require.DeepEqual(t, cp, service.JustifiedCheckpoint())
+					cp = &ethpb.Checkpoint{
+						Epoch: types.Epoch(c.BestJustifiedCheckPoint.Epoch),
+						Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
+					}
+					require.DeepEqual(t, cp, service.BestJustifiedCheckpoint())
+					cp = &ethpb.Checkpoint{
+						Epoch: types.Epoch(c.FinalizedCheckPoint.Epoch),
+						Root:  common.FromHex(c.FinalizedCheckPoint.Root),
+					}
+					require.DeepSSZEqual(t, cp, service.FinalizedCheckpoint())
 				}
 			}
 		})
