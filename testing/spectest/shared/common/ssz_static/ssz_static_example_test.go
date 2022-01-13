@@ -30,7 +30,7 @@ func ExampleRunSSZStaticTests() {
 			t.Skip("Unused type")
 			return nil, nil
 		default:
-			return nil, fmt.Errorsf("unsupported type: %s", objectName)
+			return nil, fmt.Errorf("unsupported type: %s", objectName)
 		}
 		var err error
 		if o, ok := obj.(fssz.Unmarshaler); ok {
