@@ -77,34 +77,22 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 }
 
 func TestForkChoice_computeProposerBoostScore(t *testing.T) {
-	type args struct {
-		justifiedStateBalances []uint64
-	}
-	tests := []struct {
-		name      string
-		args      args
-		wantScore uint64
-		wantErr   bool
-	}{
-		{
-			name: "no active validators returns error",
-			args: args{
-				justifiedStateBalances: nil,
-			},
-			wantScore: 0,
-			wantErr:   true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotScore, err := computeProposerBoostScore(tt.args.justifiedStateBalances)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("computeProposerBoostScore() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotScore != tt.wantScore {
-				t.Errorf("computeProposerBoostScore() gotScore = %v, want %v", gotScore, tt.wantScore)
-			}
-		})
-	}
+	t.Run("nil justified balances throws error", func(t *testing.T) {
+		_, err := computeProposerBoostScore(nil)
+		require.ErrorContains(t, "no active validators", err)
+	})
+	t.Run("normal active balances computes score", func(t *testing.T) {
+		validatorBalances := make([]uint64, 32)
+		for i := 0; i < len(validatorBalances); i++ {
+			validatorBalances[i] = 10
+		}
+		// Avg balance is 10, and the number of validators is 32.
+		// With a committee size of num validators (32) / slots per epoch (32) == 1,
+		// we then have a committee weight of avg balance * committee size = 10 * 1 = 10.
+		// The score then becomes 10 * PROPOSER_SCORE_BOOST // 100, which is
+		// 10 * 70 / 100 = 7.
+		score, err := computeProposerBoostScore(validatorBalances)
+		require.NoError(t, err)
+		require.Equal(t, uint64(7), score)
+	})
 }
