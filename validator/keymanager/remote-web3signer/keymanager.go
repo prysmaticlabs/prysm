@@ -2,7 +2,10 @@ package remote_web3signer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -65,7 +68,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 
 // FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	if km.publicKeysURL != "" {
+	if km.publicKeysURL != "" && len(km.providedPublicKeys) == 0 {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
 		if err != nil {
 			return nil, err
@@ -81,43 +84,69 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 		return nil, errors.New("invalid sign request: Fork is nil")
 	}
 
-	signRequestType, err := getSignRequestType(request)
+	signRequest, err := km.getSignRequestJson(request)
 	if err != nil {
 		return nil, err
 	}
 
-	forkData := &v1.Fork{
-		PreviousVersion: hexutil.Encode(request.Fork.PreviousVersion),
-		CurrentVersion:  hexutil.Encode(request.Fork.CurrentVersion),
-		Epoch:           fmt.Sprint(request.Fork.Epoch),
-	}
-	forkInfoData := &v1.ForkInfo{
-		Fork:                  forkData,
-		GenesisValidatorsRoot: hexutil.Encode(km.genesisValidatorsRoot),
-	}
-	aggregationSlotData := &v1.AggregationSlot{Slot: fmt.Sprint(request.AggregationSlot)}
-	web3SignerRequest := SignRequest{
-		Type:            signRequestType,
-		ForkInfo:        forkInfoData,
-		SigningRoot:     hexutil.Encode(request.SigningRoot),
-		AggregationSlot: aggregationSlotData,
-	}
-	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), &web3SignerRequest)
+	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), signRequest)
+
 }
 
-// getSignRequestType returns the type of the sign request.
-func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
+// getSignRequestJson returns a json request based on the SignRequest type.
+func (km *Keymanager) getSignRequestJson(request *validatorpb.SignRequest) (SignRequestJson, error) {
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_Block:
-		return "BLOCK", nil
+		bockSignRequest, err := v1.GetBlockSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(bockSignRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_AttestationData:
-		return "ATTESTATION", nil
+		attestationSignRequest, err := v1.GetAttestationSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(attestationSignRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
-		return "AGGREGATE_AND_PROOF", nil
+		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(aggregateAndProofSignRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_Slot:
-		return "AGGREGATION_SLOT", nil
+		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(aggregationSlotSignRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_BlockV2:
-		return "BLOCK_V2", nil
+		blocv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(blocv2AltairSignRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
+
 	// TODO(#10053): Need to add support for merge blocks.
 	/*
 		case *validatorpb.SignRequest_BlockV3:
@@ -129,18 +158,59 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 		case *validatorpb.:
 		return "DEPOSIT", nil
 	*/
+
 	case *validatorpb.SignRequest_Epoch:
-		return "RANDAO_REVEAL", nil
+		randaoRevealSignRequest, err := v1.GetRandaoRevealSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(randaoRevealSignRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_Exit:
-		return "VOLUNTARY_EXIT", nil
+		voluntaryExitRequest, err := v1.GetVoluntaryExitSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(voluntaryExitRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
-		return "SYNC_COMMITTEE_MESSAGE", nil
+		syncCommitteeMessageRequest, err := v1.GetSyncCommitteeMessageSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(syncCommitteeMessageRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
-		return "SYNC_COMMITTEE_SELECTION_PROOF", nil
+		syncCommitteeSelectionProofRequest, err := v1.GetSyncCommitteeSelectionProofSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(syncCommitteeSelectionProofRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	case *validatorpb.SignRequest_ContributionAndProof:
-		return "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF", nil
+		contributionAndProofRequest, err := v1.GetSyncCommitteeContributionAndProofSignRequest(request, km.genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		jsonRequest, err := json.Marshal(contributionAndProofRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
+		}
+		return jsonRequest, nil
 	default:
-		return "", errors.New(fmt.Sprintf("Web3signer sign request type: %T  not found", request.Object))
+		return nil, errors.New(fmt.Sprintf("Web3signer sign request type: %T  not found", request.Object))
 	}
 }
 
@@ -152,4 +222,35 @@ func (*Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription
 	return event.NewSubscription(func(i <-chan struct{}) error {
 		return nil
 	})
+}
+
+// reloadKeys reloads the public keys from the remote server
+func (*Keymanager) reloadKeys() {
+	// Not used right now.
+	// The feature of needing to dynamically reload from the validator instead of from the web3signer is yet to be determined.
+	// In the future there may be an api provided to add remote sign keys to the static list or remove from the static list.
+}
+
+// UnmarshalConfigFile attempts to JSON unmarshal a keymanager
+// config file into a SetupConfig struct.
+func UnmarshalConfigFile(r io.ReadCloser) (*SetupConfig, error) {
+	enc, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read config")
+	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			log.Errorf("Could not close keymanager config file: %v", err)
+		}
+	}()
+	config := &SetupConfig{}
+	if err := json.Unmarshal(enc, config); err != nil {
+		return nil, errors.Wrap(err, "could not JSON unmarshal")
+	}
+	return config, nil
+}
+
+// MarshalConfigFile for the keymanager.
+func MarshalConfigFile(_ context.Context, config *SetupConfig) ([]byte, error) {
+	return json.MarshalIndent(config, "", "\t")
 }

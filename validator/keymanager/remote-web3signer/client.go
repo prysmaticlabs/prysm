@@ -22,9 +22,11 @@ const (
 	maxTimeout      = 3 * time.Second
 )
 
+type SignRequestJson []byte
+
 // httpSignerClient defines the interface for interacting with a remote web3signer.
 type httpSignerClient interface {
-	Sign(ctx context.Context, pubKey string, request *SignRequest) (bls.Signature, error)
+	Sign(ctx context.Context, pubKey string, request SignRequestJson) (bls.Signature, error)
 	GetPublicKeys(ctx context.Context, url string) ([][48]byte, error)
 }
 
@@ -48,28 +50,17 @@ func newApiClient(baseEndpoint string) (*apiClient, error) {
 	}, nil
 }
 
-type SignRequest struct {
-	Type            string              `json:"type"`
-	ForkInfo        *v1.ForkInfo        `json:"fork_info"`
-	SigningRoot     string              `json:"signingRoot"`
-	AggregationSlot *v1.AggregationSlot `json:"aggregation_slot"`
-}
-
 // Sign is a wrapper method around the web3signer sign api.
-func (client *apiClient) Sign(_ context.Context, pubKey string, request *SignRequest) (bls.Signature, error) {
+func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequestJson) (bls.Signature, error) {
 	requestPath := ethApiNamespace + pubKey
-	jsonRequest, err := json.Marshal(request)
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-	}
-	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(jsonRequest))
+	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(request))
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		return nil, errors.Wrap(err, "public key not found")
 	}
-	if resp.StatusCode == 412 {
+	if resp.StatusCode == http.StatusPreconditionFailed {
 		return nil, errors.Wrap(err, "signing operation failed due to slashing protection rules")
 	}
 	signResp := &v1.SignResponse{}
@@ -142,7 +133,7 @@ func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) 
 	if err != nil {
 		return resp, errors.Wrap(err, "failed to execute json request")
 	}
-	if resp.StatusCode == 500 {
+	if resp.StatusCode == http.StatusInternalServerError {
 		return nil, errors.Wrap(err, "internal Web3Signer server error")
 	} else if resp.StatusCode == 400 {
 		return nil, errors.Wrap(err, "bad request format")
