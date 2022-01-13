@@ -22,7 +22,7 @@ type SSZRoots struct {
 	SigningRoot string `json:"signing_root"`
 }
 
-// RunSSZStaticTests executes "ssz_static" tests.
+// Rubeacon-chain/p2p/testing/p2p.gonSSZStaticTests executes "ssz_static" tests.
 func RunSSZStaticTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, _ := utils.TestFolders(t, config, "phase0", "ssz_static")

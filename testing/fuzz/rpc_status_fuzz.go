@@ -31,7 +31,7 @@ func init() {
 		panic(errors.Wrap(err, "could not create new p2p service"))
 	}
 
-	h, err = libp2p.New(context.Background())
+	h, err = libp2p.New()
 	if err != nil {
 		panic(errors.Wrap(err, "could not create new libp2p host"))
 	}
