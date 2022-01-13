@@ -50,6 +50,9 @@ func computeDeltas(
 					return nil, nil, errInvalidNodeDelta
 				}
 				deltas[nextDeltaIndex] += int(newBalance)
+
+				// TODO: Here need to add if the next root is a proposer boosted root.
+				// totalActiveBalance
 			}
 
 			currentDeltaIndex, ok := blockIndices[vote.currentRoot]

@@ -21,13 +21,14 @@ var lastHeadRoot [32]byte
 // New initializes a new fork choice store.
 func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *ForkChoice {
 	s := &Store{
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		finalizedRoot:  finalizedRoot,
-		nodes:          make([]*Node, 0),
-		nodesIndices:   make(map[[32]byte]uint64),
-		canonicalNodes: make(map[[32]byte]bool),
-		pruneThreshold: defaultPruneThreshold,
+		justifiedEpoch:    justifiedEpoch,
+		finalizedEpoch:    finalizedEpoch,
+		finalizedRoot:     finalizedRoot,
+		proposerBoostRoot: [32]byte{},
+		nodes:             make([]*Node, 0),
+		nodesIndices:      make(map[[32]byte]uint64),
+		canonicalNodes:    make(map[[32]byte]bool),
+		pruneThreshold:    defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
