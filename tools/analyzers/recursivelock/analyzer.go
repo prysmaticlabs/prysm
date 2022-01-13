@@ -46,9 +46,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		if keepTrackOf.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.funcLitEnd {
 			return
-		} else {
-			keepTrackOf.funcLitEnd = token.NoPos
 		}
+		keepTrackOf.funcLitEnd = token.NoPos
 		if keepTrackOf.deferEnd.IsValid() && node.Pos() > keepTrackOf.deferEnd {
 			keepTrackOf.deferEnd = token.NoPos
 		} else if keepTrackOf.deferEnd.IsValid() {
@@ -155,19 +154,24 @@ func (t *tracker) incFRU() {
 	t.foundRLock += 1
 }
 
+// Stores the AST and type information of a single item in a selector expression
+// For example, "a.b.c()", a selIdentNode might store the information for "a"
 type selIdentNode struct {
 	next   *selIdentNode
 	this   *ast.Ident
 	typObj types.Object
 }
 
+// a list of selIdentNodes. Stores the information of an entire selector expression
+// For example, each item in "a.b.c()" is stored as a node in this list, with the start node being "a"
 type selIdentList struct {
 	start        *selIdentNode
 	length       int
-	current      *selIdentNode
-	currentIndex int
+	current      *selIdentNode // used for internal functions
+	currentIndex int           // used for internal functions
 }
 
+// returns the next item in the list, and increments the counter keeping track of where we are in the list
 func (s *selIdentList) next() (n *selIdentNode) {
 	n = s.current.next
 	if n != nil {
@@ -177,11 +181,15 @@ func (s *selIdentList) next() (n *selIdentNode) {
 	return n
 }
 
+// reset resets the current node to the start node in the list
 func (s *selIdentList) reset() {
 	s.current = s.start
 	s.currentIndex = 0
 }
 
+// isEqual returns true if two selIdentLists are equal to each other.
+// The offset parameter tells how far in the list to check for equality.
+// For example, a.b.c() and a.b.d() are equal with an offset of 1.
 func (s *selIdentList) isEqual(s2 *selIdentList, offset int) bool {
 	if s2 == nil || (s.length != s2.length) {
 		return false
@@ -201,6 +209,12 @@ func (s *selIdentList) isEqual(s2 *selIdentList, offset int) bool {
 	return true
 }
 
+// getSub returns the shared beginning selIdentList of s and s2,
+// if s contains all elements (except the last) of s2,
+// and returns nil otherwise.
+// For example, if s represents "a.b.c.d()" and s2 represents
+// "a.b.e()", getSub will return a selIdentList representing "a.b".
+// getSub returns nil if s2's length is greater than that of s
 func (s *selIdentList) getSub(s2 *selIdentList) *selIdentList {
 	if s2 == nil || s2.length > s.length {
 		return nil
@@ -226,6 +240,8 @@ func (s *selIdentList) getSub(s2 *selIdentList) *selIdentList {
 	}
 }
 
+// changeRoot changes the first selIdentNode of a selIdentList
+// to one with given *ast.Ident and types.Object
 func (s *selIdentList) changeRoot(r *ast.Ident, t types.Object) {
 	selNode := &selIdentNode{
 		this:   r,
@@ -262,6 +278,7 @@ func (s selIdentNode) String() string {
 	return fmt.Sprintf("{ ident: '%v', type: '%v' }", s.this, s.typObj)
 }
 
+// mapSelTypes returns a selIdentList representation of the given call expression
 func mapSelTypes(c *ast.CallExpr, pass *analysis.Pass) *selIdentList {
 	list := &selIdentList{}
 	valid := list.recurMapSelTypes(c.Fun, nil, pass.TypesInfo)
@@ -271,6 +288,7 @@ func mapSelTypes(c *ast.CallExpr, pass *analysis.Pass) *selIdentList {
 	return list
 }
 
+// recursively identifies the type of each identity node in a selector expression
 func (l *selIdentList) recurMapSelTypes(e ast.Expr, next *selIdentNode, t *types.Info) bool {
 	expr := astutil.Unparen(e)
 	l.length++
@@ -297,11 +315,11 @@ func (l *selIdentList) recurMapSelTypes(e ast.Expr, next *selIdentNode, t *types
 
 type callInfo struct {
 	call *ast.CallExpr
-	id   string // type ID [either the name (if the function is exported) or the package/name if otherwise] of the function/method
-	name string
+	id   string // String representation of the type object
+	name string // type ID [either the name (if the function is exported) or the package/name if otherwise] of the function/method
 }
 
-// returns a *callInfo struct with call info (ID and type)
+// getCallInfo returns a *callInfo struct with call info
 func getCallInfo(tInfo *types.Info, call *ast.CallExpr) (c *callInfo) {
 	c = &callInfo{}
 	c.call = call
@@ -326,8 +344,8 @@ func interfaceMethod(s *types.Signature) bool {
 	return recv != nil && types.IsInterface(recv.Type())
 }
 
-// hasNestedRLock takes a call expression represented by callInfo as input and returns a stack trace of the nested or recursive RLock within
-// that call expression. If the call expression does not contain a nested or recursive RLock, hasNestedRLock returns an empty string.
+// hasNestedRLock returns a stack trace of the nested or recursive RLock within the declaration of a function/method call (given by call).
+// If the call expression does not contain a nested or recursive RLock, hasNestedRLock returns an empty string.
 // hasNestedRLock finds a nested or recursive RLock by recursively calling itself on any functions called by the function/method represented
 // by callInfo.
 func hasNestedRLock(fullRLockSelector *selIdentList, compareMap *selIdentList, call *callInfo, inspect *inspector.Inspector, pass *analysis.Pass, hist map[string]bool) (retStack string) {
@@ -411,6 +429,8 @@ type callHelper struct {
 	fset *token.FileSet
 }
 
+// identifyFuncLitBlock returns the AST block statement of the function literal called by the given expression,
+// or nil if no function literal block statement could be identified.
 func (c callHelper) identifyFuncLitBlock(expr ast.Expr) *ast.BlockStmt {
 	switch stmt := expr.(type) {
 	case *ast.FuncLit:
