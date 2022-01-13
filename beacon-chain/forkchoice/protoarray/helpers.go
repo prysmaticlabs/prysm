@@ -2,6 +2,7 @@ package protoarray
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	"go.opencensus.io/trace"
@@ -92,4 +93,11 @@ func copyNode(node *Node) *Node {
 		bestChild:      node.bestChild,
 		bestDescendant: node.bestDescendant,
 	}
+}
+
+func safeSubDelta(a, b int) (int, error) {
+	if a < b {
+		return 0, fmt.Errorf("subtraction overflow (%d - %d)", b, a)
+	}
+	return b - a, nil
 }

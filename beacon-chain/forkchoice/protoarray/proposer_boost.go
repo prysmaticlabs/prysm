@@ -33,3 +33,20 @@ func (f *ForkChoice) BoostProposerRoot(ctx context.Context, blockSlot types.Slot
 	}
 	return nil
 }
+
+func computeProposerBoostScore(balances []uint64) (score uint64, err error) {
+	totalActiveBalance := uint64(0)
+	numActive := uint64(0)
+	for _, balance := range balances {
+		if balance == 0 {
+			continue
+		}
+		totalActiveBalance += balance
+		numActive += 1
+	}
+	avgBalance := totalActiveBalance / numActive
+	committeeSize := numActive / uint64(params.BeaconConfig().SlotsPerEpoch)
+	committeeWeight := committeeSize * avgBalance
+	score = (committeeWeight * params.BeaconConfig().ProposerScoreBoost) / 100
+	return
+}

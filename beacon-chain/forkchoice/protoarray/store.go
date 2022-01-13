@@ -64,7 +64,7 @@ func (f *ForkChoice) Head(
 	}
 	f.votes = newVotes
 
-	if err := f.store.applyWeightChanges(ctx, justifiedEpoch, finalizedEpoch, deltas); err != nil {
+	if err := f.store.applyWeightChanges(ctx, justifiedEpoch, finalizedEpoch, newBalances, deltas); err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
@@ -379,7 +379,9 @@ func (s *Store) insert(ctx context.Context,
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes delta to its parents delta. After scoring changes,
 // the best child is then updated along with best descendant.
-func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, delta []int) error {
+func (s *Store) applyWeightChanges(
+	ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, newBalances []uint64, delta []int,
+) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
@@ -394,7 +396,11 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 		s.finalizedEpoch = finalizedEpoch
 	}
 
+	// Proposer score defaults to 0.
+	proposerScore := uint64(0)
+
 	// Iterate backwards through all index to node in store.
+	var err error
 	for i := len(s.nodes) - 1; i >= 0; i-- {
 		n := s.nodes[i]
 
@@ -405,6 +411,29 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 		}
 
 		nodeDelta := delta[i]
+
+		// If we have a node where the proposer boost was previously applied,
+		// we then decrease the delta by the required score amount.
+		s.proposerBoostLock.Lock()
+		if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash && s.previousProposerBoostRoot == n.root {
+			nodeDelta, err = safeSubDelta(nodeDelta, int(s.previousProposerBoostScore))
+			if err != nil {
+				s.proposerBoostLock.Unlock()
+				return err
+			}
+		}
+
+		if s.proposerBoostScore == params.BeaconConfig().ProposerScoreBoost {
+			if s.proposerBoostRoot != params.BeaconConfig().ZeroHash && s.proposerBoostRoot == n.root {
+				proposerScore, err = computeProposerBoostScore(newBalances)
+				if err != nil {
+					s.proposerBoostLock.Unlock()
+					return err
+				}
+				nodeDelta = nodeDelta + int(proposerScore)
+			}
+		}
+		s.proposerBoostLock.Unlock()
 
 		if nodeDelta < 0 {
 			// A node's weight can not be negative but the delta can be negative.
@@ -436,6 +465,12 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 			delta[n.parent] += nodeDelta
 		}
 	}
+
+	// Set the previous boosted root and score.
+	s.proposerBoostLock.Lock()
+	s.previousProposerBoostRoot = s.proposerBoostRoot
+	s.previousProposerBoostScore = proposerScore
+	s.proposerBoostLock.Unlock()
 
 	for i := len(s.nodes) - 1; i >= 0; i-- {
 		n := s.nodes[i]
