@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sharedstate"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/fieldtrie"
@@ -108,7 +108,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
-	sharedstate.StateCount.Inc()
+	state.StateCount.Inc()
 	return b, nil
 }
 
@@ -152,7 +152,7 @@ func Initialize() (*BeaconState, error) {
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
-	sharedstate.StateCount.Inc()
+	state.StateCount.Inc()
 	return b, nil
 }
 
@@ -247,7 +247,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		}
 	}
 
-	sharedstate.StateCount.Inc()
+	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
@@ -265,7 +265,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			delete(b.sharedFieldReferences, field)
 			delete(b.stateFieldLeaves, field)
 		}
-		sharedstate.StateCount.Sub(1)
+		state.StateCount.Sub(1)
 	})
 	return dst
 }
