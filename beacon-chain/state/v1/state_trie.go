@@ -6,8 +6,6 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -22,13 +20,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
-)
-
-var (
-	stateCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_state_count",
-		Help: "Count the number of active beacon state objects.",
-	})
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
@@ -77,7 +68,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
-	stateCount.Inc()
+	state.StateCount.Inc()
 	return b, nil
 }
 
@@ -173,7 +164,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		}
 	}
 
-	stateCount.Inc()
+	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
@@ -191,7 +182,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			delete(b.sharedFieldReferences, field)
 			delete(b.stateFieldLeaves, field)
 		}
-		stateCount.Sub(1)
+		state.StateCount.Sub(1)
 	})
 	return dst
 }
