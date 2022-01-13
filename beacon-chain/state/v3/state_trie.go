@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -23,18 +22,18 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconStateMerge) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateMerge))
+func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
 
-	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
@@ -68,7 +67,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Merge.
+	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Bellatrix.
 	state.StateCount.Inc()
 	return b, nil
 }
@@ -81,10 +80,10 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 
 	dst := &BeaconState{
-		state: &ethpb.BeaconStateMerge{
+		state: &ethpb.BeaconStateBellatrix{
 			// Primitive types, safe to copy.
 			GenesisTime:      b.state.GenesisTime,
 			Slot:             b.state.Slot,
@@ -195,32 +194,49 @@ func (b *BeaconState) Copy() state.BeaconState {
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "BeaconStateMerge.HashTreeRoot")
+	_, span := trace.StartSpan(ctx, "BeaconStateBellatrix.HashTreeRoot")
 	defer span.End()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
-	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b.state)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		layers := stateutil.Merkleize(fieldRoots)
-		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateMergeFieldCount)
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return [32]byte{}, err
 	}
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return [32]byte{}, err
+	}
+	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+}
 
+// Initializes the Merkle layers for the beacon state if they are empty.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
+	if len(b.merkleLayers) > 0 {
+		return nil
+	}
+	fieldRoots, err := computeFieldRoots(ctx, b.state)
+	if err != nil {
+		return err
+	}
+	layers := stateutil.Merkleize(fieldRoots)
+	b.merkleLayers = layers
+	b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+	return nil
+}
+
+// Recomputes the Merkle layers for the dirty fields in the state.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) recomputeDirtyFields(_ context.Context) error {
 	for field := range b.dirtyFields {
 		root, err := b.rootSelector(field)
 		if err != nil {
-			return [32]byte{}, err
+			return err
 		}
 		b.merkleLayers[0][field] = root[:]
 		b.recomputeRoot(int(field))
 		delete(b.dirtyFields, field)
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	return nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This

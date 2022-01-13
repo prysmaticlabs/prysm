@@ -36,7 +36,7 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		return nil, err
 	}
 
-	s := &ethpb.BeaconStateMerge{
+	s := &ethpb.BeaconStateBellatrix{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
 		Slot:                  state.Slot(),
