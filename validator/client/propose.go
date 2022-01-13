@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -356,11 +357,16 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 	if err != nil {
 		return nil, err
 	}
+	fork, err := forks.Fork(epoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not get fork on current slot: %d", epoch)
+	}
 	randaoReveal, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Epoch{Epoch: epoch},
+		Fork:            fork,
 	})
 	if err != nil {
 		return nil, err
@@ -378,6 +384,11 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 		return nil, nil, errors.New(domainDataErr)
 	}
 
+	// TODO: I'm not sure if this is the right way to do this.
+	fork, err := forks.Fork(epoch)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get fork on current slot: %d", epoch)
+	}
 	var sig bls.Signature
 	switch b.Version() {
 	case version.Altair:
@@ -394,6 +405,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 			SigningRoot:     blockRoot[:],
 			SignatureDomain: domain.SignatureDomain,
 			Object:          &validatorpb.SignRequest_BlockV2{BlockV2: block},
+			Fork:            fork,
 		})
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")
@@ -413,6 +425,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 			SigningRoot:     blockRoot[:],
 			SignatureDomain: domain.SignatureDomain,
 			Object:          &validatorpb.SignRequest_Block{Block: block},
+			Fork:            fork,
 		})
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")

@@ -474,7 +474,7 @@ func TestSignAttestation(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	sig, sr, err := validator.signAtt(ctx, pubKey, att.Data)
+	sig, sr, err := validator.signAtt(ctx, pubKey, att.Data, att.Data.Slot)
 	require.NoError(t, err, "%x,%x,%v", sig, sr, err)
 	require.Equal(t, "b6a60f8497bd328908be83634d045"+
 		"dd7a32f5e246b2c4031fc2f316983f362e36fc27fd3d6d5a2b15"+
