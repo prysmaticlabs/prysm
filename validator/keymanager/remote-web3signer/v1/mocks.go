@@ -1,14 +1,345 @@
 package v1
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////// Mock Requests //////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
+
+// GetMockSignRequest returns a mock SignRequest by type.
+func GetMockSignRequest(t string) *validatorpb.SignRequest {
+	switch t {
+	case "AGGREGATION_SLOT":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_Slot{
+				Slot: 0,
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	case "AGGREGATE_AND_PROOF":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_AggregateAttestationAndProof{
+				AggregateAttestationAndProof: &eth.AggregateAttestationAndProof{
+					AggregatorIndex: 0,
+					Aggregate:       util.NewAttestation(),
+					SelectionProof:  make([]byte, fieldparams.BLSSignatureLength),
+				},
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	case "ATTESTATION":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_AttestationData{
+				AttestationData: util.NewAttestation().Data,
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	case "BLOCK":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_Block{
+				Block: &eth.BeaconBlock{
+					Slot:          0,
+					ProposerIndex: 0,
+					ParentRoot:    make([]byte, fieldparams.RootLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					Body: &eth.BeaconBlockBody{
+						RandaoReveal: make([]byte, 32),
+						Eth1Data: &eth.Eth1Data{
+							DepositRoot:  make([]byte, fieldparams.RootLength),
+							DepositCount: 0,
+							BlockHash:    make([]byte, 32),
+						},
+						Graffiti: make([]byte, 32),
+						ProposerSlashings: []*eth.ProposerSlashing{
+							{
+								Header_1: &eth.SignedBeaconBlockHeader{
+									Header: &eth.BeaconBlockHeader{
+										Slot:          0,
+										ProposerIndex: 0,
+										ParentRoot:    make([]byte, fieldparams.RootLength),
+										StateRoot:     make([]byte, fieldparams.RootLength),
+										BodyRoot:      make([]byte, fieldparams.RootLength),
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
+								},
+								Header_2: &eth.SignedBeaconBlockHeader{
+									Header: &eth.BeaconBlockHeader{
+										Slot:          0,
+										ProposerIndex: 0,
+										ParentRoot:    make([]byte, fieldparams.RootLength),
+										StateRoot:     make([]byte, fieldparams.RootLength),
+										BodyRoot:      make([]byte, fieldparams.RootLength),
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
+								},
+							},
+						},
+						AttesterSlashings: []*eth.AttesterSlashing{
+							{
+								Attestation_1: &eth.IndexedAttestation{
+									AttestingIndices: []uint64{0, 1, 2},
+									Data:             util.NewAttestation().Data,
+									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								},
+								Attestation_2: &eth.IndexedAttestation{
+									AttestingIndices: []uint64{0, 1, 2},
+									Data:             util.NewAttestation().Data,
+									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								},
+							},
+						},
+						Attestations: []*eth.Attestation{
+							util.NewAttestation(),
+						},
+						Deposits: []*eth.Deposit{
+							{
+								Proof: [][]byte{[]byte("A")},
+								Data: &eth.Deposit_Data{
+									PublicKey:             make([]byte, fieldparams.BLSPubkeyLength),
+									WithdrawalCredentials: make([]byte, 32),
+									Amount:                0,
+									Signature:             make([]byte, fieldparams.BLSSignatureLength),
+								},
+							},
+						},
+						VoluntaryExits: []*eth.SignedVoluntaryExit{
+							{
+								Exit: &eth.VoluntaryExit{
+									Epoch:          0,
+									ValidatorIndex: 0,
+								},
+								Signature: make([]byte, fieldparams.BLSSignatureLength),
+							},
+						},
+					},
+				},
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	case "BLOCK_V2":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlockV2{
+				BlockV2: &eth.BeaconBlockAltair{
+					Slot:          0,
+					ProposerIndex: 0,
+					ParentRoot:    make([]byte, fieldparams.RootLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					Body: &eth.BeaconBlockBodyAltair{
+						RandaoReveal: make([]byte, 32),
+						Eth1Data: &eth.Eth1Data{
+							DepositRoot:  make([]byte, fieldparams.RootLength),
+							DepositCount: 0,
+							BlockHash:    make([]byte, 32),
+						},
+						Graffiti: make([]byte, 32),
+						ProposerSlashings: []*eth.ProposerSlashing{
+							{
+								Header_1: &eth.SignedBeaconBlockHeader{
+									Header: &eth.BeaconBlockHeader{
+										Slot:          0,
+										ProposerIndex: 0,
+										ParentRoot:    make([]byte, fieldparams.RootLength),
+										StateRoot:     make([]byte, fieldparams.RootLength),
+										BodyRoot:      make([]byte, fieldparams.RootLength),
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
+								},
+								Header_2: &eth.SignedBeaconBlockHeader{
+									Header: &eth.BeaconBlockHeader{
+										Slot:          0,
+										ProposerIndex: 0,
+										ParentRoot:    make([]byte, fieldparams.RootLength),
+										StateRoot:     make([]byte, fieldparams.RootLength),
+										BodyRoot:      make([]byte, fieldparams.RootLength),
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
+								},
+							},
+						},
+						AttesterSlashings: []*eth.AttesterSlashing{
+							{
+								Attestation_1: &eth.IndexedAttestation{
+									AttestingIndices: []uint64{0, 1, 2},
+									Data:             util.NewAttestation().Data,
+									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								},
+								Attestation_2: &eth.IndexedAttestation{
+									AttestingIndices: []uint64{0, 1, 2},
+									Data:             util.NewAttestation().Data,
+									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								},
+							},
+						},
+						Attestations: []*eth.Attestation{
+							util.NewAttestation(),
+						},
+						Deposits: []*eth.Deposit{
+							{
+								Proof: [][]byte{[]byte("A")},
+								Data: &eth.Deposit_Data{
+									PublicKey:             make([]byte, fieldparams.BLSPubkeyLength),
+									WithdrawalCredentials: make([]byte, 32),
+									Amount:                0,
+									Signature:             make([]byte, fieldparams.BLSSignatureLength),
+								},
+							},
+						},
+						VoluntaryExits: []*eth.SignedVoluntaryExit{
+							{
+								Exit: &eth.VoluntaryExit{
+									Epoch:          0,
+									ValidatorIndex: 0,
+								},
+								Signature: make([]byte, fieldparams.BLSSignatureLength),
+							},
+						},
+						SyncAggregate: &eth.SyncAggregate{
+							SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+							SyncCommitteeBits:      bitfield.NewBitvector512(),
+						},
+					},
+				},
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	case "RANDAO_REVEAL":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_Epoch{
+				Epoch: 0,
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	case "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_ContributionAndProof{
+				ContributionAndProof: &eth.ContributionAndProof{
+					AggregatorIndex: 0,
+					Contribution: &eth.SyncCommitteeContribution{
+						Slot:              0,
+						BlockRoot:         make([]byte, fieldparams.RootLength),
+						SubcommitteeIndex: 0,
+						AggregationBits:   bitfield.NewBitvector128(),
+						Signature:         make([]byte, fieldparams.BLSSignatureLength),
+					},
+					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
+				},
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	case "SYNC_COMMITTEE_MESSAGE":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_SyncMessageBlockRoot{
+				SyncMessageBlockRoot: &validatorpb.SyncMessageBlockRoot{
+					Slot:                 0,
+					SyncMessageBlockRoot: make([]byte, fieldparams.RootLength),
+				},
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	case "SYNC_COMMITTEE_SELECTION_PROOF":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_SyncAggregatorSelectionData{
+				SyncAggregatorSelectionData: &eth.SyncAggregatorSelectionData{
+					Slot:              0,
+					SubcommitteeIndex: 0,
+				},
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	case "VOLUNTARY_EXIT":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_Exit{
+				Exit: &eth.VoluntaryExit{
+					Epoch:          0,
+					ValidatorIndex: 0,
+				},
+			},
+			Fork: &eth.Fork{
+				PreviousVersion: make([]byte, 4),
+				CurrentVersion:  make([]byte, 4),
+				Epoch:           0,
+			},
+		}
+	default:
+		fmt.Printf("Web3signer sign request type: %v  not found", t)
+		return nil
+	}
+}
 
 // MockAggregationSlotSignRequest is a mock implementation of the AggregationSlotSignRequest.
 func MockAggregationSlotSignRequest() *AggregationSlotSignRequest {
