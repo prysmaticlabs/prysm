@@ -8,7 +8,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state-proto/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 )
 
 func testServiceOptsWithDB(t *testing.T) []Option {

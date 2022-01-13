@@ -6,9 +6,9 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state-native"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v2"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state-proto/v3"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 )
 

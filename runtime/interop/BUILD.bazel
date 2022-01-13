@@ -12,7 +12,7 @@ go_library(
         "//async:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
-        "//beacon-chain/state-proto/v1:go_default_library",
+        "//beacon-chain/state/v1:go_default_library",
         "//config/params:go_default_library",
         "//container/trie:go_default_library",
         "//crypto/bls:go_default_library",
