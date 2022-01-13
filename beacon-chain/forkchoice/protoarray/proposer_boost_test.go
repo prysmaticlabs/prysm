@@ -7,8 +7,64 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
+
+func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
+	// TODO: Add more robust setup with actual threshold of votes at which proposer boost wins vs.
+	// not having a threshold of votes.
+	// test case matrix: proposed blocks A and B
+	// 1. A boosted, B no, same votes => A wins
+	// 2. A boosted, B no, but B a lot of votes => B wins depending on vote threshold
+	// 3. A boosted, B boosted => comes down to votes
+	// 4. Neither boosted => comes down to votes
+	t.Skip("Needs setup")
+}
+
+func TestForkChoice_BoostProposerRoot_CanFindHead(t *testing.T) {
+	balances := make([]uint64, 32)
+	for i := 0; i < len(balances); i++ {
+		balances[i] = 10
+	}
+	f := setup(1, 1)
+
+	// The head should always start at the finalized block.
+	r, err := f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
+	require.NoError(t, err)
+	assert.Equal(t, params.BeaconConfig().ZeroHash, r, "Incorrect head with genesis")
+
+	// Insert block 2 into the tree and verify head is at 2:
+	//         0
+	//        /
+	//       2 <- head
+	require.NoError(t, f.ProcessBlock(context.Background(), 0, indexToHash(2), params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
+
+	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
+	require.NoError(t, err)
+	assert.Equal(t, indexToHash(2), r, "Incorrect head for justified epoch at 1")
+
+	// Insert block 1 into the tree and verify head is still at 2:
+	//            0
+	//           / \
+	//  head -> 2  1
+	require.NoError(t, f.ProcessBlock(context.Background(), 0, indexToHash(1), params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
+
+	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
+	require.NoError(t, err)
+	assert.Equal(t, indexToHash(2), r, "Incorrect head for with justified epoch at 1")
+
+	// Add a vote to block 1 of the tree, but BOOST block 2 and ensure the head is still at 2.
+	//            0
+	//           / \
+	//  head -> 2  1 (1 did not win, EVEN with a vote, as 2 got a proposer boost)
+	err = f.BoostProposerRoot(context.Background(), 0, indexToHash(1), time.Now())
+	require.NoError(t, err)
+	f.ProcessAttestation(context.Background(), []uint64{0}, indexToHash(1), 2)
+	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
+	require.NoError(t, err)
+	assert.Equal(t, indexToHash(1), r, "Incorrect head for with justified epoch at 1")
+}
 
 func TestForkChoice_BoostProposerRoot(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
