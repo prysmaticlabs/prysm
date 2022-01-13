@@ -107,6 +107,13 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
+	// After saving the state, we add a proposer score boost to fork choice for the block root if applicable.
+	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
+		ctx, signed.Block().Slot(), blockRoot, s.genesisTime,
+	); err != nil {
+		return err
+	}
+
 	// If slasher is configured, forward the attestations in the block via
 	// an event feed for processing.
 	if features.Get().EnableSlasher {

@@ -25,6 +25,7 @@ type Store struct {
 	nodesIndices      map[[32]byte]uint64 // the root of block node and the nodes index in the list.
 	canonicalNodes    map[[32]byte]bool   // the canonical block nodes.
 	nodesLock         sync.RWMutex
+	proposerBoostLock sync.RWMutex
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.

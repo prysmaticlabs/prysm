@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -14,6 +15,7 @@ type ForkChoicer interface {
 	AttestationProcessor // to track new attestation for fork choice.
 	Pruner               // to clean old data for fork choice.
 	Getter               // to retrieve fork choice information.
+	ProposerBooster      // ability to boost timely-proposed block roots.
 }
 
 // HeadRetriever retrieves head root of the current chain.
@@ -34,6 +36,11 @@ type AttestationProcessor interface {
 // Pruner prunes the fork choice upon new finalization. This is used to keep fork choice sane.
 type Pruner interface {
 	Prune(context.Context, [32]byte) error
+}
+
+// ProposerBooster is able to boost the proposer's root score during fork choice.
+type ProposerBooster interface {
+	BoostProposerRoot(ctx context.Context, blockSlot types.Slot, blockRoot [32]byte, genesisTime time.Time) error
 }
 
 // Getter returns fork choice related information.
