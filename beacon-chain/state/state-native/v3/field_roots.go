@@ -13,12 +13,12 @@ import (
 // the beacon state as a list of 32 byte roots.
 //nolint:deadcode
 func computeFieldRoots(ctx context.Context, state *BeaconState) ([][]byte, error) {
-	protoState, ok := state.toProtoNoLock().(*ethpb.BeaconStateMerge)
+	protoState, ok := state.toProtoNoLock().(*ethpb.BeaconStateBellatrix)
 	if !ok {
 		return nil, errors.New("could not convert beacon state to proto")
 	}
 	if features.Get().EnableSSZCache {
-		return stateutil.CachedHasher.ComputeFieldRootsWithHasherMerge(ctx, protoState)
+		return stateutil.CachedHasher.ComputeFieldRootsWithHasherBellatrix(ctx, protoState)
 	}
-	return stateutil.NocachedHasher.ComputeFieldRootsWithHasherMerge(ctx, protoState)
+	return stateutil.NocachedHasher.ComputeFieldRootsWithHasherBellatrix(ctx, protoState)
 }

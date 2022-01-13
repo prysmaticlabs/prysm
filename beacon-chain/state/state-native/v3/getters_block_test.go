@@ -10,13 +10,13 @@ import (
 )
 
 func TestBeaconState_LatestBlockHeader(t *testing.T) {
-	s, err := InitializeFromProto(&ethpb.BeaconStateMerge{})
+	s, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{})
 	require.NoError(t, err)
 	got := s.LatestBlockHeader()
 	require.DeepEqual(t, (*ethpb.BeaconBlockHeader)(nil), got)
 
 	want := &ethpb.BeaconBlockHeader{Slot: 100}
-	s, err = InitializeFromProto(&ethpb.BeaconStateMerge{LatestBlockHeader: want})
+	s, err = InitializeFromProto(&ethpb.BeaconStateBellatrix{LatestBlockHeader: want})
 	require.NoError(t, err)
 	got = s.LatestBlockHeader()
 	require.DeepEqual(t, want, got)
@@ -27,7 +27,7 @@ func TestBeaconState_LatestBlockHeader(t *testing.T) {
 }
 
 func TestBeaconState_BlockRoots(t *testing.T) {
-	s, err := InitializeFromProto(&ethpb.BeaconStateMerge{})
+	s, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{})
 	require.NoError(t, err)
 	got := s.BlockRoots()
 	want := make([][]byte, fieldparams.BlockRootsLength)
@@ -45,7 +45,7 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 		}
 
 	}
-	s, err = InitializeFromProto(&ethpb.BeaconStateMerge{BlockRoots: want})
+	s, err = InitializeFromProto(&ethpb.BeaconStateBellatrix{BlockRoots: want})
 	require.NoError(t, err)
 	got = s.BlockRoots()
 	require.DeepEqual(t, want, got)
@@ -56,7 +56,7 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 }
 
 func TestBeaconState_BlockRootAtIndex(t *testing.T) {
-	s, err := InitializeFromProto(&ethpb.BeaconStateMerge{})
+	s, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{})
 	require.NoError(t, err)
 	got, err := s.BlockRootAtIndex(0)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestBeaconState_BlockRootAtIndex(t *testing.T) {
 		tmp := root
 		bRoots[i] = tmp[:]
 	}
-	s, err = InitializeFromProto(&ethpb.BeaconStateMerge{BlockRoots: bRoots})
+	s, err = InitializeFromProto(&ethpb.BeaconStateBellatrix{BlockRoots: bRoots})
 	require.NoError(t, err)
 	got, err = s.BlockRootAtIndex(0)
 	require.NoError(t, err)

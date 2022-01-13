@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	fieldMap = make(map[types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateMergeFieldCount)
+	fieldMap = make(map[types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 
 	// Initialize the fixed sized arrays.
 	fieldMap[types.BlockRoots] = types.BasicArray

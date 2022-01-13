@@ -35,7 +35,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 		tmp := m
 		mixes[i] = tmp[:]
 	}
-	return &ethpb.BeaconStateMerge{
+	return &ethpb.BeaconStateBellatrix{
 		GenesisTime:                  b.genesisTime,
 		GenesisValidatorsRoot:        b.genesisValidatorsRoot[:],
 		Slot:                         b.slot,
@@ -117,7 +117,7 @@ func (b *BeaconState) toProtoNoLock() interface{} {
 		}
 	}
 
-	return &ethpb.BeaconStateMerge{
+	return &ethpb.BeaconStateBellatrix{
 		GenesisTime:                  b.genesisTimeInternal(),
 		GenesisValidatorsRoot:        gvr[:],
 		Slot:                         b.slotInternal(),
@@ -201,8 +201,8 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
 
 // ProtobufBeaconState transforms an input into beacon state Merge in the form of protobuf.
 // Error is returned if the input is not type protobuf beacon state.
-func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateMerge, error) {
-	pbState, ok := s.(*ethpb.BeaconStateMerge)
+func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateBellatrix, error) {
+	pbState, ok := s.(*ethpb.BeaconStateBellatrix)
 	if !ok {
 		return nil, errors.New("input is not type pb.BeaconStateMerge")
 	}

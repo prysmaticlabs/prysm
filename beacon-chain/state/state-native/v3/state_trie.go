@@ -24,13 +24,13 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconStateMerge) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateMerge))
+func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf fields
 // and sets them as fields of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -52,7 +52,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
 
-	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	b := &BeaconState{
 		genesisTime:                  st.GenesisTime,
 		genesisValidatorsRoot:        bytesutil.ToBytes32(st.GenesisValidatorsRoot),
@@ -117,7 +117,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 }
 
 func Initialize() (*BeaconState, error) {
-	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	sRoots := customtypes.StateRoots([fieldparams.StateRootsLength][32]byte{})
 	bRoots := customtypes.BlockRoots([fieldparams.BlockRootsLength][32]byte{})
 	mixes := customtypes.RandaoMixes([fieldparams.RandaoMixesLength][32]byte{})
@@ -166,7 +166,7 @@ func Initialize() (*BeaconState, error) {
 func (b *BeaconState) Copy() state.BeaconState {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 
 	dst := &BeaconState{
 		// Primitive types, safe to copy.
@@ -292,7 +292,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := stateutil.Merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateMergeFieldCount)
+		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	}
 
 	for field := range b.dirtyFields {
@@ -305,6 +305,37 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		delete(b.dirtyFields, field)
 	}
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+}
+
+// Initializes the Merkle layers for the beacon state if they are empty.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
+	if len(b.merkleLayers) > 0 {
+		return nil
+	}
+	fieldRoots, err := computeFieldRoots(ctx, b)
+	if err != nil {
+		return err
+	}
+	layers := stateutil.Merkleize(fieldRoots)
+	b.merkleLayers = layers
+	b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+	return nil
+}
+
+// Recomputes the Merkle layers for the dirty fields in the state.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) recomputeDirtyFields(_ context.Context) error {
+	for field := range b.dirtyFields {
+		root, err := b.rootSelector(field)
+		if err != nil {
+			return err
+		}
+		b.merkleLayers[0][field] = root[:]
+		b.recomputeRoot(int(field))
+		delete(b.dirtyFields, field)
+	}
+	return nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This

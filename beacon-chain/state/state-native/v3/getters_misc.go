@@ -77,7 +77,7 @@ func (b *BeaconState) parentRoot() [32]byte {
 // is strictly meant to be used without a lock
 // internally.
 func (_ *BeaconState) Version() int {
-	return version.Merge
+	return version.Bellatrix
 }
 
 // Slot of the current beacon chain state.

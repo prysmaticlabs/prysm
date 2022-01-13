@@ -13,7 +13,7 @@ import (
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
-	headState, err := InitializeFromProto(&ethpb.BeaconStateMerge{Slot: 1})
+	headState, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{Slot: 1})
 	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
@@ -184,7 +184,7 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := InitializeFromProto(&ethpb.BeaconStateMerge{})
+			s, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{})
 			require.NoError(t, err)
 			nKey := keyCreator([]byte{'A'})
 			tt.modifyFunc(s, nKey)
