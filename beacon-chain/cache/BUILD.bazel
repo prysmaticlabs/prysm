@@ -37,7 +37,7 @@ go_library(
         "//tools:__subpackages__",
     ],
     deps = [
-        "//beacon-chain/state-native:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
         "//beacon-chain/state/v3:go_default_library",
@@ -80,7 +80,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state-native:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
         "//beacon-chain/state/v3:go_default_library",

@@ -140,12 +140,12 @@
       "validator/.*": ""
     },
     "exclude_files": {
-      "beacon-chain/state-native/v1/generated.ssz.go": "Exclude generated SSZ file",
-      "beacon-chain/state-native/v2/generated.ssz.go": "Exclude generated SSZ file",
-      "beacon-chain/state-native/v3/generated.ssz.go": "Exclude generated SSZ file",
-      "beacon-chain/state-proto/v1/generated.ssz.go": "Exclude generated SSZ file",
-      "beacon-chain/state-proto/v2/generated.ssz.go": "Exclude generated SSZ file",
-      "beacon-chain/state-proto/v3/generated.ssz.go": "Exclude generated SSZ file"
+      "beacon-chain/state/v1/generated.ssz.go": "Exclude generated SSZ file",
+      "beacon-chain/state/v2/generated.ssz.go": "Exclude generated SSZ file",
+      "beacon-chain/state/v3/generated.ssz.go": "Exclude generated SSZ file",
+      "beacon-chain/state/state-native/v1/generated.ssz.go": "Exclude generated SSZ file",
+      "beacon-chain/state/state-native/v2/generated.ssz.go": "Exclude generated SSZ file",
+      "beacon-chain/state/state-native/v3/generated.ssz.go": "Exclude generated SSZ file"
     }
   },
   "properpermissions": {

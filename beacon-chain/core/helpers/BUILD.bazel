@@ -39,7 +39,7 @@ go_library(
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/time:go_default_library",
-        "//beacon-chain/state-native:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
         "//container/slice:go_default_library",
         "//container/trie:go_default_library",
@@ -79,7 +79,7 @@ go_test(
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/time:go_default_library",
-        "//beacon-chain/state-native:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
         "//config/features:go_default_library",

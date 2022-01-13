@@ -28,7 +28,7 @@ go_library(
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/powchain/types:go_default_library",
-        "//beacon-chain/state-native:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//config/params:go_default_library",
