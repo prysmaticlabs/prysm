@@ -6,19 +6,137 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
-func MockAggregationSlotSignRequest() *AggregationSlotSignRequest {
-	forkInfoData := MockForkInfo()
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////// Mock Requests //////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
-	AggregationSlotData := &AggregationSlot{Slot: "0"}
-	// remember to replace signing root with hex encoding remove 0x
-	web3SignerRequest := &AggregationSlotSignRequest{
-		Type:            "foo",
-		ForkInfo:        forkInfoData,
+// MockAggregationSlotSignRequest is a mock implementation of the AggregationSlotSignRequest.
+func MockAggregationSlotSignRequest() *AggregationSlotSignRequest {
+	return &AggregationSlotSignRequest{
+		Type:            "AGGREGATION_SLOT",
+		ForkInfo:        MockForkInfo(),
 		SigningRoot:     hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		AggregationSlot: AggregationSlotData,
+		AggregationSlot: &AggregationSlot{Slot: "0"},
 	}
-	return web3SignerRequest
 }
+
+// MockAggregateAndProofSignRequest is a mock implementation of the AggregateAndProofSignRequest.
+func MockAggregateAndProofSignRequest() *AggregateAndProofSignRequest {
+	return &AggregateAndProofSignRequest{
+		Type:        "AGGREGATE_AND_PROOF",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		AggregateAndProof: &AggregateAndProof{
+			AggregatorIndex: "0",
+			Aggregate:       MockAttestation(),
+			SelectionProof:  hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
+		},
+	}
+}
+
+// MockAttestationSignRequest is a mock implementation of the AttestationSignRequest.
+func MockAttestationSignRequest() *AttestationSignRequest {
+	return &AttestationSignRequest{
+		Type:        "ATTESTATION",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		Attestation: MockAttestation().Data,
+	}
+}
+
+// MockBlockSignRequest is a mock implementation of the BlockSignRequest.
+func MockBlockSignRequest() *BlockSignRequest {
+	return &BlockSignRequest{
+		Type:        "BLOCK",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		Block: &BeaconBlock{
+			Slot:          "0",
+			ProposerIndex: "0",
+			ParentRoot:    hexutil.Encode(make([]byte, fieldparams.RootLength)),
+			StateRoot:     hexutil.Encode(make([]byte, fieldparams.RootLength)),
+			Body:          MockBeaconBlockBody(),
+		},
+	}
+}
+
+// MockBlockV2AltairSignRequest is a mock implementation of the BlockV2AltairSignRequest.
+func MockBlockV2AltairSignRequest() *BlockV2AltairSignRequest {
+	return &BlockV2AltairSignRequest{
+		Type:        "BLOCK_V2",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		BeaconBlock: &BeaconBlockAltairBlockV2{
+			Version: "ALTAIR",
+			Block:   MockBeaconBlockAltair(),
+		},
+	}
+}
+
+// MockRandaoRevealSignRequest is a mock implementation of the RandaoRevealSignRequest.
+func MockRandaoRevealSignRequest() *RandaoRevealSignRequest {
+	return &RandaoRevealSignRequest{
+		Type:        "RANDAO_REVEAL",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		RandaoReveal: &RandaoReveal{
+			Epoch: "0",
+		},
+	}
+}
+
+// MockSyncCommitteeContributionAndProofSignRequest is a mock implementation of the SyncCommitteeContributionAndProofSignRequest.
+func MockSyncCommitteeContributionAndProofSignRequest() *SyncCommitteeContributionAndProofSignRequest {
+	return &SyncCommitteeContributionAndProofSignRequest{
+		Type:                 "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
+		ForkInfo:             MockForkInfo(),
+		SigningRoot:          hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		ContributionAndProof: MockContributionAndProof(),
+	}
+}
+
+// MockSyncCommitteeMessageSignRequest is a mock implementation of the SyncCommitteeMessageSignRequest.
+func MockSyncCommitteeMessageSignRequest() *SyncCommitteeMessageSignRequest {
+	return &SyncCommitteeMessageSignRequest{
+		Type:        "SYNC_COMMITTEE_MESSAGE",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SyncCommitteeMessage: &SyncCommitteeMessage{
+			BeaconBlockRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+			Slot:            "0",
+		},
+	}
+}
+
+// MockSyncCommitteeSelectionProofSignRequest is a mock implementation of the SyncCommitteeSelectionProofSignRequest.
+func MockSyncCommitteeSelectionProofSignRequest() *SyncCommitteeSelectionProofSignRequest {
+	return &SyncCommitteeSelectionProofSignRequest{
+		Type:        "SYNC_COMMITTEE_SELECTION_PROOF",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SyncAggregatorSelectionData: &SyncAggregatorSelectionData{
+			Slot:              "0",
+			SubcommitteeIndex: "0",
+		},
+	}
+}
+
+// MockVoluntaryExitSignRequest is a mock implementation of the VoluntaryExitSignRequest.
+func MockVoluntaryExitSignRequest() *VoluntaryExitSignRequest {
+	return &VoluntaryExitSignRequest{
+		Type:        "VOLUNTARY_EXIT",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		VoluntaryExit: &VoluntaryExit{
+			Epoch:          "0",
+			ValidatorIndex: "0",
+		},
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 // MockForkInfo is a mock implementation of the ForkInfo.
 func MockForkInfo() *ForkInfo {

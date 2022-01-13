@@ -293,14 +293,15 @@ func MapBeaconBlockAltair(block *ethpb.BeaconBlockAltair) (*BeaconBlockAltair, e
 		return nil, errors.Wrap(err, "could not map beacon block body for altair")
 	}
 	return &BeaconBlockAltair{
-		Slot: fmt.Sprint(block.Slot),
-		Body: body,
+		Slot:          fmt.Sprint(block.Slot),
+		ProposerIndex: fmt.Sprint(block.ProposerIndex),
 		ParentRoot: hexutil.Encode(
 			block.ParentRoot,
 		),
 		StateRoot: hexutil.Encode(
 			block.StateRoot,
 		),
+		Body: body,
 	}, nil
 }
 
