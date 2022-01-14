@@ -384,7 +384,6 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 		return nil, nil, errors.New(domainDataErr)
 	}
 
-	// TODO: I'm not sure if this is the right way to do this.
 	fork, err := forks.Fork(epoch)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not get fork on current slot: %d", epoch)
