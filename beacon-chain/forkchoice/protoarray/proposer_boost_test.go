@@ -176,7 +176,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		f.ProcessAttestation(ctx, votesFromSlot2, maliciouslyWithheldBlock, fEpoch)
 		// The attacker also had a vote it withheld from slot 1.
 		// The attacker has the more votes than the honest block now.
-		votesFromSlot1 := []uint64{0}
+		votesFromSlot1 := []uint64{2}
 		f.ProcessAttestation(ctx, votesFromSlot1, maliciouslyWithheldBlock, fEpoch)
 
 		// The honest block at slot 2, assuming it received in a timely manner, will get a boost
