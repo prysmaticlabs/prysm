@@ -145,7 +145,7 @@ message BeaconBlockBodyBellatrix {
   // Sync aggregate object to track sync committee votes for light client support. 
   v1.SyncAggregate sync_aggregate = 9;
 
-  // Execution payload: the embedded execution payload of the block [New in Merge]
+  // Execution payload: the embedded execution payload of the block [New in Bellatrix]
   v2.ExecutionPayload execution_payload = 10;
 }
 

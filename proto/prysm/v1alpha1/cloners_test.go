@@ -325,7 +325,7 @@ func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("CopySignedBeaconBlockBellatrix() = %v, want %v", got, sbb)
 	}
-	assert.NotEmpty(t, sbb, "Copied signed beacon block Merge has empty fields")
+	assert.NotEmpty(t, sbb, "Copied signed beacon block Bellatrix has empty fields")
 }
 
 func TestCopyBeaconBlockBellatrix(t *testing.T) {
@@ -335,7 +335,7 @@ func TestCopyBeaconBlockBellatrix(t *testing.T) {
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("CopyBeaconBlockBellatrix() = %v, want %v", got, b)
 	}
-	assert.NotEmpty(t, b, "Copied beacon block Merge has empty fields")
+	assert.NotEmpty(t, b, "Copied beacon block Bellatrix has empty fields")
 }
 
 func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
@@ -345,7 +345,7 @@ func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("CopyBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
 	}
-	assert.NotEmpty(t, bb, "Copied beacon block body Merge has empty fields")
+	assert.NotEmpty(t, bb, "Copied beacon block body Bellatrix has empty fields")
 }
 
 func bytes() []byte {
