@@ -48,7 +48,6 @@ go_test(
         ":go_default_library",
         "//config/params:go_default_library",
         "//testing/endtoend/params:go_default_library",
-        "//testing/endtoend/types:go_default_library",
         "//testing/require:go_default_library",
     ],
 )
