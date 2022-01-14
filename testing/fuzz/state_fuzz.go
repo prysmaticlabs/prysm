@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	stateutil "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -42,7 +43,7 @@ func BeaconStateFuzz(input []byte) {
 	validateStateHTR(s)
 }
 
-func validateStateHTR(s *v1.BeaconState) {
+func validateStateHTR(s state.BeaconState) {
 	rawState, ok := s.InnerStateUnsafe().(*ethpb.BeaconState)
 	if !ok {
 		panic("non valid type assertion")
