@@ -52,7 +52,6 @@ type ReadOnlyBeaconState interface {
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int
-	LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
@@ -74,7 +73,6 @@ type WriteOnlyBeaconState interface {
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
-	SetLatestExecutionPayloadHeader(payload *ethpb.ExecutionPayloadHeader) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
@@ -223,4 +221,6 @@ type FutureForkStub interface {
 	SetCurrentParticipationBits(val []byte) error
 	NextSyncCommittee() (*ethpb.SyncCommittee, error)
 	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
+	LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
+	SetLatestExecutionPayloadHeader(payload *ethpb.ExecutionPayloadHeader) error
 }

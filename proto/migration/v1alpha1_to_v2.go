@@ -2,7 +2,7 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -36,7 +36,7 @@ func AltairToV1Alpha1SignedBlock(altairBlk *ethpbv2.SignedBeaconBlockAltair) (*e
 	return v1alpha1Block, nil
 }
 
-func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconStateV2, error) {
+func BeaconStateAltairToV2(altairState state.BeaconStateAltair) (*ethpbv2.BeaconStateV2, error) {
 	sourceFork := altairState.Fork()
 	sourceLatestBlockHeader := altairState.LatestBlockHeader()
 	sourceEth1Data := altairState.Eth1Data()
