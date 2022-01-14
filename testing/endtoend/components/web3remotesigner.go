@@ -218,6 +218,7 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 		// double quotes. As such, we are using a template to build the yaml instead of
 		// yaml.Marshal().
 		// See: https://github.com/go-yaml/yaml/issues/556
+		// See: https://github.com/ConsenSys/web3signer/issues/485
 		b := []byte(fmt.Sprintf(keystoreYamlFormat, rkf.Type, rkf.KeyType, rkf.PrivateKey))
 		if err := os.WriteFile(path.Join(keystorePath, fmt.Sprintf("key-0x%s.yaml", hex.EncodeToString(pub[i].Marshal()))), b, 0600); err != nil {
 			return err
