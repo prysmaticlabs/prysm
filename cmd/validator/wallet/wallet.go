@@ -30,6 +30,10 @@ var Commands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
+
+				flags.Web3SignerURLFlag,
+				flags.Web3SignerPublicValidatorKeysFlag,
+
 				flags.WalletPasswordFileFlag,
 				flags.Mnemonic25thWordFileFlag,
 				flags.SkipMnemonic25thWordCheckFlag,
@@ -63,6 +67,10 @@ var Commands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
+
+				flags.Web3SignerURLFlag,
+				flags.Web3SignerPublicValidatorKeysFlag,
+
 				features.Mainnet,
 				features.PyrmontTestnet,
 				features.PraterTestnet,

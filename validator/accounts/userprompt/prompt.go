@@ -148,7 +148,7 @@ func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, e
 // InputWeb3SignerConfig via the cli.
 func InputWeb3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, error) {
 	signerURL := cliCtx.String(flags.Web3SignerURLFlag.Name)
-	validatorKeysOptionValue := cliCtx.String(flags.Web3SignerExternalPublicValidatorKeysFlag.Name)
+	validatorKeysOptionValue := cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name)
 	log.Info("Input desired configuration")
 	var err error
 	if signerURL == "" {
