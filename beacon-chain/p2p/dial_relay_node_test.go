@@ -29,8 +29,8 @@ func TestDialRelayNode_InvalidPeerString(t *testing.T) {
 
 func TestDialRelayNode_OK(t *testing.T) {
 	ctx := context.Background()
-	relay := bh.NewBlankHost(swarmt.GenSwarm(t, ctx))
-	host := bh.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	relay := bh.NewBlankHost(swarmt.GenSwarm(t))
+	host := bh.NewBlankHost(swarmt.GenSwarm(t))
 	relayAddr := fmt.Sprintf("%s/p2p/%s", relay.Addrs()[0], relay.ID().Pretty())
 
 	assert.NoError(t, dialRelayNode(ctx, host, relayAddr), "Unexpected error when dialing relay node")
