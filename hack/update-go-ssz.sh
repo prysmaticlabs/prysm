@@ -4,7 +4,7 @@
 # Script to copy ssz.go files from bazel build folder to appropriate location.
 # Bazel builds to bazel-bin/... folder, script copies them back to original folder where target is.
 
-bazel query 'kind(ssz_gen_marshal, //proto/...) union kind(ssz_gen_marshal, //testing/fuzz/...)' | xargs bazel build
+bazel query 'kind(ssz_gen_marshal, //proto/...) union kind(ssz_gen_marshal, //testing/fuzz/...)  union kind(ssz_gen_marshal, //beacon-chain/state/...)' | xargs bazel build
 
 # Get locations of proto ssz.go files.
 file_list=()

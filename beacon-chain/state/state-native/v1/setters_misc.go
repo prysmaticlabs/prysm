@@ -7,6 +7,7 @@ import (
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -44,7 +45,7 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.GenesisTime = val
+	b.genesisTime = val
 	b.markFieldAsDirty(genesisTime)
 	return nil
 }
@@ -54,29 +55,23 @@ func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.GenesisValidatorsRoot = val
+	b.genesisValidatorsRoot = bytesutil.ToBytes32(val)
 	b.markFieldAsDirty(genesisValidatorRoot)
 	return nil
 }
 
 // SetSlot for the beacon state.
 func (b *BeaconState) SetSlot(val types.Slot) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Slot = val
+	b.slot = val
 	b.markFieldAsDirty(slot)
 	return nil
 }
 
 // SetFork version for the beacon chain.
 func (b *BeaconState) SetFork(val *ethpb.Fork) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -84,7 +79,7 @@ func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 	if !ok {
 		return errors.New("proto.Clone did not return a fork proto")
 	}
-	b.state.Fork = fk
+	b.fork = fk
 	b.markFieldAsDirty(fork)
 	return nil
 }
@@ -92,16 +87,17 @@ func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 // SetHistoricalRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[historicalRoots].MinusRef()
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
-	b.state.HistoricalRoots = val
+	roots := make([][32]byte, len(val))
+	for i, r := range val {
+		roots[i] = bytesutil.ToBytes32(r)
+	}
+	b.historicalRoots = roots
 	b.markFieldAsDirty(historicalRoots)
 	return nil
 }
@@ -109,21 +105,18 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 // AppendHistoricalRoots for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	roots := b.state.HistoricalRoots
+	roots := b.historicalRoots
 	if b.sharedFieldReferences[historicalRoots].Refs() > 1 {
-		roots = make([][]byte, len(b.state.HistoricalRoots))
-		copy(roots, b.state.HistoricalRoots)
+		roots = make([][32]byte, len(b.historicalRoots))
+		copy(roots, b.historicalRoots)
 		b.sharedFieldReferences[historicalRoots].MinusRef()
 		b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 	}
 
-	b.state.HistoricalRoots = append(roots, root[:])
+	b.historicalRoots = append(roots, root)
 	b.markFieldAsDirty(historicalRoots)
 	return nil
 }

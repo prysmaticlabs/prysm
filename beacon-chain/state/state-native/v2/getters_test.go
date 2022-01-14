@@ -30,8 +30,9 @@ func TestBeaconState_SlotDataRace(t *testing.T) {
 	wg.Wait()
 }
 
-func TestNilState_NoPanic(t *testing.T) {
-	var st *BeaconState
+func TestInitializedState_NoPanic(t *testing.T) {
+	st, err := Initialize()
+	require.NoError(t, err)
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Method panicked when it was not supposed to: %v\n%v\n", r, string(debug.Stack()))
@@ -47,7 +48,7 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.LatestBlockHeader()
 	_ = st.ParentRoot()
 	_ = st.BlockRoots()
-	_, err := st.BlockRootAtIndex(0)
+	_, err = st.BlockRootAtIndex(0)
 	_ = err
 	_ = st.StateRoots()
 	_ = st.HistoricalRoots()
@@ -106,7 +107,7 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 	}{
 		{
 			name: "retrieve validator",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
+			modifyFunc: func(b *BeaconState, key [fieldparams.BLSPubkeyLength]byte) {
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
 			},
 			exists:      true,
