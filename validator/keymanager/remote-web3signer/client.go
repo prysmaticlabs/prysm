@@ -12,6 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
@@ -75,7 +76,7 @@ func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequ
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
-func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][48]byte, error) {
+func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	resp, err := client.doRequest(http.MethodGet, url, nil /* no body needed on get request */)
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][48]byt
 	if err := client.unmarshalResponse(resp.Body, &publicKeys); err != nil {
 		return nil, err
 	}
-	decodedKeys := make([][48]byte, len(publicKeys))
+	decodedKeys := make([][fieldparams.BLSPubkeyLength]byte, len(publicKeys))
 	var errorKeyPositions string
 	for i, value := range publicKeys {
 		decodedKey, err := hexutil.Decode(value)
@@ -135,7 +136,7 @@ func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) 
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
 		return nil, errors.Wrap(err, "internal Web3Signer server error")
-	} else if resp.StatusCode == 400 {
+	} else if resp.StatusCode == http.StatusBadRequest {
 		return nil, errors.Wrap(err, "bad request format")
 	}
 	return resp, err
