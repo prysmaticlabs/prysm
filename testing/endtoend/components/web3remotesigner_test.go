@@ -34,7 +34,7 @@ func TestWeb3RemoteSigner_StartsAndReturnsPublicKeys(t *testing.T) {
 		break
 	}
 
-	time.Sleep(10 *time.Second)
+	time.Sleep(10 * time.Second)
 
 	keys, err := wsc.PublicKeys(ctx)
 	require.NoError(t, err)
