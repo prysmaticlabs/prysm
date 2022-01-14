@@ -12,6 +12,13 @@ import (
 
 type Option func(s *Service) error
 
+func WithUseNativeState(useNativeState bool) Option {
+	return func(s *Service) error {
+		s.cfg.useNativeState = useNativeState
+		return nil
+	}
+}
+
 // WithHttpEndpoints deduplicates and parses http endpoints for the powchain service to use,
 // and sets the "current" endpoint that will be used first.
 func WithHttpEndpoints(endpointStrings []string) Option {

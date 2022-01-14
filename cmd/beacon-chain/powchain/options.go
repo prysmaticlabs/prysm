@@ -13,6 +13,7 @@ var log = logrus.WithField("prefix", "cmd-powchain")
 func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	endpoints := parseHttpEndpoints(c)
 	opts := []powchain.Option{
+		powchain.WithUseNativeState(c.Bool(flags.UseNativeState.Name)),
 		powchain.WithHttpEndpoints(endpoints),
 		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
 	}

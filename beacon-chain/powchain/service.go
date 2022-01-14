@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -121,6 +122,7 @@ type RPCClient interface {
 
 // config defines a config struct for dependencies into the service.
 type config struct {
+	useNativeState          bool
 	depositContractAddr     common.Address
 	beaconDB                db.HeadAccessDatabase
 	depositCache            *depositcache.DepositCache
@@ -267,7 +269,11 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &v1.BeaconState{}
+	if s.cfg.useNativeState {
+		s.preGenesisState = &v1native.BeaconState{}
+	} else {
+		s.preGenesisState = &v1.BeaconState{}
+	}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.

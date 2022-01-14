@@ -856,11 +856,12 @@ func (b *BeaconNode) registerDeterminsticGenesisService() error {
 
 	if genesisValidators > 0 || genesisStatePath != "" {
 		svc := interopcoldstart.NewService(b.ctx, &interopcoldstart.Config{
-			GenesisTime:   genesisTime,
-			NumValidators: genesisValidators,
-			BeaconDB:      b.db,
-			DepositCache:  b.depositCache,
-			GenesisPath:   genesisStatePath,
+			UseNativeState: b.cliCtx.Bool(flags.UseNativeState.Name),
+			GenesisTime:    genesisTime,
+			NumValidators:  genesisValidators,
+			BeaconDB:       b.db,
+			DepositCache:   b.depositCache,
+			GenesisPath:    genesisStatePath,
 		})
 
 		// Register genesis state as start-up state when interop mode.

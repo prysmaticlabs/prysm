@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v1native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime"
@@ -36,11 +37,12 @@ type Service struct {
 
 // Config options for the interop service.
 type Config struct {
-	GenesisTime   uint64
-	NumValidators uint64
-	BeaconDB      db.HeadAccessDatabase
-	DepositCache  *depositcache.DepositCache
-	GenesisPath   string
+	UseNativeState bool
+	GenesisTime    uint64
+	NumValidators  uint64
+	BeaconDB       db.HeadAccessDatabase
+	DepositCache   *depositcache.DepositCache
+	GenesisPath    string
 }
 
 // NewService is an interoperability testing service to inject a deterministically generated genesis state
@@ -131,7 +133,10 @@ func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState returns an empty beacon state.
-func (_ *Service) PreGenesisState() state.BeaconState {
+func (s *Service) PreGenesisState() state.BeaconState {
+	if s.cfg.UseNativeState {
+		return &v1native.BeaconState{}
+	}
 	return &v1.BeaconState{}
 }
 
