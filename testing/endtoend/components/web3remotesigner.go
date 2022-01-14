@@ -39,7 +39,7 @@ type Web3RemoteSigner struct {
 	started chan struct{}
 }
 
-func NewWeb3RemoteSigner(config *e2etypes.E2EConfig) *Web3RemoteSigner {
+func NewWeb3RemoteSigner() *Web3RemoteSigner {
 	return &Web3RemoteSigner{
 		started: make(chan struct{}, 1),
 	}

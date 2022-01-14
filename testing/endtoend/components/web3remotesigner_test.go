@@ -14,7 +14,7 @@ import (
 
 func TestWeb3RemoteSigner_StartsAndReturnsPublicKeys(t *testing.T) {
 	require.NoError(t, e2eparams.Init(0))
-	wsc := components.NewWeb3RemoteSigner(&e2etypes.E2EConfig{})
+	wsc := components.NewWeb3RemoteSigner()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

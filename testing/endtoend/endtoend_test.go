@@ -119,7 +119,7 @@ func (r *testRunner) run() {
 	// Web3 remote signer.
 	var web3RemoteSigner *components.Web3RemoteSigner
 	if config.UseWeb3RemoteSigner {
-		web3RemoteSigner = components.NewWeb3RemoteSigner(config)
+		web3RemoteSigner = components.NewWeb3RemoteSigner()
 		g.Go(func() error {
 			if err := web3RemoteSigner.Start(ctx); err != nil {
 				return errors.Wrap(err, "failed to start web3 remote signer")
