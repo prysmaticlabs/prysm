@@ -31,13 +31,13 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 	require.NoError(t, err)
 	got := s.BlockRoots()
 	want := make([][]byte, fieldparams.BlockRootsLength)
-	for i, _ := range want {
+	for i := range want {
 		want[i] = make([]byte, 32)
 	}
 	require.DeepEqual(t, want, got)
 
 	want = make([][]byte, fieldparams.BlockRootsLength)
-	for i, _ := range want {
+	for i := range want {
 		if i == 0 {
 			want[i] = bytesutil.PadTo([]byte{'a'}, 32)
 		} else {
