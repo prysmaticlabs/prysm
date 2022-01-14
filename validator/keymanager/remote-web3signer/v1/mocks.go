@@ -26,11 +26,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			Object: &validatorpb.SignRequest_Slot{
 				Slot: 0,
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	case "AGGREGATE_AND_PROOF":
 		return &validatorpb.SignRequest{
@@ -44,11 +40,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					SelectionProof:  make([]byte, fieldparams.BLSSignatureLength),
 				},
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	case "ATTESTATION":
 		return &validatorpb.SignRequest{
@@ -58,11 +50,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			Object: &validatorpb.SignRequest_AttestationData{
 				AttestationData: util.NewAttestation().Data,
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	case "BLOCK":
 		return &validatorpb.SignRequest{
@@ -147,11 +135,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					},
 				},
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	case "BLOCK_V2":
 		return &validatorpb.SignRequest{
@@ -240,11 +224,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					},
 				},
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	case "RANDAO_REVEAL":
 		return &validatorpb.SignRequest{
@@ -254,11 +234,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			Object: &validatorpb.SignRequest_Epoch{
 				Epoch: 0,
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	case "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF":
 		return &validatorpb.SignRequest{
@@ -278,11 +254,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 				},
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	case "SYNC_COMMITTEE_MESSAGE":
 		return &validatorpb.SignRequest{
@@ -290,16 +262,9 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			SigningRoot:     make([]byte, fieldparams.RootLength),
 			SignatureDomain: make([]byte, 4),
 			Object: &validatorpb.SignRequest_SyncMessageBlockRoot{
-				SyncMessageBlockRoot: &validatorpb.SyncMessageBlockRoot{
-					Slot:                 0,
-					SyncMessageBlockRoot: make([]byte, fieldparams.RootLength),
-				},
+				SyncMessageBlockRoot: make([]byte, fieldparams.RootLength),
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	case "SYNC_COMMITTEE_SELECTION_PROOF":
 		return &validatorpb.SignRequest{
@@ -312,11 +277,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					SubcommitteeIndex: 0,
 				},
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	case "VOLUNTARY_EXIT":
 		return &validatorpb.SignRequest{
@@ -329,11 +290,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					ValidatorIndex: 0,
 				},
 			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
+			SigningSlot: 0,
 		}
 	default:
 		fmt.Printf("Web3signer sign request type: %v  not found", t)

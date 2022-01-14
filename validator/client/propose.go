@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -67,7 +66,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
 		if v.emitAccountMetrics {
@@ -99,7 +98,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 	}
 
 	// Sign returned block from beacon node
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wrapper.WrappedPhase0BeaconBlock(b))
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, slot, wrapper.WrappedPhase0BeaconBlock(b))
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -177,7 +176,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
 		if v.emitAccountMetrics {
@@ -225,7 +224,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		}
 		return
 	}
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wb)
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, slot, wb)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -342,7 +341,7 @@ func ProposeExit(
 }
 
 // Sign randao reveal with randao domain and private key.
-func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch) ([]byte, error) {
+func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, slot types.Slot) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
@@ -357,16 +356,12 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 	if err != nil {
 		return nil, err
 	}
-	fork, err := forks.Fork(epoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", epoch)
-	}
 	randaoReveal, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Epoch{Epoch: epoch},
-		Fork:            fork,
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err
@@ -375,7 +370,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, b block.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, slot types.Slot, b block.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, domainDataErr)
@@ -384,10 +379,6 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 		return nil, nil, errors.New(domainDataErr)
 	}
 
-	fork, err := forks.Fork(epoch)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not get fork on current slot: %d", epoch)
-	}
 	var sig bls.Signature
 	switch b.Version() {
 	case version.Altair:
@@ -404,7 +395,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 			SigningRoot:     blockRoot[:],
 			SignatureDomain: domain.SignatureDomain,
 			Object:          &validatorpb.SignRequest_BlockV2{BlockV2: block},
-			Fork:            fork,
+			SigningSlot:     slot,
 		})
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")
@@ -424,7 +415,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 			SigningRoot:     blockRoot[:],
 			SignatureDomain: domain.SignatureDomain,
 			Object:          &validatorpb.SignRequest_Block{Block: block},
-			Fork:            fork,
+			SigningSlot:     slot,
 		})
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")

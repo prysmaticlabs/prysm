@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -130,16 +129,12 @@ func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [fiel
 	if err != nil {
 		return nil, err
 	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
-	}
 	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Slot{Slot: slot},
-		Fork:            fork,
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err
@@ -188,16 +183,12 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 	if err != nil {
 		return nil, err
 	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
-	}
 	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
 		Object:          &validatorpb.SignRequest_AggregateAttestationAndProof{AggregateAttestationAndProof: agg},
-		Fork:            fork,
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err

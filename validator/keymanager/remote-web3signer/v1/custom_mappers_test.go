@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -424,7 +425,7 @@ func TestMapContributionAndProof(t *testing.T) {
 
 func TestMapForkInfo(t *testing.T) {
 	type args struct {
-		from                  *ethpb.Fork
+		slot                  types.Slot
 		genesisValidatorsRoot []byte
 	}
 
@@ -437,11 +438,7 @@ func TestMapForkInfo(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				from: &ethpb.Fork{
-					PreviousVersion: make([]byte, 4),
-					CurrentVersion:  make([]byte, 4),
-					Epoch:           0,
-				},
+				slot:                  0,
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
 			want:    MockForkInfo(),
@@ -450,7 +447,7 @@ func TestMapForkInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapForkInfo(tt.args.from, tt.args.genesisValidatorsRoot)
+			got, err := MapForkInfo(tt.args.slot, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapForkInfo() error = %v, wantErr %v", err, tt.wantErr)
 				return

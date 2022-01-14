@@ -14,7 +14,7 @@ func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot
 	if beaconBlock == nil {
 		return nil, errors.New("invalid sign request: BeaconBlock is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisVali
 	if aggregationSlot == nil {
 		return nil, errors.New("invalid sign request: Slot is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisVa
 	if aggregateAttestationAndProof == nil {
 		return nil, errors.New("invalid sign request: AggregateAndProof is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidato
 	if attestation == nil {
 		return nil, errors.New("invalid sign request: Attestation is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValida
 	if beaconBlockV2 == nil {
 		return nil, errors.New("invalid sign request: BeaconBlock is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func GetRandaoRevealSignRequest(request *validatorpb.SignRequest, genesisValidat
 	if randaoReveal == nil {
 		return nil, errors.New("invalid sign request: Epoch is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func GetVoluntaryExitSignRequest(request *validatorpb.SignRequest, genesisValida
 	if voluntaryExit == nil {
 		return nil, errors.New("invalid sign request: Exit is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesi
 	if syncCommitteeMessage == nil || syncCommitteeMessage.SyncMessageBlockRoot == nil {
 		return nil, errors.New("invalid sign request: SyncCommitteeMessage is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -181,8 +181,8 @@ func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesi
 		ForkInfo:    fork,
 		SigningRoot: hexutil.Encode(request.SigningRoot),
 		SyncCommitteeMessage: &SyncCommitteeMessage{
-			BeaconBlockRoot: hexutil.Encode(syncCommitteeMessage.SyncMessageBlockRoot.SyncMessageBlockRoot),
-			Slot:            fmt.Sprint(syncCommitteeMessage.SyncMessageBlockRoot.Slot),
+			BeaconBlockRoot: hexutil.Encode(syncCommitteeMessage.SyncMessageBlockRoot),
+			Slot:            fmt.Sprint(request.SigningSlot),
 		},
 	}, nil
 }
@@ -193,7 +193,7 @@ func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest,
 	if syncCommitteeSelectionProof == nil {
 		return nil, errors.New("invalid sign request: SyncCommitteeSelectionProof is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 	if syncCommitteeContributionAndProof == nil {
 		return nil, errors.New("invalid sign request: SyncCommitteeContributionAndProof is nil")
 	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}

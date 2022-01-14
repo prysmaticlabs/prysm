@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/network/forks"
-
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -53,22 +51,15 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not get sync committee message signing root")
 		return
 	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		log.WithError(err).Errorf("Could not get fork on current slot: %d", slot)
-		return
-	}
+
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
 		Object: &validatorpb.SignRequest_SyncMessageBlockRoot{
-			SyncMessageBlockRoot: &validatorpb.SyncMessageBlockRoot{
-				Slot:                 slot,
-				SyncMessageBlockRoot: res.Root,
-			},
+			SyncMessageBlockRoot: res.Root,
 		},
-		Fork: fork,
+		SigningSlot: slot,
 	})
 	if err != nil {
 		log.WithError(err).Error("Could not sign sync committee message")
@@ -216,16 +207,12 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldpara
 	if err != nil {
 		return nil, err
 	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
-	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_SyncAggregatorSelectionData{SyncAggregatorSelectionData: data},
-		Fork:            fork,
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err
@@ -243,16 +230,12 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldp
 	if err != nil {
 		return nil, err
 	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
-	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
 		Object:          &validatorpb.SignRequest_ContributionAndProof{ContributionAndProof: c},
-		Fork:            fork,
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err
