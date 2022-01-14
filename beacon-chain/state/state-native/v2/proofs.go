@@ -68,7 +68,7 @@ func (b *BeaconState) FinalizedRootProof(ctx context.Context) ([][]byte, error) 
 	if err := b.recomputeDirtyFields(ctx); err != nil {
 		return nil, err
 	}
-	cpt := b.finalizedCheckpoint
+	cpt := b.state.FinalizedCheckpoint
 	// The epoch field of a finalized checkpoint is the neighbor
 	// index of the finalized root field in its Merkle tree representation
 	// of the checkpoint. This neighbor is the first element added to the proof.

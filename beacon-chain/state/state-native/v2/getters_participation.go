@@ -2,40 +2,52 @@ package v2
 
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.
 func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
-	if b.currentEpochParticipation == nil {
+	if !b.hasInnerState() {
+		return nil, nil
+	}
+	if b.state.CurrentEpochParticipation == nil {
 		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.currentEpochParticipationInternal(), nil
+	return b.currentEpochParticipation(), nil
 }
 
 // PreviousEpochParticipation corresponding to participation bits on the beacon chain.
 func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
-	if b.previousEpochParticipation == nil {
+	if !b.hasInnerState() {
+		return nil, nil
+	}
+	if b.state.PreviousEpochParticipation == nil {
 		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.previousEpochParticipationInternal(), nil
+	return b.previousEpochParticipation(), nil
 }
 
-// currentEpochParticipationInternal corresponding to participation bits on the beacon chain.
+// currentEpochParticipation corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochParticipationInternal() []byte {
-	tmp := make([]byte, len(b.currentEpochParticipation))
-	copy(tmp, b.currentEpochParticipation)
+func (b *BeaconState) currentEpochParticipation() []byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	tmp := make([]byte, len(b.state.CurrentEpochParticipation))
+	copy(tmp, b.state.CurrentEpochParticipation)
 	return tmp
 }
 
-// previousEpochParticipationInternal corresponding to participation bits on the beacon chain.
+// previousEpochParticipation corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochParticipationInternal() []byte {
-	tmp := make([]byte, len(b.previousEpochParticipation))
-	copy(tmp, b.previousEpochParticipation)
+func (b *BeaconState) previousEpochParticipation() []byte {
+	if !b.hasInnerState() {
+		return nil
+	}
+	tmp := make([]byte, len(b.state.PreviousEpochParticipation))
+	copy(tmp, b.state.PreviousEpochParticipation)
 	return tmp
 }
