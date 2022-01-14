@@ -234,7 +234,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldpara
 }
 
 // This returns the signature of validator signing over sync committee contribution and proof object.
-func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *ethpb.ContributionAndProof, slot types.Slot) ([]byte, error) {
+func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, c *ethpb.ContributionAndProof, slot types.Slot) ([]byte, error) {
 	d, err := v.domainData(ctx, slots.ToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
 	if err != nil {
 		return nil, err
