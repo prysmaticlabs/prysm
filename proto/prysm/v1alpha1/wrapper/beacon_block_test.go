@@ -453,7 +453,7 @@ func TestBellatrixSignedBeaconBlock_PbPhase0Block(t *testing.T) {
 	}
 }
 
-func TestBellatrixSignedBeaconBlock_PbMergeBlock(t *testing.T) {
+func TestBellatrixSignedBeaconBlock_PbBellatrixBlock(t *testing.T) {
 	sb := &ethpb.SignedBeaconBlockBellatrix{
 		Block:     &ethpb.BeaconBlockBellatrix{Slot: 66},
 		Signature: []byte{0x11, 0x22},
@@ -461,7 +461,7 @@ func TestBellatrixSignedBeaconBlock_PbMergeBlock(t *testing.T) {
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
-	got, err := wsb.PbMergeBlock()
+	got, err := wsb.PbBellatrixBlock()
 	assert.NoError(t, err)
 	assert.Equal(t, sb, got)
 }

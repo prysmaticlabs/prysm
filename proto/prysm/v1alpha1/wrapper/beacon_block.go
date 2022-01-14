@@ -109,8 +109,8 @@ func (_ Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, 
 	return nil, errors.New("unsupported altair block")
 }
 
-// PbMergeBlock is a stub.
-func (_ Phase0SignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+// PbBellatrixBlock is a stub.
+func (_ Phase0SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return nil, errors.New("unsupported merge block")
 }
 
@@ -381,8 +381,8 @@ func (_ altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 	return nil, ErrUnsupportedPhase0Block
 }
 
-// PbMergeBlock is a stub.
-func (_ altairSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+// PbBellatrixBlock is a stub.
+func (_ altairSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return nil, errors.New("unsupported merge block")
 }
 
@@ -638,8 +638,8 @@ func (w mergeSignedBeaconBlock) Proto() proto.Message {
 	return w.b
 }
 
-// PbMergeBlock returns the underlying protobuf object.
-func (w mergeSignedBeaconBlock) PbMergeBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+// PbBellatrixBlock returns the underlying protobuf object.
+func (w mergeSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return w.b, nil
 }
 
