@@ -116,10 +116,26 @@ func (r *testRunner) run() {
 		return nil
 	})
 
+	// Web3 remote signer.
+	var web3RemoteSigner *components.Web3RemoteSigner
+	if config.UseWeb3RemoteSigner {
+		web3RemoteSigner = components.NewWeb3RemoteSigner(config)
+		g.Go(func() error {
+			if err := web3RemoteSigner.Start(ctx); err != nil {
+				return errors.Wrap(err, "failed to start web3 remote signer")
+			}
+			return nil
+		})
+	}
+
 	// Validator nodes.
 	validatorNodes := components.NewValidatorNodeSet(config)
 	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{beaconNodes}); err != nil {
+		comps := []e2etypes.ComponentRunner{beaconNodes}
+		if config.UseWeb3RemoteSigner {
+			comps = append(comps, web3RemoteSigner)
+		}
+		if err := helpers.ComponentsStarted(ctx, comps); err != nil {
 			return errors.Wrap(err, "validator nodes require beacon nodes to run")
 		}
 		if err := validatorNodes.Start(ctx); err != nil {

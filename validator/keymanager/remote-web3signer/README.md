@@ -1,8 +1,8 @@
-# Web3Signer
+# Web3RemoteSigner
 
-Web3Signer is a popular remote signer tool by Consensys to allow users to store validation keys outside the validation
-client and signed without the vc knowing the private keys. Web3Signer Specs are found by
-searching `Consensys' Web3Signer API specification`
+Web3RemoteSigner is a popular remote signer tool by Consensys to allow users to store validation keys outside the validation
+client and signed without the vc knowing the private keys. Web3RemoteSigner Specs are found by
+searching `Consensys' Web3RemoteSigner API specification`
 
 issue: https://github.com/prysmaticlabs/prysm/issues/9994
 
