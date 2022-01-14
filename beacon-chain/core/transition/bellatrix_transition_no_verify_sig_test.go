@@ -57,7 +57,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
-	block := util.NewBeaconBlockMerge()
+	block := util.NewBeaconBlockBellatrix()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -144,7 +144,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
-	block := util.NewBeaconBlockMerge()
+	block := util.NewBeaconBlockBellatrix()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]

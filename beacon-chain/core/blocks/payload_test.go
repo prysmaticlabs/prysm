@@ -336,7 +336,7 @@ func Test_MergeBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateMerge(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
-			blk := util.NewBeaconBlockMerge()
+			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedMergeBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
@@ -401,7 +401,7 @@ func Test_ExecutionEnabled(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateMerge(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
-			blk := util.NewBeaconBlockMerge()
+			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedMergeBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
