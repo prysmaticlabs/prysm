@@ -80,10 +80,6 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 
 // Sign signs the message by using a remote web3signer server.
 func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
-	if request.Fork == nil {
-		return nil, errors.New("invalid sign request: Fork is nil")
-	}
-
 	signRequest, err := km.getSignRequestJson(request)
 	if err != nil {
 		return nil, err
