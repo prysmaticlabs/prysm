@@ -10,7 +10,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/proto/migration",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/state/v1:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/eth/v1:go_default_library",
