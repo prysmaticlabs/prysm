@@ -123,6 +123,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.Eth1HeaderReqLimit,
 			flags.GenesisStatePath,
 			flags.MinPeersPerSubnet,
+			flags.UseNativeState,
 		},
 	},
 	{
