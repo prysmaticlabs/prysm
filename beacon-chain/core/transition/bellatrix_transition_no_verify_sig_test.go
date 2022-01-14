@@ -222,7 +222,7 @@ func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
 	*ethpb.SignedBeaconBlockBellatrix) {
 	_, altairBlk := createFullAltairBlockWithOperations(t)
 	blk := &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockMerge{
+		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:          altairBlk.Block.Slot,
 			ProposerIndex: altairBlk.Block.ProposerIndex,
 			ParentRoot:    altairBlk.Block.ParentRoot,

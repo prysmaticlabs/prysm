@@ -47,7 +47,7 @@ message BeaconBlockContainerV2 {
   oneof block {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
-    BeaconBlockMerge merge_block = 3;
+    BeaconBlockBellatrix merge_block = 3;
   }
 }
 
@@ -55,7 +55,7 @@ message SignedBeaconBlockContainerV2 {
   oneof message {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
-    BeaconBlockMerge merge_block = 3;
+    BeaconBlockBellatrix merge_block = 3;
   }
 
   // 96 byte BLS signature from the validator that produced this block.
@@ -63,7 +63,7 @@ message SignedBeaconBlockContainerV2 {
 }
 
 message SignedBeaconBlockBellatrix {
-  BeaconBlockMerge message = 1;
+  BeaconBlockBellatrix message = 1;
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -77,7 +77,7 @@ message SignedBeaconBlockAltair {
 }
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
-message BeaconBlockMerge {
+message BeaconBlockBellatrix {
   // Beacon chain slot that this block represents.
   uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 

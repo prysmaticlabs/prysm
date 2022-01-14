@@ -619,8 +619,8 @@ func genBeaconBlockBodyBellatrix() *v1alpha1.BeaconBlockBodyBellatrix {
 	}
 }
 
-func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockMerge {
-	return &v1alpha1.BeaconBlockMerge{
+func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockBellatrix {
+	return &v1alpha1.BeaconBlockBellatrix{
 		Slot:          123455,
 		ProposerIndex: 55433,
 		ParentRoot:    bytes(),

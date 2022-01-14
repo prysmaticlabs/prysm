@@ -47,7 +47,7 @@ message GenericBeaconBlock {
         BeaconBlockAltair altair = 2;
 
         // Representing a post-Bellatrix fork beacon block.
-        BeaconBlockMerge merge = 3;
+        BeaconBlockBellatrix merge = 3;
     }
 }
 
@@ -299,13 +299,13 @@ message SyncAggregate {
 
 message SignedBeaconBlockBellatrix {
     // The unsigned beacon block itself.
-    BeaconBlockMerge block = 1;
+    BeaconBlockBellatrix block = 1;
 
     // 96 byte BLS signature from the validator that produced this block.
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message BeaconBlockMerge {
+message BeaconBlockBellatrix {
     // Beacon chain slot that this block represents.
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 

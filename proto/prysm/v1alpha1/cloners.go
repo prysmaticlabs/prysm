@@ -388,12 +388,12 @@ func CopySignedBeaconBlockBellatrix(sigBlock *SignedBeaconBlockBellatrix) *Signe
 	}
 }
 
-// CopyBeaconBlockBellatrix copies the provided BeaconBlockMerge.
-func CopyBeaconBlockBellatrix(block *BeaconBlockMerge) *BeaconBlockMerge {
+// CopyBeaconBlockBellatrix copies the provided BeaconBlockBellatrix.
+func CopyBeaconBlockBellatrix(block *BeaconBlockBellatrix) *BeaconBlockBellatrix {
 	if block == nil {
 		return nil
 	}
-	return &BeaconBlockMerge{
+	return &BeaconBlockBellatrix{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),

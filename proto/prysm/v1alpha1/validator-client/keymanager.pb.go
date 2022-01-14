@@ -288,7 +288,7 @@ func (x *SignRequest) GetSyncMessageBlockRoot() []byte {
 	return nil
 }
 
-func (x *SignRequest) GetBlockV3() *v1alpha1.BeaconBlockMerge {
+func (x *SignRequest) GetBlockV3() *v1alpha1.BeaconBlockBellatrix {
 	if x, ok := x.GetObject().(*SignRequest_BlockV3); ok {
 		return x.BlockV3
 	}
@@ -347,7 +347,7 @@ type SignRequest_SyncMessageBlockRoot struct {
 }
 
 type SignRequest_BlockV3 struct {
-	BlockV3 *v1alpha1.BeaconBlockMerge `protobuf:"bytes,111,opt,name=blockV3,proto3,oneof"`
+	BlockV3 *v1alpha1.BeaconBlockBellatrix `protobuf:"bytes,111,opt,name=blockV3,proto3,oneof"`
 }
 
 func (*SignRequest_Block) isSignRequest_Object() {}
@@ -515,8 +515,8 @@ var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_rawDesc = []byte
 	0x0a, 0x17, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x5f, 0x62,
 	0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x72, 0x6f, 0x6f, 0x74, 0x18, 0x6e, 0x20, 0x01, 0x28, 0x0c, 0x48,
 	0x00, 0x52, 0x14, 0x73, 0x79, 0x6e, 0x63, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x42, 0x6c,
-	0x6f, 0x63, 0x6b, 0x52, 0x6f, 0x6f, 0x74, 0x12, 0x43, 0x0a, 0x07, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
-	0x56, 0x33, 0x18, 0x6f, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x27, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
+	0x6f, 0x63, 0x6b, 0x52, 0x6f, 0x6f, 0x74, 0x12, 0x47, 0x0a, 0x07, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
+	0x56, 0x33, 0x18, 0x6f, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
 	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
 	0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x4d, 0x65, 0x72, 0x67,
 	0x65, 0x48, 0x00, 0x52, 0x07, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x56, 0x33, 0x12, 0x4f, 0x0a, 0x0c,
@@ -598,7 +598,7 @@ var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_goTypes = []inte
 	(*v1alpha1.BeaconBlockAltair)(nil),            // 8: ethereum.eth.v1alpha1.BeaconBlockAltair
 	(*v1alpha1.SyncAggregatorSelectionData)(nil),  // 9: ethereum.eth.v1alpha1.SyncAggregatorSelectionData
 	(*v1alpha1.ContributionAndProof)(nil),         // 10: ethereum.eth.v1alpha1.ContributionAndProof
-	(*v1alpha1.BeaconBlockMerge)(nil),             // 11: ethereum.eth.v1alpha1.BeaconBlockMerge
+	(*v1alpha1.BeaconBlockBellatrix)(nil),             // 11: ethereum.eth.v1alpha1.BeaconBlockMerge
 	(*empty.Empty)(nil),                           // 12: google.protobuf.Empty
 }
 var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_depIdxs = []int32{
@@ -609,7 +609,7 @@ var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_depIdxs = []int3
 	8,  // 4: ethereum.validator.accounts.v2.SignRequest.blockV2:type_name -> ethereum.eth.v1alpha1.BeaconBlockAltair
 	9,  // 5: ethereum.validator.accounts.v2.SignRequest.sync_aggregator_selection_data:type_name -> ethereum.eth.v1alpha1.SyncAggregatorSelectionData
 	10, // 6: ethereum.validator.accounts.v2.SignRequest.contribution_and_proof:type_name -> ethereum.eth.v1alpha1.ContributionAndProof
-	11, // 7: ethereum.validator.accounts.v2.SignRequest.blockV3:type_name -> ethereum.eth.v1alpha1.BeaconBlockMerge
+	11, // 7: ethereum.validator.accounts.v2.SignRequest.blockV3:type_name -> ethereum.eth.v1alpha1.BeaconBlockBellatrix
 	0,  // 8: ethereum.validator.accounts.v2.SignResponse.status:type_name -> ethereum.validator.accounts.v2.SignResponse.Status
 	12, // 9: ethereum.validator.accounts.v2.RemoteSigner.ListValidatingPublicKeys:input_type -> google.protobuf.Empty
 	2,  // 10: ethereum.validator.accounts.v2.RemoteSigner.Sign:input_type -> ethereum.validator.accounts.v2.SignRequest

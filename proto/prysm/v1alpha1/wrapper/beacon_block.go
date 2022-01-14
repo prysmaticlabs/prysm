@@ -678,12 +678,12 @@ func (w mergeSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 
 // mergeBeaconBlock is the wrapper for the actual block.
 type mergeBeaconBlock struct {
-	b *eth.BeaconBlockMerge
+	b *eth.BeaconBlockBellatrix
 }
 
 // WrappedMergeBeaconBlock is constructor which wraps a protobuf merge object
 // with the block wrapper.
-func WrappedMergeBeaconBlock(b *eth.BeaconBlockMerge) (block.BeaconBlock, error) {
+func WrappedMergeBeaconBlock(b *eth.BeaconBlockBellatrix) (block.BeaconBlock, error) {
 	w := mergeBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped

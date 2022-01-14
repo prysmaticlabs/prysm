@@ -2935,7 +2935,7 @@ func (s *SignedBeaconBlockBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err e
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
 	if s.Block == nil {
-		s.Block = new(BeaconBlockMerge)
+		s.Block = new(BeaconBlockBellatrix)
 	}
 	offset += s.Block.SizeSSZ()
 
@@ -2984,7 +2984,7 @@ func (s *SignedBeaconBlockBellatrix) UnmarshalSSZ(buf []byte) error {
 	{
 		buf = tail[o0:]
 		if s.Block == nil {
-			s.Block = new(BeaconBlockMerge)
+			s.Block = new(BeaconBlockBellatrix)
 		}
 		if err = s.Block.UnmarshalSSZ(buf); err != nil {
 			return err
@@ -2999,7 +2999,7 @@ func (s *SignedBeaconBlockBellatrix) SizeSSZ() (size int) {
 
 	// Field (0) 'Block'
 	if s.Block == nil {
-		s.Block = new(BeaconBlockMerge)
+		s.Block = new(BeaconBlockBellatrix)
 	}
 	size += s.Block.SizeSSZ()
 
@@ -3031,13 +3031,13 @@ func (s *SignedBeaconBlockBellatrix) HashTreeRootWith(hh *ssz.Hasher) (err error
 	return
 }
 
-// MarshalSSZ ssz marshals the BeaconBlockMerge object
-func (b *BeaconBlockMerge) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the BeaconBlockBellatrix object
+func (b *BeaconBlockBellatrix) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(b)
 }
 
-// MarshalSSZTo ssz marshals the BeaconBlockMerge object to a target array
-func (b *BeaconBlockMerge) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the BeaconBlockBellatrix object to a target array
+func (b *BeaconBlockBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(84)
 
@@ -3076,8 +3076,8 @@ func (b *BeaconBlockMerge) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the BeaconBlockMerge object
-func (b *BeaconBlockMerge) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the BeaconBlockBellatrix object
+func (b *BeaconBlockBellatrix) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 84 {
@@ -3127,8 +3127,8 @@ func (b *BeaconBlockMerge) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlockMerge object
-func (b *BeaconBlockMerge) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the BeaconBlockBellatrix object
+func (b *BeaconBlockBellatrix) SizeSSZ() (size int) {
 	size = 84
 
 	// Field (4) 'Body'
@@ -3140,13 +3140,13 @@ func (b *BeaconBlockMerge) SizeSSZ() (size int) {
 	return
 }
 
-// HashTreeRoot ssz hashes the BeaconBlockMerge object
-func (b *BeaconBlockMerge) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the BeaconBlockBellatrix object
+func (b *BeaconBlockBellatrix) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(b)
 }
 
-// HashTreeRootWith ssz hashes the BeaconBlockMerge object with a hasher
-func (b *BeaconBlockMerge) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the BeaconBlockBellatrix object with a hasher
+func (b *BeaconBlockBellatrix) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Slot'

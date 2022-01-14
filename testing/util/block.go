@@ -620,15 +620,15 @@ func HydrateSignedBeaconBlockBellatrix(b *ethpb.SignedBeaconBlockBellatrix) *eth
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
-	b.Block = HydrateBeaconBlockMerge(b.Block)
+	b.Block = HydrateBeaconBlockBellatrix(b.Block)
 	return b
 }
 
-// HydrateBeaconBlockMerge hydrates a beacon block with correct field length sizes
+// HydrateBeaconBlockBellatrix hydrates a beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockMerge(b *ethpb.BeaconBlockMerge) *ethpb.BeaconBlockMerge {
+func HydrateBeaconBlockBellatrix(b *ethpb.BeaconBlockBellatrix) *ethpb.BeaconBlockBellatrix {
 	if b == nil {
-		b = &ethpb.BeaconBlockMerge{}
+		b = &ethpb.BeaconBlockBellatrix{}
 	}
 	if b.ParentRoot == nil {
 		b.ParentRoot = make([]byte, 32)
