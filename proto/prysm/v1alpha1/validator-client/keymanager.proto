@@ -79,7 +79,7 @@ message SignRequest {
         ethereum.eth.v1alpha1.BeaconBlockMerge blockV3 = 111;
     }
     reserved 4, 5; // Reserving old, deleted fields.
-    uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    optional uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
 // SignResponse returned by a RemoteSigner gRPC service.
