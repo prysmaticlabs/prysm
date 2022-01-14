@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
