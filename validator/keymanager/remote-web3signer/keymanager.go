@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
@@ -67,7 +68,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys.
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	if km.publicKeysURL != "" && len(km.providedPublicKeys) == 0 {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
 		if err != nil {
