@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,17 +23,17 @@ func (m *mockTransport) RoundTrip(*http.Request) (*http.Response, error) {
 }
 
 func getClientMockSignRequest() *SignRequest {
-	forkData := &Fork{
+	forkData := &v1.Fork{
 		PreviousVersion: "",
 		CurrentVersion:  "",
 		Epoch:           "",
 	}
-	forkInfoData := &ForkInfo{
+	forkInfoData := &v1.ForkInfo{
 		Fork:                  forkData,
 		GenesisValidatorsRoot: "",
 	}
 
-	AggregationSlotData := &AggregationSlot{Slot: ""}
+	AggregationSlotData := &v1.AggregationSlot{Slot: ""}
 	// remember to replace signing root with hex encoding remove 0x
 	web3SignerRequest := SignRequest{
 		Type:            "foo",

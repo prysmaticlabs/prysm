@@ -24,9 +24,9 @@ type BeaconState interface {
 
 // StateProver defines the ability to create Merkle proofs for beacon state fields.
 type StateProver interface {
-	FinalizedRootProof() ([][]byte, error)
-	CurrentSyncCommitteeProof() ([][]byte, error)
-	NextSyncCommitteeProof() ([][]byte, error)
+	FinalizedRootProof(ctx context.Context) ([][]byte, error)
+	CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error)
+	NextSyncCommitteeProof(ctx context.Context) ([][]byte, error)
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
@@ -159,6 +159,7 @@ type WriteOnlyBlockRoots interface {
 
 // WriteOnlyStateRoots defines a struct which only has write access to state roots methods.
 type WriteOnlyStateRoots interface {
+	SetStateRoots(val [][]byte) error
 	UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error
 }
 
