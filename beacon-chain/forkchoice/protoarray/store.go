@@ -419,15 +419,13 @@ func (s *Store) applyWeightChanges(
 			nodeDelta -= int(s.previousProposerBoostScore)
 		}
 
-		if s.proposerBoostScore == params.BeaconConfig().ProposerScoreBoost {
-			if s.proposerBoostRoot != params.BeaconConfig().ZeroHash && s.proposerBoostRoot == n.root {
-				proposerScore, err = computeProposerBoostScore(newBalances)
-				if err != nil {
-					s.proposerBoostLock.Unlock()
-					return err
-				}
-				nodeDelta = nodeDelta + int(proposerScore)
+		if s.proposerBoostRoot != params.BeaconConfig().ZeroHash && s.proposerBoostRoot == n.root {
+			proposerScore, err = computeProposerBoostScore(newBalances)
+			if err != nil {
+				s.proposerBoostLock.Unlock()
+				return err
 			}
+			nodeDelta = nodeDelta + int(proposerScore)
 		}
 		s.proposerBoostLock.Unlock()
 
