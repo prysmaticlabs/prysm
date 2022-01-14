@@ -36,7 +36,6 @@ go_library(
         "//encoding/bytesutil:go_default_library",
         "//math:go_default_library",
         "//monitoring/tracing:go_default_library",
-        "//network/forks:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/slashings:go_default_library",
