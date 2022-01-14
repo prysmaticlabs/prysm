@@ -101,52 +101,31 @@ func (km *Keymanager) getSignRequestJson(request *validatorpb.SignRequest) (Sign
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(bockSignRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
+		return json.Marshal(bockSignRequest)
 	case *validatorpb.SignRequest_AttestationData:
 		attestationSignRequest, err := v1.GetAttestationSignRequest(request, km.genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(attestationSignRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
+		return json.Marshal(attestationSignRequest)
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
 		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, km.genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(aggregateAndProofSignRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
+		return json.Marshal(aggregateAndProofSignRequest)
 	case *validatorpb.SignRequest_Slot:
 		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, km.genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(aggregationSlotSignRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
+		return json.Marshal(aggregationSlotSignRequest)
 	case *validatorpb.SignRequest_BlockV2:
 		blocv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, km.genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(blocv2AltairSignRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
-
+		return json.Marshal(blocv2AltairSignRequest)
 	// TODO(#10053): Need to add support for merge blocks.
 	/*
 		case *validatorpb.SignRequest_BlockV3:
@@ -164,51 +143,31 @@ func (km *Keymanager) getSignRequestJson(request *validatorpb.SignRequest) (Sign
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(randaoRevealSignRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
+		return json.Marshal(randaoRevealSignRequest)
 	case *validatorpb.SignRequest_Exit:
 		voluntaryExitRequest, err := v1.GetVoluntaryExitSignRequest(request, km.genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(voluntaryExitRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
+		return json.Marshal(voluntaryExitRequest)
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
 		syncCommitteeMessageRequest, err := v1.GetSyncCommitteeMessageSignRequest(request, km.genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(syncCommitteeMessageRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
+		return json.Marshal(syncCommitteeMessageRequest)
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
 		syncCommitteeSelectionProofRequest, err := v1.GetSyncCommitteeSelectionProofSignRequest(request, km.genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(syncCommitteeSelectionProofRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
+		return json.Marshal(syncCommitteeSelectionProofRequest)
 	case *validatorpb.SignRequest_ContributionAndProof:
 		contributionAndProofRequest, err := v1.GetSyncCommitteeContributionAndProofSignRequest(request, km.genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		jsonRequest, err := json.Marshal(contributionAndProofRequest)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-		}
-		return jsonRequest, nil
+		return json.Marshal(contributionAndProofRequest)
 	default:
 		return nil, errors.New(fmt.Sprintf("Web3signer sign request type: %T  not found", request.Object))
 	}
