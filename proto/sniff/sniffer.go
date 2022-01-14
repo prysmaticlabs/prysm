@@ -116,10 +116,10 @@ func FindConfigFork(epoch types.Epoch, cv [4]byte) (*ConfigFork, error) {
 			if v == cv {
 				cf.ConfigName = name
 				cf.Config = cfg
+				cf.Epoch = e
 				switch v {
 				case genesis:
 					cf.Fork = params.ForkGenesis
-					cf.Epoch = e
 				case altair:
 					cf.Fork = params.ForkAltair
 				case merge:

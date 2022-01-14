@@ -27,7 +27,8 @@ var _ e2etypes.ComponentRunner = (*BeaconNodeSet)(nil)
 // BeaconNodeSet represents set of beacon nodes.
 type BeaconNodeSet struct {
 	e2etypes.ComponentRunner
-	config  *e2etypes.E2EConfig
+	flags []string
+	usePprof bool
 	enr     string
 	started chan struct{}
 }
@@ -38,9 +39,10 @@ func (s *BeaconNodeSet) SetENR(enr string) {
 }
 
 // NewBeaconNodes creates and returns a set of beacon nodes.
-func NewBeaconNodes(config *e2etypes.E2EConfig) *BeaconNodeSet {
+func NewBeaconNodes(flags []string, usePprof bool) *BeaconNodeSet {
 	return &BeaconNodeSet{
-		config:  config,
+		flags: flags,
+		usePprof: usePprof,
 		started: make(chan struct{}, 1),
 	}
 }
@@ -54,7 +56,7 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	// Create beacon nodes.
 	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		nodes[i] = NewBeaconNode(s.config, i, s.enr)
+		nodes[i] = NewBeaconNode(i, s.enr, s.flags, s.usePprof)
 	}
 
 	// Wait for all nodes to finish their job (blocking).
@@ -73,19 +75,21 @@ func (s *BeaconNodeSet) Started() <-chan struct{} {
 // BeaconNode represents beacon node.
 type BeaconNode struct {
 	e2etypes.ComponentRunner
-	config  *e2etypes.E2EConfig
+	flags []string
+	usePprof bool
 	started chan struct{}
 	index   int
 	enr     string
 }
 
 // NewBeaconNode creates and returns a beacon node.
-func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNode {
+func NewBeaconNode(index int, enr string, flags []string, usePprof bool) *BeaconNode {
 	return &BeaconNode{
-		config:  config,
 		index:   index,
 		enr:     enr,
 		started: make(chan struct{}, 1),
+		flags: flags,
+		usePprof: usePprof,
 	}
 }
 
@@ -97,7 +101,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		return errors.New("beacon chain binary not found")
 	}
 
-	config, index, enr := node.config, node.index, node.enr
+	nodeFlags, index, enr := node.flags, node.index, node.enr
 	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index))
 	if err != nil {
 		return err
@@ -123,11 +127,11 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 	}
-	if config.UsePprof {
+	if node.usePprof {
 		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+50))
 	}
 	args = append(args, features.E2EBeaconChainFlags...)
-	args = append(args, config.BeaconFlags...)
+	args = append(args, nodeFlags...)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	// Write stdout and stderr to log files.
