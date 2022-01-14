@@ -60,7 +60,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		return err
 	}
 	websignerDataDir := path.Join(bazel.TestTmpDir(), "web3signerdata")
-	if err := os.MkdirAll(websignerDataDir, 0755); err != nil {
+	if err := os.MkdirAll(websignerDataDir, 0750); err != nil {
 		return err
 	}
 
@@ -196,7 +196,7 @@ privateKey: "%s"
 `
 
 func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64) error {
-	if err := os.MkdirAll(keystorePath, 0755); err != nil {
+	if err := os.MkdirAll(keystorePath, 0750); err != nil {
 		return err
 	}
 
