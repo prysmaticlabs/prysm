@@ -17,33 +17,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestStore_BellatrixBlocksHandleInvalidEndSlot(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	numBlocks := 10
-	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
-	// Save blocks from slot 1 onwards.
-	for i := 0; i < len(totalBlocks); i++ {
-		b := util.NewBeaconBlockMerge()
-		b.Block.Slot = types.Slot(i) + 1
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		wb, err := wrapper.WrappedMergeSignedBeaconBlock(b)
-		require.NoError(t, err)
-		totalBlocks[i] = wb
-		_, err = totalBlocks[i].Block().HashTreeRoot()
-		require.NoError(t, err)
-	}
-	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	badFilter := filters.NewFilter().SetStartSlot(5).SetEndSlot(1)
-	_, _, err := db.Blocks(ctx, badFilter)
-	require.ErrorContains(t, errInvalidSlotRange.Error(), err)
-
-	goodFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(1)
-	requested, _, err := db.Blocks(ctx, goodFilter)
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(requested), "Unexpected number of blocks received, only expected two")
-}
-
 func TestStore_BellatrixBlocksCRUD_NoCache(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
