@@ -156,39 +156,75 @@ func TestStore_BlocksCRUD(t *testing.T) {
 }
 
 func TestStore_BlocksBatchDelete(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	numBlocks := 10
-	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
-	blockRoots := make([][32]byte, 0)
-	oddBlocks := make([]block.SignedBeaconBlock, 0)
-	for i := 0; i < len(totalBlocks); i++ {
-		b := util.NewBeaconBlock()
-		b.Block.Slot = types.Slot(i)
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
-		if i%2 == 0 {
-			r, err := totalBlocks[i].Block().HashTreeRoot()
-			require.NoError(t, err)
-			blockRoots = append(blockRoots, r)
-		} else {
-			oddBlocks = append(oddBlocks, totalBlocks[i])
-		}
+	tests := []struct {
+		name     string
+		newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
+	}{
+		{
+			name: "phase0",
+			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+				b := util.NewBeaconBlock()
+				b.Block.Slot = slot
+				b.Block.ParentRoot = root
+				return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
+			},
+		},
+		{
+			name: "altair",
+			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+				b := util.NewBeaconBlockAltair()
+				b.Block.Slot = slot
+				b.Block.ParentRoot = root
+				return wrapper.WrappedAltairSignedBeaconBlock(b)
+			},
+		},
+		{
+			name: "bellatrix",
+			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+				b := util.NewBeaconBlockMerge()
+				b.Block.Slot = slot
+				b.Block.ParentRoot = root
+				return wrapper.WrappedMergeSignedBeaconBlock(b)
+			},
+		},
 	}
-	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
-	require.NoError(t, err)
-	assert.Equal(t, numBlocks, len(retrieved), "Unexpected number of blocks received")
-	// We delete all even indexed blocks.
-	require.NoError(t, db.deleteBlocks(ctx, blockRoots))
-	// When we retrieve the data, only the odd indexed blocks should remain.
-	retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
-	require.NoError(t, err)
-	sort.Slice(retrieved, func(i, j int) bool {
-		return retrieved[i].Block().Slot() < retrieved[j].Block().Slot()
-	})
-	for i, block := range retrieved {
-		assert.Equal(t, true, proto.Equal(block.Proto(), oddBlocks[i].Proto()), "Wanted: %v, received: %v", block, oddBlocks[i])
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupDB(t)
+			ctx := context.Background()
+			numBlocks := 10
+			totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
+			blockRoots := make([][32]byte, 0)
+			oddBlocks := make([]block.SignedBeaconBlock, 0)
+			for i := 0; i < len(totalBlocks); i++ {
+				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
+				require.NoError(t, err)
+				totalBlocks[i] = b
+				if i%2 == 0 {
+					r, err := totalBlocks[i].Block().HashTreeRoot()
+					require.NoError(t, err)
+					blockRoots = append(blockRoots, r)
+				} else {
+					oddBlocks = append(oddBlocks, totalBlocks[i])
+				}
+			}
+			require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
+			retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
+			require.NoError(t, err)
+			assert.Equal(t, numBlocks, len(retrieved), "Unexpected number of blocks received")
+			// We delete all even indexed blocks.
+			require.NoError(t, db.deleteBlocks(ctx, blockRoots))
+			// When we retrieve the data, only the odd indexed blocks should remain.
+			retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
+			require.NoError(t, err)
+			sort.Slice(retrieved, func(i, j int) bool {
+				return retrieved[i].Block().Slot() < retrieved[j].Block().Slot()
+			})
+			for i, blk := range retrieved {
+				assert.Equal(t, true, proto.Equal(blk.Proto(), oddBlocks[i].Proto()), "Wanted: %v, received: %v", blk, oddBlocks[i])
+			}
+		})
 	}
 }
 

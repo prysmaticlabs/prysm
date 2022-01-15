@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"sort"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -17,45 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
-
-func TestStore_AltairBlocksBatchDelete(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	numBlocks := 10
-	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
-	blockRoots := make([][32]byte, 0)
-	oddBlocks := make([]block.SignedBeaconBlock, 0)
-	for i := 0; i < len(totalBlocks); i++ {
-		b := util.NewBeaconBlockAltair()
-		b.Block.Slot = types.Slot(i)
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		wb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
-		require.NoError(t, err)
-		totalBlocks[i] = wb
-		if i%2 == 0 {
-			r, err := totalBlocks[i].Block().HashTreeRoot()
-			require.NoError(t, err)
-			blockRoots = append(blockRoots, r)
-		} else {
-			oddBlocks = append(oddBlocks, totalBlocks[i])
-		}
-	}
-	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
-	require.NoError(t, err)
-	assert.Equal(t, numBlocks, len(retrieved), "Unexpected number of blocks received")
-	// We delete all even indexed blocks.
-	require.NoError(t, db.deleteBlocks(ctx, blockRoots))
-	// When we retrieve the data, only the odd indexed blocks should remain.
-	retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
-	require.NoError(t, err)
-	sort.Slice(retrieved, func(i, j int) bool {
-		return retrieved[i].Block().Slot() < retrieved[j].Block().Slot()
-	})
-	for i, block := range retrieved {
-		assert.Equal(t, true, proto.Equal(block.Proto(), oddBlocks[i].Proto()), "Wanted: %v, received: %v", block, oddBlocks[i])
-	}
-}
 
 func TestStore_AltairBlocksHandleInvalidEndSlot(t *testing.T) {
 	db := setupDB(t)
