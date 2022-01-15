@@ -8,7 +8,7 @@ go_library(
         "web3signer_types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1",
-    visibility = ["//visibility:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "//network/forks:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

@@ -5,7 +5,7 @@ go_library(
     testonly = 1,
     srcs = ["mocks.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/testutil",
-    visibility = ["//visibility:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "//config/fieldparams:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
