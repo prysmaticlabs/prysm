@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	prysmTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -162,7 +163,7 @@ func executeStateTransitionStateGen(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block")
 	}
-	if signed.Version() == version.Altair {
+	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return nil, err
@@ -208,7 +209,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 				if err != nil {
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair:
+			case version.Altair, version.Bellatrix:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not process epoch with optimization")
@@ -223,6 +224,12 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 
 		if prysmTime.CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if prysmTime.CanUpgradeToBellatrix(state.Slot()) {
+			state, err = execution.UpgradeToMerge(ctx, state)
 			if err != nil {
 				return nil, err
 			}
