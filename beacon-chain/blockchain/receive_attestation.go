@@ -143,9 +143,9 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 				}
 				s.processAttestations(s.ctx)
 
-				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(s.store.justifiedCheckpt.Root))
 				if err != nil {
-					log.WithError(err).Errorf("Unable to get justified balances for root %v", s.justifiedCheckpt.Root)
+					log.WithError(err).Errorf("Unable to get justified balances for root %v", s.store.justifiedCheckpt.Root)
 					continue
 				}
 				if err := s.updateHead(s.ctx, balances); err != nil {

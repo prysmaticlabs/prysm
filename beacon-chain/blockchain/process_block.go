@@ -38,7 +38,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) UpdateHead(ctx context.Context) error {
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(s.store.justifiedCheckpt.Root))
 	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", s.justifiedCheckpt.Root)
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", s.store.justifiedCheckpt.Root)
 		return errors.Wrap(err, msg)
 	}
 
@@ -149,7 +149,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Update justified check point.
-	currJustifiedEpoch := s.justifiedCheckpt.Epoch
+	currJustifiedEpoch := s.store.justifiedCheckpt.Epoch
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
@@ -170,13 +170,12 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}
 	}
 
-	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
+	newFinalized := postState.FinalizedCheckpointEpoch() > s.store.finalizedCheckpt.Epoch
 	if newFinalized {
 		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
 			return errors.Wrap(err, "could not save new justified")
 		}
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+		s.store.finalizedCheckpt = postState.FinalizedCheckpoint()
 	}
 	p = postState.FinalizedCheckpoint()
 	e = p.Epoch
@@ -361,19 +360,18 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		s.clearInitSyncBlocks()
 	}
 
-	if jCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+	if jCheckpoint.Epoch > s.store.justifiedCheckpt.Epoch {
 		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
 			return err
 		}
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if fCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+	if fCheckpoint.Epoch > s.store.finalizedCheckpt.Epoch {
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = fCheckpoint
+		s.store.finalizedCheckpt = fCheckpoint
 	}
 	return nil
 }

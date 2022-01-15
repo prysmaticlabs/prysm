@@ -10,6 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -57,13 +58,13 @@ type EpochRoot struct {
 // RunTest executes "forkchoice" test.
 func RunTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork_choice/get_head/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork_choice/on_block/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			ctx := context.Background()
-			if folder.Name() != "shorter_chain_but_heavier_weight" {
-				t.Skip("skipping non-basic test")
-			}
+			//if folder.Name() != "new_justified_is_later_than_store_justified" {
+			//	t.Skip("skipping non-basic test")
+			//}
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 			require.NoError(t, err)
 			var steps []Step
@@ -96,6 +97,7 @@ func RunTest(t *testing.T, config string) {
 				if step.Block != nil {
 					// Process block
 					fileName := fmt.Sprint(*step.Block, ".ssz_snappy")
+					t.Log(fileName)
 					blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
@@ -174,6 +176,9 @@ func newBlockchainService(t *testing.T, st state.BeaconState, block block.Signed
 	})
 	require.NoError(t, err)
 
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+
 	opts := append([]blockchain.Option{},
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(d),
@@ -182,6 +187,7 @@ func newBlockchainService(t *testing.T, st state.BeaconState, block block.Signed
 		blockchain.WithStateGen(stategen.New(d)),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
+		blockchain.WithDepositCache(depositCache),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
