@@ -57,28 +57,6 @@ func TestStore_AltairBlocksBatchDelete(t *testing.T) {
 	}
 }
 
-func TestStore_AltairBlocksHandleZeroCase(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	numBlocks := 10
-	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
-	for i := 0; i < len(totalBlocks); i++ {
-		b := util.NewBeaconBlockAltair()
-		b.Block.Slot = types.Slot(i)
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		wb, err := wrapper.WrappedAltairSignedBeaconBlock(b)
-		require.NoError(t, err)
-		totalBlocks[i] = wb
-		_, err = totalBlocks[i].Block().HashTreeRoot()
-		require.NoError(t, err)
-	}
-	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	zeroFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(0)
-	retrieved, _, err := db.Blocks(ctx, zeroFilter)
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(retrieved), "Unexpected number of blocks received, expected one")
-}
-
 func TestStore_AltairBlocksHandleInvalidEndSlot(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()

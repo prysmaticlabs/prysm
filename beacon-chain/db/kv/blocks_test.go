@@ -193,23 +193,60 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 }
 
 func TestStore_BlocksHandleZeroCase(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	numBlocks := 10
-	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
-	for i := 0; i < len(totalBlocks); i++ {
-		b := util.NewBeaconBlock()
-		b.Block.Slot = types.Slot(i)
-		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
-		_, err := totalBlocks[i].Block().HashTreeRoot()
-		require.NoError(t, err)
+	tests := []struct {
+		name     string
+		newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
+	}{
+		{
+			name: "phase0",
+			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+				b := util.NewBeaconBlock()
+				b.Block.Slot = slot
+				b.Block.ParentRoot = root
+				return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
+			},
+		},
+		{
+			name: "altair",
+			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+				b := util.NewBeaconBlockAltair()
+				b.Block.Slot = slot
+				b.Block.ParentRoot = root
+				return wrapper.WrappedAltairSignedBeaconBlock(b)
+			},
+		},
+		{
+			name: "bellatrix",
+			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+				b := util.NewBeaconBlockMerge()
+				b.Block.Slot = slot
+				b.Block.ParentRoot = root
+				return wrapper.WrappedMergeSignedBeaconBlock(b)
+			},
+		},
 	}
-	require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-	zeroFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(0)
-	retrieved, _, err := db.Blocks(ctx, zeroFilter)
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(retrieved), "Unexpected number of blocks received, expected one")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupDB(t)
+			ctx := context.Background()
+			numBlocks := 10
+			totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
+			for i := 0; i < len(totalBlocks); i++ {
+				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
+				require.NoError(t, err)
+				totalBlocks[i] = b
+				_, err = totalBlocks[i].Block().HashTreeRoot()
+				require.NoError(t, err)
+			}
+			require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
+			zeroFilter := filters.NewFilter().SetStartSlot(0).SetEndSlot(0)
+			retrieved, _, err := db.Blocks(ctx, zeroFilter)
+			require.NoError(t, err)
+			assert.Equal(t, 1, len(retrieved), "Unexpected number of blocks received, expected one")
+		})
+	}
+
 }
 
 func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
