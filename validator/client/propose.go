@@ -553,7 +553,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
 		if v.emitAccountMetrics {
@@ -598,7 +598,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		}
 		return
 	}
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wb)
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, slot, wb)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
