@@ -1,4 +1,4 @@
-package testutil
+package v1
 
 import (
 	"fmt"
@@ -9,7 +9,6 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -300,22 +299,22 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 }
 
 // MockAggregationSlotSignRequest is a mock implementation of the AggregationSlotSignRequest.
-func MockAggregationSlotSignRequest() *v1.AggregationSlotSignRequest {
-	return &v1.AggregationSlotSignRequest{
+func MockAggregationSlotSignRequest() *AggregationSlotSignRequest {
+	return &AggregationSlotSignRequest{
 		Type:            "AGGREGATION_SLOT",
 		ForkInfo:        MockForkInfo(),
 		SigningRoot:     hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		AggregationSlot: &v1.AggregationSlot{Slot: "0"},
+		AggregationSlot: &AggregationSlot{Slot: "0"},
 	}
 }
 
 // MockAggregateAndProofSignRequest is a mock implementation of the AggregateAndProofSignRequest.
-func MockAggregateAndProofSignRequest() *v1.AggregateAndProofSignRequest {
-	return &v1.AggregateAndProofSignRequest{
+func MockAggregateAndProofSignRequest() *AggregateAndProofSignRequest {
+	return &AggregateAndProofSignRequest{
 		Type:        "AGGREGATE_AND_PROOF",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		AggregateAndProof: &v1.AggregateAndProof{
+		AggregateAndProof: &AggregateAndProof{
 			AggregatorIndex: "0",
 			Aggregate:       MockAttestation(),
 			SelectionProof:  hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
@@ -324,8 +323,8 @@ func MockAggregateAndProofSignRequest() *v1.AggregateAndProofSignRequest {
 }
 
 // MockAttestationSignRequest is a mock implementation of the AttestationSignRequest.
-func MockAttestationSignRequest() *v1.AttestationSignRequest {
-	return &v1.AttestationSignRequest{
+func MockAttestationSignRequest() *AttestationSignRequest {
+	return &AttestationSignRequest{
 		Type:        "ATTESTATION",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
@@ -334,12 +333,12 @@ func MockAttestationSignRequest() *v1.AttestationSignRequest {
 }
 
 // MockBlockSignRequest is a mock implementation of the BlockSignRequest.
-func MockBlockSignRequest() *v1.BlockSignRequest {
-	return &v1.BlockSignRequest{
+func MockBlockSignRequest() *BlockSignRequest {
+	return &BlockSignRequest{
 		Type:        "BLOCK",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		Block: &v1.BeaconBlock{
+		Block: &BeaconBlock{
 			Slot:          "0",
 			ProposerIndex: "0",
 			ParentRoot:    hexutil.Encode(make([]byte, fieldparams.RootLength)),
@@ -350,12 +349,12 @@ func MockBlockSignRequest() *v1.BlockSignRequest {
 }
 
 // MockBlockV2AltairSignRequest is a mock implementation of the BlockV2AltairSignRequest.
-func MockBlockV2AltairSignRequest() *v1.BlockV2AltairSignRequest {
-	return &v1.BlockV2AltairSignRequest{
+func MockBlockV2AltairSignRequest() *BlockV2AltairSignRequest {
+	return &BlockV2AltairSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		BeaconBlock: &v1.BeaconBlockAltairBlockV2{
+		BeaconBlock: &BeaconBlockAltairBlockV2{
 			Version: "ALTAIR",
 			Block:   MockBeaconBlockAltair(),
 		},
@@ -363,20 +362,20 @@ func MockBlockV2AltairSignRequest() *v1.BlockV2AltairSignRequest {
 }
 
 // MockRandaoRevealSignRequest is a mock implementation of the RandaoRevealSignRequest.
-func MockRandaoRevealSignRequest() *v1.RandaoRevealSignRequest {
-	return &v1.RandaoRevealSignRequest{
+func MockRandaoRevealSignRequest() *RandaoRevealSignRequest {
+	return &RandaoRevealSignRequest{
 		Type:        "RANDAO_REVEAL",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		RandaoReveal: &v1.RandaoReveal{
+		RandaoReveal: &RandaoReveal{
 			Epoch: "0",
 		},
 	}
 }
 
 // MockSyncCommitteeContributionAndProofSignRequest is a mock implementation of the SyncCommitteeContributionAndProofSignRequest.
-func MockSyncCommitteeContributionAndProofSignRequest() *v1.SyncCommitteeContributionAndProofSignRequest {
-	return &v1.SyncCommitteeContributionAndProofSignRequest{
+func MockSyncCommitteeContributionAndProofSignRequest() *SyncCommitteeContributionAndProofSignRequest {
+	return &SyncCommitteeContributionAndProofSignRequest{
 		Type:                 "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
 		ForkInfo:             MockForkInfo(),
 		SigningRoot:          hexutil.Encode(make([]byte, fieldparams.RootLength)),
@@ -385,12 +384,12 @@ func MockSyncCommitteeContributionAndProofSignRequest() *v1.SyncCommitteeContrib
 }
 
 // MockSyncCommitteeMessageSignRequest is a mock implementation of the SyncCommitteeMessageSignRequest.
-func MockSyncCommitteeMessageSignRequest() *v1.SyncCommitteeMessageSignRequest {
-	return &v1.SyncCommitteeMessageSignRequest{
+func MockSyncCommitteeMessageSignRequest() *SyncCommitteeMessageSignRequest {
+	return &SyncCommitteeMessageSignRequest{
 		Type:        "SYNC_COMMITTEE_MESSAGE",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		SyncCommitteeMessage: &v1.SyncCommitteeMessage{
+		SyncCommitteeMessage: &SyncCommitteeMessage{
 			BeaconBlockRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
 			Slot:            "0",
 		},
@@ -398,12 +397,12 @@ func MockSyncCommitteeMessageSignRequest() *v1.SyncCommitteeMessageSignRequest {
 }
 
 // MockSyncCommitteeSelectionProofSignRequest is a mock implementation of the SyncCommitteeSelectionProofSignRequest.
-func MockSyncCommitteeSelectionProofSignRequest() *v1.SyncCommitteeSelectionProofSignRequest {
-	return &v1.SyncCommitteeSelectionProofSignRequest{
+func MockSyncCommitteeSelectionProofSignRequest() *SyncCommitteeSelectionProofSignRequest {
+	return &SyncCommitteeSelectionProofSignRequest{
 		Type:        "SYNC_COMMITTEE_SELECTION_PROOF",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		SyncAggregatorSelectionData: &v1.SyncAggregatorSelectionData{
+		SyncAggregatorSelectionData: &SyncAggregatorSelectionData{
 			Slot:              "0",
 			SubcommitteeIndex: "0",
 		},
@@ -411,12 +410,12 @@ func MockSyncCommitteeSelectionProofSignRequest() *v1.SyncCommitteeSelectionProo
 }
 
 // MockVoluntaryExitSignRequest is a mock implementation of the VoluntaryExitSignRequest.
-func MockVoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
-	return &v1.VoluntaryExitSignRequest{
+func MockVoluntaryExitSignRequest() *VoluntaryExitSignRequest {
+	return &VoluntaryExitSignRequest{
 		Type:        "VOLUNTARY_EXIT",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		VoluntaryExit: &v1.VoluntaryExit{
+		VoluntaryExit: &VoluntaryExit{
 			Epoch:          "0",
 			ValidatorIndex: "0",
 		},
@@ -428,9 +427,9 @@ func MockVoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 // MockForkInfo is a mock implementation of the ForkInfo.
-func MockForkInfo() *v1.ForkInfo {
-	return &v1.ForkInfo{
-		Fork: &v1.Fork{
+func MockForkInfo() *ForkInfo {
+	return &ForkInfo{
+		Fork: &Fork{
 			PreviousVersion: hexutil.Encode(make([]byte, 4)),
 			CurrentVersion:  hexutil.Encode(make([]byte, 4)),
 			Epoch:           "0",
@@ -441,18 +440,18 @@ func MockForkInfo() *v1.ForkInfo {
 }
 
 // MockAttestation is a mock implementation of the Attestation.
-func MockAttestation() *v1.Attestation {
-	return &v1.Attestation{
+func MockAttestation() *Attestation {
+	return &Attestation{
 		AggregationBits: hexutil.Encode(bitfield.Bitlist{0b1101}.Bytes()),
-		Data: &v1.AttestationData{
+		Data: &AttestationData{
 			Slot:            "0",
 			Index:           "0",
 			BeaconBlockRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-			Source: &v1.Checkpoint{
+			Source: &Checkpoint{
 				Epoch: "0",
 				Root:  hexutil.Encode(make([]byte, fieldparams.RootLength)),
 			},
-			Target: &v1.Checkpoint{
+			Target: &Checkpoint{
 				Epoch: "0",
 				Root:  hexutil.Encode(make([]byte, fieldparams.RootLength)),
 			},
@@ -461,18 +460,18 @@ func MockAttestation() *v1.Attestation {
 	}
 }
 
-func MockIndexedAttestation() *v1.IndexedAttestation {
-	return &v1.IndexedAttestation{
+func MockIndexedAttestation() *IndexedAttestation {
+	return &IndexedAttestation{
 		AttestingIndices: []string{"0", "1", "2"},
-		Data: &v1.AttestationData{
+		Data: &AttestationData{
 			Slot:            "0",
 			Index:           "0",
 			BeaconBlockRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-			Source: &v1.Checkpoint{
+			Source: &Checkpoint{
 				Epoch: "0",
 				Root:  hexutil.Encode(make([]byte, fieldparams.RootLength)),
 			},
-			Target: &v1.Checkpoint{
+			Target: &Checkpoint{
 				Epoch: "0",
 				Root:  hexutil.Encode(make([]byte, fieldparams.RootLength)),
 			},
@@ -481,24 +480,24 @@ func MockIndexedAttestation() *v1.IndexedAttestation {
 	}
 }
 
-func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
-	return &v1.BeaconBlockAltair{
+func MockBeaconBlockAltair() *BeaconBlockAltair {
+	return &BeaconBlockAltair{
 		Slot:          "0",
 		ProposerIndex: "0",
 		ParentRoot:    hexutil.Encode(make([]byte, fieldparams.RootLength)),
 		StateRoot:     hexutil.Encode(make([]byte, fieldparams.RootLength)),
-		Body: &v1.BeaconBlockBodyAltair{
+		Body: &BeaconBlockBodyAltair{
 			RandaoReveal: hexutil.Encode(make([]byte, 32)),
-			Eth1Data: &v1.Eth1Data{
+			Eth1Data: &Eth1Data{
 				DepositRoot:  hexutil.Encode(make([]byte, fieldparams.RootLength)),
 				DepositCount: "0",
 				BlockHash:    hexutil.Encode(make([]byte, 32)),
 			},
 			Graffiti: hexutil.Encode(make([]byte, 32)),
-			ProposerSlashings: []*v1.ProposerSlashing{
+			ProposerSlashings: []*ProposerSlashing{
 				{
-					SignedHeader_1: &v1.SignedBeaconBlockHeader{
-						Message: &v1.BeaconBlockHeader{
+					SignedHeader_1: &SignedBeaconBlockHeader{
+						Message: &BeaconBlockHeader{
 							Slot:          "0",
 							ProposerIndex: "0",
 							ParentRoot:    hexutil.Encode(make([]byte, fieldparams.RootLength)),
@@ -507,8 +506,8 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 						},
 						Signature: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 					},
-					SignedHeader_2: &v1.SignedBeaconBlockHeader{
-						Message: &v1.BeaconBlockHeader{
+					SignedHeader_2: &SignedBeaconBlockHeader{
+						Message: &BeaconBlockHeader{
 							Slot:          "0",
 							ProposerIndex: "0",
 							ParentRoot:    hexutil.Encode(make([]byte, fieldparams.RootLength)),
@@ -519,19 +518,19 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 					},
 				},
 			},
-			AttesterSlashings: []*v1.AttesterSlashing{
+			AttesterSlashings: []*AttesterSlashing{
 				{
 					Attestation_1: MockIndexedAttestation(),
 					Attestation_2: MockIndexedAttestation(),
 				},
 			},
-			Attestations: []*v1.Attestation{
+			Attestations: []*Attestation{
 				MockAttestation(),
 			},
-			Deposits: []*v1.Deposit{
+			Deposits: []*Deposit{
 				{
 					Proof: []string{"0x41"},
-					Data: &v1.DepositData{
+					Data: &DepositData{
 						PublicKey:             hexutil.Encode(make([]byte, fieldparams.BLSPubkeyLength)),
 						WithdrawalCredentials: hexutil.Encode(make([]byte, 32)),
 						Amount:                "0",
@@ -539,16 +538,16 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 					},
 				},
 			},
-			VoluntaryExits: []*v1.SignedVoluntaryExit{
+			VoluntaryExits: []*SignedVoluntaryExit{
 				{
-					Message: &v1.VoluntaryExit{
+					Message: &VoluntaryExit{
 						Epoch:          "0",
 						ValidatorIndex: "0",
 					},
 					Signature: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 				},
 			},
-			SyncAggregate: &v1.SyncAggregate{
+			SyncAggregate: &SyncAggregate{
 				SyncCommitteeSignature: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 				SyncCommitteeBits:      hexutil.Encode(bitfield.NewBitvector512().Bytes()),
 			},
@@ -556,19 +555,19 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 	}
 }
 
-func MockBeaconBlockBody() *v1.BeaconBlockBody {
-	return &v1.BeaconBlockBody{
+func MockBeaconBlockBody() *BeaconBlockBody {
+	return &BeaconBlockBody{
 		RandaoReveal: hexutil.Encode(make([]byte, 32)),
-		Eth1Data: &v1.Eth1Data{
+		Eth1Data: &Eth1Data{
 			DepositRoot:  hexutil.Encode(make([]byte, fieldparams.RootLength)),
 			DepositCount: "0",
 			BlockHash:    hexutil.Encode(make([]byte, 32)),
 		},
 		Graffiti: hexutil.Encode(make([]byte, 32)),
-		ProposerSlashings: []*v1.ProposerSlashing{
+		ProposerSlashings: []*ProposerSlashing{
 			{
-				SignedHeader_1: &v1.SignedBeaconBlockHeader{
-					Message: &v1.BeaconBlockHeader{
+				SignedHeader_1: &SignedBeaconBlockHeader{
+					Message: &BeaconBlockHeader{
 						Slot:          "0",
 						ProposerIndex: "0",
 						ParentRoot:    hexutil.Encode(make([]byte, fieldparams.RootLength)),
@@ -577,8 +576,8 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 					},
 					Signature: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 				},
-				SignedHeader_2: &v1.SignedBeaconBlockHeader{
-					Message: &v1.BeaconBlockHeader{
+				SignedHeader_2: &SignedBeaconBlockHeader{
+					Message: &BeaconBlockHeader{
 						Slot:          "0",
 						ProposerIndex: "0",
 						ParentRoot:    hexutil.Encode(make([]byte, fieldparams.RootLength)),
@@ -589,19 +588,19 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 				},
 			},
 		},
-		AttesterSlashings: []*v1.AttesterSlashing{
+		AttesterSlashings: []*AttesterSlashing{
 			{
 				Attestation_1: MockIndexedAttestation(),
 				Attestation_2: MockIndexedAttestation(),
 			},
 		},
-		Attestations: []*v1.Attestation{
+		Attestations: []*Attestation{
 			MockAttestation(),
 		},
-		Deposits: []*v1.Deposit{
+		Deposits: []*Deposit{
 			{
 				Proof: []string{"0x41"},
-				Data: &v1.DepositData{
+				Data: &DepositData{
 					PublicKey:             hexutil.Encode(make([]byte, fieldparams.BLSPubkeyLength)),
 					WithdrawalCredentials: hexutil.Encode(make([]byte, 32)),
 					Amount:                "0",
@@ -609,9 +608,9 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 				},
 			},
 		},
-		VoluntaryExits: []*v1.SignedVoluntaryExit{
+		VoluntaryExits: []*SignedVoluntaryExit{
 			{
-				Message: &v1.VoluntaryExit{
+				Message: &VoluntaryExit{
 					Epoch:          "0",
 					ValidatorIndex: "0",
 				},
@@ -621,10 +620,10 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 	}
 }
 
-func MockContributionAndProof() *v1.ContributionAndProof {
-	return &v1.ContributionAndProof{
+func MockContributionAndProof() *ContributionAndProof {
+	return &ContributionAndProof{
 		AggregatorIndex: "0",
-		Contribution: &v1.SyncCommitteeContribution{
+		Contribution: &SyncCommitteeContribution{
 			Slot:              "0",
 			BeaconBlockRoot:   hexutil.Encode(make([]byte, fieldparams.RootLength)),
 			SubcommitteeIndex: "0",

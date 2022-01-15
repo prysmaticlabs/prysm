@@ -8,10 +8,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	tu "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/testutil"
-
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestMapAggregateAndProof(t *testing.T) {
@@ -35,7 +33,7 @@ func TestMapAggregateAndProof(t *testing.T) {
 			},
 			want: &AggregateAndProof{
 				AggregatorIndex: "0",
-				Aggregate:       tu.MockAttestation(),
+				Aggregate:       MockAttestation(),
 				SelectionProof:  hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 			},
 			wantErr: false,
@@ -70,7 +68,7 @@ func TestMapAttestation(t *testing.T) {
 			args: args{
 				attestation: util.NewAttestation(),
 			},
-			want:    tu.MockAttestation(),
+			want:    MockAttestation(),
 			wantErr: false,
 		},
 	}
@@ -103,7 +101,7 @@ func TestMapAttestationData(t *testing.T) {
 			args: args{
 				data: util.NewAttestation().Data,
 			},
-			want:    tu.MockAttestation().Data,
+			want:    MockAttestation().Data,
 			wantErr: false,
 		},
 	}
@@ -148,8 +146,8 @@ func TestMapAttesterSlashing(t *testing.T) {
 				},
 			},
 			want: &AttesterSlashing{
-				Attestation_1: tu.MockIndexedAttestation(),
-				Attestation_2: tu.MockIndexedAttestation(),
+				Attestation_1: MockIndexedAttestation(),
+				Attestation_2: MockIndexedAttestation(),
 			},
 			wantErr: false,
 		},
@@ -262,7 +260,7 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 					},
 				},
 			},
-			want:    tu.MockBeaconBlockAltair(),
+			want:    MockBeaconBlockAltair(),
 			wantErr: false,
 		},
 	}
@@ -364,7 +362,7 @@ func TestMapBeaconBlockBody(t *testing.T) {
 					},
 				},
 			},
-			want:    tu.MockBeaconBlockBody(),
+			want:    MockBeaconBlockBody(),
 			wantErr: false,
 		},
 	}
@@ -407,7 +405,7 @@ func TestMapContributionAndProof(t *testing.T) {
 					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 				},
 			},
-			want: tu.MockContributionAndProof(),
+			want: MockContributionAndProof(),
 		},
 	}
 	for _, tt := range tests {
@@ -442,7 +440,7 @@ func TestMapForkInfo(t *testing.T) {
 				slot:                  0,
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    tu.MockForkInfo(),
+			want:    MockForkInfo(),
 			wantErr: false,
 		},
 	}
