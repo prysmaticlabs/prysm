@@ -43,7 +43,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 	currEpoch := slots.ToEpoch(slot)
 	switch {
 	case currEpoch >= params.BeaconConfig().BellatrixForkEpoch:
-		v.proposeBlockMerge(ctx, slot, pubKey)
+		v.proposeBlockBellatrix(ctx, slot, pubKey)
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
 		v.proposeBlockAltair(ctx, slot, pubKey)
 	default:
@@ -531,13 +531,13 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 	return []byte{}, nil
 }
 
-// This is a routine to propose merge compatible beacon blocks.
-func (v *validator) proposeBlockMerge(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+// This is a routine to propose bellatrix compatible beacon blocks.
+func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
-	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockMerge")
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockBellatrix")
 	defer span.End()
 
 	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
@@ -561,9 +561,6 @@ func (v *validator) proposeBlockMerge(ctx context.Context, slot types.Slot, pubK
 
 	g, err := v.getGraffiti(ctx, pubKey)
 	if err != nil {
-		// Graffiti is not a critical enough to fail block production and cause
-		// validator to miss block reward. When failed, validator should continue
-		// to produce the block.
 		log.WithError(err).Warn("Could not get graffiti")
 	}
 
@@ -651,12 +648,6 @@ func (v *validator) proposeBlockMerge(ctx context.Context, slot types.Slot, pubK
 		return
 	}
 
-	span.AddAttributes(
-		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
-		trace.Int64Attribute("numDeposits", int64(len(mergeBlk.Merge.Body.Deposits))),
-		trace.Int64Attribute("numAttestations", int64(len(mergeBlk.Merge.Body.Attestations))),
-	)
-
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            mergeBlk.Merge.Slot,
@@ -664,7 +655,7 @@ func (v *validator) proposeBlockMerge(ctx context.Context, slot types.Slot, pubK
 		"numAttestations": len(mergeBlk.Merge.Body.Attestations),
 		"numDeposits":     len(mergeBlk.Merge.Body.Deposits),
 		"graffiti":        string(mergeBlk.Merge.Body.Graffiti),
-		"fork":            "merge",
+		"fork":            "bellatrix",
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {

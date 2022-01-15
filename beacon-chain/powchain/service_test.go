@@ -832,3 +832,29 @@ func TestTimestampIsChecked(t *testing.T) {
 	timestamp = uint64(time.Now().Add(-eth1Threshold).Add(-1 * time.Minute).Unix())
 	assert.Equal(t, true, eth1HeadIsBehind(timestamp))
 }
+
+func TestETH1Endpoints(t *testing.T) {
+	firstEndpoint := "A"
+	secondEndpoint := "B"
+	endpoints := []string{firstEndpoint, secondEndpoint}
+
+	testAcc, err := contracts.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	beaconDB := dbutil.SetupDB(t)
+
+	mbs := &mockBSUpdater{}
+	s1, err := NewService(context.Background(),
+		WithHttpEndpoints(endpoints),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithBeaconNodeStatsUpdater(mbs),
+	)
+	s1.cfg.beaconNodeStatsUpdater = mbs
+	require.NoError(t, err)
+
+	// Check default endpoint is set to current.
+	assert.Equal(t, firstEndpoint, s1.CurrentETH1Endpoint(), "Unexpected http endpoint")
+
+	// Check endpoints are all present.
+	assert.DeepSSZEqual(t, endpoints, s1.ETH1Endpoints(), "Unexpected http endpoint slice")
+}
