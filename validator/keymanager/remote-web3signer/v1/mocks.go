@@ -8,7 +8,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -36,8 +35,20 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			Object: &validatorpb.SignRequest_AggregateAttestationAndProof{
 				AggregateAttestationAndProof: &eth.AggregateAttestationAndProof{
 					AggregatorIndex: 0,
-					Aggregate:       util.NewAttestation(),
-					SelectionProof:  make([]byte, fieldparams.BLSSignatureLength),
+					Aggregate: &eth.Attestation{
+						AggregationBits: bitfield.Bitlist{0b1101},
+						Data: &eth.AttestationData{
+							BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+							Source: &eth.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+							Target: &eth.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+						},
+						Signature: make([]byte, 96),
+					},
+					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 				},
 			},
 			SigningSlot: 0,
@@ -48,7 +59,15 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			SigningRoot:     make([]byte, fieldparams.RootLength),
 			SignatureDomain: make([]byte, 4),
 			Object: &validatorpb.SignRequest_AttestationData{
-				AttestationData: util.NewAttestation().Data,
+				AttestationData: &eth.AttestationData{
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+					Source: &eth.Checkpoint{
+						Root: make([]byte, fieldparams.RootLength),
+					},
+					Target: &eth.Checkpoint{
+						Root: make([]byte, fieldparams.RootLength),
+					},
+				},
 			},
 			SigningSlot: 0,
 		}
@@ -99,18 +118,46 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 							{
 								Attestation_1: &eth.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+									Data: &eth.AttestationData{
+										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+										Source: &eth.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+										Target: &eth.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
 								},
 								Attestation_2: &eth.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+									Data: &eth.AttestationData{
+										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+										Source: &eth.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+										Target: &eth.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
 								},
 							},
 						},
 						Attestations: []*eth.Attestation{
-							util.NewAttestation(),
+							&eth.Attestation{
+								AggregationBits: bitfield.Bitlist{0b1101},
+								Data: &eth.AttestationData{
+									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+									Source: &eth.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+									Target: &eth.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+								},
+								Signature: make([]byte, 96),
+							},
 						},
 						Deposits: []*eth.Deposit{
 							{
@@ -184,18 +231,46 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 							{
 								Attestation_1: &eth.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+									Data: &eth.AttestationData{
+										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+										Source: &eth.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+										Target: &eth.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
 								},
 								Attestation_2: &eth.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+									Data: &eth.AttestationData{
+										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+										Source: &eth.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+										Target: &eth.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
 								},
 							},
 						},
 						Attestations: []*eth.Attestation{
-							util.NewAttestation(),
+							&eth.Attestation{
+								AggregationBits: bitfield.Bitlist{0b1101},
+								Data: &eth.AttestationData{
+									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+									Source: &eth.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+									Target: &eth.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+								},
+								Signature: make([]byte, 96),
+							},
 						},
 						Deposits: []*eth.Deposit{
 							{
