@@ -1,4 +1,4 @@
-// +build blst_disabled libfuzzer
+// +build  blst_disabled libfuzzer
 
 package blst
 
