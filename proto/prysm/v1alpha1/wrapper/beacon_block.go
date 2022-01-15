@@ -41,6 +41,7 @@ type Phase0SignedBeaconBlock struct {
 
 // WrappedPhase0SignedBeaconBlock is constructor which wraps a protobuf phase 0 block
 // with the block wrapper.
+// Deprecated: use WrappedSignedBeaconBlock instead.
 func WrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) block.SignedBeaconBlock {
 	return Phase0SignedBeaconBlock{b: b}
 }
@@ -308,6 +309,7 @@ type altairSignedBeaconBlock struct {
 
 // WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
+// Deprecated: use WrappedSignedBeaconBlock instead.
 func WrappedAltairSignedBeaconBlock(b *eth.SignedBeaconBlockAltair) (block.SignedBeaconBlock, error) {
 	w := altairSignedBeaconBlock{b: b}
 	if w.IsNil() {
@@ -578,6 +580,7 @@ type mergeSignedBeaconBlock struct {
 }
 
 // WrappedMergeSignedBeaconBlock is constructor which wraps a protobuf merge block with the block wrapper.
+// Deprecated: use WrappedSignedBeaconBlock instead.
 func WrappedMergeSignedBeaconBlock(b *eth.SignedBeaconBlockMerge) (block.SignedBeaconBlock, error) {
 	w := mergeSignedBeaconBlock{b: b}
 	if w.IsNil() {
