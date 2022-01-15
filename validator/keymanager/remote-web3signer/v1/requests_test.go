@@ -6,7 +6,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/testutil"
+	util "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/testutil"
 )
 
 func TestGetAggregateAndProofSignRequest(t *testing.T) {
@@ -23,10 +23,10 @@ func TestGetAggregateAndProofSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("AGGREGATE_AND_PROOF"),
+				request:               util.GetMockSignRequest("AGGREGATE_AND_PROOF"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    testutil.MockAggregateAndProofSignRequest(),
+			want:    util.MockAggregateAndProofSignRequest(),
 			wantErr: false,
 		},
 	}
@@ -58,10 +58,10 @@ func TestGetAggregationSlotSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("AGGREGATION_SLOT"),
+				request:               util.GetMockSignRequest("AGGREGATION_SLOT"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    testutil.MockAggregationSlotSignRequest(),
+			want:    util.MockAggregationSlotSignRequest(),
 			wantErr: false,
 		},
 	}
@@ -93,10 +93,10 @@ func TestGetAttestationSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("ATTESTATION"),
+				request:               util.GetMockSignRequest("ATTESTATION"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want: testutil.MockAttestationSignRequest(),
+			want: util.MockAttestationSignRequest(),
 		},
 	}
 	for _, tt := range tests {
@@ -127,10 +127,10 @@ func TestGetBlockSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("BLOCK"),
+				request:               util.GetMockSignRequest("BLOCK"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    testutil.MockBlockSignRequest(),
+			want:    util.MockBlockSignRequest(),
 			wantErr: false,
 		},
 	}
@@ -162,10 +162,10 @@ func TestGetBlockV2AltairSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("BLOCK_V2"),
+				request:               util.GetMockSignRequest("BLOCK_V2"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    testutil.MockBlockV2AltairSignRequest(),
+			want:    util.MockBlockV2AltairSignRequest(),
 			wantErr: false,
 		},
 	}
@@ -197,10 +197,10 @@ func TestGetRandaoRevealSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("RANDAO_REVEAL"),
+				request:               util.GetMockSignRequest("RANDAO_REVEAL"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    testutil.MockRandaoRevealSignRequest(),
+			want:    util.MockRandaoRevealSignRequest(),
 			wantErr: false,
 		},
 	}
@@ -232,10 +232,10 @@ func TestGetSyncCommitteeContributionAndProofSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"),
+				request:               util.GetMockSignRequest("SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    testutil.MockSyncCommitteeContributionAndProofSignRequest(),
+			want:    util.MockSyncCommitteeContributionAndProofSignRequest(),
 			wantErr: false,
 		},
 	}
@@ -267,10 +267,10 @@ func TestGetSyncCommitteeMessageSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("SYNC_COMMITTEE_MESSAGE"),
+				request:               util.GetMockSignRequest("SYNC_COMMITTEE_MESSAGE"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    testutil.MockSyncCommitteeMessageSignRequest(),
+			want:    util.MockSyncCommitteeMessageSignRequest(),
 			wantErr: false,
 		},
 	}
@@ -302,10 +302,10 @@ func TestGetSyncCommitteeSelectionProofSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("SYNC_COMMITTEE_SELECTION_PROOF"),
+				request:               util.GetMockSignRequest("SYNC_COMMITTEE_SELECTION_PROOF"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    testutil.MockSyncCommitteeSelectionProofSignRequest(),
+			want:    util.MockSyncCommitteeSelectionProofSignRequest(),
 			wantErr: false,
 		},
 	}
@@ -337,10 +337,10 @@ func TestGetVoluntaryExitSignRequest(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               testutil.GetMockSignRequest("VOLUNTARY_EXIT"),
+				request:               util.GetMockSignRequest("VOLUNTARY_EXIT"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    testutil.MockVoluntaryExitSignRequest(),
+			want:    util.MockVoluntaryExitSignRequest(),
 			wantErr: false,
 		},
 	}
