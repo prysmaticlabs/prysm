@@ -17,6 +17,39 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+var blockTests = []struct {
+	name     string
+	newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
+}{
+	{
+		name: "phase0",
+		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+			b := util.NewBeaconBlock()
+			b.Block.Slot = slot
+			b.Block.ParentRoot = root
+			return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
+		},
+	},
+	{
+		name: "altair",
+		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+			b := util.NewBeaconBlockAltair()
+			b.Block.Slot = slot
+			b.Block.ParentRoot = root
+			return wrapper.WrappedAltairSignedBeaconBlock(b)
+		},
+	},
+	{
+		name: "bellatrix",
+		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+			b := util.NewBeaconBlockMerge()
+			b.Block.Slot = slot
+			b.Block.ParentRoot = root
+			return wrapper.WrappedMergeSignedBeaconBlock(b)
+		},
+	},
+}
+
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	slot := types.Slot(20)
 	ctx := context.Background()
@@ -156,40 +189,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 }
 
 func TestStore_BlocksBatchDelete(t *testing.T) {
-	tests := []struct {
-		name     string
-		newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
-	}{
-		{
-			name: "phase0",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlock()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
-			},
-		},
-		{
-			name: "altair",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlockAltair()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedAltairSignedBeaconBlock(b)
-			},
-		},
-		{
-			name: "bellatrix",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlockMerge()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedMergeSignedBeaconBlock(b)
-			},
-		},
-	}
-
-	for _, tt := range tests {
+	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
@@ -229,40 +229,7 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 }
 
 func TestStore_BlocksHandleZeroCase(t *testing.T) {
-	tests := []struct {
-		name     string
-		newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
-	}{
-		{
-			name: "phase0",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlock()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
-			},
-		},
-		{
-			name: "altair",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlockAltair()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedAltairSignedBeaconBlock(b)
-			},
-		},
-		{
-			name: "bellatrix",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlockMerge()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedMergeSignedBeaconBlock(b)
-			},
-		},
-	}
-
-	for _, tt := range tests {
+	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
@@ -282,44 +249,10 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 			assert.Equal(t, 1, len(retrieved), "Unexpected number of blocks received, expected one")
 		})
 	}
-
 }
 
 func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
-	tests := []struct {
-		name     string
-		newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
-	}{
-		{
-			name: "phase0",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlock()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
-			},
-		},
-		{
-			name: "altair",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlockAltair()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedAltairSignedBeaconBlock(b)
-			},
-		},
-		{
-			name: "bellatrix",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlockMerge()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedMergeSignedBeaconBlock(b)
-			},
-		},
-	}
-
-	for _, tt := range tests {
+	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
@@ -361,40 +294,7 @@ func TestStore_GenesisBlock(t *testing.T) {
 }
 
 func TestStore_BlocksCRUD_NoCache(t *testing.T) {
-	tests := []struct {
-		name     string
-		newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
-	}{
-		{
-			name: "phase0",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlock()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
-			},
-		},
-		{
-			name: "altair",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlockAltair()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedAltairSignedBeaconBlock(b)
-			},
-		},
-		{
-			name: "bellatrix",
-			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-				b := util.NewBeaconBlockMerge()
-				b.Block.Slot = slot
-				b.Block.ParentRoot = root
-				return wrapper.WrappedMergeSignedBeaconBlock(b)
-			},
-		},
-	}
-
-	for _, tt := range tests {
+	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
@@ -418,91 +318,90 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 }
 
 func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
-	db := setupDB(t)
-	b4 := util.NewBeaconBlock()
-	b4.Block.Slot = 4
-	b4.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-	b5 := util.NewBeaconBlock()
-	b5.Block.Slot = 5
-	b5.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
-	b6 := util.NewBeaconBlock()
-	b6.Block.Slot = 6
-	b6.Block.ParentRoot = bytesutil.PadTo([]byte("parent2"), 32)
-	b7 := util.NewBeaconBlock()
-	b7.Block.Slot = 7
-	b7.Block.ParentRoot = bytesutil.PadTo([]byte("parent3"), 32)
-	b8 := util.NewBeaconBlock()
-	b8.Block.Slot = 8
-	b8.Block.ParentRoot = bytesutil.PadTo([]byte("parent4"), 32)
-	blocks := []block.SignedBeaconBlock{
-		wrapper.WrappedPhase0SignedBeaconBlock(b4),
-		wrapper.WrappedPhase0SignedBeaconBlock(b5),
-		wrapper.WrappedPhase0SignedBeaconBlock(b6),
-		wrapper.WrappedPhase0SignedBeaconBlock(b7),
-		wrapper.WrappedPhase0SignedBeaconBlock(b8),
-	}
-	ctx := context.Background()
-	require.NoError(t, db.SaveBlocks(ctx, blocks))
+	for _, tt := range blockTests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupDB(t)
+			b4, err := tt.newBlock(types.Slot(4), bytesutil.PadTo([]byte("parent"), 32))
+			require.NoError(t, err)
+			b5, err := tt.newBlock(types.Slot(5), bytesutil.PadTo([]byte("parent2"), 32))
+			require.NoError(t, err)
+			b6, err := tt.newBlock(types.Slot(6), bytesutil.PadTo([]byte("parent2"), 32))
+			require.NoError(t, err)
+			b7, err := tt.newBlock(types.Slot(7), bytesutil.PadTo([]byte("parent3"), 32))
+			require.NoError(t, err)
+			b8, err := tt.newBlock(types.Slot(8), bytesutil.PadTo([]byte("parent4"), 32))
+			require.NoError(t, err)
+			blocks := []block.SignedBeaconBlock{
+				b4,
+				b5,
+				b6,
+				b7,
+				b8,
+			}
+			ctx := context.Background()
+			require.NoError(t, db.SaveBlocks(ctx, blocks))
 
-	tests := []struct {
-		filter            *filters.QueryFilter
-		expectedNumBlocks int
-	}{
-		{
-			filter:            filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent2"), 32)),
-			expectedNumBlocks: 2,
-		},
-		{
-			// No block meets the criteria below.
-			filter:            filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte{3, 4, 5}, 32)),
-			expectedNumBlocks: 0,
-		},
-		{
-			// Block slot range filter criteria.
-			filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(7),
-			expectedNumBlocks: 3,
-		},
-		{
-			filter:            filters.NewFilter().SetStartSlot(7).SetEndSlot(7),
-			expectedNumBlocks: 1,
-		},
-		{
-			filter:            filters.NewFilter().SetStartSlot(4).SetEndSlot(8),
-			expectedNumBlocks: 5,
-		},
-		{
-			filter:            filters.NewFilter().SetStartSlot(4).SetEndSlot(5),
-			expectedNumBlocks: 2,
-		},
-		{
-			filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(9),
-			expectedNumBlocks: 4,
-		},
-		{
-			filter:            filters.NewFilter().SetEndSlot(7),
-			expectedNumBlocks: 4,
-		},
-		{
-			filter:            filters.NewFilter().SetEndSlot(8),
-			expectedNumBlocks: 5,
-		},
-		{
-			filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(10),
-			expectedNumBlocks: 4,
-		},
-		{
-			// Composite filter criteria.
-			filter: filters.NewFilter().
-				SetParentRoot(bytesutil.PadTo([]byte("parent2"), 32)).
-				SetStartSlot(6).
-				SetEndSlot(8),
-			expectedNumBlocks: 1,
-		},
-	}
-	for _, tt := range tests {
-		retrievedBlocks, _, err := db.Blocks(ctx, tt.filter)
-		require.NoError(t, err)
-		assert.Equal(t, tt.expectedNumBlocks, len(retrievedBlocks), "Unexpected number of blocks")
+			tests := []struct {
+				filter            *filters.QueryFilter
+				expectedNumBlocks int
+			}{
+				{
+					filter:            filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent2"), 32)),
+					expectedNumBlocks: 2,
+				},
+				{
+					// No block meets the criteria below.
+					filter:            filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte{3, 4, 5}, 32)),
+					expectedNumBlocks: 0,
+				},
+				{
+					// Block slot range filter criteria.
+					filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(7),
+					expectedNumBlocks: 3,
+				},
+				{
+					filter:            filters.NewFilter().SetStartSlot(7).SetEndSlot(7),
+					expectedNumBlocks: 1,
+				},
+				{
+					filter:            filters.NewFilter().SetStartSlot(4).SetEndSlot(8),
+					expectedNumBlocks: 5,
+				},
+				{
+					filter:            filters.NewFilter().SetStartSlot(4).SetEndSlot(5),
+					expectedNumBlocks: 2,
+				},
+				{
+					filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(9),
+					expectedNumBlocks: 4,
+				},
+				{
+					filter:            filters.NewFilter().SetEndSlot(7),
+					expectedNumBlocks: 4,
+				},
+				{
+					filter:            filters.NewFilter().SetEndSlot(8),
+					expectedNumBlocks: 5,
+				},
+				{
+					filter:            filters.NewFilter().SetStartSlot(5).SetEndSlot(10),
+					expectedNumBlocks: 4,
+				},
+				{
+					// Composite filter criteria.
+					filter: filters.NewFilter().
+						SetParentRoot(bytesutil.PadTo([]byte("parent2"), 32)).
+						SetStartSlot(6).
+						SetEndSlot(8),
+					expectedNumBlocks: 1,
+				},
+			}
+			for _, tt2 := range tests {
+				retrievedBlocks, _, err := db.Blocks(ctx, tt2.filter)
+				require.NoError(t, err)
+				assert.Equal(t, tt2.expectedNumBlocks, len(retrievedBlocks), "Unexpected number of blocks")
+			}
+		})
 	}
 }
 
