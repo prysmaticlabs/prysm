@@ -32,7 +32,7 @@ go_test(
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//testing/util:go_default_library",
-        "//validator/keymanager/remote-web3signer/testutil:go_default_library",
+        "//validator/keymanager/remote-web3signer/v1/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",

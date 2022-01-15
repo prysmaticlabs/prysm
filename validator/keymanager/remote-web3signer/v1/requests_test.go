@@ -6,7 +6,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	util "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/testutil"
+	util "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/testutil"
 )
 
 func TestGetAggregateAndProofSignRequest(t *testing.T) {

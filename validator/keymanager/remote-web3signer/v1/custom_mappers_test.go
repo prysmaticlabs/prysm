@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	tu "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/testutil"
+	tu "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/testutil"
 
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
