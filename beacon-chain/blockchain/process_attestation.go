@@ -9,12 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
-// onAttestation is called whenever an attestation is received, verifies the attestation is valid and saves
+// OnAttestation is called whenever an attestation is received, verifies the attestation is valid and saves
 // it to the DB. As a stateless function, this does not hold nor delay attestation based on the spec descriptions.
 // The delay is handled by the caller in `processAttestations`.
 //
@@ -36,7 +35,7 @@ import (
 //
 //    # Update latest messages for attesting indices
 //    update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
-func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error {
+func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 
@@ -62,7 +61,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error
 	genesisTime := baseState.GenesisTime()
 
 	// Verify attestation target is from current epoch or previous epoch.
-	if err := verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Unix()), tgt); err != nil {
+	if err := verifyAttTargetEpoch(ctx, genesisTime, s.store.time, tgt); err != nil {
 		return err
 	}
 
@@ -75,7 +74,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) error
 	// validate_aggregate_proof.go and validate_beacon_attestation.go
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := slots.VerifyTime(genesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := slots.VerifyTime(genesisTime, s.store.time, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return err
 	}
 

@@ -29,18 +29,19 @@ import (
 type Step struct {
 	Tick        *int    `json:"tick"`
 	Block       *string `json:"block"`
+	Valid       *bool   `json:"valid"`
 	Attestation *string `json:"attestation"`
 	Check       *Check  `json:"checks"`
 }
 
 type Check struct {
-	Time                    int       `json:"time"`
-	GenesisTime             int       `json:"genesis_time"`
-	ProposerBoostRoot       string    `json:"proposer_boost_root"`
-	Head                    SlotRoot  `json:"head"`
-	JustifiedCheckPoint     EpochRoot `json:"justified_checkpoint"`
-	BestJustifiedCheckPoint EpochRoot `json:"best_justified_checkpoint"`
-	FinalizedCheckPoint     EpochRoot `json:"finalized_checkpoint"`
+	Time                    *int       `json:"time"`
+	GenesisTime             int        `json:"genesis_time"`
+	ProposerBoostRoot       string     `json:"proposer_boost_root"`
+	Head                    *SlotRoot  `json:"head"`
+	JustifiedCheckPoint     *EpochRoot `json:"justified_checkpoint"`
+	BestJustifiedCheckPoint *EpochRoot `json:"best_justified_checkpoint"`
+	FinalizedCheckPoint     *EpochRoot `json:"finalized_checkpoint"`
 }
 
 type SlotRoot struct {
@@ -56,11 +57,11 @@ type EpochRoot struct {
 // RunTest executes "forkchoice" test.
 func RunTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork_choice/on_block/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork_choice/get_head/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			ctx := context.Background()
-			if folder.Name() != "basic" {
+			if folder.Name() != "shorter_chain_but_heavier_weight" {
 				t.Skip("skipping non-basic test")
 			}
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
@@ -105,33 +106,55 @@ func RunTest(t *testing.T, config string) {
 					require.NoError(t, err)
 					wrappedBlock, err := wrapper.WrappedAltairSignedBeaconBlock(block)
 					require.NoError(t, err)
-					require.NoError(t, service.ReceiveBlock(ctx, wrappedBlock, r))
+					if step.Valid != nil && *step.Valid == false {
+						require.Equal(t, true, service.ReceiveBlock(ctx, wrappedBlock, r) != nil)
+					} else {
+						require.NoError(t, service.ReceiveBlock(ctx, wrappedBlock, r))
+					}
 				}
 				if step.Attestation != nil {
-					// Process attestation
+					fileName := fmt.Sprint(*step.Attestation, ".ssz_snappy")
+					attFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
+					require.NoError(t, err)
+					attSSZ, err := snappy.Decode(nil /* dst */, attFile)
+					require.NoError(t, err, "Failed to decompress")
+					att := &ethpb.Attestation{}
+					require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
+					require.NoError(t, service.OnAttestation(ctx, att))
+					require.NoError(t, service.UpdateHead(ctx))
 				}
 				if step.Check != nil {
 					c := step.Check
-					require.Equal(t, uint64(c.Time), service.StoreTime())
-					require.Equal(t, types.Slot(c.Head.Slot), service.HeadSlot())
-					r, err := service.HeadRoot(ctx)
-					require.NoError(t, err)
-					require.DeepEqual(t, common.FromHex(c.Head.Root), r)
-					cp := &ethpb.Checkpoint{
-						Epoch: types.Epoch(c.JustifiedCheckPoint.Epoch),
-						Root:  common.FromHex(c.JustifiedCheckPoint.Root),
+					if c.Time != nil {
+						require.Equal(t, uint64(*c.Time), service.StoreTime())
 					}
-					require.DeepEqual(t, cp, service.JustifiedCheckpoint())
-					cp = &ethpb.Checkpoint{
-						Epoch: types.Epoch(c.BestJustifiedCheckPoint.Epoch),
-						Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
+					if c.Head != nil {
+						require.Equal(t, types.Slot(c.Head.Slot), service.HeadSlot())
+						r, err := service.HeadRoot(ctx)
+						require.NoError(t, err)
+						require.DeepEqual(t, common.FromHex(c.Head.Root), r)
 					}
-					require.DeepEqual(t, cp, service.BestJustifiedCheckpoint())
-					cp = &ethpb.Checkpoint{
-						Epoch: types.Epoch(c.FinalizedCheckPoint.Epoch),
-						Root:  common.FromHex(c.FinalizedCheckPoint.Root),
+					if c.JustifiedCheckPoint != nil {
+						cp := &ethpb.Checkpoint{
+							Epoch: types.Epoch(c.JustifiedCheckPoint.Epoch),
+							Root:  common.FromHex(c.JustifiedCheckPoint.Root),
+						}
+						require.DeepEqual(t, cp, service.JustifiedCheckpoint())
 					}
-					require.DeepSSZEqual(t, cp, service.FinalizedCheckpoint())
+					if c.BestJustifiedCheckPoint != nil {
+						cp := &ethpb.Checkpoint{
+							Epoch: types.Epoch(c.BestJustifiedCheckPoint.Epoch),
+							Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
+						}
+						require.DeepEqual(t, cp, service.BestJustifiedCheckpoint())
+					}
+					if c.FinalizedCheckPoint != nil {
+						cp := &ethpb.Checkpoint{
+							Epoch: types.Epoch(c.FinalizedCheckPoint.Epoch),
+							Root:  common.FromHex(c.FinalizedCheckPoint.Root),
+						}
+						require.DeepSSZEqual(t, cp, service.FinalizedCheckpoint())
+					}
 				}
 			}
 		})
