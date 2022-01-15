@@ -18,37 +18,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestStore_SaveAltairBlock_NoDuplicates(t *testing.T) {
-	BlockCacheSize = 1
-	db := setupDB(t)
-	slot := types.Slot(20)
-	ctx := context.Background()
-	// First we save a previous block to ensure the cache max size is reached.
-	prevBlock := util.NewBeaconBlockAltair()
-	prevBlock.Block.Slot = slot - 1
-	prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(prevBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
-
-	block := util.NewBeaconBlockAltair()
-	block.Block.Slot = slot
-	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	// Even with a full cache, saving new blocks should not cause
-	// duplicated blocks in the DB.
-	for i := 0; i < 100; i++ {
-		wsb, err = wrapper.WrappedAltairSignedBeaconBlock(block)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb))
-	}
-	f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
-	retrieved, _, err := db.Blocks(ctx, f)
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(retrieved))
-	// We reset the block cache size.
-	BlockCacheSize = 256
-}
-
 func TestStore_AltairBlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()

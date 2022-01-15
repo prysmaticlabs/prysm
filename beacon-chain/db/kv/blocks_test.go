@@ -18,30 +18,97 @@ import (
 )
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
-	BlockCacheSize = 1
-	db := setupDB(t)
 	slot := types.Slot(20)
 	ctx := context.Background()
-	// First we save a previous block to ensure the cache max size is reached.
-	prevBlock := util.NewBeaconBlock()
-	prevBlock.Block.Slot = slot - 1
-	prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(prevBlock)))
 
-	block := util.NewBeaconBlock()
-	block.Block.Slot = slot
-	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	// Even with a full cache, saving new blocks should not cause
-	// duplicated blocks in the DB.
-	for i := 0; i < 100; i++ {
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
+	setup := func(t testing.TB) (*Store, func()) {
+		BlockCacheSize = 1
+		return setupDB(t), func() {
+			// We reset the block cache size.
+			BlockCacheSize = 256
+		}
 	}
-	f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
-	retrieved, _, err := db.Blocks(ctx, f)
-	require.NoError(t, err)
-	assert.Equal(t, 1, len(retrieved))
-	// We reset the block cache size.
-	BlockCacheSize = 256
+
+	eval := func(t testing.TB, db *Store, slot types.Slot) {
+		f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
+		retrieved, _, err := db.Blocks(ctx, f)
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(retrieved))
+	}
+
+	t.Run("phase0", func(t *testing.T) {
+		db, teardown := setup(t)
+		defer teardown()
+
+		// First we save a previous block to ensure the cache max size is reached.
+		prevBlock := util.NewBeaconBlock()
+		prevBlock.Block.Slot = slot - 1
+		prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(prevBlock)))
+
+		blk := util.NewBeaconBlock()
+		blk.Block.Slot = slot
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+		// Even with a full cache, saving new blocks should not cause
+		// duplicated blocks in the DB.
+		for i := 0; i < 100; i++ {
+			require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		}
+
+		eval(t, db, slot)
+	})
+
+	t.Run("altair", func(t *testing.T) {
+		db, teardown := setup(t)
+		defer teardown()
+
+		// First we save a previous block to ensure the cache max size is reached.
+		prevBlock := util.NewBeaconBlockAltair()
+		prevBlock.Block.Slot = slot - 1
+		prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(prevBlock)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+
+		blk := util.NewBeaconBlockAltair()
+		blk.Block.Slot = slot
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+		// Even with a full cache, saving new blocks should not cause
+		// duplicated blocks in the DB.
+		for i := 0; i < 100; i++ {
+			wsb, err = wrapper.WrappedAltairSignedBeaconBlock(blk)
+			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(ctx, wsb))
+		}
+
+		eval(t, db, slot)
+	})
+
+	t.Run("bellatrix", func(t *testing.T) {
+		db, teardown := setup(t)
+		defer teardown()
+
+		// First we save a previous block to ensure the cache max size is reached.
+		prevBlock := util.NewBeaconBlockMerge()
+		prevBlock.Block.Slot = slot - 1
+		prevBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+		wsb, err := wrapper.WrappedMergeSignedBeaconBlock(prevBlock)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+
+		blk := util.NewBeaconBlockMerge()
+		blk.Block.Slot = slot
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+		// Even with a full cache, saving new blocks should not cause
+		// duplicated blocks in the DB.
+		for i := 0; i < 100; i++ {
+			wsb, err = wrapper.WrappedMergeSignedBeaconBlock(blk)
+			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(ctx, wsb))
+		}
+
+		eval(t, db, slot)
+	})
 }
 
 func TestStore_BlocksCRUD(t *testing.T) {
