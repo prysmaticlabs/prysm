@@ -100,25 +100,59 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 }
 
 func TestStore_BlocksCRUD(t *testing.T) {
-	db := setupDB(t)
 	ctx := context.Background()
 
-	block := util.NewBeaconBlock()
-	block.Block.Slot = 20
-	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+	eval := func(t testing.TB, db *Store, blockRoot [32]byte, iBlk interface{}) {
+		blk, err := wrapper.WrappedSignedBeaconBlock(iBlk)
+		require.NoError(t, err)
 
-	blockRoot, err := block.Block.HashTreeRoot()
-	require.NoError(t, err)
-	retrievedBlock, err := db.Block(ctx, blockRoot)
-	require.NoError(t, err)
-	assert.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
-	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
-	retrievedBlock, err = db.Block(ctx, blockRoot)
-	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(block, retrievedBlock.Proto()), "Wanted: %v, received: %v", block, retrievedBlock)
-	require.NoError(t, db.deleteBlock(ctx, blockRoot))
-	assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
+		retrievedBlock, err := db.Block(ctx, blockRoot)
+		require.NoError(t, err)
+		assert.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
+		require.NoError(t, db.SaveBlock(ctx, blk))
+		assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
+		retrievedBlock, err = db.Block(ctx, blockRoot)
+		require.NoError(t, err)
+		assert.Equal(t, true, proto.Equal(blk.Proto(), retrievedBlock.Proto()), "Wanted: %v, received: %v", blk, retrievedBlock)
+		require.NoError(t, db.deleteBlock(ctx, blockRoot))
+		assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
+	}
+
+	t.Run("phase0", func(t *testing.T) {
+		db := setupDB(t)
+
+		blk := util.NewBeaconBlock()
+		blk.Block.Slot = 20
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+		blockRoot, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		eval(t, db, blockRoot, blk)
+	})
+
+	t.Run("altair", func(t *testing.T) {
+		db := setupDB(t)
+
+		blk := util.NewBeaconBlockAltair()
+		blk.Block.Slot = 20
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+		blockRoot, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		eval(t, db, blockRoot, blk)
+	})
+
+	t.Run("bellatrix", func(t *testing.T) {
+		db := setupDB(t)
+
+		blk := util.NewBeaconBlockMerge()
+		blk.Block.Slot = 20
+		blk.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
+		blockRoot, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		eval(t, db, blockRoot, blk)
+	})
 }
 
 func TestStore_BlocksBatchDelete(t *testing.T) {
