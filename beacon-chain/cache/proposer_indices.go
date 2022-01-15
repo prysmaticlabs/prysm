@@ -1,3 +1,4 @@
+//go:build !libfuzzer
 // +build !libfuzzer
 
 package cache
