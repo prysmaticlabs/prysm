@@ -1,6 +1,8 @@
 package wrapper
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -14,6 +16,21 @@ var (
 	_ = block.BeaconBlock(&altairBeaconBlock{})
 	_ = block.BeaconBlockBody(&altairBeaconBlockBody{})
 )
+
+// WrappedSignedBeaconBlock will wrap a signed beacon block to conform to the
+// signed beacon block interface.
+func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
+	switch i.(type) {
+	case *eth.SignedBeaconBlock:
+		return WrappedPhase0SignedBeaconBlock(i.(*eth.SignedBeaconBlock)), nil
+	case *eth.SignedBeaconBlockAltair:
+		return WrappedAltairSignedBeaconBlock(i.(*eth.SignedBeaconBlockAltair))
+	case *eth.SignedBeaconBlockMerge:
+		return WrappedMergeSignedBeaconBlock(i.(*eth.SignedBeaconBlockMerge))
+	default:
+		return nil, fmt.Errorf("unable to wrap block of type %T", i)
+	}
+}
 
 // Phase0SignedBeaconBlock is a convenience wrapper around a phase 0 beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon

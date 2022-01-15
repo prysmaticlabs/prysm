@@ -29,7 +29,15 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 		}
 	}
 
-	eval := func(t testing.TB, db *Store, slot types.Slot) {
+	eval := func(t testing.TB, db *Store, slot types.Slot, blk interface{}) {
+		// Even with a full cache, saving new blocks should not cause
+		// duplicated blocks in the DB.
+		for i := 0; i < 100; i++ {
+			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(ctx, wsb))
+		}
+
 		f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
 		retrieved, _, err := db.Blocks(ctx, f)
 		require.NoError(t, err)
@@ -49,13 +57,7 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = slot
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-		// Even with a full cache, saving new blocks should not cause
-		// duplicated blocks in the DB.
-		for i := 0; i < 100; i++ {
-			require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
-		}
-
-		eval(t, db, slot)
+		eval(t, db, slot, blk)
 	})
 
 	t.Run("altair", func(t *testing.T) {
@@ -73,15 +75,8 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 		blk := util.NewBeaconBlockAltair()
 		blk.Block.Slot = slot
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-		// Even with a full cache, saving new blocks should not cause
-		// duplicated blocks in the DB.
-		for i := 0; i < 100; i++ {
-			wsb, err = wrapper.WrappedAltairSignedBeaconBlock(blk)
-			require.NoError(t, err)
-			require.NoError(t, db.SaveBlock(ctx, wsb))
-		}
 
-		eval(t, db, slot)
+		eval(t, db, slot, blk)
 	})
 
 	t.Run("bellatrix", func(t *testing.T) {
@@ -99,15 +94,8 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 		blk := util.NewBeaconBlockMerge()
 		blk.Block.Slot = slot
 		blk.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-		// Even with a full cache, saving new blocks should not cause
-		// duplicated blocks in the DB.
-		for i := 0; i < 100; i++ {
-			wsb, err = wrapper.WrappedMergeSignedBeaconBlock(blk)
-			require.NoError(t, err)
-			require.NoError(t, db.SaveBlock(ctx, wsb))
-		}
 
-		eval(t, db, slot)
+		eval(t, db, slot, blk)
 	})
 }
 
