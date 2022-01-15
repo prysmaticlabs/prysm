@@ -361,24 +361,60 @@ func TestStore_GenesisBlock(t *testing.T) {
 }
 
 func TestStore_BlocksCRUD_NoCache(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	block := util.NewBeaconBlock()
-	block.Block.Slot = 20
-	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	blockRoot, err := block.Block.HashTreeRoot()
-	require.NoError(t, err)
-	retrievedBlock, err := db.Block(ctx, blockRoot)
-	require.NoError(t, err)
-	require.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
-	db.blockCache.Del(string(blockRoot[:]))
-	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
-	retrievedBlock, err = db.Block(ctx, blockRoot)
-	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(block, retrievedBlock.Proto()), "Wanted: %v, received: %v", block, retrievedBlock)
-	require.NoError(t, db.deleteBlock(ctx, blockRoot))
-	assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
+	tests := []struct {
+		name     string
+		newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
+	}{
+		{
+			name: "phase0",
+			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+				b := util.NewBeaconBlock()
+				b.Block.Slot = slot
+				b.Block.ParentRoot = root
+				return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
+			},
+		},
+		{
+			name: "altair",
+			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+				b := util.NewBeaconBlockAltair()
+				b.Block.Slot = slot
+				b.Block.ParentRoot = root
+				return wrapper.WrappedAltairSignedBeaconBlock(b)
+			},
+		},
+		{
+			name: "bellatrix",
+			newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+				b := util.NewBeaconBlockMerge()
+				b.Block.Slot = slot
+				b.Block.ParentRoot = root
+				return wrapper.WrappedMergeSignedBeaconBlock(b)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupDB(t)
+			ctx := context.Background()
+			blk, err := tt.newBlock(types.Slot(20), bytesutil.PadTo([]byte{1, 2, 3}, 32))
+			require.NoError(t, err)
+			blockRoot, err := blk.Block().HashTreeRoot()
+			require.NoError(t, err)
+			retrievedBlock, err := db.Block(ctx, blockRoot)
+			require.NoError(t, err)
+			require.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
+			require.NoError(t, db.SaveBlock(ctx, blk))
+			db.blockCache.Del(string(blockRoot[:]))
+			assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
+			retrievedBlock, err = db.Block(ctx, blockRoot)
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(blk.Proto(), retrievedBlock.Proto()), "Wanted: %v, received: %v", blk, retrievedBlock)
+			require.NoError(t, db.deleteBlock(ctx, blockRoot))
+			assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
+		})
+	}
 }
 
 func TestStore_Blocks_FiltersCorrectly(t *testing.T) {

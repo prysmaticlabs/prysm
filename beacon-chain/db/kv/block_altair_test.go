@@ -17,29 +17,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestStore_AltairBlocksCRUD_NoCache(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	block := util.NewBeaconBlockAltair()
-	block.Block.Slot = 20
-	block.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
-	blockRoot, err := block.Block.HashTreeRoot()
-	require.NoError(t, err)
-	retrievedBlock, err := db.Block(ctx, blockRoot)
-	require.NoError(t, err)
-	require.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
-	db.blockCache.Del(string(blockRoot[:]))
-	assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
-	retrievedBlock, err = db.Block(ctx, blockRoot)
-	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(block, retrievedBlock.Proto()), "Wanted: %v, received: %v", block, retrievedBlock)
-	require.NoError(t, db.deleteBlock(ctx, blockRoot))
-	assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
-}
-
 func TestStore_AltairBlocks_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
 	b4 := util.NewBeaconBlockAltair()
