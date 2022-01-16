@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["genesis.go"],
     embedsrcs = ["mainnet.ssz.snappy"],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/genesis",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/genesis",
     visibility = ["//beacon-chain/db:__subpackages__"],
     deps = [
         "//beacon-chain/state/v1:go_default_library",
@@ -18,7 +18,7 @@ go_test(
     name = "go_default_test",
     srcs = ["genesis_test.go"],
     deps = [
-        "//beacon-chain/state/state-native/genesis:go_default_library",
+        ":go_default_library",
         "//config/params:go_default_library",
     ],
 )
