@@ -77,8 +77,6 @@ go_test(
     srcs = [
         "archived_point_test.go",
         "backup_test.go",
-        "block_altair_test.go",
-        "block_merge_test.go",
         "blocks_test.go",
         "checkpoint_test.go",
         "deposit_contract_test.go",
