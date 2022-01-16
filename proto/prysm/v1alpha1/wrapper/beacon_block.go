@@ -1,8 +1,6 @@
 package wrapper
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -15,6 +13,10 @@ var (
 	_ = block.SignedBeaconBlock(&altairSignedBeaconBlock{})
 	_ = block.BeaconBlock(&altairBeaconBlock{})
 	_ = block.BeaconBlockBody(&altairBeaconBlockBody{})
+
+	// ErrUnsupportedSignedBeaconBlock is returned when the struct type is not a supported signed
+	// beacon block type.
+	ErrUnsupportedSignedBeaconBlock = errors.New("unsupported signed beacon block")
 )
 
 // WrappedSignedBeaconBlock will wrap a signed beacon block to conform to the
@@ -28,7 +30,7 @@ func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
 	case *eth.SignedBeaconBlockMerge:
 		return WrappedMergeSignedBeaconBlock(b)
 	default:
-		return nil, fmt.Errorf("unable to wrap block of type %T", i)
+		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", i)
 	}
 }
 

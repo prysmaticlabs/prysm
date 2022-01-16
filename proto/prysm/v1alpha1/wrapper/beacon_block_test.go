@@ -16,9 +16,15 @@ import (
 
 func TestWrappedSignedBeaconBlock(t *testing.T) {
 	tests := []struct {
-		name string
-		blk  interface{}
+		name    string
+		blk     interface{}
+		wantErr bool
 	}{
+		{
+			name:    "unsupported type",
+			blk:     "not a beacon block",
+			wantErr: true,
+		},
 		{
 			name: "phase0",
 			blk:  util.NewBeaconBlock(),
@@ -35,7 +41,11 @@ func TestWrappedSignedBeaconBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := wrapper.WrappedSignedBeaconBlock(tt.blk)
-			require.NoError(t, err)
+			if tt.wantErr {
+				require.ErrorIs(t, err, wrapper.ErrUnsupportedSignedBeaconBlock)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
