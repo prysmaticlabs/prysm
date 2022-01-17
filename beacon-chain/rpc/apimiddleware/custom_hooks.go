@@ -289,6 +289,11 @@ type altairBlockResponseJson struct {
 	Data    *signedBeaconBlockAltairContainerJson `json:"data"`
 }
 
+type bellatrixBlockResponseJson struct {
+	Version string                                   `json:"version"`
+	Data    *signedBeaconBlockBellatrixContainerJson `json:"data"`
+}
+
 func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*blockV2ResponseJson)
 	if !ok {
@@ -309,6 +314,14 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockAltairContainerJson{
 				Message:   respContainer.Data.AltairBlock,
+				Signature: respContainer.Data.Signature,
+			},
+		}
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_MERGE.String())) {
+		actualRespContainer = &bellatrixBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &signedBeaconBlockBellatrixContainerJson{
+				Message:   respContainer.Data.BellatrixBlock,
 				Signature: respContainer.Data.Signature,
 			},
 		}
