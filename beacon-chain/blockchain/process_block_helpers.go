@@ -177,30 +177,6 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	return true, nil
 }
 
-func (s *Service) shouldUpdateCurrentJustifiedNew(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.shouldUpdateCurrentJustified")
-	defer span.End()
-
-	if slots.SinceEpochStarts(s.slotInStore()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
-		return true, nil
-	}
-
-	jSlot, err := slots.EpochStart(s.store.justifiedCheckpt.Epoch)
-	if err != nil {
-		return false, err
-	}
-	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
-	b, err := s.ancestor(ctx, justifiedRoot[:], jSlot)
-	if err != nil {
-		return false, err
-	}
-	if !bytes.Equal(b, s.store.justifiedCheckpt.Root) {
-		return false, nil
-	}
-
-	return true, nil
-}
-
 func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateJustified")
 	defer span.End()

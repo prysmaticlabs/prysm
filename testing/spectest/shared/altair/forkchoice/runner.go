@@ -58,7 +58,7 @@ type EpochRoot struct {
 // RunTest executes "forkchoice" test.
 func RunTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork_choice/on_block/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork_choice/get_head/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			ctx := context.Background()
@@ -131,9 +131,15 @@ func RunTest(t *testing.T, config string) {
 						require.Equal(t, uint64(*c.Time), service.StoreTime())
 					}
 					if c.Head != nil {
-						require.Equal(t, types.Slot(c.Head.Slot), service.HeadSlot())
 						r, err := service.HeadRoot(ctx)
 						require.NoError(t, err)
+						if types.Slot(c.Head.Slot) != service.HeadSlot() {
+							for i, node := range service.ProtoArrayStore().Nodes() {
+								t.Log(i, node.Slot(), node.Parent(), node.BestChild(), node.BestDescendant(), node.Weight())
+							}
+							t.Fatalf("incorrect head slot, want %d, got %d", c.Head.Slot, service.HeadSlot())
+						}
+						require.Equal(t, types.Slot(c.Head.Slot), service.HeadSlot())
 						require.DeepEqual(t, common.FromHex(c.Head.Root), r)
 					}
 					if c.JustifiedCheckPoint != nil {

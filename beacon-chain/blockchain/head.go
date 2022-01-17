@@ -36,13 +36,6 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateHead")
 	defer span.End()
 
-	// To get the proper head update, a node first checks its best justified
-	// can become justified. This is designed to prevent bounce attack and
-	// ensure head gets its best justified info.
-	if s.store.bestJustifiedCheckpt.Epoch > s.store.justifiedCheckpt.Epoch {
-		s.store.justifiedCheckpt = s.store.bestJustifiedCheckpt
-	}
-
 	// Get head from the fork choice service.
 	f := s.store.finalizedCheckpt
 	j := s.store.justifiedCheckpt

@@ -155,32 +155,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			return err
 		}
 	}
-	p := postState.CurrentJustifiedCheckpoint()
-	e := p.Epoch
-	if e > s.store.justifiedCheckpt.Epoch {
-		if e > s.store.bestJustifiedCheckpt.Epoch {
-			s.store.bestJustifiedCheckpt = p
-		}
-		canUpdate, err := s.shouldUpdateCurrentJustifiedNew(ctx, p)
-		if err != nil {
-			return err
-		}
-		if canUpdate {
-			s.store.justifiedCheckpt = p
-		}
-	}
 
 	newFinalized := postState.FinalizedCheckpointEpoch() > s.store.finalizedCheckpt.Epoch
 	if newFinalized {
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
-		}
 		s.store.finalizedCheckpt = postState.FinalizedCheckpoint()
-	}
-	p = postState.FinalizedCheckpoint()
-	e = p.Epoch
-	if e > s.store.finalizedCheckpt.Epoch {
-		s.store.finalizedCheckpt = p
 		s.store.justifiedCheckpt = postState.CurrentJustifiedCheckpoint()
 	}
 
