@@ -53,6 +53,8 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			keymanagerKind = pb.KeymanagerKind_DERIVED
 		case keymanager.Remote:
 			keymanagerKind = pb.KeymanagerKind_REMOTE
+		case keymanager.Web3Signer:
+			keymanagerKind = pb.KeymanagerKind_Web3Signer
 		}
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
@@ -129,7 +131,10 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 		keymanagerKind = pb.KeymanagerKind_IMPORTED
 	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
+	case keymanager.Web3Signer:
+		keymanagerKind = pb.KeymanagerKind_Web3Signer
 	}
+
 	return &pb.WalletResponse{
 		WalletPath:     s.walletDir,
 		KeymanagerKind: keymanagerKind,

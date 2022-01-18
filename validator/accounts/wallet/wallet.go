@@ -276,7 +276,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
-	case keymanager.Remote:
+	case keymanager.Remote: //option should not work for --web
 		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read keymanager config")
@@ -292,7 +292,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote keymanager")
 		}
-	case keymanager.Web3Signer:
+	case keymanager.Web3Signer: //option should not work for --web
 		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read web3signer keymanager config")
@@ -305,7 +305,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if len(cfg.GenesisValidatorsRoot) != 0 {
 			config.GenesisValidatorsRoot = cfg.GenesisValidatorsRoot
 		} else {
-			return nil, errors.New("could not set genesis validators root")
+			return nil, errors.New("could not set genesis validators root for web3signer keymanager")
 		}
 		km, err = remote_web3signer.NewKeymanager(ctx, config)
 		if err != nil {
