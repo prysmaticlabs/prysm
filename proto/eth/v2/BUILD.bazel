@@ -38,6 +38,7 @@ ssz_gen_marshal(
     objs = [
         "SignedBeaconBlockAltair",
         "BeaconStateV2",
+        "SignedBeaconBlockMerge",
     ],
 )
 

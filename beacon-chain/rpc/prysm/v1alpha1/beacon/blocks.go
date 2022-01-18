@@ -41,75 +41,20 @@ type blockContainer struct {
 func (bs *Server) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
-	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, cmd.Get().MaxRPCPageSize)
+	ctrs, numBlks, nextPageToken, err := bs.listBlocks(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	blkContainers, err := convertToProto(ctrs)
+	if err != nil {
+		return nil, err
 	}
 
-	switch q := req.QueryFilter.(type) {
-	case *ethpb.ListBlocksRequest_Epoch:
-		ctrs, numBlks, nextPageToken, err := bs.listBlocksForEpoch(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		blkContainers, err := convertToProto(ctrs)
-		if err != nil {
-			return nil, err
-		}
-
-		return &ethpb.ListBlocksResponse{
-			BlockContainers: blkContainers,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-	case *ethpb.ListBlocksRequest_Root:
-		ctrs, numBlks, nextPageToken, err := bs.listBlocksForRoot(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		blkContainers, err := convertToProto(ctrs)
-		if err != nil {
-			return nil, err
-		}
-
-		return &ethpb.ListBlocksResponse{
-			BlockContainers: blkContainers,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-
-	case *ethpb.ListBlocksRequest_Slot:
-		ctrs, numBlks, nextPageToken, err := bs.listBlocksForSlot(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		blkContainers, err := convertToProto(ctrs)
-		if err != nil {
-			return nil, err
-		}
-
-		return &ethpb.ListBlocksResponse{
-			BlockContainers: blkContainers,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-	case *ethpb.ListBlocksRequest_Genesis:
-		ctrs, numBlks, nextPageToken, err := bs.listBlocksForGenesis(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		blkContainers, err := convertToProto(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBlocksResponse{
-			BlockContainers: blkContainers,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-	}
-
-	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
+	return &ethpb.ListBlocksResponse{
+		BlockContainers: blkContainers,
+		TotalSize:       int32(numBlks),
+		NextPageToken:   nextPageToken,
+	}, nil
 }
 
 // ListBeaconBlocks retrieves blocks by root, slot, or epoch.
@@ -121,72 +66,39 @@ func (bs *Server) ListBlocks(
 func (bs *Server) ListBeaconBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBeaconBlocksResponse, error) {
+	ctrs, numBlks, nextPageToken, err := bs.listBlocks(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	altCtrs, err := convertFromV1Containers(ctrs)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpb.ListBeaconBlocksResponse{
+		BlockContainers: altCtrs,
+		TotalSize:       int32(numBlks),
+		NextPageToken:   nextPageToken,
+	}, nil
+}
+
+func (bs *Server) listBlocks(ctx context.Context, req *ethpb.ListBlocksRequest) ([]blockContainer, int, string, error) {
 	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
-		ctrs, numBlks, nextPageToken, err := bs.listBlocksForEpoch(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		altCtrs, err := convertFromV1Containers(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBeaconBlocksResponse{
-			BlockContainers: altCtrs,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
+		return bs.listBlocksForEpoch(ctx, req, q)
 	case *ethpb.ListBlocksRequest_Root:
-		ctrs, numBlks, nextPageToken, err := bs.listBlocksForRoot(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		altCtrs, err := convertFromV1Containers(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBeaconBlocksResponse{
-			BlockContainers: altCtrs,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-
+		return bs.listBlocksForRoot(ctx, req, q)
 	case *ethpb.ListBlocksRequest_Slot:
-		ctrs, numBlks, nextPageToken, err := bs.listBlocksForSlot(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		altCtrs, err := convertFromV1Containers(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBeaconBlocksResponse{
-			BlockContainers: altCtrs,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
+		return bs.listBlocksForSlot(ctx, req, q)
 	case *ethpb.ListBlocksRequest_Genesis:
-		ctrs, numBlks, nextPageToken, err := bs.listBlocksForGenesis(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		altCtrs, err := convertFromV1Containers(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBeaconBlocksResponse{
-			BlockContainers: altCtrs,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
+		return bs.listBlocksForGenesis(ctx, req, q)
+	default:
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks. Criteria %T not supported", q)
 	}
-
-	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
 }
 
 func convertFromV1Containers(ctrs []blockContainer) ([]*ethpb.BeaconBlockContainer, error) {

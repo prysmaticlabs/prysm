@@ -176,3 +176,23 @@ func (mr *MockNodeClientMockRecorder) ListPeers(arg0, arg1 interface{}, arg2 ...
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPeers", reflect.TypeOf((*MockNodeClient)(nil).ListPeers), varargs...)
 }
+
+// GetETH1ConnectionStatus mocks base method
+func (m *MockNodeClient) GetETH1ConnectionStatus(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.ETH1ConnectionStatus, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetETH1ConnectionStatus", varargs...)
+	ret0, _ := ret[0].(*eth.ETH1ConnectionStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetETH1ConnectionStatus indicates an expected call of GetETH1ConnectionStatus
+func (mr *MockNodeClientMockRecorder) GetETH1ConnectionStatus(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetETH1ConnectionStatus", reflect.TypeOf((*MockNodeClient)(nil).GetETH1ConnectionStatus), varargs...)
+}
