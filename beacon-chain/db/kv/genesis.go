@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	statev1native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -51,7 +52,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 }
 
 // LoadGenesis loads a genesis state from a given file path, if no genesis exists already.
-func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
+func (s *Store) LoadGenesis(ctx context.Context, r io.Reader, useNativeState bool) error {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
@@ -60,7 +61,13 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 	if err := st.UnmarshalSSZ(b); err != nil {
 		return err
 	}
-	gs, err := statev1.InitializeFromProtoUnsafe(st)
+	var gs state.BeaconState
+	if useNativeState {
+		gs, err = statev1native.InitializeFromProtoUnsafe(st)
+	} else {
+		gs, err = statev1.InitializeFromProtoUnsafe(st)
+	}
+
 	if err != nil {
 		return err
 	}

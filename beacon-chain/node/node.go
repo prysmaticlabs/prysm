@@ -365,7 +365,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 				log.WithError(err).Error("Failed to close genesis file")
 			}
 		}()
-		if err := b.db.LoadGenesis(b.ctx, r); err != nil {
+		if err := b.db.LoadGenesis(b.ctx, r, cliCtx.Bool(flags.UseNativeState.Name)); err != nil {
 			if err == db.ErrExistingGenesisState {
 				return errors.New("Genesis state flag specified but a genesis state " +
 					"exists already. Run again with --clear-db and/or ensure you are using the " +
