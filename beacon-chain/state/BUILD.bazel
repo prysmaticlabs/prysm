@@ -4,7 +4,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "altair.go",
+        "error.go",
         "phase0.go",
+        "prometheus.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state",
     visibility = [
@@ -25,6 +27,8 @@ go_library(
     deps = [
         "//config/fieldparams:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

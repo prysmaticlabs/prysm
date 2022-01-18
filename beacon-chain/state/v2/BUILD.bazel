@@ -51,8 +51,6 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
@@ -74,6 +72,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
         "//beacon-chain/state/v1:go_default_library",

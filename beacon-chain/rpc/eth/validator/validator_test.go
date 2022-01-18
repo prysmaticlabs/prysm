@@ -59,7 +59,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -141,7 +141,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.NoError(t, bs.SetSlot(5))
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
-		roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+		roots := make([][]byte, fieldparams.BlockRootsLength)
 		roots[0] = genesisRoot[:]
 		require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -236,7 +236,7 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -285,7 +285,7 @@ func TestGetProposerDuties(t *testing.T) {
 		require.NoError(t, bs.SetSlot(5))
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
-		roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+		roots := make([][]byte, fieldparams.BlockRootsLength)
 		roots[0] = genesisRoot[:]
 		require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -1117,7 +1117,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -1258,7 +1258,7 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 	require.NoError(t, err, "Could not set up genesis state")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
