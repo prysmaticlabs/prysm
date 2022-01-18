@@ -237,7 +237,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 //      [REJECT] The block's execution payload timestamp is correct with respect to the slot --
 //      i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
 func validateBellatrixBeaconBlock(parentState state.BeaconState, blk block.BeaconBlock) error {
-	if !(parentState.Version() != version.Bellatrix && blk.Version() != version.Bellatrix) {
+	if parentState.Version() != version.Bellatrix || blk.Version() != version.Bellatrix {
 		return nil
 	}
 
