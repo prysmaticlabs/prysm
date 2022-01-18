@@ -17,12 +17,6 @@ type ValidatorIndexOutOfRangeError struct {
 	message string
 }
 
-var (
-	// ErrNilValidatorsInState returns when accessing validators in the state while the state has a
-	// nil slice for the validators field.
-	ErrNilValidatorsInState = errors.New("state has nil validator slice")
-)
-
 // NewValidatorIndexOutOfRangeError creates a new error instance.
 func NewValidatorIndexOutOfRangeError(index types.ValidatorIndex) ValidatorIndexOutOfRangeError {
 	return ValidatorIndexOutOfRangeError{
@@ -106,7 +100,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (state.ReadOnlyValidator, error) {
 	if b.validators == nil {
-		return nil, ErrNilValidatorsInState
+		return nil, state.ErrNilValidatorsInState
 	}
 	if uint64(len(b.validators)) <= uint64(idx) {
 		e := NewValidatorIndexOutOfRangeError(idx)
