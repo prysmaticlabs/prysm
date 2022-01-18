@@ -33,7 +33,6 @@ var Commands = &cli.Command{
 
 				flags.Web3SignerURLFlag,
 				flags.Web3SignerPublicValidatorKeysFlag,
-
 				flags.WalletPasswordFileFlag,
 				flags.Mnemonic25thWordFileFlag,
 				flags.SkipMnemonic25thWordCheckFlag,
