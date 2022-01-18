@@ -284,6 +284,10 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	}
 	if w != nil {
 		c.wallet = w
+		keymanagerKind := w.KeymanagerKind()
+		if keymanagerKind != keymanager.Imported && keymanagerKind != keymanager.Derived {
+			return errors.New("prysm web interface does not support remote validator key managers")
+		}
 		log.WithFields(logrus.Fields{
 			"wallet":          w.AccountsDir(),
 			"keymanager-kind": w.KeymanagerKind().String(),
