@@ -71,6 +71,7 @@ type Service struct {
 
 // config options for the service.
 type config struct {
+	UseNativeState              bool
 	BeaconBlockBuf              int
 	ChainStartFetcher           powchain.ChainStartFetcher
 	BeaconDB                    db.HeadAccessDatabase
@@ -92,7 +93,7 @@ type config struct {
 
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
-func NewService(ctx context.Context, opts ...Option) (*Service, error) {
+func NewService(ctx context.Context, useNativeState bool, opts ...Option) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	srv := &Service{
 		ctx:                  ctx,
@@ -100,7 +101,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]block.SignedBeaconBlock),
-		cfg:                  &config{},
+		cfg: &config{
+			UseNativeState: useNativeState,
+		},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
@@ -402,7 +405,7 @@ func (s *Service) initializeBeaconChain(
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
-	genesisState, err := transition.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
+	genesisState, err := transition.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data, s.cfg.UseNativeState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize genesis state")
 	}

@@ -53,7 +53,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data, false)
 	require.NoError(t, err, "Could not set up genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bs.SetSlot(5))
@@ -135,7 +135,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		// We create local variables to not interfere with other tests.
 		// Slot processing might have unexpected side-effects.
 
-		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data, false)
 		require.NoError(t, err, "Could not set up genesis state")
 		// Set state to non-epoch start slot.
 		require.NoError(t, bs.SetSlot(5))
@@ -230,7 +230,7 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data, false)
 	require.NoError(t, err, "Could not set up genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bs.SetSlot(5))
@@ -279,7 +279,7 @@ func TestGetProposerDuties(t *testing.T) {
 		// We create local variables to not interfere with other tests.
 		// Slot processing might have unexpected side-effects.
 
-		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data, false)
 		require.NoError(t, err, "Could not set up genesis state")
 		// Set state to non-epoch start slot.
 		require.NoError(t, bs.SetSlot(5))
@@ -1111,7 +1111,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data, false)
 	require.NoError(t, err, "Could not set up genesis state")
 	// Set state to non-epoch start slot.
 	require.NoError(t, bs.SetSlot(5))

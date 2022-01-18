@@ -554,7 +554,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 	)
-	blockchainService, err := blockchain.NewService(b.ctx, opts...)
+	blockchainService, err := blockchain.NewService(b.ctx, b.cliCtx.Bool(flags.UseNativeState.Name), opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
 	}
@@ -585,7 +585,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		powchain.WithBeaconNodeStatsUpdater(bs),
 		powchain.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
 	)
-	web3Service, err := powchain.NewService(b.ctx, opts...)
+	web3Service, err := powchain.NewService(b.ctx, b.cliCtx.Bool(flags.UseNativeState.Name), opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}

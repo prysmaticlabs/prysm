@@ -97,6 +97,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	require.NoError(t, err)
 	web3Service, err = powchain.NewService(
 		ctx,
+		false,
 		powchain.WithDatabase(beaconDB),
 		powchain.WithHttpEndpoints([]string{endpoint}),
 		powchain.WithDepositContractAddress(common.Address{}),
@@ -125,7 +126,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithStateGen(stateGen),
 	}
 
-	chainService, err := NewService(ctx, opts...)
+	chainService, err := NewService(ctx, false, opts...)
 	require.NoError(t, err, "Unable to setup chain service")
 	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
@@ -204,7 +205,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	trie, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
 	hashTreeRoot := trie.HashTreeRoot()
-	genState, err := transition.EmptyGenesisState()
+	genState, err := transition.EmptyGenesisState(false)
 	require.NoError(t, err)
 	err = genState.SetEth1Data(&ethpb.Eth1Data{
 		DepositRoot:  hashTreeRoot[:],
@@ -286,7 +287,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
-	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stategen.New(beaconDB)), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
+	c, err := NewService(ctx, false, WithDatabase(beaconDB), WithStateGen(stategen.New(beaconDB)), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
 	require.NoError(t, err)
 	require.NoError(t, c.startFromSavedState(headState))
 	headBlk, err := c.HeadBlock(ctx)
@@ -329,7 +330,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(headBlock)))
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
-	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stategen.New(beaconDB)), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}))
+	c, err := NewService(ctx, false, WithDatabase(beaconDB), WithStateGen(stategen.New(beaconDB)), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}))
 	require.NoError(t, err)
 	require.NoError(t, c.startFromSavedState(headState))
 	s, err := c.HeadState(ctx)
@@ -389,7 +390,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
-	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stategen.New(beaconDB)), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
+	c, err := NewService(ctx, false, WithDatabase(beaconDB), WithStateGen(stategen.New(beaconDB)), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
 	require.NoError(t, err)
 	require.NoError(t, c.startFromSavedState(headState))
 	s, err := c.HeadState(ctx)

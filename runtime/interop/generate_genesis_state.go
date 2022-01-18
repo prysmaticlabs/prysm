@@ -60,7 +60,7 @@ func GenerateGenesisStateFromDepositData(
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
 		BlockHash:    mockEth1BlockHash,
-	})
+	}, false)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}

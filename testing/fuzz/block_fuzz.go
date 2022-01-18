@@ -140,6 +140,7 @@ func BeaconFuzzBlock(b []byte) {
 
 	chain, err := blockchain.NewService(
 		context.Background(),
+		false,
 		blockchain.WithChainStartFetcher(powt.NewPOWChain()),
 		blockchain.WithDatabase(db1),
 		blockchain.WithAttestationPool(ap),

@@ -27,7 +27,7 @@ func TestGenerateGenesisState(t *testing.T) {
 	genesisState, err := transition.GenesisBeaconState(context.Background(), deposits, 0, &eth.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: uint64(len(deposits)),
-	})
+	}, false)
 	require.NoError(t, err)
 	want := int(numValidators)
 	assert.Equal(t, want, genesisState.NumValidators())

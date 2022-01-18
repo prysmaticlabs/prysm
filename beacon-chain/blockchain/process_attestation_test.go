@@ -30,7 +30,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
 		WithStateGen(stategen.New(beaconDB)),
 	}
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	_, err = blockTree1(t, beaconDB, []byte{'g'})
@@ -137,7 +137,7 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 		WithStateGen(stategen.New(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(time.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
@@ -161,7 +161,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
 	}
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	s, err := util.NewBeaconState()
@@ -233,7 +233,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
 	}
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	epoch := types.Epoch(1)
@@ -289,7 +289,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	ctx := context.Background()
 	opts := testServiceOptsWithDB(t)
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	d := util.HydrateAttestationData(&ethpb.AttestationData{})
@@ -300,7 +300,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	ctx := context.Background()
 
 	opts := testServiceOptsWithDB(t)
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	b := util.NewBeaconBlock()
@@ -317,7 +317,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	ctx := context.Background()
 
 	opts := testServiceOptsWithDB(t)
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	b := util.NewBeaconBlock()
@@ -340,7 +340,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 		WithStateGen(stategen.New(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	b32 := util.NewBeaconBlock()
@@ -366,7 +366,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	ctx := context.Background()
 
 	opts := testServiceOptsWithDB(t)
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	b32 := util.NewBeaconBlock()
@@ -392,7 +392,7 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	ctx := context.Background()
 
 	opts := testServiceOptsWithDB(t)
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	b32 := util.NewBeaconBlock()

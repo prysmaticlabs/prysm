@@ -133,7 +133,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
 				WithStateGen(stategen.New(beaconDB)),
 			}
-			s, err := NewService(ctx, opts...)
+			s, err := NewService(ctx, false, opts...)
 			require.NoError(t, err)
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
 			gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
@@ -171,7 +171,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 		WithStateGen(stategen.New(beaconDB)),
 	}
 
-	s, err := NewService(ctx, opts...)
+	s, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
 	gBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
@@ -248,7 +248,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
 				WithStateGen(stategen.New(beaconDB)),
 			}
-			s, err := NewService(ctx, opts...)
+			s, err := NewService(ctx, false, opts...)
 			require.NoError(t, err)
 			err = s.saveGenesisData(ctx, genesis)
 			require.NoError(t, err)
@@ -276,7 +276,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 func TestService_HasInitSyncBlock(t *testing.T) {
 	opts := testServiceOptsNoDB()
 	opts = append(opts, WithStateNotifier(&blockchainTesting.MockStateNotifier{}))
-	s, err := NewService(context.Background(), opts...)
+	s, err := NewService(context.Background(), false, opts...)
 	require.NoError(t, err)
 	r := [32]byte{'a'}
 	if s.HasInitSyncBlock(r) {
@@ -291,7 +291,7 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background(), opts...)
+	s, err := NewService(context.Background(), false, opts...)
 	require.NoError(t, err)
 	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
@@ -304,7 +304,7 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 	hook := logTest.NewGlobal()
 	opts := testServiceOptsWithDB(t)
-	s, err := NewService(context.Background(), opts...)
+	s, err := NewService(context.Background(), false, opts...)
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{}
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
@@ -317,7 +317,7 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
 	hook := logTest.NewGlobal()
 	opts := testServiceOptsWithDB(t)
-	s, err := NewService(context.Background(), opts...)
+	s, err := NewService(context.Background(), false, opts...)
 	require.NoError(t, err)
 	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 10000000}
 	s.genesisTime = time.Now()

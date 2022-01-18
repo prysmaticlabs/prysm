@@ -42,7 +42,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	ctx := context.Background()
 	opts := testServiceOptsWithDB(t)
 
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	b32 := util.NewBeaconBlock()
@@ -69,7 +69,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	ctx := context.Background()
 
 	opts := testServiceOptsWithDB(t)
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 
 	b32 := util.NewBeaconBlock()
@@ -98,7 +98,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	opts = append(opts, WithAttestationPool(attestations.NewPool()))
 
-	service, err := NewService(ctx, opts...)
+	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
 	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
