@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -56,7 +57,7 @@ var (
 		keymanager.Imported:   "Imported Wallet (Recommended)",
 		keymanager.Derived:    "HD Wallet",
 		keymanager.Remote:     "Remote Signing Wallet (Advanced)",
-		keymanager.Web3Signer: "Web3Signer (Advanced)",
+		keymanager.Web3Signer: "Consensys Web3Signer (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {
@@ -301,7 +302,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal web3signer keymanager config file")
 		}
-		if len(cfg.GenesisValidatorsRoot) != 0 {
+		if len(cfg.GenesisValidatorsRoot) != fieldparams.RootLength {
 			config.GenesisValidatorsRoot = cfg.GenesisValidatorsRoot
 		} else {
 			return nil, errors.New("could not set genesis validators root for web3signer keymanager")
