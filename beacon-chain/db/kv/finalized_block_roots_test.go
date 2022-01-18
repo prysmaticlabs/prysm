@@ -136,76 +136,57 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 
 func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
-	db := setupDB(t)
 	ctx := context.Background()
 
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
-
-	blks := makeBlocks(t, 0, slotsPerEpoch*3, genesisBlockRoot)
-
-	require.NoError(t, db.SaveBlocks(ctx, blks))
-	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
-	require.NoError(t, err)
-
-	cp := &ethpb.Checkpoint{
-		Epoch: 1,
-		Root:  root[:],
-	}
-
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	// a state is required to save checkpoint
-	require.NoError(t, db.SaveState(ctx, st, root))
-	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
-
-	// All blocks up to slotsPerEpoch should have a finalized child block.
-	for i := uint64(0); i < slotsPerEpoch; i++ {
-		root, err := blks[i].Block().HashTreeRoot()
+	eval := func(t testing.TB, ctx context.Context, db *Store, blks []block.SignedBeaconBlock) {
+		require.NoError(t, db.SaveBlocks(ctx, blks))
+		root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
 		require.NoError(t, err)
-		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
-		blk, err := db.FinalizedChildBlock(ctx, root)
-		assert.NoError(t, err)
-		if blk == nil {
-			t.Error("Child block doesn't exist for valid finalized block.")
+
+		cp := &ethpb.Checkpoint{
+			Epoch: 1,
+			Root:  root[:],
+		}
+
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		// a state is required to save checkpoint
+		require.NoError(t, db.SaveState(ctx, st, root))
+		require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+
+		// All blocks up to slotsPerEpoch should have a finalized child block.
+		for i := uint64(0); i < slotsPerEpoch; i++ {
+			root, err := blks[i].Block().HashTreeRoot()
+			require.NoError(t, err)
+			assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
+			blk, err := db.FinalizedChildBlock(ctx, root)
+			assert.NoError(t, err)
+			if blk == nil {
+				t.Error("Child block doesn't exist for valid finalized block.")
+			}
 		}
 	}
-}
 
-func TestStore_IsFinalizedChildBlockAltair(t *testing.T) {
-	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
-	db := setupDB(t)
-	ctx := context.Background()
+	setup := func(t testing.TB) *Store {
+		db := setupDB(t)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
 
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
-
-	blks := makeBlocksAltair(t, 0, slotsPerEpoch*3, genesisBlockRoot)
-
-	require.NoError(t, db.SaveBlocks(ctx, blks))
-	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
-	require.NoError(t, err)
-
-	cp := &ethpb.Checkpoint{
-		Epoch: 1,
-		Root:  root[:],
+		return db
 	}
 
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	// a state is required to save checkpoint
-	require.NoError(t, db.SaveState(ctx, st, root))
-	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+	t.Run("phase0", func(t *testing.T) {
+		db := setup(t)
 
-	// All blocks up to slotsPerEpoch should have a finalized child block.
-	for i := uint64(0); i < slotsPerEpoch; i++ {
-		root, err := blks[i].Block().HashTreeRoot()
-		require.NoError(t, err)
-		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
-		blk, err := db.FinalizedChildBlock(ctx, root)
-		assert.NoError(t, err)
-		if blk == nil {
-			t.Error("Child block doesn't exist for valid finalized block.")
-		}
-	}
+		blks := makeBlocks(t, 0, slotsPerEpoch*3, genesisBlockRoot)
+		eval(t, ctx, db, blks)
+	})
+
+	t.Run("altair", func(t *testing.T) {
+		db := setup(t)
+
+		blks := makeBlocksAltair(t, 0, slotsPerEpoch*3, genesisBlockRoot)
+		eval(t, ctx, db, blks)
+	})
 }
 
 func sszRootOrDie(t *testing.T, block block.SignedBeaconBlock) []byte {

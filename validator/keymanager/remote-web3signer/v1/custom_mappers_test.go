@@ -5,10 +5,9 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/testing/util"
-
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -27,8 +26,20 @@ func TestMapAggregateAndProof(t *testing.T) {
 			args: args{
 				from: &ethpb.AggregateAttestationAndProof{
 					AggregatorIndex: 0,
-					Aggregate:       util.NewAttestation(),
-					SelectionProof:  make([]byte, fieldparams.BLSSignatureLength),
+					Aggregate: &ethpb.Attestation{
+						AggregationBits: bitfield.Bitlist{0b1101},
+						Data: &ethpb.AttestationData{
+							BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+							Source: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+							Target: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+						},
+						Signature: make([]byte, 96),
+					},
+					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 				},
 			},
 			want: &AggregateAndProof{
@@ -66,7 +77,19 @@ func TestMapAttestation(t *testing.T) {
 		{
 			name: "HappyPathTest",
 			args: args{
-				attestation: util.NewAttestation(),
+				attestation: &ethpb.Attestation{
+					AggregationBits: bitfield.Bitlist{0b1101},
+					Data: &ethpb.AttestationData{
+						BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+						Source: &ethpb.Checkpoint{
+							Root: make([]byte, fieldparams.RootLength),
+						},
+						Target: &ethpb.Checkpoint{
+							Root: make([]byte, fieldparams.RootLength),
+						},
+					},
+					Signature: make([]byte, 96),
+				},
 			},
 			want:    MockAttestation(),
 			wantErr: false,
@@ -99,7 +122,15 @@ func TestMapAttestationData(t *testing.T) {
 		{
 			name: "HappyPathTest",
 			args: args{
-				data: util.NewAttestation().Data,
+				data: &ethpb.AttestationData{
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+					Source: &ethpb.Checkpoint{
+						Root: make([]byte, fieldparams.RootLength),
+					},
+					Target: &ethpb.Checkpoint{
+						Root: make([]byte, fieldparams.RootLength),
+					},
+				},
 			},
 			want:    MockAttestation().Data,
 			wantErr: false,
@@ -135,13 +166,29 @@ func TestMapAttesterSlashing(t *testing.T) {
 				slashing: &ethpb.AttesterSlashing{
 					Attestation_1: &ethpb.IndexedAttestation{
 						AttestingIndices: []uint64{0, 1, 2},
-						Data:             util.NewAttestation().Data,
-						Signature:        make([]byte, fieldparams.BLSSignatureLength),
+						Data: &ethpb.AttestationData{
+							BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+							Source: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+							Target: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+						},
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
 					},
 					Attestation_2: &ethpb.IndexedAttestation{
 						AttestingIndices: []uint64{0, 1, 2},
-						Data:             util.NewAttestation().Data,
-						Signature:        make([]byte, fieldparams.BLSSignatureLength),
+						Data: &ethpb.AttestationData{
+							BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+							Source: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+							Target: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+						},
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
 					},
 				},
 			},
@@ -220,18 +267,46 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 							{
 								Attestation_1: &ethpb.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+									Data: &ethpb.AttestationData{
+										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+										Source: &ethpb.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+										Target: &ethpb.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
 								},
 								Attestation_2: &ethpb.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+									Data: &ethpb.AttestationData{
+										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+										Source: &ethpb.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+										Target: &ethpb.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
 								},
 							},
 						},
 						Attestations: []*ethpb.Attestation{
-							util.NewAttestation(),
+							{
+								AggregationBits: bitfield.Bitlist{0b1101},
+								Data: &ethpb.AttestationData{
+									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+									Source: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+									Target: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+								},
+								Signature: make([]byte, 96),
+							},
 						},
 						Deposits: []*ethpb.Deposit{
 							{
@@ -327,18 +402,46 @@ func TestMapBeaconBlockBody(t *testing.T) {
 						{
 							Attestation_1: &ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{0, 1, 2},
-								Data:             util.NewAttestation().Data,
-								Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								Data: &ethpb.AttestationData{
+									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+									Source: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+									Target: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+								},
+								Signature: make([]byte, fieldparams.BLSSignatureLength),
 							},
 							Attestation_2: &ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{0, 1, 2},
-								Data:             util.NewAttestation().Data,
-								Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								Data: &ethpb.AttestationData{
+									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+									Source: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+									Target: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+								},
+								Signature: make([]byte, fieldparams.BLSSignatureLength),
 							},
 						},
 					},
 					Attestations: []*ethpb.Attestation{
-						util.NewAttestation(),
+						{
+							AggregationBits: bitfield.Bitlist{0b1101},
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+								Source: &ethpb.Checkpoint{
+									Root: make([]byte, fieldparams.RootLength),
+								},
+								Target: &ethpb.Checkpoint{
+									Root: make([]byte, fieldparams.RootLength),
+								},
+							},
+							Signature: make([]byte, 96),
+						},
 					},
 					Deposits: []*ethpb.Deposit{
 						{
@@ -424,7 +527,7 @@ func TestMapContributionAndProof(t *testing.T) {
 
 func TestMapForkInfo(t *testing.T) {
 	type args struct {
-		from                  *ethpb.Fork
+		slot                  types.Slot
 		genesisValidatorsRoot []byte
 	}
 
@@ -437,11 +540,7 @@ func TestMapForkInfo(t *testing.T) {
 		{
 			name: "Happy Path Test",
 			args: args{
-				from: &ethpb.Fork{
-					PreviousVersion: make([]byte, 4),
-					CurrentVersion:  make([]byte, 4),
-					Epoch:           0,
-				},
+				slot:                  0,
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
 			want:    MockForkInfo(),
@@ -450,7 +549,7 @@ func TestMapForkInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapForkInfo(tt.args.from, tt.args.genesisValidatorsRoot)
+			got, err := MapForkInfo(tt.args.slot, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapForkInfo() error = %v, wantErr %v", err, tt.wantErr)
 				return

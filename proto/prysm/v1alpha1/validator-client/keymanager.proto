@@ -78,7 +78,12 @@ message SignRequest {
         // Bellatrix objects.
         ethereum.eth.v1alpha1.BeaconBlockMerge blockV3 = 111;
     }
+<<<<<<< HEAD
     ethereum.eth.v1alpha1.Fork fork = 4;
+=======
+    reserved 4, 5; // Reserving old, deleted fields.
+    uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+>>>>>>> develop
 }
 
 // SignResponse returned by a RemoteSigner gRPC service.
@@ -98,8 +103,11 @@ message SignResponse {
     // same conventions.
     Status status = 2;
 }
+<<<<<<< HEAD
 
 message SyncMessageBlockRoot {
     uint64 slot = 1  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
     bytes sync_message_block_root  = 2;
 }
+=======
+>>>>>>> develop

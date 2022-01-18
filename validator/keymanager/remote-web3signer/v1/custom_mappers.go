@@ -5,18 +5,22 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // MapForkInfo maps the eth2.ForkInfo proto to the Web3Signer spec.
-func MapForkInfo(from *ethpb.Fork, genesisValidatorsRoot []byte) (*ForkInfo, error) {
-	if from == nil {
-		return nil, fmt.Errorf("fork info is nil")
+func MapForkInfo(slot types.Slot, genesisValidatorsRoot []byte) (*ForkInfo, error) {
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get fork info")
 	}
 	forkData := &Fork{
-		PreviousVersion: hexutil.Encode(from.PreviousVersion),
-		CurrentVersion:  hexutil.Encode(from.CurrentVersion),
-		Epoch:           fmt.Sprint(from.Epoch),
+		PreviousVersion: hexutil.Encode(fork.PreviousVersion),
+		CurrentVersion:  hexutil.Encode(fork.CurrentVersion),
+		Epoch:           fmt.Sprint(fork.Epoch),
 	}
 	return &ForkInfo{
 		Fork:                  forkData,
