@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -54,6 +55,14 @@ func WithChainStartFetcher(f powchain.ChainStartFetcher) Option {
 func WithDepositCache(c *depositcache.DepositCache) Option {
 	return func(s *Service) error {
 		s.cfg.DepositCache = c
+		return nil
+	}
+}
+
+// WithSyncCommitteeHeadStateCache for the latest head state requested by a sync committee participant.
+func WithSyncCommitteeHeadStateCache(c *cache.SyncCommitteeHeadStateCache) Option {
+	return func(s *Service) error {
+		s.cfg.SyncCommitteeHeadStateCache = c
 		return nil
 	}
 }

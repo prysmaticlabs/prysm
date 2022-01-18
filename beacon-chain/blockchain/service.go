@@ -71,22 +71,23 @@ type Service struct {
 
 // config options for the service.
 type config struct {
-	BeaconBlockBuf          int
-	ChainStartFetcher       powchain.ChainStartFetcher
-	BeaconDB                db.HeadAccessDatabase
-	DepositCache            *depositcache.DepositCache
-	AttPool                 attestations.Pool
-	ExitPool                voluntaryexits.PoolManager
-	SlashingPool            slashings.PoolManager
-	P2p                     p2p.Broadcaster
-	MaxRoutines             int
-	StateNotifier           statefeed.Notifier
-	ForkChoiceStore         f.ForkChoicer
-	AttService              *attestations.Service
-	StateGen                *stategen.State
-	SlasherAttestationsFeed *event.Feed
-	WeakSubjectivityCheckpt *ethpb.Checkpoint
-	FinalizedStateAtStartUp state.BeaconState
+	BeaconBlockBuf              int
+	ChainStartFetcher           powchain.ChainStartFetcher
+	BeaconDB                    db.HeadAccessDatabase
+	DepositCache                *depositcache.DepositCache
+	SyncCommitteeHeadStateCache *cache.SyncCommitteeHeadStateCache
+	AttPool                     attestations.Pool
+	ExitPool                    voluntaryexits.PoolManager
+	SlashingPool                slashings.PoolManager
+	P2p                         p2p.Broadcaster
+	MaxRoutines                 int
+	StateNotifier               statefeed.Notifier
+	ForkChoiceStore             f.ForkChoicer
+	AttService                  *attestations.Service
+	StateGen                    *stategen.State
+	SlasherAttestationsFeed     *event.Feed
+	WeakSubjectivityCheckpt     *ethpb.Checkpoint
+	FinalizedStateAtStartUp     state.BeaconState
 }
 
 // NewService instantiates a new block service instance that will

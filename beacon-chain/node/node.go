@@ -21,6 +21,7 @@ import (
 	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -77,29 +78,30 @@ type serviceFlagOpts struct {
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	cliCtx                  *cli.Context
-	ctx                     context.Context
-	cancel                  context.CancelFunc
-	services                *runtime.ServiceRegistry
-	lock                    sync.RWMutex
-	stop                    chan struct{} // Channel to wait for termination notifications.
-	db                      db.Database
-	slasherDB               db.SlasherDatabase
-	attestationPool         attestations.Pool
-	exitPool                voluntaryexits.PoolManager
-	slashingsPool           slashings.PoolManager
-	syncCommitteePool       synccommittee.Pool
-	depositCache            *depositcache.DepositCache
-	stateFeed               *event.Feed
-	blockFeed               *event.Feed
-	opFeed                  *event.Feed
-	forkChoiceStore         forkchoice.ForkChoicer
-	stateGen                *stategen.State
-	collector               *bcnodeCollector
-	slasherBlockHeadersFeed *event.Feed
-	slasherAttestationsFeed *event.Feed
-	finalizedStateAtStartUp state.BeaconState
-	serviceFlagOpts         *serviceFlagOpts
+	cliCtx                      *cli.Context
+	ctx                         context.Context
+	cancel                      context.CancelFunc
+	services                    *runtime.ServiceRegistry
+	lock                        sync.RWMutex
+	stop                        chan struct{} // Channel to wait for termination notifications.
+	db                          db.Database
+	slasherDB                   db.SlasherDatabase
+	attestationPool             attestations.Pool
+	exitPool                    voluntaryexits.PoolManager
+	slashingsPool               slashings.PoolManager
+	syncCommitteePool           synccommittee.Pool
+	depositCache                *depositcache.DepositCache
+	syncCommitteeHeadStateCache *cache.SyncCommitteeHeadStateCache
+	stateFeed                   *event.Feed
+	blockFeed                   *event.Feed
+	opFeed                      *event.Feed
+	forkChoiceStore             forkchoice.ForkChoicer
+	stateGen                    *stategen.State
+	collector                   *bcnodeCollector
+	slasherBlockHeadersFeed     *event.Feed
+	slasherAttestationsFeed     *event.Feed
+	finalizedStateAtStartUp     state.BeaconState
+	serviceFlagOpts             *serviceFlagOpts
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -348,8 +350,10 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not create deposit cache")
 	}
-
 	b.depositCache = depositCache
+
+	syncCommitteeHeadStateCache := cache.NewSyncCommitteeHeadState(cliCtx.Bool(flags.UseNativeState.Name))
+	b.syncCommitteeHeadStateCache = syncCommitteeHeadStateCache
 
 	if cliCtx.IsSet(flags.GenesisStatePath.Name) {
 		r, err := os.Open(cliCtx.String(flags.GenesisStatePath.Name))
@@ -537,6 +541,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		b.serviceFlagOpts.blockchainFlagOpts,
 		blockchain.WithDatabase(b.db),
 		blockchain.WithDepositCache(b.depositCache),
+		blockchain.WithSyncCommitteeHeadStateCache(b.syncCommitteeHeadStateCache),
 		blockchain.WithChainStartFetcher(web3Service),
 		blockchain.WithAttestationPool(b.attestationPool),
 		blockchain.WithExitPool(b.exitPool),
