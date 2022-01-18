@@ -14,6 +14,42 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
+func TestWrappedSignedBeaconBlock(t *testing.T) {
+	tests := []struct {
+		name    string
+		blk     interface{}
+		wantErr bool
+	}{
+		{
+			name:    "unsupported type",
+			blk:     "not a beacon block",
+			wantErr: true,
+		},
+		{
+			name: "phase0",
+			blk:  util.NewBeaconBlock(),
+		},
+		{
+			name: "altair",
+			blk:  util.NewBeaconBlockAltair(),
+		},
+		{
+			name: "bellatrix",
+			blk:  util.NewBeaconBlockMerge(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := wrapper.WrappedSignedBeaconBlock(tt.blk)
+			if tt.wantErr {
+				require.ErrorIs(t, err, wrapper.ErrUnsupportedSignedBeaconBlock)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestAltairSignedBeaconBlock_Signature(t *testing.T) {
 	sig := []byte{0x11, 0x22}
 	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}, Signature: sig})
