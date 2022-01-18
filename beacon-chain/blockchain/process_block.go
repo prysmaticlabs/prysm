@@ -36,9 +36,10 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 
 // UpdateHead updates the beacon state head.
 func (s *Service) UpdateHead(ctx context.Context) error {
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(s.store.justifiedCheckpt.Root))
+	cp := s.justifiedCheckptInStore()
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", s.store.justifiedCheckpt.Root)
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
 		return errors.Wrap(err, msg)
 	}
 
@@ -149,17 +150,21 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Update justified check point.
-	currJustifiedEpoch := s.store.justifiedCheckpt.Epoch
+	cp := s.justifiedCheckptInStore()
+	currJustifiedEpoch := cp.Epoch
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
 	}
 
-	newFinalized := postState.FinalizedCheckpointEpoch() > s.store.finalizedCheckpt.Epoch
+	cp = s.finalizedCheckptInStore()
+	currFinalizedEpoch := cp.Epoch
+	newFinalized := postState.FinalizedCheckpointEpoch() > currFinalizedEpoch
 	if newFinalized {
-		s.store.finalizedCheckpt = postState.FinalizedCheckpoint()
-		s.store.justifiedCheckpt = postState.CurrentJustifiedCheckpoint()
+		s.setFinalizedCheckptInStore(postState.FinalizedCheckpoint())
+		s.setPrevJustifiedCheckptInStore(s.justifiedCheckptInStore())
+		s.setJustifiedCheckptInStore(postState.CurrentJustifiedCheckpoint())
 	}
 
 	if err := s.UpdateHead(ctx); err != nil {
@@ -338,18 +343,18 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		s.clearInitSyncBlocks()
 	}
 
-	if jCheckpoint.Epoch > s.store.justifiedCheckpt.Epoch {
+	if jCheckpoint.Epoch > s.justifiedCheckptInStore().Epoch {
 		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
 			return err
 		}
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if fCheckpoint.Epoch > s.store.finalizedCheckpt.Epoch {
+	if fCheckpoint.Epoch > s.finalizedCheckptInStore().Epoch {
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		s.store.finalizedCheckpt = fCheckpoint
+		s.setFinalizedCheckptInStore(fCheckpoint)
 	}
 	return nil
 }

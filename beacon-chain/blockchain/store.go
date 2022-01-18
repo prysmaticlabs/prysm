@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"sync"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -28,9 +29,12 @@ type store struct {
 	time                 uint64
 	genesisTime          uint64
 	justifiedCheckpt     *ethpb.Checkpoint
+	prevJustifiedCheckpt *ethpb.Checkpoint
 	finalizedCheckpt     *ethpb.Checkpoint
+	prevFinalizedCheckpt *ethpb.Checkpoint
 	bestJustifiedCheckpt *ethpb.Checkpoint
 	proposerBoostRoot    [32]byte
+	sync.RWMutex
 }
 
 // InitializeStore initializes the fork choice store.
@@ -69,6 +73,9 @@ func (s *Service) InitializeStore(ctx context.Context, anchorState state.BeaconS
 		Epoch: coreTime.CurrentEpoch(anchorState),
 		Root:  r[:],
 	}
+
+	s.store.Lock()
+	defer s.store.Unlock()
 	s.store = &store{
 		time:                 anchorState.GenesisTime() + uint64(anchorState.Slot().Mul(params.BeaconConfig().SecondsPerSlot)),
 		genesisTime:          anchorState.GenesisTime(),
@@ -77,6 +84,7 @@ func (s *Service) InitializeStore(ctx context.Context, anchorState state.BeaconS
 		bestJustifiedCheckpt: cp,
 		proposerBoostRoot:    [32]byte{},
 	}
+
 	return nil
 }
 
@@ -104,9 +112,12 @@ func (s *Service) InitializeStore(ctx context.Context, anchorState state.BeaconS
 //        if ancestor_at_finalized_slot == store.finalized_checkpoint.root:
 //            store.justified_checkpoint = store.best_justified_checkpoint
 func (s *Service) OnTick(ctx context.Context, time uint64) error {
-	prevSlot := s.slotInStore()
+	s.store.Lock()
+	defer s.store.Unlock()
+
+	prevSlot := types.Slot((s.store.time - s.store.genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	s.store.time = time
-	currentSlot := s.slotInStore()
+	currentSlot := types.Slot((s.store.time - s.store.genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	if currentSlot > prevSlot {
 		s.store.proposerBoostRoot = [32]byte{}
 	}
@@ -130,29 +141,57 @@ func (s *Service) OnTick(ctx context.Context, time uint64) error {
 	return nil
 }
 
-// slotInStore returns the slot in the store.
-// def get_current_slot(store: Store) -> Slot:
-//    return Slot(GENESIS_SLOT + get_slots_since_genesis(store))
-func (s *Service) slotInStore() types.Slot {
-	return types.Slot((s.store.time - s.store.genesisTime) / params.BeaconConfig().SecondsPerSlot)
-}
-
-// StoreTime returns the time in the store.
-func (s *Service) StoreTime() uint64 {
+// TimeInStore returns the time in the store.
+func (s *Service) TimeInStore() uint64 {
+	s.store.RLock()
+	defer s.store.RUnlock()
 	return s.store.time
 }
 
-// JustifiedCheckpoint returns the justified checkpoint in the store.
-func (s *Service) JustifiedCheckpoint() *ethpb.Checkpoint {
-	return s.store.justifiedCheckpt
+func (s *Service) prevJustifiedCheckptInStore() *ethpb.Checkpoint {
+	s.store.RLock()
+	defer s.store.RUnlock()
+	return s.store.prevJustifiedCheckpt
 }
 
-// BestJustifiedCheckpoint returns the best justified checkpoint in the store.
-func (s *Service) BestJustifiedCheckpoint() *ethpb.Checkpoint {
+func (s *Service) setPrevJustifiedCheckptInStore(cp *ethpb.Checkpoint) {
+	s.store.Lock()
+	defer s.store.Unlock()
+	s.store.prevJustifiedCheckpt = cp
+}
+
+func (s *Service) bestJustifiedCheckptInStore() *ethpb.Checkpoint {
+	s.store.RLock()
+	defer s.store.RUnlock()
 	return s.store.bestJustifiedCheckpt
 }
 
-// FinalizedCheckpoint returns the finalized checkpoint in the store.
-func (s *Service) FinalizedCheckpoint() *ethpb.Checkpoint {
+func (s *Service) setBestJustifiedCheckptInStore(cp *ethpb.Checkpoint) {
+	s.store.Lock()
+	defer s.store.Unlock()
+	s.store.bestJustifiedCheckpt = cp
+}
+
+func (s *Service) justifiedCheckptInStore() *ethpb.Checkpoint {
+	s.store.RLock()
+	defer s.store.RUnlock()
+	return s.store.justifiedCheckpt
+}
+
+func (s *Service) setJustifiedCheckptInStore(cp *ethpb.Checkpoint) {
+	s.store.Lock()
+	defer s.store.Unlock()
+	s.store.justifiedCheckpt = cp
+}
+
+func (s *Service) finalizedCheckptInStore() *ethpb.Checkpoint {
+	s.store.RLock()
+	defer s.store.RUnlock()
 	return s.store.finalizedCheckpt
+}
+
+func (s *Service) setFinalizedCheckptInStore(cp *ethpb.Checkpoint) {
+	s.store.Lock()
+	defer s.store.Unlock()
+	s.store.finalizedCheckpt = cp
 }

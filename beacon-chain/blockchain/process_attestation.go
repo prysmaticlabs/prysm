@@ -61,7 +61,7 @@ func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 	genesisTime := baseState.GenesisTime()
 
 	// Verify attestation target is from current epoch or previous epoch.
-	if err := verifyAttTargetEpoch(ctx, genesisTime, s.store.time, tgt); err != nil {
+	if err := verifyAttTargetEpoch(ctx, genesisTime, s.TimeInStore(), tgt); err != nil {
 		return err
 	}
 
@@ -74,7 +74,7 @@ func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 	// validate_aggregate_proof.go and validate_beacon_attestation.go
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := slots.VerifyTime(genesisTime, s.store.time, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := slots.VerifyTime(genesisTime, s.TimeInStore(), a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return err
 	}
 

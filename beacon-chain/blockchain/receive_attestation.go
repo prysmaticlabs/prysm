@@ -142,10 +142,10 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 					continue
 				}
 				s.processAttestations(s.ctx)
-
-				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(s.store.justifiedCheckpt.Root))
+				cp := s.justifiedCheckptInStore()
+				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(cp.Root))
 				if err != nil {
-					log.WithError(err).Errorf("Unable to get justified balances for root %v", s.store.justifiedCheckpt.Root)
+					log.WithError(err).Errorf("Unable to get justified balances for root %v", cp.Root)
 					continue
 				}
 				if err := s.updateHead(s.ctx, balances); err != nil {
@@ -164,7 +164,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 		// This delays consideration in the fork choice until their slot is in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
-		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), s.store.time, nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), s.TimeInStore(), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			continue
 		}
 

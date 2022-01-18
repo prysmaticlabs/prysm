@@ -110,7 +110,7 @@ func Run(t *testing.T, config string, fork int) {
 					if step.Check != nil {
 						c := step.Check
 						if c.Time != nil {
-							require.Equal(t, uint64(*c.Time), service.StoreTime())
+							require.Equal(t, uint64(*c.Time), service.TimeInStore())
 						}
 						if c.Head != nil {
 							r, err := service.HeadRoot(ctx)
@@ -123,21 +123,21 @@ func Run(t *testing.T, config string, fork int) {
 								Epoch: types.Epoch(c.JustifiedCheckPoint.Epoch),
 								Root:  common.FromHex(c.JustifiedCheckPoint.Root),
 							}
-							require.DeepEqual(t, cp, service.JustifiedCheckpoint())
+							require.DeepEqual(t, cp, service.CurrentJustifiedCheckpt())
 						}
 						if c.BestJustifiedCheckPoint != nil {
 							cp := &ethpb.Checkpoint{
 								Epoch: types.Epoch(c.BestJustifiedCheckPoint.Epoch),
 								Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
 							}
-							require.DeepEqual(t, cp, service.BestJustifiedCheckpoint())
+							require.DeepEqual(t, cp, service.BestJustifiedCheckpt())
 						}
 						if c.FinalizedCheckPoint != nil {
 							cp := &ethpb.Checkpoint{
 								Epoch: types.Epoch(c.FinalizedCheckPoint.Epoch),
 								Root:  common.FromHex(c.FinalizedCheckPoint.Root),
 							}
-							require.DeepSSZEqual(t, cp, service.FinalizedCheckpoint())
+							require.DeepSSZEqual(t, cp, service.FinalizedCheckpt())
 						}
 					}
 				}
