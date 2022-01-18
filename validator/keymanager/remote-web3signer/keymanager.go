@@ -166,7 +166,7 @@ func (km *Keymanager) getSignRequestJson(request *validatorpb.SignRequest) (Sign
 		}
 		return json.Marshal(contributionAndProofRequest)
 	default:
-		return nil, errors.New(fmt.Sprintf("Web3signer sign request type: %T  not found", request.Object))
+		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}
 }
 
