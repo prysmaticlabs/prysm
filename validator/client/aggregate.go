@@ -84,7 +84,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 		return
 	}
 
-	sig, err := v.aggregateAndProofSig(ctx, pubKey, res.AggregateAndProof)
+	sig, err := v.aggregateAndProofSig(ctx, pubKey, res.AggregateAndProof, slot)
 	if err != nil {
 		log.Errorf("Could not sign aggregate and proof: %v", err)
 		return
@@ -134,6 +134,7 @@ func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [fiel
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Slot{Slot: slot},
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err
@@ -172,7 +173,7 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot types.Slot) {
 
 // This returns the signature of validator signing over aggregate and
 // proof object.
-func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, agg *ethpb.AggregateAttestationAndProof) ([]byte, error) {
+func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, agg *ethpb.AggregateAttestationAndProof, slot types.Slot) ([]byte, error) {
 	d, err := v.domainData(ctx, slots.ToEpoch(agg.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof[:])
 	if err != nil {
 		return nil, err
@@ -187,6 +188,7 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
 		Object:          &validatorpb.SignRequest_AggregateAttestationAndProof{AggregateAttestationAndProof: agg},
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err
