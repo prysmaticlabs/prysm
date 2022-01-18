@@ -65,7 +65,6 @@ var Commands = &cli.Command{
 				flags.RemoteSignerCertPathFlag,
 				flags.RemoteSignerKeyPathFlag,
 				flags.RemoteSignerCACertPathFlag,
-
 				flags.Web3SignerURLFlag,
 				flags.Web3SignerPublicValidatorKeysFlag,
 
