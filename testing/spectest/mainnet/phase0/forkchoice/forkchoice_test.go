@@ -7,6 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/spectest/shared/common/forkchoice"
 )
 
-func TestMinimal_Altair_Forkchoice(t *testing.T) {
-	forkchoice.Run(t, "minimal", version.Altair)
+func TestMainnet_Altair_Forkchoice(t *testing.T) {
+	forkchoice.Run(t, "mainnet", version.Phase0)
 }

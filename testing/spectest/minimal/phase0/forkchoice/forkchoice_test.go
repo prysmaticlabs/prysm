@@ -8,5 +8,5 @@ import (
 )
 
 func TestMinimal_Altair_Forkchoice(t *testing.T) {
-	forkchoice.Run(t, "minimal", version.Altair)
+	forkchoice.Run(t, "minimal", version.Phase0)
 }

@@ -3,9 +3,10 @@ package forkchoice
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/spectest/shared/altair/forkchoice"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/testing/spectest/shared/common/forkchoice"
 )
 
 func TestMainnet_Altair_Forkchoice(t *testing.T) {
-	forkchoice.RunTest(t, "mainnet")
+	forkchoice.Run(t, "mainnet", version.Altair)
 }
