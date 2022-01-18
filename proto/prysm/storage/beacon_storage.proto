@@ -23,6 +23,15 @@ import "proto/prysm/storage/version.proto";
 // it also stores some indexes and other metadata fields that cannot be stored in the
 // BeaconState object itself.
 message BeaconStateForStorage {
+  oneof storageState{
+    StorageBeaconStateV1 state_v1 = 1;
+  }
+}
+
+// StorageBeaconStateV1 is the first version of the indexed data structure that would be used
+// by the BeaconStateForStorage object. Version 1 has only three fields, the version, the
+// validator indexes and the ssz encoded state bytes/
+message StorageBeaconStateV1 {
   Version version = 1001;           // Used to identify the state object
   bytes validatorIndexes = 1002;    // stores the compressed indexes of the validator entry hashes
   bytes state = 2000;               // store the ssz marshalled state
