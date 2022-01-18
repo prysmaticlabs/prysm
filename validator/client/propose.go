@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -359,10 +358,6 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 	if err != nil {
 		return nil, err
 	}
-	fork, err := forks.Fork(epoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", epoch)
-	}
 	randaoReveal, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
@@ -387,10 +382,6 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	}
 
 	// TODO: I'm not sure if this is the right way to do this.
-	fork, err := forks.Fork(epoch)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not get fork on current slot: %d", epoch)
-	}
 	var sig bls.Signature
 	switch b.Version() {
 

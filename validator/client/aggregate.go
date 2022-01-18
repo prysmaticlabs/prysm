@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/network/forks"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -130,10 +129,6 @@ func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [fiel
 	if err != nil {
 		return nil, err
 	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
-	}
 	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
@@ -187,10 +182,6 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 	root, err := signing.ComputeSigningRoot(agg, d.SignatureDomain)
 	if err != nil {
 		return nil, err
-	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
 	}
 	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
