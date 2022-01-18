@@ -33,33 +33,33 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 		name           string
 	}{
 		{
-			name: "nil root and epoch",
+			name:     "nil root and epoch",
 			disabled: true,
 		},
 		{
 			name:           "not yet to verify, ws epoch higher than finalized epoch",
 			checkpt:        &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'a'}, 32), Epoch: blockEpoch},
-			finalizedEpoch: blockEpoch-1,
+			finalizedEpoch: blockEpoch - 1,
 		},
 		{
 			name:           "can't find the block in DB",
 			checkpt:        &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'a'}, 32), Epoch: 1},
-			finalizedEpoch: blockEpoch+1,
+			finalizedEpoch: blockEpoch + 1,
 			wantErr:        errWSBlockNotFound,
 		},
 		{
 			name:           "can't find the block corresponds to ws epoch in DB",
-			checkpt:        &ethpb.Checkpoint{Root: r[:], Epoch: blockEpoch-2}, // Root belongs in epoch 1.
-			finalizedEpoch: blockEpoch-1,
+			checkpt:        &ethpb.Checkpoint{Root: r[:], Epoch: blockEpoch - 2}, // Root belongs in epoch 1.
+			finalizedEpoch: blockEpoch - 1,
 			wantErr:        errWSBlockNotFoundInEpoch,
 		},
 		{
 			name:           "can verify and pass",
 			checkpt:        &ethpb.Checkpoint{Root: r[:], Epoch: blockEpoch},
-			finalizedEpoch: blockEpoch+1,
+			finalizedEpoch: blockEpoch + 1,
 		},
 		{
-			name: "equal epoch",
+			name:           "equal epoch",
 			checkpt:        &ethpb.Checkpoint{Root: r[:], Epoch: blockEpoch},
 			finalizedEpoch: blockEpoch,
 		},

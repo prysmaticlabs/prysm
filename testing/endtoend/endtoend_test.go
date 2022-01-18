@@ -15,20 +15,16 @@ import (
 	"testing"
 	"time"
 
-	ssz "github.com/ferranbt/fastssz"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	eth2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/proto/sniff"
-	"github.com/prysmaticlabs/prysm/time/slots"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	eth2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/sniff"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
@@ -36,9 +32,12 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -57,11 +56,11 @@ func init() {
 
 // testRunner abstracts E2E test configuration and running.
 type testRunner struct {
-	t      *testing.T
-	config *e2etypes.E2EConfig
-	ctx context.Context
+	t        *testing.T
+	config   *e2etypes.E2EConfig
+	ctx      context.Context
 	doneChan context.CancelFunc
-	group *errgroup.Group
+	group    *errgroup.Group
 }
 
 // newTestRunner creates E2E test runner.
@@ -69,11 +68,11 @@ func newTestRunner(t *testing.T, config *e2etypes.E2EConfig) *testRunner {
 	ctx, done := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 	return &testRunner{
-		ctx: ctx,
+		ctx:      ctx,
 		doneChan: done,
-		group: g,
-		t:      t,
-		config: config,
+		group:    g,
+		t:        t,
+		config:   config,
 	}
 }
 
@@ -213,11 +212,9 @@ func (r *testRunner) run() {
 			return nil
 		}
 		index := e2e.TestParams.BeaconNodeCount
-		/*
 		if err := r.testBeaconChainSync(index, conns, tickingStartTime, bootNode.ENR()); err != nil {
 			return errors.Wrap(err, "beacon chain sync test failed")
 		}
-		 */
 		if err := r.testCheckpointSync(index+1, conns, tickingStartTime, bootNode.ENR()); err != nil {
 			return errors.Wrap(err, "checkpoint sync test failed")
 		}
@@ -235,7 +232,6 @@ func (r *testRunner) run() {
 		t.Fatalf("E2E test ended in error: %v", err)
 	}
 }
-
 
 func appendDebugEndpoints(flags []string) []string {
 	debugFlags := []string{
@@ -338,65 +334,54 @@ func saveSSZBytes(filePath string, value saveable) (err error) {
 	return err
 }
 
-func saveBlock(ctx context.Context, conn *grpc.ClientConn, slot types.Slot, basePath string) (string, [32]byte, error) {
+func saveBlock(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork, slot types.Slot, basePath string) (string, [32]byte, error) {
 	v1Client := service.NewBeaconChainClient(conn)
 	blockId := strconv.FormatUint(uint64(slot), 10)
-	bResp, err := v1Client.GetBlockV2(ctx, &eth2.BlockRequestV2{BlockId: []byte(blockId)})
+	bResp, err := v1Client.GetBlockSSZV2(ctx, &eth2.BlockRequestV2{BlockId: []byte(blockId)})
+	if err != nil {
+		err = errors.Wrap(err, "saveBlock/GetBeaconBlock")
+		return "", [32]byte{}, err
+	}
+	sb, err := sniff.BlockForConfigFork(bResp.GetData(), cf)
 	if err != nil {
 		err = errors.Wrap(err, "saveBlock/GetBeaconBlock")
 		return "", [32]byte{}, err
 	}
 
-	var value interface {
-		ssz.Unmarshaler
-		ssz.HashRoot
-		saveable
-	}
-
-	if bResp.Data.GetPhase0Block() != nil {
-		log.Info("test block is phase 0")
-		value = bResp.Data.GetPhase0Block()
-	} else if bResp.Data.GetAltairBlock() != nil {
-		log.Info("test block is altair")
-		value = bResp.Data.GetAltairBlock()
-	} else if bResp.Data.GetMergeBlock() != nil {
-		log.Info("test block is merge")
-		value = bResp.Data.GetMergeBlock()
-	} else {
-		return "", [32]byte{}, fmt.Errorf("Unrecognized block format")
-	}
-
-	root, err := value.HashTreeRoot()
+	root, err := sb.Block().HashTreeRoot()
 	if err != nil {
 		err = errors.Wrap(err, "saveBlock/HashTreeRoot")
 		return "", [32]byte{}, err
 	}
 	p := path.Join(basePath, fmt.Sprintf("block_%d_%x.ssz", slot, root))
-	err = saveSSZBytes(p, value)
+	err = saveSSZBytes(p, sb)
 	if err != nil {
 		err = errors.Wrap(err, "saveBlock/saveSSZBytes")
 	}
 	return p, root, err
 }
 
-func saveState(ctx context.Context, conn *grpc.ClientConn, slot types.Slot, basePath string) (string, [32]byte, error) {
+func getConfigFork(ctx context.Context, conn *grpc.ClientConn, slot types.Slot) (*sniff.ConfigFork, error) {
 	ofs, err := getOrderedForkSchedule(ctx, conn)
 	if err != nil {
-		err = errors.Wrap(err, "saveState/getOrderedForkSchedule")
-		return "", [32]byte{}, err
+		err = errors.Wrap(err, "getConfigFork/getOrderedForkSchedule")
+		return nil, err
 	}
 	epoch := slots.ToEpoch(slot)
 	version, err := ofs.VersionForEpoch(epoch)
 	if err != nil {
-		err = errors.Wrap(err, "saveState/VersionForEpoch")
-		return "", [32]byte{}, err
+		err = errors.Wrap(err, "getConfigFork/VersionForEpoch")
+		return nil, err
 	}
 	cf, err := sniff.FindConfigFork(epoch, version)
 	if err != nil {
-		err = errors.Wrap(err, "saveState/FindConfigFork")
-		return "", [32]byte{}, errors.Wrap(err, "beacon node provided an unrecognized fork schedule")
+		err = errors.Wrap(err, "getConfigFork/FindConfigFork")
+		return nil, err
 	}
+	return cf, nil
+}
 
+func saveState(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork, slot types.Slot, basePath string) (string, [32]byte, error) {
 	debugClient := eth.NewDebugClient(conn)
 	sResp, err := debugClient.GetBeaconState(ctx, &eth.BeaconStateRequest{
 		QueryFilter: &eth.BeaconStateRequest_Slot{
@@ -431,8 +416,8 @@ type checkpoint struct {
 	stateRoot [32]byte
 	blockPath string
 	blockRoot [32]byte
-	headRoot [32]byte
-	epoch types.Epoch
+	headRoot  [32]byte
+	epoch     types.Epoch
 }
 
 func (c *checkpoint) flags() []string {
@@ -454,7 +439,7 @@ func getOrderedForkSchedule(ctx context.Context, conn *grpc.ClientConn) (params.
 	for _, f := range fsResp.Data {
 		ofs = append(ofs, params.ForkScheduleEntry{
 			Version: bytesutil.ToBytes4(f.CurrentVersion),
-			Epoch: f.Epoch,
+			Epoch:   f.Epoch,
 		})
 	}
 	return ofs, nil
@@ -492,15 +477,22 @@ func DownloadCheckpoint(ctx context.Context, conn *grpc.ClientConn) (*checkpoint
 		err = errors.Wrap(err, "DownloadCheckpoint:EpochStart")
 		return nil, err
 	}
-	cp.blockPath, cp.blockRoot, err = saveBlock(ctx, conn, epochStart, e2e.TestParams.TestPath)
+
+	// fetch the state for the slot immediately following (and therefore integrating) the block
+	stateSlot := epochStart + 1
+	cf, err := getConfigFork(ctx, conn, stateSlot)
+	if err != nil {
+		err = errors.Wrap(err, "DownloadCheckpoint:getConfigFork")
+		return nil, err
+	}
+
+	cp.blockPath, cp.blockRoot, err = saveBlock(ctx, conn, cf, epochStart, e2e.TestParams.TestPath)
 	if err != nil {
 		err = errors.Wrap(err, "DownloadCheckpoint:saveBlock")
 		return nil, err
 	}
 
-	// fetch the state for the slot immediately following (and therefore integrating) the block
-	stateSlot := epochStart + 1
-	cp.statePath, cp.stateRoot, err = saveState(ctx, conn, stateSlot, e2e.TestParams.TestPath)
+	cp.statePath, cp.stateRoot, err = saveState(ctx, conn, cf, stateSlot, e2e.TestParams.TestPath)
 	if err != nil {
 		err = errors.Wrap(err, "DownloadCheckpoint:saveState")
 		return nil, err
@@ -514,7 +506,7 @@ func (r *testRunner) waitForSentinelBlock(ctx context.Context, conn *grpc.Client
 	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(r.config.EpochsToRun))
-	ctx, cancel := context.WithDeadline(r.ctx, time.Now().Add(time.Second * time.Duration(extraSecondsToSync)))
+	ctx, cancel := context.WithDeadline(r.ctx, time.Now().Add(time.Second*time.Duration(extraSecondsToSync)))
 	defer cancel()
 	for {
 		select {

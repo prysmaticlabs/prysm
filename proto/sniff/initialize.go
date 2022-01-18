@@ -20,20 +20,32 @@ import (
 func BeaconStateForConfigFork(marshaled []byte, cf *ConfigFork) (state.BeaconState, error) {
 	cv, err := CurrentVersionFromState(marshaled)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "in BeaconStateForConfigFork error from CurrentVersionFromState")
 	}
 	if cv != cf.Version {
 		return nil, fmt.Errorf("state fork version mismatch, detected=%#x, expected=%#x", cv, cf.Version)
 	}
+	var s state.BeaconState
 	switch cf.Fork {
 	case params.ForkGenesis:
-		return v1.InitializeFromSSZBytes(marshaled)
+		s, err = v1.InitializeFromSSZBytes(marshaled)
+		if err != nil {
+			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkGenesis failed")
+		}
 	case params.ForkAltair:
-		return v2.InitializeFromSSZBytes(marshaled)
+		s, err = v2.InitializeFromSSZBytes(marshaled)
+		if err != nil {
+			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkAltair failed")
+		}
 	case params.ForkMerge:
-		return v3.InitializeFromSSZBytes(marshaled)
+		s, err = v3.InitializeFromSSZBytes(marshaled)
+		if err != nil {
+			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkMerge failed")
+		}
+	default:
+		return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", cf.Fork.String())
 	}
-	return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", cf.Fork.String())
+	return s, nil
 }
 
 // BlockForConfigFork attempts to unmarshal a block from a marshaled byte slice into the correct block type.

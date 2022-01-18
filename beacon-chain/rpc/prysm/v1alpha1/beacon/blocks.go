@@ -483,11 +483,6 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	isGenesis := func(cp *ethpb.Checkpoint) bool {
 		return bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash && cp.Epoch == 0
 	}
-	// Retrieve genesis block in the event we have genesis checkpoints.
-	genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
-	if err != nil || genBlock == nil || genBlock.IsNil() || genBlock.Block().IsNil() {
-		return nil, status.Error(codes.Internal, "Could not get genesis block")
-	}
 
 	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
 	if !isGenesis(finalizedCheckpoint) {

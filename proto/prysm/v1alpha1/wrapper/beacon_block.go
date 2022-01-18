@@ -73,6 +73,11 @@ func (w Phase0SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return w.b.UnmarshalSSZ(buf)
 }
 
+// HashTreeRoot computes the HTR of the value by delegating to the underlying concrete type
+func (w Phase0SignedBeaconBlock) HashTreeRoot() ([32]byte, error) {
+	return w.b.HashTreeRoot()
+}
+
 // Proto returns the block in its underlying protobuf
 // interface.
 func (w Phase0SignedBeaconBlock) Proto() proto.Message {

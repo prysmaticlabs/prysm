@@ -27,10 +27,10 @@ var _ e2etypes.ComponentRunner = (*BeaconNodeSet)(nil)
 // BeaconNodeSet represents set of beacon nodes.
 type BeaconNodeSet struct {
 	e2etypes.ComponentRunner
-	flags []string
+	flags    []string
 	usePprof bool
-	enr     string
-	started chan struct{}
+	enr      string
+	started  chan struct{}
 }
 
 // SetENR assigns ENR to the set of beacon nodes.
@@ -41,9 +41,9 @@ func (s *BeaconNodeSet) SetENR(enr string) {
 // NewBeaconNodes creates and returns a set of beacon nodes.
 func NewBeaconNodes(flags []string, usePprof bool) *BeaconNodeSet {
 	return &BeaconNodeSet{
-		flags: flags,
+		flags:    flags,
 		usePprof: usePprof,
-		started: make(chan struct{}, 1),
+		started:  make(chan struct{}, 1),
 	}
 }
 
@@ -75,20 +75,20 @@ func (s *BeaconNodeSet) Started() <-chan struct{} {
 // BeaconNode represents beacon node.
 type BeaconNode struct {
 	e2etypes.ComponentRunner
-	flags []string
+	flags    []string
 	usePprof bool
-	started chan struct{}
-	index   int
-	enr     string
+	started  chan struct{}
+	index    int
+	enr      string
 }
 
 // NewBeaconNode creates and returns a beacon node.
 func NewBeaconNode(index int, enr string, flags []string, usePprof bool) *BeaconNode {
 	return &BeaconNode{
-		index:   index,
-		enr:     enr,
-		started: make(chan struct{}, 1),
-		flags: flags,
+		index:    index,
+		enr:      enr,
+		started:  make(chan struct{}, 1),
+		flags:    flags,
 		usePprof: usePprof,
 	}
 }
