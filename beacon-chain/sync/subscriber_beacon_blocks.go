@@ -71,6 +71,8 @@ func blockFromProto(msg proto.Message) (block.SignedBeaconBlock, error) {
 		return wrapper.WrappedPhase0SignedBeaconBlock(t), nil
 	case *ethpb.SignedBeaconBlockAltair:
 		return wrapper.WrappedAltairSignedBeaconBlock(t)
+	case *ethpb.SignedBeaconBlockMerge:
+		return wrapper.WrappedMergeSignedBeaconBlock(t)
 	default:
 		return nil, errors.Errorf("message has invalid underlying type: %T", msg)
 	}

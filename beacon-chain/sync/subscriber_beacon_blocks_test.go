@@ -147,6 +147,18 @@ func TestBlockFromProto(t *testing.T) {
 			}(),
 			wantErr: false,
 		},
+		{
+			name: "bellatrix type provided",
+			msgCreator: func(t *testing.T) proto.Message {
+				return &ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{Slot: 100}}
+			},
+			want: func() block.SignedBeaconBlock {
+				wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{Slot: 100}})
+				require.NoError(t, err)
+				return wsb
+			}(),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
