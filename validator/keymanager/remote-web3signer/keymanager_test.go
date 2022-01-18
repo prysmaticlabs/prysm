@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -172,9 +171,7 @@ func TestKeymanager_Sign(t *testing.T) {
 				t.Errorf("GetVoluntaryExitSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetVoluntaryExitSignRequest() got = %v, want %v", got, tt.want)
-			}
+			require.DeepEqual(t, got, tt.want)
 		})
 	}
 

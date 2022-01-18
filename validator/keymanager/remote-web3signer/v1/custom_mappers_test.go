@@ -294,7 +294,7 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 							},
 						},
 						Attestations: []*ethpb.Attestation{
-							&ethpb.Attestation{
+							{
 								AggregationBits: bitfield.Bitlist{0b1101},
 								Data: &ethpb.AttestationData{
 									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
@@ -429,7 +429,7 @@ func TestMapBeaconBlockBody(t *testing.T) {
 						},
 					},
 					Attestations: []*ethpb.Attestation{
-						&ethpb.Attestation{
+						{
 							AggregationBits: bitfield.Bitlist{0b1101},
 							Data: &ethpb.AttestationData{
 								BeaconBlockRoot: make([]byte, fieldparams.RootLength),

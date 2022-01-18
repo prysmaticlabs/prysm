@@ -83,7 +83,7 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldpa
 
 // Sign signs the message by using a remote web3signer server.
 func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
-	signRequest, err := km.getSignRequestJson(request)
+	signRequest, err := getSignRequestJson(request, km.genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -93,34 +93,40 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 }
 
 // getSignRequestJson returns a json request based on the SignRequest type.
-func (km *Keymanager) getSignRequestJson(request *validatorpb.SignRequest) (SignRequestJson, error) {
+func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (SignRequestJson, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
+	if len(genesisValidatorsRoot) != fieldparams.RootLength {
+		return nil, fmt.Errorf("invalid genesis validators root length, genesis root: %v", genesisValidatorsRoot)
+	}
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_Block:
-		bockSignRequest, err := v1.GetBlockSignRequest(request, km.genesisValidatorsRoot)
+		bockSignRequest, err := v1.GetBlockSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		return json.Marshal(bockSignRequest)
 	case *validatorpb.SignRequest_AttestationData:
-		attestationSignRequest, err := v1.GetAttestationSignRequest(request, km.genesisValidatorsRoot)
+		attestationSignRequest, err := v1.GetAttestationSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		return json.Marshal(attestationSignRequest)
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
-		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, km.genesisValidatorsRoot)
+		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		return json.Marshal(aggregateAndProofSignRequest)
 	case *validatorpb.SignRequest_Slot:
-		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, km.genesisValidatorsRoot)
+		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		return json.Marshal(aggregationSlotSignRequest)
 	case *validatorpb.SignRequest_BlockV2:
-		blocv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, km.genesisValidatorsRoot)
+		blocv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -138,31 +144,31 @@ func (km *Keymanager) getSignRequestJson(request *validatorpb.SignRequest) (Sign
 	*/
 
 	case *validatorpb.SignRequest_Epoch:
-		randaoRevealSignRequest, err := v1.GetRandaoRevealSignRequest(request, km.genesisValidatorsRoot)
+		randaoRevealSignRequest, err := v1.GetRandaoRevealSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		return json.Marshal(randaoRevealSignRequest)
 	case *validatorpb.SignRequest_Exit:
-		voluntaryExitRequest, err := v1.GetVoluntaryExitSignRequest(request, km.genesisValidatorsRoot)
+		voluntaryExitRequest, err := v1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		return json.Marshal(voluntaryExitRequest)
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
-		syncCommitteeMessageRequest, err := v1.GetSyncCommitteeMessageSignRequest(request, km.genesisValidatorsRoot)
+		syncCommitteeMessageRequest, err := v1.GetSyncCommitteeMessageSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		return json.Marshal(syncCommitteeMessageRequest)
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
-		syncCommitteeSelectionProofRequest, err := v1.GetSyncCommitteeSelectionProofSignRequest(request, km.genesisValidatorsRoot)
+		syncCommitteeSelectionProofRequest, err := v1.GetSyncCommitteeSelectionProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		return json.Marshal(syncCommitteeSelectionProofRequest)
 	case *validatorpb.SignRequest_ContributionAndProof:
-		contributionAndProofRequest, err := v1.GetSyncCommitteeContributionAndProofSignRequest(request, km.genesisValidatorsRoot)
+		contributionAndProofRequest, err := v1.GetSyncCommitteeContributionAndProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}

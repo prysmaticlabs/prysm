@@ -145,7 +145,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 							},
 						},
 						Attestations: []*eth.Attestation{
-							&eth.Attestation{
+							{
 								AggregationBits: bitfield.Bitlist{0b1101},
 								Data: &eth.AttestationData{
 									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
@@ -258,7 +258,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 							},
 						},
 						Attestations: []*eth.Attestation{
-							&eth.Attestation{
+							{
 								AggregationBits: bitfield.Bitlist{0b1101},
 								Data: &eth.AttestationData{
 									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
