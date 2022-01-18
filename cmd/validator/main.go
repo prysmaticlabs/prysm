@@ -64,9 +64,7 @@ var appFlags = []cli.Flag{
 	flags.GrpcHeadersFlag,
 	flags.GPRCGatewayCorsDomain,
 	flags.DisableAccountMetricsFlag,
-	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
-	cmd.DisableMonitoringFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
 	flags.WalletPasswordFileFlag,
@@ -74,6 +72,12 @@ var appFlags = []cli.Flag{
 	flags.EnableWebFlag,
 	flags.GraffitiFileFlag,
 	flags.EnableDutyCountDown,
+	// web3signer flags
+	flags.Web3SignerURLFlag,
+	flags.Web3SignerPublicValidatorKeysFlag,
+	////////////////////
+	cmd.DisableMonitoringFlag,
+	cmd.MonitoringHostFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.EnableBackupWebhookFlag,
 	cmd.MinimalConfigFlag,
