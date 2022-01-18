@@ -282,7 +282,7 @@ var (
 	// web3signer documentation: google Consensys' web3signer docs
 	Web3SignerPublicValidatorKeysFlag = &cli.StringFlag{
 		Name:  "validators-external-signer-public-keys",
-		Usage: "comma separated list of public keys or eternal url endpoint for validators to use for signing, for web3signer",
+		Usage: "comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer",
 		Value: "",
 	}
 
