@@ -182,12 +182,6 @@ func (*Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription
 	})
 }
 
-// reloadKeys reloads the public keys from the remote server
-func (*Keymanager) reloadKeys() {
-	// Not used right now.
-	// The feature of needing to dynamically reload from the validator instead of from the web3signer is yet to be determined.
-	// In the future there may be an api provided to add remote sign keys to the static list or remove from the static list.
-}
 
 // UnmarshalConfigFile attempts to JSON unmarshal a keymanager
 // config file into a SetupConfig struct.
