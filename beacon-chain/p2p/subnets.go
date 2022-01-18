@@ -9,6 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	mathutil "github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"go.opencensus.io/trace"
 
@@ -131,7 +133,10 @@ func (s *Service) filterPeerForSyncSubnet(index uint64) func(node *enode.Node) b
 // for a subnet. So that even in the event of poor peer
 // connectivity, we can still broadcast an attestation.
 func (s *Service) hasPeerWithSubnet(topic string) bool {
-	return len(s.pubsub.ListPeers(topic+s.Encoding().ProtocolSuffix())) >= 1
+	// In the event peer threshold is lower, we will choose the lower
+	// threshold.
+	minPeers := mathutil.Min(1, flags.Get().MinimumPeersPerSubnet)
+	return len(s.pubsub.ListPeers(topic+s.Encoding().ProtocolSuffix())) >= int(minPeers)
 }
 
 // Updates the service's discv5 listener record's attestation subnet

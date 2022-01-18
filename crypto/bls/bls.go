@@ -29,6 +29,10 @@ func SignatureFromBytes(sig []byte) (Signature, error) {
 	return blst.SignatureFromBytes(sig)
 }
 
+func MultipleSignaturesFromBytes(sigs [][]byte) ([]Signature, error) {
+	return blst.MultipleSignaturesFromBytes(sigs)
+}
+
 // AggregatePublicKeys aggregates the provided raw public keys into a single key.
 func AggregatePublicKeys(pubs [][]byte) (PublicKey, error) {
 	return blst.AggregatePublicKeys(pubs)
