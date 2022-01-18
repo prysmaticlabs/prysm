@@ -272,7 +272,7 @@ var (
 	// web3signer documentation: google Consensys' web3signer docs
 	Web3SignerURLFlag = &cli.StringFlag{
 		Name:  "validators-external-signer-url",
-		Usage: "webhook for web3signer to use for validator signing, please enter the base url of the web3signer",
+		Usage: "URL for consensys' web3signer software to use with the Prysm validator client",
 		Value: "",
 	}
 
