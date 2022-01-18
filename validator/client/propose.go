@@ -381,7 +381,6 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 		return nil, nil, errors.New(domainDataErr)
 	}
 
-	// TODO: I'm not sure if this is the right way to do this.
 	var sig bls.Signature
 	switch b.Version() {
 
