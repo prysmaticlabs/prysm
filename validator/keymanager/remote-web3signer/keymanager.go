@@ -188,7 +188,6 @@ func (*Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription
 	})
 }
 
-
 // UnmarshalConfigFile attempts to JSON unmarshal a keymanager
 // config file into a SetupConfig struct.
 func UnmarshalConfigFile(r io.ReadCloser) (*SetupConfig, error) {
