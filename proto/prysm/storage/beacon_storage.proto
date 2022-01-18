@@ -1,0 +1,38 @@
+// Copyright 2021 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.storage;
+
+import "proto/prysm/storage/version.proto";
+
+
+// BeaconStateForStorage is used only inside db/kv package and it there for the sole purpose of
+// storing the state objects efficiently. With normalizing the fields in the "state" bucket
+// it also stores some indexes and other metadata fields that cannot be stored in the
+// BeaconState object itself.
+message BeaconStateForStorage {
+  oneof storageState{
+    StorageBeaconStateV1 state_v1 = 1;
+  }
+}
+
+// StorageBeaconStateV1 is the first version of the indexed data structure that would be used
+// by the BeaconStateForStorage object. Version 1 has only three fields, the version, the
+// validator indexes and the ssz encoded state bytes/
+message StorageBeaconStateV1 {
+  Version version = 1001;           // Used to identify the state object
+  bytes validatorIndexes = 1002;    // stores the compressed indexes of the validator entry hashes
+  bytes state = 2000;               // store the ssz marshalled state
+}
