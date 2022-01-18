@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/network/forks"
-
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
