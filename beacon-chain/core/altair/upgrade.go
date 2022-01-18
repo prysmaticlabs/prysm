@@ -109,17 +109,17 @@ func UpgradeToAltair(ctx context.Context, beaconState state.BeaconState) (state.
 		return nil, err
 	}
 
-	committee, err := NextSyncCommittee(ctx, newState)
+	committee, err := NextSyncCommittee(ctx, newBeaconState)
 	if err != nil {
 		return nil, err
 	}
-	if err := newState.SetCurrentSyncCommittee(committee); err != nil {
+	if err := newBeaconState.SetCurrentSyncCommittee(committee); err != nil {
 		return nil, err
 	}
-	if err := newState.SetNextSyncCommittee(committee); err != nil {
+	if err := newBeaconState.SetNextSyncCommittee(committee); err != nil {
 		return nil, err
 	}
-	return newState, nil
+	return newBeaconState, nil
 }
 
 // TranslateParticipation translates pending attestations into participation bits, then inserts the bits into beacon state.
