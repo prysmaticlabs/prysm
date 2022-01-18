@@ -1,7 +1,5 @@
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
-# gazelle:exclude testdata
-
 go_library(
     name = "go_default_library",
     srcs = [
@@ -101,34 +99,6 @@ go_test(
         "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "@org_golang_google_protobuf//proto:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_benchmark_test",
-    size = "large",
-    srcs = ["benchmarks_test.go"],
-    args = [
-        "-test.bench=.",
-        "-test.benchmem",
-        "-test.v",
-    ],
-    local = True,
-    tags = [
-        "benchmark",
-        "manual",
-        "no-cache",
-    ],
-    deps = [
-        "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/core/transition:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
-        "//config/params:go_default_library",
-        "//proto/prysm/v1alpha1:go_default_library",
-        "//testing/benchmark:go_default_library",
-        "//testing/require:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )

@@ -31,7 +31,7 @@ import (
 )
 
 func TestListPoolAttestations(t *testing.T) {
-	state, err := util.NewBeaconState()
+	bs, err := util.NewBeaconState()
 	require.NoError(t, err)
 	att1 := &ethpbv1alpha1.Attestation{
 		AggregationBits: []byte{1, 10},
@@ -136,7 +136,7 @@ func TestListPoolAttestations(t *testing.T) {
 		Signature: bytesutil.PadTo([]byte("signature2"), 96),
 	}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
 		AttestationsPool: attestations.NewPool(),
 	}
 	require.NoError(t, s.AttestationsPool.SaveAggregatedAttestations([]*ethpbv1alpha1.Attestation{att1, att2, att3}))
@@ -193,7 +193,7 @@ func TestListPoolAttestations(t *testing.T) {
 }
 
 func TestListPoolAttesterSlashings(t *testing.T) {
-	state, err := util.NewBeaconState()
+	bs, err := util.NewBeaconState()
 	require.NoError(t, err)
 	slashing1 := &ethpbv1alpha1.AttesterSlashing{
 		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
@@ -269,7 +269,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 	}
 
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
 		SlashingsPool:    &slashings.PoolMock{PendingAttSlashings: []*ethpbv1alpha1.AttesterSlashing{slashing1, slashing2}},
 	}
 
@@ -281,7 +281,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 }
 
 func TestListPoolProposerSlashings(t *testing.T) {
-	state, err := util.NewBeaconState()
+	bs, err := util.NewBeaconState()
 	require.NoError(t, err)
 	slashing1 := &ethpbv1alpha1.ProposerSlashing{
 		Header_1: &ethpbv1alpha1.SignedBeaconBlockHeader{
@@ -329,7 +329,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 	}
 
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
 		SlashingsPool:    &slashings.PoolMock{PendingPropSlashings: []*ethpbv1alpha1.ProposerSlashing{slashing1, slashing2}},
 	}
 
@@ -341,7 +341,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 }
 
 func TestListPoolVoluntaryExits(t *testing.T) {
-	state, err := util.NewBeaconState()
+	bs, err := util.NewBeaconState()
 	require.NoError(t, err)
 	exit1 := &ethpbv1alpha1.SignedVoluntaryExit{
 		Exit: &ethpbv1alpha1.VoluntaryExit{
@@ -359,7 +359,7 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 	}
 
 	s := &Server{
-		ChainInfoFetcher:   &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{Exits: []*ethpbv1alpha1.SignedVoluntaryExit{exit1, exit2}},
 	}
 
@@ -378,7 +378,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	validator := &ethpbv1alpha1.Validator{
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		return nil
 	})
@@ -422,7 +422,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	}
 
 	for _, att := range []*ethpbv1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
-		sb, err := signing.ComputeDomainAndSign(state, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+		sb, err := signing.ComputeDomainAndSign(bs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
 		require.NoError(t, err)
 		sig, err := bls.SignatureFromBytes(sb)
 		require.NoError(t, err)
@@ -431,14 +431,14 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
 		SlashingsPool:    &slashings.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
 
 	_, err = s.SubmitAttesterSlashing(ctx, slashing)
 	require.NoError(t, err)
-	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, state, true)
+	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1AttSlashingToV1Alpha1(slashing), pendingSlashings[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
@@ -446,7 +446,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 
 func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 	ctx := context.Background()
-	state, err := util.NewBeaconState()
+	bs, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	attestation := &ethpbv1.IndexedAttestation{
@@ -474,7 +474,7 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
 		SlashingsPool:    &slashings.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
@@ -493,7 +493,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 		PublicKey:         keys[0].PublicKey().Marshal(),
 		WithdrawableEpoch: eth2types.Epoch(1),
 	}
-	state, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		return nil
 	})
@@ -524,7 +524,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 
 	for _, h := range []*ethpbv1.SignedBeaconBlockHeader{slashing.SignedHeader_1, slashing.SignedHeader_2} {
 		sb, err := signing.ComputeDomainAndSign(
-			state,
+			bs,
 			slots.ToEpoch(h.Message.Slot),
 			h.Message,
 			params.BeaconConfig().DomainBeaconProposer,
@@ -538,14 +538,14 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
 		SlashingsPool:    &slashings.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
 
 	_, err = s.SubmitProposerSlashing(ctx, slashing)
 	require.NoError(t, err)
-	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, state, true)
+	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, bs, true)
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1ProposerSlashingToV1Alpha1(slashing), pendingSlashings[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
@@ -553,7 +553,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 
 func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 	ctx := context.Background()
-	state, err := util.NewBeaconState()
+	bs, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	header := &ethpbv1.SignedBeaconBlockHeader{
@@ -574,7 +574,7 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
 		SlashingsPool:    &slashings.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
@@ -593,7 +593,7 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		// Satisfy activity time required before exiting.
 		state.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))
@@ -609,7 +609,7 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 		Signature: make([]byte, 96),
 	}
 
-	sb, err := signing.ComputeDomainAndSign(state, exit.Message.Epoch, exit.Message, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+	sb, err := signing.ComputeDomainAndSign(bs, exit.Message.Epoch, exit.Message, params.BeaconConfig().DomainVoluntaryExit, keys[0])
 	require.NoError(t, err)
 	sig, err := bls.SignatureFromBytes(sb)
 	require.NoError(t, err)
@@ -617,14 +617,14 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher:   &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
 
 	_, err = s.SubmitVoluntaryExit(ctx, exit)
 	require.NoError(t, err)
-	pendingExits := s.VoluntaryExitsPool.PendingExits(state, state.Slot(), true)
+	pendingExits := s.VoluntaryExitsPool.PendingExits(bs, bs.Slot(), true)
 	require.Equal(t, 1, len(pendingExits))
 	assert.DeepEqual(t, migration.V1ExitToV1Alpha1(exit), pendingExits[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
@@ -639,7 +639,7 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		return nil
 	})
@@ -655,7 +655,7 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher:   &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
@@ -674,7 +674,7 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		PublicKey: keys[0].PublicKey().Marshal(),
 	}
-	state, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = []*ethpbv1alpha1.Validator{validator}
 		return nil
 	})
@@ -690,7 +690,7 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
-		ChainInfoFetcher:   &blockchainmock.ChainService{State: state},
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
 		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
@@ -716,7 +716,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &ethpbv1alpha1.Checkpoint{
@@ -764,7 +764,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 
 	for _, att := range []*ethpbv1.Attestation{att1, att2} {
 		sb, err := signing.ComputeDomainAndSign(
-			state,
+			bs,
 			slots.ToEpoch(att.Data.Slot),
 			att.Data,
 			params.BeaconConfig().DomainBeaconAttester,
@@ -777,7 +777,7 @@ func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
-	chainService := &blockchainmock.ChainService{State: state}
+	chainService := &blockchainmock.ChainService{State: bs}
 	s := &Server{
 		HeadFetcher:       chainService,
 		ChainInfoFetcher:  chainService,
@@ -822,7 +822,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &ethpbv1alpha1.Checkpoint{
@@ -871,7 +871,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 
 	// Don't sign attInvalidSignature.
 	sb, err := signing.ComputeDomainAndSign(
-		state,
+		bs,
 		slots.ToEpoch(attValid.Data.Slot),
 		attValid.Data,
 		params.BeaconConfig().DomainBeaconAttester,
@@ -883,7 +883,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	attValid.Signature = sig.Marshal()
 
 	broadcaster := &p2pMock.MockBroadcaster{}
-	chainService := &blockchainmock.ChainService{State: state}
+	chainService := &blockchainmock.ChainService{State: bs}
 	s := &Server{
 		HeadFetcher:       chainService,
 		ChainInfoFetcher:  chainService,
@@ -922,7 +922,7 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = validators
 		state.Slot = 1
 		state.PreviousJustifiedCheckpoint = &ethpbv1alpha1.Checkpoint{
@@ -954,7 +954,7 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 		Signature: nil,
 	}
 
-	chain := &blockchainmock.ChainService{State: state}
+	chain := &blockchainmock.ChainService{State: bs}
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher:  chain,
