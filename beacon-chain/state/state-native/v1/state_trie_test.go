@@ -170,7 +170,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			assert.DeepNotEqual(t, []byte{}, root[:], "Received empty hash tree root")
 			assert.DeepEqual(t, genericHTR[:], root[:], "Expected hash tree root to match generic")
 			if len(oldHTR) != 0 && bytes.Equal(root[:], oldHTR) {
-				t.Errorf("Expected HashTreeRoot to change, received %#x == old %#x", root, oldHTR)
+				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
 			}
 			oldHTR = root[:]
 		})
@@ -239,7 +239,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			assert.DeepNotEqual(t, []byte{}, root[:], "Received empty hash tree root")
 			assert.DeepEqual(t, genericHTR[:], root[:], "Expected hash tree root to match generic")
 			if len(oldHTR) != 0 && bytes.Equal(root[:], oldHTR) {
-				t.Errorf("Expected HashTreeRoot to change, received %#x == old %#x", root, oldHTR)
+				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
 			}
 			oldHTR = root[:]
 		})
