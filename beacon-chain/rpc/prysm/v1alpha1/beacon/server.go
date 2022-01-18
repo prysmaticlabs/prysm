@@ -40,7 +40,6 @@ type Server struct {
 	Broadcaster                 p2p.Broadcaster
 	AttestationsPool            attestations.Pool
 	SlashingsPool               slashings.PoolManager
-	CanonicalStateChan          chan *ethpb.BeaconState
 	ChainStartChan              chan time.Time
 	ReceivedAttestationsBuffer  chan *ethpb.Attestation
 	CollectedAttestationsBuffer chan []*ethpb.Attestation
