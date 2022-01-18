@@ -368,11 +368,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Epoch{Epoch: epoch},
-<<<<<<< HEAD
-		Fork:            fork,
-=======
 		SigningSlot:     slot,
->>>>>>> develop
 	})
 	if err != nil {
 		return nil, err
@@ -431,11 +427,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 			SigningRoot:     blockRoot[:],
 			SignatureDomain: domain.SignatureDomain,
 			Object:          &validatorpb.SignRequest_BlockV2{BlockV2: block},
-<<<<<<< HEAD
-			Fork:            fork,
-=======
 			SigningSlot:     slot,
->>>>>>> develop
 		})
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")
@@ -455,11 +447,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 			SigningRoot:     blockRoot[:],
 			SignatureDomain: domain.SignatureDomain,
 			Object:          &validatorpb.SignRequest_Block{Block: block},
-<<<<<<< HEAD
-			Fork:            fork,
-=======
 			SigningSlot:     slot,
->>>>>>> develop
 		})
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")

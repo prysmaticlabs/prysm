@@ -10,13 +10,6 @@ import (
 
 // GetBlockSignRequest maps the request for signing type BLOCK.
 func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockSignRequest, error) {
-<<<<<<< HEAD
-	beaconBlock := request.Object.(*validatorpb.SignRequest_Block)
-	if beaconBlock == nil {
-		return nil, errors.New("invalid sign request: BeaconBlock is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	beaconBlock, ok := request.Object.(*validatorpb.SignRequest_Block)
 	if !ok {
 		return nil, errors.New("failed to cast request object to block")
@@ -25,7 +18,6 @@ func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot
 		return nil, errors.New("invalid sign request: BeaconBlock is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}
@@ -49,13 +41,6 @@ func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot
 
 // GetAggregationSlotSignRequest maps the request for signing type AGGREGATION_SLOT.
 func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AggregationSlotSignRequest, error) {
-<<<<<<< HEAD
-	aggregationSlot := request.Object.(*validatorpb.SignRequest_Slot)
-	if aggregationSlot == nil {
-		return nil, errors.New("invalid sign request: Slot is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	aggregationSlot, ok := request.Object.(*validatorpb.SignRequest_Slot)
 	if !ok {
 		return nil, errors.New("failed to cast request object to aggregation slot")
@@ -64,7 +49,6 @@ func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisVali
 		return nil, errors.New("invalid sign request: Slot is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}
@@ -80,13 +64,6 @@ func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisVali
 
 // GetAggregateAndProofSignRequest maps the request for signing type AGGREGATE_AND_PROOF.
 func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AggregateAndProofSignRequest, error) {
-<<<<<<< HEAD
-	aggregateAttestationAndProof := request.Object.(*validatorpb.SignRequest_AggregateAttestationAndProof)
-	if aggregateAttestationAndProof == nil {
-		return nil, errors.New("invalid sign request: AggregateAndProof is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	aggregateAttestationAndProof, ok := request.Object.(*validatorpb.SignRequest_AggregateAttestationAndProof)
 	if !ok {
 		return nil, errors.New("failed to cast request object to aggregate attestation and proof")
@@ -95,7 +72,6 @@ func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisVa
 		return nil, errors.New("invalid sign request: AggregateAndProof is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}
@@ -113,13 +89,6 @@ func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisVa
 
 // GetAttestationSignRequest maps the request for signing type ATTESTATION.
 func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AttestationSignRequest, error) {
-<<<<<<< HEAD
-	attestation := request.Object.(*validatorpb.SignRequest_AttestationData)
-	if attestation == nil {
-		return nil, errors.New("invalid sign request: Attestation is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	attestation, ok := request.Object.(*validatorpb.SignRequest_AttestationData)
 	if !ok {
 		return nil, errors.New("failed to cast request object to attestation")
@@ -128,7 +97,6 @@ func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidato
 		return nil, errors.New("invalid sign request: Attestation is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}
@@ -146,13 +114,6 @@ func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidato
 
 // GetBlockV2AltairSignRequest maps the request for signing type BLOCK_V2.
 func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2AltairSignRequest, error) {
-<<<<<<< HEAD
-	beaconBlockV2 := request.Object.(*validatorpb.SignRequest_BlockV2)
-	if beaconBlockV2 == nil {
-		return nil, errors.New("invalid sign request: BeaconBlock is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	beaconBlockV2, ok := request.Object.(*validatorpb.SignRequest_BlockV2)
 	if !ok {
 		return nil, errors.New("failed to cast request object to block v2")
@@ -161,7 +122,6 @@ func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValida
 		return nil, errors.New("invalid sign request: BeaconBlock is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}
@@ -182,13 +142,6 @@ func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValida
 
 // GetRandaoRevealSignRequest maps the request for signing type RANDAO_REVEAL.
 func GetRandaoRevealSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*RandaoRevealSignRequest, error) {
-<<<<<<< HEAD
-	randaoReveal := request.Object.(*validatorpb.SignRequest_Epoch)
-	if randaoReveal == nil {
-		return nil, errors.New("invalid sign request: Epoch is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	randaoReveal, ok := request.Object.(*validatorpb.SignRequest_Epoch)
 	if !ok {
 		return nil, errors.New("failed to cast request object to randao reveal")
@@ -197,7 +150,6 @@ func GetRandaoRevealSignRequest(request *validatorpb.SignRequest, genesisValidat
 		return nil, errors.New("invalid sign request: Epoch is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}
@@ -213,13 +165,6 @@ func GetRandaoRevealSignRequest(request *validatorpb.SignRequest, genesisValidat
 
 // GetVoluntaryExitSignRequest maps the request for signing type VOLUNTARY_EXIT.
 func GetVoluntaryExitSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*VoluntaryExitSignRequest, error) {
-<<<<<<< HEAD
-	voluntaryExit := request.Object.(*validatorpb.SignRequest_Exit).Exit
-	if voluntaryExit == nil {
-		return nil, errors.New("invalid sign request: Exit is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	voluntaryExit, ok := request.Object.(*validatorpb.SignRequest_Exit)
 	if !ok {
 		return nil, errors.New("failed to cast request object to voluntary exit")
@@ -228,7 +173,6 @@ func GetVoluntaryExitSignRequest(request *validatorpb.SignRequest, genesisValida
 		return nil, errors.New("invalid sign request: Exit is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}
@@ -237,26 +181,14 @@ func GetVoluntaryExitSignRequest(request *validatorpb.SignRequest, genesisValida
 		ForkInfo:    fork,
 		SigningRoot: hexutil.Encode(request.SigningRoot),
 		VoluntaryExit: &VoluntaryExit{
-<<<<<<< HEAD
-			ValidatorIndex: fmt.Sprint(voluntaryExit.ValidatorIndex),
-			Epoch:          fmt.Sprint(voluntaryExit.Epoch),
-=======
 			ValidatorIndex: fmt.Sprint(voluntaryExit.Exit.ValidatorIndex),
 			Epoch:          fmt.Sprint(voluntaryExit.Exit.Epoch),
->>>>>>> develop
 		},
 	}, nil
 }
 
 // GetSyncCommitteeMessageSignRequest maps the request for signing type SYNC_COMMITTEE_MESSAGE.
 func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeMessageSignRequest, error) {
-<<<<<<< HEAD
-	syncCommitteeMessage := request.Object.(*validatorpb.SignRequest_SyncMessageBlockRoot)
-	if syncCommitteeMessage == nil || syncCommitteeMessage.SyncMessageBlockRoot == nil {
-		return nil, errors.New("invalid sign request: SyncCommitteeMessage is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}
@@ -268,7 +200,6 @@ func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesi
 		return nil, errors.New("invalid sign request: SyncCommitteeMessage is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}
@@ -277,26 +208,14 @@ func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesi
 		ForkInfo:    fork,
 		SigningRoot: hexutil.Encode(request.SigningRoot),
 		SyncCommitteeMessage: &SyncCommitteeMessage{
-<<<<<<< HEAD
-			BeaconBlockRoot: hexutil.Encode(syncCommitteeMessage.SyncMessageBlockRoot.SyncMessageBlockRoot),
-			Slot:            fmt.Sprint(syncCommitteeMessage.SyncMessageBlockRoot.Slot),
-=======
 			BeaconBlockRoot: hexutil.Encode(syncCommitteeMessage.SyncMessageBlockRoot),
 			Slot:            fmt.Sprint(request.SigningSlot),
->>>>>>> develop
 		},
 	}, nil
 }
 
 // GetSyncCommitteeSelectionProofSignRequest maps the request for signing type SYNC_COMMITTEE_SELECTION_PROOF.
 func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeSelectionProofSignRequest, error) {
-<<<<<<< HEAD
-	syncCommitteeSelectionProof := request.Object.(*validatorpb.SignRequest_SyncAggregatorSelectionData)
-	if syncCommitteeSelectionProof == nil {
-		return nil, errors.New("invalid sign request: SyncCommitteeSelectionProof is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	syncCommitteeSelectionProof, ok := request.Object.(*validatorpb.SignRequest_SyncAggregatorSelectionData)
 	if !ok {
 		return nil, errors.New("failed to cast request object to sync committee selection proof")
@@ -305,7 +224,6 @@ func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest,
 		return nil, errors.New("invalid sign request: SyncCommitteeSelectionProof is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}
@@ -323,13 +241,6 @@ func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest,
 
 // GetSyncCommitteeContributionAndProofSignRequest maps the request for signing type SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF.
 func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeContributionAndProofSignRequest, error) {
-<<<<<<< HEAD
-	syncCommitteeContributionAndProof := request.Object.(*validatorpb.SignRequest_ContributionAndProof)
-	if syncCommitteeContributionAndProof == nil {
-		return nil, errors.New("invalid sign request: SyncCommitteeContributionAndProof is nil")
-	}
-	fork, err := MapForkInfo(request.Fork, genesisValidatorsRoot)
-=======
 	syncCommitteeContributionAndProof, ok := request.Object.(*validatorpb.SignRequest_ContributionAndProof)
 	if !ok {
 		return nil, errors.New("failed to cast request object to sync committee contribution and proof")
@@ -338,7 +249,6 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 		return nil, errors.New("invalid sign request: SyncCommitteeContributionAndProof is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
->>>>>>> develop
 	if err != nil {
 		return nil, err
 	}

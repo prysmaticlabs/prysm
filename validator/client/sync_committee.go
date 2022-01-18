@@ -53,33 +53,14 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not get sync committee message signing root")
 		return
 	}
-<<<<<<< HEAD
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		log.WithError(err).Errorf("Could not get fork on current slot: %d", slot)
-		return
-	}
-=======
-
->>>>>>> develop
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
-<<<<<<< HEAD
-		Object:          &validatorpb.SignRequest_SyncMessageBlockRoot{
-			SyncMessageBlockRoot: &validatorpb.SyncMessageBlockRoot{
-				Slot:                 slot,
-				SyncMessageBlockRoot: res.Root,
-			},
-		},
-		Fork:            fork,
-=======
 		Object: &validatorpb.SignRequest_SyncMessageBlockRoot{
 			SyncMessageBlockRoot: res.Root,
 		},
 		SigningSlot: slot,
->>>>>>> develop
 	})
 	if err != nil {
 		log.WithError(err).Error("Could not sign sync committee message")
@@ -236,11 +217,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldpara
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_SyncAggregatorSelectionData{SyncAggregatorSelectionData: data},
-<<<<<<< HEAD
-		Fork:            fork,
-=======
 		SigningSlot:     slot,
->>>>>>> develop
 	})
 	if err != nil {
 		return nil, err
@@ -249,11 +226,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldpara
 }
 
 // This returns the signature of validator signing over sync committee contribution and proof object.
-<<<<<<< HEAD
-func (v *validator) signContributionAndProof(ctx context.Context, pubKey [48]byte, c *ethpb.ContributionAndProof, slot types.Slot) ([]byte, error) {
-=======
 func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, c *ethpb.ContributionAndProof, slot types.Slot) ([]byte, error) {
->>>>>>> develop
 	d, err := v.domainData(ctx, slots.ToEpoch(c.Contribution.Slot), params.BeaconConfig().DomainContributionAndProof[:])
 	if err != nil {
 		return nil, err
@@ -271,11 +244,7 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldp
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
 		Object:          &validatorpb.SignRequest_ContributionAndProof{ContributionAndProof: c},
-<<<<<<< HEAD
-		Fork:            fork,
-=======
 		SigningSlot:     slot,
->>>>>>> develop
 	})
 	if err != nil {
 		return nil, err

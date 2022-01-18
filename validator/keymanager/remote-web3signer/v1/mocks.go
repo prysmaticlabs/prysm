@@ -8,10 +8,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-<<<<<<< HEAD
-	"github.com/prysmaticlabs/prysm/testing/util"
-=======
->>>>>>> develop
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -29,15 +25,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			Object: &validatorpb.SignRequest_Slot{
 				Slot: 0,
 			},
-<<<<<<< HEAD
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	case "AGGREGATE_AND_PROOF":
 		return &validatorpb.SignRequest{
@@ -47,17 +35,6 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			Object: &validatorpb.SignRequest_AggregateAttestationAndProof{
 				AggregateAttestationAndProof: &eth.AggregateAttestationAndProof{
 					AggregatorIndex: 0,
-<<<<<<< HEAD
-					Aggregate:       util.NewAttestation(),
-					SelectionProof:  make([]byte, fieldparams.BLSSignatureLength),
-				},
-			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 					Aggregate: &eth.Attestation{
 						AggregationBits: bitfield.Bitlist{0b1101},
 						Data: &eth.AttestationData{
@@ -75,7 +52,6 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 				},
 			},
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	case "ATTESTATION":
 		return &validatorpb.SignRequest{
@@ -83,15 +59,6 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			SigningRoot:     make([]byte, fieldparams.RootLength),
 			SignatureDomain: make([]byte, 4),
 			Object: &validatorpb.SignRequest_AttestationData{
-<<<<<<< HEAD
-				AttestationData: util.NewAttestation().Data,
-			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 				AttestationData: &eth.AttestationData{
 					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 					Source: &eth.Checkpoint{
@@ -103,7 +70,6 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 				},
 			},
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	case "BLOCK":
 		return &validatorpb.SignRequest{
@@ -152,15 +118,6 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 							{
 								Attestation_1: &eth.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-<<<<<<< HEAD
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
-								},
-								Attestation_2: &eth.IndexedAttestation{
-									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
-=======
 									Data: &eth.AttestationData{
 										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 										Source: &eth.Checkpoint{
@@ -184,14 +141,10 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 										},
 									},
 									Signature: make([]byte, fieldparams.BLSSignatureLength),
->>>>>>> develop
 								},
 							},
 						},
 						Attestations: []*eth.Attestation{
-<<<<<<< HEAD
-							util.NewAttestation(),
-=======
 							{
 								AggregationBits: bitfield.Bitlist{0b1101},
 								Data: &eth.AttestationData{
@@ -205,7 +158,6 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 								},
 								Signature: make([]byte, 96),
 							},
->>>>>>> develop
 						},
 						Deposits: []*eth.Deposit{
 							{
@@ -230,15 +182,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					},
 				},
 			},
-<<<<<<< HEAD
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	case "BLOCK_V2":
 		return &validatorpb.SignRequest{
@@ -287,15 +231,6 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 							{
 								Attestation_1: &eth.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-<<<<<<< HEAD
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
-								},
-								Attestation_2: &eth.IndexedAttestation{
-									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
-=======
 									Data: &eth.AttestationData{
 										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 										Source: &eth.Checkpoint{
@@ -319,14 +254,10 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 										},
 									},
 									Signature: make([]byte, fieldparams.BLSSignatureLength),
->>>>>>> develop
 								},
 							},
 						},
 						Attestations: []*eth.Attestation{
-<<<<<<< HEAD
-							util.NewAttestation(),
-=======
 							{
 								AggregationBits: bitfield.Bitlist{0b1101},
 								Data: &eth.AttestationData{
@@ -340,7 +271,6 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 								},
 								Signature: make([]byte, 96),
 							},
->>>>>>> develop
 						},
 						Deposits: []*eth.Deposit{
 							{
@@ -369,15 +299,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					},
 				},
 			},
-<<<<<<< HEAD
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	case "RANDAO_REVEAL":
 		return &validatorpb.SignRequest{
@@ -387,15 +309,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			Object: &validatorpb.SignRequest_Epoch{
 				Epoch: 0,
 			},
-<<<<<<< HEAD
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	case "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF":
 		return &validatorpb.SignRequest{
@@ -415,15 +329,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 				},
 			},
-<<<<<<< HEAD
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	case "SYNC_COMMITTEE_MESSAGE":
 		return &validatorpb.SignRequest{
@@ -431,22 +337,9 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			SigningRoot:     make([]byte, fieldparams.RootLength),
 			SignatureDomain: make([]byte, 4),
 			Object: &validatorpb.SignRequest_SyncMessageBlockRoot{
-<<<<<<< HEAD
-				SyncMessageBlockRoot: &validatorpb.SyncMessageBlockRoot{
-					Slot:                 0,
-					SyncMessageBlockRoot: make([]byte, fieldparams.RootLength),
-				},
-			},
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 				SyncMessageBlockRoot: make([]byte, fieldparams.RootLength),
 			},
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	case "SYNC_COMMITTEE_SELECTION_PROOF":
 		return &validatorpb.SignRequest{
@@ -459,15 +352,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					SubcommitteeIndex: 0,
 				},
 			},
-<<<<<<< HEAD
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	case "VOLUNTARY_EXIT":
 		return &validatorpb.SignRequest{
@@ -480,15 +365,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					ValidatorIndex: 0,
 				},
 			},
-<<<<<<< HEAD
-			Fork: &eth.Fork{
-				PreviousVersion: make([]byte, 4),
-				CurrentVersion:  make([]byte, 4),
-				Epoch:           0,
-			},
-=======
 			SigningSlot: 0,
->>>>>>> develop
 		}
 	default:
 		fmt.Printf("Web3signer sign request type: %v  not found", t)

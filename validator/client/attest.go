@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -202,23 +201,12 @@ func (v *validator) signAtt(ctx context.Context, pubKey [fieldparams.BLSPubkeyLe
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-<<<<<<< HEAD
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("could not get fork on current slot: %d", slot)
-	}
-=======
->>>>>>> develop
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_AttestationData{AttestationData: data},
-<<<<<<< HEAD
-		Fork:            fork,
-=======
 		SigningSlot:     slot,
->>>>>>> develop
 	})
 	if err != nil {
 		return nil, [32]byte{}, err

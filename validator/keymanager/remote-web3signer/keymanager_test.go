@@ -7,10 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-<<<<<<< HEAD
-	"reflect"
-=======
->>>>>>> develop
 	"strings"
 	"testing"
 
@@ -45,12 +41,9 @@ func (mc *MockClient) GetPublicKeys(_ context.Context, _ string) ([][48]byte, er
 		}
 		keys = append(keys, bytesutil.ToBytes48(decoded))
 	}
-<<<<<<< HEAD
-=======
 	if mc.isThrowingError {
 		return nil, fmt.Errorf("mock error")
 	}
->>>>>>> develop
 	return keys, nil
 }
 
@@ -178,13 +171,7 @@ func TestKeymanager_Sign(t *testing.T) {
 				t.Errorf("GetVoluntaryExitSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-<<<<<<< HEAD
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetVoluntaryExitSignRequest() got = %v, want %v", got, tt.want)
-			}
-=======
 			require.DeepEqual(t, got, tt.want)
->>>>>>> develop
 		})
 	}
 
@@ -256,8 +243,6 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 	assert.EqualValues(t, resp, keys)
 }
 
-<<<<<<< HEAD
-=======
 func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *testing.T) {
 	ctx := context.Background()
 	client := &MockClient{
@@ -284,7 +269,6 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 	assert.Equal(t, fmt.Errorf("mock error"), err)
 }
 
->>>>>>> develop
 func TestUnmarshalConfigFile_HappyPath(t *testing.T) {
 	fakeConfig := struct {
 		BaseEndpoint          string
@@ -303,9 +287,5 @@ func TestUnmarshalConfigFile_HappyPath(t *testing.T) {
 
 	config, err := UnmarshalConfigFile(r)
 	assert.NoError(t, err)
-<<<<<<< HEAD
-	assert.Equal(t, "example.com", config.BaseEndpoint)
-=======
 	assert.Equal(t, fakeConfig.BaseEndpoint, config.BaseEndpoint)
->>>>>>> develop
 }

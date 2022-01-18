@@ -140,11 +140,7 @@ func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [fiel
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Slot{Slot: slot},
-<<<<<<< HEAD
-		Fork:            fork,
-=======
 		SigningSlot:     slot,
->>>>>>> develop
 	})
 	if err != nil {
 		return nil, err
@@ -183,11 +179,7 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot types.Slot) {
 
 // This returns the signature of validator signing over aggregate and
 // proof object.
-<<<<<<< HEAD
-func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [48]byte, agg *ethpb.AggregateAttestationAndProof, slot types.Slot) ([]byte, error) {
-=======
 func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, agg *ethpb.AggregateAttestationAndProof, slot types.Slot) ([]byte, error) {
->>>>>>> develop
 	d, err := v.domainData(ctx, slots.ToEpoch(agg.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof[:])
 	if err != nil {
 		return nil, err
@@ -206,11 +198,7 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,
 		Object:          &validatorpb.SignRequest_AggregateAttestationAndProof{AggregateAttestationAndProof: agg},
-<<<<<<< HEAD
-		Fork:            fork,
-=======
 		SigningSlot:     slot,
->>>>>>> develop
 	})
 	if err != nil {
 		return nil, err
