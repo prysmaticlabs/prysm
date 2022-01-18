@@ -10,6 +10,9 @@ import (
 
 // GetBlockSignRequest maps the request for signing type BLOCK.
 func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	beaconBlock, ok := request.Object.(*validatorpb.SignRequest_Block)
 	if !ok {
 		return nil, errors.New("failed to cast request object to block")
@@ -41,6 +44,9 @@ func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot
 
 // GetAggregationSlotSignRequest maps the request for signing type AGGREGATION_SLOT.
 func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AggregationSlotSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	aggregationSlot, ok := request.Object.(*validatorpb.SignRequest_Slot)
 	if !ok {
 		return nil, errors.New("failed to cast request object to aggregation slot")
@@ -64,6 +70,9 @@ func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisVali
 
 // GetAggregateAndProofSignRequest maps the request for signing type AGGREGATE_AND_PROOF.
 func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AggregateAndProofSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	aggregateAttestationAndProof, ok := request.Object.(*validatorpb.SignRequest_AggregateAttestationAndProof)
 	if !ok {
 		return nil, errors.New("failed to cast request object to aggregate attestation and proof")
@@ -89,6 +98,9 @@ func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisVa
 
 // GetAttestationSignRequest maps the request for signing type ATTESTATION.
 func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AttestationSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	attestation, ok := request.Object.(*validatorpb.SignRequest_AttestationData)
 	if !ok {
 		return nil, errors.New("failed to cast request object to attestation")
@@ -114,6 +126,9 @@ func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidato
 
 // GetBlockV2AltairSignRequest maps the request for signing type BLOCK_V2.
 func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2AltairSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	beaconBlockV2, ok := request.Object.(*validatorpb.SignRequest_BlockV2)
 	if !ok {
 		return nil, errors.New("failed to cast request object to block v2")
@@ -142,6 +157,9 @@ func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValida
 
 // GetRandaoRevealSignRequest maps the request for signing type RANDAO_REVEAL.
 func GetRandaoRevealSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*RandaoRevealSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	randaoReveal, ok := request.Object.(*validatorpb.SignRequest_Epoch)
 	if !ok {
 		return nil, errors.New("failed to cast request object to randao reveal")
@@ -165,6 +183,9 @@ func GetRandaoRevealSignRequest(request *validatorpb.SignRequest, genesisValidat
 
 // GetVoluntaryExitSignRequest maps the request for signing type VOLUNTARY_EXIT.
 func GetVoluntaryExitSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*VoluntaryExitSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	voluntaryExit, ok := request.Object.(*validatorpb.SignRequest_Exit)
 	if !ok {
 		return nil, errors.New("failed to cast request object to voluntary exit")
@@ -189,6 +210,9 @@ func GetVoluntaryExitSignRequest(request *validatorpb.SignRequest, genesisValida
 
 // GetSyncCommitteeMessageSignRequest maps the request for signing type SYNC_COMMITTEE_MESSAGE.
 func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeMessageSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	syncCommitteeMessage, ok := request.Object.(*validatorpb.SignRequest_SyncMessageBlockRoot)
 	if !ok {
 		return nil, errors.New("failed to cast request object to sync committee message")
@@ -213,6 +237,9 @@ func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesi
 
 // GetSyncCommitteeSelectionProofSignRequest maps the request for signing type SYNC_COMMITTEE_SELECTION_PROOF.
 func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeSelectionProofSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	syncCommitteeSelectionProof, ok := request.Object.(*validatorpb.SignRequest_SyncAggregatorSelectionData)
 	if !ok {
 		return nil, errors.New("failed to cast request object to sync committee selection proof")
@@ -238,6 +265,9 @@ func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest,
 
 // GetSyncCommitteeContributionAndProofSignRequest maps the request for signing type SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF.
 func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeContributionAndProofSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	syncCommitteeContributionAndProof, ok := request.Object.(*validatorpb.SignRequest_ContributionAndProof)
 	if !ok {
 		return nil, errors.New("failed to cast request object to sync committee contribution and proof")

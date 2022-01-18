@@ -21,8 +21,9 @@ import (
 )
 
 type MockClient struct {
-	Signature  string
-	PublicKeys []string
+	Signature       string
+	PublicKeys      []string
+	isThrowingError bool
 }
 
 func (mc *MockClient) Sign(_ context.Context, _ string, _ SignRequestJson) (bls.Signature, error) {
@@ -40,6 +41,9 @@ func (mc *MockClient) GetPublicKeys(_ context.Context, _ string) ([][48]byte, er
 			return nil, err
 		}
 		keys = append(keys, bytesutil.ToBytes48(decoded))
+	}
+	if mc.isThrowingError {
+		return nil, fmt.Errorf("mock error")
 	}
 	return keys, nil
 }
@@ -242,6 +246,32 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 	assert.EqualValues(t, resp, keys)
 }
 
+func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *testing.T) {
+	ctx := context.Background()
+	client := &MockClient{
+		PublicKeys:      []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
+		isThrowingError: true,
+	}
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	config := &SetupConfig{
+		BaseEndpoint:          "example.com",
+		GenesisValidatorsRoot: root,
+		PublicKeysURL:         "example2.com/api/v1/eth2/publicKeys",
+	}
+	km, err := NewKeymanager(ctx, config)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	km.client = client
+	resp, err := km.FetchValidatingPublicKeys(ctx)
+	assert.NotNil(t, err)
+	assert.Nil(t, resp)
+	assert.Equal(t, fmt.Errorf("mock error"), err)
+}
+
 func TestUnmarshalConfigFile_HappyPath(t *testing.T) {
 	fakeConfig := struct {
 		BaseEndpoint          string
@@ -260,5 +290,5 @@ func TestUnmarshalConfigFile_HappyPath(t *testing.T) {
 
 	config, err := UnmarshalConfigFile(r)
 	assert.NoError(t, err)
-	assert.Equal(t, "example.com", config.BaseEndpoint)
+	assert.Equal(t, fakeConfig.BaseEndpoint, config.BaseEndpoint)
 }
