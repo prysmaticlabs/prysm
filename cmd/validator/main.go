@@ -72,7 +72,7 @@ var appFlags = []cli.Flag{
 	flags.EnableWebFlag,
 	flags.GraffitiFileFlag,
 	flags.EnableDutyCountDown,
-	// web3signer flags
+	// Consensys' Web3Signer flags
 	flags.Web3SignerURLFlag,
 	flags.Web3SignerPublicValidatorKeysFlag,
 	////////////////////
