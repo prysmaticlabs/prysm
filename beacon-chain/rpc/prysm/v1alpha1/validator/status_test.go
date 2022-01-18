@@ -539,13 +539,12 @@ func TestActivationStatus_OK(t *testing.T) {
 	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.HashTreeRoot()))
 
 	vs := &Server{
-		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *ethpb.BeaconState, 1),
-		ChainStartFetcher:  &mockPOW.POWChain{},
-		BlockFetcher:       &mockPOW.POWChain{},
-		Eth1InfoFetcher:    &mockPOW.POWChain{},
-		DepositFetcher:     depositCache,
-		HeadFetcher:        &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		Ctx:               context.Background(),
+		ChainStartFetcher: &mockPOW.POWChain{},
+		BlockFetcher:      &mockPOW.POWChain{},
+		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
 	activeExists, response, err := vs.activationStatus(context.Background(), pubKeys)
 	require.NoError(t, err)
@@ -743,14 +742,13 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	assert.NoError(t, depositCache.InsertDeposit(context.Background(), dep, 0, 1, depositTrie.HashTreeRoot()))
 
 	vs := &Server{
-		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *ethpb.BeaconState, 1),
-		ChainStartFetcher:  &mockPOW.POWChain{},
-		BlockFetcher:       &mockPOW.POWChain{},
-		Eth1InfoFetcher:    &mockPOW.POWChain{},
-		DepositFetcher:     depositCache,
-		HeadFetcher:        &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		Ctx:               context.Background(),
+		ChainStartFetcher: &mockPOW.POWChain{},
+		BlockFetcher:      &mockPOW.POWChain{},
+		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
@@ -839,13 +837,12 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 
 	vs := &Server{
-		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *ethpb.BeaconState, 1),
-		ChainStartFetcher:  &mockPOW.POWChain{},
-		BlockFetcher:       &mockPOW.POWChain{},
-		Eth1InfoFetcher:    &mockPOW.POWChain{},
-		HeadFetcher:        &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		Ctx:               context.Background(),
+		ChainStartFetcher: &mockPOW.POWChain{},
+		BlockFetcher:      &mockPOW.POWChain{},
+		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
