@@ -87,6 +87,7 @@ type Config struct {
 	BlockReceiver           blockchain.BlockReceiver
 	POWChainService         powchain.Chain
 	ChainStartFetcher       powchain.ChainStartFetcher
+	POWChainInfoFetcher     powchain.ChainInfoFetcher
 	GenesisTimeFetcher      blockchain.TimeFetcher
 	GenesisFetcher          blockchain.GenesisFetcher
 	EnableDebugRPCEndpoints bool
@@ -222,6 +223,7 @@ func (s *Service) Start() {
 		PeersFetcher:         s.cfg.PeersFetcher,
 		PeerManager:          s.cfg.PeerManager,
 		GenesisFetcher:       s.cfg.GenesisFetcher,
+		POWChainInfoFetcher:  s.cfg.POWChainInfoFetcher,
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}

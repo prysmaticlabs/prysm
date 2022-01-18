@@ -11,7 +11,7 @@
 # docker build -t gcr.io/prysmaticlabs/rbe-worker:latest .
 # gcloud docker -- push gcr.io/prysmaticlabs/rbe-worker:latest 
 
-FROM debian:buster-slim as build
+FROM debian:bullseye-slim as build
 
 # install gnu/gcc cross-build toolchain (gcc 8.3)
 ENV DOCKER_CLI_EXPERIMENTAL=enabled

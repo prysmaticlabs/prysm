@@ -31,20 +31,20 @@ require (
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/herumi/bls-eth-go-binary v0.0.0-20210917013441-d37c07cfda4e
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
-	github.com/ipfs/go-log/v2 v2.3.0
+	github.com/ipfs/go-log/v2 v2.4.0
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
 	github.com/json-iterator/go v1.1.11
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
 	github.com/kr/pretty v0.2.1
-	github.com/libp2p/go-libp2p v0.15.1
-	github.com/libp2p/go-libp2p-blankhost v0.2.0
-	github.com/libp2p/go-libp2p-core v0.9.0
-	github.com/libp2p/go-libp2p-noise v0.2.2
-	github.com/libp2p/go-libp2p-peerstore v0.2.8
-	github.com/libp2p/go-libp2p-pubsub v0.5.6
-	github.com/libp2p/go-libp2p-swarm v0.5.3
-	github.com/libp2p/go-tcp-transport v0.2.8
+	github.com/libp2p/go-libp2p v0.17.0
+	github.com/libp2p/go-libp2p-blankhost v0.3.0
+	github.com/libp2p/go-libp2p-core v0.13.0
+	github.com/libp2p/go-libp2p-noise v0.3.0
+	github.com/libp2p/go-libp2p-peerstore v0.6.0
+	github.com/libp2p/go-libp2p-pubsub v0.6.1
+	github.com/libp2p/go-libp2p-swarm v0.9.0
+	github.com/libp2p/go-tcp-transport v0.4.0
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.1
@@ -84,7 +84,7 @@ require (
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/tools v0.1.1
+	golang.org/x/tools v0.1.8
 	google.golang.org/genproto v0.0.0-20210426193834-eac7f76ac494
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1
@@ -108,7 +108,6 @@ require (
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	k8s.io/apimachinery v0.18.3
 	k8s.io/klog/v2 v2.3.0 // indirect
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
