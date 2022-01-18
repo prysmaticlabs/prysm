@@ -67,7 +67,9 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	}, nil
 }
 
-// FetchValidatingPublicKeys fetches the validating public keys from the remote server  or from the provided keys if there are no existing public keys set or provides the existing keys in the keymanager.
+// FetchValidatingPublicKeys fetches the validating public keys
+// from the remote server or from the provided keys if there are no existing public keys set
+// or provides the existing keys in the keymanager.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	if km.publicKeysURL != "" && len(km.providedPublicKeys) == 0 {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
