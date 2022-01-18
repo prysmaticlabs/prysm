@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/network/forks"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
