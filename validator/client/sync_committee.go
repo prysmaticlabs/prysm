@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/network/forks"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -207,10 +206,6 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldpara
 	if err != nil {
 		return nil, err
 	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
-	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
@@ -233,10 +228,6 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldp
 	root, err := signing.ComputeSigningRoot(c, d.SignatureDomain)
 	if err != nil {
 		return nil, err
-	}
-	fork, err := forks.Fork(slots.ToEpoch(slot))
-	if err != nil {
-		return nil, fmt.Errorf("could not get fork on current slot: %d", slot)
 	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
