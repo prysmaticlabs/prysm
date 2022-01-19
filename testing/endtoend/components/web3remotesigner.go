@@ -21,6 +21,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"gopkg.in/yaml.v2"
 )
 
 const Web3RemoteSignerPort = 9000
@@ -30,9 +31,9 @@ var _ e2etypes.ComponentRunner = (*Web3RemoteSigner)(nil)
 // rawKeyFile used for consensys's web3signer config files.
 // See: https://docs.web3signer.consensys.net/en/latest/Reference/Key-Configuration-Files/#raw-unencrypted-files
 type rawKeyFile struct {
-	Type       string `json:"type"`       // always "file-raw" for this test.
-	KeyType    string `json:"keyType"`    // always "BLS" for this test.
-	PrivateKey string `json:"privateKey"` // hex encoded private key with 0x prefix.
+	Type       string `yaml:"type"`       // always "file-raw" for this test.
+	KeyType    string `yaml:"keyType"`    // always "BLS" for this test.
+	PrivateKey string `yaml:"privateKey"` // hex encoded private key with 0x prefix.
 }
 
 type Web3RemoteSigner struct {
@@ -191,11 +192,6 @@ func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]bls.PublicKey, err
 	return pks, nil
 }
 
-const keystoreYamlFormat = `type: "%s"
-keyType: "%s"
-privateKey: "%s"
-`
-
 func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64) error {
 	if err := os.MkdirAll(keystorePath, 0750); err != nil {
 		return err
@@ -214,13 +210,10 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 			KeyType:    "BLS",
 			PrivateKey: hexutil.Encode(pk.Marshal()),
 		}
-		// Note: yaml.v2 does not support marshalling yaml while enforcing yaml strings to be
-		// quoted with double quotes. Consensys' web3signer fails to read keystores without the
-		// double quotes. As such, we are using a template to build the yaml instead of
-		// yaml.Marshal().
-		// See: https://github.com/go-yaml/yaml/issues/556
-		// See: https://github.com/ConsenSys/web3signer/issues/485
-		b := []byte(fmt.Sprintf(keystoreYamlFormat, rkf.Type, rkf.KeyType, rkf.PrivateKey))
+		b, err := yaml.Marshal(rkf)
+		if err != nil {
+			return err
+		}
 		if err := os.WriteFile(path.Join(keystorePath, fmt.Sprintf("key-0x%s.yaml", hex.EncodeToString(pub[i].Marshal()))), b, 0600); err != nil {
 			return err
 		}
