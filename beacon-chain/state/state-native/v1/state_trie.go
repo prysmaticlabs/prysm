@@ -112,50 +112,6 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 	return b, nil
 }
 
-func Initialize() (*BeaconState, error) {
-	fieldCount := params.BeaconConfig().BeaconStateFieldCount
-	sRoots := customtypes.StateRoots([fieldparams.StateRootsLength][32]byte{})
-	bRoots := customtypes.BlockRoots([fieldparams.BlockRootsLength][32]byte{})
-	mixes := customtypes.RandaoMixes([fieldparams.RandaoMixesLength][32]byte{})
-	b := &BeaconState{
-		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 10),
-		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler([]*ethpb.Validator{}),
-		stateRoots:            &sRoots,
-		blockRoots:            &bRoots,
-		randaoMixes:           &mixes,
-	}
-
-	var err error
-	for i := 0; i < fieldCount; i++ {
-		b.dirtyFields[types.FieldIndex(i)] = true
-		b.rebuildTrie[types.FieldIndex(i)] = true
-		b.dirtyIndices[types.FieldIndex(i)] = []uint64{}
-		b.stateFieldLeaves[types.FieldIndex(i)], err = fieldtrie.NewFieldTrie(types.FieldIndex(i), types.BasicArray, nil, 0)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[previousEpochAttestations] = stateutil.NewRef(1)
-	b.sharedFieldReferences[currentEpochAttestations] = stateutil.NewRef(1)
-	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
-	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
-	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-
-	state.StateCount.Inc()
-	return b, nil
-}
-
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() state.BeaconState {
 	b.lock.RLock()
