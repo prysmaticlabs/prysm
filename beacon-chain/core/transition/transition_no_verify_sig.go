@@ -45,6 +45,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	state state.BeaconState,
 	signed block.SignedBeaconBlock,
+	useNativeState bool,
 ) (*bls.SignatureBatch, state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
@@ -61,12 +62,12 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	interop.WriteStateToDisk(state)
 
 	if features.Get().EnableNextSlotStateCache {
-		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
+		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot(), useNativeState)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not process slots")
 		}
 	} else {
-		state, err = ProcessSlots(ctx, state, signed.Block().Slot())
+		state, err = ProcessSlots(ctx, state, signed.Block().Slot(), useNativeState)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not process slot")
 		}
@@ -116,6 +117,7 @@ func CalculateStateRoot(
 	ctx context.Context,
 	state state.BeaconState,
 	signed block.SignedBeaconBlock,
+	useNativeState bool,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
 	defer span.End()
@@ -136,12 +138,12 @@ func CalculateStateRoot(
 	// Execute per slots transition.
 	var err error
 	if features.Get().EnableNextSlotStateCache {
-		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
+		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot(), useNativeState)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not process slots")
 		}
 	} else {
-		state, err = ProcessSlots(ctx, state, signed.Block().Slot())
+		state, err = ProcessSlots(ctx, state, signed.Block().Slot(), useNativeState)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not process slot")
 		}

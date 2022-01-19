@@ -32,7 +32,7 @@ func TestService_TreeHandler(t *testing.T) {
 	)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(fcs),
 	}
 	s, err := NewService(ctx, false, opts...)

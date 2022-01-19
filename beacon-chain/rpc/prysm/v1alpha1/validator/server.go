@@ -38,6 +38,7 @@ import (
 // and committees in which particular validators need to perform their responsibilities,
 // and more.
 type Server struct {
+	UseNativeState         bool
 	Ctx                    context.Context
 	AttestationCache       *cache.AttestationCache
 	HeadFetcher            blockchain.HeadFetcher

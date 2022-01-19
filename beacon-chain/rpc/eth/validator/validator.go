@@ -55,7 +55,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
+	s, err = advanceState(ctx, s, req.Epoch, currentEpoch, vs.UseNativeState)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
@@ -133,7 +133,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
+	s, err = advanceState(ctx, s, req.Epoch, currentEpoch, vs.UseNativeState)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
 	}
@@ -652,7 +652,7 @@ func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, erro
 // advanceState advances state with empty transitions up to the requested epoch start slot.
 // In case 1 epoch ahead was requested, we take the start slot of the current epoch.
 // Taking the start slot of the next epoch would result in an error inside transition.ProcessSlots.
-func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, currentEpoch types.Epoch) (state.BeaconState, error) {
+func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, currentEpoch types.Epoch, useNativeState bool) (state.BeaconState, error) {
 	var epochStartSlot types.Slot
 	var err error
 	if requestedEpoch == currentEpoch+1 {
@@ -667,7 +667,7 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 		}
 	}
 	if s.Slot() < epochStartSlot {
-		s, err = transition.ProcessSlots(ctx, s, epochStartSlot)
+		s, err = transition.ProcessSlots(ctx, s, epochStartSlot, useNativeState)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
 		}

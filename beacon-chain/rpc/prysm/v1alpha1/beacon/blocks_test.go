@@ -782,7 +782,7 @@ func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
 		BlockNotifier: chainService.BlockNotifier(),
 		HeadFetcher:   chainService,
 		BeaconDB:      db,
-		StateGen:      stategen.New(db),
+		StateGen:      stategen.New(db, false),
 	}
 
 	wsEpoch, err := helpers.ComputeWeakSubjectivityPeriod(context.Background(), beaconState)

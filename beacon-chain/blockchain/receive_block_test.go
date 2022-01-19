@@ -131,7 +131,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				WithAttestationPool(attestations.NewPool()),
 				WithExitPool(voluntaryexits.NewPool()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-				WithStateGen(stategen.New(beaconDB)),
+				WithStateGen(stategen.New(beaconDB, false)),
 			}
 			s, err := NewService(ctx, false, opts...)
 			require.NoError(t, err)
@@ -168,7 +168,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 		WithAttestationPool(attestations.NewPool()),
 		WithExitPool(voluntaryexits.NewPool()),
 		WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 
 	s, err := NewService(ctx, false, opts...)
@@ -246,7 +246,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				WithDatabase(beaconDB),
 				WithForkChoiceStore(protoarray.New(0, 0, genesisBlockRoot)),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-				WithStateGen(stategen.New(beaconDB)),
+				WithStateGen(stategen.New(beaconDB, false)),
 			}
 			s, err := NewService(ctx, false, opts...)
 			require.NoError(t, err)

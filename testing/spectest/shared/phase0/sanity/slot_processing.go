@@ -49,7 +49,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			postBeaconState := &ethpb.BeaconState{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-			postState, err := transition.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)))
+			postState, err := transition.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)), false)
 			require.NoError(t, err)
 
 			pbState, err := v1.ProtobufBeaconState(postState.CloneInnerState())

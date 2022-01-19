@@ -60,7 +60,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 			Database:             slasherDB,
 			StateNotifier:        &mock.MockStateNotifier{},
 			HeadStateFetcher:     mockChain,
-			StateGen:             stategen.New(beaconDB),
+			StateGen:             stategen.New(beaconDB, false),
 			SlashingPoolInserter: &slashings.PoolMock{},
 		},
 		params:    DefaultParams(),

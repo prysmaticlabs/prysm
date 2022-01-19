@@ -447,7 +447,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 }
 
 func (b *BeaconNode) startStateGen() error {
-	b.stateGen = stategen.New(b.db)
+	b.stateGen = stategen.New(b.db, b.cliCtx.Bool(flags.UseNativeState.Name))
 
 	cp, err := b.db.FinalizedCheckpoint(b.ctx)
 	if err != nil {
@@ -613,6 +613,7 @@ func (b *BeaconNode) registerSyncService() error {
 
 	rs := regularsync.NewService(
 		b.ctx,
+		b.cliCtx.Bool(flags.UseNativeState.Name),
 		regularsync.WithDatabase(b.db),
 		regularsync.WithP2P(b.fetchP2P()),
 		regularsync.WithChainService(chainService),
@@ -733,6 +734,7 @@ func (b *BeaconNode) registerRPCService() error {
 
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
+		UseNativeState:          b.cliCtx.Bool(flags.UseNativeState.Name),
 		Host:                    host,
 		Port:                    port,
 		BeaconMonitoringHost:    beaconMonitoringHost,

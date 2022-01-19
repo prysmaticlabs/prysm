@@ -93,7 +93,7 @@ func GenerateAttestations(
 			return nil, errors.New("state type isn't supported")
 		}
 
-		headState, err = transition.ProcessSlots(context.Background(), headState, slot+1)
+		headState, err = transition.ProcessSlots(context.Background(), headState, slot+1, false)
 		if err != nil {
 			return nil, err
 		}

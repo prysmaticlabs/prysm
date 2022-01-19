@@ -41,7 +41,7 @@ func TestStore_OnBlock(t *testing.T) {
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(fcs),
 	}
 
@@ -138,7 +138,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
@@ -164,7 +164,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	for i := 1; i < 10; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		bState, err = transition.ExecuteStateTransition(ctx, bState, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		bState, err = transition.ExecuteStateTransition(ctx, bState, wrapper.WrappedPhase0SignedBeaconBlock(b), false)
 		require.NoError(t, err)
 		if i == 1 {
 			firstState = bState.Copy()
@@ -253,7 +253,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
@@ -286,7 +286,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
@@ -323,7 +323,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
 	}
 	service, err := NewService(ctx, false, opts...)
@@ -360,7 +360,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
@@ -401,7 +401,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
@@ -445,7 +445,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
@@ -605,7 +605,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, false, opts...)
@@ -692,7 +692,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, false, opts...)
@@ -748,7 +748,7 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(fcs),
 	}
 	ctx := context.Background()
@@ -833,7 +833,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(fcs),
 	}
 	b := util.NewBeaconBlock()
@@ -967,7 +967,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.NoError(t, err)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),

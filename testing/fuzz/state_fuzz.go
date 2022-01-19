@@ -36,7 +36,7 @@ func BeaconStateFuzz(input []byte) {
 	if err != nil {
 		return
 	}
-	if _, err := stateutil.ProcessSlots(context.Background(), s, slot); err != nil {
+	if _, err := stateutil.ProcessSlots(context.Background(), s, slot, false); err != nil {
 		_ = err
 		return
 	}

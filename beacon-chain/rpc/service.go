@@ -70,6 +70,7 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
+	UseNativeState          bool
 	Host                    string
 	Port                    string
 	CertFlag                string
@@ -168,6 +169,7 @@ func (s *Service) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	validatorServer := &validatorv1alpha1.Server{
+		UseNativeState:         s.cfg.UseNativeState,
 		Ctx:                    s.ctx,
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.cfg.AttestationsPool,
@@ -194,6 +196,7 @@ func (s *Service) Start() {
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 	}
 	validatorServerV1 := &validator.Server{
+		UseNativeState:   s.cfg.UseNativeState,
 		HeadFetcher:      s.cfg.HeadFetcher,
 		TimeFetcher:      s.cfg.GenesisTimeFetcher,
 		SyncChecker:      s.cfg.SyncService,
@@ -236,6 +239,7 @@ func (s *Service) Start() {
 	}
 
 	beaconChainServer := &beaconv1alpha1.Server{
+		UseNativeState:              s.cfg.UseNativeState,
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.cfg.BeaconDB,
 		AttestationsPool:            s.cfg.AttestationsPool,

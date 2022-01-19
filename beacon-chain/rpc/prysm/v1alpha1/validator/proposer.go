@@ -138,6 +138,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block block.SignedBeacon
 		ctx,
 		beaconState,
 		block,
+		vs.UseNativeState,
 	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not calculate state root at slot %d", beaconState.Slot())

@@ -21,7 +21,7 @@ import (
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
-func (_ *State) ReplayBlocks(
+func (s *State) ReplayBlocks(
 	ctx context.Context,
 	state state.BeaconState,
 	signed []block.SignedBeaconBlock,
@@ -50,7 +50,7 @@ func (_ *State) ReplayBlocks(
 			if state.Slot() >= signed[i].Block().Slot() {
 				continue
 			}
-			state, err = executeStateTransitionStateGen(ctx, state, signed[i])
+			state, err = executeStateTransitionStateGen(ctx, state, signed[i], s.useNativeState)
 			if err != nil {
 				return nil, err
 			}
@@ -59,7 +59,7 @@ func (_ *State) ReplayBlocks(
 
 	// If there is skip slots at the end.
 	if targetSlot > state.Slot() {
-		state, err = processSlotsStateGen(ctx, state, targetSlot)
+		state, err = processSlotsStateGen(ctx, state, targetSlot, s.useNativeState)
 		if err != nil {
 			return nil, err
 		}
@@ -137,6 +137,7 @@ func executeStateTransitionStateGen(
 	ctx context.Context,
 	state state.BeaconState,
 	signed block.SignedBeaconBlock,
+	useNativeState bool,
 ) (state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -150,7 +151,7 @@ func executeStateTransitionStateGen(
 
 	// Execute per slots transition.
 	// Given this is for state gen, a node uses the version process slots without skip slots cache.
-	state, err = processSlotsStateGen(ctx, state, signed.Block().Slot())
+	state, err = processSlotsStateGen(ctx, state, signed.Block().Slot(), useNativeState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slot")
 	}
@@ -179,7 +180,7 @@ func executeStateTransitionStateGen(
 // processSlotsStateGen to process old slots for state gen usages.
 // There's no skip slot cache involved given state gen only works with already stored block and state in DB.
 // WARNING: This method should not be used for future slot.
-func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
+func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot types.Slot, useNativeState bool) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stategen.ProcessSlotsStateGen")
 	defer span.End()
 	if state == nil || state.IsNil() {
@@ -222,7 +223,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 		}
 
 		if prysmTime.CanUpgradeToAltair(state.Slot()) {
-			state, err = altair.UpgradeToAltair(ctx, state)
+			state, err = altair.UpgradeToAltair(ctx, state, useNativeState)
 			if err != nil {
 				return nil, err
 			}

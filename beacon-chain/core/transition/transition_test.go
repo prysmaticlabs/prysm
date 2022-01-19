@@ -44,7 +44,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 		},
 	}
 	want := "expected state.slot"
-	_, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	_, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block), false)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -74,7 +74,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1, false)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -87,7 +87,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	block.Block.Body.RandaoReveal = randaoReveal
 	block.Block.Body.Eth1Data = eth1Data
 
-	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block), false)
 	require.NoError(t, err)
 
 	block.Block.StateRoot = stateRoot[:]
@@ -96,7 +96,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block), false)
 	require.NoError(t, err)
 
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, beaconState.Slot(), "Unexpected Slot number")
@@ -467,7 +467,7 @@ func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 	parentState, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
-	_, err = transition.ProcessSlots(context.Background(), parentState, slot)
+	_, err = transition.ProcessSlots(context.Background(), parentState, slot, false)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 2", err)
 }
 
@@ -476,7 +476,7 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 	parentState, err := v1.InitializeFromProto(&ethpb.BeaconState{Slot: slot})
 	require.NoError(t, err)
 
-	_, err = transition.ProcessSlots(context.Background(), parentState, slot-1)
+	_, err = transition.ProcessSlots(context.Background(), parentState, slot-1, false)
 	assert.ErrorContains(t, "expected state.slot 2 < slot 1", err)
 }
 
@@ -488,7 +488,7 @@ func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(conf)
 
 	st, _ := util.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10, false)
 	require.NoError(t, err)
 	require.Equal(t, version.Altair, st.Version())
 
@@ -524,7 +524,7 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
-	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10, false)
 	require.NoError(t, err)
 	require.Equal(t, version.Altair, st.Version())
 
@@ -561,7 +561,7 @@ func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
 	require.Equal(t, version.Bellatrix, st.Version())
-	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10, false)
 	require.NoError(t, err)
 	require.Equal(t, version.Bellatrix, st.Version())
 
@@ -596,7 +596,7 @@ func TestProcessSlots_ThroughMergeEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(conf)
 
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10, false)
 	require.NoError(t, err)
 	require.Equal(t, version.Bellatrix, st.Version())
 
@@ -606,7 +606,7 @@ func TestProcessSlots_ThroughMergeEpoch(t *testing.T) {
 func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, 1)
 	r := []byte{'a'}
-	s, err := transition.ProcessSlotsUsingNextSlotCache(context.Background(), s, r, 5)
+	s, err := transition.ProcessSlotsUsingNextSlotCache(context.Background(), s, r, 5, false)
 	require.NoError(t, err)
 	require.Equal(t, types.Slot(5), s.Slot())
 }

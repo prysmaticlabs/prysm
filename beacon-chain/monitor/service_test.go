@@ -88,7 +88,7 @@ func setupService(t *testing.T) *Service {
 	}
 	return &Service{
 		config: &ValidatorMonitorConfig{
-			StateGen:            stategen.New(beaconDB),
+			StateGen:            stategen.New(beaconDB, false),
 			StateNotifier:       chainService.StateNotifier(),
 			HeadFetcher:         chainService,
 			AttestationNotifier: chainService.OperationNotifier(),

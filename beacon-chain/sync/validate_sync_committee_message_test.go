@@ -56,6 +56,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		{
 			name: "Is syncing",
 			svc: NewService(context.Background(),
+				false,
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: true}),
 				WithChainService(chainService),
@@ -63,7 +64,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, false)
 				msg.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
@@ -84,6 +85,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		{
 			name: "Bad Topic",
 			svc: NewService(context.Background(),
+				false,
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
@@ -91,7 +93,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, false)
 				msg.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
@@ -112,6 +114,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		{
 			name: "Future Slot Message",
 			svc: NewService(context.Background(),
+				false,
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
@@ -119,7 +122,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, false)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				return s, topic
@@ -139,6 +142,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		{
 			name: "Already Seen Message",
 			svc: NewService(context.Background(),
+				false,
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
@@ -146,7 +150,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, false)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 
@@ -168,6 +172,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		{
 			name: "Non-existent block root",
 			svc: NewService(context.Background(),
+				false,
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
@@ -175,7 +180,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, false)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
@@ -202,6 +207,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		{
 			name: "Subnet is non-existent",
 			svc: NewService(context.Background(),
+				false,
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
@@ -209,7 +215,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, false)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -250,6 +256,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		{
 			name: "Validator is non-existent",
 			svc: NewService(context.Background(),
+				false,
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
@@ -257,7 +264,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, false)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -297,6 +304,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		{
 			name: "Invalid Sync Committee Signature",
 			svc: NewService(context.Background(),
+				false,
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
@@ -304,7 +312,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, false)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -352,6 +360,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		{
 			name: "Valid Sync Committee Signature",
 			svc: NewService(context.Background(),
+				false,
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
 				WithChainService(chainService),
@@ -359,7 +368,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, false)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]

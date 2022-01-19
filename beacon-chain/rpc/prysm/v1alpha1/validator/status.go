@@ -342,7 +342,7 @@ func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.
 	if err != nil {
 		return nil, err
 	}
-	return transition.ProcessSlots(ctx, retState, retState.Slot()+1)
+	return transition.ProcessSlots(ctx, retState, retState.Slot()+1, vs.UseNativeState)
 }
 
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {

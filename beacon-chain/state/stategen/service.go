@@ -43,6 +43,7 @@ type StateManager interface {
 
 // State is a concrete implementation of StateManager.
 type State struct {
+	useNativeState          bool
 	beaconDB                db.NoHeadAccessDatabase
 	slotsPerArchivedPoint   types.Slot
 	hotStateCache           *hotStateCache
@@ -71,8 +72,9 @@ type finalizedInfo struct {
 }
 
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase) *State {
+func New(beaconDB db.NoHeadAccessDatabase, useNativeState bool) *State {
 	return &State{
+		useNativeState:          useNativeState,
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},

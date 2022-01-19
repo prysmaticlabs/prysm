@@ -130,12 +130,12 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
 			}
-			s, err = transition.ProcessSlotsUsingNextSlotCache(ctx, s, headRoot, epochStartSlot)
+			s, err = transition.ProcessSlotsUsingNextSlotCache(ctx, s, headRoot, epochStartSlot, vs.UseNativeState)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 			}
 		} else {
-			s, err = transition.ProcessSlots(ctx, s, epochStartSlot)
+			s, err = transition.ProcessSlots(ctx, s, epochStartSlot, vs.UseNativeState)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 			}

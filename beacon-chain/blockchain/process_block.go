@@ -98,7 +98,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
+	postState, err := transition.ExecuteStateTransition(ctx, preState, signed, s.cfg.UseNativeState)
 	if err != nil {
 		return err
 	}
@@ -268,7 +268,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
-		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
+		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b, s.cfg.UseNativeState)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -360,7 +360,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 		copied := postState.Copy()
-		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
+		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1, s.cfg.UseNativeState)
 		if err != nil {
 			return err
 		}

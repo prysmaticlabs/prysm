@@ -63,7 +63,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 				wsb, err := wrapper.WrappedMergeSignedBeaconBlock(block)
 				require.NoError(t, err)
-				processedState, transitionError = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
+				processedState, transitionError = transition.ExecuteStateTransition(context.Background(), beaconState, wsb, false)
 				if transitionError != nil {
 					break
 				}

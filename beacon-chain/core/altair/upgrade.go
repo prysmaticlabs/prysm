@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	statealtairnative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v2"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -62,7 +63,7 @@ import (
 //    post.current_sync_committee = get_next_sync_committee(post)
 //    post.next_sync_committee = get_next_sync_committee(post)
 //    return post
-func UpgradeToAltair(ctx context.Context, beaconState state.BeaconState) (state.BeaconStateAltair, error) {
+func UpgradeToAltair(ctx context.Context, beaconState state.BeaconState, useNativeState bool) (state.BeaconStateAltair, error) {
 	epoch := time.CurrentEpoch(beaconState)
 
 	numValidators := beaconState.NumValidators()
@@ -95,31 +96,41 @@ func UpgradeToAltair(ctx context.Context, beaconState state.BeaconState) (state.
 		InactivityScores:            make([]uint64, numValidators),
 	}
 
-	newState, err := statealtair.InitializeFromProto(s)
-	if err != nil {
-		return nil, err
+	var newState state.BeaconStateAltair
+	if useNativeState {
+		var err error
+		newState, err = statealtairnative.InitializeFromProto(s)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var err error
+		newState, err = statealtair.InitializeFromProto(s)
+		if err != nil {
+			return nil, err
+		}
 	}
-	newBeaconState := (state.BeaconStateAltair)(newState)
+
 	prevEpochAtts, err := beaconState.PreviousEpochAttestations()
 	if err != nil {
 		return nil, err
 	}
-	newBeaconState, err = TranslateParticipation(ctx, newBeaconState, prevEpochAtts)
+	newState, err = TranslateParticipation(ctx, newState, prevEpochAtts)
 	if err != nil {
 		return nil, err
 	}
 
-	committee, err := NextSyncCommittee(ctx, newBeaconState)
+	committee, err := NextSyncCommittee(ctx, newState)
 	if err != nil {
 		return nil, err
 	}
-	if err := newBeaconState.SetCurrentSyncCommittee(committee); err != nil {
+	if err := newState.SetCurrentSyncCommittee(committee); err != nil {
 		return nil, err
 	}
-	if err := newBeaconState.SetNextSyncCommittee(committee); err != nil {
+	if err := newState.SetNextSyncCommittee(committee); err != nil {
 		return nil, err
 	}
-	return newBeaconState, nil
+	return newState, nil
 }
 
 // TranslateParticipation translates pending attestations into participation bits, then inserts the bits into beacon state.

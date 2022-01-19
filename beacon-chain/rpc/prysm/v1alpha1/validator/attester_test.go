@@ -390,7 +390,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
 		TimeFetcher:         &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier:       chainService.StateNotifier(),
-		StateGen:            stategen.New(db),
+		StateGen:            stategen.New(db, false),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))

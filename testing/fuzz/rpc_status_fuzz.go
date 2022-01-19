@@ -44,6 +44,7 @@ func init() {
 		panic(errors.Wrap(err, "could not connect to peer"))
 	}
 	regularsync.NewService(context.Background(),
+		false,
 		regularsync.WithP2P(p),
 		regularsync.WithChainService(
 			&mock.ChainService{

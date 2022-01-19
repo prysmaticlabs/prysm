@@ -230,7 +230,7 @@ func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (state.Bea
 	}
 
 	if lastValidSlot < slot {
-		replayStartState, err = processSlotsStateGen(ctx, replayStartState, slot)
+		replayStartState, err = processSlotsStateGen(ctx, replayStartState, slot, s.useNativeState)
 		if err != nil {
 			return nil, err
 		}

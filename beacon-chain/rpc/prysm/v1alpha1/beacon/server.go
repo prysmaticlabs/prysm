@@ -25,6 +25,7 @@ import (
 // Server defines a server implementation of the gRPC Beacon Chain service,
 // providing RPC endpoints to access data relevant to the Ethereum beacon chain.
 type Server struct {
+	UseNativeState              bool
 	BeaconDB                    db.ReadOnlyDatabase
 	Ctx                         context.Context
 	ChainStartFetcher           powchain.ChainStartFetcher

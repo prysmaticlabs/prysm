@@ -51,7 +51,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1, false)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	block.Block.Body.SyncAggregate = syncAggregate
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(block)
 	require.NoError(t, err)
-	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
+	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb, false)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -104,7 +104,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	wsb, err = wrapper.WrappedMergeSignedBeaconBlock(block)
 	require.NoError(t, err)
-	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
+	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb, false)
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)
@@ -138,7 +138,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1, false)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -181,7 +181,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 
 	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(block)
 	require.NoError(t, err)
-	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
+	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb, false)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
@@ -193,7 +193,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	wsb, err = wrapper.WrappedMergeSignedBeaconBlock(block)
 	require.NoError(t, err)
-	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
+	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb, false)
 	require.ErrorContains(t, "could not validate state root", err)
 }
 

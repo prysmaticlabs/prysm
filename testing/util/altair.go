@@ -282,7 +282,7 @@ func BlockSignatureAltair(
 	if err != nil {
 		return nil, err
 	}
-	s, err := transition.CalculateStateRoot(context.Background(), bState, wsb)
+	s, err := transition.CalculateStateRoot(context.Background(), bState, wsb, false)
 	if err != nil {
 		return nil, err
 	}

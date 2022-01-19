@@ -579,7 +579,7 @@ func TestProduceBlock(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          stategen.New(db, false),
 	}
 
 	proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -669,7 +669,7 @@ func TestProduceBlockV2(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, false),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -773,7 +773,7 @@ func TestProduceBlockV2(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, false),
 			SyncCommitteePool: synccommittee.NewStore(),
 		}
 

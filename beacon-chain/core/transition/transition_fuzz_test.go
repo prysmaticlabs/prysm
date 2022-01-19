@@ -23,7 +23,7 @@ func TestFuzzExecuteStateTransition_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		s, err := ExecuteStateTransition(ctx, state, wrapper.WrappedPhase0SignedBeaconBlock(sb))
+		s, err := ExecuteStateTransition(ctx, state, wrapper.WrappedPhase0SignedBeaconBlock(sb), false)
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for state: %v and signed block: %v", s, err, state, sb)
 		}
@@ -41,7 +41,7 @@ func TestFuzzCalculateStateRoot_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		stateRoot, err := CalculateStateRoot(ctx, state, wrapper.WrappedPhase0SignedBeaconBlock(sb))
+		stateRoot, err := CalculateStateRoot(ctx, state, wrapper.WrappedPhase0SignedBeaconBlock(sb), false)
 		if err != nil && stateRoot != [32]byte{} {
 			t.Fatalf("state root should be empty on err. found: %v on error: %v for signed block: %v", stateRoot, err, sb)
 		}
@@ -75,7 +75,7 @@ func TestFuzzProcessSlots_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(&slot)
-		s, err := ProcessSlots(ctx, state, slot)
+		s, err := ProcessSlots(ctx, state, slot, false)
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for state: %v", s, err, state)
 		}

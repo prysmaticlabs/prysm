@@ -108,7 +108,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
 	copied := genesisState.Copy()
-	copied, err = transition.ProcessSlots(ctx, copied, 1)
+	copied, err = transition.ProcessSlots(ctx, copied, 1, false)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
 	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))

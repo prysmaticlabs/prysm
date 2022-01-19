@@ -61,7 +61,7 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 				wsb, err := wrapper.WrappedMergeSignedBeaconBlock(block)
 				require.NoError(t, err)
-				processedState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
+				processedState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb, false)
 				require.NoError(t, err)
 				beaconState, ok = processedState.(*v3.BeaconState)
 				require.Equal(t, true, ok)

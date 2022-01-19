@@ -13,6 +13,7 @@ import (
 // Server defines a server implementation of the gRPC Validator service,
 // providing RPC endpoints intended for validator clients.
 type Server struct {
+	UseNativeState    bool
 	HeadFetcher       blockchain.HeadFetcher
 	TimeFetcher       blockchain.TimeFetcher
 	SyncChecker       sync.Checker

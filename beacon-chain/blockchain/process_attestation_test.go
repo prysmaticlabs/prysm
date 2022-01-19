@@ -28,7 +28,7 @@ func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
@@ -134,7 +134,7 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, false, opts...)
@@ -146,7 +146,7 @@ func TestStore_OnAttestation_Ok(t *testing.T) {
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
 	copied := genesisState.Copy()
-	copied, err = transition.ProcessSlots(ctx, copied, 1)
+	copied, err = transition.ProcessSlots(ctx, copied, 1, false)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
 	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
@@ -159,7 +159,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
@@ -231,7 +231,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 	}
 	service, err := NewService(ctx, false, opts...)
 	require.NoError(t, err)
@@ -255,7 +255,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	require.NoError(t, err)
 	s, err := slots.EpochStart(newCheckpoint.Epoch)
 	require.NoError(t, err)
-	baseState, err = transition.ProcessSlots(ctx, baseState, s)
+	baseState, err = transition.ProcessSlots(ctx, baseState, s, false)
 	require.NoError(t, err)
 	assert.Equal(t, returned.Slot(), baseState.Slot(), "Incorrectly returned base state")
 
@@ -337,7 +337,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, false)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, false, opts...)

@@ -70,7 +70,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          stategen.New(db, false),
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -151,7 +151,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		SlashingsPool:     slashings.NewPool(),
 		AttPool:           attestations.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          stategen.New(db, false),
 	}
 
 	// Generate a bunch of random attestations at slot. These would be considered double votes, but
@@ -304,7 +304,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		StateGen:          stategen.New(db),
+		StateGen:          stategen.New(db, false),
 	}
 	req := util.NewBeaconBlock()
 	req.Block.ProposerIndex = 21
@@ -2055,7 +2055,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          stategen.New(db, false),
 		SyncCommitteePool: synccommittee.NewStore(),
 	}
 
@@ -2167,7 +2167,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          stategen.New(db, false),
 		SyncCommitteePool: synccommittee.NewStore(),
 	}
 
@@ -2340,7 +2340,7 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          stategen.New(db, false),
 	}
 
 	proposerSlashings := make([]*ethpb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)

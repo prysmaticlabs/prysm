@@ -76,7 +76,7 @@ func TestTranslateParticipation(t *testing.T) {
 func TestUpgradeToAltair(t *testing.T) {
 	st, _ := util.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	preForkState := st.Copy()
-	aState, err := altair.UpgradeToAltair(context.Background(), st)
+	aState, err := altair.UpgradeToAltair(context.Background(), st, false)
 	require.NoError(t, err)
 
 	require.Equal(t, preForkState.GenesisTime(), aState.GenesisTime())

@@ -54,7 +54,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	offset := int64(2 * params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
 		BeaconDB:           db,
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, false),
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 

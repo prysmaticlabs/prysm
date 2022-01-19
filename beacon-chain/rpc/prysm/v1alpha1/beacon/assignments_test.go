@@ -61,7 +61,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, false),
 	}
 	wanted := &ethpb.ValidatorAssignments{
 		Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
@@ -122,7 +122,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, false),
 	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 500, count)
@@ -197,7 +197,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, false),
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
@@ -263,7 +263,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, false),
 	}
 
 	pubKey1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -332,7 +332,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, false),
 	}
 
 	req := &ethpb.ListValidatorAssignmentsRequest{Indices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}

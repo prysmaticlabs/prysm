@@ -63,7 +63,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	msg.Block.ProposerIndex = proposerIdx
 	msg.Signature = bytesutil.PadTo([]byte("fake"), fieldparams.BLSSignatureLength)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -159,7 +159,7 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -222,7 +222,7 @@ func TestValidateBeaconBlockPubSub_IsInCache(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -287,7 +287,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -343,7 +343,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	copied := beaconState.Copy()
 	// The next block is only 1 epoch ahead so as to not induce a new seed.
 	blkSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(coreTime.NextEpoch(copied)))
-	copied, err = transition.ProcessSlots(context.Background(), copied, blkSlot)
+	copied, err = transition.ProcessSlots(context.Background(), copied, blkSlot, false)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
 	require.NoError(t, err)
@@ -354,7 +354,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
 		State: beaconState,
@@ -410,7 +410,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	copied := beaconState.Copy()
 	// The next block is at least 2 epochs ahead to induce shuffling and a new seed.
 	blkSlot := params.BeaconConfig().SlotsPerEpoch * 2
-	copied, err = transition.ProcessSlots(context.Background(), copied, blkSlot)
+	copied, err = transition.ProcessSlots(context.Background(), copied, blkSlot, false)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
 	require.NoError(t, err)
@@ -421,7 +421,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
 		State: beaconState,
@@ -528,7 +528,7 @@ func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	chainService := &mock.ChainService{Genesis: time.Now(),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -812,7 +812,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -880,7 +880,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	currBlockRoot, err := msg.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -957,7 +957,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 	copied := beaconState.Copy()
 	// The next block is at least 2 epochs ahead to induce shuffling and a new seed.
 	blkSlot := params.BeaconConfig().SlotsPerEpoch * 2
-	copied, err = transition.ProcessSlots(context.Background(), copied, blkSlot)
+	copied, err = transition.ProcessSlots(context.Background(), copied, blkSlot, false)
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
 	require.NoError(t, err)
@@ -980,7 +980,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 
 	genesisTime := time.Now()
 
-	stateGen := stategen.New(db)
+	stateGen := stategen.New(db, false)
 	chainService := &mock.ChainService{
 		Genesis: time.Unix(genesisTime.Unix()-int64(slotsSinceGenesis.Mul(perSlot)), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{

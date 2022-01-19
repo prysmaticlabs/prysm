@@ -237,7 +237,7 @@ func (bs *Server) ListValidators(
 	}
 	if s > reqState.Slot() {
 		reqState = reqState.Copy()
-		reqState, err = transition.ProcessSlots(ctx, reqState, s)
+		reqState, err = transition.ProcessSlots(ctx, reqState, s, bs.UseNativeState)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -677,12 +677,12 @@ func (bs *Server) GetValidatorPerformance(
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
 			}
-			headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, currSlot)
+			headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, currSlot, bs.UseNativeState)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", currSlot, err)
 			}
 		} else {
-			headState, err = transition.ProcessSlots(ctx, headState, currSlot)
+			headState, err = transition.ProcessSlots(ctx, headState, currSlot, bs.UseNativeState)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 			}

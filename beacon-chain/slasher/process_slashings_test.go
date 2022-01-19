@@ -44,7 +44,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
+			StateGen:                stategen.New(beaconDB, false),
 			SlashingPoolInserter:    &slashings.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},
@@ -151,7 +151,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
+			StateGen:                stategen.New(beaconDB, false),
 			SlashingPoolInserter:    &slashings.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},

@@ -39,7 +39,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, false),
 	}
 	b := util.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
@@ -102,7 +102,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, false),
 	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 1)
@@ -156,7 +156,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, false),
 	}
 	b := util.NewBeaconBlock()
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))

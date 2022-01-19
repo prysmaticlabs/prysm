@@ -68,6 +68,7 @@ type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
 // config to hold dependencies for the sync service.
 type config struct {
+	useNativeState          bool
 	attestationNotifier     operation.Notifier
 	p2p                     p2p.P2P
 	beaconDB                db.NoHeadAccessDatabase
@@ -134,14 +135,14 @@ type Service struct {
 }
 
 // NewService initializes new regular sync service.
-func NewService(ctx context.Context, opts ...Option) *Service {
+func NewService(ctx context.Context, useNativeState bool, opts ...Option) *Service {
 	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		ctx:                  ctx,
 		cancel:               cancel,
 		chainStarted:         abool.New(),
-		cfg:                  &config{},
+		cfg:                  &config{useNativeState: useNativeState},
 		slotToPendingBlocks:  c,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),

@@ -48,6 +48,7 @@ func ExecuteStateTransition(
 	ctx context.Context,
 	state state.BeaconState,
 	signed block.SignedBeaconBlock,
+	useNativeState bool,
 ) (state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -60,7 +61,7 @@ func ExecuteStateTransition(
 	defer span.End()
 	var err error
 
-	set, postState, err := ExecuteStateTransitionNoVerifyAnySig(ctx, state, signed)
+	set, postState, err := ExecuteStateTransitionNoVerifyAnySig(ctx, state, signed, useNativeState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not execute state transition")
 	}
@@ -134,7 +135,8 @@ func ProcessSlotsUsingNextSlotCache(
 	ctx context.Context,
 	parentState state.BeaconState,
 	parentRoot []byte,
-	slot types.Slot) (state.BeaconState, error) {
+	slot types.Slot,
+	useNativeState bool) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlotsUsingNextSlotCache")
 	defer span.End()
 
@@ -152,7 +154,7 @@ func ProcessSlotsUsingNextSlotCache(
 	// Since next slot cache only advances state by 1 slot,
 	// we check if there's more slots that need to process.
 	if slot > parentState.Slot() {
-		parentState, err = ProcessSlots(ctx, parentState, slot)
+		parentState, err = ProcessSlots(ctx, parentState, slot, useNativeState)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process slots")
 		}
@@ -171,7 +173,7 @@ func ProcessSlotsUsingNextSlotCache(
 //        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 //            process_epoch(state)
 //        state.slot = Slot(state.slot + 1)
-func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot, useNativeState bool) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
 	if state == nil || state.IsNil() {
@@ -258,7 +260,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		}
 
 		if time.CanUpgradeToAltair(state.Slot()) {
-			state, err = altair.UpgradeToAltair(ctx, state)
+			state, err = altair.UpgradeToAltair(ctx, state, useNativeState)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

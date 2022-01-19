@@ -19,7 +19,7 @@ func TestService_headSyncCommitteeFetcher_Errors(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	c := &Service{
 		cfg: &config{
-			StateGen: stategen.New(beaconDB),
+			StateGen: stategen.New(beaconDB, false),
 		},
 	}
 	c.head = &head{}
@@ -37,7 +37,7 @@ func TestService_HeadDomainFetcher_Errors(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	c := &Service{
 		cfg: &config{
-			StateGen: stategen.New(beaconDB),
+			StateGen: stategen.New(beaconDB, false),
 		},
 	}
 	c.head = &head{}

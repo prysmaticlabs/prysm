@@ -150,7 +150,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
-		bs, err = transition.ProcessSlots(ctx, bs, startSlot)
+		bs, err = transition.ProcessSlots(ctx, bs, startSlot, s.cfg.useNativeState)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationIgnore, err
