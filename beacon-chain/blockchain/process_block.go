@@ -103,14 +103,15 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
-		return err
-	}
-
-	// After saving the state, we add a proposer score boost to fork choice for the block root if applicable.
+	// We add a proposer score boost to fork choice for the block root if applicable, right after
+	// running a successful state transition for the block.
 	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
 		ctx, signed.Block().Slot(), blockRoot, s.genesisTime,
 	); err != nil {
+		return err
+	}
+
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
 

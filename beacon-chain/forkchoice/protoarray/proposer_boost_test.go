@@ -29,90 +29,125 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		balances[i] = 10
 	}
 	jEpoch, fEpoch := types.Epoch(0), types.Epoch(0)
-	t.Run("attacker succeeds without proposer score boosting", func(t *testing.T) {
+	t.Run("back-propagates boost score to ancestors after proposer boosting", func(t *testing.T) {
 		f := setup(jEpoch, fEpoch)
 
 		// The head should always start at the finalized block.
-		r, err := f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		headRoot, err := f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
-		assert.Equal(t, zeroHash, r, "Incorrect head with genesis")
+		assert.Equal(t, zeroHash, headRoot, "Incorrect head with genesis")
 
-		// The proposer at slot 1 does not reveal their block.
+		// Insert block at slot 1 into the tree and verify head is at that block:
+		//         0
+		//         |
+		//         1 <- HEAD
+		slot := types.Slot(1)
+		newRoot := indexToHash(1)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				slot,
+				newRoot,
+				headRoot,
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+		f.ProcessAttestation(ctx, []uint64{0}, newRoot, fEpoch)
+		headRoot, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, newRoot, headRoot, "Incorrect head for justified epoch at slot 1")
 
 		// Insert block at slot 2 into the tree and verify head is at that block:
 		//         0
-		//        /
-		//	(1? no block?)
-		//      /
-		//     2 <- HEAD
-		honestBlockSlot := types.Slot(2)
-		honestBlock := indexToHash(2)
+		//         |
+		//         1
+		//         |
+		//         2 <- HEAD
+		slot = types.Slot(2)
+		newRoot = indexToHash(2)
 		require.NoError(t,
 			f.ProcessBlock(
 				ctx,
-				honestBlockSlot,
-				honestBlock,
-				zeroHash,
+				slot,
+				newRoot,
+				headRoot,
 				graffiti,
 				jEpoch,
 				fEpoch,
 			),
 		)
-		// One validator from the assigned committee for slot 2 has voted for the honest block so far.
-		votes := []uint64{0}
-		f.ProcessAttestation(ctx, votes, honestBlock, fEpoch)
-
-		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		f.ProcessAttestation(ctx, []uint64{1}, newRoot, fEpoch)
+		headRoot, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
-		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
+		assert.Equal(t, newRoot, headRoot, "Incorrect head for justified epoch at slot 2")
 
-		// Attacker comes out with block from slot 1 late, at the same time as the honest, slot 2 proposal.
+		// Insert block at slot 3 into the tree and verify head is at that block:
 		//         0
-		//        /
-		//	(1? no block?)
-		//      /     \
-		//     2       1 (block from slot 1 released late)
-		maliciousBlockSlot := types.Slot(1)
-		maliciouslyWithheldBlock := indexToHash(1)
+		//         |
+		//         1
+		//         |
+		//         2
+		//         |
+		//         3 <- HEAD
+		slot = types.Slot(2)
+		newRoot = indexToHash(2)
 		require.NoError(t,
 			f.ProcessBlock(
 				ctx,
-				maliciousBlockSlot,
-				maliciouslyWithheldBlock,
-				zeroHash,
+				slot,
+				newRoot,
+				headRoot,
 				graffiti,
 				jEpoch,
 				fEpoch,
 			),
 		)
-		// The attacker takes advantage of getting some of the honest, voting validators
-		// from slot 2 to vote on his malicious block, as it was published at the same time as
-		// honest proposal.
-		votesFromSlot2 := []uint64{1}
-		f.ProcessAttestation(ctx, votesFromSlot2, maliciouslyWithheldBlock, fEpoch)
-		// The attacker also had a vote it withheld from slot 1.
-		// The attacker has the more votes than the honest block now.
-		votesFromSlot1 := []uint64{2}
-		f.ProcessAttestation(ctx, votesFromSlot1, maliciouslyWithheldBlock, fEpoch)
-
-		// The head should change because the attacker published their block right after the honest proposer
-		// published their own. We should see the head change to the malicious block.
-		//                  0
-		//                 /
-		//	         (1? no block?)
-		//               /     \
-		//              2       1 <- HEAD, attacker wins
-		r, err = f.Head(
-			ctx,
-			jEpoch,
-			zeroHash,
-			balances,
-			fEpoch,
-		)
+		f.ProcessAttestation(ctx, []uint64{2}, newRoot, fEpoch)
+		headRoot, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
-		assert.Equal(t, maliciouslyWithheldBlock, r, "Incorrect head for with justified epoch")
+		assert.Equal(t, newRoot, headRoot, "Incorrect head for justified epoch at slot 3")
+
+		// Insert a second block at slot 3 into the tree and boost its score.
+		//         0
+		//         |
+		//         1
+		//         |
+		//         2
+		//        / \
+		//       3   4 <- HEAD
+		slot = types.Slot(3)
+		newRoot = indexToHash(4)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				slot,
+				newRoot,
+				headRoot,
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+		f.ProcessAttestation(ctx, []uint64{3}, newRoot, fEpoch)
+		threeSlots := 3 * params.BeaconConfig().SecondsPerSlot
+		genesisTime := time.Now().Add(-time.Second * time.Duration(threeSlots))
+		require.NoError(t, f.BoostProposerRoot(ctx, slot, newRoot, genesisTime))
+		headRoot, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, newRoot, headRoot, "Incorrect head for justified epoch at slot 3")
+
+		// Check the ancestor scores from the store.
+		require.Equal(t, 4, len(f.store.nodes))
+		require.Equal(t, f.store.nodes[0].weight, uint64(0)) // Genesis has 0 weight here.
+
+		// Expect nodes to have a boosted, back-propagated score.
+		require.Equal(t, f.store.nodes[1].weight, uint64(47))
+		require.Equal(t, f.store.nodes[2].weight, uint64(37))
+		require.Equal(t, f.store.nodes[3].weight, uint64(17))
 	})
-	t.Run("attacker fails when honest, timely proposals are boosted", func(t *testing.T) {
+	t.Run("vanilla ex ante attack", func(t *testing.T) {
 		f := setup(jEpoch, fEpoch)
 
 		// The head should always start at the finalized block.
@@ -120,14 +155,14 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, zeroHash, r, "Incorrect head with genesis")
 
-		// The proposer at slot 1 does not reveal their block.
-
-		// Insert block at slot 2 into the tree and verify head is at that block:
-		//         0
-		//        /
-		//	(1? no block?)
-		//      /
-		//     2 <- HEAD
+		// Proposer from slot 1 does not reveal their block, B, at slot 1.
+		// Proposer at slot 2 does reveal their block, C, and it becomes the head.
+		// C builds on A, as proposer at slot 1 did not reveal B.
+		//         A       -> Slot 0
+		//        / \
+		//	    (B?) \     -> Slot 1, B supposed to happen but does not occur.
+		//            \
+		//             C   -> Slot 2 HEAD
 		honestBlockSlot := types.Slot(2)
 		honestBlock := indexToHash(2)
 		require.NoError(t,
@@ -141,27 +176,16 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				fEpoch,
 			),
 		)
-		// One validator from the assigned committee for slot 2 has voted for the honest block so far.
-		votes := []uint64{0}
-		f.ProcessAttestation(ctx, votes, honestBlock, fEpoch)
-
 		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 
-		// Attacker comes out with block from slot 1, very late (after slot 2 has started).
-		// with the recently proposer block. The attacker has all the withheld votes from slot 1 in their block.
-		//         0
-		//        /
-		//	(1? no block?)
-		//      /     \
-		//     2       1 (block from slot 1 released late)
-		maliciousBlockSlot := types.Slot(1)
-		maliciouslyWithheldBlock := indexToHash(1)
+		maliciouslyWithheldBlockSlot := types.Slot(1)
+		maliciouslyWithheldBlock := indexToHash(2)
 		require.NoError(t,
 			f.ProcessBlock(
 				ctx,
-				maliciousBlockSlot,
+				maliciouslyWithheldBlockSlot,
 				maliciouslyWithheldBlock,
 				zeroHash,
 				graffiti,
@@ -169,40 +193,20 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				fEpoch,
 			),
 		)
-		// The attacker takes advantage of getting some of the honest, voting validators
-		// from slot 2 to vote on his malicious block, as it was published at the same time as
-		// honest proposal.
-		votesFromSlot2 := []uint64{1}
-		f.ProcessAttestation(ctx, votesFromSlot2, maliciouslyWithheldBlock, fEpoch)
-		// The attacker also had a vote it withheld from slot 1.
-		// The attacker has the more votes than the honest block now.
-		votesFromSlot1 := []uint64{2}
-		f.ProcessAttestation(ctx, votesFromSlot1, maliciouslyWithheldBlock, fEpoch)
 
-		// The honest block at slot 2, assuming it received in a timely manner, will get a boost
-		// during the chain head calculations by fork choice. We give it that boost.
-		// We set the genesis time as current_time - 2 slots worth of seconds to place us in slot 2.
-		secondsPerSlot := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
-		genesisTime := time.Now().Add(-2 * secondsPerSlot)
-		err = f.BoostProposerRoot(ctx, honestBlockSlot, honestBlock, genesisTime)
+		// Ensure the head is C, the honest block.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
+		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 
-		// Proposer boost helps the honestly-proposed block win (received in a timely manner) even in
-		// this attack scenario from a maliciously-withheld block. We should see the head should not change.
-		//                  0
-		//                 /
-		//	         (1? no block?)
-		//               /     \
-		// remains HEAD -> 2    1 (1 should not win, EVEN with more votes than 2, as 2 got a proposer boost)
-		r, err = f.Head(
-			ctx,
-			jEpoch,
-			zeroHash,
-			balances,
-			fEpoch,
-		)
+		// The maliciously withheld block has one vote.
+		votes := []uint64{1}
+		f.ProcessAttestation(ctx, votes, maliciouslyWithheldBlock, fEpoch)
+
+		// Ensure the head is STILL C, the honest block.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
-		assert.Equal(t, honestBlock, r, "Incorrect head for with justified epoch")
+		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 	})
 }
 
