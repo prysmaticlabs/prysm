@@ -39,6 +39,7 @@ import (
 // and more.
 type Server struct {
 	UseNativeState         bool
+	MockEth1Votes          bool
 	Ctx                    context.Context
 	AttestationCache       *cache.AttestationCache
 	HeadFetcher            blockchain.HeadFetcher
@@ -58,7 +59,6 @@ type Server struct {
 	ExitPool               voluntaryexits.PoolManager
 	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
-	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier

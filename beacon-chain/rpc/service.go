@@ -71,6 +71,8 @@ type Service struct {
 // Config options for the beacon node RPC server.
 type Config struct {
 	UseNativeState          bool
+	EnableDebugRPCEndpoints bool
+	MockEth1Votes           bool
 	Host                    string
 	Port                    string
 	CertFlag                string
@@ -90,8 +92,6 @@ type Config struct {
 	POWChainInfoFetcher     powchain.ChainInfoFetcher
 	GenesisTimeFetcher      blockchain.TimeFetcher
 	GenesisFetcher          blockchain.GenesisFetcher
-	EnableDebugRPCEndpoints bool
-	MockEth1Votes           bool
 	AttestationsPool        attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingsPool           slashings.PoolManager
