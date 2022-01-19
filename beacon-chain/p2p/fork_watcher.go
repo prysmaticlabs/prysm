@@ -26,10 +26,10 @@ func (s *Service) forkWatcher() {
 					log.WithError(err).Error("Could not add fork entry")
 				}
 
-				// from Bellatrix Epoch, the MaxGossipSize and the MaxChunkSize is changed to 10MB.
+				// from Bellatrix Epoch, the MaxGossipSize and the MaxChunkSize is changed to 10Mb.
 				if currEpoch == params.BeaconConfig().BellatrixForkEpoch {
-					encoder.MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSizeBellatrix
-					encoder.MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSizeBellatrix
+					encoder.SetMaxGossipSizeForBellatrix()
+					encoder.SetMaxChunkSizeForBellatrix()
 				}
 			}
 		case <-s.ctx.Done():
