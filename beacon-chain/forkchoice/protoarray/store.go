@@ -227,6 +227,13 @@ func (s *Store) FinalizedEpoch() types.Epoch {
 	return s.finalizedEpoch
 }
 
+// ProposerBoost of fork choice store.
+func (s *Store) ProposerBoost() []byte {
+	s.proposerBoostLock.RLock()
+	defer s.proposerBoostLock.RUnlock()
+	return s.proposerBoostRoot[:]
+}
+
 // Nodes of fork choice store.
 func (s *Store) Nodes() []*Node {
 	s.nodesLock.RLock()

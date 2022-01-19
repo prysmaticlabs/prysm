@@ -139,6 +139,10 @@ func Run(t *testing.T, config string, fork int) {
 							}
 							require.DeepSSZEqual(t, cp, service.FinalizedCheckpt())
 						}
+						if c.ProposerBoostRoot != nil {
+							want := common.FromHex(*c.ProposerBoostRoot)
+							require.DeepEqual(t, want, service.ProtoArrayStore().ProposerBoost())
+						}
 					}
 				}
 			})

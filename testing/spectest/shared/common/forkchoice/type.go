@@ -11,7 +11,7 @@ type Step struct {
 type Check struct {
 	Time                    *int       `json:"time"`
 	GenesisTime             int        `json:"genesis_time"`
-	ProposerBoostRoot       string     `json:"proposer_boost_root"`
+	ProposerBoostRoot       *string     `json:"proposer_boost_root"`
 	Head                    *SlotRoot  `json:"head"`
 	JustifiedCheckPoint     *EpochRoot `json:"justified_checkpoint"`
 	BestJustifiedCheckPoint *EpochRoot `json:"best_justified_checkpoint"`

@@ -121,8 +121,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
 	// running a successful state transition for the block.
 	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
-		ctx, signed.Block().Slot(), blockRoot, s.genesisTime,
-	); err != nil {
+		ctx, signed.Block().Slot(), blockRoot, s.TimeInStore(), s.genesisTime); err != nil {
 		return err
 	}
 
