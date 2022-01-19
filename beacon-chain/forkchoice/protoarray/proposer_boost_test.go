@@ -364,6 +364,11 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			),
 		)
 
+		// D cannot win without a boost.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, c, r, "Expected C to remain the head")
+
 		// Block D receives the boost.
 		genesis = time.Now().Add(-3 * secondsPerSlot)
 		require.NoError(t, f.BoostProposerRoot(ctx, dSlot /* slot */, d, genesis))
