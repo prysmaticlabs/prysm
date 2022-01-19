@@ -67,11 +67,19 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
 		}
-		genesisTrie, err := v1.InitializeFromProto(genesisState)
-		if err != nil {
-			log.Fatalf("Could not get state trie: %v", err)
+		var beaconState state.BeaconState
+		if s.cfg.UseNativeState {
+			beaconState, err = v1native.InitializeFromProto(genesisState)
+			if err != nil {
+				log.Fatalf("Could not get state trie: %v", err)
+			}
+		} else {
+			beaconState, err = v1.InitializeFromProto(genesisState)
+			if err != nil {
+				log.Fatalf("Could not get state trie: %v", err)
+			}
 		}
-		if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
+		if err := s.saveGenesisState(ctx, beaconState); err != nil {
 			log.Fatalf("Could not save interop genesis state %v", err)
 		}
 		return s
