@@ -81,16 +81,6 @@ func (b *BeaconState) ToProto() interface{} {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.toProtoNoLock()
-}
-
-// toProtoNoLock returns the pointer value of the underlying
-// beacon state proto object, bypassing state locking. Use with care.
-func (b *BeaconState) toProtoNoLock() interface{} {
-	if b == nil {
-		return nil
-	}
-
 	gvr := b.genesisValidatorsRoot
 	var bRoots [][]byte
 	if b.blockRoots != nil {
