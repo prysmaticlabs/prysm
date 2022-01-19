@@ -14,13 +14,13 @@ import (
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"gopkg.in/yaml.v2"
 )
 
