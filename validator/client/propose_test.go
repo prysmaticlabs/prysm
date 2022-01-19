@@ -1006,7 +1006,7 @@ func TestSignBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	sig, domain, err := validator.signBlock(ctx, pubKey, 0, wrapper.WrappedPhase0BeaconBlock(blk.Block))
+	sig, domain, err := validator.signBlock(ctx, pubKey, 0, 0, wrapper.WrappedPhase0BeaconBlock(blk.Block))
 	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
 		"82f20bf762cbe10ee7b9b4f5ae1ad6ff2089d352403750bed402b94b58469c072536"+
@@ -1041,7 +1041,7 @@ func TestSignAltairBlock(t *testing.T) {
 	validator.keyManager = km
 	wb, err := wrapper.WrappedAltairBeaconBlock(blk.Block)
 	require.NoError(t, err)
-	sig, domain, err := validator.signBlock(ctx, pubKey, 0, wb)
+	sig, domain, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
 	require.DeepEqual(t, proposerDomain, domain.SignatureDomain)
 }
@@ -1071,7 +1071,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 	validator.keyManager = km
 	wb, err := wrapper.WrappedMergeBeaconBlock(blk.Block)
 	require.NoError(t, err)
-	sig, domain, err := validator.signBlock(ctx, pubKey, 0, wb)
+	sig, domain, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)
 	require.DeepEqual(t, proposerDomain, domain.SignatureDomain)
 }
