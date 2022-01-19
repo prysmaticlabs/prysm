@@ -38,7 +38,7 @@ func RunUpgradeToBellatrix(t *testing.T, config string) {
 			}
 			preState, err := v2.InitializeFromProto(preStateBase)
 			require.NoError(t, err)
-			postState, err := execution.UpgradeToMerge(context.Background(), preState)
+			postState, err := execution.UpgradeToMerge(context.Background(), preState, false)
 			require.NoError(t, err)
 			postStateFromFunction, err := v3.ProtobufBeaconState(postState.InnerStateUnsafe())
 			require.NoError(t, err)

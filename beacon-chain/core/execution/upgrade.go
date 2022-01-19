@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v3native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v3"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -12,7 +13,7 @@ import (
 
 // UpgradeToMerge updates inputs a generic state to return the version Merge state.
 // It inserts an empty `ExecutionPayloadHeader` into the state.
-func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+func UpgradeToMerge(ctx context.Context, state state.BeaconState, useNativeState bool) (state.BeaconState, error) {
 	epoch := time.CurrentEpoch(state)
 
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
@@ -82,5 +83,8 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		},
 	}
 
+	if useNativeState {
+		return v3native.InitializeFromProto(s)
+	}
 	return v3.InitializeFromProto(s)
 }

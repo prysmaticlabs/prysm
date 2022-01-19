@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	v1native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	v2native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v2"
+	v3native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v3"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
@@ -428,6 +429,9 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		if ok {
 			protoState.Validators = validatorEntries
+		}
+		if s.useNativeState {
+			return v3native.InitializeFromProtoUnsafe(protoState)
 		}
 		return v3.InitializeFromProtoUnsafe(protoState)
 	case hasAltairKey(enc):
