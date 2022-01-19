@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 const Web3RemoteSignerPort = 9000
@@ -177,7 +178,7 @@ func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]bls.PublicKey, err
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		raw, err := hex.DecodeString(strings.TrimPrefix(key, "0x"))
+		raw, err := hexutil.Decode(key)
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +212,7 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 		rkf := &rawKeyFile{
 			Type:       "file-raw",
 			KeyType:    "BLS",
-			PrivateKey: "0x" + hex.EncodeToString(pk.Marshal()),
+			PrivateKey: hexutil.Encode(pk.Marshal()),
 		}
 		// Note: yaml.v2 does not support marshalling yaml while enforcing yaml strings to be
 		// quoted with double quotes. Consensys' web3signer fails to read keystores without the
