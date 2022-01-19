@@ -13,12 +13,6 @@ func (b *BeaconState) GenesisTime() uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisTimeInternal()
-}
-
-// genesisTime of the beacon state as a uint64.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisTimeInternal() uint64 {
 	return b.genesisTime
 }
 
@@ -27,14 +21,7 @@ func (b *BeaconState) GenesisValidatorRoot() []byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	r := b.genesisValidatorRootInternal()
-	return r[:]
-}
-
-// genesisValidatorRootInternal of the beacon state.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisValidatorRootInternal() [32]byte {
-	return b.genesisValidatorsRoot
+	return b.genesisValidatorsRoot[:]
 }
 
 // Version of the beacon state. This method
@@ -49,12 +36,6 @@ func (b *BeaconState) Slot() types.Slot {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.slotInternal()
-}
-
-// slot of the current beacon chain state.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slotInternal() types.Slot {
 	return b.slot
 }
 
