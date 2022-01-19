@@ -48,12 +48,12 @@ func (b *BeaconState) Fork() *ethpb.Fork {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.forkInternal()
+	return b.forkVal()
 }
 
-// forkInternal version of the beacon chain.
+// forkVal version of the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) forkInternal() *ethpb.Fork {
+func (b *BeaconState) forkVal() *ethpb.Fork {
 	if b.fork == nil {
 		return nil
 	}
@@ -78,7 +78,7 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	rootsArr := b.historicalRootsInternal()
+	rootsArr := b.historicalRootsVal()
 	roots := make([][]byte, len(rootsArr))
 	for i, r := range rootsArr {
 		tmp := r
@@ -88,9 +88,9 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	return roots
 }
 
-// historicalRootsInternal based on epochs stored in the beacon state.
+// historicalRootsVal based on epochs stored in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) historicalRootsInternal() customtypes.HistoricalRoots {
+func (b *BeaconState) historicalRootsVal() customtypes.HistoricalRoots {
 	return bytesutil.SafeCopy2d32Bytes(b.historicalRoots)
 }
 

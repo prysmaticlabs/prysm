@@ -13,12 +13,12 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.eth1DataInternal()
+	return b.eth1DataVal()
 }
 
-// eth1DataInternal corresponding to the proof-of-work chain information stored in the beacon state.
+// eth1DataVal corresponding to the proof-of-work chain information stored in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) eth1DataInternal() *ethpb.Eth1Data {
+func (b *BeaconState) eth1DataVal() *ethpb.Eth1Data {
 	if b.eth1Data == nil {
 		return nil
 	}
@@ -36,13 +36,13 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.eth1DataVotesInternal()
+	return b.eth1DataVotesVal()
 }
 
-// eth1DataVotesInternal corresponds to votes from Ethereum on the canonical proof-of-work chain
+// eth1DataVotesVal corresponds to votes from Ethereum on the canonical proof-of-work chain
 // data retrieved from eth1.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) eth1DataVotesInternal() []*ethpb.Eth1Data {
+func (b *BeaconState) eth1DataVotesVal() []*ethpb.Eth1Data {
 	if b.eth1DataVotes == nil {
 		return nil
 	}

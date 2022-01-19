@@ -14,7 +14,7 @@ func (b *BeaconState) RotateAttestations() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.setPreviousEpochAttestations(b.currentEpochAttestationsInternal())
+	b.setPreviousEpochAttestations(b.currentEpochAttestationsVal())
 	b.setCurrentEpochAttestations([]*ethpb.PendingAttestation{})
 	return nil
 }

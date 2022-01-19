@@ -100,8 +100,8 @@ func (b *BeaconState) ToProto() interface{} {
 	}
 	var hRoots [][]byte
 	if b.historicalRoots != nil {
-		hRoots = make([][]byte, len(b.historicalRootsInternal()))
-		for i, r := range b.historicalRootsInternal() {
+		hRoots = make([][]byte, len(b.historicalRootsVal()))
+		for i, r := range b.historicalRootsVal() {
 			tmp := r
 			hRoots[i] = tmp[:]
 		}
@@ -119,24 +119,24 @@ func (b *BeaconState) ToProto() interface{} {
 		GenesisTime:                 b.genesisTime,
 		GenesisValidatorsRoot:       gvr[:],
 		Slot:                        b.slot,
-		Fork:                        b.forkInternal(),
-		LatestBlockHeader:           b.latestBlockHeaderInternal(),
+		Fork:                        b.forkVal(),
+		LatestBlockHeader:           b.latestBlockHeaderVal(),
 		BlockRoots:                  bRoots,
 		StateRoots:                  sRoots,
 		HistoricalRoots:             hRoots,
-		Eth1Data:                    b.eth1DataInternal(),
-		Eth1DataVotes:               b.eth1DataVotesInternal(),
+		Eth1Data:                    b.eth1DataVal(),
+		Eth1DataVotes:               b.eth1DataVotesVal(),
 		Eth1DepositIndex:            b.eth1DepositIndex,
-		Validators:                  b.validatorsInternal(),
-		Balances:                    b.balancesInternal(),
+		Validators:                  b.validatorsVal(),
+		Balances:                    b.balancesVal(),
 		RandaoMixes:                 mixes,
-		Slashings:                   b.slashingsInternal(),
-		PreviousEpochAttestations:   b.previousEpochAttestationsInternal(),
-		CurrentEpochAttestations:    b.currentEpochAttestationsInternal(),
-		JustificationBits:           b.justificationBitsInternal(),
-		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpointInternal(),
-		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpointInternal(),
-		FinalizedCheckpoint:         b.finalizedCheckpointInternal(),
+		Slashings:                   b.slashingsVal(),
+		PreviousEpochAttestations:   b.previousEpochAttestationsVal(),
+		CurrentEpochAttestations:    b.currentEpochAttestationsVal(),
+		JustificationBits:           b.justificationBitsVal(),
+		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpointVal(),
+		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpointVal(),
+		FinalizedCheckpoint:         b.finalizedCheckpointVal(),
 	}
 }
 
