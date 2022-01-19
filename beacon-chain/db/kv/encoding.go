@@ -7,6 +7,7 @@ import (
 
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -53,6 +54,8 @@ func encode(ctx context.Context, msg proto.Message) ([]byte, error) {
 func isSSZStorageFormat(obj interface{}) bool {
 	switch obj.(type) {
 	case *ethpb.BeaconState:
+		return true
+	case *statenative.BeaconState:
 		return true
 	case *ethpb.SignedBeaconBlock:
 		return true
