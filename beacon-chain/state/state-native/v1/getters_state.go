@@ -100,8 +100,8 @@ func (b *BeaconState) ToProto() interface{} {
 	}
 	var hRoots [][]byte
 	if b.historicalRoots != nil {
-		hRoots = make([][]byte, len(b.historicalRootsVal()))
-		for i, r := range b.historicalRootsVal() {
+		hRoots = make([][]byte, len(b.historicalRoots))
+		for i, r := range b.historicalRoots {
 			tmp := r
 			hRoots[i] = tmp[:]
 		}

@@ -2,8 +2,6 @@ package v1
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -78,20 +76,13 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	rootsArr := b.historicalRootsVal()
-	roots := make([][]byte, len(rootsArr))
-	for i, r := range rootsArr {
+	roots := make([][]byte, len(b.historicalRoots))
+	for i, r := range b.historicalRoots {
 		tmp := r
 		roots[i] = tmp[:]
 	}
 
 	return roots
-}
-
-// historicalRootsVal based on epochs stored in the beacon state.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) historicalRootsVal() customtypes.HistoricalRoots {
-	return bytesutil.SafeCopy2d32Bytes(b.historicalRoots)
 }
 
 // balancesLength returns the length of the balances slice.
