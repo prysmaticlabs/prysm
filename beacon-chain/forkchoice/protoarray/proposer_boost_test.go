@@ -181,7 +181,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 
 		maliciouslyWithheldBlockSlot := types.Slot(1)
-		maliciouslyWithheldBlock := indexToHash(2)
+		maliciouslyWithheldBlock := indexToHash(1)
 		require.NoError(t,
 			f.ProcessBlock(
 				ctx,
@@ -199,14 +199,88 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 
+		// We boost the honest proposal at slot 2.
+		secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
+		genesis := time.Now().Add(-2 * secondsPerSlot)
+		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot /* slot */, honestBlock, genesis))
+
 		// The maliciously withheld block has one vote.
 		votes := []uint64{1}
 		f.ProcessAttestation(ctx, votes, maliciouslyWithheldBlock, fEpoch)
 
-		// Ensure the head is STILL C, the honest block.
+		// Ensure the head is STILL C, the honest block, as the honest block had proposer boost.
 		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
+	})
+	t.Run("adversarial attestations > proposer boosting", func(t *testing.T) {
+		f := setup(jEpoch, fEpoch)
+
+		// The head should always start at the finalized block.
+		r, err := f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, zeroHash, r, "Incorrect head with genesis")
+
+		// Proposer from slot 1 does not reveal their block, B, at slot 1.
+		// Proposer at slot 2 does reveal their block, C, and it becomes the head.
+		// C builds on A, as proposer at slot 1 did not reveal B.
+		//         A       -> Slot 0
+		//        / \
+		//	    (B?) \     -> Slot 1, B supposed to happen but does not occur.
+		//            \
+		//             C   -> Slot 2 HEAD
+		honestBlockSlot := types.Slot(2)
+		honestBlock := indexToHash(2)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				honestBlockSlot,
+				honestBlock,
+				zeroHash,
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+
+		// Ensure C is the head.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
+
+		maliciouslyWithheldBlockSlot := types.Slot(1)
+		maliciouslyWithheldBlock := indexToHash(2)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				maliciouslyWithheldBlockSlot,
+				maliciouslyWithheldBlock,
+				zeroHash,
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+
+		// Ensure C is still the head after the malicious proposer reveals their block.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
+
+		// We boost the honest proposal at slot 2.
+		secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
+		genesis := time.Now().Add(-2 * secondsPerSlot)
+		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot /* slot */, honestBlock, genesis))
+
+		// An attestation is received for B that has more voting power than C with the proposer boost,
+		// allowing B to then become the head if their attestation has enough adversarial votes.
+		votes := []uint64{1}
+		f.ProcessAttestation(ctx, votes, maliciouslyWithheldBlock, fEpoch)
+
+		// Expect the head to have switched to B.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, maliciouslyWithheldBlock, r, "Expected B to become the head")
 	})
 }
 
