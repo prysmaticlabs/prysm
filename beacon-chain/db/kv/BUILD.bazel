@@ -41,6 +41,7 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/genesis:go_default_library",
         "//beacon-chain/state/state-native/v1:go_default_library",
+        "//beacon-chain/state/state-native/v2:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
         "//beacon-chain/state/v3:go_default_library",

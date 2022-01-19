@@ -105,6 +105,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 				}
 				switch {
 				case hasAltairKey(enc):
+					// TODO: Can we leave it here like this?
 					protoState := &v1alpha1.BeaconStateAltair{}
 					if err := protoState.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
 						return errors.Wrap(err, "failed to unmarshal encoding for altair")
@@ -134,6 +135,7 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 						return stateErr
 					}
 				default:
+					// TODO: Can we leave it here like this?
 					protoState := &v1alpha1.BeaconState{}
 					if err := protoState.UnmarshalSSZ(enc); err != nil {
 						return errors.Wrap(err, "failed to unmarshal encoding for phase0")
