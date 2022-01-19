@@ -280,6 +280,99 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, maliciouslyWithheldBlock, r, "Expected B to become the head")
 	})
+	t.Run("boosting necessary to sandwich attack", func(t *testing.T) {
+		// Boosting necessary to sandwich attack.
+		// Objects:
+		//	Block A - slot N
+		//	Block B (parent A) - slot N+1
+		//	Block C (parent A) - slot N+2
+		//	Block D (parent B) - slot N+3
+		//	Attestation_1 (Block C); size 1 - slot N+2 (honest)
+		// Steps:
+		//	Block A received at N — A is head
+		//	Block C received at N+2 — C is head
+		//	Block B received at N+2 — C is head
+		//	Attestation_1 received at N+3 — C is head
+		//	Block D received at N+3 — D is head
+		f := setup(jEpoch, fEpoch)
+		a := zeroHash
+
+		// The head should always start at the finalized block.
+		r, err := f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, zeroHash, r, "Incorrect head with genesis")
+
+		cSlot := types.Slot(2)
+		c := indexToHash(2)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				cSlot,
+				c,
+				a, // parent
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+
+		// Ensure C is the head.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, c, r, "Incorrect head for justified epoch at slot 2")
+
+		// We boost C.
+		secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
+		genesis := time.Now().Add(-2 * secondsPerSlot)
+		require.NoError(t, f.BoostProposerRoot(ctx, cSlot /* slot */, c, genesis))
+
+		bSlot := types.Slot(1)
+		b := indexToHash(1)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				bSlot,
+				b,
+				a, // parent
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+
+		// Ensure C is still the head.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, c, r, "Incorrect head for justified epoch at slot 2")
+
+		// An attestation for C is received at slot N+3.
+		votes := []uint64{1}
+		f.ProcessAttestation(ctx, votes, c, fEpoch)
+
+		// A block D, building on B, is received at slot N+3. It should not be able to win without boosting.
+		dSlot := types.Slot(3)
+		d := indexToHash(3)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				dSlot,
+				d,
+				b, // parent
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+
+		// Block D receives the boost.
+		genesis = time.Now().Add(-3 * secondsPerSlot)
+		require.NoError(t, f.BoostProposerRoot(ctx, dSlot /* slot */, d, genesis))
+
+		// Ensure D becomes the head thanks to boosting.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, d, r, "Expected D to become the head")
+	})
 }
 
 func TestForkChoice_BoostProposerRoot(t *testing.T) {
