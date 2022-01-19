@@ -23,6 +23,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/core/altair:go_default_library",
+        "//beacon-chain/core/execution:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
