@@ -38,19 +38,19 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 
 	var bRoots customtypes.BlockRoots
 	for i, r := range st.BlockRoots {
-		bRoots[i] = bytesutil.ToBytes32(r)
+		copy(bRoots[i][:], r)
 	}
 	var sRoots customtypes.StateRoots
 	for i, r := range st.StateRoots {
-		sRoots[i] = bytesutil.ToBytes32(r)
+		copy(sRoots[i][:], r)
 	}
 	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
 	for i, r := range st.HistoricalRoots {
-		hRoots[i] = bytesutil.ToBytes32(r)
+		copy(hRoots[i][:], r)
 	}
 	var mixes customtypes.RandaoMixes
 	for i, m := range st.RandaoMixes {
-		mixes[i] = bytesutil.ToBytes32(m)
+		copy(mixes[i][:], m)
 	}
 
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount

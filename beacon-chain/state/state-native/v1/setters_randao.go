@@ -19,7 +19,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 
 	var mixesArr [fieldparams.RandaoMixesLength][32]byte
 	for i := 0; i < len(mixesArr); i++ {
-		mixesArr[i] = bytesutil.ToBytes32(val[i])
+		copy(mixesArr[i][:], val[i])
 	}
 	mixes := customtypes.RandaoMixes(mixesArr)
 	b.randaoMixes = &mixes
