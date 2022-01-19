@@ -22,7 +22,6 @@ type Store struct {
 	finalizedEpoch             types.Epoch                             // latest finalized epoch in store.
 	finalizedRoot              [fieldparams.RootLength]byte            // latest finalized root in store.
 	proposerBoostRoot          [fieldparams.RootLength]byte            // latest block root that was boosted after being received in a timely manner.
-	proposerBoostScore         uint64                                  // proposer boost score for the current boosted root.
 	previousProposerBoostRoot  [fieldparams.RootLength]byte            // previous block root that was boosted after being received in a timely manner.
 	previousProposerBoostScore uint64                                  // previous proposer boosted root score.
 	nodes                      []*Node                                 // list of block nodes, each node is a representation of one block.
