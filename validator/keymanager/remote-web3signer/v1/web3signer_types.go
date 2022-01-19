@@ -71,26 +71,26 @@ type VoluntaryExitSignRequest struct {
 
 // SyncCommitteeMessageSignRequest is a request object for web3signer sign api.
 type SyncCommitteeMessageSignRequest struct {
-	Type          string                `json:"type"`
-	ForkInfo      *ForkInfo             `json:"fork_info"`
-	SigningRoot   string                `json:"signingRoot"`
-	SyncCommittee *SyncCommitteeMessage `json:"sync_committee_message"`
+	Type                 string                `json:"type"`
+	ForkInfo             *ForkInfo             `json:"fork_info"`
+	SigningRoot          string                `json:"signingRoot"`
+	SyncCommitteeMessage *SyncCommitteeMessage `json:"sync_committee_message"`
 }
 
 // SyncCommitteeSelectionProofSignRequest is a request object for web3signer sign api.
 type SyncCommitteeSelectionProofSignRequest struct {
-	Type          string                       `json:"type"`
-	ForkInfo      *ForkInfo                    `json:"fork_info"`
-	SigningRoot   string                       `json:"signingRoot"`
-	SyncCommittee *SyncAggregatorSelectionData `json:"sync_committee_selection_proof"`
+	Type                        string                       `json:"type"`
+	ForkInfo                    *ForkInfo                    `json:"fork_info"`
+	SigningRoot                 string                       `json:"signingRoot"`
+	SyncAggregatorSelectionData *SyncAggregatorSelectionData `json:"sync_aggregator_selection_data"`
 }
 
 // SyncCommitteeContributionAndProofSignRequest is a request object for web3signer sign api.
 type SyncCommitteeContributionAndProofSignRequest struct {
-	Type          string                `json:"type"`
-	ForkInfo      *ForkInfo             `json:"fork_info"`
-	SigningRoot   string                `json:"signingRoot"`
-	SyncCommittee *ContributionAndProof `json:"sync_committee_contribution_and_proof"`
+	Type                 string                `json:"type"`
+	ForkInfo             *ForkInfo             `json:"fork_info"`
+	SigningRoot          string                `json:"signingRoot"`
+	ContributionAndProof *ContributionAndProof `json:"contribution_and_proof"`
 }
 
 ////////////////////////////////////////////////////////////////////////////////
