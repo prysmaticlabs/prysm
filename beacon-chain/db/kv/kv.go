@@ -70,12 +70,14 @@ var blockedBuckets = [][]byte{
 
 // Config for the bolt db kv store.
 type Config struct {
+	UseNativeState  bool
 	InitialMMapSize int
 }
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for Ethereum Beacon Nodes.
 type Store struct {
+	useNativeState      bool
 	db                  *bolt.DB
 	databasePath        string
 	blockCache          *ristretto.Cache
@@ -139,6 +141,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	}
 
 	kv := &Store{
+		useNativeState:      config.UseNativeState,
 		db:                  boltDB,
 		databasePath:        dirPath,
 		blockCache:          blockCache,

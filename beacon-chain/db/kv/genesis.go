@@ -52,7 +52,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 }
 
 // LoadGenesis loads a genesis state from a given file path, if no genesis exists already.
-func (s *Store) LoadGenesis(ctx context.Context, r io.Reader, useNativeState bool) error {
+func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func (s *Store) LoadGenesis(ctx context.Context, r io.Reader, useNativeState boo
 		return err
 	}
 	var gs state.BeaconState
-	if useNativeState {
+	if s.useNativeState {
 		gs, err = statev1native.InitializeFromProtoUnsafe(st)
 	} else {
 		gs, err = statev1.InitializeFromProtoUnsafe(st)

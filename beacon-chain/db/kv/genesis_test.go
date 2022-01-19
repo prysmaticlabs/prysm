@@ -61,13 +61,13 @@ func TestLoadGenesisFromFile(t *testing.T) {
 	}()
 
 	db := setupDB(t)
-	assert.NoError(t, db.LoadGenesis(context.Background(), r, false))
+	assert.NoError(t, db.LoadGenesis(context.Background(), r))
 	testGenesisDataSaved(t, db)
 
 	// Loading the same genesis again should not throw an error
 	_, err = r.Seek(0, 0)
 	assert.NoError(t, err)
-	assert.NoError(t, db.LoadGenesis(context.Background(), r, false))
+	assert.NoError(t, db.LoadGenesis(context.Background(), r))
 }
 
 func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
@@ -84,7 +84,7 @@ func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
 
 	// Loading a genesis with the wrong fork version as beacon config should throw an error.
 	db := setupDB(t)
-	assert.ErrorContains(t, "does not match config genesis fork version", db.LoadGenesis(context.Background(), r, false))
+	assert.ErrorContains(t, "does not match config genesis fork version", db.LoadGenesis(context.Background(), r))
 }
 
 func TestEnsureEmbeddedGenesis(t *testing.T) {

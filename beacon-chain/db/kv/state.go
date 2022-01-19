@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
+	v1native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
@@ -454,6 +455,9 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		if ok {
 			protoState.Validators = validatorEntries
+		}
+		if s.useNativeState {
+			return v1native.InitializeFromProtoUnsafe(protoState)
 		}
 		return v1.InitializeFromProtoUnsafe(protoState)
 	}
