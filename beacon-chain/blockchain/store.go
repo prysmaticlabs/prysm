@@ -119,7 +119,9 @@ func (s *Service) OnTick(ctx context.Context, time uint64) error {
 	s.store.time = time
 	currentSlot := types.Slot((s.store.time - s.store.genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	if currentSlot > prevSlot {
-		s.store.proposerBoostRoot = [32]byte{}
+		if err := s.cfg.ForkChoiceStore.ResetBoostedProposerRoot(ctx); err != nil {
+			return err
+		}
 	}
 	if !(currentSlot > prevSlot && slots.IsEpochStart(currentSlot)) {
 		return nil

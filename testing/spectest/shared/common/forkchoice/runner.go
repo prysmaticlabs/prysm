@@ -1,6 +1,7 @@
 package forkchoice
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"path"
@@ -105,9 +106,9 @@ func Run(t *testing.T, config string, fork int) {
 						att := &ethpb.Attestation{}
 						require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
 						require.NoError(t, service.OnAttestation(ctx, att))
-						require.NoError(t, service.UpdateHead(ctx))
 					}
 					if step.Check != nil {
+						require.NoError(t, service.UpdateHead(ctx))
 						c := step.Check
 						if c.Time != nil {
 							require.Equal(t, uint64(*c.Time), service.TimeInStore())
