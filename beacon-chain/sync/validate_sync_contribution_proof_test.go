@@ -1056,7 +1056,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		_, testState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wsb)
+		_, testState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, testState, wsb, false)
 		assert.NoError(t, err)
 		assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 		assert.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: i, Root: r[:]}))
