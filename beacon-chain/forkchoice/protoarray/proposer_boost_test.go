@@ -24,7 +24,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 	ctx := context.Background()
 	zeroHash := params.BeaconConfig().ZeroHash
 	graffiti := [32]byte{}
-	balances := make([]uint64, 32)
+	balances := make([]uint64, 64) // 64 active validators.
 	for i := 0; i < len(balances); i++ {
 		balances[i] = 10
 	}
@@ -249,7 +249,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 
 		maliciouslyWithheldBlockSlot := types.Slot(1)
-		maliciouslyWithheldBlock := indexToHash(2)
+		maliciouslyWithheldBlock := indexToHash(1)
 		require.NoError(t,
 			f.ProcessBlock(
 				ctx,
