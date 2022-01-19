@@ -158,7 +158,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// C builds on A, as proposer at slot 1 did not reveal B.
 		//         A
 		//        / \
-		//	    (B?) \
+		//      (B?) \
 		//            \
 		//             C <- Slot 2 HEAD
 		honestBlockSlot := types.Slot(2)
