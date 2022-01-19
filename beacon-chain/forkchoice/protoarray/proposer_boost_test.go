@@ -12,14 +12,12 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-// Simple, ex-ante attack reorg.
-// In a nutshell, an adversarial block proposer in slot n keeps its proposal hidden.
-// The honest block proposer in slot n+1 will then propose a competing block. The
-// adversary can now use its committee members’ votes from both slots n and n+ 1
-// to vote for the withheld block of slot n in an attempt to outnumber honest votes
-// on the proposal of slot n + 1. As a result, blocks proposed by honest validators
-// may end up orphaned, i.e., they are displaced out of the chain chosen by LMD
-// GHOST. In [19] this reorg strategy is part of a bigger scheme to delay consensus
+// Simple, ex-ante attack mitigation using proposer boost.
+// In a nutshell, an adversarial block proposer in slot n+1 keeps its proposal hidden.
+// The honest block proposer in slot n+2 will then propose an honest block. The
+// adversary can now use its committee members’ votes from both slots n+1
+// and release their withheld block of slot n+2 in an attempt to win fork choice.
+// If the honest proposal is boosted at slot n+2, it will win against this attacker.
 func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 	ctx := context.Background()
 	zeroHash := params.BeaconConfig().ZeroHash
@@ -158,11 +156,11 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// Proposer from slot 1 does not reveal their block, B, at slot 1.
 		// Proposer at slot 2 does reveal their block, C, and it becomes the head.
 		// C builds on A, as proposer at slot 1 did not reveal B.
-		//         A       -> Slot 0
+		//         A
 		//        / \
-		//	    (B?) \     -> Slot 1, B supposed to happen but does not occur.
+		//	    (B?) \
 		//            \
-		//             C   -> Slot 2 HEAD
+		//             C <- Slot 2 HEAD
 		honestBlockSlot := types.Slot(2)
 		honestBlock := indexToHash(2)
 		require.NoError(t,
@@ -224,11 +222,11 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// Proposer from slot 1 does not reveal their block, B, at slot 1.
 		// Proposer at slot 2 does reveal their block, C, and it becomes the head.
 		// C builds on A, as proposer at slot 1 did not reveal B.
-		//         A       -> Slot 0
+		//         A
 		//        / \
-		//	    (B?) \     -> Slot 1, B supposed to happen but does not occur.
+		//	    (B?) \
 		//            \
-		//             C   -> Slot 2 HEAD
+		//             C <- Slot 2 HEAD
 		honestBlockSlot := types.Slot(2)
 		honestBlock := indexToHash(2)
 		require.NoError(t,
@@ -356,17 +354,17 @@ func TestForkChoice_computeProposerBoostScore(t *testing.T) {
 		require.ErrorContains(t, "no active validators", err)
 	})
 	t.Run("normal active balances computes score", func(t *testing.T) {
-		validatorBalances := make([]uint64, 32)
+		validatorBalances := make([]uint64, 64) // Num validators
 		for i := 0; i < len(validatorBalances); i++ {
 			validatorBalances[i] = 10
 		}
-		// Avg balance is 10, and the number of validators is 32.
-		// With a committee size of num validators (32) / slots per epoch (32) == 1,
-		// we then have a committee weight of avg balance * committee size = 10 * 1 = 10.
+		// Avg balance is 10, and the number of validators is 64.
+		// With a committee size of num validators (64) / slots per epoch (32) == 2.
+		// we then have a committee weight of avg balance * committee size = 10 * 2 = 20.
 		// The score then becomes 10 * PROPOSER_SCORE_BOOST // 100, which is
-		// 10 * 70 / 100 = 7.
+		// 20 * 70 / 100 = 14.
 		score, err := computeProposerBoostScore(validatorBalances)
 		require.NoError(t, err)
-		require.Equal(t, uint64(7), score)
+		require.Equal(t, uint64(14), score)
 	})
 }

@@ -43,7 +43,7 @@ func (f *ForkChoice) ResetBoostedProposerRoot(_ context.Context) error {
 	return nil
 }
 
-// Given a list of active balances, we compute the proposer boost score
+// Given a list of validator balances, we compute the proposer boost score
 // that should be given to a proposer based on their committee weight, derived from
 // the total active balances, the size of a committee, and a boost score constant.
 // IMPORTANT: The caller MUST pass in a list of validator balances where balances > 0 refer to active
