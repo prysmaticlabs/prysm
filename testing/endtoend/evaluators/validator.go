@@ -16,7 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var expectedParticipation = 0.99
+var expectedParticipation = 0.95
 
 var expectedSyncParticipation = 0.99
 

@@ -70,7 +70,6 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.Eth1FollowDistance = 4
 	e2eConfig.ShardCommitteePeriod = 4
-	e2eConfig.MaxSeedLookahead = 1
 
 	// PoW parameters.
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.

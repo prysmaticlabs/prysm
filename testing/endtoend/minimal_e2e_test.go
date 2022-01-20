@@ -122,7 +122,6 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
-		ev.ValidatorSyncParticipation,
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
