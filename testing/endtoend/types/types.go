@@ -14,6 +14,7 @@ type E2EConfig struct {
 	TestSync            bool
 	UsePrysmShValidator bool
 	UsePprof            bool
+	UseWeb3RemoteSigner bool
 	TestDeposits        bool
 	EpochsToRun         uint64
 	TracingSinkEndpoint string
