@@ -52,11 +52,15 @@ func (s *Service) CanSubscribe(topic string) bool {
 		log.WithError(err).Error("Could not determine merge fork digest")
 		return false
 	}
-	if parts[2] != fmt.Sprintf("%x", phase0ForkDigest) &&
-		parts[2] != fmt.Sprintf("%x", altairForkDigest) &&
-		parts[2] != fmt.Sprintf("%x", bellatrixForkDigest) {
+
+	switch parts[2] {
+	case fmt.Sprintf("%x", phase0ForkDigest):
+	case fmt.Sprintf("%x", altairForkDigest):
+	case fmt.Sprintf("%x", bellatrixForkDigest):
+	default:
 		return false
 	}
+
 	if parts[4] != encoder.ProtocolSuffixSSZSnappy {
 		return false
 	}
