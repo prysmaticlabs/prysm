@@ -15,9 +15,11 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 		return nil
 	}
 
+	gvrCopy := b.genesisValidatorsRoot
+
 	return &ethpb.BeaconState{
 		GenesisTime:                 b.genesisTime,
-		GenesisValidatorsRoot:       b.genesisValidatorsRoot[:],
+		GenesisValidatorsRoot:       gvrCopy[:],
 		Slot:                        b.slot,
 		Fork:                        b.fork,
 		LatestBlockHeader:           b.latestBlockHeader,
@@ -49,9 +51,11 @@ func (b *BeaconState) ToProto() interface{} {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	gvrCopy := b.genesisValidatorsRoot
+
 	return &ethpb.BeaconState{
 		GenesisTime:                 b.genesisTime,
-		GenesisValidatorsRoot:       b.genesisValidatorsRoot[:],
+		GenesisValidatorsRoot:       gvrCopy[:],
 		Slot:                        b.slot,
 		Fork:                        b.forkVal(),
 		LatestBlockHeader:           b.latestBlockHeaderVal(),
