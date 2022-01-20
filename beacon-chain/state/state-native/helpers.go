@@ -7,8 +7,7 @@ func BlockRootsToSlice(blockRoots *customtypes.BlockRoots) [][]byte {
 	if blockRoots == nil {
 		return nil
 	}
-	var bRoots [][]byte
-	bRoots = make([][]byte, len(blockRoots))
+	bRoots := make([][]byte, len(blockRoots))
 	for i, r := range blockRoots {
 		tmp := r
 		bRoots[i] = tmp[:]
@@ -21,8 +20,7 @@ func StateRootsToSlice(stateRoots *customtypes.StateRoots) [][]byte {
 	if stateRoots == nil {
 		return nil
 	}
-	var sRoots [][]byte
-	sRoots = make([][]byte, len(stateRoots))
+	sRoots := make([][]byte, len(stateRoots))
 	for i, r := range stateRoots {
 		tmp := r
 		sRoots[i] = tmp[:]
@@ -35,8 +33,7 @@ func HistoricalRootsToSlice(historicalRoots customtypes.HistoricalRoots) [][]byt
 	if historicalRoots == nil {
 		return nil
 	}
-	var hRoots [][]byte
-	hRoots = make([][]byte, len(historicalRoots))
+	hRoots := make([][]byte, len(historicalRoots))
 	for i, r := range historicalRoots {
 		tmp := r
 		hRoots[i] = tmp[:]
@@ -49,8 +46,7 @@ func RandaoMixesToSlice(randaoMixes *customtypes.RandaoMixes) [][]byte {
 	if randaoMixes == nil {
 		return nil
 	}
-	var mixes [][]byte
-	mixes = make([][]byte, len(randaoMixes))
+	mixes := make([][]byte, len(randaoMixes))
 	for i, r := range randaoMixes {
 		tmp := r
 		mixes[i] = tmp[:]
