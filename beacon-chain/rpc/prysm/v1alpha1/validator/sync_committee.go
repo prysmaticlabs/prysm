@@ -156,8 +156,9 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 			for _, index := range headSyncCommitteeIndices {
 				i := uint64(index)
 				subnetIndex := i / subCommitteeSize
-				if subnetIndex == subnetId {
-					bits.SetBitAt(i%subCommitteeSize, true)
+				indexMod := i % subCommitteeSize
+				if subnetIndex == subnetId && !bits.BitAt(indexMod) {
+					bits.SetBitAt(indexMod, true)
 					sig, err := bls.SignatureFromBytes(msg.Signature)
 					if err != nil {
 						return []byte{}, nil, errors.Wrapf(err, "Could not get bls signature from bytes")
