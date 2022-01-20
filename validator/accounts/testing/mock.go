@@ -83,83 +83,83 @@ type MockValidator struct {
 	Km keymanager.IKeymanager
 }
 
-func (m MockValidator) Done() {
+func (_ MockValidator) Done() {
 	panic("implement me")
 }
 
-func (m MockValidator) WaitForChainStart(ctx context.Context) error {
+func (_ MockValidator) WaitForChainStart(ctx context.Context) error {
 	panic("implement me")
 }
 
-func (m MockValidator) WaitForSync(ctx context.Context) error {
+func (_ MockValidator) WaitForSync(ctx context.Context) error {
 	panic("implement me")
 }
 
-func (m MockValidator) WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error {
+func (_ MockValidator) WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error {
 	panic("implement me")
 }
 
-func (m MockValidator) CanonicalHeadSlot(ctx context.Context) (types.Slot, error) {
+func (_ MockValidator) CanonicalHeadSlot(ctx context.Context) (types.Slot, error) {
 	panic("implement me")
 }
 
-func (m MockValidator) NextSlot() <-chan types.Slot {
+func (_ MockValidator) NextSlot() <-chan types.Slot {
 	panic("implement me")
 }
 
-func (m MockValidator) SlotDeadline(slot types.Slot) time.Time {
+func (_ MockValidator) SlotDeadline(slot types.Slot) time.Time {
 	panic("implement me")
 }
 
-func (m MockValidator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error {
+func (_ MockValidator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error {
 	panic("implement me")
 }
 
-func (m MockValidator) UpdateDuties(ctx context.Context, slot types.Slot) error {
+func (_ MockValidator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 	panic("implement me")
 }
 
-func (m MockValidator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]iface2.ValidatorRole, error) {
+func (_ MockValidator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]iface2.ValidatorRole, error) {
 	panic("implement me")
 }
 
-func (m MockValidator) SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (_ MockValidator) SubmitAttestation(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	panic("implement me")
 }
 
-func (m MockValidator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (_ MockValidator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	panic("implement me")
 }
 
-func (m MockValidator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (_ MockValidator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	panic("implement me")
 }
 
-func (m MockValidator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (_ MockValidator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	panic("implement me")
 }
 
-func (m MockValidator) SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+func (_ MockValidator) SubmitSignedContributionAndProof(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	panic("implement me")
 }
 
-func (m MockValidator) LogAttestationsSubmitted() {
+func (_ MockValidator) LogAttestationsSubmitted() {
 	panic("implement me")
 }
 
-func (m MockValidator) LogNextDutyTimeLeft(slot types.Slot) error {
+func (_ MockValidator) LogNextDutyTimeLeft(slot types.Slot) error {
 	panic("implement me")
 }
 
-func (m MockValidator) UpdateDomainDataCaches(ctx context.Context, slot types.Slot) {
+func (_ MockValidator) UpdateDomainDataCaches(ctx context.Context, slot types.Slot) {
 	panic("implement me")
 }
 
-func (m MockValidator) WaitForKeymanagerInitialization(ctx context.Context) error {
+func (_ MockValidator) WaitForKeymanagerInitialization(ctx context.Context) error {
 	panic("implement me")
 }
 
-func (m MockValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
+func (_ MockValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	panic("implement me")
 }
 
@@ -167,14 +167,14 @@ func (m MockValidator) Keymanager() (keymanager.IKeymanager, error) {
 	return m.Km, nil
 }
 
-func (m MockValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
+func (_ MockValidator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
 	panic("implement me")
 }
 
-func (m MockValidator) HandleKeyReload(ctx context.Context, newKeys [][48]byte) (bool, error) {
+func (_ MockValidator) HandleKeyReload(ctx context.Context, newKeys [][48]byte) (bool, error) {
 	panic("implement me")
 }
 
-func (m MockValidator) CheckDoppelGanger(ctx context.Context) error {
+func (_ MockValidator) CheckDoppelGanger(ctx context.Context) error {
 	panic("implement me")
 }
