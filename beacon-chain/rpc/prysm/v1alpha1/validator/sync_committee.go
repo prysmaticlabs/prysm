@@ -65,7 +65,7 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitte
 func (vs *Server) GetSyncSubcommitteeIndex(
 	ctx context.Context, req *ethpb.SyncSubcommitteeIndexRequest,
 ) (*ethpb.SyncSubcommitteeIndexResponse, error) {
-	index, exists := vs.HeadFetcher.HeadPublicKeyToValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
+	index, exists := vs.HeadFetcher.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(req.PublicKey))
 	if !exists {
 		return nil, errors.New("public key does not exist in state")
 	}
