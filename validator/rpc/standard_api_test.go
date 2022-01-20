@@ -49,7 +49,6 @@ func TestServer_ListKeystores(t *testing.T) {
 	require.NoError(t, err)
 
 	s := &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
 	}
@@ -102,11 +101,10 @@ func TestServer_ImportKeystores(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
+	//km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	//require.NoError(t, err)
 
 	s := &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
 	}
@@ -216,7 +214,9 @@ func TestServer_DeleteKeystores(t *testing.T) {
 
 	// We recover 3 accounts from a test mnemonic.
 	numAccounts := 3
-	dr, ok := srv.keymanager.(*derived.Keymanager)
+	km, er := srv.validatorService.Keymanager()
+	require.NoError(t, er)
+	dr, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
 	err := dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
@@ -357,11 +357,10 @@ func setupServerWithWallet(t testing.TB) *Server {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
+	//km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	//require.NoError(t, err)
 
 	return &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
 	}

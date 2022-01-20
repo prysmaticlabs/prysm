@@ -60,7 +60,7 @@ func run(ctx context.Context, v iface.Validator) {
 			log.Fatalf("Could not determine if beacon chain started: %v", err)
 		}
 
-		err = v.WaitForWalletInitialization(ctx)
+		err = v.WaitForKeymanagerInitialization(ctx)
 		if err != nil {
 			// log.Fatalf will prevent defer from being called
 			cleanup()
@@ -109,7 +109,11 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
-	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+	km, err := v.Keymanager()
+	if err != nil {
+		log.Fatalf("Could not get keymanager: %v", err)
+	}
+	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -143,7 +147,7 @@ func run(ctx context.Context, v iface.Validator) {
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
-			remoteKm, ok := v.GetKeymanager().(remote.RemoteKeymanager)
+			remoteKm, ok := km.(remote.RemoteKeymanager)
 			if ok {
 				_, err := remoteKm.ReloadPublicKeys(ctx)
 				if err != nil {

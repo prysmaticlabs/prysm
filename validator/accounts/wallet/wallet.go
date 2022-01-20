@@ -302,6 +302,8 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal web3signer keymanager config file")
 		}
+		// TODO(9883): future work needs to address how initialize keymanager is called for web3signer.
+		// an error may be thrown for genesis validators root for some InitializeKeymanager calls.
 		if len(cfg.GenesisValidatorsRoot) != fieldparams.RootLength {
 			config.GenesisValidatorsRoot = cfg.GenesisValidatorsRoot
 		} else {

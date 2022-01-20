@@ -30,6 +30,7 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
+	// TODO(#9883) - Remove this when we have a better way to handle this.
 	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
 		return errors.New("wrong wallet password entered")

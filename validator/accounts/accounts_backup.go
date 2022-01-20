@@ -48,6 +48,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
+	// TODO(#9883) - Remove this when we have a better way to handle this.
 	if w.KeymanagerKind() == keymanager.Remote || w.KeymanagerKind() == keymanager.Web3Signer {
 		return errors.New(
 			"remote and web3signer wallets cannot backup accounts",

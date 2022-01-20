@@ -75,6 +75,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		if err = createImportedKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
+		// TODO(#9883) - Remove this when we have a better way to handle this. should be safe to use for now.
 		km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 		if err != nil {
 			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)

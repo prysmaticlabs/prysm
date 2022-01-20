@@ -36,6 +36,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -56,6 +57,7 @@ var (
 type validator struct {
 	logValidatorBalances               bool
 	useWeb                             bool
+	interopKeysConfig                  *imported.InteropKeymanagerConfig
 	emitAccountMetrics                 bool
 	logDutyCountDown                   bool
 	domainDataLock                     sync.Mutex
@@ -63,6 +65,7 @@ type validator struct {
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
 	slashableKeysLock                  sync.RWMutex
+	wallet                             *wallet.Wallet
 	walletInitializedFeed              *event.Feed
 	blockFeed                          *event.Feed
 	genesisTime                        uint64
@@ -98,37 +101,107 @@ func (v *validator) Done() {
 	v.ticker.Done()
 }
 
-// WaitForWalletInitialization checks if the validator needs to wait for
-func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
-	// This function should only run if we are using managing the
-	// validator client using the Prysm web UI.
-	if !v.useWeb {
-		return nil
+// WaitForKeymanagerInitialization checks if the validator needs to wait for
+func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
+	genesisRoot, err := v.db.GenesisValidatorsRoot(ctx)
+	if err != nil || len(genesisRoot) != fieldparams.RootLength {
+		return errors.Wrap(err, "unable to retrieve valid genesis validators root while initializing key manager")
 	}
-	if v.keyManager != nil {
-		return nil
+	if v.useWeb && v.wallet == nil {
+		// if wallet is not set, wait for it to be set through the UI
+		km, err := waitForWebWalletInitialization(ctx, v.walletInitializedFeed, genesisRoot)
+		if err != nil {
+			return err
+		}
+		v.keyManager = km
+	} else {
+		if v.interopKeysConfig != nil {
+			keyManager, err := imported.NewInteropKeymanager(ctx, v.interopKeysConfig.Offset, v.interopKeysConfig.NumValidatorKeys)
+			if err != nil {
+				return errors.Wrap(err, "could not generate interop keys for key manager")
+			}
+			v.keyManager = keyManager
+		} else if v.wallet == nil {
+			return errors.New("wallet not set")
+		} else {
+			keyManager, err := v.wallet.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true, GenesisValidatorsRoot: genesisRoot})
+			if err != nil {
+				return errors.Wrap(err, "could not initialize key manager")
+			}
+			v.keyManager = keyManager
+		}
 	}
+	recheckKeys(ctx, v.db, v.keyManager)
+	return nil
+}
+
+// subscribe to channel for when the wallet is initialized
+func waitForWebWalletInitialization(ctx context.Context, walletInitializedEvent *event.Feed, genesisValidatorsRoot []byte) (keymanager.IKeymanager, error) {
 	walletChan := make(chan *wallet.Wallet)
-	sub := v.walletInitializedFeed.Subscribe(walletChan)
+	sub := walletInitializedEvent.Subscribe(walletChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case w := <-walletChan:
-			genesisRoot, err := v.db.GenesisValidatorsRoot(ctx)
+			keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true, GenesisValidatorsRoot: genesisValidatorsRoot})
 			if err != nil {
-				return errors.Wrap(err, "unable to retrieve genesis validators root")
+				return nil, errors.Wrap(err, "could not read keymanager")
 			}
-			keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true, GenesisValidatorsRoot: genesisRoot})
-			if err != nil {
-				return errors.Wrap(err, "could not read keymanager")
-			}
-			v.keyManager = keyManager
-			return nil
+			return keyManager, nil
 		case <-ctx.Done():
-			return errors.New("context canceled")
+			return nil, errors.New("context canceled")
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
-			return nil
+			return nil, nil
+		}
+	}
+}
+
+// recheckKeys checks if the validator has any keys that need to be rechecked.
+// the keymanager implements a subscription to push these updates to the validator.
+func recheckKeys(ctx context.Context, valDB vdb.Database, keyManager keymanager.IKeymanager) {
+	var validatingKeys [][fieldparams.BLSPubkeyLength]byte
+	var err error
+	validatingKeys, err = keyManager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		log.WithError(err).Debug("Could not fetch validating keys")
+	}
+	if err := valDB.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+		log.WithError(err).Debug("Could not update public keys buckets")
+	}
+	go recheckValidatingKeysBucket(ctx, valDB, keyManager)
+	for _, key := range validatingKeys {
+		log.WithField(
+			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
+		).Info("Validating for public key")
+	}
+}
+
+// to accounts changes in the keymanager, then updates those keys'
+// buckets in bolt DB if a bucket for a key does not exist.
+func recheckValidatingKeysBucket(ctx context.Context, valDB vdb.Database, km keymanager.IKeymanager) {
+	importedKeymanager, ok := km.(*imported.Keymanager)
+	if !ok {
+		return
+	}
+	validatingPubKeysChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
+	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	defer func() {
+		sub.Unsubscribe()
+		close(validatingPubKeysChan)
+	}()
+	for {
+		select {
+		case keys := <-validatingPubKeysChan:
+			if err := valDB.UpdatePublicKeysBuckets(keys); err != nil {
+				log.WithError(err).Debug("Could not update public keys buckets")
+				continue
+			}
+		case <-ctx.Done():
+			return
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return
 		}
 	}
 }
@@ -651,9 +724,12 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[fieldpar
 	return rolesAt, nil
 }
 
-// GetKeymanager returns the underlying validator's keymanager.
-func (v *validator) GetKeymanager() keymanager.IKeymanager {
-	return v.keyManager
+// Keymanager returns the underlying validator's keymanager.
+func (v *validator) Keymanager() (keymanager.IKeymanager, error) {
+	if v.keyManager == nil {
+		return nil, errors.New("keymanager is not initialized")
+	}
+	return v.keyManager, nil
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot and committee,

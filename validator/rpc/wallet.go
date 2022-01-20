@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/tyler-smith/go-bip39"
@@ -119,7 +118,7 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 
-	if s.wallet == nil || s.keymanager == nil {
+	if s.wallet == nil || s.validatorService == nil {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
 	}
@@ -263,7 +262,14 @@ func (s *Server) ImportAccounts(
 	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
 	}
-	km, ok := s.keymanager.(keymanager.Importer)
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No validator service initialized")
+	}
+	ikm, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "No keymanager initialized")
+	}
+	km, ok := ikm.(keymanager.Importer)
 	if !ok {
 		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import keystores")
 	}
@@ -290,13 +296,16 @@ func (s *Server) ImportAccounts(
 		importedPubKeys[i] = pubKey
 	}
 	// Import the uploaded accounts.
-	_, err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
+	statuses, err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
 		Importer:        km,
 		Keystores:       keystores,
 		AccountPassword: req.KeystoresPassword,
 	})
 	if err != nil {
 		return nil, err
+	}
+	if len(statuses) == 0 {
+		return nil, status.Error(codes.Internal, "No statuses returned from import")
 	}
 	s.walletInitializedFeed.Send(s.wallet)
 	return &pb.ImportAccountsResponse{
@@ -336,22 +345,11 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 
 	s.walletInitialized = true
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: true})
-	if err != nil {
-		return errors.Wrap(err, accounts.ErrCouldNotInitializeKeymanager)
-	}
-	s.keymanager = km
 	s.wallet = w
 	s.walletDir = cfg.WalletDir
 
-	// Only send over feed if we have validating keys.
-	validatingPublicKeys, err := km.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not check for validating public keys")
-	}
-	if len(validatingPublicKeys) > 0 {
-		s.walletInitializedFeed.Send(w)
-	}
+	s.walletInitializedFeed.Send(w)
+
 	return nil
 }
 
