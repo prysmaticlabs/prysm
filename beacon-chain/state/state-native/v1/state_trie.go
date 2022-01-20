@@ -232,33 +232,11 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
 	if err := b.initializeMerkleLayers(ctx); err != nil {
 		return [32]byte{}, err
 	}
-
-	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b.ToProtoUnsafe().(*ethpb.BeaconState))
-		if err != nil {
-			return [32]byte{}, err
-		}
-		layers := stateutil.Merkleize(fieldRoots)
-		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
-	}
-
 	if err := b.recomputeDirtyFields(ctx); err != nil {
 		return [32]byte{}, err
-	}
-
-	for field := range b.dirtyFields {
-		root, err := b.rootSelector(ctx, field)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		b.merkleLayers[0][field] = root[:]
-		b.recomputeRoot(int(field))
-		delete(b.dirtyFields, field)
 	}
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
