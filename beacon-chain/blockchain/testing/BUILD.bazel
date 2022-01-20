@@ -8,7 +8,6 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing:__subpackages__",
-        "//testing/fuzz:__pkg__",
     ],
     deps = [
         "//async/event:go_default_library",
