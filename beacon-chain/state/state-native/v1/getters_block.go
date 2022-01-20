@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 
+	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -52,12 +53,7 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := make([][]byte, len(b.blockRoots))
-	for i, r := range b.blockRoots {
-		tmp := r
-		roots[i] = tmp[:]
-	}
-	return roots
+	return state_native.BlockRootsToSlice(b.blockRoots)
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an

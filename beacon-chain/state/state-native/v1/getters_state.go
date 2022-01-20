@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -14,54 +15,21 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 		return nil
 	}
 
-	var bRoots [][]byte
-	if b.blockRoots != nil {
-		bRoots = make([][]byte, len(b.blockRoots))
-		for i, r := range b.blockRoots {
-			tmp := r
-			bRoots[i] = tmp[:]
-		}
-	}
-	var sRoots [][]byte
-	if b.stateRoots != nil {
-		sRoots = make([][]byte, len(b.stateRoots))
-		for i, r := range b.stateRoots {
-			tmp := r
-			sRoots[i] = tmp[:]
-		}
-	}
-	var hRoots [][]byte
-	if b.historicalRoots != nil {
-		hRoots = make([][]byte, len(b.historicalRoots))
-		for i, r := range b.historicalRoots {
-			tmp := r
-			hRoots[i] = tmp[:]
-		}
-	}
-	var mixes [][]byte
-	if b.randaoMixes != nil {
-		mixes = make([][]byte, len(b.randaoMixes))
-		for i, m := range b.randaoMixes {
-			tmp := m
-			mixes[i] = tmp[:]
-		}
-	}
-
 	return &ethpb.BeaconState{
 		GenesisTime:                 b.genesisTime,
 		GenesisValidatorsRoot:       b.genesisValidatorsRoot[:],
 		Slot:                        b.slot,
 		Fork:                        b.fork,
 		LatestBlockHeader:           b.latestBlockHeader,
-		BlockRoots:                  bRoots,
-		StateRoots:                  sRoots,
-		HistoricalRoots:             hRoots,
+		BlockRoots:                  state_native.BlockRootsToSlice(b.blockRoots),
+		StateRoots:                  state_native.StateRootsToSlice(b.stateRoots),
+		HistoricalRoots:             state_native.HistoricalRootsToSlice(b.historicalRoots),
 		Eth1Data:                    b.eth1Data,
 		Eth1DataVotes:               b.eth1DataVotes,
 		Eth1DepositIndex:            b.eth1DepositIndex,
 		Validators:                  b.validators,
 		Balances:                    b.balances,
-		RandaoMixes:                 mixes,
+		RandaoMixes:                 state_native.RandaoMixesToSlice(b.randaoMixes),
 		Slashings:                   b.slashings,
 		PreviousEpochAttestations:   b.previousEpochAttestations,
 		CurrentEpochAttestations:    b.currentEpochAttestations,
@@ -81,55 +49,21 @@ func (b *BeaconState) ToProto() interface{} {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	gvr := b.genesisValidatorsRoot
-	var bRoots [][]byte
-	if b.blockRoots != nil {
-		bRoots = make([][]byte, len(b.blockRoots))
-		for i, r := range b.blockRoots {
-			tmp := r
-			bRoots[i] = tmp[:]
-		}
-	}
-	var sRoots [][]byte
-	if b.stateRoots != nil {
-		sRoots = make([][]byte, len(b.stateRoots))
-		for i, r := range b.stateRoots {
-			tmp := r
-			sRoots[i] = tmp[:]
-		}
-	}
-	var hRoots [][]byte
-	if b.historicalRoots != nil {
-		hRoots = make([][]byte, len(b.historicalRoots))
-		for i, r := range b.historicalRoots {
-			tmp := r
-			hRoots[i] = tmp[:]
-		}
-	}
-	var mixes [][]byte
-	if b.randaoMixes != nil {
-		mixes = make([][]byte, len(b.randaoMixes))
-		for i, m := range b.randaoMixes {
-			tmp := m
-			mixes[i] = tmp[:]
-		}
-	}
-
 	return &ethpb.BeaconState{
 		GenesisTime:                 b.genesisTime,
-		GenesisValidatorsRoot:       gvr[:],
+		GenesisValidatorsRoot:       b.genesisValidatorsRoot[:],
 		Slot:                        b.slot,
 		Fork:                        b.forkVal(),
 		LatestBlockHeader:           b.latestBlockHeaderVal(),
-		BlockRoots:                  bRoots,
-		StateRoots:                  sRoots,
-		HistoricalRoots:             hRoots,
+		BlockRoots:                  state_native.BlockRootsToSlice(b.blockRoots),
+		StateRoots:                  state_native.StateRootsToSlice(b.stateRoots),
+		HistoricalRoots:             state_native.HistoricalRootsToSlice(b.historicalRoots),
 		Eth1Data:                    b.eth1DataVal(),
 		Eth1DataVotes:               b.eth1DataVotesVal(),
 		Eth1DepositIndex:            b.eth1DepositIndex,
 		Validators:                  b.validatorsVal(),
 		Balances:                    b.balancesVal(),
-		RandaoMixes:                 mixes,
+		RandaoMixes:                 state_native.RandaoMixesToSlice(b.randaoMixes),
 		Slashings:                   b.slashingsVal(),
 		PreviousEpochAttestations:   b.previousEpochAttestationsVal(),
 		CurrentEpochAttestations:    b.currentEpochAttestationsVal(),
@@ -149,13 +83,7 @@ func (b *BeaconState) StateRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := make([][]byte, len(b.stateRoots))
-	for i, r := range b.stateRoots {
-		tmp := r
-		roots[i] = tmp[:]
-	}
-
-	return roots
+	return state_native.StateRootsToSlice(b.stateRoots)
 }
 
 // StateRootAtIndex retrieves a specific state root based on an

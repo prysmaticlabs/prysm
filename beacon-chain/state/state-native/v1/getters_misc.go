@@ -2,6 +2,7 @@ package v1
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
+	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -76,13 +77,7 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := make([][]byte, len(b.historicalRoots))
-	for i, r := range b.historicalRoots {
-		tmp := r
-		roots[i] = tmp[:]
-	}
-
-	return roots
+	return state_native.HistoricalRootsToSlice(b.historicalRoots)
 }
 
 // balancesLength returns the length of the balances slice.
