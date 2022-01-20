@@ -19,7 +19,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//testing/spectest:__subpackages__",
         "//testing/util:__pkg__",
         "//validator:__subpackages__",
