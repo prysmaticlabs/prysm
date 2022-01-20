@@ -303,13 +303,13 @@ func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
 	c := &Service{}
 	c.head = &head{state: s}
 
-	_, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [fieldparams.BLSPubkeyLength]byte{})
+	_, e := c.HeadPublicKeyToValidatorIndex([fieldparams.BLSPubkeyLength]byte{})
 	require.Equal(t, false, e)
 
 	v, err := s.ValidatorAtIndex(0)
 	require.NoError(t, err)
 
-	i, e := c.HeadPublicKeyToValidatorIndex(context.Background(), bytesutil.ToBytes48(v.PublicKey))
+	i, e := c.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(v.PublicKey))
 	require.Equal(t, true, e)
 	require.Equal(t, types.ValidatorIndex(0), i)
 }
@@ -318,12 +318,12 @@ func TestService_HeadPublicKeyToValidatorIndexNil(t *testing.T) {
 	c := &Service{}
 	c.head = nil
 
-	idx, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [fieldparams.BLSPubkeyLength]byte{})
+	idx, e := c.HeadPublicKeyToValidatorIndex([fieldparams.BLSPubkeyLength]byte{})
 	require.Equal(t, false, e)
 	require.Equal(t, types.ValidatorIndex(0), idx)
 
 	c.head = &head{state: nil}
-	i, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [fieldparams.BLSPubkeyLength]byte{})
+	i, e := c.HeadPublicKeyToValidatorIndex([fieldparams.BLSPubkeyLength]byte{})
 	require.Equal(t, false, e)
 	require.Equal(t, types.ValidatorIndex(0), i)
 }
