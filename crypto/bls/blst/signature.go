@@ -60,7 +60,7 @@ func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error)
 		}
 	}
 	multiSignatures := new(blstSignature).BatchUncompress(multiSigs)
-	if multiSignatures == nil || len(multiSignatures) == 0 {
+	if len(multiSignatures) == 0 {
 		return nil, errors.New("could not unmarshal bytes into signature")
 	}
 	if len(multiSignatures) != len(multiSigs) {
