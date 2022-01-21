@@ -157,7 +157,7 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 		if headState == nil || headState.IsNil() {
 			return nil, errors.New("nil state")
 		}
-		headState, err = transition.ProcessSlotsConditionally(ctx, headState, slot)
+		headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slot)
 		if err != nil {
 			return nil, err
 		}

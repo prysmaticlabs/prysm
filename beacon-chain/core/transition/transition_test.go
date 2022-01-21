@@ -617,21 +617,21 @@ func TestProcessSlotsConditionally(t *testing.T) {
 
 	t.Run("target slot below current slot", func(t *testing.T) {
 		require.NoError(t, s.SetSlot(5))
-		s, err := transition.ProcessSlotsConditionally(ctx, s, 4)
+		s, err := transition.ProcessSlotsIfPossible(ctx, s, 4)
 		require.NoError(t, err)
 		assert.Equal(t, types.Slot(5), s.Slot())
 	})
 
 	t.Run("target slot equal current slot", func(t *testing.T) {
 		require.NoError(t, s.SetSlot(5))
-		s, err := transition.ProcessSlotsConditionally(ctx, s, 5)
+		s, err := transition.ProcessSlotsIfPossible(ctx, s, 5)
 		require.NoError(t, err)
 		assert.Equal(t, types.Slot(5), s.Slot())
 	})
 
 	t.Run("target slot above current slot", func(t *testing.T) {
 		require.NoError(t, s.SetSlot(5))
-		s, err := transition.ProcessSlotsConditionally(ctx, s, 6)
+		s, err := transition.ProcessSlotsIfPossible(ctx, s, 6)
 		require.NoError(t, err)
 		assert.Equal(t, types.Slot(6), s.Slot())
 	})
