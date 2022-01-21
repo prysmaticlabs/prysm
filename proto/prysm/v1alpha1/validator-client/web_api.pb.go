@@ -36,10 +36,9 @@ const _ = proto.ProtoPackageIsVersion4
 type KeymanagerKind int32
 
 const (
-	KeymanagerKind_DERIVED    KeymanagerKind = 0
-	KeymanagerKind_IMPORTED   KeymanagerKind = 1
-	KeymanagerKind_REMOTE     KeymanagerKind = 2
-	KeymanagerKind_Web3Signer KeymanagerKind = 3
+	KeymanagerKind_DERIVED  KeymanagerKind = 0
+	KeymanagerKind_IMPORTED KeymanagerKind = 1
+	KeymanagerKind_REMOTE   KeymanagerKind = 2
 )
 
 // Enum value maps for KeymanagerKind.
@@ -48,13 +47,11 @@ var (
 		0: "DERIVED",
 		1: "IMPORTED",
 		2: "REMOTE",
-		3: "WEB3_SIGNER",
 	}
 	KeymanagerKind_value = map[string]int32{
-		"DERIVED":     0,
-		"IMPORTED":    1,
-		"REMOTE":      2,
-		"WEB3_SIGNER": 3,
+		"DERIVED":  0,
+		"IMPORTED": 1,
+		"REMOTE":   2,
 	}
 )
 
