@@ -48,7 +48,7 @@ func DeleteAndCreateFile(tmpPath, fileName string) (*os.File, error) {
 			return nil, err
 		}
 	}
-	newFile, err := os.Create(path.Join(tmpPath, fileName))
+	newFile, err := os.Create(path.Join(tmpPath, fileName)) // #nosec G304 -- Test code, not used in production
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func writeURLRespAtPath(url, filePath string) error {
 	if err != nil {
 		return err
 	}
-	file, err := os.Create(filePath)
+	file, err := os.Create(filePath) // #nosec G304 -- Test code, not used in production
 	if err != nil {
 		return err
 	}
