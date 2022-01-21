@@ -99,7 +99,7 @@ func (_ MockValidator) WaitForActivation(_ context.Context, _ chan [][48]byte) e
 	panic("implement me")
 }
 
-func (_ MockValidator) CanonicalHeadSlot(_x context.Context) (types.Slot, error) {
+func (_ MockValidator) CanonicalHeadSlot(_ context.Context) (types.Slot, error) {
 	panic("implement me")
 }
 
