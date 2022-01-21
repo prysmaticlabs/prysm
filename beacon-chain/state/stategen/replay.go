@@ -241,7 +241,11 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 
 	// Handle the genesis case where the input slot is 0.
 	if slot == 0 {
-		gRoot, err := s.genesisRoot(ctx)
+		gb, err := s.beaconDB.GenesisBlock(ctx)
+		if err != nil {
+			return [32]byte{}, 0, err
+		}
+		gRoot, err := gb.Block().HashTreeRoot()
 		if err != nil {
 			return [32]byte{}, 0, err
 		}
@@ -294,15 +298,6 @@ func (s *State) lastSavedState(ctx context.Context, slot types.Slot) (state.Read
 	}
 
 	return lastSaved[0], nil
-}
-
-// This returns the genesis root.
-func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
-	b, err := s.beaconDB.GenesisBlock(ctx)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return b.Block().HashTreeRoot()
 }
 
 // Given the start slot and the end slot, this returns the finalized beacon blocks in between.

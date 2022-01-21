@@ -17,6 +17,30 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+func TestStore_LowestSyncedBlockSlot(t *testing.T) {
+	// test case: make sure expected error is returned w/ an empty bucket
+	db := setupDB(t)
+	ctx := context.Background()
+	_, err := db.LowestSyncedBlockSlot(ctx)
+	require.ErrorIs(t, err, errEmptyBucket)
+
+	// test case: make sure that the right value is returned using a non-zero key
+	block := util.NewBeaconBlock()
+	block.Block.Slot = types.Slot(1 << 32)
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
+	slot, err := db.LowestSyncedBlockSlot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, slot, block.Block.Slot)
+
+	// test case: write a lower value and make sure that it is returned instead of the existing value
+	zero := util.NewBeaconBlock()
+	zero.Block.Slot = types.Slot(0)
+	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(zero)))
+	zslot, err := db.LowestSyncedBlockSlot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, zslot, zero.Block.Slot)
+}
+
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	BlockCacheSize = 1
 	db := setupDB(t)

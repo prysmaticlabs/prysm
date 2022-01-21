@@ -549,11 +549,11 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 func (bs *Server) GetWeakSubjectivityCheckpointEpoch(ctx context.Context, _ *emptypb.Empty) (*ethpb.WeakSubjectivityCheckpointEpoch, error) {
 	hs, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
+		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity epoch: %v", err)
 	}
 
 	return &ethpb.WeakSubjectivityCheckpointEpoch{
@@ -569,24 +569,24 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.
 	}
 	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
+		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity epoch: %v", err)
 	}
 	wsSlot, err := slots.EpochStart(wsEpoch)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity slot")
+		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity slot: %v", err)
 	}
 
 	wsState, err := bs.StateGen.StateBySlot(ctx, wsSlot)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state")
+		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity state: %v", err)
 	}
 	stateRoot, err := wsState.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state root")
+		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity state root: %v", err)
 	}
 	blkRoot, err := wsState.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity block root")
+		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity block root: %v", err)
 	}
 
 	return &ethpb.WeakSubjectivityCheckpoint{

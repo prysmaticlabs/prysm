@@ -23,6 +23,7 @@ import (
 
 // used to represent errors for inconsistent slot ranges.
 var errInvalidSlotRange = errors.New("invalid end slot and start slot provided")
+var errEmptyBucket = errors.New("unexpectedly empty bucket")
 
 // Block retrieval by root.
 func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
@@ -66,6 +67,25 @@ func (s *Store) OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	})
 
 	return root, err
+}
+
+// LowestSyncedBlockSlot returns the lowest slot number in the block root index
+func (s *Store) LowestSyncedBlockSlot(ctx context.Context) (types.Slot, error) {
+	// start scan at zero, which will yield the lowest key in the collection.
+	var slot types.Slot
+	err := s.db.View(func(tx *bolt.Tx) error {
+		// Iterate through the index, which is in byte sorted order.
+		bkt := tx.Bucket(blockSlotIndicesBucket)
+		c := bkt.Cursor()
+		k, _ := c.First()
+		if k == nil {
+			msg := fmt.Sprintf("'%s' bucket is empty", string(blockSlotIndicesBucket))
+			return errors.Wrap(errEmptyBucket, msg)
+		}
+		slot = bytesutil.BytesToSlotBigEndian(k)
+		return nil
+	})
+	return slot, err
 }
 
 // HeadBlock returns the latest canonical block in the Ethereum Beacon Chain.

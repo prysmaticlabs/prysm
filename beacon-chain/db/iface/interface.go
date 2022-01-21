@@ -51,6 +51,7 @@ type ReadOnlyDatabase interface {
 
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
+	LowestSyncedBlockSlot(ctx context.Context) (types.Slot, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.

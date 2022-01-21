@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -12,6 +13,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
+
+var ErrSlotBeforeOrigin = errors.New("cannot retrieve data for slots before sync origin")
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
@@ -212,6 +215,11 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateBySlot")
 	defer span.End()
+
+	if slot < s.MinimumSlot() {
+		msg := fmt.Sprintf("no data from before slot %d", s.MinimumSlot())
+		return nil, errors.Wrap(ErrSlotBeforeOrigin, msg)
+	}
 
 	// Return genesis state if slot is 0.
 	if slot == 0 {
