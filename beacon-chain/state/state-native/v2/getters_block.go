@@ -3,8 +3,6 @@ package v2
 import (
 	"fmt"
 
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -17,12 +15,12 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.latestBlockHeaderInternal()
+	return b.latestBlockHeaderVal()
 }
 
-// latestBlockHeaderInternal stored within the beacon state.
+// latestBlockHeaderVal stored within the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestBlockHeaderInternal() *ethpb.BeaconBlockHeader {
+func (b *BeaconState) latestBlockHeaderVal() *ethpb.BeaconBlockHeader {
 	if b.latestBlockHeader == nil {
 		return nil
 	}
@@ -46,7 +44,7 @@ func (b *BeaconState) latestBlockHeaderInternal() *ethpb.BeaconBlockHeader {
 }
 
 // BlockRoots kept track of in the beacon state.
-func (b *BeaconState) BlockRoots() *[fieldparams.BlockRootsLength][32]byte {
+func (b *BeaconState) BlockRoots() [][]byte {
 	if b.blockRoots == nil {
 		return nil
 	}
@@ -54,27 +52,24 @@ func (b *BeaconState) BlockRoots() *[fieldparams.BlockRootsLength][32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := [fieldparams.BlockRootsLength][32]byte(*b.blockRootsInternal())
-	return &roots
-}
-
-// blockRootsInternal kept track of in the beacon state.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRootsInternal() *customtypes.BlockRoots {
-	return b.blockRoots
+	return b.blockRoots.Slice()
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
 // input index value.
-func (b *BeaconState) BlockRootAtIndex(idx uint64) ([32]byte, error) {
+func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if b.blockRoots == nil {
-		return [32]byte{}, nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.blockRootAtIndex(idx)
+	r, err := b.blockRootAtIndex(idx)
+	if err != nil {
+		return nil, err
+	}
+	return r[:], nil
 }
 
 // blockRootAtIndex retrieves a specific block root based on an

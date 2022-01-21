@@ -11,8 +11,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -147,51 +147,6 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (*BeaconState, error
 	return b, nil
 }
 
-func Initialize() (*BeaconState, error) {
-	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
-	sRoots := customtypes.StateRoots([fieldparams.StateRootsLength][32]byte{})
-	bRoots := customtypes.BlockRoots([fieldparams.BlockRootsLength][32]byte{})
-	mixes := customtypes.RandaoMixes([fieldparams.RandaoMixesLength][32]byte{})
-	b := &BeaconState{
-		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
-		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler([]*ethpb.Validator{}),
-		stateRoots:            &sRoots,
-		blockRoots:            &bRoots,
-		randaoMixes:           &mixes,
-	}
-
-	var err error
-	for i := 0; i < fieldCount; i++ {
-		b.dirtyFields[types.FieldIndex(i)] = true
-		b.rebuildTrie[types.FieldIndex(i)] = true
-		b.dirtyIndices[types.FieldIndex(i)] = []uint64{}
-		b.stateFieldLeaves[types.FieldIndex(i)], err = fieldtrie.NewFieldTrie(types.FieldIndex(i), types.BasicArray, nil, 0)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
-	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
-	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
-	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
-	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
-	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-
-	stateCount.Inc()
-	return b, nil
-}
-
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() state.BeaconState {
 	b.lock.RLock()
@@ -221,15 +176,15 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 		// Everything else, too small to be concerned about, constant size.
 		genesisValidatorsRoot:       b.genesisValidatorsRoot,
-		justificationBits:           b.justificationBits,
-		fork:                        b.fork,
-		latestBlockHeader:           b.latestBlockHeader,
-		eth1Data:                    b.eth1Data,
-		previousJustifiedCheckpoint: b.previousJustifiedCheckpoint,
-		currentJustifiedCheckpoint:  b.currentJustifiedCheckpoint,
-		finalizedCheckpoint:         b.finalizedCheckpoint,
-		currentSyncCommittee:        b.currentSyncCommittee,
-		nextSyncCommittee:           b.nextSyncCommittee,
+		justificationBits:           b.justificationBitsVal(),
+		fork:                        b.forkVal(),
+		latestBlockHeader:           b.latestBlockHeaderVal(),
+		eth1Data:                    b.eth1DataVal(),
+		previousJustifiedCheckpoint: b.previousJustifiedCheckpointVal(),
+		currentJustifiedCheckpoint:  b.currentJustifiedCheckpointVal(),
+		finalizedCheckpoint:         b.finalizedCheckpointVal(),
+		currentSyncCommittee:        b.currentSyncCommitteeVal(),
+		nextSyncCommittee:           b.nextSyncCommitteeVal(),
 
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
@@ -306,7 +261,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	return dst
 }
 
-// HTR of the beacon state retrieves the Merkle root of the trie
+// HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	_, span := trace.StartSpan(ctx, "beaconStateAltair.HashTreeRoot")
@@ -314,27 +269,48 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
-	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		layers := stateutil.Merkleize(fieldRoots)
-		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateAltairFieldCount)
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return [32]byte{}, err
 	}
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return [32]byte{}, err
+	}
+	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+}
 
+// Initializes the Merkle layers for the beacon state if they are empty.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
+	if len(b.merkleLayers) > 0 {
+		return nil
+	}
+	protoState, ok := b.ToProtoUnsafe().(*ethpb.BeaconStateAltair)
+	if !ok {
+		return errors.New("state is of the wrong type")
+	}
+	fieldRoots, err := computeFieldRoots(ctx, protoState)
+	if err != nil {
+		return err
+	}
+	layers := stateutil.Merkleize(fieldRoots)
+	b.merkleLayers = layers
+	b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
+	return nil
+}
+
+// Recomputes the Merkle layers for the dirty fields in the state.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 	for field := range b.dirtyFields {
 		root, err := b.rootSelector(ctx, field)
 		if err != nil {
-			return [32]byte{}, err
+			return err
 		}
 		b.merkleLayers[0][field] = root[:]
 		b.recomputeRoot(int(field))
 		delete(b.dirtyFields, field)
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	return nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This

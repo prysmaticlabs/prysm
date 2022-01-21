@@ -2,7 +2,6 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
 load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
-# gazelle:ignore
 go_library(
     name = "go_default_library",
     srcs = [
@@ -18,6 +17,7 @@ go_library(
         "getters_state.go",
         "getters_sync_committee.go",
         "getters_validator.go",
+        "proofs.go",
         "setters_block.go",
         "setters_checkpoint.go",
         "setters_eth1.go",
@@ -34,7 +34,7 @@ go_library(
         "//config:mainnet": ["beacon_state_mainnet.go"],
         "//config:minimal": ["beacon_state_minimal.go"],
     }),
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v2",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v2",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//proto/migration:__subpackages__",
@@ -43,8 +43,9 @@ go_library(
     ],
     deps = [
         "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/custom-types:go_default_library",
         "//beacon-chain/state/fieldtrie:go_default_library",
+        "//beacon-chain/state/state-native/custom-types:go_default_library",
+        "//beacon-chain/state/state-native/fieldtrie:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
@@ -76,20 +77,29 @@ go_test(
         "getters_block_test.go",
         "getters_test.go",
         "getters_validator_test.go",
+        "proofs_test.go",
         "setters_test.go",
         "state_trie_test.go",
-    ],
+    ] + select({
+        "//config:mainnet": ["beacon_state_mainnet_test.go"],
+        "//config:minimal": ["beacon_state_minimal_test.go"],
+    }),
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/state-native/v1:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//config/features:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
+        "//container/trie:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
@@ -98,11 +108,11 @@ go_test(
 ssz_gen_marshal(
     name = "ssz_generated_files",
     srcs = select({
-           "//config:mainnet": ["beacon_state_mainnet.go"],
-           "//config:minimal": ["beacon_state_minimal.go"],
-        }),
+        "//config:mainnet": ["beacon_state_mainnet.go"],
+        "//config:minimal": ["beacon_state_minimal.go"],
+    }),
     includes = [
-        "//beacon-chain/state/custom-types:go_default_library",
+        "//beacon-chain/state/state-native/custom-types:go_default_library",
         "//config/fieldparams:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
