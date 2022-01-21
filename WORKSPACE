@@ -355,16 +355,6 @@ git_repository(
 # Group the sources of the library so that CMake rule have access to it
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
 
-http_archive(
-    name = "sigp_beacon_fuzz_corpora",
-    build_file = "//third_party:beacon-fuzz/corpora.BUILD",
-    sha256 = "42993d0901a316afda45b4ba6d53c7c21f30c551dcec290a4ca131c24453d1ef",
-    strip_prefix = "beacon-fuzz-corpora-bac24ad78d45cc3664c0172241feac969c1ac29b",
-    urls = [
-        "https://github.com/sigp/beacon-fuzz-corpora/archive/bac24ad78d45cc3664c0172241feac969c1ac29b.tar.gz",
-    ],
-)
-
 # External dependencies
 
 http_archive(
@@ -390,6 +380,10 @@ prysm_deps()
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
+
+load("@prysm//testing/endtoend:deps.bzl", "e2e_deps")
+
+e2e_deps()
 
 load(
     "@io_bazel_rules_docker//go:image.bzl",

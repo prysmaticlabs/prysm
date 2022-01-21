@@ -82,5 +82,5 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		},
 	}
 
-	return v3.InitializeFromProto(s)
+	return v3.InitializeFromProtoUnsafe(s)
 }
