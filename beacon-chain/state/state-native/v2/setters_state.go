@@ -2,21 +2,25 @@ package v2
 
 import (
 	"github.com/pkg/errors"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 // SetStateRoots for the beacon state. Updates the state roots
 // to a new value by overwriting the previous value.
-func (b *BeaconState) SetStateRoots(val *[fieldparams.StateRootsLength][32]byte) error {
+func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[stateRoots].MinusRef()
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 
-	roots := customtypes.StateRoots(*val)
+	var rootsArr [fieldparams.StateRootsLength][32]byte
+	for i := 0; i < len(rootsArr); i++ {
+		copy(rootsArr[i][:], val[i])
+	}
+	roots := customtypes.StateRoots(rootsArr)
 	b.stateRoots = &roots
 	b.markFieldAsDirty(stateRoots)
 	b.rebuildTrie[stateRoots] = true
