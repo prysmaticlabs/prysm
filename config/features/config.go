@@ -224,9 +224,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logEnabled(enableBatchGossipVerification)
 		cfg.EnableBatchVerification = true
 	}
-	if ctx.Bool(enableBalanceTrieComputation.Name) {
-		logEnabled(enableBalanceTrieComputation)
-		cfg.EnableBalanceTrieComputation = true
+	cfg.EnableBalanceTrieComputation = true
+	if ctx.Bool(disableBalanceTrieComputation.Name) {
+		logDisabled(disableBalanceTrieComputation)
+		cfg.EnableBalanceTrieComputation = false
 	}
 	Init(cfg)
 }
