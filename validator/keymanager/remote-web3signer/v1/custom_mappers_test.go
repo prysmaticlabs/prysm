@@ -214,6 +214,8 @@ func TestMapAttesterSlashing(t *testing.T) {
 }
 
 func TestMapBeaconBlockAltair(t *testing.T) {
+	var bVector []byte
+	bVector = bitfield.NewBitvector32()
 	type args struct {
 		block *ethpb.BeaconBlockAltair
 	}
@@ -330,7 +332,7 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 						},
 						SyncAggregate: &ethpb.SyncAggregate{
 							SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
-							SyncCommitteeBits:      bitfield.NewBitvector512(),
+							SyncCommitteeBits:      bVector,
 						},
 					},
 				},
@@ -484,6 +486,8 @@ func TestMapBeaconBlockBody(t *testing.T) {
 }
 
 func TestMapContributionAndProof(t *testing.T) {
+	var bBitfield []byte
+	bBitfield = bitfield.NewBitvector8()
 	type args struct {
 		contribution *ethpb.ContributionAndProof
 	}
@@ -502,7 +506,7 @@ func TestMapContributionAndProof(t *testing.T) {
 						Slot:              0,
 						BlockRoot:         make([]byte, fieldparams.RootLength),
 						SubcommitteeIndex: 0,
-						AggregationBits:   bitfield.NewBitvector128(),
+						AggregationBits:   bBitfield,
 						Signature:         make([]byte, fieldparams.BLSSignatureLength),
 					},
 					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
