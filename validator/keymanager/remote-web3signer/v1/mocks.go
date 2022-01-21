@@ -14,10 +14,32 @@ import (
 //////////////// Mock Requests //////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+func MockSyncComitteeBits() []byte {
+	currSize := new(eth.SyncAggregate).SyncCommitteeBits.Len()
+	switch currSize {
+	case 512:
+		return bitfield.NewBitvector512().Bytes()
+	case 32:
+		return bitfield.NewBitvector32().Bytes()
+	default:
+		return nil
+	}
+}
+
+func MockAggregationBits() []byte {
+	currSize := new(eth.SyncCommitteeContribution).AggregationBits.Len()
+	switch currSize {
+	case 128:
+		return bitfield.NewBitvector128().Bytes()
+	case 8:
+		return bitfield.NewBitvector8().Bytes()
+	default:
+		return nil
+	}
+}
+
 // GetMockSignRequest returns a mock SignRequest by type.
 func GetMockSignRequest(t string) *validatorpb.SignRequest {
-	var bVector []byte = bitfield.NewBitvector32()
-	var bBitfield []byte = bitfield.NewBitvector8()
 	switch t {
 	case "AGGREGATION_SLOT":
 		return &validatorpb.SignRequest{
@@ -296,7 +318,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 						},
 						SyncAggregate: &eth.SyncAggregate{
 							SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
-							SyncCommitteeBits:      bVector,
+							SyncCommitteeBits:      MockSyncComitteeBits(),
 						},
 					},
 				},
@@ -325,7 +347,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 						Slot:              0,
 						BlockRoot:         make([]byte, fieldparams.RootLength),
 						SubcommitteeIndex: 0,
-						AggregationBits:   bBitfield,
+						AggregationBits:   MockAggregationBits(),
 						Signature:         make([]byte, fieldparams.BLSSignatureLength),
 					},
 					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
@@ -626,7 +648,7 @@ func MockBeaconBlockAltair() *BeaconBlockAltair {
 			},
 			SyncAggregate: &SyncAggregate{
 				SyncCommitteeSignature: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
-				SyncCommitteeBits:      hexutil.Encode(bitfield.NewBitvector32().Bytes()),
+				SyncCommitteeBits:      hexutil.Encode(MockSyncComitteeBits()),
 			},
 		},
 	}
@@ -704,7 +726,7 @@ func MockContributionAndProof() *ContributionAndProof {
 			Slot:              "0",
 			BeaconBlockRoot:   hexutil.Encode(make([]byte, fieldparams.RootLength)),
 			SubcommitteeIndex: "0",
-			AggregationBits:   hexutil.Encode(bitfield.NewBitvector8().Bytes()),
+			AggregationBits:   hexutil.Encode(MockAggregationBits()),
 			Signature:         hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 		},
 		SelectionProof: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
