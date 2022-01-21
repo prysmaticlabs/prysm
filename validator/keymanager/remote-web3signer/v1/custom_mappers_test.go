@@ -214,8 +214,7 @@ func TestMapAttesterSlashing(t *testing.T) {
 }
 
 func TestMapBeaconBlockAltair(t *testing.T) {
-	var bVector []byte
-	bVector = bitfield.NewBitvector32()
+	var bVector []byte = bitfield.NewBitvector32()
 	type args struct {
 		block *ethpb.BeaconBlockAltair
 	}

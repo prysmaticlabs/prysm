@@ -16,10 +16,8 @@ import (
 
 // GetMockSignRequest returns a mock SignRequest by type.
 func GetMockSignRequest(t string) *validatorpb.SignRequest {
-	var bVector []byte
-	bVector = bitfield.NewBitvector32()
-	var bBitfield []byte
-	bBitfield = bitfield.NewBitvector8()
+	var bVector []byte = bitfield.NewBitvector32()
+	var bBitfield []byte = bitfield.NewBitvector8()
 	switch t {
 	case "AGGREGATION_SLOT":
 		return &validatorpb.SignRequest{
