@@ -36,6 +36,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedAttestationAggregationStrategy = &cli.BoolFlag{
+		Name:   "attestation-aggregation-strategy",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedForceOptMaxCoverAggregationStategy = &cli.BoolFlag{
+		Name:   "attestation-aggregation-force-opt-maxcover",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -44,4 +54,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedCorrectlyPruneCanonicalAtts,
 	deprecatedCorrectlyInsertOrphanedAtts,
 	deprecatedNextSlotStateCache,
+	deprecatedAttestationAggregationStrategy,
+	deprecatedForceOptMaxCoverAggregationStategy,
 }

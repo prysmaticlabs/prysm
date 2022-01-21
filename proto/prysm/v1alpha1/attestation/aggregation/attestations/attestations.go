@@ -2,7 +2,6 @@ package attestations
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
@@ -50,17 +49,7 @@ var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 //   }
 //   aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
-	strategy := AttestationAggregationStrategy(features.Get().AttestationAggregationStrategy)
-	switch strategy {
-	case "", NaiveAggregation:
-		return NaiveAttestationAggregation(atts)
-	case MaxCoverAggregation:
-		return MaxCoverAttestationAggregation(atts)
-	case OptMaxCoverAggregation:
-		return optMaxCoverAttestationAggregation(atts)
-	default:
-		return nil, errors.Wrapf(aggregation.ErrInvalidStrategy, "%q", strategy)
-	}
+	return MaxCoverAttestationAggregation(atts)
 }
 
 // AggregatePair aggregates pair of attestations a1 and a2 together.
