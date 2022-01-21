@@ -44,7 +44,6 @@ type Server struct {
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
-	CanonicalStateChan     chan *ethpb.BeaconState
 	BlockFetcher           powchain.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher

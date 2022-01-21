@@ -6,8 +6,6 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -22,13 +20,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
-)
-
-var (
-	stateCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_state_count",
-		Help: "Count the number of active beacon state objects.",
-	})
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
@@ -77,7 +68,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
-	stateCount.Inc()
+	state.StateCount.Inc()
 	return b, nil
 }
 
@@ -173,7 +164,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		}
 	}
 
-	stateCount.Inc()
+	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
@@ -191,7 +182,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			delete(b.sharedFieldReferences, field)
 			delete(b.stateFieldLeaves, field)
 		}
-		stateCount.Sub(1)
+		state.StateCount.Sub(1)
 	})
 	return dst
 }
@@ -204,27 +195,44 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
-	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b.state)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		layers := stateutil.Merkleize(fieldRoots)
-		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return [32]byte{}, err
 	}
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return [32]byte{}, err
+	}
+	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+}
 
+// Initializes the Merkle layers for the beacon state if they are empty.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
+	if len(b.merkleLayers) > 0 {
+		return nil
+	}
+	fieldRoots, err := computeFieldRoots(ctx, b.state)
+	if err != nil {
+		return err
+	}
+	layers := stateutil.Merkleize(fieldRoots)
+	b.merkleLayers = layers
+	b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
+	return nil
+}
+
+// Recomputes the Merkle layers for the dirty fields in the state.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 	for field := range b.dirtyFields {
 		root, err := b.rootSelector(ctx, field)
 		if err != nil {
-			return [32]byte{}, err
+			return err
 		}
 		b.merkleLayers[0][field] = root[:]
 		b.recomputeRoot(int(field))
 		delete(b.dirtyFields, field)
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	return nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This

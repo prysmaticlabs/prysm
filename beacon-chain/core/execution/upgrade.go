@@ -5,7 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -36,7 +36,7 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		return nil, err
 	}
 
-	s := &ethpb.BeaconStateMerge{
+	s := &ethpb.BeaconStateBellatrix{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
 		Slot:                  state.Slot(),
@@ -82,5 +82,5 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		},
 	}
 
-	return v3.InitializeFromProto(s)
+	return v3.InitializeFromProtoUnsafe(s)
 }

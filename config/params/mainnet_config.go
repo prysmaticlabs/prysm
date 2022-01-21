@@ -23,11 +23,15 @@ const (
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
+	// Placeholder for the merge epoch until it is decided
+	mainnetBellatrixForkEpoch = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                   1 << 20, // 1 MiB
-	MaxChunkSize:                    1 << 20, // 1 MiB
+	GossipMaxSize:                   1 << 20,      // 1 MiB
+	GossipMaxSizeBellatrix:          10 * 1 << 20, // 10 MiB
+	MaxChunkSize:                    1 << 20,      // 1 MiB
+	MaxChunkSizeBellatrix:           10 * 1 << 20, // 10 MiB
 	AttestationSubnetCount:          64,
 	AttestationPropagationSlotRange: 32,
 	MaxRequestBlocks:                1 << 10, // 1024
@@ -161,23 +165,23 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
 
 	// Prysm constants.
-	GweiPerEth:                  1000000000,
-	BLSSecretKeyLength:          32,
-	BLSPubkeyLength:             48,
-	DefaultBufferSize:           10000,
-	WithdrawalPrivkeyFileName:   "/shardwithdrawalkey",
-	ValidatorPrivkeyFileName:    "/validatorprivatekey",
-	RPCSyncCheck:                1,
-	EmptySignature:              [96]byte{},
-	DefaultPageSize:             250,
-	MaxPeersToSync:              15,
-	SlotsPerArchivedPoint:       2048,
-	GenesisCountdownInterval:    time.Minute,
-	ConfigName:                  ConfigNames[Mainnet],
-	PresetBase:                  "mainnet",
-	BeaconStateFieldCount:       21,
-	BeaconStateAltairFieldCount: 24,
-	BeaconStateMergeFieldCount:  25,
+	GweiPerEth:                     1000000000,
+	BLSSecretKeyLength:             32,
+	BLSPubkeyLength:                48,
+	DefaultBufferSize:              10000,
+	WithdrawalPrivkeyFileName:      "/shardwithdrawalkey",
+	ValidatorPrivkeyFileName:       "/validatorprivatekey",
+	RPCSyncCheck:                   1,
+	EmptySignature:                 [96]byte{},
+	DefaultPageSize:                250,
+	MaxPeersToSync:                 15,
+	SlotsPerArchivedPoint:          2048,
+	GenesisCountdownInterval:       time.Minute,
+	ConfigName:                     ConfigNames[Mainnet],
+	PresetBase:                     "mainnet",
+	BeaconStateFieldCount:          21,
+	BeaconStateAltairFieldCount:    24,
+	BeaconStateBellatrixFieldCount: 25,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -199,6 +203,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
 		{1, 0, 0, 0}: mainnetAltairForkEpoch,
+		{2, 0, 0, 0}: mainnetBellatrixForkEpoch,
 		// Any further forks must be specified here by their epoch number.
 	},
 
@@ -237,6 +242,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Light client
 	MinSyncCommitteeParticipants: 1,
 
-	// Merge
+	// Bellatrix
 	TerminalBlockHashActivationEpoch: math.MaxUint64,
 }

@@ -13,7 +13,26 @@ var (
 	_ = block.SignedBeaconBlock(&altairSignedBeaconBlock{})
 	_ = block.BeaconBlock(&altairBeaconBlock{})
 	_ = block.BeaconBlockBody(&altairBeaconBlockBody{})
+
+	// ErrUnsupportedSignedBeaconBlock is returned when the struct type is not a supported signed
+	// beacon block type.
+	ErrUnsupportedSignedBeaconBlock = errors.New("unsupported signed beacon block")
 )
+
+// WrappedSignedBeaconBlock will wrap a signed beacon block to conform to the
+// signed beacon block interface.
+func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
+	switch b := i.(type) {
+	case *eth.SignedBeaconBlock:
+		return WrappedPhase0SignedBeaconBlock(b), nil
+	case *eth.SignedBeaconBlockAltair:
+		return WrappedAltairSignedBeaconBlock(b)
+	case *eth.SignedBeaconBlockMerge:
+		return WrappedMergeSignedBeaconBlock(b)
+	default:
+		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", i)
+	}
+}
 
 // Phase0SignedBeaconBlock is a convenience wrapper around a phase 0 beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon
@@ -24,6 +43,7 @@ type Phase0SignedBeaconBlock struct {
 
 // WrappedPhase0SignedBeaconBlock is constructor which wraps a protobuf phase 0 block
 // with the block wrapper.
+// Deprecated: use WrappedSignedBeaconBlock instead.
 func WrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) block.SignedBeaconBlock {
 	return Phase0SignedBeaconBlock{b: b}
 }
@@ -291,6 +311,7 @@ type altairSignedBeaconBlock struct {
 
 // WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
+// Deprecated: use WrappedSignedBeaconBlock instead.
 func WrappedAltairSignedBeaconBlock(b *eth.SignedBeaconBlockAltair) (block.SignedBeaconBlock, error) {
 	w := altairSignedBeaconBlock{b: b}
 	if w.IsNil() {
@@ -561,6 +582,7 @@ type mergeSignedBeaconBlock struct {
 }
 
 // WrappedMergeSignedBeaconBlock is constructor which wraps a protobuf merge block with the block wrapper.
+// Deprecated: use WrappedSignedBeaconBlock instead.
 func WrappedMergeSignedBeaconBlock(b *eth.SignedBeaconBlockMerge) (block.SignedBeaconBlock, error) {
 	w := mergeSignedBeaconBlock{b: b}
 	if w.IsNil() {
@@ -633,7 +655,7 @@ func (_ mergeSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, e
 
 // Version of the underlying protobuf object.
 func (_ mergeSignedBeaconBlock) Version() int {
-	return version.Merge
+	return version.Bellatrix
 }
 
 func (w mergeSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
@@ -735,7 +757,7 @@ func (w mergeBeaconBlock) Proto() proto.Message {
 
 // Version of the underlying protobuf object.
 func (_ mergeBeaconBlock) Version() int {
-	return version.Merge
+	return version.Bellatrix
 }
 
 // mergeBeaconBlockBody is a wrapper of a beacon block body.

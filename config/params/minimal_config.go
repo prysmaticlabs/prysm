@@ -96,6 +96,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ForkVersionSchedule = map[[4]byte]types.Epoch{
 		{0, 0, 0, 1}: 0,
 		{1, 0, 0, 1}: math.MaxUint64,
+		{2, 0, 0, 1}: math.MaxUint64,
 	}
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4

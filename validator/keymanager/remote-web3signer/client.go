@@ -12,8 +12,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
 const (
@@ -21,9 +23,11 @@ const (
 	maxTimeout      = 3 * time.Second
 )
 
+type SignRequestJson []byte
+
 // httpSignerClient defines the interface for interacting with a remote web3signer.
 type httpSignerClient interface {
-	Sign(ctx context.Context, pubKey string, request *SignRequest) (bls.Signature, error)
+	Sign(ctx context.Context, pubKey string, request SignRequestJson) (bls.Signature, error)
 	GetPublicKeys(ctx context.Context, url string) ([][48]byte, error)
 }
 
@@ -47,55 +51,20 @@ func newApiClient(baseEndpoint string) (*apiClient, error) {
 	}, nil
 }
 
-// SignRequest is a request object for web3signer sign api.
-type SignRequest struct {
-	Type            string           `json:"type"`
-	ForkInfo        *ForkInfo        `json:"fork_info"`
-	SigningRoot     string           `json:"signingRoot"`
-	AggregationSlot *AggregationSlot `json:"aggregation_slot"`
-}
-
-// ForkInfo a sub property object of the Sign request,in the future before the merge to remove the need to send the entire block body and just use the block_body_root.
-type ForkInfo struct {
-	Fork                  *Fork  `json:"fork"`
-	GenesisValidatorsRoot string `json:"genesis_validators_root"`
-}
-
-// Fork a sub property of ForkInfo.
-type Fork struct {
-	PreviousVersion string `json:"previous_version"`
-	CurrentVersion  string `json:"current_version"`
-	Epoch           string `json:"epoch"`
-}
-
-// AggregationSlot a sub property of SignRequest.
-type AggregationSlot struct {
-	Slot string `json:"slot"`
-}
-
-// signResponse the response object of the web3signer sign api.
-type signResponse struct {
-	Signature string `json:"signature"`
-}
-
 // Sign is a wrapper method around the web3signer sign api.
-func (client *apiClient) Sign(_ context.Context, pubKey string, request *SignRequest) (bls.Signature, error) {
+func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequestJson) (bls.Signature, error) {
 	requestPath := ethApiNamespace + pubKey
-	jsonRequest, err := json.Marshal(request)
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid format, failed to marshal json request")
-	}
-	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(jsonRequest))
+	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(request))
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		return nil, errors.Wrap(err, "public key not found")
 	}
-	if resp.StatusCode == 412 {
+	if resp.StatusCode == http.StatusPreconditionFailed {
 		return nil, errors.Wrap(err, "signing operation failed due to slashing protection rules")
 	}
-	signResp := &signResponse{}
+	signResp := &v1.SignResponse{}
 	if err := client.unmarshalResponse(resp.Body, &signResp); err != nil {
 		return nil, err
 	}
@@ -107,7 +76,7 @@ func (client *apiClient) Sign(_ context.Context, pubKey string, request *SignReq
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
-func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][48]byte, error) {
+func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	resp, err := client.doRequest(http.MethodGet, url, nil /* no body needed on get request */)
 	if err != nil {
 		return nil, err
@@ -116,7 +85,7 @@ func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][48]byt
 	if err := client.unmarshalResponse(resp.Body, &publicKeys); err != nil {
 		return nil, err
 	}
-	decodedKeys := make([][48]byte, len(publicKeys))
+	decodedKeys := make([][fieldparams.BLSPubkeyLength]byte, len(publicKeys))
 	var errorKeyPositions string
 	for i, value := range publicKeys {
 		decodedKey, err := hexutil.Decode(value)
@@ -165,9 +134,9 @@ func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) 
 	if err != nil {
 		return resp, errors.Wrap(err, "failed to execute json request")
 	}
-	if resp.StatusCode == 500 {
+	if resp.StatusCode == http.StatusInternalServerError {
 		return nil, errors.Wrap(err, "internal Web3Signer server error")
-	} else if resp.StatusCode == 400 {
+	} else if resp.StatusCode == http.StatusBadRequest {
 		return nil, errors.Wrap(err, "bad request format")
 	}
 	return resp, err

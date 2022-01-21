@@ -65,7 +65,7 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitte
 func (vs *Server) GetSyncSubcommitteeIndex(
 	ctx context.Context, req *ethpb.SyncSubcommitteeIndexRequest,
 ) (*ethpb.SyncSubcommitteeIndexResponse, error) {
-	index, exists := vs.HeadFetcher.HeadPublicKeyToValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
+	index, exists := vs.HeadFetcher.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(req.PublicKey))
 	if !exists {
 		return nil, errors.New("public key does not exist in state")
 	}
@@ -156,8 +156,9 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 			for _, index := range headSyncCommitteeIndices {
 				i := uint64(index)
 				subnetIndex := i / subCommitteeSize
-				if subnetIndex == subnetId {
-					bits.SetBitAt(i%subCommitteeSize, true)
+				indexMod := i % subCommitteeSize
+				if subnetIndex == subnetId && !bits.BitAt(indexMod) {
+					bits.SetBitAt(indexMod, true)
 					sig, err := bls.SignatureFromBytes(msg.Signature)
 					if err != nil {
 						return []byte{}, nil, errors.Wrapf(err, "Could not get bls signature from bytes")
