@@ -32,10 +32,9 @@ jobs:
           goimports-path: ./
 
       - name: Gosec security scanner
-        uses: securego/gosec@master
+        uses: securego/gosec@35af340d07255059323f0c56a121a5e400be0b62
         with:
           args: '-exclude=G307 -exclude-dir=crypto/bls/herumi ./...'
-          tags: v2.9.5
 
       - name: Golangci-lint
         uses: golangci/golangci-lint-action@v2
