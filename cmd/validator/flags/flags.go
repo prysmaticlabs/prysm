@@ -269,7 +269,7 @@ var (
 	}
 	// Web3SignerURLFlag defines the URL for a web3signer to connect to.
 	// example:--validators-external-signer-url=http://localhost:9000
-	// web3signer documentation: google Consensys' web3signer docs
+	// web3signer documentation can be found in Consensys' web3signer project docs
 	Web3SignerURLFlag = &cli.StringFlag{
 		Name:  "validators-external-signer-url",
 		Usage: "URL for consensys' web3signer software to use with the Prysm validator client",
