@@ -131,9 +131,9 @@ var (
 		Name:  "disable-active-balance-cache",
 		Usage: "This disables active balance cache, which improves node performance during block processing",
 	}
-	enableGetBlockOptimizations = &cli.BoolFlag{
-		Name:  "enable-get-block-optimizations",
-		Usage: "This enables some optimizations on the GetBlock() function.",
+	disableGetBlockOptimizations = &cli.BoolFlag{
+		Name:  "disable-get-block-optimizations",
+		Usage: "This disables some optimizations on the GetBlock() function.",
 	}
 	enableBatchGossipVerification = &cli.BoolFlag{
 		Name:  "enable-batch-gossip-verification",
@@ -149,7 +149,6 @@ var (
 var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	forceOptMaxCoverAggregationStategy,
-	enableGetBlockOptimizations,
 	enableBatchGossipVerification,
 	enableBalanceTrieComputation,
 }
@@ -193,7 +192,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
 	disableCorrectlyInsertOrphanedAtts,
-	enableGetBlockOptimizations,
+	disableGetBlockOptimizations,
 	disableCorrectlyPruneCanonicalAtts,
 	disableActiveBalanceCache,
 	enableBatchGossipVerification,
