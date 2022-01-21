@@ -232,9 +232,30 @@ func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
 }
 
 func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
-	s := &Server{}
 	ctx := context.Background()
-	_, err := s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
+	s := &Server{
+		validatorService: vs,
+	}
+	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
 	assert.ErrorContains(t, "No public keys specified to delete", err)
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeysToDelete: make([][]byte, 1),
@@ -313,11 +334,20 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
 		walletInitialized:         true,
 		wallet:                    w,
 		beaconNodeClient:          mockNodeClient,
 		beaconNodeValidatorClient: mockValidatorClient,
+		validatorService:          vs,
 	}
 	numAccounts := 2
 	dr, ok := km.(*derived.Keymanager)
