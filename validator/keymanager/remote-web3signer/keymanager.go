@@ -13,7 +13,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
@@ -35,12 +34,6 @@ type SetupConfig struct {
 	ProvidedPublicKeys [][48]byte
 }
 
-type Web3Signer interface {
-	keymanager.IKeymanager
-	GenesisValidatorsRoot() []byte
-	SetGenesisValidatorsRoot(genesisValidatorsRoot []byte)
-}
-
 // Keymanager defines the web3signer keymanager.
 type Keymanager struct {
 	client                httpSignerClient
@@ -48,14 +41,6 @@ type Keymanager struct {
 	publicKeysURL         string
 	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
-}
-
-func (km *Keymanager) GenesisValidatorsRoot() []byte {
-	return km.genesisValidatorsRoot
-}
-
-func (km *Keymanager) SetGenesisValidatorsRoot(genesisValidatorsRoot []byte) {
-	km.genesisValidatorsRoot = genesisValidatorsRoot
 }
 
 // NewKeymanager instantiates a new web3signer key manager.
