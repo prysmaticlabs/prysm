@@ -44,12 +44,12 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.validatorsVal()
+	return b.validatorsInternal()
 }
 
-// validatorsVal participating in consensus on the beacon chain.
+// validatorsInternal participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) validatorsVal() []*ethpb.Validator {
+func (b *BeaconState) validatorsInternal() []*ethpb.Validator {
 	if b.validators == nil {
 		return nil
 	}
@@ -189,12 +189,12 @@ func (b *BeaconState) Balances() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.balancesVal()
+	return b.balancesInternal()
 }
 
-// balancesVal of validators participating in consensus on the beacon chain.
+// balancesInternal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) balancesVal() []uint64 {
+func (b *BeaconState) balancesInternal() []uint64 {
 	if b.balances == nil {
 		return nil
 	}
@@ -240,12 +240,12 @@ func (b *BeaconState) Slashings() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.slashingsVal()
+	return b.slashingsInternal()
 }
 
-// slashingsVal of validators on the beacon chain.
+// slashingsInternal of validators on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slashingsVal() []uint64 {
+func (b *BeaconState) slashingsInternal() []uint64 {
 	if b.slashings == nil {
 		return nil
 	}
@@ -255,9 +255,9 @@ func (b *BeaconState) slashingsVal() []uint64 {
 	return res
 }
 
-// inactivityScoresVal of validators participating in consensus on the beacon chain.
+// inactivityScoresInternal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) inactivityScoresVal() []uint64 {
+func (b *BeaconState) inactivityScoresInternal() []uint64 {
 	if b.inactivityScores == nil {
 		return nil
 	}
@@ -276,5 +276,5 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.inactivityScoresVal(), nil
+	return b.inactivityScoresInternal(), nil
 }

@@ -1,7 +1,11 @@
 package v2
 
 import (
+	"time"
+
 	types "github.com/prysmaticlabs/eth2-types"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/custom-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -11,15 +15,61 @@ func (b *BeaconState) GenesisTime() uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.genesisTimeInternal()
+}
+
+// genesisTimeInternal of the beacon state as a uint64.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) genesisTimeInternal() uint64 {
 	return b.genesisTime
 }
 
 // GenesisValidatorRoot of the beacon state.
-func (b *BeaconState) GenesisValidatorRoot() []byte {
+func (b *BeaconState) GenesisValidatorRoot() [32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisValidatorsRoot[:]
+	return b.genesisValidatorRootInternal()
+}
+
+// genesisValidatorRootInternal of the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) genesisValidatorRootInternal() [32]byte {
+	return b.genesisValidatorsRoot
+}
+
+// GenesisUnixTime returns the genesis time as time.Time.
+func (b *BeaconState) GenesisUnixTime() time.Time {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.genesisUnixTime()
+}
+
+// genesisUnixTime returns the genesis time as time.Time.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) genesisUnixTime() time.Time {
+	return time.Unix(int64(b.genesisTime), 0)
+}
+
+// ParentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.
+func (b *BeaconState) ParentRoot() [32]byte {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.parentRoot()
+}
+
+// parentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) parentRoot() [32]byte {
+	if b.latestBlockHeader == nil {
+		return [32]byte{}
+	}
+
+	parentRoot := [32]byte{}
+	copy(parentRoot[:], b.latestBlockHeader.ParentRoot)
+	return parentRoot
 }
 
 // Version of the beacon state. This method
@@ -34,6 +84,12 @@ func (b *BeaconState) Slot() types.Slot {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.slotInternal()
+}
+
+// slotInternal of the current beacon chain state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) slotInternal() types.Slot {
 	return b.slot
 }
 
@@ -46,12 +102,12 @@ func (b *BeaconState) Fork() *ethpb.Fork {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.forkVal()
+	return b.forkInternal()
 }
 
-// forkVal version of the beacon chain.
+// forkInternal version of the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) forkVal() *ethpb.Fork {
+func (b *BeaconState) forkInternal() *ethpb.Fork {
 	if b.fork == nil {
 		return nil
 	}
@@ -68,7 +124,7 @@ func (b *BeaconState) forkVal() *ethpb.Fork {
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
-func (b *BeaconState) HistoricalRoots() [][]byte {
+func (b *BeaconState) HistoricalRoots() [][32]byte {
 	if b.historicalRoots == nil {
 		return nil
 	}
@@ -76,7 +132,13 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.historicalRoots.Slice()
+	return b.historicalRootsInternal()
+}
+
+// historicalRootsInternal based on epochs stored in the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) historicalRootsInternal() customtypes.HistoricalRoots {
+	return bytesutil.SafeCopy2d32Bytes(b.historicalRoots)
 }
 
 // balancesLength returns the length of the balances slice.

@@ -9,7 +9,7 @@ func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.currentEpochParticipationVal(), nil
+	return b.currentEpochParticipationInternal(), nil
 }
 
 // PreviousEpochParticipation corresponding to participation bits on the beacon chain.
@@ -21,20 +21,20 @@ func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.previousEpochParticipationVal(), nil
+	return b.previousEpochParticipationInternal(), nil
 }
 
-// currentEpochParticipationVal corresponding to participation bits on the beacon chain.
+// currentEpochParticipationInternal corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochParticipationVal() []byte {
+func (b *BeaconState) currentEpochParticipationInternal() []byte {
 	tmp := make([]byte, len(b.currentEpochParticipation))
 	copy(tmp, b.currentEpochParticipation)
 	return tmp
 }
 
-// previousEpochParticipationVal corresponding to participation bits on the beacon chain.
+// previousEpochParticipationInternal corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochParticipationVal() []byte {
+func (b *BeaconState) previousEpochParticipationInternal() []byte {
 	tmp := make([]byte, len(b.previousEpochParticipation))
 	copy(tmp, b.previousEpochParticipation)
 	return tmp

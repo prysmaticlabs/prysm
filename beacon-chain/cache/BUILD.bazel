@@ -31,7 +31,6 @@ go_library(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
-        "//beacon-chain/state/v2:go_default_library",
         "//beacon-chain/state/v3:go_default_library",
         "//cache/lru:go_default_library",
         "//config/features:go_default_library",
@@ -74,7 +73,6 @@ go_test(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
-        "//beacon-chain/state/v2:go_default_library",
         "//beacon-chain/state/v3:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
