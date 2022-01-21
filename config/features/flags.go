@@ -85,10 +85,6 @@ var (
 		Name:  "attest-timely",
 		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
 	}
-	disableNextSlotStateCache = &cli.BoolFlag{
-		Name:  "disable-next-slot-state-cache",
-		Usage: "Disable next slot cache which improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
-	}
 	enableSlasherFlag = &cli.BoolFlag{
 		Name:  "slasher",
 		Usage: "Enables a slasher in the beacon node for detecting slashable offenses",
@@ -186,7 +182,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
-	disableNextSlotStateCache,
 	forceOptMaxCoverAggregationStategy,
 	enableSlasherFlag,
 	disableProposerAttsSelectionUsingMaxCover,

@@ -176,18 +176,16 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	})
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	if features.Get().EnableNextSlotStateCache {
-		go func() {
-			// Use a custom deadline here, since this method runs asynchronously.
-			// We ignore the parent method's context and instead create a new one
-			// with a custom deadline, therefore using the background context instead.
-			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-			defer cancel()
-			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-				log.WithError(err).Debug("could not update next slot state cache")
-			}
-		}()
-	}
+	go func() {
+		// Use a custom deadline here, since this method runs asynchronously.
+		// We ignore the parent method's context and instead create a new one
+		// with a custom deadline, therefore using the background context instead.
+		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+		defer cancel()
+		if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+			log.WithError(err).Debug("could not update next slot state cache")
+		}
+	}()
 
 	// Save justified check point to db.
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {

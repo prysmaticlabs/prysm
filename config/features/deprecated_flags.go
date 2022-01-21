@@ -36,6 +36,12 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedDisableNextSlotStateCache = &cli.BoolFlag{
+		Name:   "disable-next-slot-state-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -44,4 +50,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedCorrectlyPruneCanonicalAtts,
 	deprecatedCorrectlyInsertOrphanedAtts,
 	deprecatedNextSlotStateCache,
+	deprecatedDisableNextSlotStateCache,
 }
