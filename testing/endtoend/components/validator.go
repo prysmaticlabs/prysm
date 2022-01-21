@@ -160,7 +160,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		for _, pub := range pubs {
 			hexPubs = append(hexPubs, "0x"+hex.EncodeToString(pub.Marshal()))
 		}
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag, strings.Join(hexPubs, ",")))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexPubs, ",")))
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
