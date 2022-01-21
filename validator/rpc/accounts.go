@@ -106,21 +106,13 @@ func (s *Server) BackupAccounts(
 	}
 
 	var keystoresToBackup []*keymanager.Keystore
-	switch s.wallet.KeymanagerKind() {
-	case keymanager.Imported:
-		km, ok := km.(*imported.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
-		}
+	switch km := km.(type) {
+	case *imported.Keymanager:
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not backup accounts for imported keymanager: %v", err)
 		}
-	case keymanager.Derived:
-		km, ok := km.(*derived.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
-		}
+	case *derived.Keymanager:
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not backup accounts for derived keymanager: %v", err)
@@ -211,11 +203,11 @@ func (s *Server) VoluntaryExit(
 	if err != nil {
 		return nil, err
 	}
-	switch ikm.(type) {
+	switch ikm := ikm.(type) {
 	case *imported.Keymanager:
-		km = ikm.(*imported.Keymanager)
+		km = ikm
 	case *derived.Keymanager:
-		km = ikm.(*derived.Keymanager)
+		km = ikm
 	default:
 		return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
 	}
