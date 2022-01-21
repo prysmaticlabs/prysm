@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -23,15 +22,15 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 		Slot:                        b.slot,
 		Fork:                        b.fork,
 		LatestBlockHeader:           b.latestBlockHeader,
-		BlockRoots:                  state_native.BlockRootsToSlice(b.blockRoots),
-		StateRoots:                  state_native.StateRootsToSlice(b.stateRoots),
-		HistoricalRoots:             state_native.HistoricalRootsToSlice(b.historicalRoots),
+		BlockRoots:                  b.blockRoots.Slice(),
+		StateRoots:                  b.stateRoots.Slice(),
+		HistoricalRoots:             b.historicalRoots.Slice(),
 		Eth1Data:                    b.eth1Data,
 		Eth1DataVotes:               b.eth1DataVotes,
 		Eth1DepositIndex:            b.eth1DepositIndex,
 		Validators:                  b.validators,
 		Balances:                    b.balances,
-		RandaoMixes:                 state_native.RandaoMixesToSlice(b.randaoMixes),
+		RandaoMixes:                 b.randaoMixes.Slice(),
 		Slashings:                   b.slashings,
 		PreviousEpochAttestations:   b.previousEpochAttestations,
 		CurrentEpochAttestations:    b.currentEpochAttestations,
@@ -59,15 +58,15 @@ func (b *BeaconState) ToProto() interface{} {
 		Slot:                        b.slot,
 		Fork:                        b.forkVal(),
 		LatestBlockHeader:           b.latestBlockHeaderVal(),
-		BlockRoots:                  state_native.BlockRootsToSlice(b.blockRoots),
-		StateRoots:                  state_native.StateRootsToSlice(b.stateRoots),
-		HistoricalRoots:             state_native.HistoricalRootsToSlice(b.historicalRoots),
+		BlockRoots:                  b.blockRoots.Slice(),
+		StateRoots:                  b.stateRoots.Slice(),
+		HistoricalRoots:             b.historicalRoots.Slice(),
 		Eth1Data:                    b.eth1DataVal(),
 		Eth1DataVotes:               b.eth1DataVotesVal(),
 		Eth1DepositIndex:            b.eth1DepositIndex,
 		Validators:                  b.validatorsVal(),
 		Balances:                    b.balancesVal(),
-		RandaoMixes:                 state_native.RandaoMixesToSlice(b.randaoMixes),
+		RandaoMixes:                 b.randaoMixes.Slice(),
 		Slashings:                   b.slashingsVal(),
 		PreviousEpochAttestations:   b.previousEpochAttestationsVal(),
 		CurrentEpochAttestations:    b.currentEpochAttestationsVal(),
@@ -87,7 +86,7 @@ func (b *BeaconState) StateRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return state_native.StateRootsToSlice(b.stateRoots)
+	return b.stateRoots.Slice()
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
