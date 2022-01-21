@@ -485,8 +485,7 @@ func TestMapBeaconBlockBody(t *testing.T) {
 }
 
 func TestMapContributionAndProof(t *testing.T) {
-	var bBitfield []byte
-	bBitfield = bitfield.NewBitvector8()
+	bBitfield := bitfield.NewBitvector8()
 	type args struct {
 		contribution *ethpb.ContributionAndProof
 	}
