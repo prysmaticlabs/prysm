@@ -216,9 +216,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logDisabled(disableActiveBalanceCache)
 		cfg.EnableActiveBalanceCache = false
 	}
-	if ctx.Bool(enableGetBlockOptimizations.Name) {
-		logEnabled(enableGetBlockOptimizations)
-		cfg.EnableGetBlockOptimizations = true
+	cfg.EnableGetBlockOptimizations = true
+	if ctx.Bool(disableGetBlockOptimizations.Name) {
+		logDisabled(disableGetBlockOptimizations)
+		cfg.EnableGetBlockOptimizations = false
 	}
 	cfg.EnableBatchVerification = true
 	if ctx.Bool(disableBatchGossipVerification.Name) {
