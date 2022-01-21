@@ -212,7 +212,7 @@ func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir
 		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}
 	// We create a new file to store our backup.zip.
-	zipfile, err := os.Create(archivePath)
+	zipfile, err := os.Create(filepath.Clean(archivePath))
 	if err != nil {
 		return errors.Wrapf(err, "could not create zip file with path: %s", archivePath)
 	}
