@@ -243,6 +243,7 @@ func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
 		},
 		SkipMnemonicConfirm: true,
 	})
+	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{

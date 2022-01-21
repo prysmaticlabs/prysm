@@ -43,6 +43,7 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 		},
 		SkipMnemonicConfirm: true,
 	})
+	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -51,7 +52,7 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 			Km: km,
 		},
 	})
-
+	require.NoError(t, err)
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
