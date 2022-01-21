@@ -247,7 +247,11 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	if len(b.merkleLayers) > 0 {
 		return nil
 	}
-	fieldRoots, err := computeFieldRoots(ctx, b.ToProtoUnsafe().(*ethpb.BeaconState))
+	protoState, ok := b.ToProtoUnsafe().(*ethpb.BeaconState)
+	if !ok {
+		return errors.New("state is of the wrong type")
+	}
+	fieldRoots, err := computeFieldRoots(ctx, protoState)
 	if err != nil {
 		return err
 	}
