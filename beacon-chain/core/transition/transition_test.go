@@ -610,3 +610,29 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, types.Slot(5), s.Slot())
 }
+
+func TestProcessSlotsConditionally(t *testing.T) {
+	ctx := context.Background()
+	s, _ := util.DeterministicGenesisState(t, 1)
+
+	t.Run("target slot below current slot", func(t *testing.T) {
+		require.NoError(t, s.SetSlot(5))
+		s, err := transition.ProcessSlotsConditionally(ctx, s, 4)
+		require.NoError(t, err)
+		assert.Equal(t, types.Slot(5), s.Slot())
+	})
+
+	t.Run("target slot equal current slot", func(t *testing.T) {
+		require.NoError(t, s.SetSlot(5))
+		s, err := transition.ProcessSlotsConditionally(ctx, s, 5)
+		require.NoError(t, err)
+		assert.Equal(t, types.Slot(5), s.Slot())
+	})
+
+	t.Run("target slot above current slot", func(t *testing.T) {
+		require.NoError(t, s.SetSlot(5))
+		s, err := transition.ProcessSlotsConditionally(ctx, s, 6)
+		require.NoError(t, err)
+		assert.Equal(t, types.Slot(6), s.Slot())
+	})
+}
