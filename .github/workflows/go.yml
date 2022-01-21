@@ -27,12 +27,15 @@ jobs:
 
       - name: GoImports checker
         id: goimports
-        uses: Jerome1337/goimports-action@v1.0.3
+        uses: Jerome1337/goimports-action@v1.0.2
         with:
           goimports-path: ./
 
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      
       - name: Gosec security scanner
-        uses: securego/gosec@35af340d07255059323f0c56a121a5e400be0b62
+        uses: securego/gosec@v2.9.5
         with:
           args: '-exclude=G307 -exclude-dir=crypto/bls/herumi ./...'
 
