@@ -42,6 +42,12 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedEnableGetBlockOptimizations = &cli.BoolFlag{
+		Name:   "enable-get-block-optimizations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -51,4 +57,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedCorrectlyInsertOrphanedAtts,
 	deprecatedNextSlotStateCache,
 	deprecatedEnableBatchGossipVerification,
+	deprecatedEnableGetBlockOptimizations,
 }
