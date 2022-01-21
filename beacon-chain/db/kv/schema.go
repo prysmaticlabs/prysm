@@ -49,7 +49,7 @@ var (
 	altairKey = []byte("altair")
 	mergeKey  = []byte("merge")
 	// block root included in the beacon state used by weak subjectivity initial sync
-	originBlockRootKey = []byte("origin-block-root")
+	originCheckpointBlockRootKey = []byte("origin-checkpoint-block-root")
 
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
 	lastArchivedIndexKey = []byte("last-archived")

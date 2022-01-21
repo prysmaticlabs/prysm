@@ -7,7 +7,7 @@ import "errors"
 var ErrNotFound = errors.New("not found in db")
 
 // ErrNotFoundOriginBlockRoot is an error specifically for the origin block root getter
-var ErrNotFoundOriginBlockRoot = WrapDBError(ErrNotFound, "OriginBlockRoot")
+var ErrNotFoundOriginBlockRoot = WrapDBError(ErrNotFound, "OriginCheckpointBlockRoot")
 
 // WrapDBError wraps an error in a DBError. See commentary on DBError for more context.
 func WrapDBError(e error, outer string) error {

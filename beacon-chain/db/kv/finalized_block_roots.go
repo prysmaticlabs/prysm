@@ -46,7 +46,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	root := checkpoint.Root
 	var previousRoot []byte
 	genesisRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
-	initCheckpointRoot := tx.Bucket(blocksBucket).Get(originBlockRootKey)
+	initCheckpointRoot := tx.Bucket(blocksBucket).Get(originCheckpointBlockRootKey)
 
 	// De-index recent finalized block roots, to be re-indexed.
 	previousFinalizedCheckpoint := &ethpb.Checkpoint{}

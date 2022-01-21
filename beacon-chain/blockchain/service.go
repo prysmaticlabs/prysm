@@ -232,7 +232,7 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 
 func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error) {
 	// first check if we have started from checkpoint sync and have a root
-	originRoot, err := s.cfg.BeaconDB.OriginBlockRoot(ctx)
+	originRoot, err := s.cfg.BeaconDB.OriginCheckpointBlockRoot(ctx)
 	if err == nil {
 		return originRoot, nil
 	}
@@ -240,7 +240,7 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 		return originRoot, errors.Wrap(err, "could not retrieve checkpoint sync chain origin data from db")
 	}
 
-	// we got here because OriginBlockRoot gave us an ErrNotFound. this means the node was started from a genesis state,
+	// we got here because OriginCheckpointBlockRoot gave us an ErrNotFound. this means the node was started from a genesis state,
 	// so we should have a value for GenesisBlock
 	genesisBlock, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	if err != nil {

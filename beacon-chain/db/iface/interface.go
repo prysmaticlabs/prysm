@@ -50,7 +50,7 @@ type ReadOnlyDatabase interface {
 	PowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
 
 	// origin checkpoint sync support
-	OriginBlockRoot(ctx context.Context) ([32]byte, error)
+	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 }
 
 // NoHeadAccessDatabase defines a struct without access to chain head data.

@@ -67,7 +67,7 @@ func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Read
 
 	// save origin block root in special key, to be used when the canonical
 	// origin (start of chain, ie alternative to genesis) block or state is needed
-	if err = s.SaveOriginBlockRoot(ctx, blockRoot); err != nil {
+	if err = s.SaveOriginCheckpointBlockRoot(ctx, blockRoot); err != nil {
 		return errors.Wrap(err, "could not save origin block root")
 	}
 
