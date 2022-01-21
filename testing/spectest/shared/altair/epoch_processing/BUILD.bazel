@@ -25,7 +25,6 @@ go_library(
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/v2:go_default_library",
         "//config/params:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
