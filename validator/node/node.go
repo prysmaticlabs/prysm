@@ -269,22 +269,6 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	c.wallet = w
-	//if w != nil {
-	//	c.wallet = w
-	//	keymanagerKind := w.KeymanagerKind()
-	//	// TODO(#9883) - Remove this when we have a better way to handle this.
-	//	if keymanagerKind != keymanager.Imported && keymanagerKind != keymanager.Derived {
-	//		return errors.New("prysm web interface does not support remote validator key managers")
-	//	}
-	//	log.WithFields(logrus.Fields{
-	//		"wallet":          w.AccountsDir(),
-	//		"keymanager-kind": w.KeymanagerKind().String(),
-	//	}).Info("Opened validator wallet")
-	//	keyManager, err = w.InitializeKeymanager(cliCtx.Context, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
-	//	if err != nil {
-	//		return errors.Wrap(err, "could not read keymanager for wallet")
-	//	}
-	//}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if c.wallet != nil {
 		dataDir = c.wallet.AccountsDir()

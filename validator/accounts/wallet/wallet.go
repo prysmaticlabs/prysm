@@ -305,10 +305,9 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		// TODO(9883): future work needs to address how initialize keymanager is called for web3signer.
 		// an error may be thrown for genesis validators root for some InitializeKeymanager calls.
 		if len(cfg.GenesisValidatorsRoot) != fieldparams.RootLength {
-			config.GenesisValidatorsRoot = cfg.GenesisValidatorsRoot
-		} else {
-			return nil, errors.New("could not set genesis validators root for web3signer keymanager")
+			return nil, errors.New("web3signer requires a genesis validators root value")
 		}
+		config.GenesisValidatorsRoot = cfg.GenesisValidatorsRoot
 		km, err = remote_web3signer.NewKeymanager(ctx, config)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize web3signer keymanager")
