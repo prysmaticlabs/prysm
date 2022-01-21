@@ -47,48 +47,48 @@ type GenesisFetcher interface {
 // routine.
 type ValidatorService struct {
 	useWeb                bool
-	interopKeysConfig     *imported.InteropKeymanagerConfig
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
 	logDutyCountDown      bool
+	interopKeysConfig     *imported.InteropKeymanagerConfig
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
 	maxCallRecvMsgSize    int
-	wallet                *wallet.Wallet
-	walletInitializedFeed *event.Feed
 	cancel                context.CancelFunc
-	db                    db.Database
+	walletInitializedFeed *event.Feed
+	wallet                *wallet.Wallet
+	graffitiStruct        *graffiti.Graffiti
 	dataDir               string
 	withCert              string
 	endpoint              string
-	validator             iface.Validator
 	ctx                   context.Context
+	validator             iface.Validator
+	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
-	graffitiStruct        *graffiti.Graffiti
 }
 
 // Config for the validator service.
 type Config struct {
 	UseWeb                     bool
-	InteropKeysConfig          *imported.InteropKeymanagerConfig
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	LogDutyCountDown           bool
+	InteropKeysConfig          *imported.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
-	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Endpoint                   string
+	GrpcRetryDelay             time.Duration
+	GraffitiStruct             *graffiti.Graffiti
 	Validator                  iface.Validator
 	ValDB                      db.Database
-	GraffitiFlag               string
 	CertFlag                   string
 	DataDir                    string
 	GrpcHeadersFlag            string
-	GraffitiStruct             *graffiti.Graffiti
+	GraffitiFlag               string
+	Endpoint                   string
 }
 
 // NewValidatorService creates a new validator service for the service

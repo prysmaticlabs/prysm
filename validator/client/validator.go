@@ -57,7 +57,6 @@ var (
 type validator struct {
 	logValidatorBalances               bool
 	useWeb                             bool
-	interopKeysConfig                  *imported.InteropKeymanagerConfig
 	emitAccountMetrics                 bool
 	logDutyCountDown                   bool
 	domainDataLock                     sync.Mutex
@@ -65,29 +64,30 @@ type validator struct {
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
 	slashableKeysLock                  sync.RWMutex
-	wallet                             *wallet.Wallet
+	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
 	walletInitializedFeed              *event.Feed
-	blockFeed                          *event.Feed
-	genesisTime                        uint64
-	highestValidSlot                   types.Slot
-	domainDataCache                    *ristretto.Cache
-	aggregatedSlotCommitteeIDCache     *lru.Cache
-	ticker                             slots.Ticker
-	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
-	duties                             *ethpb.DutiesResponse
-	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	attLogs                            map[[32]byte]*attSubmitted
+	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
+	duties                             *ethpb.DutiesResponse
+	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
+	graffitiOrderedIndex               uint64
+	aggregatedSlotCommitteeIDCache     *lru.Cache
+	domainDataCache                    *ristretto.Cache
+	highestValidSlot                   types.Slot
+	genesisTime                        uint64
+	blockFeed                          *event.Feed
+	interopKeysConfig                  *imported.InteropKeymanagerConfig
+	wallet                             *wallet.Wallet
+	graffitiStruct                     *graffiti.Graffiti
 	node                               ethpb.NodeClient
-	keyManager                         keymanager.IKeymanager
-	beaconClient                       ethpb.BeaconChainClient
-	validatorClient                    ethpb.BeaconNodeValidatorClient
 	slashingProtectionClient           ethpb.SlasherClient
 	db                                 vdb.Database
+	beaconClient                       ethpb.BeaconChainClient
+	keyManager                         keymanager.IKeymanager
+	ticker                             slots.Ticker
+	validatorClient                    ethpb.BeaconNodeValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
-	graffitiStruct                     *graffiti.Graffiti
-	graffitiOrderedIndex               uint64
-	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
 }
 
 type validatorStatus struct {
