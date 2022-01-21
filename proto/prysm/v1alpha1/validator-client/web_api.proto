@@ -173,7 +173,7 @@ enum KeymanagerKind {
     DERIVED = 0;
     IMPORTED = 1;
     REMOTE = 2;
-	WEB3SIGNER = 3;
+    WEB3SIGNER = 3;
 }
 
 message CreateWalletRequest {
