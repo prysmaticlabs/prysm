@@ -17,7 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -47,10 +49,17 @@ func TestServer_ListKeystores(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
-
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 
 	t.Run("no keystores found", func(t *testing.T) {
@@ -101,12 +110,19 @@ func TestServer_ImportKeystores(t *testing.T) {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	//km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	//require.NoError(t, err)
-
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 	t.Run("prevents importing if faulty keystore in request", func(t *testing.T) {
 		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
@@ -357,12 +373,20 @@ func setupServerWithWallet(t testing.TB) *Server {
 		SkipMnemonicConfirm: true,
 	})
 	require.NoError(t, err)
-	//km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	//require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 
 	return &Server{
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 }
 
