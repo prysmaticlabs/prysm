@@ -47,7 +47,7 @@ message BeaconBlockContainerV2 {
   oneof block {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
-    BeaconBlockBellatrix merge_block = 3;
+    BeaconBlockBellatrix bellatrix_block = 3;
   }
 }
 
@@ -55,7 +55,7 @@ message SignedBeaconBlockContainerV2 {
   oneof message {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
-    BeaconBlockBellatrix merge_block = 3;
+    BeaconBlockBellatrix bellatrix_block = 3;
   }
 
   // 96 byte BLS signature from the validator that produced this block.

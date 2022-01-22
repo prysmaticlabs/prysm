@@ -35,7 +35,7 @@ func TestWrappedSignedBeaconBlock(t *testing.T) {
 		},
 		{
 			name: "bellatrix",
-			blk:  util.NewBeaconBlockMerge(),
+			blk:  util.NewBeaconBlockBellatrix(),
 		},
 	}
 	for _, tt := range tests {
@@ -388,7 +388,7 @@ func TestBellatrixSignedBeaconBlock_Header(t *testing.T) {
 		},
 		Signature: signature,
 	}
-	wrapped, err := wrapper.WrappedMergeSignedBeaconBlock(block)
+	wrapped, err := wrapper.WrappedBellatrixSignedBeaconBlock(block)
 	require.NoError(t, err)
 
 	header, err := wrapped.Header()
@@ -403,7 +403,7 @@ func TestBellatrixSignedBeaconBlock_Header(t *testing.T) {
 
 func TestBellatrixSignedBeaconBlock_Signature(t *testing.T) {
 	sig := []byte{0x11, 0x22}
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}, Signature: sig})
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}, Signature: sig})
 	require.NoError(t, err)
 
 	if !bytes.Equal(sig, wsb.Signature()) {
@@ -413,17 +413,17 @@ func TestBellatrixSignedBeaconBlock_Signature(t *testing.T) {
 
 func TestBellatrixSignedBeaconBlock_Block(t *testing.T) {
 	blk := &ethpb.BeaconBlockBellatrix{Slot: 54}
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: blk})
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: blk})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, blk, wsb.Block().Proto())
 }
 
 func TestBellatrixSignedBeaconBlock_IsNil(t *testing.T) {
-	_, err := wrapper.WrappedMergeSignedBeaconBlock(nil)
+	_, err := wrapper.WrappedBellatrixSignedBeaconBlock(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wsb.IsNil())
@@ -438,14 +438,14 @@ func TestBellatrixSignedBeaconBlock_Proto(t *testing.T) {
 		Block:     &ethpb.BeaconBlockBellatrix{Slot: 66},
 		Signature: []byte{0x11, 0x22},
 	}
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(sb)
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
 	assert.Equal(t, sb, wsb.Proto())
 }
 
 func TestBellatrixSignedBeaconBlock_PbPhase0Block(t *testing.T) {
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 	require.NoError(t, err)
 
 	if _, err := wsb.PbPhase0Block(); err != wrapper.ErrUnsupportedPhase0Block {
@@ -458,7 +458,7 @@ func TestBellatrixSignedBeaconBlock_PbBellatrixBlock(t *testing.T) {
 		Block:     &ethpb.BeaconBlockBellatrix{Slot: 66},
 		Signature: []byte{0x11, 0x22},
 	}
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(sb)
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
 	got, err := wsb.PbBellatrixBlock()
@@ -467,7 +467,7 @@ func TestBellatrixSignedBeaconBlock_PbBellatrixBlock(t *testing.T) {
 }
 
 func TestBellatrixSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
 	assert.NoError(t, err)
 
 	var b []byte
@@ -477,7 +477,7 @@ func TestBellatrixSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
 }
 
 func TestBellatrixSignedBeaconBlock_SSZ(t *testing.T) {
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
 	assert.NoError(t, err)
 
 	b, err := wsb.MarshalSSZ()
@@ -490,7 +490,7 @@ func TestBellatrixSignedBeaconBlock_SSZ(t *testing.T) {
 }
 
 func TestBellatrixSignedBeaconBlock_Version(t *testing.T) {
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 	require.NoError(t, err)
 
 	assert.Equal(t, version.Bellatrix, wsb.Version())

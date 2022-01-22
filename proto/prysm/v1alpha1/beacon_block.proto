@@ -34,7 +34,7 @@ message GenericSignedBeaconBlock {
         SignedBeaconBlockAltair altair = 2;
 
         // Representing a signed, post-Bellatrix fork beacon block.
-        SignedBeaconBlockBellatrix merge = 3;
+        SignedBeaconBlockBellatrix bellatrix = 3;
     }
 }
 
@@ -47,7 +47,7 @@ message GenericBeaconBlock {
         BeaconBlockAltair altair = 2;
 
         // Representing a post-Bellatrix fork beacon block.
-        BeaconBlockBellatrix merge = 3;
+        BeaconBlockBellatrix bellatrix = 3;
     }
 }
 
