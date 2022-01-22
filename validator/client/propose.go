@@ -582,7 +582,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 	}
 	bellatrixBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_Bellatrix)
 	if !ok {
-		log.Error("Not an bellatrix block")
+		log.Error("Not a Bellatrix block")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}

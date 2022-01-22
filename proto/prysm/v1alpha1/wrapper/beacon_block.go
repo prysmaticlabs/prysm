@@ -574,14 +574,14 @@ func (_ altairBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error)
 	return nil, errors.New("ExecutionPayload is not supported in altair block body")
 }
 
-// bellatrixSignedBeaconBlock is a convenience wrapper around a bellatrix beacon block
+// bellatrixSignedBeaconBlock is a convenience wrapper around a Bellatrix beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
 type bellatrixSignedBeaconBlock struct {
 	b *eth.SignedBeaconBlockBellatrix
 }
 
-// WrappedBellatrixSignedBeaconBlock is constructor which wraps a protobuf bellatrix block with the block wrapper.
+// WrappedBellatrixSignedBeaconBlock is constructor which wraps a protobuf Bellatrix block with the block wrapper.
 // Deprecated: use WrappedSignedBeaconBlock instead.
 func WrappedBellatrixSignedBeaconBlock(b *eth.SignedBeaconBlockBellatrix) (block.SignedBeaconBlock, error) {
 	w := bellatrixSignedBeaconBlock{b: b}
@@ -681,7 +681,7 @@ type bellatrixBeaconBlock struct {
 	b *eth.BeaconBlockBellatrix
 }
 
-// WrappedBellatrixBeaconBlock is constructor which wraps a protobuf bellatrix object
+// WrappedBellatrixBeaconBlock is constructor which wraps a protobuf Bellatrix object
 // with the block wrapper.
 func WrappedBellatrixBeaconBlock(b *eth.BeaconBlockBellatrix) (block.BeaconBlock, error) {
 	w := bellatrixBeaconBlock{b: b}

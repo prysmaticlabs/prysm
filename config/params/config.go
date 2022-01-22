@@ -183,7 +183,7 @@ type BeaconChainConfig struct {
 	// Bellatrix
 	TerminalBlockHash                common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`                  // TerminalBlockHash of beacon chain.
 	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
-	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of Bellatrixexperimental bellatrix spec. This value is type is currently TBD: https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/beacon-chain.md#transition-settings
+	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of the experimental Bellatrix spec. This value is type is currently TBD: https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/beacon-chain.md#transition-settings
 	FeeRecipient                     common.Address // FeeRecipient where the transaction fee goes to.
 }
 

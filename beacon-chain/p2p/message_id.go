@@ -75,7 +75,7 @@ func postAltairMsgID(pmsg *pubsub_pb.Message, fEpoch types.Epoch) string {
 	topicLen := uint64(len(topic))
 	topicLenBytes := bytesutil.Uint64ToBytesLittleEndian(topicLen)
 
-	// beyond bellatrix epoch, allow 10 Mib gossip data size
+	// beyond Bellatrix epoch, allow 10 Mib gossip data size
 	gossipPubSubSize := params.BeaconNetworkConfig().GossipMaxSize
 	if fEpoch >= params.BeaconConfig().BellatrixForkEpoch {
 		gossipPubSubSize = params.BeaconNetworkConfig().GossipMaxSizeBellatrix

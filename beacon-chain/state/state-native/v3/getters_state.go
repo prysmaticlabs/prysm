@@ -116,7 +116,7 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	return b.state.MarshalSSZ()
 }
 
-// ProtobufBeaconState transforms an input into beacon state bellatrix in the form of protobuf.
+// ProtobufBeaconState transforms an input into beacon state Bellatrix in the form of protobuf.
 // Error is returned if the input is not type protobuf beacon state.
 func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateBellatrix, error) {
 	pbState, ok := s.(*ethpb.BeaconStateBellatrix)
