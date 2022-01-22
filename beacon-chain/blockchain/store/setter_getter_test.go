@@ -42,3 +42,12 @@ func Test_store_FinalizedCheckpt(t *testing.T) {
 	s.SetFinalizedCheckpt(cp)
 	require.Equal(t, cp, s.FinalizedCheckpt())
 }
+
+func Test_store_PrevFinalizedCheckpt(t *testing.T) {
+	s := &store{}
+	var cp *ethpb.Checkpoint
+	require.Equal(t, cp, s.PrevFinalizedCheckpt())
+	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
+	s.SetPrevFinalizedCheckpt(cp)
+	require.Equal(t, cp, s.PrevFinalizedCheckpt())
+}

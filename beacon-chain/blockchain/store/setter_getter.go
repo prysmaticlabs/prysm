@@ -23,6 +23,13 @@ func (s *store) JustifiedCheckpt() *ethpb.Checkpoint {
 	return s.justifiedCheckpt
 }
 
+// PrevFinalizedCheckpt returns the previous finalized checkpoint in the store.
+func (s *store) PrevFinalizedCheckpt() *ethpb.Checkpoint {
+	s.RLock()
+	defer s.RUnlock()
+	return s.prevFinalizedCheckpt
+}
+
 // FinalizedCheckpt returns the finalized checkpoint in the store.
 func (s *store) FinalizedCheckpt() *ethpb.Checkpoint {
 	s.RLock()
@@ -56,4 +63,11 @@ func (s *store) SetFinalizedCheckpt(cp *ethpb.Checkpoint) {
 	s.Lock()
 	defer s.Unlock()
 	s.finalizedCheckpt = cp
+}
+
+// SetPrevFinalizedCheckpt sets the previous finalized checkpoint in the store.
+func (s *store) SetPrevFinalizedCheckpt(cp *ethpb.Checkpoint) {
+	s.Lock()
+	defer s.Unlock()
+	s.prevFinalizedCheckpt = cp
 }
