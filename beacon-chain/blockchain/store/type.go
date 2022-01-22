@@ -17,8 +17,6 @@ import (
 //    best_justified_checkpoint: Checkpoint
 //    proposerBoostRoot: Root
 type store struct {
-	time                 uint64
-	genesisTime          uint64
 	justifiedCheckpt     *ethpb.Checkpoint
 	finalizedCheckpt     *ethpb.Checkpoint
 	bestJustifiedCheckpt *ethpb.Checkpoint
