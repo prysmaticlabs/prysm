@@ -681,9 +681,9 @@ type bellatrixBeaconBlock struct {
 	b *eth.BeaconBlockBellatrix
 }
 
-// WrappedMergeBeaconBlock is constructor which wraps a protobuf bellatrix object
+// WrappedBellatrixBeaconBlock is constructor which wraps a protobuf bellatrix object
 // with the block wrapper.
-func WrappedMergeBeaconBlock(b *eth.BeaconBlockBellatrix) (block.BeaconBlock, error) {
+func WrappedBellatrixBeaconBlock(b *eth.BeaconBlockBellatrix) (block.BeaconBlock, error) {
 	w := bellatrixBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -765,9 +765,9 @@ type bellatrixBeaconBlockBody struct {
 	b *eth.BeaconBlockBodyBellatrix
 }
 
-// WrappedMergeBeaconBlockBody is constructor which wraps a protobuf bellatrix object
+// WrappedBellatrixBeaconBlockBody is constructor which wraps a protobuf bellatrix object
 // with the block wrapper.
-func WrappedMergeBeaconBlockBody(b *eth.BeaconBlockBodyBellatrix) (block.BeaconBlockBody, error) {
+func WrappedBellatrixBeaconBlockBody(b *eth.BeaconBlockBodyBellatrix) (block.BeaconBlockBody, error) {
 	w := bellatrixBeaconBlockBody{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped

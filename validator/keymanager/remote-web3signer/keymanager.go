@@ -131,7 +131,7 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 			return nil, err
 		}
 		return json.Marshal(blocv2AltairSignRequest)
-	// TODO(#10053): Need to add support for merge blocks.
+	// TODO(#10053): Need to add support for bellatrix blocks.
 	/*
 		case *validatorpb.SignRequest_BlockV3:
 		return "BLOCK_V3", nil

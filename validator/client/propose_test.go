@@ -1069,7 +1069,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	wb, err := wrapper.WrappedMergeBeaconBlock(blk.Block)
+	wb, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
 	require.NoError(t, err)
 	sig, domain, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)

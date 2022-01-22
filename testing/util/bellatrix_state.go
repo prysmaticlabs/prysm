@@ -36,7 +36,7 @@ func DeterministicGenesisStateBellatrix(t testing.TB, numValidators uint64) (sta
 
 // genesisBeaconStateBellatrix returns the genesis beacon state.
 func genesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
-	st, err := emptyGenesisStateMerge()
+	st, err := emptyGenesisStateBellatrix()
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +55,8 @@ func genesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit,
 	return buildGenesisBeaconStateBellatrix(genesisTime, st, st.Eth1Data())
 }
 
-// emptyGenesisStateMerge returns an empty genesis state in Merge format.
-func emptyGenesisStateMerge() (state.BeaconState, error) {
+// emptyGenesisStateBellatrix returns an empty genesis state in Bellatrix format.
+func emptyGenesisStateBellatrix() (state.BeaconState, error) {
 	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.
 		Slot: 0,

@@ -338,7 +338,7 @@ func Test_MergeBlock(t *testing.T) {
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedMergeBeaconBlockBody(blk.Block.Body)
+			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsMergeBlock(st, body)
 			require.NoError(t, err)
@@ -403,7 +403,7 @@ func Test_ExecutionEnabled(t *testing.T) {
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedMergeBeaconBlockBody(blk.Block.Body)
+			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.ExecutionEnabled(st, body)
 			require.NoError(t, err)
