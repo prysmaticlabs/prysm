@@ -25,7 +25,7 @@ import (
 )
 
 func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 
 	syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 }
 
 func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 
 	syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -198,7 +198,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 }
 
 func TestProcessEpoch_BadBalanceBellatrix(t *testing.T) {
-	s, _ := util.DeterministicGenesisStateMerge(t, 100)
+	s, _ := util.DeterministicGenesisStateBellatrix(t, 100)
 	assert.NoError(t, s.SetSlot(63))
 	assert.NoError(t, s.UpdateBalancesAtIndex(0, math.MaxUint64))
 	participation := byte(0)
@@ -253,6 +253,6 @@ func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
 		},
 		Signature: nil,
 	}
-	beaconState, _ := util.DeterministicGenesisStateMerge(t, 32)
+	beaconState, _ := util.DeterministicGenesisStateBellatrix(t, 32)
 	return beaconState, blk
 }

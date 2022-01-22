@@ -558,7 +558,7 @@ func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(conf)
 	defer params.UseMainnetConfig()
 
-	st, _ := util.DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
 	require.Equal(t, version.Bellatrix, st.Version())
 	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)

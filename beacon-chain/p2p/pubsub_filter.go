@@ -49,7 +49,7 @@ func (s *Service) CanSubscribe(topic string) bool {
 	}
 	bellatrixForkDigest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().BellatrixForkEpoch, s.genesisValidatorsRoot)
 	if err != nil {
-		log.WithError(err).Error("Could not determine merge fork digest")
+		log.WithError(err).Error("Could not determine bellatrix fork digest")
 		return false
 	}
 

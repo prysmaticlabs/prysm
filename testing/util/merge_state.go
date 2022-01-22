@@ -16,8 +16,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// DeterministicGenesisStateMerge returns a genesis state in Merge format made using the deterministic deposits.
-func DeterministicGenesisStateMerge(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
+// DeterministicGenesisStateBellatrix returns a genesis state in Bellatrix format made using the deterministic deposits.
+func DeterministicGenesisStateBellatrix(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
