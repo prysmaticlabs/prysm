@@ -33,7 +33,7 @@ type httpSignerClient interface {
 
 // apiClient a wrapper object around web3signer APIs. API docs found here https://consensys.github.io/web3signer/web3signer-eth2.html.
 type apiClient struct {
-	BasePath   string
+	BaseURL    *url.URL
 	restClient *http.Client
 }
 
@@ -44,7 +44,7 @@ func newApiClient(baseEndpoint string) (*apiClient, error) {
 		return nil, errors.Wrap(err, "invalid format, unable to parse url")
 	}
 	return &apiClient{
-		BasePath: u.Host,
+		BaseURL: u,
 		restClient: &http.Client{
 			Timeout: maxTimeout,
 		},
@@ -54,7 +54,7 @@ func newApiClient(baseEndpoint string) (*apiClient, error) {
 // Sign is a wrapper method around the web3signer sign api.
 func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequestJson) (bls.Signature, error) {
 	requestPath := ethApiNamespace + pubKey
-	resp, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, bytes.NewBuffer(request))
+	resp, err := client.doRequest(http.MethodPost, client.BaseURL.String()+requestPath, bytes.NewBuffer(request))
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequ
 		return nil, errors.Wrap(err, "public key not found")
 	}
 	if resp.StatusCode == http.StatusPreconditionFailed {
-		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", client.BasePath+requestPath, request, resp)
+		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", client.BaseURL.String()+requestPath, request, resp)
 	}
 	signResp := &v1.SignResponse{}
 	if err := client.unmarshalResponse(resp.Body, &signResp); err != nil {
@@ -104,7 +104,7 @@ func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][fieldp
 // ReloadSignerKeys is a wrapper method around the web3signer reload api.
 func (client *apiClient) ReloadSignerKeys(_ context.Context) error {
 	const requestPath = "/reload"
-	if _, err := client.doRequest(http.MethodPost, client.BasePath+requestPath, nil); err != nil {
+	if _, err := client.doRequest(http.MethodPost, client.BaseURL.String()+requestPath, nil); err != nil {
 		return err
 	}
 	return nil
@@ -113,7 +113,7 @@ func (client *apiClient) ReloadSignerKeys(_ context.Context) error {
 // GetServerStatus is a wrapper method around the web3signer upcheck api
 func (client *apiClient) GetServerStatus(_ context.Context) (string, error) {
 	const requestPath = "/upcheck"
-	resp, err := client.doRequest(http.MethodGet, client.BasePath+requestPath, nil /* no body needed on get request */)
+	resp, err := client.doRequest(http.MethodGet, client.BaseURL.String()+requestPath, nil /* no body needed on get request */)
 	if err != nil {
 		return "", err
 	}
