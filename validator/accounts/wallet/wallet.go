@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -304,7 +306,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		}
 		// TODO(9883): future work needs to address how initialize keymanager is called for web3signer.
 		// an error may be thrown for genesis validators root for some InitializeKeymanager calls.
-		if len(cfg.GenesisValidatorsRoot) != fieldparams.RootLength {
+		if len(cfg.GenesisValidatorsRoot) != fieldparams.RootLength || bytes.Equal(params.BeaconConfig().ZeroHash[:], cfg.GenesisValidatorsRoot) {
 			return nil, errors.New("web3signer requires a genesis validators root value")
 		}
 		config.GenesisValidatorsRoot = cfg.GenesisValidatorsRoot

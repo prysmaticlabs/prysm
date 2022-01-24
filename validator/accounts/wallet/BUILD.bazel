@@ -14,6 +14,7 @@ go_library(
     deps = [
         "//cmd/validator/flags:go_default_library",
         "//config/fieldparams:go_default_library",
+        "//config/params:go_default_library",
         "//io/file:go_default_library",
         "//io/prompt:go_default_library",
         "//validator/accounts/iface:go_default_library",
