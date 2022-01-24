@@ -289,3 +289,29 @@ func TestUnmarshalConfigFile_HappyPath(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, fakeConfig.BaseEndpoint, config.BaseEndpoint)
 }
+
+func TestPrettyPrintSignRequest_HappyPath(t *testing.T) {
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	assert.NoError(t, err)
+	fmt.Printf("%v", root)
+	signRequest, err := getSignRequestJson(v1.GetMockSignRequest("AGGREGATION_SLOT"), root)
+	assert.NoError(t, err)
+
+	pretty := `{
+	"type": "AGGREGATION_SLOT",
+	"fork_info": {
+		"fork": {
+			"previous_version": "0x00000000",
+			"current_version": "0x00000000",
+			"epoch": "0"
+		},
+		"genesis_validators_root": "0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69"
+	},
+	"signingRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"aggregation_slot": {
+		"slot": "0"
+	}
+}`
+	assert.Equal(t, string(signRequest), pretty)
+
+}
