@@ -139,9 +139,9 @@ var (
 		Name:  "disable-batch-gossip-verification",
 		Usage: "This enables batch verification of signatures received over gossip.",
 	}
-	enableBalanceTrieComputation = &cli.BoolFlag{
-		Name:  "enable-balance-trie-computation",
-		Usage: "This enables optimized hash tree root operations for our balance field.",
+	disableBalanceTrieComputation = &cli.BoolFlag{
+		Name:  "disable-balance-trie-computation",
+		Usage: "This disables optimized hash tree root operations for our balance field.",
 	}
 )
 
@@ -149,7 +149,6 @@ var (
 var devModeFlags = []cli.Flag{
 	enableLargerGossipHistory,
 	forceOptMaxCoverAggregationStategy,
-	enableBalanceTrieComputation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -195,7 +194,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableCorrectlyPruneCanonicalAtts,
 	disableActiveBalanceCache,
 	disableBatchGossipVerification,
-	enableBalanceTrieComputation,
+	disableBalanceTrieComputation,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
