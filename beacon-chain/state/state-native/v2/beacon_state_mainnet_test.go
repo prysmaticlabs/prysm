@@ -81,6 +81,6 @@ func TestMainnetSszValuesAgainstFieldParams(t *testing.T) {
 
 	f, ok = bsType.FieldByName("inactivityScores")
 	require.Equal(t, true, ok, "Required field not found")
-	v = f.Tag.Get("ssz-size")
+	v = f.Tag.Get("ssz-max")
 	assert.Equal(t, strconv.Itoa(fieldparams.ValidatorRegistryLimit), v)
 }
