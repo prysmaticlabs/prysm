@@ -22,7 +22,7 @@ type store struct {
 	bestJustifiedCheckpt *ethpb.Checkpoint
 	sync.RWMutex
 	// These are not part of the consensus spec, but we do use them to return gRPC API requests.
-	// I highly doubt anyone uses them, we can consider removing them in v3.
+	// TODO(10094): Consider removing in v3.
 	prevFinalizedCheckpt *ethpb.Checkpoint
 	prevJustifiedCheckpt *ethpb.Checkpoint
 }
