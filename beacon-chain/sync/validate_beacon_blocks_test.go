@@ -1192,3 +1192,11 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	result := res == pubsub.ValidationReject
 	assert.Equal(t, true, result)
 }
+
+func Test_validateBellatrixBeaconBlock(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateAltair(t, 1)
+	b := util.NewBeaconBlockMerge()
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.ErrorContains(t, "block and state are not the same version", validateBellatrixBeaconBlock(st, blk.Block()))
+}
