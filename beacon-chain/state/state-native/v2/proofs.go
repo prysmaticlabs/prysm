@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/fieldtrie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -18,14 +17,44 @@ func FinalizedRootGeneralizedIndex() uint64 {
 	return finalizedRootIndex
 }
 
+// CurrentSyncCommitteeGeneralizedIndex for the beacon state.
+func CurrentSyncCommitteeGeneralizedIndex() uint64 {
+	return uint64(currentSyncCommittee)
+}
+
+// NextSyncCommitteeGeneralizedIndex for the beacon state.
+func NextSyncCommitteeGeneralizedIndex() uint64 {
+	return uint64(nextSyncCommittee)
+}
+
 // CurrentSyncCommitteeProof from the state's Merkle trie representation.
-func (*BeaconState) CurrentSyncCommitteeProof(_ context.Context) ([][]byte, error) {
-	return nil, errors.New("CurrentSyncCommitteeProof() unsupported for v1 beacon state")
+func (b *BeaconState) CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	// In case the Merkle layers of the trie are not populated, we need
+	// to perform some initialization.
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return nil, err
+	}
+	// Our beacon state uses a "dirty" fields pattern which requires us to
+	// recompute branches of the Merkle layers that are marked as dirty.
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return nil, err
+	}
+	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, currentSyncCommittee), nil
 }
 
 // NextSyncCommitteeProof from the state's Merkle trie representation.
-func (*BeaconState) NextSyncCommitteeProof(_ context.Context) ([][]byte, error) {
-	return nil, errors.New("NextSyncCommitteeProof() unsupported for v1 beacon state")
+func (b *BeaconState) NextSyncCommitteeProof(ctx context.Context) ([][]byte, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return nil, err
+	}
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return nil, err
+	}
+	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, nextSyncCommittee), nil
 }
 
 // FinalizedRootProof crafts a Merkle proof for the finalized root

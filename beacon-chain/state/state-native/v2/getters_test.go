@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -29,22 +30,22 @@ func TestBeaconState_SlotDataRace(t *testing.T) {
 }
 
 func TestBeaconState_ValidatorByPubkey(t *testing.T) {
-	keyCreator := func(input []byte) [48]byte {
-		nKey := [48]byte{}
+	keyCreator := func(input []byte) [fieldparams.BLSPubkeyLength]byte {
+		nKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(nKey[:1], input)
 		return nKey
 	}
 
 	tests := []struct {
 		name            string
-		modifyFunc      func(b *BeaconState, k [48]byte)
+		modifyFunc      func(b *BeaconState, k [fieldparams.BLSPubkeyLength]byte)
 		exists          bool
 		expectedIdx     types.ValidatorIndex
 		largestIdxInSet types.ValidatorIndex
 	}{
 		{
 			name: "retrieve validator",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
+			modifyFunc: func(b *BeaconState, key [fieldparams.BLSPubkeyLength]byte) {
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
 			},
 			exists:      true,
@@ -52,7 +53,7 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 		},
 		{
 			name: "retrieve validator with multiple validators from the start",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
+			modifyFunc: func(b *BeaconState, key [fieldparams.BLSPubkeyLength]byte) {
 				key1 := keyCreator([]byte{'C'})
 				key2 := keyCreator([]byte{'D'})
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
@@ -64,7 +65,7 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 		},
 		{
 			name: "retrieve validator with multiple validators",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
+			modifyFunc: func(b *BeaconState, key [fieldparams.BLSPubkeyLength]byte) {
 				key1 := keyCreator([]byte{'C'})
 				key2 := keyCreator([]byte{'D'})
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key1[:]}))
@@ -76,7 +77,7 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 		},
 		{
 			name: "retrieve validator with multiple validators from the start with shared state",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
+			modifyFunc: func(b *BeaconState, key [fieldparams.BLSPubkeyLength]byte) {
 				key1 := keyCreator([]byte{'C'})
 				key2 := keyCreator([]byte{'D'})
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
@@ -89,7 +90,7 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 		},
 		{
 			name: "retrieve validator with multiple validators with shared state",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
+			modifyFunc: func(b *BeaconState, key [fieldparams.BLSPubkeyLength]byte) {
 				key1 := keyCreator([]byte{'C'})
 				key2 := keyCreator([]byte{'D'})
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key1[:]}))
@@ -104,7 +105,7 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 		},
 		{
 			name: "retrieve validator with multiple validators with shared state at boundary",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
+			modifyFunc: func(b *BeaconState, key [fieldparams.BLSPubkeyLength]byte) {
 				key1 := keyCreator([]byte{'C'})
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key1[:]}))
 				n := b.Copy()
