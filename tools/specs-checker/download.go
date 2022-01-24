@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 
 	"github.com/urfave/cli/v2"
@@ -39,7 +40,7 @@ func download(cliCtx *cli.Context) error {
 
 func getAndSaveFile(specDocUrl, outFilePath string) error {
 	// Create output file.
-	f, err := os.Create(outFilePath)
+	f, err := os.Create(filepath.Clean(outFilePath))
 	if err != nil {
 		return fmt.Errorf("cannot create output file: %w", err)
 	}
