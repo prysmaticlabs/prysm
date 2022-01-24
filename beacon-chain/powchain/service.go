@@ -340,7 +340,9 @@ func (s *Service) CurrentETH1Endpoint() string {
 
 // CurrentETH1ConnectionError returns the error (if any) of the current connection.
 func (s *Service) CurrentETH1ConnectionError() error {
-	_, _, err := s.dialETH1Nodes(s.cfg.currHttpEndpoint)
+	httpClient, rpcClient, err := s.dialETH1Nodes(s.cfg.currHttpEndpoint)
+	httpClient.Close()
+	rpcClient.Close()
 	return err
 }
 
@@ -358,7 +360,9 @@ func (s *Service) ETH1Endpoints() []string {
 func (s *Service) ETH1ConnectionErrors() []error {
 	var errs []error
 	for _, ep := range s.cfg.httpEndpoints {
-		_, _, err := s.dialETH1Nodes(ep)
+		httpClient, rpcClient, err := s.dialETH1Nodes(ep)
+		httpClient.Close()
+		rpcClient.Close()
 		errs = append(errs, err)
 	}
 	return errs

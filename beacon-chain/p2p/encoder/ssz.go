@@ -200,3 +200,13 @@ func newBufferedWriter(w io.Writer) *snappy.Writer {
 	bufW.Reset(w)
 	return bufW
 }
+
+// SetMaxGossipSizeForBellatrix sets the MaxGossipSize to 10Mb.
+func SetMaxGossipSizeForBellatrix() {
+	MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSizeBellatrix
+}
+
+// SetMaxChunkSizeForBellatrix sets the MaxChunkSize to 10Mb.
+func SetMaxChunkSizeForBellatrix() {
+	MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSizeBellatrix
+}

@@ -507,3 +507,12 @@ func TestReverseByteOrder(t *testing.T) {
 	assert.Equal(t, bytes.Equal(input, []byte{0, 1, 2, 3, 4, 5}), true)
 	assert.Equal(t, bytes.Equal(expectedResult, output), true)
 }
+
+func TestSafeCopy2d32Bytes(t *testing.T) {
+	input := make([][32]byte, 2)
+	input[0] = bytesutil.ToBytes32([]byte{'a'})
+	input[1] = bytesutil.ToBytes32([]byte{'b'})
+	output := bytesutil.SafeCopy2d32Bytes(input)
+	assert.Equal(t, false, &input == &output, "No copy was made")
+	assert.DeepEqual(t, input, output)
+}

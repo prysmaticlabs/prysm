@@ -64,7 +64,7 @@ func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 	assert.Equal(t, msgID, p2p.MsgID(genesisValidatorsRoot, nMsg), "Got incorrect msg id")
 }
 
-func TestMessageIDFunction_HashesCorrectlyMerge(t *testing.T) {
+func TestMessageIDFunction_HashesCorrectlyBellatrix(t *testing.T) {
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
 	d, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot)
 	assert.NoError(t, err)

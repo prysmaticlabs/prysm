@@ -29,9 +29,9 @@ const (
 
 var mainnetNetworkConfig = &NetworkConfig{
 	GossipMaxSize:                   1 << 20,      // 1 MiB
-	GossipMaxSizeMerge:              10 * 1 << 20, // 10 MiB
+	GossipMaxSizeBellatrix:          10 * 1 << 20, // 10 MiB
 	MaxChunkSize:                    1 << 20,      // 1 MiB
-	MaxChunkSizeMerge:               10 * 1 << 20, // 10 MiB
+	MaxChunkSizeBellatrix:           10 * 1 << 20, // 10 MiB
 	AttestationSubnetCount:          64,
 	AttestationPropagationSlotRange: 32,
 	MaxRequestBlocks:                1 << 10, // 1024
@@ -238,11 +238,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Merge.
 	TerminalBlockHash:                   [32]byte{},
-	TerminalBlockHashActivationEpoch:    math.MaxUint64,
 	MinSlashingPenaltyQuotientMerge:     32,
 	ProportionalSlashingMultiplierMerge: 3,
 	InactivityPenaltyQuotientMerge:      1 << 24,
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
+
+	// Bellatrix
+	TerminalBlockHashActivationEpoch: math.MaxUint64,
 }

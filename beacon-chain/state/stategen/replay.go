@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	prysmTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -162,18 +163,15 @@ func executeStateTransitionStateGen(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block")
 	}
-	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix {
-		sa, err := signed.Block().Body().SyncAggregate()
-		if err != nil {
-			return nil, err
-		}
-		state, err = altair.ProcessSyncAggregate(ctx, state, sa)
-		if err != nil {
-			return nil, err
-		}
+	if signed.Version() == version.Phase0 {
+		return state, nil
 	}
 
-	return state, nil
+	sa, err := signed.Block().Body().SyncAggregate()
+	if err != nil {
+		return nil, err
+	}
+	return altair.ProcessSyncAggregate(ctx, state, sa)
 }
 
 // processSlotsStateGen to process old slots for state gen usages.
@@ -223,6 +221,12 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 
 		if prysmTime.CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if prysmTime.CanUpgradeToBellatrix(state.Slot()) {
+			state, err = execution.UpgradeToMerge(ctx, state)
 			if err != nil {
 				return nil, err
 			}

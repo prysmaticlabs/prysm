@@ -195,6 +195,6 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
 	// Set Altair fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
-	// Set Merge fork data.
+	// Set Bellatrix fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
 }

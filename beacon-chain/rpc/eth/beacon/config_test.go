@@ -398,5 +398,5 @@ func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// Genesis and Altair.
-	assert.Equal(t, 2, len(resp.Data))
+	assert.Equal(t, 3, len(resp.Data))
 }

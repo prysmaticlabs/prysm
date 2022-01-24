@@ -25,7 +25,6 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//cmd/beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//testing/slasher/simulator:__pkg__",
     ],
     deps = [
