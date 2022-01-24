@@ -45,11 +45,15 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = ["web3remotesigner_test.go"],
-    data = ["@web3signer"],
+    data = [
+        "//config/params:custom_configs",
+        "@web3signer",
+    ],
     deps = [
         ":go_default_library",
         "//config/params:go_default_library",
         "//testing/endtoend/params:go_default_library",
         "//testing/require:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

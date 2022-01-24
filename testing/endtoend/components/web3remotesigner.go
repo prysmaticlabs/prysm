@@ -37,13 +37,15 @@ type rawKeyFile struct {
 }
 
 type Web3RemoteSigner struct {
-	ctx     context.Context
-	started chan struct{}
+	ctx            context.Context
+	started        chan struct{}
+	configFilePath string
 }
 
-func NewWeb3RemoteSigner() *Web3RemoteSigner {
+func NewWeb3RemoteSigner(configFilePath string) *Web3RemoteSigner {
 	return &Web3RemoteSigner{
-		started: make(chan struct{}, 1),
+		started:        make(chan struct{}, 1),
+		configFilePath: configFilePath,
 	}
 }
 
@@ -66,6 +68,12 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		return err
 	}
 
+	network := "minimal"
+	if len(w.configFilePath) > 0 {
+		// A file path to yaml config file is acceptable network argument.
+		network = w.configFilePath
+	}
+
 	args := []string{
 		// Global flags
 		fmt.Sprintf("--key-store-path=%s", keystorePath),
@@ -74,7 +82,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		// Command
 		"eth2",
 		// Command flags
-		"--network=minimal",
+		"--network=" + network,
 		"--slashing-protection-enabled=false", // Otherwise, a postgres DB is required.
 		"--enable-key-manager-api=true",
 	}

@@ -17,6 +17,7 @@ go_test(
         "//:prysm_sh",
         "//cmd/beacon-chain",
         "//cmd/validator",
+        "//config/params:custom_configs",
         "//tools/bootnode",
         "@com_github_ethereum_go_ethereum//cmd/geth",
         "@web3signer",

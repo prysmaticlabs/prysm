@@ -46,6 +46,7 @@ go_test(
         "@consensus_spec_tests_mainnet//:test_data",
         "@consensus_spec_tests_minimal//:test_data",
         "@eth2_networks//:configs",
+        "testdata/e2e_config.yaml",
     ],
     gotags = ["develop"],
     race = "on",
@@ -57,4 +58,10 @@ go_test(
         "@in_gopkg_yaml_v2//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
+)
+
+filegroup(
+    name = "custom_configs",
+    srcs = glob(["testdata/*.yaml"]),
+    visibility = ["//testing:__subpackages__"],
 )
