@@ -198,6 +198,17 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	})
 }
 
+// NewWalletForWeb3Signer returns a new wallet for web3 signer which is temporary and not stored locally.
+func NewWalletForWeb3Signer() *Wallet {
+	// wallet is just a temporary wallet for web3 signer used to call intialize keymanager.
+	return &Wallet{
+		walletDir:      "",
+		accountsPath:   "",
+		keymanagerKind: keymanager.Web3Signer,
+		walletPassword: "",
+	}
+}
+
 // OpenWallet instantiates a wallet from a specified path. It checks the
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.

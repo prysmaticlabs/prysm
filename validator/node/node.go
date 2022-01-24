@@ -106,6 +106,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
+		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+			return nil, errors.New("web3signer cannot be used with --web")
+		}
 		log.Info("Enabling web portal to manage the validator client")
 		if err := validatorClient.initializeForWeb(cliCtx); err != nil {
 			return nil, err
@@ -176,18 +179,27 @@ func (c *ValidatorClient) Close() {
 func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var err error
 	if !cliCtx.IsSet(flags.InteropNumValidators.Name) {
-		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-			return nil, wallet.ErrNoWalletFound
-		})
-		if err != nil {
-			return errors.Wrap(err, "could not open wallet")
+		// Custom Check For Web3Signer
+		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+			if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) && cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+				c.wallet = wallet.NewWalletForWeb3Signer()
+			} else {
+				return errors.New("--web3signer-url and --web3signer-public-validator-keys must be used together")
+			}
+		} else {
+			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+				return nil, wallet.ErrNoWalletFound
+			})
+			if err != nil {
+				return errors.Wrap(err, "could not open wallet")
+			}
+			c.wallet = w
+			// TODO(#9883) - Remove this when we have a better way to handle this.
+			log.WithFields(logrus.Fields{
+				"wallet":          w.AccountsDir(),
+				"keymanager-kind": w.KeymanagerKind().String(),
+			}).Info("Opened validator wallet")
 		}
-		c.wallet = w
-		// TODO(#9883) - Remove this when we have a better way to handle this.
-		log.WithFields(logrus.Fields{
-			"wallet":          w.AccountsDir(),
-			"keymanager-kind": w.KeymanagerKind().String(),
-		}).Info("Opened validator wallet")
 	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if c.wallet != nil {
