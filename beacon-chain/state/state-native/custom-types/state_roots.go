@@ -67,3 +67,16 @@ func (r *StateRoots) MarshalSSZ() ([]byte, error) {
 func (_ *StateRoots) SizeSSZ() int {
 	return fieldparams.StateRootsLength * 32
 }
+
+// Slice converts a customtypes.StateRoots object into a 2D byte slice.
+func (r *StateRoots) Slice() [][]byte {
+	if r == nil {
+		return nil
+	}
+	sRoots := make([][]byte, len(r))
+	for i, root := range r {
+		tmp := root
+		sRoots[i] = tmp[:]
+	}
+	return sRoots
+}
