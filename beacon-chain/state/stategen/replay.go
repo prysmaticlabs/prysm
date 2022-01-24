@@ -239,6 +239,11 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedBlock")
 	defer span.End()
 
+	if slot < s.MinimumSlot() {
+		msg := fmt.Sprintf("no data from before slot %d", s.MinimumSlot())
+		return [32]byte{}, 0, errors.Wrap(ErrSlotBeforeOrigin, msg)
+	}
+
 	// Handle the genesis case where the input slot is 0.
 	if slot == 0 {
 		gb, err := s.beaconDB.GenesisBlock(ctx)
@@ -278,6 +283,11 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 func (s *State) lastSavedState(ctx context.Context, slot types.Slot) (state.ReadOnlyBeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedState")
 	defer span.End()
+
+	if slot < s.MinimumSlot() {
+		msg := fmt.Sprintf("no data from before slot %d", s.MinimumSlot())
+		return nil, errors.Wrap(ErrSlotBeforeOrigin, msg)
+	}
 
 	// Handle the genesis case where the input slot is 0.
 	if slot == 0 {

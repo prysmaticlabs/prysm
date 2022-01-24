@@ -6,6 +6,7 @@ package stategen
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -125,6 +126,9 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	fRoot := bytesutil.ToBytes32(c.Root)
 	// Resume as genesis state if last finalized root is zero hashes.
 	if fRoot == params.BeaconConfig().ZeroHash {
+		if s.MinimumSlot() > 0 {
+			return nil, fmt.Errorf("no finalized checkpoint, and history before slot %d not currently available", s.MinimumSlot())
+		}
 		return s.beaconDB.GenesisState(ctx)
 	}
 
