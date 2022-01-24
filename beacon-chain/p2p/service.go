@@ -234,6 +234,10 @@ func (s *Service) Start() {
 	// current epoch.
 	s.RefreshENR()
 
+	// if the current epoch is beyond bellatrix, increase the
+	// MaxGossipSize and MaxChunkSize to 10Mb.
+	s.increaseMaxMessageSizesForBellatrix()
+
 	// Periodic functions.
 	async.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
 		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
@@ -490,4 +494,15 @@ func (s *Service) connectToBootnodes() error {
 // required for discovery and pubsub validation.
 func (s *Service) isInitialized() bool {
 	return !s.genesisTime.IsZero() && len(s.genesisValidatorsRoot) == 32
+}
+
+// increaseMaxMessageSizesForBellatrix increases the max sizes of gossip and chunk from 1 Mb to 10Mb,
+// if the current epoch is or above the configured BellatrixForkEpoch.
+func (s *Service) increaseMaxMessageSizesForBellatrix() {
+	currentSlot := slots.Since(s.genesisTime)
+	currentEpoch := slots.ToEpoch(currentSlot)
+	if currentEpoch >= params.BeaconConfig().BellatrixForkEpoch {
+		encoder.SetMaxGossipSizeForBellatrix()
+		encoder.SetMaxChunkSizeForBellatrix()
+	}
 }

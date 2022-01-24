@@ -41,9 +41,6 @@ build --flaky_test_attempts=5
 # Disabled race detection due to unstable test results under constrained environment build kite
 # build --features=race
 
-# Disable flaky test detection for fuzzing.
-test:fuzz --flaky_test_attempts=1
-
 # Better caching
 build:nostamp --nostamp
 build:nostamp --workspace_status_command=./hack/workspace_status_ci.sh

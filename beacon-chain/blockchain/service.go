@@ -59,7 +59,6 @@ type Service struct {
 	checkpointStateCache  *cache.CheckpointStateCache
 	initSyncBlocks        map[[32]byte]block.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
-	//justifiedBalances     []uint64
 	justifiedBalances *stateBalanceCache
 	wsVerifier        *WeakSubjectivityVerifier
 	store             *store

@@ -50,7 +50,7 @@ type HeadFetcher interface {
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
-	HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
+	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
@@ -304,13 +304,13 @@ func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
 }
 
 // HeadPublicKeyToValidatorIndex returns the validator index of the `pubkey` in current head state.
-func (s *Service) HeadPublicKeyToValidatorIndex(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+func (s *Service) HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 	if !s.hasHeadState() {
 		return 0, false
 	}
-	return s.headState(ctx).ValidatorIndexByPubkey(pubKey)
+	return s.headValidatorIndexAtPubkey(pubKey)
 }
 
 // HeadValidatorIndexToPublicKey returns the pubkey of the validator `index`  in current head state.

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -254,6 +255,13 @@ func (s *Service) headGenesisValidatorRoot() [32]byte {
 // This is a lock free version.
 func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOnlyValidator, error) {
 	return s.head.state.ValidatorAtIndexReadOnly(index)
+}
+
+// This returns the validator index referenced by the provided pubkey in
+// the head state.
+// This is a lock free version.
+func (s *Service) headValidatorIndexAtPubkey(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+	return s.head.state.ValidatorIndexByPubkey(pubKey)
 }
 
 // Returns true if head state exists.
