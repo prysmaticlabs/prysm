@@ -1,6 +1,7 @@
 package remote_web3signer
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
@@ -83,6 +85,7 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldpa
 
 // Sign signs the message by using a remote web3signer server.
 func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
+
 	signRequest, err := getSignRequestJson(request, km.genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
@@ -97,7 +100,7 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}
-	if len(genesisValidatorsRoot) != fieldparams.RootLength {
+	if len(genesisValidatorsRoot) != fieldparams.RootLength && bytes.Equal(params.BeaconConfig().ZeroHash[:], genesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid genesis validators root length, genesis root: %v", genesisValidatorsRoot)
 	}
 	switch request.Object.(type) {
