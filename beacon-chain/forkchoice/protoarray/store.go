@@ -18,9 +18,6 @@ const defaultPruneThreshold = 256
 // This tracks the last reported head root. Used for metrics.
 var lastHeadRoot [32]byte
 
-// This tracks the tips of the fully validated blocks tree.
-var synced_tips map[[32]byte]types.Slot
-
 // New initializes a new fork choice store.
 func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *ForkChoice {
 	s := &Store{
