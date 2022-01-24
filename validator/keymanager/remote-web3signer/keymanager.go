@@ -100,7 +100,7 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}
-	if len(genesisValidatorsRoot) != fieldparams.RootLength && bytes.Equal(params.BeaconConfig().ZeroHash[:], genesisValidatorsRoot) {
+	if len(genesisValidatorsRoot) != fieldparams.RootLength || bytes.Equal(params.BeaconConfig().ZeroHash[:], genesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid genesis validators root length, genesis root: %v", genesisValidatorsRoot)
 	}
 	switch request.Object.(type) {
