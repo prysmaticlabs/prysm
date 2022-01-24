@@ -62,7 +62,7 @@ func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequ
 		return nil, errors.Wrap(err, "public key not found")
 	}
 	if resp.StatusCode == http.StatusPreconditionFailed {
-		return nil, errors.Wrap(err, "signing operation failed due to slashing protection rules")
+		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", client.BasePath+requestPath, request, resp)
 	}
 	signResp := &v1.SignResponse{}
 	if err := client.unmarshalResponse(resp.Body, &signResp); err != nil {
@@ -135,9 +135,17 @@ func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) 
 		return resp, errors.Wrap(err, "failed to execute json request")
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
-		return nil, errors.Wrap(err, "internal Web3Signer server error")
+		b, err := io.ReadAll(body)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read body")
+		}
+		return nil, fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", fullPath, b, resp)
 	} else if resp.StatusCode == http.StatusBadRequest {
-		return nil, errors.Wrap(err, "bad request format")
+		b, err := io.ReadAll(body)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read body")
+		}
+		return nil, fmt.Errorf("bad request format, Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", fullPath, b, resp)
 	}
 	return resp, err
 }
