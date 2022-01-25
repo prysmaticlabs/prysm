@@ -59,10 +59,10 @@ func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequ
 		return nil, err
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, errors.Wrap(err, "public key not found")
+		return nil, fmt.Errorf("public key not found")
 	}
 	if resp.StatusCode == http.StatusPreconditionFailed {
-		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", client.BaseURL.String()+requestPath, request, resp)
+		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", client.BaseURL.String()+requestPath, string(request), resp)
 	}
 	signResp := &v1.SignResponse{}
 	if err := client.unmarshalResponse(resp.Body, &signResp); err != nil {
