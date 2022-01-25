@@ -28,9 +28,14 @@ func (f *ForkChoice) boundarySyncedTips() (types.Slot, types.Slot) {
 
 // Optimistic returns true if this node is optimistically synced
 // WARNING: this function does not check if slot corresponds to the
-//          block with the given root. The caller is responsible for
-//          checking this. A consensus bug could be a cause of getting
-//          this wrong, so think twice before passing a wrong pair.
+//          block with the given root. An incorrect response may be
+//          returned when requesting earlier than finalized epoch due
+//          to pruning of non-canonical branches. A requests for a
+//          combination root/slot of an available block is guaranteed
+//          to yield the correct result. The caller is responsible for
+//          checking the block's availability. A consensus bug could be
+//          a cause of getting this wrong, so think twice before passing
+//          a wrong pair.
 func (f *ForkChoice) Optimistic(root [32]byte, slot types.Slot) (bool, error) {
 
 	// If the node is a synced tip, then it's fully validated
