@@ -130,6 +130,7 @@ func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) 
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, failed to create new Post Request Object")
 	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.restClient.Do(req)
 	if err != nil {
 		return resp, errors.Wrap(err, "failed to execute json request")
