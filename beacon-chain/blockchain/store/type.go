@@ -6,7 +6,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// store is defined in the fork choice consensus spec for tracking current time and various versions of checkpoints.
+// Store is defined in the fork choice consensus spec for tracking current time and various versions of checkpoints.
 //
 // Spec code:
 // class Store(object):
@@ -16,7 +16,7 @@ import (
 //    finalized_checkpoint: Checkpoint
 //    best_justified_checkpoint: Checkpoint
 //    proposerBoostRoot: Root
-type store struct {
+type Store struct {
 	justifiedCheckpt     *ethpb.Checkpoint
 	finalizedCheckpt     *ethpb.Checkpoint
 	bestJustifiedCheckpt *ethpb.Checkpoint
