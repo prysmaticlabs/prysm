@@ -307,20 +307,15 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 			return nil, errors.Wrap(err, "could not initialize remote keymanager")
 		}
 	case keymanager.Web3Signer: //option should not work for --web
-		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not read web3signer keymanager config")
-		}
-		config, err := remote_web3signer.UnmarshalConfigFile(configFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not unmarshal web3signer keymanager config file")
+		config := cfg.Web3SignerConfig
+		if config == nil {
+			return nil, errors.New("web3signer config is nil")
 		}
 		// TODO(9883): future work needs to address how initialize keymanager is called for web3signer.
 		// an error may be thrown for genesis validators root for some InitializeKeymanager calls.
-		if len(cfg.GenesisValidatorsRoot) != fieldparams.RootLength || bytes.Equal(params.BeaconConfig().ZeroHash[:], cfg.GenesisValidatorsRoot) {
+		if len(config.GenesisValidatorsRoot) != fieldparams.RootLength || bytes.Equal(params.BeaconConfig().ZeroHash[:], config.GenesisValidatorsRoot) {
 			return nil, errors.New("web3signer requires a genesis validators root value")
 		}
-		config.GenesisValidatorsRoot = cfg.GenesisValidatorsRoot
 		km, err = remote_web3signer.NewKeymanager(ctx, config)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize web3signer keymanager")

@@ -37,6 +37,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -88,6 +89,7 @@ type validator struct {
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
+	Web3SignerConfig                   *remote_web3signer.SetupConfig
 }
 
 type validatorStatus struct {
@@ -109,7 +111,7 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 	}
 	if v.useWeb && v.wallet == nil {
 		// if wallet is not set, wait for it to be set through the UI
-		km, err := waitForWebWalletInitialization(ctx, v.walletInitializedFeed, genesisRoot)
+		km, err := waitForWebWalletInitialization(ctx, v.walletInitializedFeed)
 		if err != nil {
 			return err
 		}
@@ -124,7 +126,10 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 		} else if v.wallet == nil {
 			return errors.New("wallet not set")
 		} else {
-			keyManager, err := v.wallet.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true, GenesisValidatorsRoot: genesisRoot})
+			if v.Web3SignerConfig != nil {
+				v.Web3SignerConfig.GenesisValidatorsRoot = genesisRoot
+			}
+			keyManager, err := v.wallet.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true, Web3SignerConfig: v.Web3SignerConfig})
 			if err != nil {
 				return errors.Wrap(err, "could not initialize key manager")
 			}
@@ -136,14 +141,14 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 }
 
 // subscribe to channel for when the wallet is initialized
-func waitForWebWalletInitialization(ctx context.Context, walletInitializedEvent *event.Feed, genesisValidatorsRoot []byte) (keymanager.IKeymanager, error) {
+func waitForWebWalletInitialization(ctx context.Context, walletInitializedEvent *event.Feed) (keymanager.IKeymanager, error) {
 	walletChan := make(chan *wallet.Wallet)
 	sub := walletInitializedEvent.Subscribe(walletChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case w := <-walletChan:
-			keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true, GenesisValidatorsRoot: genesisValidatorsRoot})
+			keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 			if err != nil {
 				return nil, errors.Wrap(err, "could not read keymanager")
 			}

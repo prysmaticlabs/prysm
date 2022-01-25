@@ -120,12 +120,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 			"Successfully created wallet with remote keymanager configuration",
 		)
 	case keymanager.Web3Signer:
-		if err = createWeb3SignerKeymanagerWallet(ctx, w, cfg.Web3SignerSetupConfig); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet")
-		}
-		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
-			"Successfully created wallet with web3 signer configuration",
-		)
+		return nil, errors.New("web3signer keymanager does not require persistent wallets.")
 	default:
 		return nil, errors.Wrapf(err, errKeymanagerNotSupported, w.KeymanagerKind())
 	}
@@ -204,11 +199,7 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		createWalletConfig.RemoteKeymanagerOpts = opts
 	}
 	if keymanagerKind == keymanager.Web3Signer {
-		config, err := userprompt.InputWeb3SignerConfig(cliCtx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not input web3 signer config")
-		}
-		createWalletConfig.Web3SignerSetupConfig = config
+		return nil, errors.New("web3signer keymanager does not require persistent wallets.")
 	}
 	return createWalletConfig, nil
 }

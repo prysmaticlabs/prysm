@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 )
 
 // InitKeymanagerConfig defines configuration options for initializing a keymanager.
 type InitKeymanagerConfig struct {
-	ListenForChanges      bool
-	GenesisValidatorsRoot []byte
+	ListenForChanges bool
+	Web3SignerConfig *remote_web3signer.SetupConfig
 }
 
 // Wallet defines a struct which has capabilities and knowledge of how

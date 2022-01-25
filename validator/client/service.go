@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -67,6 +68,7 @@ type ValidatorService struct {
 	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
+	web3SignerConfig      *remote_web3signer.SetupConfig
 }
 
 // Config for the validator service.
@@ -89,6 +91,7 @@ type Config struct {
 	GrpcHeadersFlag            string
 	GraffitiFlag               string
 	Endpoint                   string
+	Web3SignerConfig           *remote_web3signer.SetupConfig
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -116,6 +119,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
+		web3SignerConfig:      cfg.Web3SignerConfig,
 	}, nil
 }
 
@@ -195,6 +199,7 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
+		Web3SignerConfig:               v.web3SignerConfig,
 	}
 	// To resolve a race condition at startup due to the interface
 	// nature of the abstracted block type. We initialize

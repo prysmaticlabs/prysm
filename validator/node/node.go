@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/gateway"
@@ -23,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
@@ -39,6 +42,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	validatorMiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
@@ -390,6 +394,11 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		}
 	}
 
+	wsc, err := web3SignerConfig(c.cliCtx)
+	if err != nil {
+		return err
+	}
+
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
@@ -408,12 +417,45 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
+		Web3SignerConfig:           wsc,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
 	}
 
 	return c.services.RegisterService(v)
+}
+
+func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, error) {
+	var web3signerConfig *remote_web3signer.SetupConfig
+	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) && cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+		u, err := url.Parse(flags.Web3SignerURLFlag.Value)
+		if err != nil {
+			return nil, errors.Wrapf(err, "web3signer url %s is invalid", flags.Web3SignerURLFlag.Value)
+		}
+		web3signerConfig = &remote_web3signer.SetupConfig{
+			BaseEndpoint:          u.String(),
+			GenesisValidatorsRoot: nil,
+		}
+		u, err = url.Parse(flags.Web3SignerPublicValidatorKeysFlag.Value)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not parse %s as a URL for web3signer remote public keys", flags.Web3SignerPublicValidatorKeysFlag.Value)
+		}
+		if u != nil {
+			web3signerConfig.PublicKeysURL = flags.Web3SignerPublicValidatorKeysFlag.Value
+		} else {
+			var validatorKeys [][48]byte
+			for _, key := range strings.Split(flags.Web3SignerPublicValidatorKeysFlag.Value, ",") {
+				decodedKey, err := hexutil.Decode(key)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+				}
+				validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
+			}
+			web3signerConfig.ProvidedPublicKeys = validatorKeys
+		}
+	}
+	return web3signerConfig, nil
 }
 
 func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
