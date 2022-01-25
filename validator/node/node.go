@@ -182,6 +182,7 @@ func (c *ValidatorClient) Close() {
 
 func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var err error
+	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if !cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		// Custom Check For Web3Signer
 		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
@@ -203,11 +204,8 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 				"wallet":          w.AccountsDir(),
 				"keymanager-kind": w.KeymanagerKind().String(),
 			}).Info("Opened validator wallet")
+			dataDir = c.wallet.AccountsDir()
 		}
-	}
-	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if c.wallet != nil {
-		dataDir = c.wallet.AccountsDir()
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
