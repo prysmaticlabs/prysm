@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -199,4 +200,135 @@ func TestOptimistic(t *testing.T) {
 	op, err = f.Optimistic(ctx, nodeK.root, nodeK.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
+}
+
+// This tests the algorithm to update syncedTips
+// We start with the following diagram
+//
+//                E -- F
+//               /
+//         C -- D
+//        /      \
+//  A -- B        G -- H -- I
+//        \        \
+//         J        -- K -- L
+//
+// And every block in the Fork choice is optimistic. Synced_Tips contains a
+// single block that is outside of Fork choice
+//
+func TestUpdateSyncedTips(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
+	tests := []struct {
+		root      [32]byte                // the root of the new VALID block
+		tips      map[[32]byte]types.Slot // the old synced tips
+		newtips   map[[32]byte]types.Slot // the updated synced tips
+		wantedErr error
+	}{
+		{
+			[32]byte{'i'},
+			map[[32]byte]types.Slot{[32]byte{'z'}: 90},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			nil,
+		},
+		{
+			[32]byte{'i'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			nil,
+		},
+		{
+			[32]byte{'i'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'e'}: 103,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'e'}: 104,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			nil,
+		},
+		{
+			[32]byte{'j'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'f'}: 105,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'f'}: 105,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+				[32]byte{'j'}: 102,
+			},
+			nil,
+		},
+		{
+			[32]byte{'g'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'f'}: 105,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'f'}: 105,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+				[32]byte{'j'}: 102,
+			},
+			errInvalidBestChildIndex,
+		},
+		{
+			[32]byte{'p'},
+			map[[32]byte]types.Slot{},
+			map[[32]byte]types.Slot{},
+			errInvalidNodeIndex,
+		},
+	}
+	for i, tc := range tests {
+		f.syncedTips.Lock()
+		f.syncedTips.validatedTips = tc.tips
+		f.syncedTips.Unlock()
+		err := f.UpdateSyncedTips(tc.root)
+		if tc.wantedErr != nil {
+			require.ErrorIs(t, err, tc.wantedErr)
+		} else {
+			require.NoError(t, err)
+			f.syncedTips.RLock()
+			require.DeepEqual(t, f.syncedTips.validatedTips, tc.newtips)
+			f.syncedTips.RUnlock()
+		}
+	}
 }

@@ -88,3 +88,97 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 	f.store.nodesLock.RUnlock()
 	return f.Optimistic(ctx, root, slot)
 }
+
+// This updates the synced_tips map when the block with the given root becomes
+// VALID
+func (f *ForkChoice) UpdateSyncedTips(root [32]byte) error {
+	// We can only change status of blocks already in the Fork Choice
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	index, ok := f.store.nodesIndices[root]
+	if !ok {
+		return errInvalidNodeIndex
+	}
+
+	// We can only update from a head, no intermediate nodes
+	// Note: this can be relaxed, but the complexity of code to deal with
+	// this case is unnecessary.
+	node := f.store.nodes[index]
+	if node.bestChild != NonExistentNode {
+		return errInvalidBestChildIndex
+	}
+
+	// Stop early if the block was already VALID
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
+	_, ok = f.syncedTips.validatedTips[root]
+	if ok {
+		return nil
+	}
+
+	// The new VALID node will be a synced tip
+	f.syncedTips.validatedTips[root] = node.slot
+
+	// Compute the full path from the given node to its synced tip
+	// This path will now consist of fully validated blocks. Notice that
+	// the previous tip may have been outside of the Fork Choice store.
+	// In this case, only one block can be in syncedTips as the whole
+	// Fork Choice would be a descendant of this block.
+	cnode := node
+	validPath := make(map[uint64]bool)
+	for {
+		index := cnode.parent
+		if index == NonExistentNode {
+			break
+		}
+		cnode = f.store.nodes[index]
+		_, ok = f.syncedTips.validatedTips[cnode.root]
+		if ok {
+			break
+		}
+		validPath[index] = true
+	}
+
+	// Compute the list of leaves in the Fork Choice
+	// These are all the nodes that have NonExistentNode as best child
+	// We already processed the newly VALID leaf so that one is excluded
+	leaves := []uint64{}
+	for i := uint64(0); i < uint64(len(f.store.nodes)); i++ {
+		node = f.store.nodes[i]
+		if node.bestChild == NonExistentNode {
+			leaves = append(leaves, i)
+		}
+	}
+
+	// For each leaf recompute it's new tip.
+	newTips := make(map[[32]byte]types.Slot)
+	for _, i := range leaves {
+		node = f.store.nodes[i]
+		idx := uint64(i)
+		for {
+			// Stop if we reached the previous tip
+			_, ok = f.syncedTips.validatedTips[node.root]
+			if ok {
+				newTips[node.root] = node.slot
+				break
+			}
+
+			// Stop if we reach a new valid tip
+			_, ok = validPath[idx]
+			if ok {
+				newTips[node.root] = node.slot
+				break
+			}
+
+			idx = node.parent
+			if idx == NonExistentNode {
+				break
+			}
+			node = f.store.nodes[idx]
+		}
+	}
+
+	// Add the new tips to syncedTips
+	f.syncedTips.validatedTips = newTips
+	return nil
+}
