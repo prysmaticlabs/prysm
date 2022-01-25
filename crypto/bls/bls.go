@@ -39,9 +39,17 @@ func AggregatePublicKeys(pubs [][]byte) (PublicKey, error) {
 	return blst.AggregatePublicKeys(pubs)
 }
 
+func AggregateMultiplePubkeys(pubs []PublicKey) PublicKey {
+	return blst.AggregateMultiplePubkeys(pubs)
+}
+
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []common.Signature) common.Signature {
 	return blst.AggregateSignatures(sigs)
+}
+
+func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error) {
+	return blst.AggregateCompressedSignatures(multiSigs)
 }
 
 // VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.

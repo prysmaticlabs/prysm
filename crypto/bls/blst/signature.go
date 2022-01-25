@@ -46,6 +46,15 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 	return &Signature{s: signature}, nil
 }
 
+func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error) {
+	signature := new(blstAggregateSignature)
+	valid := signature.AggregateCompressed(multiSigs, true)
+	if !valid {
+		return nil, errors.New("provided signatures fail the group check and cannot be compressed")
+	}
+	return &Signature{s: signature.ToAffine()}, nil
+}
+
 // MultipleSignaturesFromBytes creates a group of BLS signatures from a LittleEndian 2d-byte slice.
 func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error) {
 	if features.Get().SkipBLSVerify {

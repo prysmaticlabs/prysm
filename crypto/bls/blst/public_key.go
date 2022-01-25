@@ -93,6 +93,12 @@ func (p *PublicKey) IsInfinite() bool {
 	return p.p.Equals(zeroKey)
 }
 
+// Equals checks if the provided public key is equal to
+// the current one.
+func (p *PublicKey) Equals(p2 common.PublicKey) bool {
+	return p.p.Equals(p2.(*PublicKey).p)
+}
+
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
 	if features.Get().SkipBLSVerify {
@@ -106,4 +112,20 @@ func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
 	p.p = agg.ToAffine()
 
 	return p
+}
+
+func AggregateMultiplePubkeys(pubkeys []common.PublicKey) common.PublicKey {
+	if features.Get().SkipBLSVerify {
+		return &PublicKey{}
+	}
+	mulP1 := make([]*blstPublicKey, 0, len(pubkeys))
+	for _, pubkey := range pubkeys {
+		mulP1 = append(mulP1, pubkey.(*PublicKey).p)
+	}
+	agg := new(blstAggregatePublicKey)
+	// No group check needed here since it is done in PublicKeyFromBytes
+	// Note the checks could be moved from PublicKeyFromBytes into Aggregate
+	// and take advantage of multi-threading.
+	agg.Aggregate(mulP1, false)
+	return &PublicKey{p: agg.ToAffine()}
 }

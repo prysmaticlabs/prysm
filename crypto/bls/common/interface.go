@@ -18,6 +18,7 @@ type PublicKey interface {
 	Copy() PublicKey
 	Aggregate(p2 PublicKey) PublicKey
 	IsInfinite() bool
+	Equals(p2 PublicKey) bool
 }
 
 // Signature represents a BLS signature.
