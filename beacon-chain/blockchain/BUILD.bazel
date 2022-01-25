@@ -11,6 +11,7 @@ go_library(
         "init_sync_process_block.go",
         "log.go",
         "metrics.go",
+        "new_slot.go",
         "options.go",
         "process_attestation.go",
         "process_attestation_helpers.go",
