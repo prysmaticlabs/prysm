@@ -429,23 +429,25 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, error) {
 	var web3signerConfig *remote_web3signer.SetupConfig
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) && cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-		u, err := url.Parse(flags.Web3SignerURLFlag.Value)
+		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
+		publicKeysStr := cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name)
+		u, err := url.Parse(urlStr)
 		if err != nil {
-			return nil, errors.Wrapf(err, "web3signer url %s is invalid", flags.Web3SignerURLFlag.Value)
+			return nil, errors.Wrapf(err, "web3signer url %s is invalid", urlStr)
 		}
 		web3signerConfig = &remote_web3signer.SetupConfig{
 			BaseEndpoint:          u.String(),
 			GenesisValidatorsRoot: nil,
 		}
-		u, err = url.Parse(flags.Web3SignerPublicValidatorKeysFlag.Value)
+		u, err = url.Parse(publicKeysStr)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not parse %s as a URL for web3signer remote public keys", flags.Web3SignerPublicValidatorKeysFlag.Value)
+			return nil, errors.Wrapf(err, "could not parse %s as a URL for web3signer remote public keys", publicKeysStr)
 		}
 		if u != nil {
-			web3signerConfig.PublicKeysURL = flags.Web3SignerPublicValidatorKeysFlag.Value
+			web3signerConfig.PublicKeysURL = publicKeysStr
 		} else {
 			var validatorKeys [][48]byte
-			for _, key := range strings.Split(flags.Web3SignerPublicValidatorKeysFlag.Value, ",") {
+			for _, key := range strings.Split(publicKeysStr, ",") {
 				decodedKey, err := hexutil.Decode(key)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
