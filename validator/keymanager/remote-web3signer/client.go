@@ -66,7 +66,9 @@ func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequ
 	if resp.StatusCode == http.StatusPreconditionFailed {
 		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", client.BaseURL.String()+requestPath, string(request), resp)
 	}
+
 	return unmarshalSignatureResponse(resp.Body)
+
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
@@ -76,7 +78,7 @@ func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][fieldp
 		return nil, err
 	}
 	var publicKeys []string
-	if err := client.unmarshalResponse(resp.Body, &publicKeys); err != nil {
+	if err := unmarshalResponse(resp.Body, &publicKeys); err != nil {
 		return nil, err
 	}
 	decodedKeys := make([][fieldparams.BLSPubkeyLength]byte, len(publicKeys))
@@ -112,7 +114,7 @@ func (client *apiClient) GetServerStatus(_ context.Context) (string, error) {
 		return "", err
 	}
 	var status string
-	if err := client.unmarshalResponse(resp.Body, &status); err != nil {
+	if err := unmarshalResponse(resp.Body, &status); err != nil {
 		return "", err
 	}
 	return status, nil
@@ -146,14 +148,14 @@ func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) 
 }
 
 // unmarshalResponse is a utility method for unmarshalling responses.
-func (*apiClient) unmarshalResponse(responseBody io.ReadCloser, unmarshalledResponseObject interface{}) error {
+func unmarshalResponse(responseBody io.ReadCloser, unmarshalledResponseObject interface{}) error {
 	defer closeBody(responseBody)
-	gotRes, err := ioutil.ReadAll(responseBody)
-	if err != nil {
-		return err
-	}
-	if err := json.NewDecoder(bytes.NewBuffer(gotRes)).Decode(unmarshalledResponseObject); err != nil {
-		return errors.Wrap(err, "invalid format, unable to read response body as array of strings")
+	if err := json.NewDecoder(responseBody).Decode(&unmarshalledResponseObject); err != nil {
+		body, err := ioutil.ReadAll(responseBody)
+		if err != nil {
+			return errors.Wrap(err, "failed to read response body")
+		}
+		return errors.Wrap(err, fmt.Sprintf("invalid format, unable to read response body: %v", string(body)))
 	}
 	return nil
 }
