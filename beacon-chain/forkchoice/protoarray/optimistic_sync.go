@@ -1,6 +1,7 @@
 package protoarray
 
 import (
+	"context"
 	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -36,8 +37,10 @@ func (f *ForkChoice) boundarySyncedTips() (types.Slot, types.Slot) {
 //          checking the block's availability. A consensus bug could be
 //          a cause of getting this wrong, so think twice before passing
 //          a wrong pair.
-func (f *ForkChoice) Optimistic(root [32]byte, slot types.Slot) (bool, error) {
-
+func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.Slot) (bool, error) {
+	if ctx.Err() != nil {
+		return false, ctx.Err()
+	}
 	// If the node is a synced tip, then it's fully validated
 	f.syncedTips.RLock()
 	_, ok := f.syncedTips.validatedTips[root]
@@ -61,25 +64,25 @@ func (f *ForkChoice) Optimistic(root [32]byte, slot types.Slot) (bool, error) {
 	// Store!
 	f.store.nodesLock.RLock()
 	index, ok := f.store.nodesIndices[root]
-	if ok {
-		node := f.store.nodes[index]
-
-		// if the node is a leaf of the Fork Choice tree, then it's
-		// optimistic
-		childIndex := node.BestChild()
-		if childIndex == NonExistentNode {
-			return true, nil
-		}
-
-		// recurse to the child
-		child := f.store.nodes[childIndex]
-		root = child.root
-		slot = child.slot
+	if !ok {
+		// This should not happen
 		f.store.nodesLock.RUnlock()
-		return f.Optimistic(root, slot)
+		return false, fmt.Errorf("invalid root, slot combination, got %#x, %d",
+			bytesutil.Trunc(root[:]), slot)
 	}
-	// This should not happen
+	node := f.store.nodes[index]
+
+	// if the node is a leaf of the Fork Choice tree, then it's
+	// optimistic
+	childIndex := node.BestChild()
+	if childIndex == NonExistentNode {
+		return true, nil
+	}
+
+	// recurse to the child
+	child := f.store.nodes[childIndex]
+	root = child.root
+	slot = child.slot
 	f.store.nodesLock.RUnlock()
-	return false, fmt.Errorf("invalid root, slot combination, got %#x, %d",
-		bytesutil.Trunc(root[:]), slot)
+	return f.Optimistic(ctx, root, slot)
 }

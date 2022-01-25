@@ -8,11 +8,10 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	store     *Store
-	votes     []Vote // tracks individual validator's last vote.
-	votesLock sync.RWMutex
-	balances  []uint64 // tracks individual validator's last justified balances.
-	//nolint:deadcode
+	store      *Store
+	votes      []Vote // tracks individual validator's last vote.
+	votesLock  sync.RWMutex
+	balances   []uint64 // tracks individual validator's last justified balances.
 	syncedTips *optimisticStore
 }
 
@@ -44,7 +43,6 @@ type Node struct {
 
 // optimisticStore defines a structure that tracks the tips of the fully
 // validated blocks tree.
-//nolint:deadcode
 type optimisticStore struct {
 	validatedTips map[[32]byte]types.Slot
 	sync.RWMutex

@@ -1,6 +1,7 @@
 package protoarray
 
 import (
+	"context"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -139,63 +140,63 @@ func TestOptimistic(t *testing.T) {
 		store:      s,
 		syncedTips: st,
 	}
-
+	ctx := context.Background()
 	// We test the implementation of boundarySyncedTips
 	min, max := f.boundarySyncedTips()
 	require.Equal(t, min, types.Slot(101), "minimum tip slot is different")
 	require.Equal(t, max, types.Slot(103), "maximum tip slot is different")
 
 	// We test first nodes outside the Fork Choice store
-	op, err := f.Optimistic(root0, slot0)
+	op, err := f.Optimistic(ctx, root0, slot0)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
-	op, err = f.Optimistic(root1, slot1)
+	op, err = f.Optimistic(ctx, root1, slot1)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
 	// We check all nodes in the Fork Choice store.
-	op, err = f.Optimistic(nodeA.root, nodeA.slot)
+	op, err = f.Optimistic(ctx, nodeA.root, nodeA.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
-	op, err = f.Optimistic(nodeB.root, nodeB.slot)
+	op, err = f.Optimistic(ctx, nodeB.root, nodeB.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
-	op, err = f.Optimistic(nodeC.root, nodeC.slot)
+	op, err = f.Optimistic(ctx, nodeC.root, nodeC.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
-	op, err = f.Optimistic(nodeD.root, nodeD.slot)
+	op, err = f.Optimistic(ctx, nodeD.root, nodeD.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
-	op, err = f.Optimistic(nodeE.root, nodeE.slot)
+	op, err = f.Optimistic(ctx, nodeE.root, nodeE.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(nodeF.root, nodeF.slot)
+	op, err = f.Optimistic(ctx, nodeF.root, nodeF.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(nodeG.root, nodeG.slot)
+	op, err = f.Optimistic(ctx, nodeG.root, nodeG.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(nodeH.root, nodeH.slot)
+	op, err = f.Optimistic(ctx, nodeH.root, nodeH.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(nodeI.root, nodeI.slot)
+	op, err = f.Optimistic(ctx, nodeI.root, nodeI.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(nodeJ.root, nodeJ.slot)
+	op, err = f.Optimistic(ctx, nodeJ.root, nodeJ.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(nodeK.root, nodeK.slot)
+	op, err = f.Optimistic(ctx, nodeK.root, nodeK.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 }
