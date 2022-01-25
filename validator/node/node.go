@@ -188,7 +188,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) && cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
 				c.wallet = wallet.NewWalletForWeb3Signer()
 			} else {
-				return errors.New("--web3signer-url and --web3signer-public-validator-keys must be used together")
+				return errors.New("--validators-external-signer-url and --validators-external-signer-public-keys must be used together")
 			}
 		} else {
 			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
