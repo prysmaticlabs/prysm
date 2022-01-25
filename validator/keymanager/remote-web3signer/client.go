@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -136,15 +137,15 @@ func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) 
 		return resp, errors.Wrap(err, "failed to execute json request")
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
-		defer closeBody(resp.Body)
-		b, err := io.ReadAll(resp.Body)
+		defer closeBody(body)
+		b, err := io.ReadAll(body)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read body")
 		}
 		return nil, fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request Body: %s, Full Response: %v", fullPath, string(b), resp)
 	} else if resp.StatusCode == http.StatusBadRequest {
-		defer closeBody(resp.Body)
-		b, err := io.ReadAll(resp.Body)
+		defer closeBody(body)
+		b, err := io.ReadAll(body)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read body")
 		}
@@ -156,7 +157,12 @@ func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) 
 // unmarshalResponse is a utility method for unmarshalling responses.
 func (*apiClient) unmarshalResponse(responseBody io.ReadCloser, unmarshalledResponseObject interface{}) error {
 	defer closeBody(responseBody)
-	if err := json.NewDecoder(responseBody).Decode(&unmarshalledResponseObject); err != nil {
+	gotRes, err := ioutil.ReadAll(responseBody)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("HTTP Response: %s", string(gotRes))
+	if err := json.NewDecoder(bytes.NewBuffer(gotRes)).Decode(&unmarshalledResponseObject); err != nil {
 		return errors.Wrap(err, "invalid format, unable to read response body as array of strings")
 	}
 	return nil
