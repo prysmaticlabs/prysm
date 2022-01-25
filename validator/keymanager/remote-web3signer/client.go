@@ -164,9 +164,9 @@ func unmarshalSignatureResponse(responseBody io.ReadCloser) (bls.Signature, erro
 	if err != nil {
 		return nil, err
 	}
-	sigBytes, err := hex.DecodeString(strings.TrimPrefix(body, "0x"))
+	sigBytes, err := hex.DecodeString(strings.TrimPrefix(string(body), "0x"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return bls.SignatureFromBytes(sigBytes)
 }
