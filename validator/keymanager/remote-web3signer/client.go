@@ -137,14 +137,12 @@ func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) 
 		return resp, errors.Wrap(err, "failed to execute json request")
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
-		defer closeBody(body)
 		b, err := io.ReadAll(body)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read body")
 		}
 		return nil, fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request Body: %s, Full Response: %v", fullPath, string(b), resp)
 	} else if resp.StatusCode == http.StatusBadRequest {
-		defer closeBody(body)
 		b, err := io.ReadAll(body)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read body")
