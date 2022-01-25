@@ -159,7 +159,7 @@ func (*apiClient) unmarshalResponse(responseBody io.ReadCloser, unmarshalledResp
 		return err
 	}
 	fmt.Printf("HTTP Response: %s", string(gotRes))
-	if err := json.NewDecoder(bytes.NewBuffer(gotRes)).Decode(&unmarshalledResponseObject); err != nil {
+	if err := json.NewDecoder(bytes.NewBuffer(gotRes)).Decode(unmarshalledResponseObject); err != nil {
 		return errors.Wrap(err, "invalid format, unable to read response body as array of strings")
 	}
 	return nil
