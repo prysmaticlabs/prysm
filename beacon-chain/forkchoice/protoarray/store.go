@@ -33,7 +33,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
 	st := &optimisticStore{
-		validatedTips: make(map[[32]byte]types.Slot, 0),
+		validatedTips: make(map[[32]byte]types.Slot),
 	}
 	return &ForkChoice{store: s, balances: b, votes: v, syncedTips: st}
 }

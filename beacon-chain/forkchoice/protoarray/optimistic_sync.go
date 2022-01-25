@@ -33,8 +33,8 @@ func (f *ForkChoice) boundarySyncedTips() (types.Slot, types.Slot) {
 //          this wrong, so think twice before passing a wrong pair.
 func (f *ForkChoice) Optimistic(root [32]byte, slot types.Slot) (bool, error) {
 
-	f.syncedTips.RLock()
 	// If the node is a synced tip, then it's fully validated
+	f.syncedTips.RLock()
 	_, ok := f.syncedTips.validatedTips[root]
 	if ok {
 		return false, nil
@@ -54,6 +54,7 @@ func (f *ForkChoice) Optimistic(root [32]byte, slot types.Slot) (bool, error) {
 
 	// If we reached this point then the block has to be in the Fork Choice
 	// Store!
+	f.store.nodesLock.RLock()
 	index, ok := f.store.nodesIndices[root]
 	if ok {
 		node := f.store.nodes[index]
@@ -61,7 +62,7 @@ func (f *ForkChoice) Optimistic(root [32]byte, slot types.Slot) (bool, error) {
 		// if the node is a leaf of the Fork Choice tree, then it's
 		// optimistic
 		childIndex := node.BestChild()
-		if childIndex == index {
+		if childIndex == NonExistentNode {
 			return true, nil
 		}
 
@@ -69,9 +70,11 @@ func (f *ForkChoice) Optimistic(root [32]byte, slot types.Slot) (bool, error) {
 		child := f.store.nodes[childIndex]
 		root = child.root
 		slot = child.slot
+		f.store.nodesLock.RUnlock()
 		return f.Optimistic(root, slot)
 	}
 	// This should not happen
+	f.store.nodesLock.RUnlock()
 	return false, fmt.Errorf("invalid root, slot combination, got %#x, %d",
 		bytesutil.Trunc(root[:]), slot)
 }

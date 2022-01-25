@@ -50,7 +50,7 @@ func TestOptimistic(t *testing.T) {
 	nodeD := &Node{
 		slot:      types.Slot(103),
 		root:      bytesutil.ToBytes32([]byte("helloD")),
-		bestChild: 3,
+		bestChild: NonExistentNode,
 		parent:    2,
 	}
 	nodeE := &Node{
@@ -62,7 +62,7 @@ func TestOptimistic(t *testing.T) {
 	nodeF := &Node{
 		slot:      types.Slot(104),
 		root:      bytesutil.ToBytes32([]byte("helloF")),
-		bestChild: 5,
+		bestChild: NonExistentNode,
 		parent:    4,
 	}
 	nodeG := &Node{
@@ -80,7 +80,7 @@ func TestOptimistic(t *testing.T) {
 	nodeI := &Node{
 		slot:      types.Slot(104),
 		root:      bytesutil.ToBytes32([]byte("helloI")),
-		bestChild: 8,
+		bestChild: NonExistentNode,
 		parent:    7,
 	}
 	nodeJ := &Node{
@@ -92,7 +92,7 @@ func TestOptimistic(t *testing.T) {
 	nodeK := &Node{
 		slot:      types.Slot(104),
 		root:      bytesutil.ToBytes32([]byte("helloK")),
-		bestChild: 10,
+		bestChild: NonExistentNode,
 		parent:    9,
 	}
 	nodes := []*Node{
