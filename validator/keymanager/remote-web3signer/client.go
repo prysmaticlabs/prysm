@@ -16,6 +16,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
 const (
@@ -64,11 +65,11 @@ func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequ
 	if resp.StatusCode == http.StatusPreconditionFailed {
 		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", client.BaseURL.String()+requestPath, string(request), resp)
 	}
-	var signResp string
-	if err := client.unmarshalResponse(resp.Body, &signResp); err != nil {
+	signResp := &v1.SignResponse{}
+	if err := client.unmarshalResponse(resp.Body, signResp); err != nil {
 		return nil, err
 	}
-	decoded, err := hexutil.Decode(signResp)
+	decoded, err := hexutil.Decode(signResp.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode signature")
 	}
@@ -158,7 +159,7 @@ func (*apiClient) unmarshalResponse(responseBody io.ReadCloser, unmarshalledResp
 	if err != nil {
 		return err
 	}
-	fmt.Printf("HTTP Response: %s", string(gotRes))
+	fmt.Printf("HTTP Response: %s and attempting into %T", string(gotRes), unmarshalledResponseObject)
 	if err := json.NewDecoder(bytes.NewBuffer(gotRes)).Decode(unmarshalledResponseObject); err != nil {
 		return errors.Wrap(err, "invalid format, unable to read response body as array of strings")
 	}
