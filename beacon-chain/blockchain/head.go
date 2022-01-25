@@ -40,13 +40,27 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	// To get the proper head update, a node first checks its best justified
 	// can become justified. This is designed to prevent bounce attack and
 	// ensure head gets its best justified info.
-	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
-		s.justifiedCheckpt = s.bestJustifiedCheckpt
+	bestJustified := s.store.BestJustifiedCheckpt()
+	if bestJustified == nil {
+		return errNilBestJustifiedInStore
+	}
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	if bestJustified.Epoch > justified.Epoch {
+		s.store.SetJustifiedCheckpt(bestJustified)
 	}
 
 	// Get head from the fork choice service.
-	f := s.finalizedCheckpt
-	j := s.justifiedCheckpt
+	f := s.store.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
+	j := s.store.JustifiedCheckpt()
+	if j == nil {
+		return errNilJustifiedInStore
+	}
 	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
 	headStartRoot := bytesutil.ToBytes32(j.Root)
