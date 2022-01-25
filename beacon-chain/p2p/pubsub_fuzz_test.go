@@ -1,4 +1,4 @@
-//go:build fuzz,go1.18
+//go:build fuzz && go1.18
 // +build fuzz,go1.18
 
 package p2p_test
