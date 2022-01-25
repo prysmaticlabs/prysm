@@ -28,6 +28,8 @@ func (f *ForkChoice) boundarySyncedTips() (types.Slot, types.Slot) {
 }
 
 // Optimistic returns true if this node is optimistically synced
+// A optimistically synced block is synced as usual, but its
+// execution payload is not validated, while the EL is still syncing.
 // WARNING: this function does not check if slot corresponds to the
 //          block with the given root. An incorrect response may be
 //          returned when requesting earlier than finalized epoch due
