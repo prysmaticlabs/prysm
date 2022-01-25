@@ -13,12 +13,9 @@ go_library(
     ],
     deps = [
         "//cmd/validator/flags:go_default_library",
-        "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",
         "//io/prompt:go_default_library",
         "//validator/keymanager/remote:go_default_library",
-        "//validator/keymanager/remote-web3signer:go_default_library",
-        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
         "@com_github_manifoldco_promptui//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

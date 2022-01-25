@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -189,28 +187,4 @@ func (*Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription
 	return event.NewSubscription(func(i <-chan struct{}) error {
 		return nil
 	})
-}
-
-// UnmarshalConfigFile attempts to JSON unmarshal a keymanager
-// config file into a SetupConfig struct.
-func UnmarshalConfigFile(r io.ReadCloser) (*SetupConfig, error) {
-	enc, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read config")
-	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			log.Errorf("Could not close keymanager config file: %v", err)
-		}
-	}()
-	config := &SetupConfig{}
-	if err := json.Unmarshal(enc, config); err != nil {
-		return nil, errors.Wrap(err, "could not JSON unmarshal")
-	}
-	return config, nil
-}
-
-// MarshalConfigFile for the keymanager.
-func MarshalConfigFile(_ context.Context, config *SetupConfig) ([]byte, error) {
-	return json.MarshalIndent(config, "", "\t")
 }

@@ -258,20 +258,6 @@ func createRemoteKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet, op
 	return nil
 }
 
-func createWeb3SignerKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet, config *remote_web3signer.SetupConfig) error {
-	keymanagerConfig, err := remote_web3signer.MarshalConfigFile(ctx, config)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal web3signer config file")
-	}
-	if err := wallet.SaveWallet(); err != nil {
-		return errors.Wrap(err, "could not save wallet to disk")
-	}
-	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return errors.Wrap(err, "could not write web3signer keymanager config to disk")
-	}
-	return nil
-}
-
 func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	if cliCtx.IsSet(flags.KeymanagerKindFlag.Name) {
 		return keymanager.ParseKind(cliCtx.String(flags.KeymanagerKindFlag.Name))

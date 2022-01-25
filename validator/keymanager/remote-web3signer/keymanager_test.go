@@ -1,12 +1,9 @@
 package remote_web3signer
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -267,27 +264,6 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 	assert.NotNil(t, err)
 	assert.Nil(t, resp)
 	assert.Equal(t, fmt.Errorf("mock error"), err)
-}
-
-func TestUnmarshalConfigFile_HappyPath(t *testing.T) {
-	fakeConfig := struct {
-		BaseEndpoint          string
-		GenesisValidatorsRoot []byte
-		PublicKeysURL         string
-		ProvidedPublicKeys    [][48]byte
-	}{}
-	fakeConfig.BaseEndpoint = "example.com"
-	fmt.Printf("%v", fakeConfig)
-	var buffer bytes.Buffer
-	b, err := json.Marshal(fakeConfig)
-	require.NoError(t, err)
-	_, err = buffer.Write(b)
-	require.NoError(t, err)
-	r := ioutil.NopCloser(&buffer)
-
-	config, err := UnmarshalConfigFile(r)
-	assert.NoError(t, err)
-	assert.Equal(t, fakeConfig.BaseEndpoint, config.BaseEndpoint)
 }
 
 func TestPrettyPrintSignRequest_HappyPath(t *testing.T) {
