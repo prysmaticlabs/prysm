@@ -67,3 +67,16 @@ func (r *BlockRoots) MarshalSSZ() ([]byte, error) {
 func (_ *BlockRoots) SizeSSZ() int {
 	return fieldparams.BlockRootsLength * 32
 }
+
+// Slice converts a customtypes.BlockRoots object into a 2D byte slice.
+func (r *BlockRoots) Slice() [][]byte {
+	if r == nil {
+		return nil
+	}
+	bRoots := make([][]byte, len(r))
+	for i, root := range r {
+		tmp := root
+		bRoots[i] = tmp[:]
+	}
+	return bRoots
+}
