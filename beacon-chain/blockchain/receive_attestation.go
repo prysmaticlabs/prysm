@@ -88,6 +88,9 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	}
 
 	f := s.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
@@ -144,6 +147,10 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 				s.processAttestations(s.ctx)
 
 				justified := s.store.JustifiedCheckpt()
+				if justified == nil {
+					log.WithError(errNilJustifiedInStore).Error("Could not get justified checkpoint")
+					continue
+				}
 				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(justified.Root))
 				if err != nil {
 					log.WithError(err).Errorf("Unable to get justified balances for root %v", justified.Root)

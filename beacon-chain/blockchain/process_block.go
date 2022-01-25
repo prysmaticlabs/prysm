@@ -136,6 +136,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 	// Update justified check point.
 	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
 	currJustifiedEpoch := justified.Epoch
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
@@ -144,6 +147,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
 	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
 	if newFinalized {
 		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
@@ -335,6 +341,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	}
 
 	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
 	if jCheckpoint.Epoch > justified.Epoch {
 		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
 			return err
@@ -342,6 +351,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	}
 
 	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if fCheckpoint.Epoch > finalized.Epoch {
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {

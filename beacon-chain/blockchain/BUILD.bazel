@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "chain_info.go",
+        "error.go",
         "head.go",
         "head_sync_committee_info.go",
         "info.go",
