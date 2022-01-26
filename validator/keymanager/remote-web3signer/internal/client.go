@@ -31,7 +31,7 @@ type HttpSignerClient interface {
 	GetPublicKeys(ctx context.Context, url string) ([][48]byte, error)
 }
 
-// ApiClient a wrapper object around web3signer APIs. API docs found here https://consensys.github.io/web3signer/web3signer-eth2.html.
+// ApiClient a wrapper object around web3signer APIs. Please refer to the docs from Consensys' web3signer project.
 type ApiClient struct {
 	BaseURL    *url.URL
 	RestClient *http.Client
