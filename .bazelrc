@@ -62,20 +62,7 @@ build:llvm-asan --config=llvm
 build:llvm-asan --config=asan
 build:llvm-asan --linkopt -fuse-ld=ld.lld
 
-build:fuzz --define=gotags=libfuzzer
-build:fuzz --config=llvm-asan
-build:fuzz --copt=-fsanitize=fuzzer-no-link
-build:fuzz --linkopt=-fsanitize=fuzzer
-build:fuzz --copt=-fno-omit-frame-pointer
-build:fuzz --define=FUZZING_ENGINE=libfuzzer
-build:fuzz --copt=-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-build:fuzz --linkopt -Wl,--no-as-needed
-build:fuzz --define=gc_goopts=-d=libfuzzer,checkptr
-build:fuzz --run_under=//tools:fuzz_wrapper
-build:fuzz --compilation_mode=opt
-build:fuzz --define=blst_disabled=true
-
-test:fuzz --local_test_jobs="HOST_CPUS*.5"
+build:fuzz --@io_bazel_rules_go//go/config:tags=fuzz
 
 # Build binary with cgo symbolizer for debugging / profiling.
 build:cgo_symbolizer --config=llvm

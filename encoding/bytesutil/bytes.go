@@ -228,6 +228,16 @@ func SafeCopy2dBytes(ary [][]byte) [][]byte {
 	return nil
 }
 
+// SafeCopy2d32Bytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
+func SafeCopy2d32Bytes(ary [][32]byte) [][32]byte {
+	if ary != nil {
+		copied := make([][32]byte, len(ary))
+		copy(copied, ary)
+		return copied
+	}
+	return nil
+}
+
 // ReverseBytes32Slice will reverse the provided slice's order.
 func ReverseBytes32Slice(arr [][32]byte) [][32]byte {
 	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
@@ -382,4 +392,15 @@ func IsHex(b []byte) bool {
 		return false
 	}
 	return hexRegex.Match(b)
+}
+
+// ReverseByteOrder Switch the endianness of a byte slice by reversing its order.
+// this function does not modify the actual input bytes.
+func ReverseByteOrder(input []byte) []byte {
+	b := make([]byte, len(input))
+	copy(b, input)
+	for i := 0; i < len(b)/2; i++ {
+		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
+	}
+	return b
 }

@@ -126,7 +126,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true /* deleteEmptyBuckets */)
 
 	opts := s.buildOptions(ipAddr, s.privKey)
-	h, err := libp2p.New(s.ctx, opts...)
+	h, err := libp2p.New(opts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")
 		return nil, err
@@ -233,6 +233,10 @@ func (s *Service) Start() {
 	// Initialize metadata according to the
 	// current epoch.
 	s.RefreshENR()
+
+	// if the current epoch is beyond bellatrix, increase the
+	// MaxGossipSize and MaxChunkSize to 10Mb.
+	s.increaseMaxMessageSizesForBellatrix()
 
 	// Periodic functions.
 	async.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
@@ -490,4 +494,15 @@ func (s *Service) connectToBootnodes() error {
 // required for discovery and pubsub validation.
 func (s *Service) isInitialized() bool {
 	return !s.genesisTime.IsZero() && len(s.genesisValidatorsRoot) == 32
+}
+
+// increaseMaxMessageSizesForBellatrix increases the max sizes of gossip and chunk from 1 Mb to 10Mb,
+// if the current epoch is or above the configured BellatrixForkEpoch.
+func (s *Service) increaseMaxMessageSizesForBellatrix() {
+	currentSlot := slots.Since(s.genesisTime)
+	currentEpoch := slots.ToEpoch(currentSlot)
+	if currentEpoch >= params.BeaconConfig().BellatrixForkEpoch {
+		encoder.SetMaxGossipSizeForBellatrix()
+		encoder.SetMaxChunkSizeForBellatrix()
+	}
 }

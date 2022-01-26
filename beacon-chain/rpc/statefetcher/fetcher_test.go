@@ -29,14 +29,14 @@ func TestGetState(t *testing.T) {
 		state.Slot = headSlot
 		return nil
 	}
-	state, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
+	newBeaconState, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
 	require.NoError(t, err)
-	stateRoot, err := state.HashTreeRoot(ctx)
+	stateRoot, err := newBeaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
 	t.Run("head", func(t *testing.T) {
 		p := StateProvider{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			ChainInfoFetcher: &chainMock.ChainService{State: newBeaconState},
 		}
 
 		s, err := p.State(ctx, []byte("head"))
@@ -59,17 +59,17 @@ func TestGetState(t *testing.T) {
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		state, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
+		bs, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
 			state.BlockRoots[0] = r[:]
 			return nil
 		})
 		require.NoError(t, err)
-		stateRoot, err := state.HashTreeRoot(ctx)
+		newStateRoot, err := bs.HashTreeRoot(ctx)
 		require.NoError(t, err)
 
 		require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
-		require.NoError(t, db.SaveState(ctx, state, r))
+		require.NoError(t, db.SaveState(ctx, bs, r))
 
 		p := StateProvider{
 			BeaconDB: db,
@@ -79,12 +79,12 @@ func TestGetState(t *testing.T) {
 		require.NoError(t, err)
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
-		assert.DeepEqual(t, stateRoot, sRoot)
+		assert.DeepEqual(t, newStateRoot, sRoot)
 	})
 
 	t.Run("finalized", func(t *testing.T) {
 		stateGen := stategen.NewMockService()
-		stateGen.StatesByRoot[stateRoot] = state
+		stateGen.StatesByRoot[stateRoot] = newBeaconState
 
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
@@ -104,7 +104,7 @@ func TestGetState(t *testing.T) {
 
 	t.Run("justified", func(t *testing.T) {
 		stateGen := stategen.NewMockService()
-		stateGen.StatesByRoot[stateRoot] = state
+		stateGen.StatesByRoot[stateRoot] = newBeaconState
 
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
@@ -126,10 +126,10 @@ func TestGetState(t *testing.T) {
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("0", 63) + "1")
 		require.NoError(t, err)
 		stateGen := stategen.NewMockService()
-		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = state
+		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = newBeaconState
 
 		p := StateProvider{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			ChainInfoFetcher: &chainMock.ChainService{State: newBeaconState},
 			StateGenService:  stateGen,
 		}
 
@@ -142,7 +142,7 @@ func TestGetState(t *testing.T) {
 
 	t.Run("hex_root_not_found", func(t *testing.T) {
 		p := StateProvider{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			ChainInfoFetcher: &chainMock.ChainService{State: newBeaconState},
 		}
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
 		require.NoError(t, err)
@@ -152,7 +152,7 @@ func TestGetState(t *testing.T) {
 
 	t.Run("slot", func(t *testing.T) {
 		stateGen := stategen.NewMockService()
-		stateGen.StatesBySlot[headSlot] = state
+		stateGen.StatesBySlot[headSlot] = newBeaconState
 
 		p := StateProvider{
 			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
@@ -191,9 +191,9 @@ func TestGetStateRoot(t *testing.T) {
 		state.Slot = headSlot
 		return nil
 	}
-	state, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
+	newBeaconState, err := util.NewBeaconState(util.FillRootsNaturalOpt, fillSlot)
 	require.NoError(t, err)
-	stateRoot, err := state.HashTreeRoot(ctx)
+	stateRoot, err := newBeaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
 	t.Run("head", func(t *testing.T) {
@@ -201,7 +201,7 @@ func TestGetStateRoot(t *testing.T) {
 		b.Block.StateRoot = stateRoot[:]
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
-				State: state,
+				State: newBeaconState,
 				Block: wrapper.WrappedPhase0SignedBeaconBlock(b),
 			},
 		}
@@ -218,7 +218,7 @@ func TestGetStateRoot(t *testing.T) {
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		state, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
+		bs, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
 			state.BlockRoots[0] = r[:]
 			return nil
 		})
@@ -226,7 +226,7 @@ func TestGetStateRoot(t *testing.T) {
 
 		require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
-		require.NoError(t, db.SaveState(ctx, state, r))
+		require.NoError(t, db.SaveState(ctx, bs, r))
 
 		p := StateProvider{
 			BeaconDB: db,
@@ -306,7 +306,7 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, err)
 
 		p := StateProvider{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			ChainInfoFetcher: &chainMock.ChainService{State: newBeaconState},
 		}
 
 		s, err := p.StateRoot(ctx, stateId)
@@ -316,7 +316,7 @@ func TestGetStateRoot(t *testing.T) {
 
 	t.Run("hex_root_not_found", func(t *testing.T) {
 		p := StateProvider{
-			ChainInfoFetcher: &chainMock.ChainService{State: state},
+			ChainInfoFetcher: &chainMock.ChainService{State: newBeaconState},
 		}
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("f", 64))
 		require.NoError(t, err)

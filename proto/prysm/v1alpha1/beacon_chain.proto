@@ -441,6 +441,9 @@ message BeaconBlockContainer {
 
         // Representing an altair block.
         SignedBeaconBlockAltair altair_block = 4;
+
+        // Representing an bellatrix block.
+        SignedBeaconBlockBellatrix bellatrix_block = 5;
     }
 }
 
