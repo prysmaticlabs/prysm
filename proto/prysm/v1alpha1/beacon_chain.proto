@@ -443,7 +443,7 @@ message BeaconBlockContainer {
         SignedBeaconBlockAltair altair_block = 4;
 
         // Representing an bellatrix block.
-        SignedBeaconBlockMerge bellatrix_block = 5;
+        SignedBeaconBlockBellatrix bellatrix_block = 5;
     }
 }
 

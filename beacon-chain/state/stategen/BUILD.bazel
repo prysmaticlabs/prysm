@@ -10,7 +10,6 @@ go_library(
         "log.go",
         "metrics.go",
         "migrate.go",
-        "mock.go",
         "replay.go",
         "service.go",
         "setter.go",

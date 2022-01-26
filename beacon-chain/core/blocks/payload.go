@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// MergeComplete returns true if the transition to merge has completed.
+// MergeComplete returns true if the transition to Bellatrix has completed.
 // Meaning the payload header in beacon state is not `ExecutionPayloadHeader()` (i.e. not empty).
 //
 // Spec code:
