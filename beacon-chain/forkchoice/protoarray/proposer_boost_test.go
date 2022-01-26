@@ -200,7 +200,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// We boost the honest proposal at slot 2.
 		secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
 		genesis := time.Now().Add(-2 * secondsPerSlot)
-		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot /* slot */, honestBlock, genesis))
+		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot, honestBlock, genesis))
 
 		// The maliciously withheld block has one vote.
 		votes := []uint64{1}
