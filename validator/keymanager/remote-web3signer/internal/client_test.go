@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"testing"
 
-	internal "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	"github.com/stretchr/testify/assert"
 )
 

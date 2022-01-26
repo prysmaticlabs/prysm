@@ -54,9 +54,9 @@ func NewApiClient(baseEndpoint string) (*ApiClient, error) {
 }
 
 // Sign is a wrapper method around the web3signer sign api.
-func (client *ApiClient) Sign(_ context.Context, pubKey string, request SignRequestJson) (bls.Signature, error) {
+func (client *ApiClient) Sign(ctx context.Context, pubKey string, request SignRequestJson) (bls.Signature, error) {
 	requestPath := ethApiNamespace + pubKey
-	resp, err := client.doRequest(http.MethodPost, client.BaseURL.String()+requestPath, bytes.NewBuffer(request))
+	resp, err := client.doRequest(ctx, http.MethodPost, client.BaseURL.String()+requestPath, bytes.NewBuffer(request))
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +72,8 @@ func (client *ApiClient) Sign(_ context.Context, pubKey string, request SignRequ
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
-func (client *ApiClient) GetPublicKeys(_ context.Context, url string) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	resp, err := client.doRequest(http.MethodGet, url, nil /* no body needed on get request */)
+func (client *ApiClient) GetPublicKeys(ctx context.Context, url string) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	resp, err := client.doRequest(ctx, http.MethodGet, url, nil /* no body needed on get request */)
 	if err != nil {
 		return nil, err
 	}
@@ -98,18 +98,18 @@ func (client *ApiClient) GetPublicKeys(_ context.Context, url string) ([][fieldp
 }
 
 // ReloadSignerKeys is a wrapper method around the web3signer reload api.
-func (client *ApiClient) ReloadSignerKeys(_ context.Context) error {
+func (client *ApiClient) ReloadSignerKeys(ctx context.Context) error {
 	const requestPath = "/reload"
-	if _, err := client.doRequest(http.MethodPost, client.BaseURL.String()+requestPath, nil); err != nil {
+	if _, err := client.doRequest(ctx, http.MethodPost, client.BaseURL.String()+requestPath, nil); err != nil {
 		return err
 	}
 	return nil
 }
 
 // GetServerStatus is a wrapper method around the web3signer upcheck api
-func (client *ApiClient) GetServerStatus(_ context.Context) (string, error) {
+func (client *ApiClient) GetServerStatus(ctx context.Context) (string, error) {
 	const requestPath = "/upcheck"
-	resp, err := client.doRequest(http.MethodGet, client.BaseURL.String()+requestPath, nil /* no body needed on get request */)
+	resp, err := client.doRequest(ctx, http.MethodGet, client.BaseURL.String()+requestPath, nil /* no body needed on get request */)
 	if err != nil {
 		return "", err
 	}
@@ -121,8 +121,8 @@ func (client *ApiClient) GetServerStatus(_ context.Context) (string, error) {
 }
 
 // doRequest is a utility method for requests.
-func (client *ApiClient) doRequest(httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(httpMethod, fullPath, body)
+func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, httpMethod, fullPath, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, failed to create new Post Request Object")
 	}
