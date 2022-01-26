@@ -20,7 +20,7 @@ import (
 	walletMock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/validator/client/testutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	remotekeymanagermock "github.com/prysmaticlabs/prysm/validator/keymanager/remote/mock"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/tyler-smith/go-bip39"
@@ -398,7 +398,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 
 	inactiveKey := bytesutil.ToBytes48([]byte("inactive"))
 	activeKey := bytesutil.ToBytes48([]byte("active"))
-	km := remote.NewMock()
+	km := remotekeymanagermock.NewMock()
 	km.PublicKeys = [][fieldparams.BLSPubkeyLength]byte{inactiveKey, activeKey}
 	slot := types.Slot(0)
 
@@ -461,7 +461,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 	t.Run("reloaded", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		hook := logTest.NewGlobal()
-		remoteKm := remote.NewMock()
+		remoteKm := remotekeymanagermock.NewMock()
 		remoteKm.PublicKeys = [][fieldparams.BLSPubkeyLength]byte{inactiveKey}
 
 		tickerChan := make(chan types.Slot)

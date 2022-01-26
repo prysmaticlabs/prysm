@@ -6,7 +6,6 @@ go_library(
         "doc.go",
         "keymanager.go",
         "log.go",
-        "mock_keymanager.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote",
     visibility = [
