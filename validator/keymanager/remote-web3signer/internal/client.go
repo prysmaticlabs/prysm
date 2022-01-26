@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -20,7 +19,6 @@ import (
 
 const (
 	ethApiNamespace = "/api/v1/eth2/sign/"
-	maxTimeout      = 3 * time.Second
 )
 
 type SignRequestJson []byte
@@ -44,10 +42,8 @@ func NewApiClient(baseEndpoint string) (*ApiClient, error) {
 		return nil, errors.Wrap(err, "invalid format, unable to parse url")
 	}
 	return &ApiClient{
-		BaseURL: u,
-		RestClient: &http.Client{
-			Timeout: maxTimeout,
-		},
+		BaseURL:    u,
+		RestClient: &http.Client{},
 	}, nil
 }
 
