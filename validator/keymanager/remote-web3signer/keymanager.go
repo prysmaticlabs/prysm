@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
@@ -36,7 +37,7 @@ type SetupConfig struct {
 
 // Keymanager defines the web3signer keymanager.
 type Keymanager struct {
-	client                httpSignerClient
+	client                internal.HttpSignerClient
 	genesisValidatorsRoot []byte
 	publicKeysURL         string
 	providedPublicKeys    [][48]byte
@@ -54,12 +55,12 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if cfg.PublicKeysURL == "" && len(cfg.ProvidedPublicKeys) == 0 {
 		return nil, errors.New("no valid public key options provided")
 	}
-	client, err := newApiClient(cfg.BaseEndpoint)
+	client, err := internal.NewApiClient(cfg.BaseEndpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create apiClient")
 	}
 	return &Keymanager{
-		client:                httpSignerClient(client),
+		client:                internal.HttpSignerClient(client),
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
 		publicKeysURL:         cfg.PublicKeysURL,
@@ -94,7 +95,7 @@ func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 }
 
 // getSignRequestJson returns a json request based on the SignRequest type.
-func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (SignRequestJson, error) {
+func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (internal.SignRequestJson, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}

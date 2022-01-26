@@ -1,4 +1,4 @@
-package remote_web3signer
+package internal
 
 import (
 	"bytes"
@@ -27,34 +27,34 @@ const (
 
 type SignRequestJson []byte
 
-// httpSignerClient defines the interface for interacting with a remote web3signer.
-type httpSignerClient interface {
+// HttpSignerClient defines the interface for interacting with a remote web3signer.
+type HttpSignerClient interface {
 	Sign(ctx context.Context, pubKey string, request SignRequestJson) (bls.Signature, error)
 	GetPublicKeys(ctx context.Context, url string) ([][48]byte, error)
 }
 
-// apiClient a wrapper object around web3signer APIs. API docs found here https://consensys.github.io/web3signer/web3signer-eth2.html.
-type apiClient struct {
+// ApiClient a wrapper object around web3signer APIs. API docs found here https://consensys.github.io/web3signer/web3signer-eth2.html.
+type ApiClient struct {
 	BaseURL    *url.URL
-	restClient *http.Client
+	RestClient *http.Client
 }
 
-// newApiClient method instantiates a new apiClient object.
-func newApiClient(baseEndpoint string) (*apiClient, error) {
+// NewApiClient method instantiates a new ApiClient object.
+func NewApiClient(baseEndpoint string) (*ApiClient, error) {
 	u, err := url.Parse(baseEndpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, unable to parse url")
 	}
-	return &apiClient{
+	return &ApiClient{
 		BaseURL: u,
-		restClient: &http.Client{
+		RestClient: &http.Client{
 			Timeout: maxTimeout,
 		},
 	}, nil
 }
 
 // Sign is a wrapper method around the web3signer sign api.
-func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequestJson) (bls.Signature, error) {
+func (client *ApiClient) Sign(_ context.Context, pubKey string, request SignRequestJson) (bls.Signature, error) {
 	requestPath := ethApiNamespace + pubKey
 	resp, err := client.doRequest(http.MethodPost, client.BaseURL.String()+requestPath, bytes.NewBuffer(request))
 	if err != nil {
@@ -72,7 +72,7 @@ func (client *apiClient) Sign(_ context.Context, pubKey string, request SignRequ
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
-func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][fieldparams.BLSPubkeyLength]byte, error) {
+func (client *ApiClient) GetPublicKeys(_ context.Context, url string) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	resp, err := client.doRequest(http.MethodGet, url, nil /* no body needed on get request */)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (client *apiClient) GetPublicKeys(_ context.Context, url string) ([][fieldp
 }
 
 // ReloadSignerKeys is a wrapper method around the web3signer reload api.
-func (client *apiClient) ReloadSignerKeys(_ context.Context) error {
+func (client *ApiClient) ReloadSignerKeys(_ context.Context) error {
 	const requestPath = "/reload"
 	if _, err := client.doRequest(http.MethodPost, client.BaseURL.String()+requestPath, nil); err != nil {
 		return err
@@ -107,7 +107,7 @@ func (client *apiClient) ReloadSignerKeys(_ context.Context) error {
 }
 
 // GetServerStatus is a wrapper method around the web3signer upcheck api
-func (client *apiClient) GetServerStatus(_ context.Context) (string, error) {
+func (client *ApiClient) GetServerStatus(_ context.Context) (string, error) {
 	const requestPath = "/upcheck"
 	resp, err := client.doRequest(http.MethodGet, client.BaseURL.String()+requestPath, nil /* no body needed on get request */)
 	if err != nil {
@@ -121,13 +121,13 @@ func (client *apiClient) GetServerStatus(_ context.Context) (string, error) {
 }
 
 // doRequest is a utility method for requests.
-func (client *apiClient) doRequest(httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
+func (client *ApiClient) doRequest(httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest(httpMethod, fullPath, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, failed to create new Post Request Object")
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.restClient.Do(req)
+	resp, err := client.RestClient.Do(req)
 	if err != nil {
 		return resp, errors.Wrap(err, "failed to execute json request")
 	}

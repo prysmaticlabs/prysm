@@ -1,4 +1,4 @@
-package remote_web3signer
+package internal_test
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"testing"
 
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+	internal "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,12 +34,9 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 	}}
 	u, err := url.Parse("example.com")
 	assert.NoError(t, err)
-	cl := apiClient{BaseURL: u, restClient: &http.Client{Transport: mock}}
-	request := v1.MockAggregationSlotSignRequest() // could be any request
-	jsonRequest, err := json.Marshal(request)
-	if err != nil {
-		fmt.Printf("error: %v", err)
-	}
+	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
+	jsonRequest, err := json.Marshal(`{message: "hello"}`)
+	assert.NoError(t, err)
 	resp, err := cl.Sign(context.Background(), "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", jsonRequest)
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
@@ -57,7 +54,7 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	}}
 	u, err := url.Parse("example.com")
 	assert.NoError(t, err)
-	cl := apiClient{BaseURL: u, restClient: &http.Client{Transport: mock}}
+	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
 	resp, err := cl.GetPublicKeys(context.Background(), "example.com/api/publickeys")
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
@@ -73,7 +70,7 @@ func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
 	}}
 	u, err := url.Parse("example.com")
 	assert.NoError(t, err)
-	cl := apiClient{BaseURL: u, restClient: &http.Client{Transport: mock}}
+	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
 	err = cl.ReloadSignerKeys(context.Background())
 	assert.Nil(t, err)
 }
@@ -88,7 +85,7 @@ func TestClient_GetServerStatus_HappyPath(t *testing.T) {
 	}}
 	u, err := url.Parse("example.com")
 	assert.NoError(t, err)
-	cl := apiClient{BaseURL: u, restClient: &http.Client{Transport: mock}}
+	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
 	resp, err := cl.GetServerStatus(context.Background())
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)

@@ -12,7 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +23,7 @@ type MockClient struct {
 	isThrowingError bool
 }
 
-func (mc *MockClient) Sign(_ context.Context, _ string, _ SignRequestJson) (bls.Signature, error) {
+func (mc *MockClient) Sign(_ context.Context, _ string, _ internal.SignRequestJson) (bls.Signature, error) {
 	decoded, err := hexutil.Decode(mc.Signature)
 	if err != nil {
 		return nil, err
@@ -83,7 +84,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "AGGREGATION_SLOT",
 			args: args{
-				request: v1.GetMockSignRequest("AGGREGATION_SLOT"),
+				request: mock.GetMockSignRequest("AGGREGATION_SLOT"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -91,7 +92,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "AGGREGATE_AND_PROOF",
 			args: args{
-				request: v1.GetMockSignRequest("AGGREGATE_AND_PROOF"),
+				request: mock.GetMockSignRequest("AGGREGATE_AND_PROOF"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -99,7 +100,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "ATTESTATION",
 			args: args{
-				request: v1.GetMockSignRequest("ATTESTATION"),
+				request: mock.GetMockSignRequest("ATTESTATION"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -107,7 +108,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "BLOCK",
 			args: args{
-				request: v1.GetMockSignRequest("BLOCK"),
+				request: mock.GetMockSignRequest("BLOCK"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -115,7 +116,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "BLOCK_V2",
 			args: args{
-				request: v1.GetMockSignRequest("BLOCK_V2"),
+				request: mock.GetMockSignRequest("BLOCK_V2"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -123,7 +124,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "RANDAO_REVEAL",
 			args: args{
-				request: v1.GetMockSignRequest("RANDAO_REVEAL"),
+				request: mock.GetMockSignRequest("RANDAO_REVEAL"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -131,7 +132,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
 			args: args{
-				request: v1.GetMockSignRequest("SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"),
+				request: mock.GetMockSignRequest("SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -139,7 +140,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "SYNC_COMMITTEE_MESSAGE",
 			args: args{
-				request: v1.GetMockSignRequest("SYNC_COMMITTEE_MESSAGE"),
+				request: mock.GetMockSignRequest("SYNC_COMMITTEE_MESSAGE"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -147,7 +148,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "SYNC_COMMITTEE_SELECTION_PROOF",
 			args: args{
-				request: v1.GetMockSignRequest("SYNC_COMMITTEE_SELECTION_PROOF"),
+				request: mock.GetMockSignRequest("SYNC_COMMITTEE_SELECTION_PROOF"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -155,7 +156,7 @@ func TestKeymanager_Sign(t *testing.T) {
 		{
 			name: "VOLUNTARY_EXIT",
 			args: args{
-				request: v1.GetMockSignRequest("VOLUNTARY_EXIT"),
+				request: mock.GetMockSignRequest("VOLUNTARY_EXIT"),
 			},
 			want:    desiredSig,
 			wantErr: false,
@@ -270,7 +271,7 @@ func TestPrettyPrintSignRequest_HappyPath(t *testing.T) {
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	assert.NoError(t, err)
 	fmt.Printf("%v", root)
-	signRequest, err := getSignRequestJson(v1.GetMockSignRequest("AGGREGATION_SLOT"), root)
+	signRequest, err := getSignRequestJson(mock.GetMockSignRequest("AGGREGATION_SLOT"), root)
 	assert.NoError(t, err)
 
 	pretty := `{
