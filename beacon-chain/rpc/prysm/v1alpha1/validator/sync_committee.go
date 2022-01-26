@@ -147,10 +147,8 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	sigs := make([][]byte, 0, subCommitteeSize)
 	bits := ethpb.NewSyncCommitteeAggregationBits()
-	seenValidators := map[types.ValidatorIndex]bool{}
 	for _, msg := range msgs {
-		if bytes.Equal(blockRoot, msg.BlockRoot) && !seenValidators[msg.ValidatorIndex] {
-			seenValidators[msg.ValidatorIndex] = true
+		if bytes.Equal(blockRoot, msg.BlockRoot) {
 			headSyncCommitteeIndices, err := vs.HeadFetcher.HeadSyncCommitteeIndices(ctx, msg.ValidatorIndex, slot)
 			if err != nil {
 				return []byte{}, nil, errors.Wrapf(err, "could not get sync subcommittee index")
@@ -158,8 +156,9 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 			for _, index := range headSyncCommitteeIndices {
 				i := uint64(index)
 				subnetIndex := i / subCommitteeSize
-				if subnetIndex == subnetId {
-					bits.SetBitAt(i%subCommitteeSize, true)
+				indexMod := i % subCommitteeSize
+				if subnetIndex == subnetId && !bits.BitAt(indexMod) {
+					bits.SetBitAt(indexMod, true)
 					sigs = append(sigs, msg.Signature)
 				}
 			}

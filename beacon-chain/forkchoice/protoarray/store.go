@@ -32,8 +32,10 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
-
-	return &ForkChoice{store: s, balances: b, votes: v}
+	st := &optimisticStore{
+		validatedTips: make(map[[32]byte]types.Slot),
+	}
+	return &ForkChoice{store: s, balances: b, votes: v, syncedTips: st}
 }
 
 // Head returns the head root from fork choice store.

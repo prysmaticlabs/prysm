@@ -60,18 +60,21 @@ func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error)
 		}
 	}
 	multiSignatures := new(blstSignature).BatchUncompress(multiSigs)
-	if multiSignatures == nil || len(multiSignatures) == 0 {
+	if len(multiSignatures) == 0 {
 		return nil, errors.New("could not unmarshal bytes into signature")
 	}
-	wrappedSigs := make([]common.Signature, 0, len(multiSignatures))
-	for _, signature := range multiSignatures {
+	if len(multiSignatures) != len(multiSigs) {
+		return nil, errors.Errorf("wanted %d decompressed signatures but got %d", len(multiSigs), len(multiSignatures))
+	}
+	wrappedSigs := make([]common.Signature, len(multiSignatures))
+	for i, signature := range multiSignatures {
 		// Group check signature. Do not check for infinity since an aggregated signature
 		// could be infinite.
 		if !signature.SigValidate(false) {
 			return nil, errors.New("signature not in group")
 		}
 		copiedSig := signature
-		wrappedSigs = append(wrappedSigs, &Signature{s: copiedSig})
+		wrappedSigs[i] = &Signature{s: copiedSig}
 	}
 	return wrappedSigs, nil
 }
