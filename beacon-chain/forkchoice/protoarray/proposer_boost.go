@@ -48,10 +48,10 @@ func (f *ForkChoice) ResetBoostedProposerRoot(_ context.Context) error {
 // the total active balances, the size of a committee, and a boost score constant.
 // IMPORTANT: The caller MUST pass in a list of validator balances where balances > 0 refer to active
 // validators while balances == 0 are for inactive validators.
-func computeProposerBoostScore(justifiedStateBalances []uint64) (score uint64, err error) {
+func computeProposerBoostScore(validatorBalances []uint64) (score uint64, err error) {
 	totalActiveBalance := uint64(0)
 	numActive := uint64(0)
-	for _, balance := range justifiedStateBalances {
+	for _, balance := range validatorBalances {
 		// We only consider balances > 0. The input slice should be constructed
 		// as balance > 0 for all active validators and 0 for inactive ones.
 		if balance == 0 {

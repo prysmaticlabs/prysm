@@ -15,7 +15,7 @@ import (
 // Simple, ex-ante attack mitigation using proposer boost.
 // In a nutshell, an adversarial block proposer in slot n+1 keeps its proposal hidden.
 // The honest block proposer in slot n+2 will then propose an honest block. The
-// adversary can now use its committee members’ votes from both slots n+1
+// adversary can now use its committee members’ votes from both slots n+1 and n+2.
 // and release their withheld block of slot n+2 in an attempt to win fork choice.
 // If the honest proposal is boosted at slot n+2, it will win against this attacker.
 func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
@@ -138,9 +138,30 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		// Check the ancestor scores from the store.
 		require.Equal(t, 4, len(f.store.nodes))
-		require.Equal(t, f.store.nodes[0].weight, uint64(0)) // Genesis has 0 weight here.
 
 		// Expect nodes to have a boosted, back-propagated score.
+		// Ancestors have the added weights of their children. Genesis is a special exception at 0 weight,
+		require.Equal(t, f.store.nodes[0].weight, uint64(0))
+
+		// Otherwise assuming a block, A, that is not-genesis:
+		//
+		// A -> B -> C
+		//
+		//Where each one has a weight of 10 individually, the final weights will look like
+		//
+		// (A: 30) -> (B: 20) -> (C: 10)
+		//
+		// The boost adds 7 to the weight, so if C is boosted, we would have
+		//
+		// (A: 37) -> (B: 27) -> (C: 17)
+		//
+		// In this case, we have a small fork:
+		//
+		// (A: 47) -> (B: 37) -> (C: 17)
+		//				    \_->(D: 10)
+		//
+		// So B has its own weight, 10, and the sum of of both C and D thats why we see weight 37 in the
+		// middle instead of the normal progression of (37 -> 27 -> 17).
 		require.Equal(t, f.store.nodes[1].weight, uint64(47))
 		require.Equal(t, f.store.nodes[2].weight, uint64(37))
 		require.Equal(t, f.store.nodes[3].weight, uint64(17))
