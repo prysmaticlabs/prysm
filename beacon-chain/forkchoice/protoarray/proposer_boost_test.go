@@ -397,7 +397,7 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		blockRoot := [32]byte{'A'}
 
 		// Trying to boost a block from slot 0 should not work.
-		err := f.BoostProposerRoot(ctx, 0 /* slot */, blockRoot, genesis)
+		err := f.BoostProposerRoot(ctx, types.Slot(0), blockRoot, genesis)
 		require.NoError(t, err)
 		require.DeepEqual(t, [32]byte{}, f.store.proposerBoostRoot)
 	})
