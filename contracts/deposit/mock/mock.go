@@ -1,4 +1,4 @@
-package deposit
+package mock
 
 import (
 	"crypto/ecdsa"
@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prysmaticlabs/prysm/contracts/deposit"
 )
 
 var (
@@ -26,7 +27,7 @@ var (
 type TestAccount struct {
 	Addr         common.Address
 	ContractAddr common.Address
-	Contract     *DepositContract
+	Contract     *deposit.DepositContract
 	Backend      *backends.SimulatedBackend
 	TxOpts       *bind.TransactOpts
 }
@@ -79,8 +80,8 @@ func LessThan1Eth() *big.Int {
 }
 
 // DeployDepositContract deploys a new Ethereum contract, binding an instance of DepositContract to it.
-func DeployDepositContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *DepositContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(DepositContractABI))
+func DeployDepositContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *deposit.DepositContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(deposit.DepositContractABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -89,5 +90,9 @@ func DeployDepositContract(auth *bind.TransactOpts, backend bind.ContractBackend
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	return address, tx, &DepositContract{DepositContractCaller: DepositContractCaller{contract: contract}, DepositContractTransactor: DepositContractTransactor{contract: contract}, DepositContractFilterer: DepositContractFilterer{contract: contract}}, nil
+	return address, tx, &deposit.DepositContract{
+		DepositContractCaller: deposit.NewDepositContractCallerFromBoundContract(contract),
+		DepositContractTransactor: deposit.NewDepositContractTransactorFromBoundContract(contract),
+		DepositContractFilterer: deposit.NewDepositContractFiltererFromBoundContract(contract),
+	}, nil
 }

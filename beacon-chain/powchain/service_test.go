@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/network"
@@ -125,7 +126,7 @@ var depositsReqForChainStart = 64
 func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
@@ -154,7 +155,7 @@ func TestStart_OK(t *testing.T) {
 func TestStart_NoHttpEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	s, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{""}),
@@ -189,7 +190,7 @@ func TestStart_NoHttpEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 func TestStart_NoHttpEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	st, _ := util.DeterministicGenesisState(t, 10)
 	b := util.NewBeaconBlock()
@@ -223,7 +224,7 @@ func TestStart_NoHttpEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
 func TestStart_NoHttpEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 
 	require.NoError(t, beaconDB.SavePowchainData(context.Background(), &ethpb.ETH1ChainData{
@@ -244,7 +245,7 @@ func TestStart_NoHttpEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
 
 func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(),
@@ -269,7 +270,7 @@ func TestStop_OK(t *testing.T) {
 }
 
 func TestService_Eth1Synced(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(),
@@ -294,7 +295,7 @@ func TestService_Eth1Synced(t *testing.T) {
 }
 
 func TestFollowBlock_OK(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(),
@@ -399,7 +400,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	params.OverrideBeaconNetworkConfig(nCfg)
 
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(),
@@ -533,7 +534,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 }
 
 func TestNewService_EarliestVotingBlock(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(),
@@ -583,7 +584,7 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 }
 
 func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
@@ -618,7 +619,7 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	firstEndpoint := "A"
 	secondEndpoint := "B"
 
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
@@ -828,7 +829,7 @@ func TestETH1Endpoints(t *testing.T) {
 	secondEndpoint := "B"
 	endpoints := []string{firstEndpoint, secondEndpoint}
 
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
