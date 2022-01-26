@@ -151,20 +151,20 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//
 		// (A: 30) -> (B: 20) -> (C: 10)
 		//
-		// The boost adds 7 to the weight, so if C is boosted, we would have
+		// The boost adds 14 to the weight, so if C is boosted, we would have
 		//
-		// (A: 37) -> (B: 27) -> (C: 17)
+		// (A: 44) -> (B: 34) -> (C: 24)
 		//
 		// In this case, we have a small fork:
 		//
-		// (A: 47) -> (B: 37) -> (C: 17)
+		// (A: 54) -> (B: 44) -> (C: 24)
 		//				    \_->(D: 10)
 		//
-		// So B has its own weight, 10, and the sum of of both C and D thats why we see weight 37 in the
-		// middle instead of the normal progression of (37 -> 27 -> 17).
-		require.Equal(t, f.store.nodes[1].weight, uint64(47))
-		require.Equal(t, f.store.nodes[2].weight, uint64(37))
-		require.Equal(t, f.store.nodes[3].weight, uint64(17))
+		// So B has its own weight, 10, and the sum of of both C and D thats why we see weight 54 in the
+		// middle instead of the normal progression of (44 -> 34 -> 24).
+		require.Equal(t, f.store.nodes[1].weight, uint64(54))
+		require.Equal(t, f.store.nodes[2].weight, uint64(44))
+		require.Equal(t, f.store.nodes[3].weight, uint64(24))
 	})
 	t.Run("vanilla ex ante attack", func(t *testing.T) {
 		f := setup(jEpoch, fEpoch)
