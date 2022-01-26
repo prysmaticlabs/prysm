@@ -25,8 +25,8 @@ func (f *ForkChoice) BoostProposerRoot(_ context.Context, blockSlot types.Slot, 
 	isBeforeAttestingInterval := timeIntoSlot < secondsPerSlot/params.BeaconConfig().IntervalsPerSlot
 	currentSlot := slots.SinceGenesis(genesisTime)
 
-	// Only update the boosted proposer root to the incoming block root.
-	// If the block is for the current, clock-based slot and the block was timely.
+	// Only update the boosted proposer root to the incoming block root
+	// if the block is for the current, clock-based slot and the block was timely.
 	if currentSlot == blockSlot && isBeforeAttestingInterval {
 		f.store.proposerBoostLock.Lock()
 		f.store.proposerBoostRoot = blockRoot
