@@ -189,7 +189,6 @@ func (s *Server) DeleteAccounts(
 func (s *Server) VoluntaryExit(
 	ctx context.Context, req *pb.VoluntaryExitRequest,
 ) (*pb.VoluntaryExitResponse, error) {
-	var km keymanager.IKeymanager
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
 	}
@@ -199,17 +198,9 @@ func (s *Server) VoluntaryExit(
 	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
 	}
-	ikm, err := s.validatorService.Keymanager()
+	km, err := s.validatorService.Keymanager()
 	if err != nil {
 		return nil, err
-	}
-	switch ikm := ikm.(type) {
-	case *imported.Keymanager:
-		km = ikm
-	case *derived.Keymanager:
-		km = ikm
-	default:
-		return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
 	}
 	formattedKeys := make([]string, len(req.PublicKeys))
 	for i, key := range req.PublicKeys {
