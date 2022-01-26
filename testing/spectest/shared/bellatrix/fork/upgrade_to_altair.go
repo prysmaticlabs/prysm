@@ -18,7 +18,7 @@ import (
 )
 
 // RunUpgradeToBellatrix is a helper function that runs bellatrix's fork spec tests.
-// It unmarshals a pre- and post-state to check `UpgradeToMerge` comply with spec implementation.
+// It unmarshals a pre- and post-state to check `UpgradeToBellatrix` comply with spec implementation.
 func RunUpgradeToBellatrix(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
@@ -38,7 +38,7 @@ func RunUpgradeToBellatrix(t *testing.T, config string) {
 			}
 			preState, err := v2.InitializeFromProto(preStateBase)
 			require.NoError(t, err)
-			postState, err := execution.UpgradeToMerge(context.Background(), preState)
+			postState, err := execution.UpgradeToBellatrix(context.Background(), preState)
 			require.NoError(t, err)
 			postStateFromFunction, err := v3.ProtobufBeaconState(postState.InnerStateUnsafe())
 			require.NoError(t, err)

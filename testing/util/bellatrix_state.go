@@ -16,8 +16,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// DeterministicGenesisStateMerge returns a genesis state in Merge format made using the deterministic deposits.
-func DeterministicGenesisStateMerge(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
+// DeterministicGenesisStateBellatrix returns a genesis state in Bellatrix format made using the deterministic deposits.
+func DeterministicGenesisStateBellatrix(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
@@ -36,7 +36,7 @@ func DeterministicGenesisStateMerge(t testing.TB, numValidators uint64) (state.B
 
 // genesisBeaconStateBellatrix returns the genesis beacon state.
 func genesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
-	st, err := emptyGenesisStateMerge()
+	st, err := emptyGenesisStateBellatrix()
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +55,8 @@ func genesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit,
 	return buildGenesisBeaconStateBellatrix(genesisTime, st, st.Eth1Data())
 }
 
-// emptyGenesisStateMerge returns an empty genesis state in Merge format.
-func emptyGenesisStateMerge() (state.BeaconState, error) {
+// emptyGenesisStateBellatrix returns an empty genesis state in Bellatrix format.
+func emptyGenesisStateBellatrix() (state.BeaconState, error) {
 	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.
 		Slot: 0,
@@ -181,7 +181,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 	}
 
-	bodyRoot, err := (&ethpb.BeaconBlockBodyMerge{
+	bodyRoot, err := (&ethpb.BeaconBlockBodyBellatrix{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, 32),
