@@ -100,7 +100,7 @@ func Test_AltairToV1Alpha1SignedBlock(t *testing.T) {
 }
 
 func Test_V1Alpha1BeaconBlockBellatrixToV2(t *testing.T) {
-	alphaBlock := util.HydrateBeaconBlockMerge(&ethpbalpha.BeaconBlockMerge{})
+	alphaBlock := util.HydrateBeaconBlockBellatrix(&ethpbalpha.BeaconBlockBellatrix{})
 	alphaBlock.Slot = slot
 	alphaBlock.ProposerIndex = validatorIndex
 	alphaBlock.ParentRoot = parentRoot

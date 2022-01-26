@@ -321,31 +321,31 @@ func TestCopyPayloadHeader(t *testing.T) {
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 	sbb := genSignedBeaconBlockBellatrix()
 
-	got := v1alpha1.CopySignedBeaconBlockMerge(sbb)
+	got := v1alpha1.CopySignedBeaconBlockBellatrix(sbb)
 	if !reflect.DeepEqual(got, sbb) {
-		t.Errorf("CopySignedBeaconBlockMerge() = %v, want %v", got, sbb)
+		t.Errorf("CopySignedBeaconBlockBellatrix() = %v, want %v", got, sbb)
 	}
-	assert.NotEmpty(t, sbb, "Copied signed beacon block Merge has empty fields")
+	assert.NotEmpty(t, sbb, "Copied signed beacon block Bellatrix has empty fields")
 }
 
 func TestCopyBeaconBlockBellatrix(t *testing.T) {
 	b := genBeaconBlockBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockMerge(b)
+	got := v1alpha1.CopyBeaconBlockBellatrix(b)
 	if !reflect.DeepEqual(got, b) {
-		t.Errorf("CopyBeaconBlockMerge() = %v, want %v", got, b)
+		t.Errorf("CopyBeaconBlockBellatrix() = %v, want %v", got, b)
 	}
-	assert.NotEmpty(t, b, "Copied beacon block Merge has empty fields")
+	assert.NotEmpty(t, b, "Copied beacon block Bellatrix has empty fields")
 }
 
 func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
 	bb := genBeaconBlockBodyBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockBodyMerge(bb)
+	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
 	if !reflect.DeepEqual(got, bb) {
-		t.Errorf("CopyBeaconBlockBodyMerge() = %v, want %v", got, bb)
+		t.Errorf("CopyBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
 	}
-	assert.NotEmpty(t, bb, "Copied beacon block body Merge has empty fields")
+	assert.NotEmpty(t, bb, "Copied beacon block body Bellatrix has empty fields")
 }
 
 func bytes() []byte {
@@ -604,8 +604,8 @@ func genSignedBeaconBlockAltair() *v1alpha1.SignedBeaconBlockAltair {
 	}
 }
 
-func genBeaconBlockBodyBellatrix() *v1alpha1.BeaconBlockBodyMerge {
-	return &v1alpha1.BeaconBlockBodyMerge{
+func genBeaconBlockBodyBellatrix() *v1alpha1.BeaconBlockBodyBellatrix {
+	return &v1alpha1.BeaconBlockBodyBellatrix{
 		RandaoReveal:      bytes(),
 		Eth1Data:          genEth1Data(),
 		Graffiti:          bytes(),
@@ -619,8 +619,8 @@ func genBeaconBlockBodyBellatrix() *v1alpha1.BeaconBlockBodyMerge {
 	}
 }
 
-func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockMerge {
-	return &v1alpha1.BeaconBlockMerge{
+func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockBellatrix {
+	return &v1alpha1.BeaconBlockBellatrix{
 		Slot:          123455,
 		ProposerIndex: 55433,
 		ParentRoot:    bytes(),
@@ -629,8 +629,8 @@ func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockMerge {
 	}
 }
 
-func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockMerge {
-	return &v1alpha1.SignedBeaconBlockMerge{
+func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockBellatrix {
+	return &v1alpha1.SignedBeaconBlockBellatrix{
 		Block:     genBeaconBlockBellatrix(),
 		Signature: bytes(),
 	}
