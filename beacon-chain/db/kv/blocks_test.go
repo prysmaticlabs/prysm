@@ -46,12 +46,12 @@ var blockTests = []struct {
 	{
 		name: "bellatrix",
 		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-			b := util.NewBeaconBlockMerge()
+			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = slot
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedMergeSignedBeaconBlock(b)
+			return wrapper.WrappedBellatrixSignedBeaconBlock(b)
 		},
 	},
 }

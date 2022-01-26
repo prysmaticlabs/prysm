@@ -9,7 +9,7 @@ import (
 )
 
 func TestDeterministicGenesisStateBellatrix(t *testing.T) {
-	st, k := DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxCommitteesPerSlot)
+	st, k := DeterministicGenesisStateBellatrix(t, params.BeaconConfig().MaxCommitteesPerSlot)
 	require.Equal(t, params.BeaconConfig().MaxCommitteesPerSlot, uint64(len(k)))
 	require.Equal(t, params.BeaconConfig().MaxCommitteesPerSlot, uint64(st.NumValidators()))
 }

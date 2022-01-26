@@ -17,7 +17,7 @@ type SignedBeaconBlock interface {
 	Proto() proto.Message
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
-	PbMergeBlock() (*ethpb.SignedBeaconBlockMerge, error)
+	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int

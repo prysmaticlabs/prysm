@@ -34,7 +34,7 @@ message GenericSignedBeaconBlock {
         SignedBeaconBlockAltair altair = 2;
 
         // Representing a signed, post-Bellatrix fork beacon block.
-        SignedBeaconBlockMerge merge = 3;
+        SignedBeaconBlockBellatrix bellatrix = 3;
     }
 }
 
@@ -47,7 +47,7 @@ message GenericBeaconBlock {
         BeaconBlockAltair altair = 2;
 
         // Representing a post-Bellatrix fork beacon block.
-        BeaconBlockMerge merge = 3;
+        BeaconBlockBellatrix bellatrix = 3;
     }
 }
 
@@ -297,15 +297,15 @@ message SyncAggregate {
     bytes sync_committee_signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message SignedBeaconBlockMerge {
+message SignedBeaconBlockBellatrix {
     // The unsigned beacon block itself.
-    BeaconBlockMerge block = 1;
+    BeaconBlockBellatrix block = 1;
 
     // 96 byte BLS signature from the validator that produced this block.
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message BeaconBlockMerge {
+message BeaconBlockBellatrix {
     // Beacon chain slot that this block represents.
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 
@@ -319,10 +319,10 @@ message BeaconBlockMerge {
     bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
 
     // The beacon block body.
-    BeaconBlockBodyMerge body = 5;
+    BeaconBlockBodyBellatrix body = 5;
 }
 
-message BeaconBlockBodyMerge {
+message BeaconBlockBodyBellatrix {
     // The validators RANDAO reveal 96 byte value.
     bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
 
