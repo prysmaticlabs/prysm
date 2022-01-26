@@ -246,7 +246,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			delete(b.sharedFieldReferences, field)
 			delete(b.stateFieldLeaves, field)
 		}
-		state.StateCount.Inc()
+		state.StateCount.Sub(1)
 	})
 
 	return dst
@@ -285,7 +285,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	}
 	layers := stateutil.Merkleize(fieldRoots)
 	b.merkleLayers = layers
-	b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
+	b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateAltairFieldCount)
 	return nil
 }
 
