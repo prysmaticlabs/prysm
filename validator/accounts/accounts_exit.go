@@ -136,9 +136,9 @@ func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][fieldparams.BLS
 		return nil, nil, errors.Wrap(err, "could not open wallet")
 	}
 	// TODO(#9883) - Remove this when we have a better way to handle this.
-	if w.KeymanagerKind() == keymanager.Remote || w.KeymanagerKind() == keymanager.Web3Signer {
+	if w.KeymanagerKind() == keymanager.Web3Signer {
 		return nil, nil, errors.New(
-			"remote and web3signer wallets cannot exit accounts locally. please perform this on the remote signer node",
+			"web3signer wallets cannot exit accounts locally. please perform this on the remote signer node",
 		)
 	}
 	km, err = w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
