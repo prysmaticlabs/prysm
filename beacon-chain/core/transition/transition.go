@@ -273,7 +273,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		}
 
 		if time.CanUpgradeToBellatrix(state.Slot()) {
-			state, err = execution.UpgradeToMerge(ctx, state)
+			state, err = execution.UpgradeToBellatrix(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

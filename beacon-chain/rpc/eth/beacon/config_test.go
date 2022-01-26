@@ -331,11 +331,11 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "73", v)
 		case "FeeRecipient":
 			assert.Equal(t, common.HexToAddress("FeeRecipient"), v)
-		case "PROPORTIONAL_SLASHING_MULTIPLIER_MERGE":
+		case "PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX":
 			assert.Equal(t, "3", v)
-		case "MIN_SLASHING_PENALTY_QUOTIENT_MERGE":
+		case "MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX":
 			assert.Equal(t, "32", v)
-		case "INACTIVITY_PENALTY_QUOTIENT_MERGE":
+		case "INACTIVITY_PENALTY_QUOTIENT_BELLATRIX":
 			assert.Equal(t, "16777216", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)

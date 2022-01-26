@@ -317,7 +317,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
-	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_MERGE.String())) {
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())) {
 		actualRespContainer = &bellatrixBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockBellatrixContainerJson{
