@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestStateRoots_Casting(t *testing.T) {
@@ -89,4 +90,16 @@ func TestStateRoots_SizeSSZ(t *testing.T) {
 	if d.SizeSSZ() != fieldparams.StateRootsLength*32 {
 		t.Errorf("Wrong SSZ size. Expected %v vs actual %v", fieldparams.StateRootsLength*32, d.SizeSSZ())
 	}
+}
+
+func TestStateRoots_Slice(t *testing.T) {
+	a, b, c := [32]byte{'a'}, [32]byte{'b'}, [32]byte{'c'}
+	roots := StateRoots{}
+	roots[1] = a
+	roots[10] = b
+	roots[100] = c
+	slice := roots.Slice()
+	assert.DeepEqual(t, a[:], slice[1])
+	assert.DeepEqual(t, b[:], slice[10])
+	assert.DeepEqual(t, c[:], slice[100])
 }
