@@ -108,31 +108,31 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(bockSignRequest, "", "\t")
+		return json.Marshal(bockSignRequest)
 	case *validatorpb.SignRequest_AttestationData:
 		attestationSignRequest, err := v1.GetAttestationSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(attestationSignRequest, "", "\t")
+		return json.Marshal(attestationSignRequest)
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
 		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(aggregateAndProofSignRequest, "", "\t")
+		return json.Marshal(aggregateAndProofSignRequest)
 	case *validatorpb.SignRequest_Slot:
 		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(aggregationSlotSignRequest, "", "\t")
+		return json.Marshal(aggregationSlotSignRequest)
 	case *validatorpb.SignRequest_BlockV2:
 		blocv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(blocv2AltairSignRequest, "", "\t")
+		return json.Marshal(blocv2AltairSignRequest)
 	// TODO(#10053): Need to add support for merge blocks.
 
 	/*
@@ -151,31 +151,31 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(randaoRevealSignRequest, "", "\t")
+		return json.Marshal(randaoRevealSignRequest)
 	case *validatorpb.SignRequest_Exit:
 		voluntaryExitRequest, err := v1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(voluntaryExitRequest, "", "\t")
+		return json.Marshal(voluntaryExitRequest)
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
 		syncCommitteeMessageRequest, err := v1.GetSyncCommitteeMessageSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(syncCommitteeMessageRequest, "", "\t")
+		return json.Marshal(syncCommitteeMessageRequest)
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
 		syncCommitteeSelectionProofRequest, err := v1.GetSyncCommitteeSelectionProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(syncCommitteeSelectionProofRequest, "", "\t")
+		return json.Marshal(syncCommitteeSelectionProofRequest)
 	case *validatorpb.SignRequest_ContributionAndProof:
 		contributionAndProofRequest, err := v1.GetSyncCommitteeContributionAndProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		return json.MarshalIndent(contributionAndProofRequest, "", "\t")
+		return json.Marshal(contributionAndProofRequest)
 	default:
 		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}
