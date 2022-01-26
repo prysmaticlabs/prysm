@@ -1,4 +1,4 @@
-package slashings
+package mock
 
 import (
 	"context"
