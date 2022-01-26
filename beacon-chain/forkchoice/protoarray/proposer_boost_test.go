@@ -268,7 +268,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// We boost the honest proposal at slot 2.
 		secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
 		genesis := time.Now().Add(-2 * secondsPerSlot)
-		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot /* slot */, honestBlock, genesis))
+		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot, honestBlock, genesis))
 
 		// An attestation is received for B that has more voting power than C with the proposer boost,
 		// allowing B to then become the head if their attestation has enough adversarial votes.
