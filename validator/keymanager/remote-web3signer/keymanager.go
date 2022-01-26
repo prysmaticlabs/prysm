@@ -133,6 +133,7 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		}
 		return json.MarshalIndent(blocv2AltairSignRequest, "", "\t")
 	// TODO(#10053): Need to add support for merge blocks.
+
 	/*
 		case *validatorpb.SignRequest_BlockV3:
 		return "BLOCK_V3", nil

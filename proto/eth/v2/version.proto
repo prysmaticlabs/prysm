@@ -26,5 +26,5 @@ option php_namespace = "Ethereum\\Eth\\v2";
 enum Version {
   PHASE0 = 0;
   ALTAIR = 1;
-  MERGE = 2;
+  BELLATRIX = 2;
 }
