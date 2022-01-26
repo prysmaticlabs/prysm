@@ -39,7 +39,7 @@ func InitializeDataMaps() {
 			return wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (block.SignedBeaconBlock, error) {
-			return wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{}})
+			return wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 		},
 	}
 

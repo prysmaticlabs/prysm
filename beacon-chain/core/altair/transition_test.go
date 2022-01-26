@@ -43,7 +43,7 @@ func TestProcessEpoch_CanProcess(t *testing.T) {
 }
 
 func TestProcessEpoch_CanProcessBellatrix(t *testing.T) {
-	st, _ := util.DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(10*params.BeaconConfig().SlotsPerEpoch))
 	newState, err := altair.ProcessEpoch(context.Background(), st)
 	require.NoError(t, err)
