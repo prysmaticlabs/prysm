@@ -91,8 +91,8 @@ func DeployDepositContract(auth *bind.TransactOpts, backend bind.ContractBackend
 		return common.Address{}, nil, nil, err
 	}
 	return address, tx, &deposit.DepositContract{
-		DepositContractCaller: deposit.NewDepositContractCallerFromBoundContract(contract),
+		DepositContractCaller:     deposit.NewDepositContractCallerFromBoundContract(contract),
 		DepositContractTransactor: deposit.NewDepositContractTransactorFromBoundContract(contract),
-		DepositContractFilterer: deposit.NewDepositContractFiltererFromBoundContract(contract),
+		DepositContractFilterer:   deposit.NewDepositContractFiltererFromBoundContract(contract),
 	}, nil
 }
