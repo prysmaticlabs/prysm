@@ -143,8 +143,7 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	}
 
 	// Compute the list of leaves in the Fork Choice
-	// These are all the nodes that have NonExistentNode as best child
-	// We already processed the newly VALID leaf so that one is excluded
+	// These are all the nodes that have NonExistentNode as best child.
 	leaves := []uint64{}
 	for i := uint64(0); i < uint64(len(f.store.nodes)); i++ {
 		node = f.store.nodes[i]
