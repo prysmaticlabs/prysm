@@ -91,7 +91,10 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 
 // This updates the synced_tips map when the block with the given root becomes
 // VALID
-func (f *ForkChoice) UpdateSyncedTips(root [32]byte) error {
+func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	// We can only change status of blocks already in the Fork Choice
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()

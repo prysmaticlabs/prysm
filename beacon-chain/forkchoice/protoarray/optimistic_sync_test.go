@@ -317,11 +317,11 @@ func TestUpdateSyncedTips(t *testing.T) {
 			errInvalidNodeIndex,
 		},
 	}
-	for i, tc := range tests {
+	for _, tc := range tests {
 		f.syncedTips.Lock()
 		f.syncedTips.validatedTips = tc.tips
 		f.syncedTips.Unlock()
-		err := f.UpdateSyncedTips(tc.root)
+		err := f.UpdateSyncedTips(context.Background(), tc.root)
 		if tc.wantedErr != nil {
 			require.ErrorIs(t, err, tc.wantedErr)
 		} else {
