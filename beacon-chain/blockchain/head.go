@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -39,13 +40,27 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	// To get the proper head update, a node first checks its best justified
 	// can become justified. This is designed to prevent bounce attack and
 	// ensure head gets its best justified info.
-	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
-		s.justifiedCheckpt = s.bestJustifiedCheckpt
+	bestJustified := s.store.BestJustifiedCheckpt()
+	if bestJustified == nil {
+		return errNilBestJustifiedInStore
+	}
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	if bestJustified.Epoch > justified.Epoch {
+		s.store.SetJustifiedCheckpt(bestJustified)
 	}
 
 	// Get head from the fork choice service.
-	f := s.finalizedCheckpt
-	j := s.justifiedCheckpt
+	f := s.store.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
+	j := s.store.JustifiedCheckpt()
+	if j == nil {
+		return errNilJustifiedInStore
+	}
 	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
 	headStartRoot := bytesutil.ToBytes32(j.Root)
@@ -261,6 +276,13 @@ func (s *Service) headGenesisValidatorRoot() [32]byte {
 // This is a lock free version.
 func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOnlyValidator, error) {
 	return s.head.state.ValidatorAtIndexReadOnly(index)
+}
+
+// This returns the validator index referenced by the provided pubkey in
+// the head state.
+// This is a lock free version.
+func (s *Service) headValidatorIndexAtPubkey(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+	return s.head.state.ValidatorIndexByPubkey(pubKey)
 }
 
 // Returns true if head state exists.

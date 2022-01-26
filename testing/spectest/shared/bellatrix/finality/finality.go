@@ -57,9 +57,9 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, err)
 				blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 				require.NoError(t, err, "Failed to decompress")
-				block := &ethpb.SignedBeaconBlockMerge{}
+				block := &ethpb.SignedBeaconBlockBellatrix{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				wsb, err := wrapper.WrappedMergeSignedBeaconBlock(block)
+				wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(block)
 				require.NoError(t, err)
 				processedState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 				require.NoError(t, err)
