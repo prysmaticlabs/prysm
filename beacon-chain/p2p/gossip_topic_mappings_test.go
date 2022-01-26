@@ -25,12 +25,12 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bCfg := params.BeaconConfig()
 	altairForkEpoch := eth2types.Epoch(100)
-	mergeForkEpoch := eth2types.Epoch(200)
+	BellatrixForkEpoch := eth2types.Epoch(200)
 
 	bCfg.AltairForkEpoch = altairForkEpoch
-	bCfg.MergeForkEpoch = mergeForkEpoch
+	bCfg.BellatrixForkEpoch = BellatrixForkEpoch
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = eth2types.Epoch(100)
-	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.MergeForkVersion)] = eth2types.Epoch(200)
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.BellatrixForkVersion)] = eth2types.Epoch(200)
 	params.OverrideBeaconConfig(bCfg)
 
 	// Phase 0
@@ -43,8 +43,8 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	_, ok = pMessage.(*ethpb.SignedBeaconBlockAltair)
 	assert.Equal(t, true, ok)
 
-	// Merge Fork
-	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, mergeForkEpoch)
+	// Bellatrix Fork
+	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, BellatrixForkEpoch)
 	_, ok = pMessage.(*ethpb.SignedBeaconBlockMerge)
 	assert.Equal(t, true, ok)
 

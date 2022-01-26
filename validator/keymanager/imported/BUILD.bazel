@@ -21,6 +21,7 @@ go_library(
         "//async:go_default_library",
         "//async/event:go_default_library",
         "//config/features:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",
@@ -53,6 +54,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//async/event:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/eth/service:go_default_library",

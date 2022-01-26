@@ -8,6 +8,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -18,6 +19,14 @@ type BeaconState interface {
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	FutureForkStub
+	StateProver
+}
+
+// StateProver defines the ability to create Merkle proofs for beacon state fields.
+type StateProver interface {
+	FinalizedRootProof(ctx context.Context) ([][]byte, error)
+	CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error)
+	NextSyncCommitteeProof(ctx context.Context) ([][]byte, error)
 }
 
 // ReadOnlyBeaconState defines a struct which only has read access to beacon state methods.
@@ -65,7 +74,7 @@ type WriteOnlyBeaconState interface {
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
-	SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error
+	SetLatestExecutionPayloadHeader(payload *ethpb.ExecutionPayloadHeader) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
@@ -75,7 +84,7 @@ type ReadOnlyValidator interface {
 	ActivationEpoch() types.Epoch
 	WithdrawableEpoch() types.Epoch
 	ExitEpoch() types.Epoch
-	PublicKey() [48]byte
+	PublicKey() [fieldparams.BLSPubkeyLength]byte
 	WithdrawalCredentials() []byte
 	Slashed() bool
 	IsNil() bool
@@ -86,8 +95,8 @@ type ReadOnlyValidators interface {
 	Validators() []*ethpb.Validator
 	ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validator, error)
 	ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (ReadOnlyValidator, error)
-	ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex, bool)
-	PubkeyAtIndex(idx types.ValidatorIndex) [48]byte
+	ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
+	PubkeyAtIndex(idx types.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte
 	NumValidators() int
 	ReadFromEveryValidator(f func(idx int, val ReadOnlyValidator) error) error
 }
@@ -150,6 +159,7 @@ type WriteOnlyBlockRoots interface {
 
 // WriteOnlyStateRoots defines a struct which only has write access to state roots methods.
 type WriteOnlyStateRoots interface {
+	SetStateRoots(val [][]byte) error
 	UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error
 }
 

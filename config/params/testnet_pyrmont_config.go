@@ -30,8 +30,8 @@ func PyrmontConfig() *BeaconChainConfig {
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x20, 0x09}
 	cfg.AltairForkVersion = []byte{0x01, 0x00, 0x20, 0x09}
 	cfg.AltairForkEpoch = 61650
-	cfg.MergeForkVersion = []byte{0x02, 0x00, 0x20, 0x09}
-	cfg.MergeForkEpoch = math.MaxUint64 // TODO_MERGE: Add Pyrmont merge epoch if merge is ever tried in it.
+	cfg.BellatrixForkVersion = []byte{0x02, 0x00, 0x20, 0x09}
+	cfg.BellatrixForkEpoch = math.MaxUint64
 	cfg.ShardingForkVersion = []byte{0x03, 0x00, 0x20, 0x09}
 	cfg.ShardingForkEpoch = math.MaxUint64
 	cfg.SecondsPerETH1Block = 14

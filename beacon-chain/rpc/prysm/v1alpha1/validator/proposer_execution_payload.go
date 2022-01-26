@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/catalyst"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -67,7 +67,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 
 	var parentHash []byte
 	var hasTerminalBlock bool
-	complete, err := execution.IsMergeComplete(st)
+	complete, err := blocks.MergeComplete(st)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 			// `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
 			isActivationEpochReached := params.BeaconConfig().TerminalBlockHashActivationEpoch <= slots.ToEpoch(slot)
 			if !isActivationEpochReached {
-				return execution.EmptyPayload(), nil
+				return blocks.EmptyPayload(), nil
 			}
 		}
 
@@ -87,7 +87,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 		}
 		if !hasTerminalBlock {
 			// No terminal block signals this is pre merge, empty payload is used.
-			return execution.EmptyPayload(), nil
+			return blocks.EmptyPayload(), nil
 		}
 		// Terminal block found signals production on top of terminal PoW block.
 	} else {
@@ -113,7 +113,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 		return nil, err
 	}
 	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-	if finalizedBlock != nil && finalizedBlock.Version() == version.Merge {
+	if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
 		finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 		if err != nil {
 			return nil, err

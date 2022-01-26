@@ -4,13 +4,14 @@ import (
 	"context"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStore_GenesisValidatorsRoot_ReadAndWrite(t *testing.T) {
 	ctx := context.Background()
-	db := setupDB(t, [][48]byte{})
+	db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	tests := []struct {
 		name    string
 		want    []byte

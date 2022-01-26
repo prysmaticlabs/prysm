@@ -1104,7 +1104,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	genesisValidatorRoot := r.cfg.Chain.GenesisValidatorRoot()
-	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, genesisValidatorRoot[:])
+	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, mergeDigest)
 	m := &pubsub.Message{
@@ -1177,7 +1177,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	genesisValidatorRoot := r.cfg.Chain.GenesisValidatorRoot()
-	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, genesisValidatorRoot[:])
+	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, mergeDigest)
 	m := &pubsub.Message{
@@ -1249,7 +1249,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadGasUsed(t *testing.T) {
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	genesisValidatorRoot := r.cfg.Chain.GenesisValidatorRoot()
-	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, genesisValidatorRoot[:])
+	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, mergeDigest)
 	m := &pubsub.Message{
@@ -1321,7 +1321,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentHashInPayload(t *testing.T) {
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	genesisValidatorRoot := r.cfg.Chain.GenesisValidatorRoot()
-	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().MergeForkVersion, genesisValidatorRoot[:])
+	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, mergeDigest)
 	m := &pubsub.Message{

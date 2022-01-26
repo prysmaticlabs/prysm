@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/prompt"
@@ -127,7 +128,7 @@ func PerformVoluntaryExit(
 	return rawExitedKeys, formattedExitedKeys, nil
 }
 
-func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km keymanager.IKeymanager, err error) {
+func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte, km keymanager.IKeymanager, err error) {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, wallet.ErrNoWalletFound
 	})
@@ -153,7 +154,7 @@ func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km key
 func interact(
 	cliCtx *cli.Context,
 	r io.Reader,
-	validatingPublicKeys [][48]byte,
+	validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte,
 ) (rawPubKeys [][]byte, formattedPubKeys []string, err error) {
 	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
 		// Allow the user to interactively select the accounts to exit or optionally
@@ -231,7 +232,7 @@ func interact(
 	return rawPubKeys, formattedPubKeys, nil
 }
 
-func prepareAllKeys(validatingKeys [][48]byte) (raw [][]byte, formatted []string) {
+func prepareAllKeys(validatingKeys [][fieldparams.BLSPubkeyLength]byte) (raw [][]byte, formatted []string) {
 	raw = make([][]byte, len(validatingKeys))
 	formatted = make([]string, len(validatingKeys))
 	for i, pk := range validatingKeys {

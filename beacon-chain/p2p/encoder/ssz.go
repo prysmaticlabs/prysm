@@ -16,9 +16,8 @@ import (
 var _ NetworkEncoding = (*SszNetworkEncoder)(nil)
 
 // MaxGossipSize allowed for gossip messages.
-var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib
-
-var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize // 1 Mib
+var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib.
+var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize   // 1 Mib.
 
 // This pool defines the sync pool for our buffered snappy writers, so that they
 // can be constantly reused.
@@ -200,4 +199,14 @@ func newBufferedWriter(w io.Writer) *snappy.Writer {
 	}
 	bufW.Reset(w)
 	return bufW
+}
+
+// SetMaxGossipSizeForBellatrix sets the MaxGossipSize to 10Mb.
+func SetMaxGossipSizeForBellatrix() {
+	MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSizeBellatrix
+}
+
+// SetMaxChunkSizeForBellatrix sets the MaxChunkSize to 10Mb.
+func SetMaxChunkSizeForBellatrix() {
+	MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSizeBellatrix
 }

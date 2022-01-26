@@ -16,7 +16,7 @@ func (s *Service) forkWatcher() {
 		case currSlot := <-slotTicker.C():
 			currEpoch := slots.ToEpoch(currSlot)
 			if currEpoch == params.BeaconConfig().AltairForkEpoch ||
-				currEpoch == params.BeaconConfig().MergeForkEpoch {
+				currEpoch == params.BeaconConfig().BellatrixForkEpoch {
 				// If we are in the fork epoch, we update our enr with
 				// the updated fork digest. These repeatedly does
 				// this over the epoch, which might be slightly wasteful
@@ -26,10 +26,10 @@ func (s *Service) forkWatcher() {
 					log.WithError(err).Error("Could not add fork entry")
 				}
 
-				// from Merge Epoch, the MaxGossipSize and the MaxChunkSize is changed to 10MB.
-				if currEpoch == params.BeaconConfig().MergeForkEpoch {
-					encoder.MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSizeMerge
-					encoder.MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSizeMerge
+				// from Bellatrix Epoch, the MaxGossipSize and the MaxChunkSize is changed to 10Mb.
+				if currEpoch == params.BeaconConfig().BellatrixForkEpoch {
+					encoder.SetMaxGossipSizeForBellatrix()
+					encoder.SetMaxChunkSizeForBellatrix()
 				}
 			}
 		case <-s.ctx.Done():

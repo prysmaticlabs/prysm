@@ -11,7 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -60,13 +62,48 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 			SyncCommitteeIndices: []types.CommitteeIndex{0},
 		},
 	}
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	// Request slot 0, should get the index 0 for validator 0.
 	res, err := server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:], Slot: types.Slot(0),
 	})
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, res.Indices)
+}
+
+func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateAltair(t, 10)
+	server := &Server{
+		SyncCommitteePool: synccommittee.NewStore(),
+		P2P:               &mockp2p.MockBroadcaster{},
+		HeadFetcher: &mock.ChainService{
+			State:                st,
+			SyncCommitteeIndices: []types.CommitteeIndex{10},
+		},
+	}
+	secKey, err := bls.RandKey()
+	require.NoError(t, err)
+	sig := secKey.Sign([]byte{'A'}).Marshal()
+	msg := &ethpb.SyncCommitteeMessage{
+		Slot:           1,
+		ValidatorIndex: 2,
+		BlockRoot:      make([]byte, 32),
+		Signature:      sig,
+	}
+	_, err = server.SubmitSyncMessage(context.Background(), msg)
+	require.NoError(t, err)
+	_, err = server.SubmitSyncMessage(context.Background(), msg)
+	require.NoError(t, err)
+	val, err := st.ValidatorAtIndex(2)
+	require.NoError(t, err)
+
+	contr, err := server.GetSyncCommitteeContribution(context.Background(),
+		&ethpb.SyncCommitteeContributionRequest{
+			Slot:      1,
+			PublicKey: val.PublicKey,
+			SubnetId:  1})
+	require.NoError(t, err)
+	assert.DeepEqual(t, sig, contr.Signature)
 }
 
 func TestSubmitSignedContributionAndProof_OK(t *testing.T) {

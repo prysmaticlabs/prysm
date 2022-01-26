@@ -62,7 +62,6 @@ type Service struct {
 	cancel               context.CancelFunc
 	listener             net.Listener
 	grpcServer           *grpc.Server
-	canonicalStateChan   chan *ethpbv1alpha1.BeaconState
 	incomingAttestation  chan *ethpbv1alpha1.Attestation
 	credentialError      error
 	connectedRPCClients  map[net.Addr]bool
@@ -87,6 +86,7 @@ type Config struct {
 	BlockReceiver           blockchain.BlockReceiver
 	POWChainService         powchain.Chain
 	ChainStartFetcher       powchain.ChainStartFetcher
+	POWChainInfoFetcher     powchain.ChainInfoFetcher
 	GenesisTimeFetcher      blockchain.TimeFetcher
 	GenesisFetcher          blockchain.GenesisFetcher
 	EnableDebugRPCEndpoints bool
@@ -119,7 +119,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		cfg:                 cfg,
 		ctx:                 ctx,
 		cancel:              cancel,
-		canonicalStateChan:  make(chan *ethpbv1alpha1.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation: make(chan *ethpbv1alpha1.Attestation, params.BeaconConfig().DefaultBufferSize),
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
@@ -178,7 +177,6 @@ func (s *Service) Start() {
 		ForkFetcher:            s.cfg.ForkFetcher,
 		FinalizationFetcher:    s.cfg.FinalizationFetcher,
 		TimeFetcher:            s.cfg.GenesisTimeFetcher,
-		CanonicalStateChan:     s.canonicalStateChan,
 		BlockFetcher:           s.cfg.POWChainService,
 		DepositFetcher:         s.cfg.DepositFetcher,
 		ChainStartFetcher:      s.cfg.ChainStartFetcher,
@@ -225,6 +223,7 @@ func (s *Service) Start() {
 		PeersFetcher:         s.cfg.PeersFetcher,
 		PeerManager:          s.cfg.PeerManager,
 		GenesisFetcher:       s.cfg.GenesisFetcher,
+		POWChainInfoFetcher:  s.cfg.POWChainInfoFetcher,
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
@@ -250,7 +249,6 @@ func (s *Service) Start() {
 		ChainStartFetcher:           s.cfg.ChainStartFetcher,
 		DepositFetcher:              s.cfg.DepositFetcher,
 		BlockFetcher:                s.cfg.POWChainService,
-		CanonicalStateChan:          s.canonicalStateChan,
 		GenesisTimeFetcher:          s.cfg.GenesisTimeFetcher,
 		StateNotifier:               s.cfg.StateNotifier,
 		BlockNotifier:               s.cfg.BlockNotifier,

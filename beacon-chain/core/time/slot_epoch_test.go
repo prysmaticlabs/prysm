@@ -115,10 +115,10 @@ func TestCanUpgradeToAltair(t *testing.T) {
 	}
 }
 
-func TestCanUpgradeToMerge(t *testing.T) {
+func TestCanUpgradeBellatrix(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bc := params.BeaconConfig()
-	bc.MergeForkEpoch = 5
+	bc.BellatrixForkEpoch = 5
 	params.OverrideBeaconConfig(bc)
 	tests := []struct {
 		name string
@@ -131,20 +131,20 @@ func TestCanUpgradeToMerge(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "not merge epoch",
+			name: "not bellatrix epoch",
 			slot: params.BeaconConfig().SlotsPerEpoch,
 			want: false,
 		},
 		{
-			name: "merge epoch",
-			slot: types.Slot(params.BeaconConfig().MergeForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			name: "bellatrix epoch",
+			slot: types.Slot(params.BeaconConfig().BellatrixForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
 			want: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := CanUpgradeToMerge(tt.slot); got != tt.want {
-				t.Errorf("CanUpgradeToMerge() = %v, want %v", got, tt.want)
+			if got := CanUpgradeToBellatrix(tt.slot); got != tt.want {
+				t.Errorf("CanUpgradeToBellatrix() = %v, want %v", got, tt.want)
 			}
 		})
 	}

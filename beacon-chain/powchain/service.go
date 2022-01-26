@@ -89,6 +89,10 @@ type ChainStartFetcher interface {
 type ChainInfoFetcher interface {
 	Eth2GenesisPowchainInfo() (uint64, *big.Int)
 	IsConnectedToETH1() bool
+	CurrentETH1Endpoint() string
+	CurrentETH1ConnectionError() error
+	ETH1Endpoints() []string
+	ETH1ConnectionErrors() []error
 }
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
@@ -327,6 +331,41 @@ func (s *Service) updateConnectedETH1(state bool) {
 // IsConnectedToETH1 checks if the beacon node is connected to a ETH1 Node.
 func (s *Service) IsConnectedToETH1() bool {
 	return s.connectedETH1
+}
+
+// CurrentETH1Endpoint returns the URL of the current ETH1 endpoint.
+func (s *Service) CurrentETH1Endpoint() string {
+	return s.cfg.currHttpEndpoint.Url
+}
+
+// CurrentETH1ConnectionError returns the error (if any) of the current connection.
+func (s *Service) CurrentETH1ConnectionError() error {
+	httpClient, rpcClient, err := s.dialETH1Nodes(s.cfg.currHttpEndpoint)
+	httpClient.Close()
+	rpcClient.Close()
+	return err
+}
+
+// ETH1Endpoints returns the slice of HTTP endpoint URLs (default is 0th element).
+func (s *Service) ETH1Endpoints() []string {
+	var eps []string
+	for _, ep := range s.cfg.httpEndpoints {
+		eps = append(eps, ep.Url)
+	}
+	return eps
+}
+
+// ETH1ConnectionErrors returns a slice of errors for each HTTP endpoint. An error
+// of nil means the connection was successful.
+func (s *Service) ETH1ConnectionErrors() []error {
+	var errs []error
+	for _, ep := range s.cfg.httpEndpoints {
+		httpClient, rpcClient, err := s.dialETH1Nodes(ep)
+		httpClient.Close()
+		rpcClient.Close()
+		errs = append(errs, err)
+	}
+	return errs
 }
 
 // DepositRoot returns the Merkle root of the latest deposit trie
@@ -749,7 +788,7 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
-			if !features.Get().MergeTestnet {
+			if !features.Get().KintsugiTestnet {
 				if err := s.processPastLogs(ctx); err != nil {
 					log.Errorf("Unable to process past logs %v", err)
 					s.retryETH1Node(err)
@@ -765,7 +804,7 @@ func (s *Service) initPOWService() {
 			}
 			// Handle edge case with embedded genesis state by fetching genesis header to determine
 			// its height.
-			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 && !features.Get().MergeTestnet {
+			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 && !features.Get().KintsugiTestnet {
 				genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, common.BytesToHash(s.chainStartData.Eth1Data.BlockHash))
 				if err != nil {
 					log.Errorf("Unable to retrieve genesis ETH1.0 chain header: %v", err)

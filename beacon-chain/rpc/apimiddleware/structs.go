@@ -323,16 +323,16 @@ type beaconBlockBodyJson struct {
 }
 
 type signedBeaconBlockContainerV2Json struct {
-	Phase0Block *beaconBlockJson       `json:"phase0_block"`
-	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
-	MergeBlock  *beaconBlockMergeJson  `json:"merge_block"`
-	Signature   string                 `json:"signature" hex:"true"`
+	Phase0Block    *beaconBlockJson          `json:"phase0_block"`
+	AltairBlock    *beaconBlockAltairJson    `json:"altair_block"`
+	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
+	Signature      string                    `json:"signature" hex:"true"`
 }
 
 type beaconBlockContainerV2Json struct {
-	Phase0Block *beaconBlockJson       `json:"phase0_block"`
-	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
-	MergeBlock  *beaconBlockMergeJson  `json:"merge_block"`
+	Phase0Block    *beaconBlockJson          `json:"phase0_block"`
+	AltairBlock    *beaconBlockAltairJson    `json:"altair_block"`
+	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
 }
 
 type signedBeaconBlockAltairContainerJson struct {
@@ -340,9 +340,9 @@ type signedBeaconBlockAltairContainerJson struct {
 	Signature string                 `json:"signature" hex:"true"`
 }
 
-type signedBeaconBlockMergeContainerJson struct {
-	Message   *beaconBlockMergeJson `json:"message"`
-	Signature string                `json:"signature" hex:"true"`
+type signedBeaconBlockBellatrixContainerJson struct {
+	Message   *beaconBlockBellatrixJson `json:"message"`
+	Signature string                    `json:"signature" hex:"true"`
 }
 
 type beaconBlockAltairJson struct {
@@ -353,12 +353,12 @@ type beaconBlockAltairJson struct {
 	Body          *beaconBlockBodyAltairJson `json:"body"`
 }
 
-type beaconBlockMergeJson struct {
-	Slot          string                    `json:"slot"`
-	ProposerIndex string                    `json:"proposer_index"`
-	ParentRoot    string                    `json:"parent_root" hex:"true"`
-	StateRoot     string                    `json:"state_root" hex:"true"`
-	Body          *beaconBlockBodyMergeJson `json:"body"`
+type beaconBlockBellatrixJson struct {
+	Slot          string                        `json:"slot"`
+	ProposerIndex string                        `json:"proposer_index"`
+	ParentRoot    string                        `json:"parent_root" hex:"true"`
+	StateRoot     string                        `json:"state_root" hex:"true"`
+	Body          *beaconBlockBodyBellatrixJson `json:"body"`
 }
 
 type beaconBlockBodyAltairJson struct {
@@ -373,7 +373,7 @@ type beaconBlockBodyAltairJson struct {
 	SyncAggregate     *syncAggregateJson         `json:"sync_aggregate"`
 }
 
-type beaconBlockBodyMergeJson struct {
+type beaconBlockBodyBellatrixJson struct {
 	RandaoReveal      string                     `json:"randao_reveal" hex:"true"`
 	Eth1Data          *eth1DataJson              `json:"eth1_data"`
 	Graffiti          string                     `json:"graffiti" hex:"true"`

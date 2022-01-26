@@ -19,6 +19,7 @@ go_test(
         "//cmd/validator",
         "//tools/bootnode",
         "@com_github_ethereum_go_ethereum//cmd/geth",
+        "@web3signer",
     ],
     eth_network = "minimal",
     shard_count = 2,

@@ -1,8 +1,6 @@
 package params
 
 import (
-	"math"
-
 	eth1Params "github.com/ethereum/go-ethereum/params"
 )
 
@@ -42,10 +40,10 @@ func PraterConfig() *BeaconChainConfig {
 	cfg.DepositChainID = eth1Params.GoerliChainConfig.ChainID.Uint64()
 	cfg.DepositNetworkID = eth1Params.GoerliChainConfig.ChainID.Uint64()
 	cfg.AltairForkEpoch = 36660
-	cfg.MergeForkEpoch = math.MaxUint64 // TODO_MERGE: Add Prater merge epoch when merge is tried in it.
 	cfg.AltairForkVersion = []byte{0x1, 0x0, 0x10, 0x20}
-	cfg.MergeForkVersion = []byte{0x2, 0x0, 0x10, 0x20}
-	//cfg.TerminalTotalDifficulty = common.Hex2Bytes("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC00")
+	cfg.ShardingForkVersion = []byte{0x3, 0x0, 0x10, 0x20}
+	cfg.BellatrixForkVersion = []byte{0x2, 0x0, 0x10, 0x20}
+	cfg.TerminalTotalDifficulty = 4294967296
 	cfg.DepositContractAddress = "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b"
 	return cfg
 }

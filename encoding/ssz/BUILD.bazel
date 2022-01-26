@@ -13,7 +13,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//config/fieldparams:go_default_library",
-        "//config/params:go_default_library",
         "//container/trie:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
@@ -38,6 +37,7 @@ go_test(
     ],
     deps = [
         ":go_default_library",
+        "//config/fieldparams:go_default_library",
         "//crypto/hash:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",

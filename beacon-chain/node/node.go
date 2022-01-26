@@ -754,6 +754,7 @@ func (b *BeaconNode) registerRPCService() error {
 		SlashingChecker:         slasherService,
 		SyncCommitteeObjectPool: b.syncCommitteePool,
 		POWChainService:         web3Service,
+		POWChainInfoFetcher:     web3Service,
 		ChainStartFetcher:       chainStartFetcher,
 		MockEth1Votes:           mockEth1DataVotes,
 		SyncService:             syncService,

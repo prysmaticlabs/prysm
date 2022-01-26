@@ -106,21 +106,21 @@ type BeaconChainConfig struct {
 	DomainContributionAndProof        [4]byte `yaml:"DOMAIN_CONTRIBUTION_AND_PROOF" spec:"true"`         // DomainAggregateAndProof defines the BLS signature domain for contribution and proof.
 
 	// Prysm constants.
-	GweiPerEth                  uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	BLSSecretKeyLength          int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytes.
-	BLSPubkeyLength             int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
-	DefaultBufferSize           int           // DefaultBufferSize for channels across the Prysm repository.
-	ValidatorPrivkeyFileName    string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
-	WithdrawalPrivkeyFileName   string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
-	RPCSyncCheck                time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
-	EmptySignature              [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
-	DefaultPageSize             int           // DefaultPageSize defines the default page size for RPC server request.
-	MaxPeersToSync              int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
-	SlotsPerArchivedPoint       types.Slot    // SlotsPerArchivedPoint defines the number of slots per one archived point.
-	GenesisCountdownInterval    time.Duration // How often to log the countdown until the genesis time is reached.
-	BeaconStateFieldCount       int           // BeaconStateFieldCount defines how many fields are in beacon state.
-	BeaconStateAltairFieldCount int           // BeaconStateAltairFieldCount defines how many fields are in beacon state hard fork 1.
-	BeaconStateMergeFieldCount  int           // BeaconStateMergeFieldCount defines how many fields are in beacon state post upgrade to the Merge.
+	GweiPerEth                     uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
+	BLSSecretKeyLength             int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytes.
+	BLSPubkeyLength                int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
+	DefaultBufferSize              int           // DefaultBufferSize for channels across the Prysm repository.
+	ValidatorPrivkeyFileName       string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
+	WithdrawalPrivkeyFileName      string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
+	RPCSyncCheck                   time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
+	EmptySignature                 [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
+	DefaultPageSize                int           // DefaultPageSize defines the default page size for RPC server request.
+	MaxPeersToSync                 int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
+	SlotsPerArchivedPoint          types.Slot    // SlotsPerArchivedPoint defines the number of slots per one archived point.
+	GenesisCountdownInterval       time.Duration // How often to log the countdown until the genesis time is reached.
+	BeaconStateFieldCount          int           // BeaconStateFieldCount defines how many fields are in beacon state.
+	BeaconStateAltairFieldCount    int           // BeaconStateAltairFieldCount defines how many fields are in beacon state hard fork 1.
+	BeaconStateBellatrixFieldCount int           // BeaconStateBellatrixFieldCount defines how many fields are in beacon state post upgrade to the Bellatrix.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -130,14 +130,16 @@ type BeaconChainConfig struct {
 	SlashingProtectionPruningEpochs types.Epoch // SlashingProtectionPruningEpochs defines a period after which all prior epochs are pruned in the validator database.
 
 	// Fork-related values.
-	GenesisForkVersion  []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`  // GenesisForkVersion is used to track fork version between state transitions.
-	AltairForkVersion   []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`   // AltairForkVersion is used to represent the fork version for altair.
-	AltairForkEpoch     types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`     // AltairForkEpoch is used to represent the assigned fork epoch for altair.
-	MergeForkVersion    []byte                  `yaml:"MERGE_FORK_VERSION" spec:"true"`    // MergeForkVersion is used to represent the fork version for the merge.
-	MergeForkEpoch      types.Epoch             `yaml:"MERGE_FORK_EPOCH" spec:"true"`      // MergeForkEpoch is used to represent the assigned fork epoch for the merge.
-	ShardingForkVersion []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
-	ShardingForkEpoch   types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
-	ForkVersionSchedule map[[4]byte]types.Epoch // Schedule of fork epochs by version.
+	GenesisForkVersion          []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`   // GenesisForkVersion is used to track fork version between state transitions.
+	AltairForkVersion           []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`    // AltairForkVersion is used to represent the fork version for altair.
+	AltairForkEpoch             types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`      // AltairForkEpoch is used to represent the assigned fork epoch for altair.
+	BellatrixForkVersion        []byte                  `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
+	BellatrixForkEpoch          types.Epoch             `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
+	ShardingForkVersion         []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
+	ShardingForkEpoch           types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
+	ForkVersionSchedule         map[[4]byte]types.Epoch // Schedule of fork epochs by version.
+	MinAnchorPowBlockDifficulty uint64                  `yaml:"MIN_ANCHOR_POW_BLOCK_DIFFICULTY" spec:"true"` // MinAnchorPowBlockDifficulty specifies the target chain difficulty at the time of bellatrix.
+	TransitionTotalDifficulty   uint64                  `yaml:"TRANSITION_TOTAL_DIFFICULTY" spec:"true"`     // TransitionTotalDifficulty is part of the experimental bellatrix spec. This value is not used (yet) and is expected to be a uint256.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
@@ -171,24 +173,18 @@ type BeaconChainConfig struct {
 	InactivityPenaltyQuotientAltair      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_ALTAIR" spec:"true"`      // InactivityPenaltyQuotientAltair for penalties during inactivity post Altair hard fork.
 	MinSlashingPenaltyQuotientAltair     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR" spec:"true"`    // MinSlashingPenaltyQuotientAltair for slashing penalties post Altair hard fork.
 	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties' multiplier post Alair hard fork.
-	MinSlashingPenaltyQuotientMerge      uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE" spec:"true"`     // MinSlashingPenaltyQuotientMerge for slashing penalties post Merge hard fork.
-	ProportionalSlashingMultiplierMerge  uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE" spec:"true"`  // ProportionalSlashingMultiplierMerge for slashing penalties' multiplier post Merge hard fork.
-
-	// Merge.
-	EnabledMerge                     bool           // EnabledMerge is true if merge feature is enabled.
-	MaxTransactionsPerPayload        uint64         `yaml:"MAX_TRANSACTIONS_PER_PAYLOAD" spec:"true"`         // MaxTransactionsPerPayload of beacon chain.
-	MaxBytesPerTransaction           uint64         `yaml:"MAX_BYTES_PER_TRANSACTION" spec:"true"`            // MaxBytesPerTransaction of beacon chain.
-	TerminalBlockHash                common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`                  // TerminalBlockHash of beacon chain.
-	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
-	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of the experimental merge spec. This value is not used (yet) and is expected to be a uint256.
-	FeeRecipient                     common.Address // FeeRecipient where the transaction fee goes to.
-
-	// Updated Merge penalty values. This moves penalty parameters toward their final, maximum security values.
-	// Note: We do not override previous configuration values but instead creates new values and replaces usage throughout.
-	InactivityPenaltyQuotientMerge uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_MERGE" spec:"true"` // InactivityPenaltyQuotientMerge for penalties during inactivity post Merge hard fork.
+	MinSlashingPenaltyQuotientMerge      uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE" spec:"true"`     // MinSlashingPenaltyQuotientMerge for slashing penalties post Bellatrix hard fork.
+	ProportionalSlashingMultiplierMerge  uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE" spec:"true"`  // ProportionalSlashingMultiplierMerge for slashing penalties' multiplier post Bellatrix hard fork.
+	InactivityPenaltyQuotientMerge       uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_MERGE" spec:"true"`       // InactivityPenaltyQuotientMerge for penalties during inactivity post Bellatrix hard fork.
 
 	// Light client
 	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.
+
+	// Bellatrix
+	TerminalBlockHash                common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`                  // TerminalBlockHash of beacon chain.
+	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
+	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of Bellatrixexperimental bellatrix spec. This value is type is currently TBD: https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/beacon-chain.md#transition-settings
+	FeeRecipient                     common.Address // FeeRecipient where the transaction fee goes to.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
@@ -199,6 +195,6 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
 	// Set Altair fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
-	// Set Merge fork data.
-	b.ForkVersionSchedule[bytesutil.ToBytes4(b.MergeForkVersion)] = b.MergeForkEpoch
+	// Set Bellatrix fork data.
+	b.ForkVersionSchedule[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
 }

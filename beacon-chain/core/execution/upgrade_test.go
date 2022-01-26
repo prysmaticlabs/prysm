@@ -1,9 +1,10 @@
-package execution
+package execution_test
 
 import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -11,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
-func TestUpgradeToMerge(t *testing.T) {
+func TestUpgradeToBellatrix(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	preForkState := st.Copy()
-	mSt, err := UpgradeToMerge(context.Background(), st)
+	mSt, err := execution.UpgradeToMerge(context.Background(), st)
 	require.NoError(t, err)
 
 	require.Equal(t, preForkState.GenesisTime(), mSt.GenesisTime())
@@ -49,7 +50,7 @@ func TestUpgradeToMerge(t *testing.T) {
 	f := mSt.Fork()
 	require.DeepSSZEqual(t, &ethpb.Fork{
 		PreviousVersion: st.Fork().CurrentVersion,
-		CurrentVersion:  params.BeaconConfig().MergeForkVersion,
+		CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
 		Epoch:           time.CurrentEpoch(st),
 	}, f)
 	csc, err := mSt.CurrentSyncCommittee()

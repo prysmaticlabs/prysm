@@ -36,8 +36,8 @@ const disabledFeatureFlag = "Disabled feature flag"
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Testnet Flags.
-	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
-	MergeTestnet   bool // MergeTestnet defines the flag through which we can enable node to run on the merge testnet.
+	PyrmontTestnet  bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
+	KintsugiTestnet bool // KintsugiTestnet defines the flag through which we can enable node to run on the merge testnet.
 
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
@@ -132,10 +132,11 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		log.Warn("Running on the Prater Testnet")
 		params.UsePraterConfig()
 		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(MergeTestnet.Name) {
+	} else if ctx.Bool(KintsugiTestnet.Name) {
 		log.Warn("Running on the Merge Testnet")
 		params.UseMergeTestConfig()
 		params.UseMergeTestNetworkConfig()
+		cfg.KintsugiTestnet = true
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
 		params.UseMainnetConfig()
@@ -221,17 +222,20 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logDisabled(disableActiveBalanceCache)
 		cfg.EnableActiveBalanceCache = false
 	}
-	if ctx.Bool(enableGetBlockOptimizations.Name) {
-		logEnabled(enableGetBlockOptimizations)
-		cfg.EnableGetBlockOptimizations = true
+	cfg.EnableGetBlockOptimizations = true
+	if ctx.Bool(disableGetBlockOptimizations.Name) {
+		logDisabled(disableGetBlockOptimizations)
+		cfg.EnableGetBlockOptimizations = false
 	}
-	if ctx.Bool(enableBatchGossipVerification.Name) {
-		logEnabled(enableBatchGossipVerification)
-		cfg.EnableBatchVerification = true
+	cfg.EnableBatchVerification = true
+	if ctx.Bool(disableBatchGossipVerification.Name) {
+		logDisabled(disableBatchGossipVerification)
+		cfg.EnableBatchVerification = false
 	}
-	if ctx.Bool(enableBalanceTrieComputation.Name) {
-		logEnabled(enableBalanceTrieComputation)
-		cfg.EnableBalanceTrieComputation = true
+	cfg.EnableBalanceTrieComputation = true
+	if ctx.Bool(disableBalanceTrieComputation.Name) {
+		logDisabled(disableBalanceTrieComputation)
+		cfg.EnableBalanceTrieComputation = false
 	}
 	Init(cfg)
 }

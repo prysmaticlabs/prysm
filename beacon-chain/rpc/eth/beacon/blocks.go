@@ -293,7 +293,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}, nil
 	}
 
-	mergeBlk, err := blk.PbMergeBlock()
+	bellatrixBlk, err := blk.PbMergeBlock()
 	if err != nil {
 		altairBlk, err := blk.PbAltairBlock()
 		if err != nil {
@@ -314,8 +314,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 		return nil, status.Errorf(codes.Internal, "Could not check for block")
 	}
-	if mergeBlk != nil {
-		v2Blk, err := migration.V1Alpha1BeaconBlockMergeToV2(mergeBlk.Block)
+	if bellatrixBlk != nil {
+		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}

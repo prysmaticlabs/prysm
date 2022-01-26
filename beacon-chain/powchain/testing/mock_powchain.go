@@ -31,6 +31,10 @@ type POWChain struct {
 	Eth1Data          *ethpb.Eth1Data
 	GenesisEth1Block  *big.Int
 	GenesisState      state.BeaconState
+	CurrEndpoint      string
+	CurrError         error
+	Endpoints         []string
+	Errors            []error
 }
 
 // BlockByHash is a stub for `POWChain`.
@@ -142,6 +146,22 @@ func (_ *POWChain) ClearPreGenesisData() {
 // IsConnectedToETH1 --
 func (_ *POWChain) IsConnectedToETH1() bool {
 	return true
+}
+
+func (m *POWChain) CurrentETH1Endpoint() string {
+	return m.CurrEndpoint
+}
+
+func (m *POWChain) CurrentETH1ConnectionError() error {
+	return m.CurrError
+}
+
+func (m *POWChain) ETH1Endpoints() []string {
+	return m.Endpoints
+}
+
+func (m *POWChain) ETH1ConnectionErrors() []error {
+	return m.Errors
 }
 
 // RPCClient defines the mock rpc client.

@@ -24,14 +24,14 @@ const (
 	// Altair Fork Epoch for mainnet config.
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Placeholder for the merge epoch until it is decided
-	mainnetMergeForkEpoch = math.MaxUint64
+	mainnetBellatrixForkEpoch = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                   1 << 20,  // 1 MiB
-	GossipMaxSizeMerge:              10 << 10, // 10 MiB
-	MaxChunkSize:                    1 << 20,  // 1 MiB
-	MaxChunkSizeMerge:               10 << 20, // 10 MiB
+	GossipMaxSize:                   1 << 20,      // 1 MiB
+	GossipMaxSizeBellatrix:          10 * 1 << 20, // 10 MiB
+	MaxChunkSize:                    1 << 20,      // 1 MiB
+	MaxChunkSizeBellatrix:           10 * 1 << 20, // 10 MiB
 	AttestationSubnetCount:          64,
 	AttestationPropagationSlotRange: 32,
 	MaxRequestBlocks:                1 << 10, // 1024
@@ -165,23 +165,23 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
 
 	// Prysm constants.
-	GweiPerEth:                  1000000000,
-	BLSSecretKeyLength:          32,
-	BLSPubkeyLength:             48,
-	DefaultBufferSize:           10000,
-	WithdrawalPrivkeyFileName:   "/shardwithdrawalkey",
-	ValidatorPrivkeyFileName:    "/validatorprivatekey",
-	RPCSyncCheck:                1,
-	EmptySignature:              [96]byte{},
-	DefaultPageSize:             250,
-	MaxPeersToSync:              15,
-	SlotsPerArchivedPoint:       2048,
-	GenesisCountdownInterval:    time.Minute,
-	ConfigName:                  ConfigNames[Mainnet],
-	PresetBase:                  "mainnet",
-	BeaconStateFieldCount:       21,
-	BeaconStateAltairFieldCount: 24,
-	BeaconStateMergeFieldCount:  25,
+	GweiPerEth:                     1000000000,
+	BLSSecretKeyLength:             32,
+	BLSPubkeyLength:                48,
+	DefaultBufferSize:              10000,
+	WithdrawalPrivkeyFileName:      "/shardwithdrawalkey",
+	ValidatorPrivkeyFileName:       "/validatorprivatekey",
+	RPCSyncCheck:                   1,
+	EmptySignature:                 [96]byte{},
+	DefaultPageSize:                250,
+	MaxPeersToSync:                 15,
+	SlotsPerArchivedPoint:          2048,
+	GenesisCountdownInterval:       time.Minute,
+	ConfigName:                     ConfigNames[Mainnet],
+	PresetBase:                     "mainnet",
+	BeaconStateFieldCount:          21,
+	BeaconStateAltairFieldCount:    24,
+	BeaconStateBellatrixFieldCount: 25,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -192,17 +192,18 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisForkVersion:  []byte{0, 0, 0, 0},
-	AltairForkVersion:   []byte{1, 0, 0, 0},
-	AltairForkEpoch:     mainnetAltairForkEpoch,
-	MergeForkVersion:    []byte{2, 0, 0, 0},
-	MergeForkEpoch:      mainnetMergeForkEpoch,
-	ShardingForkVersion: []byte{3, 0, 0, 0},
-	ShardingForkEpoch:   math.MaxUint64,
+	GenesisForkVersion:          []byte{0, 0, 0, 0},
+	AltairForkVersion:           []byte{1, 0, 0, 0},
+	AltairForkEpoch:             mainnetAltairForkEpoch,
+	BellatrixForkVersion:        []byte{2, 0, 0, 0},
+	BellatrixForkEpoch:          math.MaxUint64,
+	ShardingForkVersion:         []byte{3, 0, 0, 0},
+	ShardingForkEpoch:           math.MaxUint64,
+	MinAnchorPowBlockDifficulty: 4294967296,
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
 		{1, 0, 0, 0}: mainnetAltairForkEpoch,
-		{2, 0, 0, 0}: mainnetMergeForkEpoch,
+		{2, 0, 0, 0}: mainnetBellatrixForkEpoch,
 		// Any further forks must be specified here by their epoch number.
 	},
 
@@ -236,14 +237,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ProportionalSlashingMultiplierAltair: 2,
 
 	// Merge.
-	MaxTransactionsPerPayload:           1 << 20,
-	MaxBytesPerTransaction:              1 << 30,
 	TerminalBlockHash:                   [32]byte{},
-	TerminalBlockHashActivationEpoch:    math.MaxUint64,
 	MinSlashingPenaltyQuotientMerge:     32,
 	ProportionalSlashingMultiplierMerge: 3,
 	InactivityPenaltyQuotientMerge:      1 << 24,
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
+
+	// Bellatrix
+	TerminalBlockHashActivationEpoch: math.MaxUint64,
 }
