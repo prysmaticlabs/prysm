@@ -14,11 +14,11 @@ http_archive(
 )
 
 http_archive(
-    name = "com_grail_bazel_toolchain",
-    sha256 = "1b3901ba6cd7d7d31674d9648db32da4084bdf8f668670be3ae9847938d63774",
-    strip_prefix = "bazel-toolchain-4ed2de142f28b0b6ec6043ed5e5bbad2644bcfe1",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/4ed2de142f28b0b6ec6043ed5e5bbad2644bcfe1.tar.gz"],
-)
+     name = "com_grail_bazel_toolchain",
+     sha256 = "1b3901ba6cd7d7d31674d9648db32da4084bdf8f668670be3ae9847938d63774",
+     strip_prefix = "bazel-toolchain-4ed2de142f28b0b6ec6043ed5e5bbad2644bcfe1",
+     urls = ["https://github.com/grailbio/bazel-toolchain/archive/4ed2de142f28b0b6ec6043ed5e5bbad2644bcfe1.tar.gz"],
+ )
 
 load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
 
