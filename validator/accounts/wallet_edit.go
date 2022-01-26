@@ -49,8 +49,6 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 		if err := w.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg); err != nil {
 			return errors.Wrap(err, "could not write config to disk")
 		}
-	case keymanager.Web3Signer:
-		return errors.New("web3signer keymanager does not support editing configuration or persistent prysm wallet")
 	default:
 		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
 	}
