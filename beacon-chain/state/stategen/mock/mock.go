@@ -1,4 +1,4 @@
-package stategen
+package mock
 
 import (
 	"context"

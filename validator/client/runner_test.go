@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/client/testutil"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote/mock"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -231,6 +231,7 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 
 func TestKeyReload_RemoteKeymanager(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
+
 	km := remote.NewMock()
 	v := &testutil.FakeValidator{Km: &km}
 

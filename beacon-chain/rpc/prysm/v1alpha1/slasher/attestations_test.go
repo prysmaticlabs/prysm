@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/beacon-chain/slasher/mock"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -23,7 +23,7 @@ func TestServer_HighestAttestations(t *testing.T) {
 			HighestTargetEpoch: 3,
 		},
 	}
-	mockSlasher := &slasher.MockSlashingChecker{
+	mockSlasher := &mock.MockSlashingChecker{
 		HighestAtts: highestAtts,
 	}
 	s := Server{SlashingChecker: mockSlasher}
