@@ -426,7 +426,7 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		fmt.Println(genesis)
 		blockRoot := [32]byte{'A'}
 
-		err := f.BoostProposerRoot(ctx, 1 /* slot */, blockRoot, genesis)
+		err := f.BoostProposerRoot(ctx, types.Slot(1), blockRoot, genesis)
 		require.NoError(t, err)
 		require.DeepEqual(t, [32]byte{'A'}, f.store.proposerBoostRoot)
 	})
