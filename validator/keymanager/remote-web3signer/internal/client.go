@@ -3,14 +3,12 @@ package internal
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -166,7 +164,7 @@ func unmarshalSignatureResponse(responseBody io.ReadCloser) (bls.Signature, erro
 	if err != nil {
 		return nil, err
 	}
-	sigBytes, err := hex.DecodeString(strings.TrimPrefix(string(body), "0x"))
+	sigBytes, err := hexutil.Decode(string(body))
 	if err != nil {
 		return nil, err
 	}
