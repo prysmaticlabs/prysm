@@ -77,31 +77,34 @@ type FinalizationFetcher interface {
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 }
 
-// FinalizedCheckpt returns the latest finalized checkpoint from head state.
+// FinalizedCheckpt returns the latest finalized checkpoint from chain store.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	if s.finalizedCheckpt == nil {
+	cp := s.store.FinalizedCheckpt()
+	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return ethpb.CopyCheckpoint(s.finalizedCheckpt)
+	return ethpb.CopyCheckpoint(cp)
 }
 
-// CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
+// CurrentJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.justifiedCheckpt == nil {
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return ethpb.CopyCheckpoint(s.justifiedCheckpt)
+	return ethpb.CopyCheckpoint(cp)
 }
 
-// PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
+// PreviousJustifiedCheckpt returns the previous justified checkpoint from chain store.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.prevJustifiedCheckpt == nil {
+	cp := s.store.PrevJustifiedCheckpt()
+	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return ethpb.CopyCheckpoint(s.prevJustifiedCheckpt)
+	return ethpb.CopyCheckpoint(cp)
 }
 
 // HeadSlot returns the slot of the head of the chain.
