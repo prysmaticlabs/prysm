@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -360,7 +360,7 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 
 	s := &Server{
 		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
-		VoluntaryExitsPool: &voluntaryexits.PoolMock{Exits: []*ethpbv1alpha1.SignedVoluntaryExit{exit1, exit2}},
+		VoluntaryExitsPool: &mock.PoolMock{Exits: []*ethpbv1alpha1.SignedVoluntaryExit{exit1, exit2}},
 	}
 
 	resp, err := s.ListPoolVoluntaryExits(context.Background(), &emptypb.Empty{})
@@ -618,7 +618,7 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
-		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
+		VoluntaryExitsPool: &mock.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
 
@@ -656,7 +656,7 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
-		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
+		VoluntaryExitsPool: &mock.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
 
@@ -691,7 +691,7 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
-		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
+		VoluntaryExitsPool: &mock.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
 
