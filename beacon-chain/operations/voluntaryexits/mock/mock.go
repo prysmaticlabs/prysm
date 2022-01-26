@@ -1,4 +1,4 @@
-package voluntaryexits
+package mock
 
 import (
 	"context"
