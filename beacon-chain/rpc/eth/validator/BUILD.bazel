@@ -55,6 +55,7 @@ go_test(
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
+        "//beacon-chain/operations/attestations/mock:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/operations/synccommittee:go_default_library",
         "//beacon-chain/operations/voluntaryexits:go_default_library",
