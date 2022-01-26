@@ -92,9 +92,6 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 // This updates the synced_tips map when the block with the given root becomes
 // VALID
 func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
 	// We can only change status of blocks already in the Fork Choice
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
@@ -146,6 +143,9 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	// These are all the nodes that have NonExistentNode as best child.
 	leaves := []uint64{}
 	for i := uint64(0); i < uint64(len(f.store.nodes)); i++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		node = f.store.nodes[i]
 		if node.bestChild == NonExistentNode {
 			leaves = append(leaves, i)
@@ -155,6 +155,9 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	// For each leaf recompute it's new tip.
 	newTips := make(map[[32]byte]types.Slot)
 	for _, i := range leaves {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		node = f.store.nodes[i]
 		idx := uint64(i)
 		for {
