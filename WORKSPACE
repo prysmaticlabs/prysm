@@ -335,7 +335,7 @@ filegroup(
 """,
     # sha256 = "4575bd2b64dcc2c7af1e5e97bdd1cc0624a7fc599309809915a640414b10f3d0",
     # strip_prefix = "lighthouse-7fa1b868985ee24aad65567f9250cf7fa86f97b1",
-    url = "https://github.com/sigp/lighthouse/releases/download/v2.1.0/lighthouse-v2.1.0-x86_64-unknown-linux-gnu-portable.tar.gz",
+    url = "https://github.com/sigp/lighthouse/releases/download/v2.1.1/lighthouse-v2.1.1-x86_64-unknown-linux-gnu-portable.tar.gz",
 )
 
 http_archive(
