@@ -232,7 +232,7 @@ func TestKeyReload_NoActiveKey(t *testing.T) {
 func TestKeyReload_RemoteKeymanager(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	km := remote.NewMock()
+	km := mock.NewMock()
 	v := &testutil.FakeValidator{Km: &km}
 
 	ticker := make(chan types.Slot)
