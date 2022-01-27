@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/beacon-chain/slasher/mock"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestServer_IsSlashableAttestation_SlashingFound(t *testing.T) {
-	mockSlasher := &slasher.MockSlashingChecker{
+	mockSlasher := &mock.MockSlashingChecker{
 		AttesterSlashingFound: true,
 	}
 	s := Server{SlashingChecker: mockSlasher}
@@ -21,7 +21,7 @@ func TestServer_IsSlashableAttestation_SlashingFound(t *testing.T) {
 }
 
 func TestServer_IsSlashableAttestation_SlashingNotFound(t *testing.T) {
-	mockSlasher := &slasher.MockSlashingChecker{
+	mockSlasher := &mock.MockSlashingChecker{
 		AttesterSlashingFound: false,
 	}
 	s := Server{SlashingChecker: mockSlasher}
@@ -32,7 +32,7 @@ func TestServer_IsSlashableAttestation_SlashingNotFound(t *testing.T) {
 }
 
 func TestServer_IsSlashableBlock_SlashingFound(t *testing.T) {
-	mockSlasher := &slasher.MockSlashingChecker{
+	mockSlasher := &mock.MockSlashingChecker{
 		ProposerSlashingFound: true,
 	}
 	s := Server{SlashingChecker: mockSlasher}
@@ -43,7 +43,7 @@ func TestServer_IsSlashableBlock_SlashingFound(t *testing.T) {
 }
 
 func TestServer_IsSlashableBlock_SlashingNotFound(t *testing.T) {
-	mockSlasher := &slasher.MockSlashingChecker{
+	mockSlasher := &mock.MockSlashingChecker{
 		ProposerSlashingFound: false,
 	}
 	s := Server{SlashingChecker: mockSlasher}
