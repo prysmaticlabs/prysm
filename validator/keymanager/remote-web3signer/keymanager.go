@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/google/martian/log"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -116,10 +117,12 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		}
 		return json.Marshal(attestationSignRequest)
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
+		log.Infof("Inside of the sign func, getting: %+v as the request", request)
 		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
+		log.Info("Now marshaling the request")
 		return json.Marshal(aggregateAndProofSignRequest)
 	case *validatorpb.SignRequest_Slot:
 		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
