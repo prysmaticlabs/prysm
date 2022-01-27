@@ -50,12 +50,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
 	}
 
-	blk, err := vs.getMergeBeaconBlock(ctx, req)
+	blk, err := vs.getBellatrixBeaconBlock(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch Merge beacon block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
 	}
 
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Merge{Merge: blk}}, nil
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -70,7 +70,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	return vs.getPhase0BeaconBlock(ctx, req)
 }
 
-func (vs *Server) getMergeBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockMerge, error) {
+func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, error) {
 	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, err
@@ -93,12 +93,12 @@ func (vs *Server) getMergeBeaconBlock(ctx context.Context, req *ethpb.BlockReque
 		"txs":           payload.Transactions,
 	}).Info("Retrieved payload")
 
-	blk := &ethpb.BeaconBlockMerge{
+	blk := &ethpb.BeaconBlockBellatrix{
 		Slot:          altairBlk.Slot,
 		ProposerIndex: altairBlk.ProposerIndex,
 		ParentRoot:    altairBlk.ParentRoot,
 		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		Body: &ethpb.BeaconBlockBodyMerge{
+		Body: &ethpb.BeaconBlockBodyBellatrix{
 			RandaoReveal:      altairBlk.Body.RandaoReveal,
 			Eth1Data:          altairBlk.Body.Eth1Data,
 			Graffiti:          altairBlk.Body.Graffiti,
@@ -112,8 +112,8 @@ func (vs *Server) getMergeBeaconBlock(ctx context.Context, req *ethpb.BlockReque
 		},
 	}
 	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(
-		&ethpb.SignedBeaconBlockMerge{Block: blk, Signature: make([]byte, 96)},
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(
+		&ethpb.SignedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {
 		return nil, err
@@ -178,10 +178,10 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		if err != nil {
 			return nil, status.Error(codes.Internal, "could not wrap altair beacon block")
 		}
-	case *ethpb.GenericSignedBeaconBlock_Merge:
-		blk, err = wrapper.WrappedMergeSignedBeaconBlock(b.Merge)
+	case *ethpb.GenericSignedBeaconBlock_Bellatrix:
+		blk, err = wrapper.WrappedBellatrixSignedBeaconBlock(b.Bellatrix)
 		if err != nil {
-			return nil, status.Error(codes.Internal, "could not wrap merge beacon block")
+			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
 		}
 	default:
 		return nil, status.Error(codes.Internal, "block version not supported")

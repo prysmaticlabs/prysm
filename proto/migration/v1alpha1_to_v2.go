@@ -25,20 +25,6 @@ func V1Alpha1BeaconBlockAltairToV2(v1alpha1Block *ethpbalpha.BeaconBlockAltair) 
 	return v2Block, nil
 }
 
-// V1Alpha1BeaconBlockMergeToV2 converts a v1alpha1 Merge beacon block to a v2
-// Merge block.
-func V1Alpha1BeaconBlockMergeToV2(v1alpha1Block *ethpbalpha.BeaconBlockMerge) (*ethpbv2.BeaconBlockMerge, error) {
-	marshaledBlk, err := proto.Marshal(v1alpha1Block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal block")
-	}
-	v2Block := &ethpbv2.BeaconBlockMerge{}
-	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal block")
-	}
-	return v2Block, nil
-}
-
 // AltairToV1Alpha1SignedBlock converts a v2 SignedBeaconBlockAltair proto to a v1alpha1 proto.
 func AltairToV1Alpha1SignedBlock(altairBlk *ethpbv2.SignedBeaconBlockAltair) (*ethpbalpha.SignedBeaconBlockAltair, error) {
 	marshaledBlk, err := proto.Marshal(altairBlk)

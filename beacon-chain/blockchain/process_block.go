@@ -222,7 +222,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 					return
 				}
 				// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
-				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalized.Root))
 				if err != nil {
 					log.WithError(err)
 					return
