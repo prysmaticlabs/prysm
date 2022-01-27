@@ -87,14 +87,11 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldpa
 
 // Sign signs the message by using a remote web3signer server.
 func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
-
 	signRequest, err := getSignRequestJson(ctx, km.validator, request, km.genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
-
 	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), signRequest)
-
 }
 
 // getSignRequestJson returns a json request based on the SignRequest type.
@@ -130,11 +127,16 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("Now marshaling the request")
+		fmt.Printf("Now marshaling the request %+v\n", aggregateAndProofSignRequest)
 		if err = validator.StructCtx(ctx, aggregateAndProofSignRequest); err != nil {
 			return nil, err
 		}
-		return json.Marshal(aggregateAndProofSignRequest)
+		enc, err := json.Marshal(aggregateAndProofSignRequest)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Printf("MARSHALED request %s", string(enc))
+		return enc, nil
 	case *validatorpb.SignRequest_Slot:
 		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
