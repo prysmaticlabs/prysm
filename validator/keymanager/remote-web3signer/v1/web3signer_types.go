@@ -15,7 +15,7 @@ type AggregateAndProofSignRequest struct {
 	Type              string             `json:"type" validate:"required"`
 	ForkInfo          *ForkInfo          `json:"fork_info" validate:"required"`
 	SigningRoot       string             `json:"signingRoot"`
-	AggregateAndProof *AggregateAndProof `json:"aggregation_and_proof" validate:"required"`
+	AggregateAndProof *AggregateAndProof `json:"aggregate_and_proof" validate:"required"`
 }
 
 // AttestationSignRequest is a request object for web3signer sign api.
