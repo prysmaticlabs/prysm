@@ -19,9 +19,9 @@ func MockSyncComitteeBits() []byte {
 	currSize := new(eth.SyncAggregate).SyncCommitteeBits.Len()
 	switch currSize {
 	case 512:
-		return bitfield.NewBitvector512().Bytes()
+		return bitfield.NewBitvector512()
 	case 32:
-		return bitfield.NewBitvector32().Bytes()
+		return bitfield.NewBitvector32()
 	default:
 		return nil
 	}
@@ -31,9 +31,9 @@ func MockAggregationBits() []byte {
 	currSize := new(eth.SyncCommitteeContribution).AggregationBits.Len()
 	switch currSize {
 	case 128:
-		return bitfield.NewBitvector128().Bytes()
+		return bitfield.NewBitvector128()
 	case 8:
-		return bitfield.NewBitvector8().Bytes()
+		return bitfield.NewBitvector8()
 	default:
 		return nil
 	}
@@ -542,7 +542,7 @@ func MockForkInfo() *v1.ForkInfo {
 // MockAttestation is a mock implementation of the Attestation.
 func MockAttestation() *v1.Attestation {
 	return &v1.Attestation{
-		AggregationBits: hexutil.Encode(bitfield.Bitlist{0b1101}.Bytes()),
+		AggregationBits: hexutil.Encode(bitfield.Bitlist{0b1101}),
 		Data: &v1.AttestationData{
 			Slot:            "0",
 			Index:           "0",

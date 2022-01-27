@@ -58,7 +58,7 @@ func MapAttestation(attestation *ethpb.Attestation) (*Attestation, error) {
 	}
 	return &Attestation{
 		Data:            data,
-		AggregationBits: hexutil.Encode(attestation.AggregationBits.Bytes()),
+		AggregationBits: hexutil.Encode(attestation.AggregationBits),
 		Signature:       hexutil.Encode(attestation.Signature),
 	}, nil
 }
@@ -335,7 +335,7 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 		Deposits:          make([]*Deposit, len(body.Deposits)),
 		VoluntaryExits:    make([]*SignedVoluntaryExit, len(body.VoluntaryExits)),
 		SyncAggregate: &SyncAggregate{
-			SyncCommitteeBits:      hexutil.Encode(body.SyncAggregate.SyncCommitteeBits.Bytes()),
+			SyncCommitteeBits:      hexutil.Encode(body.SyncAggregate.SyncCommitteeBits),
 			SyncCommitteeSignature: hexutil.Encode(body.SyncAggregate.SyncCommitteeSignature),
 		},
 	}
@@ -407,7 +407,7 @@ func MapContributionAndProof(contribution *ethpb.ContributionAndProof) (*Contrib
 			Slot:              fmt.Sprint(contribution.Contribution.Slot),
 			BeaconBlockRoot:   hexutil.Encode(contribution.Contribution.BlockRoot),
 			SubcommitteeIndex: fmt.Sprint(contribution.Contribution.SubcommitteeIndex),
-			AggregationBits:   hexutil.Encode(contribution.Contribution.AggregationBits.Bytes()),
+			AggregationBits:   hexutil.Encode(contribution.Contribution.AggregationBits),
 			Signature:         hexutil.Encode(contribution.Contribution.Signature),
 		},
 	}, nil
