@@ -1,47 +1,42 @@
 package v2
 
 import (
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"fmt"
+
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // LatestBlockHeader stored within the beacon state.
 func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
-	if !b.hasInnerState() {
-		return nil
-	}
-	if b.state.LatestBlockHeader == nil {
+	if b.latestBlockHeader == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.latestBlockHeader()
+	return b.latestBlockHeaderVal()
 }
 
-// latestBlockHeader stored within the beacon state.
+// latestBlockHeaderVal stored within the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestBlockHeader() *ethpb.BeaconBlockHeader {
-	if !b.hasInnerState() {
-		return nil
-	}
-	if b.state.LatestBlockHeader == nil {
+func (b *BeaconState) latestBlockHeaderVal() *ethpb.BeaconBlockHeader {
+	if b.latestBlockHeader == nil {
 		return nil
 	}
 
 	hdr := &ethpb.BeaconBlockHeader{
-		Slot:          b.state.LatestBlockHeader.Slot,
-		ProposerIndex: b.state.LatestBlockHeader.ProposerIndex,
+		Slot:          b.latestBlockHeader.Slot,
+		ProposerIndex: b.latestBlockHeader.ProposerIndex,
 	}
 
-	parentRoot := make([]byte, len(b.state.LatestBlockHeader.ParentRoot))
-	bodyRoot := make([]byte, len(b.state.LatestBlockHeader.BodyRoot))
-	stateRoot := make([]byte, len(b.state.LatestBlockHeader.StateRoot))
+	parentRoot := make([]byte, len(b.latestBlockHeader.ParentRoot))
+	bodyRoot := make([]byte, len(b.latestBlockHeader.BodyRoot))
+	stateRoot := make([]byte, len(b.latestBlockHeader.StateRoot))
 
-	copy(parentRoot, b.state.LatestBlockHeader.ParentRoot)
-	copy(bodyRoot, b.state.LatestBlockHeader.BodyRoot)
-	copy(stateRoot, b.state.LatestBlockHeader.StateRoot)
+	copy(parentRoot, b.latestBlockHeader.ParentRoot)
+	copy(bodyRoot, b.latestBlockHeader.BodyRoot)
+	copy(stateRoot, b.latestBlockHeader.StateRoot)
 	hdr.ParentRoot = parentRoot
 	hdr.BodyRoot = bodyRoot
 	hdr.StateRoot = stateRoot
@@ -50,50 +45,40 @@ func (b *BeaconState) latestBlockHeader() *ethpb.BeaconBlockHeader {
 
 // BlockRoots kept track of in the beacon state.
 func (b *BeaconState) BlockRoots() [][]byte {
-	if !b.hasInnerState() {
-		return nil
-	}
-	if b.state.BlockRoots == nil {
+	if b.blockRoots == nil {
 		return nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.blockRoots()
-}
-
-// blockRoots kept track of in the beacon state.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRoots() [][]byte {
-	if !b.hasInnerState() {
-		return nil
-	}
-	return bytesutil.SafeCopy2dBytes(b.state.BlockRoots)
+	return b.blockRoots.Slice()
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
 // input index value.
 func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
-	if !b.hasInnerState() {
-		return nil, ErrNilInnerState
-	}
-	if b.state.BlockRoots == nil {
+	if b.blockRoots == nil {
 		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.blockRootAtIndex(idx)
+	r, err := b.blockRootAtIndex(idx)
+	if err != nil {
+		return nil, err
+	}
+	return r[:], nil
 }
 
 // blockRootAtIndex retrieves a specific block root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
-	if !b.hasInnerState() {
-		return nil, ErrNilInnerState
+func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
+	if uint64(len(b.blockRoots)) <= idx {
+		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}
-	return bytesutil.SafeCopyRootAtIndex(b.state.BlockRoots, idx)
+
+	return b.blockRoots[idx], nil
 }
