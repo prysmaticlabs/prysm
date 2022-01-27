@@ -122,21 +122,14 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		}
 		return json.Marshal(attestationSignRequest)
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
-		fmt.Printf("Inside of the sign func, getting: %+v as the request\n", request)
 		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("Now marshaling the request %+v\n", aggregateAndProofSignRequest)
 		if err = validator.StructCtx(ctx, aggregateAndProofSignRequest); err != nil {
 			return nil, err
 		}
-		enc, err := json.Marshal(aggregateAndProofSignRequest)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Printf("MARSHALED request %s", string(enc))
-		return enc, nil
+		return json.Marshal(aggregateAndProofSignRequest)
 	case *validatorpb.SignRequest_Slot:
 		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
