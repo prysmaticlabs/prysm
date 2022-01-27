@@ -3,6 +3,7 @@
 package field_params
 
 const (
+	Preset                          = "mainnet"
 	BlockRootsLength                = 8192          // SLOTS_PER_HISTORICAL_ROOT
 	StateRootsLength                = 8192          // SLOTS_PER_HISTORICAL_ROOT
 	RandaoMixesLength               = 65536         // EPOCHS_PER_HISTORICAL_VECTOR

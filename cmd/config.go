@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 )
@@ -66,7 +67,14 @@ func newConfig(ctx *cli.Context) *Flags {
 	}
 	if ctx.Bool(E2EConfigFlag.Name) {
 		log.Warn("Using end-to-end testing config")
-		params.UseE2EMainnetConfig()
+		switch fieldparams.Preset {
+		case "mainnet":
+			params.UseE2EMainnetConfig()
+		case "minimal":
+			params.UseE2EConfig()
+		default:
+			log.Fatalf("Unrecognized preset being used: %s", fieldparams.Preset)
+		}
 	}
 	return cfg
 }
