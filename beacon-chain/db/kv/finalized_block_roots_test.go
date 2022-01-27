@@ -94,7 +94,7 @@ func TestStore_DanglingNonCanonicalBlock(t *testing.T) {
 	root, err = blks[2*slotsPerEpoch-1].Block().HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, false, db.IsFinalizedBlock(ctx, root), "Block at slot 63 was considered finalized in the index")
-	// All blocks up to slotsPerEpoch*3 should be in the finalized index.
+	// All blocks from slotsPerEpoch*3 to slotsPerEpoch*4 should not be in the finalized index.
 	for i := slotsPerEpoch; i < 2*slotsPerEpoch; i++ {
 		root, err := blks2[i].Block().HashTreeRoot()
 		require.NoError(t, err)
