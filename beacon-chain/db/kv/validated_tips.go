@@ -2,8 +2,8 @@ package kv
 
 import (
 	"context"
-	types "github.com/prysmaticlabs/eth2-types"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
