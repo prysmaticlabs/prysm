@@ -18,14 +18,34 @@ import (
 
 var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 
-func TestStore_IsFinalizedBlock(t *testing.T) {
+// In this test we consider the following forked chain
+//
+// 0 -- ... -- 62 -- 64 -- 65 -- ... -- 127
+//              \
+//                -- 63
+// The last slot of Epoch 1 is orphaned.
+//
+// This tests the following
+// 1- We finalize Epoch 1, all blocks 0 -- 63 should be final
+// 2- Check that blocks 64 -- 127 are not final
+// 3- Finalize Epoch 2, all blocks 64 -- 95 are final
+// 4- Block 63 should not be final
+// 5- Blocks 96-- 127 should not be final
+// 6- Blocks 0 -- 62 should be final
+func TestStore_DanglingNonCanonicalBlock(t *testing.T) {
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	db := setupDB(t)
 	ctx := context.Background()
 
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
 
-	blks := makeBlocks(t, 0, slotsPerEpoch*3, genesisBlockRoot)
+	blks := makeBlocks(t, 0, slotsPerEpoch*2, genesisBlockRoot)
+	require.NoError(t, db.SaveBlocks(ctx, blks))
+	orphanParentRoot, err := blks[slotsPerEpoch*2-2].Block().HashTreeRoot()
+	require.NoError(t, err)
+	blks2 := makeBlocks(t, slotsPerEpoch*2, slotsPerEpoch*2, orphanParentRoot)
+	require.NoError(t, db.SaveBlocks(ctx, blks2))
+
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
 	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
@@ -42,17 +62,51 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 
+	// We finalize Epoch 1 that contains the dangling node
 	// All blocks up to slotsPerEpoch*2 should be in the finalized index.
 	for i := uint64(0); i < slotsPerEpoch*2; i++ {
 		root, err := blks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
 	}
-	for i := slotsPerEpoch * 3; i < uint64(len(blks)); i++ {
-		root, err := blks[i].Block().HashTreeRoot()
+	// All blocks in Epochs 2 and 3 should not be Final
+	for i := 0; i < len(blks2); i++ {
+		root, err := blks2[i].Block().HashTreeRoot()
 		require.NoError(t, err)
 		assert.Equal(t, false, db.IsFinalizedBlock(ctx, root), "Block at index %d was considered finalized in the index, but should not have", i)
 	}
+
+	// We now finalize epoch 2, the first block of which orphans the
+	// dangling node
+	root, err = blks2[0].Block().HashTreeRoot()
+	require.NoError(t, err)
+	cp.Root = root[:]
+	cp.Epoch = 2
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+	// All blocks up to slotsPerEpoch*3 should be in the finalized index.
+	for i := uint64(0); i < slotsPerEpoch; i++ {
+		root, err := blks2[i].Block().HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
+	}
+	// The Block at slot 63 should not be considered final
+	root, err = blks[2*slotsPerEpoch-1].Block().HashTreeRoot()
+	require.NoError(t, err)
+	assert.Equal(t, false, db.IsFinalizedBlock(ctx, root), "Block at slot 63 was considered finalized in the index")
+	// All blocks up to slotsPerEpoch*3 should be in the finalized index.
+	for i := slotsPerEpoch; i < 2*slotsPerEpoch; i++ {
+		root, err := blks2[i].Block().HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, false, db.IsFinalizedBlock(ctx, root), "Block at slot %d was considered finalized in the index and should not be", i+2*slotsPerEpoch)
+	}
+	// All blocks up to slotsPerEpoch*2-2 should be in the finalized index.
+	for i := uint64(0); i < slotsPerEpoch*2-2; i++ {
+		root, err := blks[i].Block().HashTreeRoot()
+		require.NoError(t, err)
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Block at index %d was not considered finalized in the index", i)
+	}
+
 }
 
 func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
@@ -202,7 +256,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])
 		blocks[j-i] = util.NewBeaconBlock()
-		blocks[j-i].Block.Slot = types.Slot(j + 1)
+		blocks[j-i].Block.Slot = types.Slot(j)
 		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()

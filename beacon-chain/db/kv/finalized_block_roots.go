@@ -58,7 +58,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 
 	blockRoots, err := s.BlockRoots(ctx, filters.NewFilter().
 		SetStartEpoch(previousFinalizedCheckpoint.Epoch).
-		SetEndEpoch(checkpoint.Epoch+1),
+		SetEndEpoch(checkpoint.Epoch),
 	)
 	if err != nil {
 		tracing.AnnotateError(span, err)
@@ -128,7 +128,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	}
 
 	// Upsert blocks from the current finalized epoch.
-	roots, err := s.BlockRoots(ctx, filters.NewFilter().SetStartEpoch(checkpoint.Epoch).SetEndEpoch(checkpoint.Epoch+1))
+	roots, err := s.BlockRoots(ctx, filters.NewFilter().SetStartEpoch(checkpoint.Epoch).SetEndEpoch(checkpoint.Epoch))
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return err
