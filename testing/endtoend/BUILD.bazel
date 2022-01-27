@@ -1,7 +1,7 @@
 load("@prysm//tools/go:def.bzl", "go_test")
 
 # gazelle:exclude geth_deps.go
-
+# gazelle:exclude mainnet_e2e_test.go
 go_test(
     name = "go_default_test",
     size = "large",
