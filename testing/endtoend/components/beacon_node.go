@@ -55,8 +55,7 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	// Create beacon nodes.
 	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		bn := NewBeaconNode(s.config, i, s.enr)
-		nodes[i] = bn
+		nodes[i] = NewBeaconNode(s.config, i, s.enr)
 	}
 
 	// Wait for all nodes to finish their job (blocking).
@@ -76,10 +75,6 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 // Started checks whether beacon node set is started and all nodes are ready to be queried.
 func (s *BeaconNodeSet) Started() <-chan struct{} {
 	return s.started
-}
-
-func (s *BeaconNodeSet) PeerIDs() []string {
-	return s.ids
 }
 
 // BeaconNode represents beacon node.
@@ -178,7 +173,6 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not find peer id: %w", err)
 		}
-		log.Infof("peer id %d is %s", index, peerId)
 		node.peerID = peerId
 	}
 
