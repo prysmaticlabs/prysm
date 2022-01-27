@@ -5,6 +5,8 @@ import (
 	"context"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -12,10 +14,10 @@ func TestTips_AddNewTips(t *testing.T) {
 	ctx := context.Background()
 	db := setupDB(t)
 
-	tipA := [32]byte{'A'}
-	tipB := [32]byte{'B'}
-	tipC := [32]byte{'C'}
-	newTips := [][32]byte{tipA, tipB, tipC}
+	newTips := make(map[[32]byte]types.Slot)
+	newTips[[32]byte{'A'}] = types.Slot(1)
+	newTips[[32]byte{'B'}] = types.Slot(2)
+	newTips[[32]byte{'C'}] = types.Slot(3)
 
 	require.NoError(t, db.UpdateValidatedTips(ctx, newTips))
 
@@ -29,17 +31,19 @@ func TestTips_UpdateTipsWithoutOverlap(t *testing.T) {
 	ctx := context.Background()
 	db := setupDB(t)
 
-	tipA := [32]byte{'A'}
-	tipB := [32]byte{'B'}
-	tipC := [32]byte{'C'}
-	oldTips := [][32]byte{tipA, tipB, tipC}
+	oldTips := make(map[[32]byte]types.Slot)
+	oldTips[[32]byte{'A'}] = types.Slot(1)
+	oldTips[[32]byte{'B'}] = types.Slot(2)
+	oldTips[[32]byte{'C'}] = types.Slot(3)
+
 	require.NoError(t, db.UpdateValidatedTips(ctx, oldTips))
 
 	// create a new overlapping tips to add
-	tipD := [32]byte{'D'}
-	tipE := [32]byte{'E'}
-	tipF := [32]byte{'F'}
-	newTips := [][32]byte{tipD, tipE, tipF}
+	newTips := make(map[[32]byte]types.Slot)
+	newTips[[32]byte{'D'}] = types.Slot(4)
+	newTips[[32]byte{'E'}] = types.Slot(5)
+	newTips[[32]byte{'F'}] = types.Slot(6)
+
 	require.NoError(t, db.UpdateValidatedTips(ctx, newTips))
 
 	gotTips, err := db.ValidatedTips(ctx)
@@ -53,16 +57,17 @@ func TestTips_UpdateTipsWithOverlap(t *testing.T) {
 	ctx := context.Background()
 	db := setupDB(t)
 
-	tipA := [32]byte{'A'}
-	tipB := [32]byte{'B'}
-	tipC := [32]byte{'C'}
-	oldTips := [][32]byte{tipA, tipB, tipC}
+	oldTips := make(map[[32]byte]types.Slot)
+	oldTips[[32]byte{'A'}] = types.Slot(1)
+	oldTips[[32]byte{'B'}] = types.Slot(2)
+	oldTips[[32]byte{'C'}] = types.Slot(3)
 	require.NoError(t, db.UpdateValidatedTips(ctx, oldTips))
 
 	// create a new overlapping tips to add
-	tipD := [32]byte{'D'}
-	tipE := [32]byte{'E'}
-	newTips := [][32]byte{tipC, tipD, tipE}
+	newTips := make(map[[32]byte]types.Slot)
+	newTips[[32]byte{'C'}] = types.Slot(3)
+	newTips[[32]byte{'D'}] = types.Slot(4)
+	newTips[[32]byte{'E'}] = types.Slot(5)
 	require.NoError(t, db.UpdateValidatedTips(ctx, newTips))
 
 	gotTips, err := db.ValidatedTips(ctx)
@@ -72,12 +77,17 @@ func TestTips_UpdateTipsWithOverlap(t *testing.T) {
 
 }
 
-func areTipsSame(got [][32]byte, required [][32]byte) bool {
+func areTipsSame(got map[[32]byte]types.Slot, required map[[32]byte]types.Slot) bool {
 	if len(got) != len(required) {
 		return false
 	}
-	for i := 0; i < len(got); i++ {
-		if !bytes.Equal(got[i][:], required[i][:]) {
+
+	for k, v := range got {
+		if val, ok := required[k]; ok {
+			if !bytes.Equal(bytesutil.SlotToBytesBigEndian(v), bytesutil.SlotToBytesBigEndian(val)) {
+				return false
+			}
+		} else {
 			return false
 		}
 	}
