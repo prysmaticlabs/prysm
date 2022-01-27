@@ -491,6 +491,9 @@ func (is *infostream) calculateStatusAndTransition(validator state.ReadOnlyValid
 	}
 
 	if currentEpoch < validator.ActivationEligibilityEpoch() {
+		if validator.EffectiveBalance() == 0 {
+			return ethpb.ValidatorStatus_PENDING, 0
+		}
 		if helpers.IsEligibleForActivationQueueUsingTrie(validator) {
 			return ethpb.ValidatorStatus_DEPOSITED, is.epochToTimestamp(validator.ActivationEligibilityEpoch())
 		}

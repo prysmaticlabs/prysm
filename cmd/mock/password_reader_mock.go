@@ -2,7 +2,7 @@
 // Source: github.com/connorwstein/prysm/cmd (interfaces: PasswordReader)
 
 // Package mock_cmd is a generated GoMock package.
-package cmd
+package mock
 
 import (
 	reflect "reflect"
