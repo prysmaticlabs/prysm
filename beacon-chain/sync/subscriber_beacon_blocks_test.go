@@ -150,10 +150,10 @@ func TestBlockFromProto(t *testing.T) {
 		{
 			name: "bellatrix type provided",
 			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{Slot: 100}}
+				return &ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Slot: 100}}
 			},
 			want: func() block.SignedBeaconBlock {
-				wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: &ethpb.BeaconBlockMerge{Slot: 100}})
+				wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Slot: 100}})
 				require.NoError(t, err)
 				return wsb
 			}(),

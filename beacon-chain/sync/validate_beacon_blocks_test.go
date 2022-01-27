@@ -1051,9 +1051,9 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
-	parentBlock := util.NewBeaconBlockMerge()
-	signedParentBlock, err := wrapper.WrappedMergeSignedBeaconBlock(parentBlock)
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
+	parentBlock := util.NewBeaconBlockBellatrix()
+	signedParentBlock, err := wrapper.WrappedBellatrixSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
 	bRoot, err := parentBlock.Block.HashTreeRoot()
@@ -1067,7 +1067,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
 	require.NoError(t, err)
 
-	msg := util.NewBeaconBlockMerge()
+	msg := util.NewBeaconBlockBellatrix()
 	msg.Block.ParentRoot = bRoot[:]
 	msg.Block.Slot = 1
 	msg.Block.ProposerIndex = proposerIdx
@@ -1105,9 +1105,9 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	genesisValidatorRoot := r.cfg.chain.GenesisValidatorRoot()
-	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
+	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
 	require.NoError(t, err)
-	topic = r.addDigestToTopic(topic, mergeDigest)
+	topic = r.addDigestToTopic(topic, BellatrixDigest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -1125,9 +1125,9 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
-	parentBlock := util.NewBeaconBlockMerge()
-	signedParentBlock, err := wrapper.WrappedMergeSignedBeaconBlock(parentBlock)
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
+	parentBlock := util.NewBeaconBlockBellatrix()
+	signedParentBlock, err := wrapper.WrappedBellatrixSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
 	bRoot, err := parentBlock.Block.HashTreeRoot()
@@ -1140,7 +1140,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	require.NoError(t, err)
 
 	presentTime := time.Now().Unix()
-	msg := util.NewBeaconBlockMerge()
+	msg := util.NewBeaconBlockBellatrix()
 	msg.Block.ParentRoot = bRoot[:]
 	msg.Block.Slot = 1
 	msg.Block.ProposerIndex = proposerIdx
@@ -1178,9 +1178,9 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
 	genesisValidatorRoot := r.cfg.chain.GenesisValidatorRoot()
-	mergeDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
+	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
 	assert.NoError(t, err)
-	topic = r.addDigestToTopic(topic, mergeDigest)
+	topic = r.addDigestToTopic(topic, BellatrixDigest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -1195,7 +1195,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 
 func Test_validateBellatrixBeaconBlock(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, 1)
-	b := util.NewBeaconBlockMerge()
+	b := util.NewBeaconBlockBellatrix()
 	blk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.ErrorContains(t, "block and state are not the same version", validateBellatrixBeaconBlock(st, blk.Block()))
