@@ -57,8 +57,8 @@ func MapAttestation(attestation *ethpb.Attestation) (*Attestation, error) {
 		return nil, err
 	}
 	return &Attestation{
-		Data:            data,
 		AggregationBits: hexutil.Encode(attestation.AggregationBits),
+		Data:            data,
 		Signature:       hexutil.Encode(attestation.Signature),
 	}, nil
 }
