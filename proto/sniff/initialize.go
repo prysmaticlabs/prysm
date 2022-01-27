@@ -48,6 +48,35 @@ func BeaconStateForConfigFork(marshaled []byte, cf *ConfigFork) (state.BeaconSta
 	return s, nil
 }
 
+func BeaconState(marshaled []byte) (state.BeaconState, error) {
+	cf, err := ConfigForkForState(marshaled)
+	if err != nil {
+		return nil, errors.Wrap(err, "in sniff.BeaconState error from ConfigForkForState")
+	}
+	var s state.BeaconState
+	switch cf.Fork {
+	case params.ForkGenesis:
+		s, err = v1.InitializeFromSSZBytes(marshaled)
+		if err != nil {
+			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkGenesis failed")
+		}
+	case params.ForkAltair:
+		s, err = v2.InitializeFromSSZBytes(marshaled)
+		if err != nil {
+			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkAltair failed")
+		}
+	case params.ForkMerge:
+		s, err = v3.InitializeFromSSZBytes(marshaled)
+		if err != nil {
+			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkMerge failed")
+		}
+	default:
+		return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", cf.Fork.String())
+	}
+	return s, nil
+}
+
+
 // BlockForConfigFork attempts to unmarshal a block from a marshaled byte slice into the correct block type.
 // In order to do this it needs to know what fork the block is from using ConfigFork, which can be obtained
 // by using ConfigForkForState.

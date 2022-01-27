@@ -81,15 +81,11 @@ type ConfigFork struct {
 }
 
 func ConfigForkForState(marshaled []byte) (*ConfigFork, error) {
-	epoch, err := beaconStateEpoch.Uint64(marshaled)
+	cv, err := CurrentVersionFromState(marshaled)
 	if err != nil {
 		return nil, err
 	}
-	cv, err := beaconStateCurrentVersion.Bytes4(marshaled)
-	if err != nil {
-		return nil, err
-	}
-	return FindConfigFork(types.Epoch(epoch), cv)
+	return FindConfigFork(cv)
 }
 
 func CurrentVersionFromState(marshaled []byte) ([4]byte, error) {
@@ -104,7 +100,7 @@ func EpochFromState(marshaled []byte) (types.Epoch, error) {
 	return types.Epoch(epoch), nil
 }
 
-func FindConfigFork(epoch types.Epoch, cv [4]byte) (*ConfigFork, error) {
+func FindConfigFork(cv [4]byte) (*ConfigFork, error) {
 	cf := &ConfigFork{
 		Version: cv,
 	}
@@ -131,7 +127,7 @@ func FindConfigFork(epoch types.Epoch, cv [4]byte) (*ConfigFork, error) {
 			}
 		}
 	}
-	return cf, fmt.Errorf("could not find a config+fork match for epoch=%d, current_version=%#x", epoch, cv)
+	return cf, fmt.Errorf("could not find a config+fork match with version=%#x", cv)
 }
 
 var beaconBlockSlot = fieldSpec{

@@ -1,7 +1,7 @@
 package openapi
 
 import (
-	"encoding/base64"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +12,7 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"text/template"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -23,11 +24,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const GET_WEAK_SUBJECTIVITY_CHECKPOINT_EPOCH_PATH = "/eth/v1alpha1/beacon/weak_subjectivity_checkpoint_epoch"
-const GET_WEAK_SUBJECTIVITY_CHECKPOINT_PATH = "/eth/v1alpha1/beacon/weak_subjectivity_checkpoint"
-const GET_SIGNED_BLOCK_PATH = "/eth/v2/beacon/blocks"
-const GET_STATE_PATH = "/eth/v2/debug/beacon/states"
-const GET_FORK_SCHEDULE_PATH = "/eth/v1/config/fork_schedule"
+const (
+	GET_WEAK_SUBJECTIVITY_CHECKPOINT_EPOCH_PATH = "/eth/v1alpha1/beacon/weak_subjectivity_checkpoint_epoch"
+	GET_WEAK_SUBJECTIVITY_CHECKPOINT_PATH = "/eth/v1alpha1/beacon/weak_subjectivity_checkpoint"
+	GET_SIGNED_BLOCK_PATH = "/eth/v2/beacon/blocks"
+	GET_STATE_PATH = "/eth/v2/debug/beacon/states"
+	GET_FORK_SCHEDULE_PATH = "/eth/v1/config/fork_schedule"
+	GET_FORK_FOR_STATE = "/eth/v1/beacon/states/{{.StateId}}/fork"
+	GET_BLOCK_ROOT = "/eth/v1/beacon/blocks/{{.BlockId}}/root"
+)
+
+const (
+	StateIdHead = "head"
+)
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
@@ -98,6 +107,9 @@ type checkpointEpochResponse struct {
 func (c *Client) GetWeakSubjectivityCheckpointEpoch() (uint64, error) {
 	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_CHECKPOINT_EPOCH_PATH)
 	r, err := c.c.Get(u.String())
+	defer func() {
+		err = r.Body.Close()
+	}()
 	if err != nil {
 		return 0, err
 	}
@@ -112,50 +124,6 @@ func (c *Client) GetWeakSubjectivityCheckpointEpoch() (uint64, error) {
 	return strconv.ParseUint(jsonr.Epoch, 10, 64)
 }
 
-type wscResponse struct {
-	BlockRoot string
-	StateRoot string
-	Epoch     string
-}
-
-// GetWeakSubjectivityCheckpoint calls an entirely different rpc method than GetWeakSubjectivityCheckpointEpoch
-// This endpoint is much slower, because it uses stategen to generate the BeaconState at the beginning of the
-// weak subjectivity epoch. This also results in a different set of state+block roots, because this endpoint currently
-// uses the state's latest_block_header for the block hash, while the checkpoint sync code assumes that the block
-// is from the first slot in the epoch and the state is from the subesequent slot.
-func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpoint, error) {
-	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_CHECKPOINT_PATH)
-	r, err := c.c.Get(u.String())
-	if err != nil {
-		return nil, err
-	}
-	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
-	}
-	v := &wscResponse{}
-	err = json.NewDecoder(r.Body).Decode(v)
-	if err != nil {
-		return nil, err
-	}
-	epoch, err := strconv.ParseUint(v.Epoch, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	blockRoot, err := base64.StdEncoding.DecodeString(v.BlockRoot)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := base64.StdEncoding.DecodeString(v.StateRoot)
-	if err != nil {
-		return nil, err
-	}
-	return &ethpb.WeakSubjectivityCheckpoint{
-		Epoch:     types.Epoch(epoch),
-		BlockRoot: blockRoot,
-		StateRoot: stateRoot,
-	}, nil
-}
-
 // GetBlockBySlot queries the beacon node API for the SignedBeaconBlockAltair for the given slot
 func (c *Client) GetBlockBySlot(slot uint64) (io.Reader, error) {
 	blockPath := path.Join(GET_SIGNED_BLOCK_PATH, strconv.FormatUint(slot, 10))
@@ -167,6 +135,9 @@ func (c *Client) GetBlockBySlot(slot uint64) (io.Reader, error) {
 	}
 	req.Header.Set("Accept", "application/octet-stream")
 	r, err := c.c.Do(req)
+	defer func() {
+		err = r.Body.Close()
+	}()
 	if err != nil {
 		return nil, err
 	}
@@ -174,6 +145,49 @@ func (c *Client) GetBlockBySlot(slot uint64) (io.Reader, error) {
 		return nil, non200Err(r)
 	}
 	return r.Body, nil
+}
+
+// blockId can be one of:
+// - "head" (canonical head in node's view)
+// - "genesis"
+// - "finalized"
+// - <slot>
+// - <hex encoded blockRoot with 0x prefix>. -- you could, but should you?
+func (c *Client) GetBlockRoot(blockId string) ([32]byte, error) {
+	var root [32]byte
+	t := template.Must(template.New("get-block-root").Parse(GET_BLOCK_ROOT))
+	b := bytes.NewBuffer(nil)
+	err := t.Execute(b, struct{BlockId string}{BlockId: blockId})
+	if err != nil {
+		return root, errors.Wrap(err, fmt.Sprintf("unable to generate path w/ blockId=%s", blockId))
+	}
+	rootPath := b.String()
+	u := c.urlForPath(rootPath)
+	log.Printf("requesting %s", u.String())
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		return root, err
+	}
+	r, err := c.c.Do(req)
+	defer func() {
+		err = r.Body.Close()
+	}()
+	if err != nil {
+		return root, err
+	}
+	if r.StatusCode != http.StatusOK {
+		return root, non200Err(r)
+	}
+	jsonr := &struct{Data struct{Root string}}{}
+	err = json.NewDecoder(r.Body).Decode(jsonr)
+	if err != nil {
+		return root, errors.Wrap(err, "error decoding json data from get block root response")
+	}
+	rs, err := hexutil.Decode(jsonr.Data.Root)
+	if err != nil {
+		return root, errors.Wrap(err, fmt.Sprintf("error decoding hex-encoded value %s", jsonr.Data.Root))
+	}
+	return bytesutil.ToBytes32(rs), nil
 }
 
 // GetBlockByRoot retrieves a SignedBeaconBlockAltair with the given root via the beacon node API
@@ -187,6 +201,9 @@ func (c *Client) GetBlockByRoot(blockHex string) (io.Reader, error) {
 	}
 	req.Header.Set("Accept", "application/octet-stream")
 	r, err := c.c.Do(req)
+	defer func() {
+		err = r.Body.Close()
+	}()
 	if err != nil {
 		return nil, err
 	}
@@ -198,27 +215,17 @@ func (c *Client) GetBlockByRoot(blockHex string) (io.Reader, error) {
 
 // GetStateByRoot retrieves a BeaconStateAltair with the given root via the beacon node API
 func (c *Client) GetStateByRoot(stateHex string) (io.Reader, error) {
-	statePath := path.Join(GET_STATE_PATH, stateHex)
-	u := c.urlForPath(statePath)
-	log.Printf("requesting %s", u.String())
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/octet-stream")
-	r, err := c.c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
-	}
-	return r.Body, nil
+	return c.GetStateById(stateHex)
 }
 
 // GetStateBySlot retrieves a BeaconStateAltair at the given slot via the beacon node API
 func (c *Client) GetStateBySlot(slot uint64) (io.Reader, error) {
-	statePath := path.Join(GET_STATE_PATH, strconv.FormatUint(slot, 10))
+	slotStr := strconv.FormatUint(slot, 10)
+	return c.GetStateById(slotStr)
+}
+
+func (c *Client) GetStateById(stateId string) (io.Reader, error) {
+	statePath := path.Join(GET_STATE_PATH, stateId)
 	u := c.urlForPath(statePath)
 	log.Printf("requesting %s", u.String())
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
@@ -227,21 +234,85 @@ func (c *Client) GetStateBySlot(slot uint64) (io.Reader, error) {
 	}
 	req.Header.Set("Accept", "application/octet-stream")
 	r, err := c.c.Do(req)
+	defer func() {
+		err = r.Body.Close()
+	}()
 	if err != nil {
 		return nil, err
 	}
 	if r.StatusCode != http.StatusOK {
 		return nil, non200Err(r)
 	}
-	return r.Body, nil
+	b := bytes.NewBuffer(nil)
+	_, err = io.Copy(b, r.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading http response body from GetStateById")
+	}
+	return b, nil
+}
+
+func (c *Client) GetForkForState(stateId string) (*ethpb.Fork, error) {
+	t := template.Must(template.New("get-for-for-state").Parse(GET_FORK_FOR_STATE))
+	b := bytes.NewBuffer(nil)
+	err := t.Execute(b, struct{StateId string}{StateId: stateId})
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("unable to generate path w/ stateId=%s", stateId))
+	}
+	u := c.urlForPath(b.String())
+	r, err := c.c.Get(u.String())
+	defer func() {
+		err = r.Body.Close()
+	}()
+	if err != nil {
+		return nil, err
+	}
+	if r.StatusCode != http.StatusOK {
+		return nil, non200Err(r)
+	}
+	fr := &forkResponse{}
+	dataWrapper := &struct{Data *forkResponse}{Data: fr}
+	err = json.NewDecoder(r.Body).Decode(dataWrapper)
+	if err != nil {
+		return nil, errors.Wrap(err, "error decoding json response in GetForkForState")
+	}
+
+	return fr.Fork()
+}
+
+type forkResponse struct {
+	PreviousVersion string `json:"previous_version"`
+	CurrentVersion  string `json:"current_version"`
+	Epoch           string `json:"epoch"`
+}
+
+func (f *forkResponse) Fork() (*ethpb.Fork, error) {
+	epoch, err := strconv.Atoi(f.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	cSlice, err := hexutil.Decode(f.CurrentVersion)
+	if err != nil {
+		return nil, err
+	}
+	if len(cSlice) != 4 {
+		return nil, fmt.Errorf("got %d byte version for CurrentVersion, expected 4 bytes. hex=%s", len(cSlice), f.CurrentVersion)
+	}
+	pSlice, err := hexutil.Decode(f.PreviousVersion)
+	if err != nil {
+		return nil, err
+	}
+	if len(pSlice) != 4 {
+		return nil, fmt.Errorf("got %d byte version, expected 4 bytes. version hex=%s", len(pSlice), f.PreviousVersion)
+	}
+	return &ethpb.Fork{
+		CurrentVersion: cSlice,
+		PreviousVersion: pSlice,
+		Epoch: types.Epoch(epoch),
+	}, nil
 }
 
 type forkScheduleResponse struct {
-	Data []struct {
-		PreviousVersion string `json:"previous_version"`
-		CurrentVersion  string `json:"current_version"`
-		Epoch           string `json:"epoch"`
-	}
+	Data []forkResponse
 }
 
 func (fsr *forkScheduleResponse) OrderedForkSchedule() (params.OrderedForkSchedule, error) {
@@ -272,6 +343,9 @@ func (c *Client) GetForkSchedule() (params.OrderedForkSchedule, error) {
 	u := c.urlForPath(GET_FORK_SCHEDULE_PATH)
 	log.Printf("requesting %s", u.String())
 	r, err := c.c.Get(u.String())
+	defer func() {
+		err = r.Body.Close()
+	}()
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,9 @@ package checkpoint
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"io"
 	"os"
 	"time"
@@ -18,10 +21,6 @@ import (
 var saveFlags = struct {
 	BeaconNodeHost string
 	Timeout        string
-	BlockHex       string
-	BlockSavePath  string
-	StateHex       string
-	Epoch          int
 }{}
 
 var saveCmd = &cli.Command{
@@ -41,11 +40,6 @@ var saveCmd = &cli.Command{
 			Destination: &saveFlags.Timeout,
 			Value:       "4m",
 		},
-		&cli.IntFlag{
-			Name:        "epoch",
-			Usage:       "instead of state-root, epoch can be used to find the BeaconState for the slot at the epoch boundary.",
-			Destination: &saveFlags.Epoch,
-		},
 	},
 }
 
@@ -63,68 +57,48 @@ func cliActionSave(_ *cli.Context) error {
 		return err
 	}
 
-	if saveFlags.Epoch > 0 {
-		return saveCheckpointByEpoch(client, uint64(saveFlags.Epoch))
-	}
-
 	return saveCheckpoint(client)
 }
 
 func saveCheckpoint(client *openapi.Client) error {
-	epoch, err := client.GetWeakSubjectivityCheckpointEpoch()
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Beacon node computes the current weak subjectivity checkpoint as epoch = %d", epoch)
-	return saveCheckpointByEpoch(client, epoch)
-}
-
-func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 	ctx := context.Background()
-	// Fork schedule is used to query for chain config metadata that is used to unmarshal values with the correct type
-	fs, err := client.GetForkSchedule()
+
+	headReader, err := client.GetStateById(openapi.StateIdHead)
+	headBytes, err := io.ReadAll(headReader)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to read response body for get head state api call")
 	}
-	version, err := fs.VersionForEpoch(types.Epoch(epoch))
+	log.Printf("state response byte len=%d", len(headBytes))
+	headState, err := sniff.BeaconState(headBytes)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error unmarshaling state to correct version")
 	}
-	cf, err := sniff.FindConfigFork(types.Epoch(epoch), version)
+	cf, err := sniff.ConfigForkForState(headBytes)
 	if err != nil {
-		return errors.Wrap(err, "beacon node provided an unrecognized fork schedule")
+		return errors.Wrap(err, "error detecting chain config for beacon state")
 	}
 	log.Printf("detected supported config for state & block version detection, name=%s, fork=%s", cf.ConfigName.String(), cf.Fork)
 
-	bSlot := epoch * uint64(cf.Config.SlotsPerEpoch)
+	// LatestWeakSubjectivityEpoch uses package-level vars from the params package, so we need to override it
+	params.OverrideBeaconConfig(cf.Config)
+	epoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, headState)
+	if err != nil {
+		return errors.Wrap(err, "error computing the weak subjectivity epoch from head state")
+	}
 
-	blockReader, err := client.GetBlockBySlot(bSlot)
+	// use first slot of the epoch for the block slot
+	bSlot, err := slots.EpochStart(epoch)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to retrieve block bytes for slot %d from api", bSlot))
+		return errors.Wrap(err, fmt.Sprintf("Error computing first slot of epoch=%d", epoch))
 	}
-	blockBytes, err := io.ReadAll(blockReader)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to read response body for block at slot %d from api", bSlot))
-	}
-	block, err := sniff.BlockForConfigFork(blockBytes, cf)
-	if err != nil {
-		return errors.Wrap(err, "failed to detect config/version from block inspection")
-	}
-	blockRoot, err := block.Block().HashTreeRoot()
-	if err != nil {
-		return err
-	}
-	log.Printf("retrieved block at slot %d with root=%#x", bSlot, blockRoot)
-	blockStateRoot := block.Block().StateRoot()
-	log.Printf("retrieved block has state root=%#x", blockStateRoot)
-
 	// assigning this variable to make it extra obvious that the state slot is different
 	sSlot := bSlot + 1
 	// using the state at (slot % 32 = 1) instead of the epoch boundary ensures the
 	// next block applied to the state will have the block at the weak subjectivity checkpoint
 	// as its parent, satisfying prysm's sync code current verification that the parent block is present in the db
-	stateReader, err := client.GetStateBySlot(sSlot)
+	log.Printf("weak subjectivity epoch computed as %d. download block@slot=%d, state@slot=%d", epoch, bSlot, sSlot)
+
+	stateReader, err := client.GetStateBySlot(uint64(sSlot))
 	if err != nil {
 		return err
 	}
@@ -146,6 +120,42 @@ func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 	if err != nil {
 		return err
 	}
+
+	// Fork schedule is used to query for chain config metadata that is used to unmarshal values with the correct type
+	fs, err := client.GetForkSchedule()
+	if err != nil {
+		return err
+	}
+	// get the version and find the config fork
+	version, err := fs.VersionForEpoch(epoch)
+	if err != nil {
+		return err
+	}
+	cf, err = sniff.FindConfigFork(version)
+	if err != nil {
+		return errors.Wrap(err, "beacon node provided an unrecognized fork schedule")
+	}
+
+	blockReader, err := client.GetBlockBySlot(uint64(bSlot))
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed to retrieve block bytes for slot %d from api", bSlot))
+	}
+	blockBytes, err := io.ReadAll(blockReader)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed to read response body for block at slot %d from api", bSlot))
+	}
+	block, err := sniff.BlockForConfigFork(blockBytes, cf)
+	if err != nil {
+		return errors.Wrap(err, "failed to detect config/version from block inspection")
+	}
+	blockRoot, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	log.Printf("retrieved block at slot %d with root=%#x", bSlot, blockRoot)
+	blockStateRoot := block.Block().StateRoot()
+	log.Printf("retrieved block has state root=%#x", blockStateRoot)
+
 	// we only want to provide checkpoints+state pairs where the state integrates the checkpoint block as its latest root
 	// this ensures that when syncing begins from the provided state, the next block in the chain can find the
 	// latest block in the db.
@@ -184,6 +194,6 @@ func saveCheckpointByEpoch(client *openapi.Client, epoch uint64) error {
 	return nil
 }
 
-func fname(prefix string, cf *sniff.ConfigFork, slot uint64, root [32]byte) string {
+func fname(prefix string, cf *sniff.ConfigFork, slot types.Slot, root [32]byte) string {
 	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, cf.ConfigName.String(), cf.Fork.String(), slot, root)
 }

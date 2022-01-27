@@ -373,7 +373,7 @@ func getConfigFork(ctx context.Context, conn *grpc.ClientConn, slot types.Slot) 
 		err = errors.Wrap(err, "getConfigFork/VersionForEpoch")
 		return nil, err
 	}
-	cf, err := sniff.FindConfigFork(epoch, version)
+	cf, err := sniff.FindConfigFork(version)
 	if err != nil {
 		err = errors.Wrap(err, "getConfigFork/FindConfigFork")
 		return nil, err
