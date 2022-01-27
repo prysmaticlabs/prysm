@@ -595,8 +595,8 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
 
-	// The node would have seen finalized root or else it'd
-	// be able to prune it.
+	// The node would have seen finalized root or else it
+	// wouldn't be able to prune it.
 	finalizedIndex, ok := s.nodesIndices[finalizedRoot]
 	if !ok {
 		return errUnknownFinalizedRoot
@@ -608,52 +608,40 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 		return nil
 	}
 
-	// Remove the key/values from indices mapping on to be pruned nodes.
-	// These nodes are before the finalized index.
-	for i := uint64(0); i < finalizedIndex; i++ {
-		if int(i) >= len(s.nodes) {
-			return errInvalidNodeIndex
+	// Traverse through the node list starting from the finalized node at index 0.
+	// Nodes that are not branching off from the finalized node will be removed.
+	canonicalNodesMap := make(map[uint64]uint64, uint64(len(s.nodes))-finalizedIndex)
+	canonicalNodes := make([]*Node, 1, uint64(len(s.nodes))-finalizedIndex)
+	finalizedNode := s.nodes[finalizedIndex]
+	finalizedNode.parent = NonExistentNode
+	canonicalNodes[0] = finalizedNode
+	canonicalNodesMap[finalizedIndex] = uint64(0)
+	for idx := uint64(0); idx < uint64(len(s.nodes)); idx++ {
+		node := copyNode(s.nodes[idx])
+		parentIdx, ok := canonicalNodesMap[node.parent]
+		if ok {
+			s.nodesIndices[node.root] = uint64(len(canonicalNodes))
+			canonicalNodesMap[idx] = uint64(len(canonicalNodes))
+			node.parent = parentIdx
+			canonicalNodes = append(canonicalNodes, node)
+		} else {
+			// Remove node that is not part of finalized branch.
+			delete(s.nodesIndices, node.root)
 		}
-		delete(s.nodesIndices, s.nodes[i].root)
 	}
+	s.nodesIndices[finalizedRoot] = uint64(0)
 
-	// Finalized index can not be greater than the length of the node.
-	if int(finalizedIndex) >= len(s.nodes) {
-		return errors.New("invalid finalized index")
-	}
-	s.nodes = s.nodes[finalizedIndex:]
-
-	// Adjust indices to node mapping.
-	for k, v := range s.nodesIndices {
-		s.nodesIndices[k] = v - finalizedIndex
-	}
-
-	// Iterate through existing nodes and adjust its parent/child indices with the newly pruned layout.
-	for i, node := range s.nodes {
-		if node.parent != NonExistentNode {
-			// If the node's parent is less than finalized index, set it to non existent.
-			if node.parent >= finalizedIndex {
-				node.parent -= finalizedIndex
-			} else {
-				node.parent = NonExistentNode
-			}
-		}
+	// Recompute best child and descendant for each canonical nodes.
+	for _, node := range canonicalNodes {
 		if node.bestChild != NonExistentNode {
-			if node.bestChild < finalizedIndex {
-				return errInvalidBestChildIndex
-			}
-			node.bestChild -= finalizedIndex
+			node.bestChild = canonicalNodesMap[node.bestChild]
 		}
 		if node.bestDescendant != NonExistentNode {
-			if node.bestDescendant < finalizedIndex {
-				return errInvalidBestDescendantIndex
-			}
-			node.bestDescendant -= finalizedIndex
+			node.bestDescendant = canonicalNodesMap[node.bestDescendant]
 		}
-
-		s.nodes[i] = node
 	}
 
+	s.nodes = canonicalNodes
 	prunedCount.Inc()
 
 	return nil
