@@ -299,7 +299,7 @@ func TestProposeBlockBellatrix_ProposeBlockFailed(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.GenericBeaconBlock{
-		Block: &ethpb.GenericBeaconBlock_Merge{Merge: util.NewBeaconBlockMerge().Block},
+		Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: util.NewBeaconBlockBellatrix().Block},
 	}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -449,17 +449,17 @@ func TestProposeBlockBellatrix_BlocksDoubleProposal(t *testing.T) {
 		gomock.Any(), // epoch
 	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	testBlock := util.NewBeaconBlockMerge()
+	testBlock := util.NewBeaconBlockBellatrix()
 	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
 	testBlock.Block.Slot = slot
 	m.validatorClient.EXPECT().GetBeaconBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.GenericBeaconBlock{
-		Block: &ethpb.GenericBeaconBlock_Merge{Merge: testBlock.Block},
+		Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: testBlock.Block},
 	}, nil /*err*/)
 
-	secondTestBlock := util.NewBeaconBlockMerge()
+	secondTestBlock := util.NewBeaconBlockBellatrix()
 	secondTestBlock.Block.Slot = slot
 	graffiti := [32]byte{}
 	copy(graffiti[:], "someothergraffiti")
@@ -468,7 +468,7 @@ func TestProposeBlockBellatrix_BlocksDoubleProposal(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.GenericBeaconBlock{
-		Block: &ethpb.GenericBeaconBlock_Merge{Merge: secondTestBlock.Block},
+		Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: secondTestBlock.Block},
 	}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -769,14 +769,14 @@ func TestProposeBlockBellatrix_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	blk := util.NewBeaconBlockMerge()
+	blk := util.NewBeaconBlockBellatrix()
 	blk.Block.Body.Graffiti = validator.graffiti
 	m.validatorClient.EXPECT().GetBeaconBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.GenericBeaconBlock{
-		Block: &ethpb.GenericBeaconBlock_Merge{
-			Merge: blk.Block,
+		Block: &ethpb.GenericBeaconBlock_Bellatrix{
+			Bellatrix: blk.Block,
 		},
 	}, nil /*err*/)
 
@@ -796,7 +796,7 @@ func TestProposeBlockBellatrix_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	})
 
 	validator.ProposeBlock(context.Background(), 2*params.BeaconConfig().SlotsPerEpoch, pubKey)
-	altairBlk := sentBlock.Block.(*ethpb.GenericSignedBeaconBlock_Merge).Merge.Block
+	altairBlk := sentBlock.Block.(*ethpb.GenericSignedBeaconBlock_Bellatrix).Bellatrix.Block
 	assert.Equal(t, string(validator.graffiti), string(altairBlk.Body.Graffiti))
 }
 
@@ -1058,7 +1058,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: proposerDomain}, nil)
 	ctx := context.Background()
-	blk := util.NewBeaconBlockMerge()
+	blk := util.NewBeaconBlockBellatrix()
 	blk.Block.Slot = 1
 	blk.Block.ProposerIndex = 100
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -1069,7 +1069,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	wb, err := wrapper.WrappedMergeBeaconBlock(blk.Block)
+	wb, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
 	require.NoError(t, err)
 	sig, domain, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%x,%v", sig, domain.SignatureDomain, err)

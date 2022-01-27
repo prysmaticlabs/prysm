@@ -636,13 +636,13 @@ func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, err
 			return nil, err
 		}
 		return wrapper.WrappedAltairSignedBeaconBlock(rawBlock)
-	case hasMergeKey(enc):
-		rawBlock := &ethpb.SignedBeaconBlockMerge{}
+	case hasBellatrixKey(enc):
+		rawBlock := &ethpb.SignedBeaconBlockBellatrix{}
 		err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):])
 		if err != nil {
 			return nil, err
 		}
-		return wrapper.WrappedMergeSignedBeaconBlock(rawBlock)
+		return wrapper.WrappedBellatrixSignedBeaconBlock(rawBlock)
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock := &ethpb.SignedBeaconBlock{}

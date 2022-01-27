@@ -28,7 +28,7 @@ type blockOperation func(context.Context, state.BeaconState, block.SignedBeaconB
 func RunBlockOperationTest(
 	t *testing.T,
 	folderPath string,
-	body *ethpb.BeaconBlockBodyMerge,
+	body *ethpb.BeaconBlockBodyBellatrix,
 	operationFn blockOperation,
 ) {
 	preBeaconStateFile, err := util.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
@@ -52,9 +52,9 @@ func RunBlockOperationTest(
 	}
 
 	helpers.ClearCache()
-	b := util.NewBeaconBlockMerge()
+	b := util.NewBeaconBlockBellatrix()
 	b.Block.Body = body
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(b)
 	require.NoError(t, err)
 	beaconState, err := operationFn(context.Background(), preState, wsb)
 	if postSSZExists {

@@ -25,7 +25,7 @@ import (
 )
 
 func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 
 	syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
-	block := util.NewBeaconBlockMerge()
+	block := util.NewBeaconBlockBellatrix()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -91,7 +91,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(block)
 	require.NoError(t, err)
 	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -102,7 +102,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	wsb, err = wrapper.WrappedMergeSignedBeaconBlock(block)
+	wsb, err = wrapper.WrappedBellatrixSignedBeaconBlock(block)
 	require.NoError(t, err)
 	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 }
 
 func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 
 	syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -144,7 +144,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
-	block := util.NewBeaconBlockMerge()
+	block := util.NewBeaconBlockBellatrix()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -179,7 +179,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
 
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(block)
 	require.NoError(t, err)
 	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -191,14 +191,14 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	block.Signature = sig.Marshal()
 
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	wsb, err = wrapper.WrappedMergeSignedBeaconBlock(block)
+	wsb, err = wrapper.WrappedBellatrixSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "could not validate state root", err)
 }
 
 func TestProcessEpoch_BadBalanceBellatrix(t *testing.T) {
-	s, _ := util.DeterministicGenesisStateMerge(t, 100)
+	s, _ := util.DeterministicGenesisStateBellatrix(t, 100)
 	assert.NoError(t, s.SetSlot(63))
 	assert.NoError(t, s.UpdateBalancesAtIndex(0, math.MaxUint64))
 	participation := byte(0)
@@ -219,15 +219,15 @@ func TestProcessEpoch_BadBalanceBellatrix(t *testing.T) {
 }
 
 func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
-	*ethpb.SignedBeaconBlockMerge) {
+	*ethpb.SignedBeaconBlockBellatrix) {
 	_, altairBlk := createFullAltairBlockWithOperations(t)
-	blk := &ethpb.SignedBeaconBlockMerge{
-		Block: &ethpb.BeaconBlockMerge{
+	blk := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:          altairBlk.Block.Slot,
 			ProposerIndex: altairBlk.Block.ProposerIndex,
 			ParentRoot:    altairBlk.Block.ParentRoot,
 			StateRoot:     altairBlk.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyMerge{
+			Body: &ethpb.BeaconBlockBodyBellatrix{
 				RandaoReveal:      altairBlk.Block.Body.RandaoReveal,
 				Eth1Data:          altairBlk.Block.Body.Eth1Data,
 				Graffiti:          altairBlk.Block.Body.Graffiti,
@@ -253,6 +253,6 @@ func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
 		},
 		Signature: nil,
 	}
-	beaconState, _ := util.DeterministicGenesisStateMerge(t, 32)
+	beaconState, _ := util.DeterministicGenesisStateBellatrix(t, 32)
 	return beaconState, blk
 }
