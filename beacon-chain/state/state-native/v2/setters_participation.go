@@ -7,16 +7,13 @@ import (
 // SetPreviousParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[previousEpochParticipationBits].MinusRef()
 	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1)
 
-	b.state.PreviousEpochParticipation = val
+	b.previousEpochParticipation = val
 	b.markFieldAsDirty(previousEpochParticipationBits)
 	b.rebuildTrie[previousEpochParticipationBits] = true
 	return nil
@@ -25,16 +22,13 @@ func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 // SetCurrentParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[currentEpochParticipationBits].MinusRef()
 	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)
 
-	b.state.CurrentEpochParticipation = val
+	b.currentEpochParticipation = val
 	b.markFieldAsDirty(currentEpochParticipationBits)
 	b.rebuildTrie[currentEpochParticipationBits] = true
 	return nil
@@ -43,47 +37,41 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 // AppendCurrentParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	participation := b.state.CurrentEpochParticipation
+	participation := b.currentEpochParticipation
 	if b.sharedFieldReferences[currentEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		participation = make([]byte, len(b.state.CurrentEpochParticipation))
-		copy(participation, b.state.CurrentEpochParticipation)
+		participation = make([]byte, len(b.currentEpochParticipation))
+		copy(participation, b.currentEpochParticipation)
 		b.sharedFieldReferences[currentEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)
 	}
 
-	b.state.CurrentEpochParticipation = append(participation, val)
+	b.currentEpochParticipation = append(participation, val)
 	b.markFieldAsDirty(currentEpochParticipationBits)
-	b.addDirtyIndices(currentEpochParticipationBits, []uint64{uint64(len(b.state.CurrentEpochParticipation) - 1)})
+	b.addDirtyIndices(currentEpochParticipationBits, []uint64{uint64(len(b.currentEpochParticipation) - 1)})
 	return nil
 }
 
 // AppendPreviousParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
-	if !b.hasInnerState() {
-		return ErrNilInnerState
-	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	bits := b.state.PreviousEpochParticipation
+	bits := b.previousEpochParticipation
 	if b.sharedFieldReferences[previousEpochParticipationBits].Refs() > 1 {
-		bits = make([]byte, len(b.state.PreviousEpochParticipation))
-		copy(bits, b.state.PreviousEpochParticipation)
+		bits = make([]byte, len(b.previousEpochParticipation))
+		copy(bits, b.previousEpochParticipation)
 		b.sharedFieldReferences[previousEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1)
 	}
 
-	b.state.PreviousEpochParticipation = append(bits, val)
+	b.previousEpochParticipation = append(bits, val)
 	b.markFieldAsDirty(previousEpochParticipationBits)
-	b.addDirtyIndices(previousEpochParticipationBits, []uint64{uint64(len(b.state.PreviousEpochParticipation) - 1)})
+	b.addDirtyIndices(previousEpochParticipationBits, []uint64{uint64(len(b.previousEpochParticipation) - 1)})
 
 	return nil
 }
