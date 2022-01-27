@@ -238,7 +238,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinSlashingPenaltyQuotientBellatrix:     32,
 	ProportionalSlashingMultiplierBellatrix: 3,
 	InactivityPenaltyQuotientBellatrix:      1 << 24,
-	TerminalBlockHash:                   [32]byte{},
+	TerminalBlockHash:                       [32]byte{},
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
