@@ -136,7 +136,7 @@ func (r *testRunner) run() {
 
 	lighthouseNodes := components.NewLighthouseBeaconNodes(config)
 	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode}); err != nil {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode, beaconNodes}); err != nil {
 			return errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run")
 		}
 		lighthouseNodes.SetENR(bootNode.ENR())

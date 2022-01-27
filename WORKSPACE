@@ -325,20 +325,6 @@ filegroup(
 )
 
 http_archive(
-    name = "lighthouse",
-    build_file_content = """
-filegroup(
-    name = "binaries",
-    srcs = glob(["**/*"]),
-    visibility = ["//visibility:public"],
-)
-""",
-    # sha256 = "4575bd2b64dcc2c7af1e5e97bdd1cc0624a7fc599309809915a640414b10f3d0",
-    # strip_prefix = "lighthouse-7fa1b868985ee24aad65567f9250cf7fa86f97b1",
-    url = "https://github.com/sigp/lighthouse/releases/download/v2.1.1/lighthouse-v2.1.1-x86_64-unknown-linux-gnu-portable.tar.gz",
-)
-
-http_archive(
     name = "com_github_bazelbuild_buildtools",
     sha256 = "7a182df18df1debabd9e36ae07c8edfa1378b8424a04561b674d933b965372b3",
     strip_prefix = "buildtools-f2aed9ee205d62d45c55cfabbfd26342f8526862",

@@ -16,11 +16,13 @@ type E2EConfig struct {
 	UsePprof            bool
 	UseWeb3RemoteSigner bool
 	TestDeposits        bool
+	UseFixedPeerIDs     bool
 	EpochsToRun         uint64
 	TracingSinkEndpoint string
 	Evaluators          []Evaluator
 	BeaconFlags         []string
 	ValidatorFlags      []string
+	PeerIDs             []string
 }
 
 // Evaluator defines the structure of the evaluators used to

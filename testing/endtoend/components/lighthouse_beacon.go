@@ -117,6 +117,11 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		"--http",
 		"--debug-level=debug",
 	}
+	if node.config.UseFixedPeerIDs {
+		flagVal := strings.Join(node.config.PeerIDs, ",")
+		args = append(args,
+			fmt.Sprintf("--trusted-peers=%s", flagVal))
+	}
 	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
 	// Write stdout and stderr to log files.
 	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("lighthouse_beacon_node_%d_stdout.log", index)))

@@ -29,6 +29,7 @@ type BeaconNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	enr     string
+	ids     []string
 	started chan struct{}
 }
 
@@ -54,12 +55,19 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	// Create beacon nodes.
 	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		nodes[i] = NewBeaconNode(s.config, i, s.enr)
+		bn := NewBeaconNode(s.config, i, s.enr)
+		nodes[i] = bn
 	}
 
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
 	return helpers.WaitOnNodes(ctx, nodes, func() {
+		if s.config.UseFixedPeerIDs {
+			for i := 0; i < len(nodes); i++ {
+				s.ids = append(s.ids, nodes[i].(*BeaconNode).peerID)
+			}
+			s.config.PeerIDs = s.ids
+		}
 		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
 	})
@@ -70,6 +78,10 @@ func (s *BeaconNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
+func (s *BeaconNodeSet) PeerIDs() []string {
+	return s.ids
+}
+
 // BeaconNode represents beacon node.
 type BeaconNode struct {
 	e2etypes.ComponentRunner
@@ -77,6 +89,7 @@ type BeaconNode struct {
 	started chan struct{}
 	index   int
 	enr     string
+	peerID  string
 }
 
 // NewBeaconNode creates and returns a beacon node.
@@ -158,6 +171,15 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 
 	if err = helpers.WaitForTextInFile(stdOutFile, "gRPC server listening on port"); err != nil {
 		return fmt.Errorf("could not find multiaddr for node %d, this means the node had issues starting: %w", index, err)
+	}
+
+	if config.UseFixedPeerIDs {
+		peerId, err := helpers.FindFollowingTextInFile(stdOutFile, "Running node with peer id of ")
+		if err != nil {
+			return fmt.Errorf("could not find peer id: %w", err)
+		}
+		log.Infof("peer id %d is %s", index, peerId)
+		node.peerID = peerId
 	}
 
 	// Mark node as ready.
