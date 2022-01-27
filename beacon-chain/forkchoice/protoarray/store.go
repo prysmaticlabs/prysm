@@ -578,42 +578,40 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 		return nil
 	}
 
-	// We start adding nodes since the final one, anything that arrived
-	// to fork choice before the finalized block is either final now or
-	// it is in a contentious fork.
-	processedNodes := make(map[uint64]uint64, uint64(len(s.nodes))-finalizedIndex)
-	newNodes := make([]*Node, 1, uint64(len(s.nodes))-finalizedIndex)
-	node := s.nodes[finalizedIndex]
-	node.parent = NonExistentNode
-	newNodes[0] = node
-	processedNodes[finalizedIndex] = uint64(0)
+	// Traverse through the node list starting from the finalized node at index 0.
+	// Nodes that are not branching off from the finalized node will be removed.
+	canonicalNodesMap := make(map[uint64]uint64, uint64(len(s.nodes))-finalizedIndex)
+	canonicalNodes := make([]*Node, 1, uint64(len(s.nodes))-finalizedIndex)
+	finalizedNode := s.nodes[finalizedIndex]
+	finalizedNode.parent = NonExistentNode
+	canonicalNodes[0] = finalizedNode
+	canonicalNodesMap[finalizedIndex] = uint64(0)
 	for idx := uint64(0); idx < uint64(len(s.nodes)); idx++ {
-		node = s.nodes[idx]
-		parentIdx, ok := processedNodes[node.parent]
+		node := copyNode(s.nodes[idx])
+		parentIdx, ok := canonicalNodesMap[node.parent]
 		if ok {
-			// This node is a descendant of the finalized point
-			s.nodesIndices[node.root] = uint64(len(newNodes))
-			processedNodes[idx] = uint64(len(newNodes))
+			s.nodesIndices[node.root] = uint64(len(canonicalNodes))
+			canonicalNodesMap[idx] = uint64(len(canonicalNodes))
 			node.parent = parentIdx
-			newNodes = append(newNodes, node)
+			canonicalNodes = append(canonicalNodes, node)
 		} else {
-			// This node is in a contentious fork
+			// Remove node that is not part of finalized branch.
 			delete(s.nodesIndices, node.root)
 		}
 	}
 	s.nodesIndices[finalizedRoot] = uint64(0)
 
-	// Recompute best child and descendant for each added node
-	for _, node := range newNodes {
+	// Recompute best child and descendant for each canonical nodes.
+	for _, node := range canonicalNodes {
 		if node.bestChild != NonExistentNode {
-			node.bestChild = processedNodes[node.bestChild]
+			node.bestChild = canonicalNodesMap[node.bestChild]
 		}
 		if node.bestDescendant != NonExistentNode {
-			node.bestDescendant = processedNodes[node.bestDescendant]
+			node.bestDescendant = canonicalNodesMap[node.bestDescendant]
 		}
 	}
 
-	s.nodes = newNodes
+	s.nodes = canonicalNodes
 	prunedCount.Inc()
 
 	return nil
