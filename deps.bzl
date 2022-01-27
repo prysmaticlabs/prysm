@@ -1949,8 +1949,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_kr_pretty",
         importpath = "github.com/kr/pretty",
-        sum = "h1:Fmg33tUaq4/8ym9TJN1x7sLJnHVwhP33CNkpYV/7rwI=",
-        version = "v0.2.1",
+        sum = "h1:WgNl7dwNpEZ6jJ9k1snq4pZsg7DOEN8hP9Xw0Tsjwk0=",
+        version = "v0.3.0",
     )
     go_repository(
         name = "com_github_kr_pty",
@@ -2372,8 +2372,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_marten_seemann_qtls_go1_15",
         importpath = "github.com/marten-seemann/qtls-go1-15",
-        sum = "h1:Ci4EIUN6Rlb+D6GmLdej/bCQ4nPYNtVXQB+xjiXE1nk=",
-        version = "v0.1.5",
+        sum = "h1:RehYMOyRW8hPVEja1KBVsFVNSm35Jj9Mvs5yNoZZ28A=",
+        version = "v0.1.4",
     )
     go_repository(
         name = "com_github_marten_seemann_qtls_go1_16",
@@ -3047,8 +3047,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_rogpeppe_go_internal",
         importpath = "github.com/rogpeppe/go-internal",
-        sum = "h1:RR9dF3JtopPvtkroDZuVD7qquD0bnHlKSqaQhgwt8yk=",
-        version = "v1.3.0",
+        sum = "h1:FCbCCtXNOY3UtUuHUYaghJg4y7Fd14rXifAYUAtL9R8=",
+        version = "v1.8.0",
     )
 
     go_repository(
@@ -3635,8 +3635,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_whyrusleeping_go_logging",
         importpath = "github.com/whyrusleeping/go-logging",
-        sum = "h1:fwpzlmT0kRC/Fmd0MdmGgJG/CXIZ6gFq46FQZjprUcc=",
-        version = "v0.0.1",
+        sum = "h1:9lDbC6Rz4bwmou+oE6Dt4Cb2BGMur5eR/GYptkKUVHo=",
+        version = "v0.0.0-20170515211332-0457bb6b88fc",
     )
 
     go_repository(
