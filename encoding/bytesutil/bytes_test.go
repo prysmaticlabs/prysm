@@ -522,4 +522,8 @@ func TestNonZeroRoot(t *testing.T) {
 	input := make([]byte, fieldparams.RootLength)
 	output := bytesutil.NonZeroRoot(input)
 	assert.Equal(t, false, output)
+	copy(input[2:], "a")
+	copy(input[3:], "b")
+	output = bytesutil.NonZeroRoot(input)
+	assert.Equal(t, true, output)
 }
