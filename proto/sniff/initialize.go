@@ -76,7 +76,6 @@ func BeaconState(marshaled []byte) (state.BeaconState, error) {
 	return s, nil
 }
 
-
 // BlockForConfigFork attempts to unmarshal a block from a marshaled byte slice into the correct block type.
 // In order to do this it needs to know what fork the block is from using ConfigFork, which can be obtained
 // by using ConfigForkForState.

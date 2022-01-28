@@ -103,7 +103,7 @@ type BeaconNode struct {
 	finalizedStateAtStartUp state.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
 	blockchainFlagOpts      []blockchain.Option
-	CheckpointInitializer   *checkpoint.Initializer
+	CheckpointInitializer   checkpoint.Initializer
 }
 
 // New creates a new node instance, sets up configuration options, and registers

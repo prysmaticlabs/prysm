@@ -2,10 +2,10 @@ package checkpoint
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/checkpoint"
 	"github.com/urfave/cli/v2"
-	"os"
 )
 
 var (
@@ -21,6 +21,12 @@ var (
 		Usage: "Rather than syncing from genesis, you can start processing from a ssz-serialized BeaconState+Block." +
 			" This flag allows you to specify a local file containing the checkpoint Block to load.",
 	}
+	RemoteURL = &cli.StringFlag{
+		Name: "checkpoint-sync-url",
+		Usage: "URL of a synced beacon node to trust in obtaining checkpoint sync data. " +
+			"as an additional safety measure, it is strongly recommended to only use this option in conjunction with " +
+		    "--weak-subjectivity-checkpoint flag",
+	}
 )
 
 // BeaconNodeOptions is responsible for determining if the checkpoint sync options have been used, and if so,
@@ -29,6 +35,18 @@ var (
 func BeaconNodeOptions(c *cli.Context) (node.Option, error) {
 	blockPath := c.Path(BlockPath.Name)
 	statePath := c.Path(StatePath.Name)
+	remoteURL := c.String(RemoteURL.Name)
+	if remoteURL != "" {
+		return func(node *node.BeaconNode) error {
+			var err error
+			node.CheckpointInitializer, err = checkpoint.NewAPIInitializer(remoteURL)
+			if err != nil {
+				return errors.Wrap(err, "error while constructing beacon node api client for checkpoint sync")
+			}
+			return nil
+		}, nil
+	}
+
 	if blockPath == "" && statePath == "" {
 		return nil, nil
 	}
@@ -39,19 +57,10 @@ func BeaconNodeOptions(c *cli.Context) (node.Option, error) {
 		return nil, fmt.Errorf("--checkpoint-state specified, but not --checkpoint-block. both are required")
 	}
 
-	return func(node *node.BeaconNode) error {
-		blockFH, err := os.Open(blockPath)
+	return func(node *node.BeaconNode) (err error) {
+		node.CheckpointInitializer, err = checkpoint.NewFileInitializer(blockPath, statePath)
 		if err != nil {
-			return err
-		}
-		stateFH, err := os.Open(statePath)
-		if err != nil {
-			return err
-		}
-
-		node.CheckpointInitializer = &checkpoint.Initializer{
-			BlockReadCloser: blockFH,
-			StateReadCloser: stateFH,
+			return errors.Wrap(err, "error preparing to initialize checkpoint from local ssz files")
 		}
 		return nil
 	}, nil

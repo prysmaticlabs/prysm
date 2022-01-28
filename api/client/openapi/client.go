@@ -144,7 +144,12 @@ func (c *Client) GetBlockBySlot(slot uint64) (io.Reader, error) {
 	if r.StatusCode != http.StatusOK {
 		return nil, non200Err(r)
 	}
-	return r.Body, nil
+	b := bytes.NewBuffer(nil)
+	_, err = io.Copy(b, r.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading http response body from GetBlockBySlot")
+	}
+	return b, nil
 }
 
 // blockId can be one of:

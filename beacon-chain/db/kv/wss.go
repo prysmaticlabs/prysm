@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -28,6 +29,12 @@ func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Read
 	if err != nil {
 		return errors.Wrap(err, "could not sniff config+fork for origin state bytes")
 	}
+	_, ok := params.BeaconConfig().ForkVersionSchedule[cf.Version]
+	if !ok {
+		return fmt.Errorf("config mismatch, beacon node configured to connect to %s, detected state is for %s", params.BeaconConfig().ConfigName, cf.ConfigName.String())
+	}
+
+	log.Printf("detected supported config for state & block version detection, name=%s, fork=%s", cf.ConfigName.String(), cf.Fork)
 	state, err := sniff.BeaconStateForConfigFork(sb, cf)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize origin state w/ bytes + config+fork")

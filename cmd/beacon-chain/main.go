@@ -123,6 +123,7 @@ var appFlags = []cli.Flag{
 	cmd.ValidatorMonitorIndicesFlag,
 	checkpoint.BlockPath,
 	checkpoint.StatePath,
+	checkpoint.RemoteURL,
 }
 
 func init() {

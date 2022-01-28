@@ -2,32 +2,74 @@ package checkpoint
 
 import (
 	"context"
+	"fmt"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	log "github.com/sirupsen/logrus"
-	"io"
+	"os"
 )
 
-// Initializer holds io.ReadClosers for the block + state needed to initialize a beacon-node database
-// to begin syncing from a weak subjectivity checkpoint block.
-type Initializer struct {
-	BlockReadCloser io.ReadCloser
-	StateReadCloser io.ReadCloser
+type Initializer interface {
+	Initialize(ctx context.Context, d db.Database) error
+}
+
+func NewFileInitializer(blockPath string, statePath string) (*FileInitializer, error) {
+	var err error
+	if err = existsAndIsFile(blockPath); err != nil {
+		return nil, err
+	}
+	if err = existsAndIsFile(statePath); err != nil {
+		return nil, err
+	}
+	// stat just to make sure it actually exists and is a file
+	return &FileInitializer{blockPath: blockPath, statePath: statePath}, nil
+}
+
+// FileInitializer initializes a beacon-node database to use checkpoint sync,
+// using ssz-encoded block and state data stored in files on the local filesystem.
+type FileInitializer struct {
+	blockPath string
+	statePath string
 }
 
 // Initialize is called in the BeaconNode db startup code if an Initializer is present.
 // Initialize does what is needed to prepare the beacon node database for syncing from the weak subjectivity checkpoint.
-func (ini *Initializer) Initialize(ctx context.Context, d db.Database) error {
+func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error {
+	blockFH, err := os.Open(fi.blockPath)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error reading block file %s for checkpoint sync initialization", fi.blockPath))
+	}
 	defer func() {
-		err := ini.BlockReadCloser.Close()
+		err := blockFH.Close()
 		if err != nil {
 			log.Errorf("error while closing checkpoint block input stream: %s", err)
 		}
 	}()
+
+	stateFH, err := os.Open(fi.statePath)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error reading state file %s for checkpoint sync initialization", fi.statePath))
+	}
 	defer func() {
-		err := ini.StateReadCloser.Close()
+		err := stateFH.Close()
 		if err != nil {
 			log.Errorf("error while closing checkpoint state input stream: %s", err)
 		}
 	}()
-	return d.SaveOrigin(ctx, ini.StateReadCloser, ini.BlockReadCloser)
+
+	return d.SaveOrigin(ctx, blockFH, stateFH)
+}
+
+var _ Initializer = &FileInitializer{}
+
+func existsAndIsFile(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		msg := fmt.Sprintf("error checking existence of ssz-encoded file %s for checkpoint sync init", path)
+		return errors.Wrap(err, msg)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("%s is a directory, please specify full path to file", path)
+	}
+	return nil
 }
