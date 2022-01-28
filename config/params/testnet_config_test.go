@@ -21,7 +21,9 @@ func testnetConfigFilePath(t *testing.T, network string) string {
 
 func TestE2EConfigParity(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	yamlDir := filepath.Join("/home/nishant", "config.yaml")
+	testDir := bazel.TestTmpDir()
+	yamlDir := filepath.Join(testDir, "config.yaml")
+
 	testCfg := params.E2EMainnetTestConfig()
 	yamlObj := params.E2EMainnetConfigYaml()
 	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
