@@ -1,5 +1,5 @@
-//go:build fuzz && go1.18
-// +build fuzz,go1.18
+//go:build fuzz && go1.18 && disabled
+// +build fuzz,go1.18,disabled
 
 package p2p_test
 
