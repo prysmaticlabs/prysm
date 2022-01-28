@@ -77,7 +77,7 @@ go_test(
     eth_network = "mainnet",
     shard_count = 2,
     tags = [
-        "e2e",
+        "e2e-multiclient",
         "mainnet",
         "manual",
         "requires-network",
