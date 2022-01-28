@@ -69,8 +69,8 @@ func TestWallet_InitializeKeymanager_web3Signer_HappyPath(t *testing.T) {
 		},
 	}
 	km, err := w.InitializeKeymanager(ctx, config)
-	assert.NotNil(t, err)
-	assert.Equal(t, nil, km)
+	require.NoError(t, err)
+	assert.NotNil(t, km)
 }
 
 func TestWallet_InitializeKeymanager_web3Signer_nilConfig(t *testing.T) {
