@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // FieldTrie is the representation of the representative
@@ -198,21 +197,4 @@ func (f *FieldTrie) Empty() bool {
 // meant to be used in tests.
 func (f *FieldTrie) InsertFieldLayer(layer [][]*[32]byte) {
 	f.fieldLayers = layer
-}
-
-func (f *FieldTrie) validateIndices(idxs []uint64) error {
-	length := f.length
-	if f.dataType == types.CompressedArray {
-		comLength, err := f.field.ElemsInChunk()
-		if err != nil {
-			return err
-		}
-		length *= comLength
-	}
-	for _, idx := range idxs {
-		if idx >= length {
-			return errors.Errorf("invalid index for field %s: %d >= length %d", f.field.String(version.Phase0), idx, length)
-		}
-	}
-	return nil
 }

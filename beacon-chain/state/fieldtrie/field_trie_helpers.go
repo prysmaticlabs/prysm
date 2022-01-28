@@ -30,6 +30,23 @@ func ProofFromMerkleLayers(layers [][][]byte, startingLeafIndex types.FieldIndex
 	return proof
 }
 
+func (f *FieldTrie) validateIndices(idxs []uint64) error {
+	length := f.length
+	if f.dataType == types.CompressedArray {
+		comLength, err := f.field.ElemsInChunk()
+		if err != nil {
+			return err
+		}
+		length *= comLength
+	}
+	for _, idx := range idxs {
+		if idx >= length {
+			return errors.Errorf("invalid index for field %s: %d >= length %d", f.field.String(version.Phase0), idx, length)
+		}
+	}
+	return nil
+}
+
 func validateElements(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) error {
 	if dataType == types.CompressedArray {
 		comLength, err := field.ElemsInChunk()
