@@ -15,7 +15,7 @@ func UseE2EConfig() {
 	OverrideBeaconNetworkConfig(cfg)
 }
 
-// UseE2EConfig for beacon chain services.
+// UseE2EMainnetConfig for beacon chain services.
 func UseE2EMainnetConfig() {
 	beaconConfig = E2EMainnetTestConfig()
 
