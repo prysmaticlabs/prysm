@@ -7,7 +7,6 @@ go_library(
         "maligned.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/tools/analyzers/maligned",
-    nofuzz = True,
     visibility = ["//visibility:public"],
     deps = [
         "@org_golang_x_tools//go/analysis:go_default_library",

@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = ["analyzer.go"],
     importpath = "github.com/prysmaticlabs/prysm/tools/analyzers/interfacechecker",
-    nofuzz = True,
     visibility = ["//visibility:public"],
     deps = [
         "@org_golang_x_tools//go/analysis:go_default_library",
