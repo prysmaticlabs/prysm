@@ -1,14 +1,19 @@
 package wallet_test
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,4 +53,34 @@ func Test_IsValid_RandomFiles(t *testing.T) {
 	valid, err = wallet.IsValid(path)
 	require.NoError(t, err)
 	require.Equal(t, true, valid)
+}
+
+func TestWallet_InitializeKeymanager_web3Signer_HappyPath(t *testing.T) {
+	w := wallet.NewWalletForWeb3Signer()
+	ctx := context.Background()
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	require.NoError(t, err)
+	config := iface.InitKeymanagerConfig{
+		ListenForChanges: false,
+		Web3SignerConfig: &remote_web3signer.SetupConfig{
+			BaseEndpoint:          "http://localhost:8545",
+			GenesisValidatorsRoot: root,
+			PublicKeysURL:         "http://localhost:8545/public_keys",
+		},
+	}
+	km, err := w.InitializeKeymanager(ctx, config)
+	assert.NotNil(t, err)
+	assert.Equal(t, nil, km)
+}
+
+func TestWallet_InitializeKeymanager_web3Signer_nilConfig(t *testing.T) {
+	w := wallet.NewWalletForWeb3Signer()
+	ctx := context.Background()
+	config := iface.InitKeymanagerConfig{
+		ListenForChanges: false,
+		Web3SignerConfig: nil,
+	}
+	km, err := w.InitializeKeymanager(ctx, config)
+	assert.NotNil(t, err)
+	assert.Equal(t, nil, km)
 }

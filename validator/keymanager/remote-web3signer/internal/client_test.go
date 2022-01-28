@@ -24,6 +24,12 @@ func (m *mockTransport) RoundTrip(*http.Request) (*http.Response, error) {
 	return m.mockResponse, nil
 }
 
+func TestNewApiClient(t *testing.T) {
+	apiClient, err := internal.NewApiClient("http://localhost:8545")
+	assert.NoError(t, err)
+	assert.NotNil(t, apiClient)
+}
+
 func TestClient_Sign_HappyPath(t *testing.T) {
 	jsonSig := `0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9`
 	// create a new reader with that JSON
@@ -41,6 +47,63 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 	assert.EqualValues(t, "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9", fmt.Sprintf("%#x", resp.Marshal()))
+}
+
+func TestClient_Sign_500(t *testing.T) {
+	jsonSig := `0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9`
+	// create a new reader with that JSON
+	r := ioutil.NopCloser(bytes.NewReader([]byte(jsonSig)))
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 500,
+		Body:       r,
+	}}
+	u, err := url.Parse("example.com")
+	assert.NoError(t, err)
+	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
+	jsonRequest, err := json.Marshal(`{message: "hello"}`)
+	assert.NoError(t, err)
+	resp, err := cl.Sign(context.Background(), "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", jsonRequest)
+	assert.NotNil(t, err)
+	assert.Nil(t, resp)
+
+}
+
+func TestClient_Sign_412(t *testing.T) {
+	jsonSig := `0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9`
+	// create a new reader with that JSON
+	r := ioutil.NopCloser(bytes.NewReader([]byte(jsonSig)))
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 412,
+		Body:       r,
+	}}
+	u, err := url.Parse("example.com")
+	assert.NoError(t, err)
+	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
+	jsonRequest, err := json.Marshal(`{message: "hello"}`)
+	assert.NoError(t, err)
+	resp, err := cl.Sign(context.Background(), "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", jsonRequest)
+	assert.NotNil(t, err)
+	assert.Nil(t, resp)
+
+}
+
+func TestClient_Sign_400(t *testing.T) {
+	jsonSig := `0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9`
+	// create a new reader with that JSON
+	r := ioutil.NopCloser(bytes.NewReader([]byte(jsonSig)))
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 400,
+		Body:       r,
+	}}
+	u, err := url.Parse("example.com")
+	assert.NoError(t, err)
+	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
+	jsonRequest, err := json.Marshal(`{message: "hello"}`)
+	assert.NoError(t, err)
+	resp, err := cl.Sign(context.Background(), "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", jsonRequest)
+	assert.NotNil(t, err)
+	assert.Nil(t, resp)
+
 }
 
 func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
