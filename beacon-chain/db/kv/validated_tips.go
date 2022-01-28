@@ -9,6 +9,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ValidatedTips returns all the validated_tips that are present in the DB.
 func (s *Store) ValidatedTips(ctx context.Context) (map[[32]byte]types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatedTips")
 	defer span.End()
@@ -29,6 +30,8 @@ func (s *Store) ValidatedTips(ctx context.Context) (map[[32]byte]types.Slot, err
 	return valTips, err
 }
 
+// UpdateValidatedTips clears off all the old validated_tips from the DB and
+// adds the new tips that are provided.
 func (s *Store) UpdateValidatedTips(ctx context.Context, newVals map[[32]byte]types.Slot) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.UpdateValidatedTips")
 	defer span.End()
