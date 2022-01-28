@@ -4,10 +4,12 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -17,8 +19,12 @@ import (
 func TestFieldTrie_NewTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 40)
 
-	// 5 represents the enum value of state roots
-	trie, err := fieldtrie.NewFieldTrie(5, stateTypes.BasicArray, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+	var bRoots customtypes.BlockRoots
+	for i, r := range newState.BlockRoots() {
+		bRoots[i] = bytesutil.ToBytes32(r)
+	}
+	// 5 represents the enum value of block roots
+	trie, err := fieldtrie.NewFieldTrie(5, stateTypes.BasicArray, &bRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
 	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
 	require.NoError(t, err)
@@ -57,8 +63,12 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	// 12 represents the enum value of randao mixes.
-	trie, err := fieldtrie.NewFieldTrie(13, stateTypes.BasicArray, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+	var mixes customtypes.RandaoMixes
+	for i, r := range newState.RandaoMixes() {
+		mixes[i] = bytesutil.ToBytes32(r)
+	}
+	// 13 represents the enum value of randao mixes.
+	trie, err := fieldtrie.NewFieldTrie(13, stateTypes.BasicArray, &mixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 
 	newTrie := trie.CopyTrie()
@@ -69,7 +79,11 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	require.NoError(t, newState.UpdateRandaoMixesAtIndex(changedIdx[0], changedVals[0][:]))
 	require.NoError(t, newState.UpdateRandaoMixesAtIndex(changedIdx[1], changedVals[1][:]))
 
-	root, err := trie.RecomputeTrie(changedIdx, newState.RandaoMixes())
+	var mixes2 customtypes.RandaoMixes
+	for i, r := range newState.RandaoMixes() {
+		mixes2[i] = bytesutil.ToBytes32(r)
+	}
+	root, err := trie.RecomputeTrie(changedIdx, &mixes2)
 	require.NoError(t, err)
 	newRoot, err := newTrie.TrieRoot()
 	require.NoError(t, err)

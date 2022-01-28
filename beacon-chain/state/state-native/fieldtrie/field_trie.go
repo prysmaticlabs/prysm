@@ -55,7 +55,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.ValueOf(elements).Len(),
+			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
@@ -96,7 +96,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.ValueOf(elements).Len()
+		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		return fieldRoot, nil
 	case types.CompositeArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
