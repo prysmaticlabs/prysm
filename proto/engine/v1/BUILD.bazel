@@ -58,6 +58,7 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = [
+        "json_marshal_unmarshal.go",
         ":ssz_generated_files",  # keep
     ],
     embed = [
@@ -77,3 +78,10 @@ go_library(
     ],  # keep
 )
 
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "json_marshal_unmarshal_test.go",
+    ],
+    embed = [":go_default_library"],
+)
