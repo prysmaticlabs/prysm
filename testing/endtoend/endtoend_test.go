@@ -69,7 +69,7 @@ func (r *testRunner) run() {
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
 	var keyGen, lighthouseValidatorNodes e2etypes.ComponentRunner
-	var lighthouseNodes components.LighthouseBeaconNodeSet
+	var lighthouseNodes *components.LighthouseBeaconNodeSet
 
 	ctx, done := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
