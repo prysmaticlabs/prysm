@@ -16,21 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
-// ProofFromMerkleLayers creates a proof starting at the leaf index of the state Merkle layers.
-func ProofFromMerkleLayers(layers [][][]byte, startingLeafIndex types.FieldIndex) [][]byte {
-	// The merkle tree structure looks as follows:
-	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
-	proof := make([][]byte, 0)
-	currentIndex := startingLeafIndex
-	for i := 0; i < len(layers)-1; i++ {
-		neighborIdx := currentIndex ^ 1
-		neighbor := layers[i][neighborIdx]
-		proof = append(proof, neighbor)
-		currentIndex = currentIndex / 2
-	}
-	return proof
-}
-
 func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	length := f.length
 	if f.dataType == types.CompressedArray {
