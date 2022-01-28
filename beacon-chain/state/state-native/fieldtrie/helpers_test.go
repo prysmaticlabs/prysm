@@ -2,12 +2,8 @@ package fieldtrie
 
 import (
 	"encoding/binary"
-	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
-	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 )
@@ -64,22 +60,4 @@ func TestBalancesSlice_CorrectRoots_Some(t *testing.T) {
 
 	// Returns root for each indice(even if duplicated)
 	assert.DeepEqual(t, roots, [][32]byte{root1, root1})
-}
-
-func TestValidateIndices_CompressedField(t *testing.T) {
-	fakeTrie := &FieldTrie{
-		RWMutex:     new(sync.RWMutex),
-		reference:   stateutil.NewRef(0),
-		fieldLayers: nil,
-		field:       types.Balances,
-		dataType:    types.CompressedArray,
-		length:      params.BeaconConfig().ValidatorRegistryLimit / 4,
-		numOfElems:  0,
-	}
-	goodIdx := params.BeaconConfig().ValidatorRegistryLimit - 1
-	assert.NoError(t, fakeTrie.validateIndices([]uint64{goodIdx}))
-
-	badIdx := goodIdx + 1
-	assert.ErrorContains(t, "invalid index for field balances", fakeTrie.validateIndices([]uint64{badIdx}))
-
 }
