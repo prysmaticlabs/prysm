@@ -14,6 +14,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -227,30 +228,47 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 		return errors.New("incorrect proposer index")
 	}
 
-	// check if the block has execution payload.
-	// If yes, then do few more checks per spec
-	if parentState.Version() == version.Bellatrix {
-		executionEnabled, err := blocks.ExecutionEnabled(parentState, blk.Block().Body())
-		if err != nil {
-			return err
-		}
-		if executionEnabled {
-			payload, err := blk.Block().Body().ExecutionPayload()
-			if err != nil || payload == nil {
-				return err
-			}
+	return validateBellatrixBeaconBlock(parentState, blk.Block())
+}
 
-			// [REJECT] The block's execution payload timestamp is correct with respect to the slot --
-			// i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
-			t, err := slots.ToTime(genesisTime, blk.Block().Slot())
-			if err != nil {
-				return err
-			}
-			if payload.Timestamp != uint64(t.Unix()) {
-				return errors.New("incorrect timestamp")
-			}
-		}
+// validateBellatrixBeaconBlock validates the block for the Bellatrix fork.
+// spec code:
+//   If the execution is enabled for the block -- i.e. is_execution_enabled(state, block.body) then validate the following:
+//      [REJECT] The block's execution payload timestamp is correct with respect to the slot --
+//      i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+func validateBellatrixBeaconBlock(parentState state.BeaconState, blk block.BeaconBlock) error {
+	// Error if block and state are not the same version
+	if parentState.Version() != blk.Version() {
+		return errors.New("block and state are not the same version")
 	}
+	if parentState.Version() != version.Bellatrix || blk.Version() != version.Bellatrix {
+		return nil
+	}
+
+	body := blk.Body()
+	executionEnabled, err := blocks.ExecutionEnabled(parentState, body)
+	if err != nil {
+		return err
+	}
+	if !executionEnabled {
+		return nil
+	}
+
+	t, err := slots.ToTime(parentState.GenesisTime(), blk.Slot())
+	if err != nil {
+		return err
+	}
+	payload, err := body.ExecutionPayload()
+	if err != nil {
+		return err
+	}
+	if payload == nil {
+		return errors.New("execution payload is nil")
+	}
+	if payload.Timestamp != uint64(t.Unix()) {
+		return errors.New("incorrect timestamp")
+	}
+
 	return nil
 }
 

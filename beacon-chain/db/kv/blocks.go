@@ -204,58 +204,6 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, []
 	return len(blockRoots) > 0, blockRoots, nil
 }
 
-// deleteBlock by block root.
-func (s *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlock")
-	defer span.End()
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		enc := bkt.Get(blockRoot[:])
-		if enc == nil {
-			return nil
-		}
-		blk, err := unmarshalBlock(ctx, enc)
-		if err != nil {
-			return err
-		}
-		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
-		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not delete root for DB indices")
-		}
-		s.blockCache.Del(string(blockRoot[:]))
-		return bkt.Delete(blockRoot[:])
-	})
-}
-
-// deleteBlocks by block roots.
-func (s *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlocks")
-	defer span.End()
-
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		for _, blockRoot := range blockRoots {
-			enc := bkt.Get(blockRoot[:])
-			if enc == nil {
-				return nil
-			}
-			blk, err := unmarshalBlock(ctx, enc)
-			if err != nil {
-				return err
-			}
-			indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
-			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-				return errors.Wrap(err, "could not delete root for DB indices")
-			}
-			s.blockCache.Del(string(blockRoot[:]))
-			if err := bkt.Delete(blockRoot[:]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
 // SaveBlock to the db.
 func (s *Store) SaveBlock(ctx context.Context, signed block.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
@@ -267,7 +215,6 @@ func (s *Store) SaveBlock(ctx context.Context, signed block.SignedBeaconBlock) e
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return nil
 	}
-
 	return s.SaveBlocks(ctx, []block.SignedBeaconBlock{signed})
 }
 
