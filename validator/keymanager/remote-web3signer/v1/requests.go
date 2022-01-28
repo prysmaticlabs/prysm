@@ -64,7 +64,6 @@ func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisVali
 
 // GetAggregateAndProofSignRequest maps the request for signing type AGGREGATE_AND_PROOF.
 func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AggregateAndProofSignRequest, error) {
-	fmt.Println("Attempting to assert request.Object")
 	aggregateAttestationAndProof, ok := request.Object.(*validatorpb.SignRequest_AggregateAttestationAndProof)
 	if !ok {
 		return nil, errors.New("failed to cast request object to aggregate attestation and proof")
@@ -72,12 +71,10 @@ func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisVa
 	if aggregateAttestationAndProof == nil {
 		return nil, errors.New("invalid sign request: AggregateAndProof is nil")
 	}
-	fmt.Println("Getting fork info")
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Getting a mapped aggregate and proof")
 	aggregateAndProof, err := MapAggregateAndProof(aggregateAttestationAndProof.AggregateAttestationAndProof)
 	if err != nil {
 		return nil, err
