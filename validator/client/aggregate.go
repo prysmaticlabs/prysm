@@ -183,7 +183,6 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 	if err != nil {
 		return nil, err
 	}
-	log.Warnf("ATTEMPTING TO SIGN AGGREGATE AND PROOF")
 	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
