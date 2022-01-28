@@ -150,7 +150,6 @@ func TestStateBalanceCache(t *testing.T) {
 		{
 			sbc: &stateBalanceCache{
 				stateGen: &mockStateByRooter{
-					//state: generateTestValidators(1, testWithBadEpoch),
 					err: sentinelCacheMiss,
 				},
 				root: bytesutil.ToBytes32([]byte{'B'}),
@@ -203,6 +202,18 @@ func TestStateBalanceCache(t *testing.T) {
 			balances: allValidBalances,
 			root:     bytesutil.ToBytes32([]byte{'A'}),
 			name:     "happy path",
+		},
+		{
+			sbc: &stateBalanceCache{
+				stateGen: &mockStateByRooter{
+					state: testStateFixture(
+						testStateWithSlot(99),
+						testStateWithValidators(allValidValidators)),
+				},
+			},
+			balances: allValidBalances,
+			root:     [32]byte{},
+			name:     "zero root",
 		},
 	}
 	ctx := context.Background()
