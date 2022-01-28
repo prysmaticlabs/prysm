@@ -11,8 +11,8 @@ go_library(
     deps = [
         "//async/event:go_default_library",
         "//config/fieldparams:go_default_library",
-        "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//validator/keymanager/remote-web3signer/internal:go_default_library",
         "//validator/keymanager/remote-web3signer/v1:go_default_library",
