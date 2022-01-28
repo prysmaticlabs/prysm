@@ -32,7 +32,10 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		if strings.HasPrefix(line, "CONFIG_NAME") {
 			hasConfigName = true
 		}
-		if strings.HasPrefix(line, "PRESET_BASE: 'minimal'") || strings.HasPrefix(line, "# Minimal preset") {
+		if strings.HasPrefix(line, "PRESET_BASE: 'minimal'") ||
+			strings.HasPrefix(line, `PRESET_BASE: "minimal"`) ||
+			strings.HasPrefix(line, "PRESET_BASE: minimal") ||
+			strings.HasPrefix(line, "# Minimal preset") {
 			conf = MinimalSpecConfig().Copy()
 		}
 		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
