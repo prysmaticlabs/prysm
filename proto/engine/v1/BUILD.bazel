@@ -3,6 +3,7 @@
 ##############################################################################
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 ##############################################################################
 # Go
@@ -20,6 +21,17 @@ proto_library(
     deps = [
         "//proto/eth/ext:proto",
         "@go_googleapis//google/api:annotations_proto",
+    ],
+)
+
+##############################################################################
+# Go
+##############################################################################
+ssz_gen_marshal(
+    name = "ssz_generated_files",
+    go_proto = ":go_proto",
+    objs = [
+        "ExecutionPayload",
     ],
 )
 
@@ -44,6 +56,9 @@ go_proto_library(
 
 go_library(
     name = "go_default_library",
+    srcs = [
+        ":ssz_generated_files",  # keep
+    ],
     embed = [
         ":go_proto",
     ],
