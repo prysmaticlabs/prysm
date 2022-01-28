@@ -3,7 +3,6 @@
 ##############################################################################
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 ##############################################################################
 # Go
@@ -11,6 +10,8 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 # gazelle:ignore
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
+load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 proto_library(
     name = "proto",
@@ -72,6 +73,7 @@ go_library(
         "@go_googleapis//google/api:annotations_go_proto",
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+		"@com_github_ferranbt_fastssz//:go_default_library"
     ],  # keep
 )
 
