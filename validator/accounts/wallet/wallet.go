@@ -290,7 +290,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
-	case keymanager.Remote: //option should not work for --web
+	case keymanager.Remote:
 		configFile, err := w.ReadKeymanagerConfigFromDisk(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not read keymanager config")
@@ -306,7 +306,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize remote keymanager")
 		}
-	case keymanager.Web3Signer: //option should not work for --web
+	case keymanager.Web3Signer:
 		config := cfg.Web3SignerConfig
 		if config == nil {
 			return nil, errors.New("web3signer config is nil")
