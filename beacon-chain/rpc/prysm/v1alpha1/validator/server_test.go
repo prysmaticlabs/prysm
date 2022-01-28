@@ -63,13 +63,12 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	require.NoError(t, err)
 
 	vs := &Server{
-		Ctx:                ctx,
-		ChainStartFetcher:  &mockPOW.POWChain{},
-		BlockFetcher:       &mockPOW.POWChain{},
-		Eth1InfoFetcher:    &mockPOW.POWChain{},
-		CanonicalStateChan: make(chan *ethpb.BeaconState, 1),
-		DepositFetcher:     depositCache,
-		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		Ctx:               ctx,
+		ChainStartFetcher: &mockPOW.POWChain{},
+		BlockFetcher:      &mockPOW.POWChain{},
+		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey(1)},
@@ -142,13 +141,12 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
-		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *ethpb.BeaconState, 1),
-		ChainStartFetcher:  &mockPOW.POWChain{},
-		BlockFetcher:       &mockPOW.POWChain{},
-		Eth1InfoFetcher:    &mockPOW.POWChain{},
-		DepositFetcher:     depositCache,
-		HeadFetcher:        &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
+		Ctx:               context.Background(),
+		ChainStartFetcher: &mockPOW.POWChain{},
+		BlockFetcher:      &mockPOW.POWChain{},
+		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2},
@@ -222,10 +220,9 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
-		Ctx:                context.Background(),
-		CanonicalStateChan: make(chan *ethpb.BeaconState, 1),
-		ChainStartFetcher:  &mockPOW.POWChain{},
-		HeadFetcher:        &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
+		Ctx:               context.Background(),
+		ChainStartFetcher: &mockPOW.POWChain{},
+		HeadFetcher:       &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2, pubKey3},

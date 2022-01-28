@@ -30,7 +30,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/kv",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//tools:__subpackages__",
     ],
     deps = [
@@ -77,8 +76,6 @@ go_test(
     srcs = [
         "archived_point_test.go",
         "backup_test.go",
-        "block_altair_test.go",
-        "block_merge_test.go",
         "blocks_test.go",
         "checkpoint_test.go",
         "deposit_contract_test.go",

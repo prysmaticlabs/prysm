@@ -2,11 +2,15 @@ package remote_web3signer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
@@ -63,9 +67,11 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	}, nil
 }
 
-// FetchValidatingPublicKeys fetches the validating public keys from the remote server or from the provided keys.
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	if km.publicKeysURL != "" {
+// FetchValidatingPublicKeys fetches the validating public keys
+// from the remote server or from the provided keys if there are no existing public keys set
+// or provides the existing keys in the keymanager.
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	if km.publicKeysURL != "" && len(km.providedPublicKeys) == 0 {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
 		if err != nil {
 			return nil, err
@@ -77,48 +83,55 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 
 // Sign signs the message by using a remote web3signer server.
 func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
-	if request.Fork == nil {
-		return nil, errors.New("invalid sign request: Fork is nil")
-	}
-
-	signRequestType, err := getSignRequestType(request)
+	signRequest, err := getSignRequestJson(request, km.genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	forkData := &v1.Fork{
-		PreviousVersion: hexutil.Encode(request.Fork.PreviousVersion),
-		CurrentVersion:  hexutil.Encode(request.Fork.CurrentVersion),
-		Epoch:           fmt.Sprint(request.Fork.Epoch),
-	}
-	forkInfoData := &v1.ForkInfo{
-		Fork:                  forkData,
-		GenesisValidatorsRoot: hexutil.Encode(km.genesisValidatorsRoot),
-	}
-	aggregationSlotData := &v1.AggregationSlot{Slot: fmt.Sprint(request.AggregationSlot)}
-	web3SignerRequest := SignRequest{
-		Type:            signRequestType,
-		ForkInfo:        forkInfoData,
-		SigningRoot:     hexutil.Encode(request.SigningRoot),
-		AggregationSlot: aggregationSlotData,
-	}
-	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), &web3SignerRequest)
+	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), signRequest)
+
 }
 
-// getSignRequestType returns the type of the sign request.
-func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
+// getSignRequestJson returns a json request based on the SignRequest type.
+func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (SignRequestJson, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
+	if len(genesisValidatorsRoot) != fieldparams.RootLength {
+		return nil, fmt.Errorf("invalid genesis validators root length, genesis root: %v", genesisValidatorsRoot)
+	}
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_Block:
-		return "BLOCK", nil
+		bockSignRequest, err := v1.GetBlockSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(bockSignRequest)
 	case *validatorpb.SignRequest_AttestationData:
-		return "ATTESTATION", nil
+		attestationSignRequest, err := v1.GetAttestationSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(attestationSignRequest)
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
-		return "AGGREGATE_AND_PROOF", nil
+		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(aggregateAndProofSignRequest)
 	case *validatorpb.SignRequest_Slot:
-		return "AGGREGATION_SLOT", nil
+		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(aggregationSlotSignRequest)
 	case *validatorpb.SignRequest_BlockV2:
-		return "BLOCK_V2", nil
-	// TODO(#10053): Need to add support for merge blocks.
+		blocv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(blocv2AltairSignRequest)
+	// TODO(#10053): Need to add support for Bellatrix blocks.
 	/*
 		case *validatorpb.SignRequest_BlockV3:
 		return "BLOCK_V3", nil
@@ -129,18 +142,39 @@ func getSignRequestType(request *validatorpb.SignRequest) (string, error) {
 		case *validatorpb.:
 		return "DEPOSIT", nil
 	*/
+
 	case *validatorpb.SignRequest_Epoch:
-		return "RANDAO_REVEAL", nil
+		randaoRevealSignRequest, err := v1.GetRandaoRevealSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(randaoRevealSignRequest)
 	case *validatorpb.SignRequest_Exit:
-		return "VOLUNTARY_EXIT", nil
+		voluntaryExitRequest, err := v1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(voluntaryExitRequest)
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
-		return "SYNC_COMMITTEE_MESSAGE", nil
+		syncCommitteeMessageRequest, err := v1.GetSyncCommitteeMessageSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(syncCommitteeMessageRequest)
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
-		return "SYNC_COMMITTEE_SELECTION_PROOF", nil
+		syncCommitteeSelectionProofRequest, err := v1.GetSyncCommitteeSelectionProofSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(syncCommitteeSelectionProofRequest)
 	case *validatorpb.SignRequest_ContributionAndProof:
-		return "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF", nil
+		contributionAndProofRequest, err := v1.GetSyncCommitteeContributionAndProofSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(contributionAndProofRequest)
 	default:
-		return "", errors.New(fmt.Sprintf("Web3signer sign request type: %T  not found", request.Object))
+		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}
 }
 
@@ -152,4 +186,28 @@ func (*Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription
 	return event.NewSubscription(func(i <-chan struct{}) error {
 		return nil
 	})
+}
+
+// UnmarshalConfigFile attempts to JSON unmarshal a keymanager
+// config file into a SetupConfig struct.
+func UnmarshalConfigFile(r io.ReadCloser) (*SetupConfig, error) {
+	enc, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read config")
+	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			log.Errorf("Could not close keymanager config file: %v", err)
+		}
+	}()
+	config := &SetupConfig{}
+	if err := json.Unmarshal(enc, config); err != nil {
+		return nil, errors.Wrap(err, "could not JSON unmarshal")
+	}
+	return config, nil
+}
+
+// MarshalConfigFile for the keymanager.
+func MarshalConfigFile(_ context.Context, config *SetupConfig) ([]byte, error) {
+	return json.MarshalIndent(config, "", "\t")
 }

@@ -144,15 +144,6 @@ common_files = {
     "//:README.md": "README.md",
 }
 
-string_setting(
-    name = "gotags",
-    build_setting_default = "",
-    values = [
-        "",
-        "libfuzzer",
-    ],
-)
-
 sh_binary(
     name = "prysm_sh",
     srcs = ["prysm.sh"],
