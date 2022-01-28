@@ -1,7 +1,6 @@
 package remote_web3signer
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
@@ -48,7 +47,7 @@ type Keymanager struct {
 
 // NewKeymanager instantiates a new web3signer key manager.
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
-	if cfg.BaseEndpoint == "" || len(cfg.GenesisValidatorsRoot) != fieldparams.RootLength || bytes.Equal(params.BeaconConfig().ZeroHash[:], cfg.GenesisValidatorsRoot) {
+	if cfg.BaseEndpoint == "" || !bytesutil.NonZeroRoot(cfg.GenesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
 	}
 	if cfg.PublicKeysURL != "" && len(cfg.ProvidedPublicKeys) != 0 {
@@ -99,7 +98,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}
-	if len(genesisValidatorsRoot) != fieldparams.RootLength || bytes.Equal(params.BeaconConfig().ZeroHash[:], genesisValidatorsRoot) {
+	if !bytesutil.NonZeroRoot(genesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid genesis validators root length, genesis root: %v", genesisValidatorsRoot)
 	}
 	switch request.Object.(type) {
