@@ -191,7 +191,6 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 		SigningSlot:     slot,
 	})
 	if err != nil {
-		log.Warnf("GOT ERROR FROM SIGN FUNCTION FOR AGGREGATE AND PROOF")
 		return nil, err
 	}
 
