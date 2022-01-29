@@ -58,6 +58,7 @@ type Keystore struct {
 	Pubkey  string                 `json:"pubkey"`
 	Version uint                   `json:"version"`
 	Name    string                 `json:"name"`
+	Path    string                 `json:"path"`
 }
 
 // Kind defines an enum for either imported, derived, or remote-signing
