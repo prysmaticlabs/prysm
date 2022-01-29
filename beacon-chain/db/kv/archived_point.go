@@ -24,7 +24,7 @@ func (s *Store) LastArchivedSlot(ctx context.Context) (types.Slot, error) {
 	return index, err
 }
 
-// LastArchivedRoot from the db
+// LastArchivedRoot from the db.
 func (s *Store) LastArchivedRoot(ctx context.Context) [32]byte {
 	_, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedRoot")
 	defer span.End()
