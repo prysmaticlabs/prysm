@@ -114,6 +114,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
 
+	// Fork choice algorithm constants.
+	ProposerScoreBoost: 70,
+	IntervalsPerSlot:   3,
+
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.
 	DepositNetworkID:       1, // Network ID of eth1 mainnet.
