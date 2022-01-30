@@ -144,15 +144,9 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 
 	// Retrieve the list of leaves in the Fork Choice
 	// These are all the nodes that have NonExistentNode as best child.
-	var leaves []uint64
-	for i := uint64(0); i < uint64(len(f.store.nodes)); i++ {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		node = f.store.nodes[i]
-		if node.bestChild == NonExistentNode {
-			leaves = append(leaves, i)
-		}
+	leaves, err := f.store.leaves(ctx)
+	if err != nil {
+		return err
 	}
 
 	// For each leaf, recompute the new tip.
@@ -191,5 +185,107 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	}
 
 	f.syncedTips.validatedTips = newTips
+	return nil
+}
+
+// This function removes a node that has become INVALID according to the
+// EL. It updates the synced_tips to reflect this change.
+func (f *ForkChoice) Invalid(ctx context.Context, root [32]byte) error {
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	idx, ok := f.store.nodesIndices[root]
+	if !ok {
+		return errInvalidNodeIndex
+	}
+	node := f.store.nodes[idx]
+	parentIndex := node.parent
+
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
+
+	// This should not happen
+	if parentIndex == NonExistentNode {
+		return nil
+	}
+	parent := f.store.nodes[parentIndex]
+	parentRoot := parent.root
+
+	// Check if after removing the child node, we need to update the
+	// parent's best child and descendant.
+	needsUpdateParentsChildren := false
+	if parent.bestChild == idx || parent.bestDescendant == idx {
+		needsUpdateParentsChildren = true
+	}
+
+	// delete the invalid node, order is important
+	f.store.nodes = append(f.store.nodes[:idx], f.store.nodes[idx+1:]...)
+	delete(f.store.nodesIndices, root)
+	// Fix best parent and best child for each node
+	for _, node := range f.store.nodes {
+		if node.parent == NonExistentNode || node.parent == idx {
+			// node.parent == idx should not happen
+			node.parent = NonExistentNode
+		} else if node.parent > idx {
+			node.parent -= 1
+		}
+		if node.bestChild == NonExistentNode || node.bestChild == idx {
+			node.bestChild = NonExistentNode
+		} else if node.bestChild > idx {
+			node.bestChild -= 1
+		}
+		if node.bestDescendant == NonExistentNode || node.bestDescendant == idx {
+			node.bestDescendant = NonExistentNode
+		} else if node.bestDescendant > idx {
+			node.bestDescendant -= 1
+		}
+	}
+
+	// Update the parent's best child and best descendant
+	if needsUpdateParentsChildren {
+		// look for a new child
+		for childIndex, child := range f.store.nodes {
+			if child.parent == parentIndex {
+				err := f.store.updateBestChildAndDescendant(
+					parentIndex, uint64(childIndex))
+				if err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+
+	// Return early if the parent is not a synced_tip
+	_, ok = f.syncedTips.validatedTips[parentRoot]
+	if !ok {
+		return nil
+	}
+
+	leaves, err := f.store.leaves(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range leaves {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		node = f.store.nodes[i]
+		for {
+			// Return early if the parent is still a synced tip
+			if node.root == parentRoot {
+				return nil
+			}
+			_, ok = f.syncedTips.validatedTips[node.root]
+			if ok {
+				break
+			}
+			if node.parent == NonExistentNode {
+				break
+			}
+			node = f.store.nodes[node.parent]
+		}
+	}
+	delete(f.syncedTips.validatedTips, parentRoot)
 	return nil
 }

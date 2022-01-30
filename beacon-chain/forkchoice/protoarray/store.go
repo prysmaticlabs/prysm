@@ -213,6 +213,23 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	return f.store.nodes[i].root[:], nil
 }
 
+// Returns the list of leaves in the Fork Choice
+// These are all the nodes that have NonExistentNode as best child.
+// This internal method assumes that the caller holds a lock in s.nodesLock
+func (s *Store) leaves(ctx context.Context) ([]uint64, error) {
+	var leaves []uint64
+	for i := uint64(0); i < uint64(len(s.nodes)); i++ {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		node := s.nodes[i]
+		if node.bestChild == NonExistentNode {
+			leaves = append(leaves, i)
+		}
+	}
+	return leaves, nil
+}
+
 // PruneThreshold of fork choice store.
 func (s *Store) PruneThreshold() uint64 {
 	return s.pruneThreshold
