@@ -46,9 +46,9 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "AggregateAndProof":
 		obj = &ethpb.AggregateAttestationAndProof{}
 	case "BeaconBlock":
-		obj = &ethpb.BeaconBlockMerge{}
+		obj = &ethpb.BeaconBlockBellatrix{}
 	case "BeaconBlockBody":
-		obj = &ethpb.BeaconBlockBodyMerge{}
+		obj = &ethpb.BeaconBlockBodyBellatrix{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
@@ -81,7 +81,7 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SignedAggregateAndProof":
 		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
-		obj = &ethpb.SignedBeaconBlockMerge{}
+		obj = &ethpb.SignedBeaconBlockBellatrix{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
 	case "SignedVoluntaryExit":

@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "log.go",
         "metrics.go",
-        "mock.go",
         "pool.go",
         "prepare_forkchoice.go",
         "prune_expired.go",

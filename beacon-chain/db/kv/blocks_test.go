@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"sort"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -46,12 +45,12 @@ var blockTests = []struct {
 	{
 		name: "bellatrix",
 		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
-			b := util.NewBeaconBlockMerge()
+			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = slot
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedMergeSignedBeaconBlock(b)
+			return wrapper.WrappedBellatrixSignedBeaconBlock(b)
 		},
 	},
 }
@@ -109,48 +108,6 @@ func TestStore_BlocksCRUD(t *testing.T) {
 			retrievedBlock, err = db.Block(ctx, blockRoot)
 			require.NoError(t, err)
 			assert.Equal(t, true, proto.Equal(blk.Proto(), retrievedBlock.Proto()), "Wanted: %v, received: %v", blk, retrievedBlock)
-			require.NoError(t, db.deleteBlock(ctx, blockRoot))
-			assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
-		})
-	}
-}
-
-func TestStore_BlocksBatchDelete(t *testing.T) {
-	for _, tt := range blockTests {
-		t.Run(tt.name, func(t *testing.T) {
-			db := setupDB(t)
-			ctx := context.Background()
-			numBlocks := 10
-			totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
-			blockRoots := make([][32]byte, 0)
-			oddBlocks := make([]block.SignedBeaconBlock, 0)
-			for i := 0; i < len(totalBlocks); i++ {
-				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
-				require.NoError(t, err)
-				totalBlocks[i] = b
-				if i%2 == 0 {
-					r, err := totalBlocks[i].Block().HashTreeRoot()
-					require.NoError(t, err)
-					blockRoots = append(blockRoots, r)
-				} else {
-					oddBlocks = append(oddBlocks, totalBlocks[i])
-				}
-			}
-			require.NoError(t, db.SaveBlocks(ctx, totalBlocks))
-			retrieved, _, err := db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
-			require.NoError(t, err)
-			assert.Equal(t, numBlocks, len(retrieved), "Unexpected number of blocks received")
-			// We delete all even indexed blocks.
-			require.NoError(t, db.deleteBlocks(ctx, blockRoots))
-			// When we retrieve the data, only the odd indexed blocks should remain.
-			retrieved, _, err = db.Blocks(ctx, filters.NewFilter().SetParentRoot(bytesutil.PadTo([]byte("parent"), 32)))
-			require.NoError(t, err)
-			sort.Slice(retrieved, func(i, j int) bool {
-				return retrieved[i].Block().Slot() < retrieved[j].Block().Slot()
-			})
-			for i, blk := range retrieved {
-				assert.Equal(t, true, proto.Equal(blk.Proto(), oddBlocks[i].Proto()), "Wanted: %v, received: %v", blk, oddBlocks[i])
-			}
 		})
 	}
 }
@@ -238,8 +195,6 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 			retrievedBlock, err = db.Block(ctx, blockRoot)
 			require.NoError(t, err)
 			assert.Equal(t, true, proto.Equal(blk.Proto(), retrievedBlock.Proto()), "Wanted: %v, received: %v", blk, retrievedBlock)
-			require.NoError(t, db.deleteBlock(ctx, blockRoot))
-			assert.Equal(t, false, db.HasBlock(ctx, blockRoot), "Expected block to have been deleted from the db")
 		})
 	}
 }
@@ -454,14 +409,6 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
 			assert.Equal(t, true, proto.Equal(block3.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block3, highestAt[0])
-
-			r3, err := block3.Block().HashTreeRoot()
-			require.NoError(t, err)
-			require.NoError(t, db.deleteBlock(ctx, r3))
-
-			highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
-			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(block2.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
 		})
 	}
 }

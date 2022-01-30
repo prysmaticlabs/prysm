@@ -91,6 +91,7 @@ go_test(
         "//config/params:go_default_library",
         "//container/trie:go_default_library",
         "//contracts/deposit:go_default_library",
+        "//contracts/deposit/mock:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//monitoring/clientstats:go_default_library",
