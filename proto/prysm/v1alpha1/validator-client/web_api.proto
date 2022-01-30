@@ -168,10 +168,10 @@ service Auth {
     }
 }
 
-// Type of key manager for the wallet, either direct, derived, or remote.
+// Type of key manager for the wallet, either derived, local, or remote.
 enum KeymanagerKind {
     DERIVED = 0;
-    IMPORTED = 1;
+    LOCAL = 1;
     REMOTE = 2;
 }
 

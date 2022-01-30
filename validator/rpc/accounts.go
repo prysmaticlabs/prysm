@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -80,7 +80,7 @@ func (s *Server) BackupAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
+	if s.wallet.KeymanagerKind() != keymanager.Local && s.wallet.KeymanagerKind() != keymanager.Derived {
 		return nil, status.Error(codes.FailedPrecondition, "Only HD or imported wallets can backup accounts")
 	}
 	pubKeys := make([]bls.PublicKey, len(req.PublicKeys))
@@ -95,8 +95,8 @@ func (s *Server) BackupAccounts(
 	var err error
 	var keystoresToBackup []*keymanager.Keystore
 	switch s.wallet.KeymanagerKind() {
-	case keymanager.Imported:
-		km, ok := s.keymanager.(*imported.Keymanager)
+	case keymanager.Local:
+		km, ok := s.keymanager.(*local.Keymanager)
 		if !ok {
 			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
 		}
@@ -160,7 +160,7 @@ func (s *Server) DeleteAccounts(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
+	if s.wallet.KeymanagerKind() != keymanager.Local && s.wallet.KeymanagerKind() != keymanager.Derived {
 		return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
 	}
 	if err := accounts.DeleteAccount(ctx, &accounts.Config{
@@ -185,7 +185,7 @@ func (s *Server) VoluntaryExit(
 	if s.wallet == nil || s.keymanager == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
+	if s.wallet.KeymanagerKind() != keymanager.Local && s.wallet.KeymanagerKind() != keymanager.Derived {
 		return nil, status.Error(
 			codes.FailedPrecondition, "Only Imported or Derived wallets can submit voluntary exits",
 		)

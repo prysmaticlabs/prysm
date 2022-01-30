@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
@@ -49,13 +49,13 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	}
 
 	switch w.KeymanagerKind() {
-	case keymanager.Imported:
-		km, ok := km.(*imported.Keymanager)
+	case keymanager.Local:
+		km, ok := km.(*local.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
-		if err := listImportedKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
-			return errors.Wrap(err, "could not list validator accounts with imported keymanager")
+		if err := listLocalKeymanagerAccounts(cliCtx.Context, showDepositData, showPrivateKeys, km); err != nil {
+			return errors.Wrap(err, "could not list validator accounts with local keymanager")
 		}
 	case keymanager.Derived:
 		km, ok := km.(*derived.Keymanager)
@@ -79,11 +79,11 @@ func ListAccountsCli(cliCtx *cli.Context) error {
 	return nil
 }
 
-func listImportedKeymanagerAccounts(
+func listLocalKeymanagerAccounts(
 	ctx context.Context,
 	showDepositData,
 	showPrivateKeys bool,
-	keymanager *imported.Keymanager,
+	keymanager *local.Keymanager,
 ) error {
 	// We initialize the wallet's keymanager.
 	accountNames, err := keymanager.ValidatingAccountNames()
@@ -91,7 +91,7 @@ func listImportedKeymanagerAccounts(
 		return errors.Wrap(err, "could not fetch account names")
 	}
 	numAccounts := au.BrightYellow(len(accountNames))
-	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("imported wallet").Bold())
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("local wallet").Bold())
 	fmt.Println("")
 	if len(accountNames) == 1 {
 		fmt.Printf("Showing %d validator account\n", numAccounts)
