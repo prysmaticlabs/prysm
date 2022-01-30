@@ -29,7 +29,7 @@ func RunAttesterSlashingTest(t *testing.T, config string) {
 			attSlashing := &ethpb.AttesterSlashing{}
 			require.NoError(t, attSlashing.UnmarshalSSZ(attSlashingSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBodyMerge{AttesterSlashings: []*ethpb.AttesterSlashing{attSlashing}}
+			body := &ethpb.BeaconBlockBodyBellatrix{AttesterSlashings: []*ethpb.AttesterSlashing{attSlashing}}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b block.SignedBeaconBlock) (state.BeaconState, error) {
 				return blocks.ProcessAttesterSlashings(ctx, s, b.Block().Body().AttesterSlashings(), validators.SlashValidator)
 			})

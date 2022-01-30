@@ -38,8 +38,14 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	defer span.End()
 
 	// Get head from the fork choice service.
-	f := s.finalizedCheckptInStore()
-	j := s.justifiedCheckptInStore()
+	f := s.store.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
+	j := s.store.JustifiedCheckpt()
+	if j == nil {
+		return errNilJustifiedInStore
+	}
 	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
 	headStartRoot := bytesutil.ToBytes32(j.Root)

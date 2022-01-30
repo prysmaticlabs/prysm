@@ -122,7 +122,7 @@ func SinceEpochStarts(slot types.Slot) types.Slot {
 }
 
 // VerifyTime validates the input slot is not from the future.
-func VerifyTime(genesisTime uint64, currentTime uint64, slot types.Slot, timeTolerance time.Duration) error {
+func VerifyTime(genesisTime uint64, slot types.Slot, timeTolerance time.Duration) error {
 	slotTime, err := ToTime(genesisTime, slot)
 	if err != nil {
 		return err
@@ -134,9 +134,11 @@ func VerifyTime(genesisTime uint64, currentTime uint64, slot types.Slot, timeTol
 		return err
 	}
 
-	diff := slotTime.Sub(time.Unix(int64(currentTime), 0))
+	currentTime := prysmTime.Now()
+	diff := slotTime.Sub(currentTime)
+
 	if diff > timeTolerance {
-		return fmt.Errorf("could not process slot from the future, slot time %s > current time %s", slotTime, time.Unix(int64(currentTime), 0))
+		return fmt.Errorf("could not process slot from the future, slot time %s > current time %s", slotTime, currentTime)
 	}
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/mock"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/urfave/cli/v2"
@@ -65,7 +66,7 @@ func TestEnterPassword(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			m := NewMockPasswordReader(ctrl)
+			m := mock.NewMockPasswordReader(ctrl)
 			for _, ret := range tc.rets {
 				m.EXPECT().ReadPassword().Return(ret.pw, ret.err)
 			}

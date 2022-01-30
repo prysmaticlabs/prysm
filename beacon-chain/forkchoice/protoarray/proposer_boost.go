@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // BoostProposerRoot sets the block root which should be boosted during
@@ -18,15 +19,15 @@ import (
 //  is_before_attesting_interval = time_into_slot < SECONDS_PER_SLOT // INTERVALS_PER_SLOT
 //  if get_current_slot(store) == block.slot and is_before_attesting_interval:
 //      store.proposer_boost_root = hash_tree_root(block)
-func (f *ForkChoice) BoostProposerRoot(_ context.Context, blockSlot types.Slot, blockRoot [32]byte, storeTime uint64, genesisTime time.Time) error {
+func (f *ForkChoice) BoostProposerRoot(_ context.Context, blockSlot types.Slot, blockRoot [32]byte, genesisTime time.Time) error {
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-	timeIntoSlot := (storeTime - uint64(genesisTime.Second())) % secondsPerSlot
+	timeIntoSlot := uint64(time.Since(genesisTime).Seconds()) % secondsPerSlot
 	isBeforeAttestingInterval := timeIntoSlot < secondsPerSlot/params.BeaconConfig().IntervalsPerSlot
-	currentSlot := (storeTime - uint64(genesisTime.Second())) / secondsPerSlot
+	currentSlot := slots.SinceGenesis(genesisTime)
 
-	// Only update the boosted proposer root to the incoming block root.
-	// If the block is for the current, clock-based slot and the block was timely.
-	if types.Slot(currentSlot) == blockSlot && isBeforeAttestingInterval {
+	// Only update the boosted proposer root to the incoming block root
+	// if the block is for the current, clock-based slot and the block was timely.
+	if currentSlot == blockSlot && isBeforeAttestingInterval {
 		f.store.proposerBoostLock.Lock()
 		f.store.proposerBoostRoot = blockRoot
 		f.store.proposerBoostLock.Unlock()
@@ -46,11 +47,11 @@ func (f *ForkChoice) ResetBoostedProposerRoot(_ context.Context) error {
 // that should be given to a proposer based on their committee weight, derived from
 // the total active balances, the size of a committee, and a boost score constant.
 // IMPORTANT: The caller MUST pass in a list of validator balances where balances > 0 refer to active
-// validators while balances that == 0 are for inactive validators.
-func computeProposerBoostScore(justifiedStateBalances []uint64) (score uint64, err error) {
+// validators while balances == 0 are for inactive validators.
+func computeProposerBoostScore(validatorBalances []uint64) (score uint64, err error) {
 	totalActiveBalance := uint64(0)
 	numActive := uint64(0)
-	for _, balance := range justifiedStateBalances {
+	for _, balance := range validatorBalances {
 		// We only consider balances > 0. The input slice should be constructed
 		// as balance > 0 for all active validators and 0 for inactive ones.
 		if balance == 0 {

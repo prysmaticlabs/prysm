@@ -41,7 +41,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, utils.UnmarshalYaml(file, config), "Failed to Unmarshal")
 
 			preforkBlocks := make([]*ethpb.SignedBeaconBlockAltair, 0)
-			postforkBlocks := make([]*ethpb.SignedBeaconBlockMerge, 0)
+			postforkBlocks := make([]*ethpb.SignedBeaconBlockBellatrix, 0)
 			// Fork happens without any pre-fork blocks.
 			if config.ForkBlock == nil {
 				for i := 0; i < config.BlocksCount; i++ {
@@ -50,7 +50,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 					require.NoError(t, err, "Failed to decompress")
-					block := &ethpb.SignedBeaconBlockMerge{}
+					block := &ethpb.SignedBeaconBlockBellatrix{}
 					require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 					postforkBlocks = append(postforkBlocks, block)
 				}
@@ -72,7 +72,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 					require.NoError(t, err, "Failed to decompress")
-					block := &ethpb.SignedBeaconBlockMerge{}
+					block := &ethpb.SignedBeaconBlockBellatrix{}
 					require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 					postforkBlocks = append(postforkBlocks, block)
 				}
@@ -103,7 +103,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			}
 			postState := state.BeaconState(beaconState)
 			for _, b := range postforkBlocks {
-				wsb, err := wrapper.WrappedMergeSignedBeaconBlock(b)
+				wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(b)
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, postState, wsb)
 				require.NoError(t, err)

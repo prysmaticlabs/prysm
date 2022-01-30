@@ -36,7 +36,10 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 
 // UpdateHead updates the beacon state head.
 func (s *Service) UpdateHead(ctx context.Context) error {
-	cp := s.justifiedCheckptInStore()
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
+		return errors.New("no justified checkpoint")
+	}
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
@@ -121,7 +124,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
 	// running a successful state transition for the block.
 	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
-		ctx, signed.Block().Slot(), blockRoot, s.TimeInStore(), s.genesisTime); err != nil {
+		ctx, signed.Block().Slot(), blockRoot, s.genesisTime,
+	); err != nil {
 		return err
 	}
 
@@ -157,24 +161,33 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Update justified check point.
-	cp := s.justifiedCheckptInStore()
-	currJustifiedEpoch := cp.Epoch
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	currJustifiedEpoch := justified.Epoch
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
 	}
 
-	cp = s.finalizedCheckptInStore()
-	currFinalizedEpoch := cp.Epoch
-	newFinalized := postState.FinalizedCheckpointEpoch() > currFinalizedEpoch
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
 	if newFinalized {
-		s.setFinalizedCheckptInStore(postState.FinalizedCheckpoint())
-		s.setPrevJustifiedCheckptInStore(s.justifiedCheckptInStore())
-		s.setJustifiedCheckptInStore(postState.CurrentJustifiedCheckpoint())
+		s.store.SetPrevFinalizedCheckpt(finalized)
+		s.store.SetFinalizedCheckpt(postState.FinalizedCheckpoint())
 	}
 
-	if err := s.UpdateHead(ctx); err != nil {
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
+		return errors.Wrap(err, msg)
+	}
+	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
 
@@ -350,18 +363,27 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		s.clearInitSyncBlocks()
 	}
 
-	if jCheckpoint.Epoch > s.justifiedCheckptInStore().Epoch {
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	if jCheckpoint.Epoch > justified.Epoch {
 		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
 			return err
 		}
 	}
 
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if fCheckpoint.Epoch > s.finalizedCheckptInStore().Epoch {
+	if fCheckpoint.Epoch > finalized.Epoch {
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		s.setFinalizedCheckptInStore(fCheckpoint)
+		s.store.SetPrevFinalizedCheckpt(finalized)
+		s.store.SetFinalizedCheckpt(fCheckpoint)
 	}
 	return nil
 }

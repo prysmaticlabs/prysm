@@ -15,7 +15,7 @@ import (
 // Simple, ex-ante attack mitigation using proposer boost.
 // In a nutshell, an adversarial block proposer in slot n+1 keeps its proposal hidden.
 // The honest block proposer in slot n+2 will then propose an honest block. The
-// adversary can now use its committee members’ votes from both slots n+1
+// adversary can now use its committee members’ votes from both slots n+1 and n+2.
 // and release their withheld block of slot n+2 in an attempt to win fork choice.
 // If the honest proposal is boosted at slot n+2, it will win against this attacker.
 func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
@@ -138,12 +138,33 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		// Check the ancestor scores from the store.
 		require.Equal(t, 4, len(f.store.nodes))
-		require.Equal(t, f.store.nodes[0].weight, uint64(0)) // Genesis has 0 weight here.
 
 		// Expect nodes to have a boosted, back-propagated score.
-		require.Equal(t, f.store.nodes[1].weight, uint64(47))
-		require.Equal(t, f.store.nodes[2].weight, uint64(37))
-		require.Equal(t, f.store.nodes[3].weight, uint64(17))
+		// Ancestors have the added weights of their children. Genesis is a special exception at 0 weight,
+		require.Equal(t, f.store.nodes[0].weight, uint64(0))
+
+		// Otherwise assuming a block, A, that is not-genesis:
+		//
+		// A -> B -> C
+		//
+		//Where each one has a weight of 10 individually, the final weights will look like
+		//
+		// (A: 30) -> (B: 20) -> (C: 10)
+		//
+		// The boost adds 14 to the weight, so if C is boosted, we would have
+		//
+		// (A: 44) -> (B: 34) -> (C: 24)
+		//
+		// In this case, we have a small fork:
+		//
+		// (A: 54) -> (B: 44) -> (C: 24)
+		//				    \_->(D: 10)
+		//
+		// So B has its own weight, 10, and the sum of of both C and D thats why we see weight 54 in the
+		// middle instead of the normal progression of (44 -> 34 -> 24).
+		require.Equal(t, f.store.nodes[1].weight, uint64(54))
+		require.Equal(t, f.store.nodes[2].weight, uint64(44))
+		require.Equal(t, f.store.nodes[3].weight, uint64(24))
 	})
 	t.Run("vanilla ex ante attack", func(t *testing.T) {
 		f := setup(jEpoch, fEpoch)
@@ -200,7 +221,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// We boost the honest proposal at slot 2.
 		secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
 		genesis := time.Now().Add(-2 * secondsPerSlot)
-		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot /* slot */, honestBlock, genesis))
+		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot, honestBlock, genesis))
 
 		// The maliciously withheld block has one vote.
 		votes := []uint64{1}
@@ -268,7 +289,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// We boost the honest proposal at slot 2.
 		secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
 		genesis := time.Now().Add(-2 * secondsPerSlot)
-		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot /* slot */, honestBlock, genesis))
+		require.NoError(t, f.BoostProposerRoot(ctx, honestBlockSlot, honestBlock, genesis))
 
 		// An attestation is received for B that has more voting power than C with the proposer boost,
 		// allowing B to then become the head if their attestation has enough adversarial votes.
@@ -279,6 +300,105 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
 		assert.Equal(t, maliciouslyWithheldBlock, r, "Expected B to become the head")
+	})
+
+	t.Run("boosting necessary to sandwich attack", func(t *testing.T) {
+		// Boosting necessary to sandwich attack.
+		// Objects:
+		//	Block A - slot N
+		//	Block B (parent A) - slot N+1
+		//	Block C (parent A) - slot N+2
+		//	Block D (parent B) - slot N+3
+		//	Attestation_1 (Block C); size 1 - slot N+2 (honest)
+		// Steps:
+		//	Block A received at N — A is head
+		//	Block C received at N+2 — C is head
+		//	Block B received at N+2 — C is head
+		//	Attestation_1 received at N+3 — C is head
+		//	Block D received at N+3 — D is head
+		f := setup(jEpoch, fEpoch)
+		a := zeroHash
+
+		// The head should always start at the finalized block.
+		r, err := f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, zeroHash, r, "Incorrect head with genesis")
+
+		cSlot := types.Slot(2)
+		c := indexToHash(2)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				cSlot,
+				c,
+				a, // parent
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+
+		// Ensure C is the head.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, c, r, "Incorrect head for justified epoch at slot 2")
+
+		// We boost C.
+		secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
+		genesis := time.Now().Add(-2 * secondsPerSlot)
+		require.NoError(t, f.BoostProposerRoot(ctx, cSlot /* slot */, c, genesis))
+
+		bSlot := types.Slot(1)
+		b := indexToHash(1)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				bSlot,
+				b,
+				a, // parent
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+
+		// Ensure C is still the head.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, c, r, "Incorrect head for justified epoch at slot 2")
+
+		// An attestation for C is received at slot N+3.
+		votes := []uint64{1}
+		f.ProcessAttestation(ctx, votes, c, fEpoch)
+
+		// A block D, building on B, is received at slot N+3. It should not be able to win without boosting.
+		dSlot := types.Slot(3)
+		d := indexToHash(3)
+		require.NoError(t,
+			f.ProcessBlock(
+				ctx,
+				dSlot,
+				d,
+				b, // parent
+				graffiti,
+				jEpoch,
+				fEpoch,
+			),
+		)
+
+		// D cannot win without a boost.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, c, r, "Expected C to remain the head")
+
+		// Block D receives the boost.
+		genesis = time.Now().Add(-3 * secondsPerSlot)
+		require.NoError(t, f.BoostProposerRoot(ctx, dSlot /* slot */, d, genesis))
+
+		// Ensure D becomes the head thanks to boosting.
+		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, d, r, "Expected D to become the head")
 	})
 }
 
@@ -299,7 +419,7 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		blockRoot := [32]byte{'A'}
 
 		// Trying to boost a block from slot 0 should not work.
-		err := f.BoostProposerRoot(ctx, 0 /* slot */, blockRoot, genesis)
+		err := f.BoostProposerRoot(ctx, types.Slot(0), blockRoot, genesis)
 		require.NoError(t, err)
 		require.DeepEqual(t, [32]byte{}, f.store.proposerBoostRoot)
 	})
@@ -315,7 +435,7 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		blockRoot := [32]byte{'A'}
 
 		// Trying to boost a block from slot 1 that is untimely should not work.
-		err := f.BoostProposerRoot(ctx, 1 /* slot */, blockRoot, genesis)
+		err := f.BoostProposerRoot(ctx, types.Slot(1), blockRoot, genesis)
 		require.NoError(t, err)
 		require.DeepEqual(t, [32]byte{}, f.store.proposerBoostRoot)
 	})
@@ -328,7 +448,7 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		fmt.Println(genesis)
 		blockRoot := [32]byte{'A'}
 
-		err := f.BoostProposerRoot(ctx, 1 /* slot */, blockRoot, genesis)
+		err := f.BoostProposerRoot(ctx, types.Slot(1), blockRoot, genesis)
 		require.NoError(t, err)
 		require.DeepEqual(t, [32]byte{'A'}, f.store.proposerBoostRoot)
 	})
@@ -342,7 +462,7 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		halfAttestingInterval := time.Second
 		genesis = genesis.Add(-halfAttestingInterval)
 
-		err := f.BoostProposerRoot(ctx, 1 /* slot */, blockRoot, genesis)
+		err := f.BoostProposerRoot(ctx, types.Slot(1), blockRoot, genesis)
 		require.NoError(t, err)
 		require.DeepEqual(t, [32]byte{'A'}, f.store.proposerBoostRoot)
 	})

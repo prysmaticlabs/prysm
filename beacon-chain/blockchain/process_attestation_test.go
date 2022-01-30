@@ -179,10 +179,10 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	r := [32]byte{'g'}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, r))
 
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
+	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
+	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: r[:]})
+	service.store.SetPrevFinalizedCheckpt(&ethpb.Checkpoint{Root: r[:]})
 
 	r = bytesutil.ToBytes32([]byte{'A'})
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)}
@@ -213,10 +213,10 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
 
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
+	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
+	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: r[:]})
+	service.store.SetPrevFinalizedCheckpt(&ethpb.Checkpoint{Root: r[:]})
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}))
@@ -349,8 +349,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot(t *testing.T) {
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1}
-
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 1})
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
@@ -375,7 +374,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: r32[:]}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: r32[:], Epoch: 1})
 
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
@@ -400,7 +399,7 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: r32[:]}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: r32[:], Epoch: 1})
 
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33

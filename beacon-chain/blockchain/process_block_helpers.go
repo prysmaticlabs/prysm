@@ -44,7 +44,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b block.BeaconBlock) (st
 	}
 
 	// Verify block slot time is not from the future.
-	if err := slots.VerifyTime(preState.GenesisTime(), s.TimeInStore(), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := slots.VerifyTime(preState.GenesisTime(), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
 
@@ -91,7 +91,11 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyBlkDescendant")
 	defer span.End()
-	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.finalizedCheckptInStore().Root))
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	finalizedBlkSigned, err := s.cfg.BeaconDB.Block(ctx, fRoot)
 	if err != nil {
 		return err
@@ -121,7 +125,11 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
 func (s *Service) verifyBlkFinalizedSlot(b block.BeaconBlock) error {
-	finalizedSlot, err := slots.EpochStart(s.finalizedCheckptInStore().Epoch)
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	finalizedSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
 	}
@@ -159,9 +167,8 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if slots.SinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-
-	cp := s.justifiedCheckptInStore()
-	jSlot, err := slots.EpochStart(cp.Epoch)
+	justified := s.store.JustifiedCheckpt()
+	jSlot, err := slots.EpochStart(justified.Epoch)
 	if err != nil {
 		return false, err
 	}
@@ -170,7 +177,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if err != nil {
 		return false, err
 	}
-	if !bytes.Equal(b, cp.Root) {
+	if !bytes.Equal(b, justified.Root) {
 		return false, nil
 	}
 
@@ -182,8 +189,12 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 	defer span.End()
 
 	cpt := state.CurrentJustifiedCheckpoint()
-	if cpt.Epoch > s.bestJustifiedCheckptInStore().Epoch {
-		s.setBestJustifiedCheckptInStore(cpt)
+	bestJustified := s.store.BestJustifiedCheckpt()
+	if bestJustified == nil {
+		return errNilBestJustifiedInStore
+	}
+	if cpt.Epoch > bestJustified.Epoch {
+		s.store.SetBestJustifiedCheckpt(cpt)
 	}
 	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, cpt)
 	if err != nil {
@@ -191,8 +202,12 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 	}
 
 	if canUpdate {
-		s.setPrevJustifiedCheckptInStore(s.justifiedCheckptInStore())
-		s.setJustifiedCheckptInStore(cpt)
+		justified := s.store.JustifiedCheckpt()
+		if justified == nil {
+			return errNilJustifiedInStore
+		}
+		s.store.SetPrevJustifiedCheckpt(justified)
+		s.store.SetJustifiedCheckpt(cpt)
 	}
 
 	return nil
@@ -202,11 +217,16 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 // caches justified checkpoint balances for fork choice and save justified checkpoint in DB.
 // This method does not have defense against fork choice bouncing attack, which is why it's only recommend to be used during initial syncing.
 func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpoint) error {
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	s.store.SetPrevJustifiedCheckpt(justified)
 
 	if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
-	s.setJustifiedCheckptInStore(cp)
+	s.store.SetJustifiedCheckpt(cp)
 
 	return nil
 }
@@ -317,7 +337,11 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk block.B
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
 	slot := blk.Slot()
 	// Fork choice only matters from last finalized slot.
-	fSlot, err := slots.EpochStart(s.finalizedCheckptInStore().Epoch)
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
 	}

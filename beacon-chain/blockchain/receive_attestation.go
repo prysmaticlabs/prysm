@@ -88,6 +88,9 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	}
 
 	f := s.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
@@ -136,16 +139,26 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-st.C():
+				if err := s.newSlot(s.ctx, s.CurrentSlot()); err != nil {
+					log.WithError(err).Error("Could not process new slot")
+					return
+				}
+
 				// Continue when there's no fork choice attestation, there's nothing to process and update head.
 				// This covers the condition when the node is still initial syncing to the head of the chain.
 				if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
 					continue
 				}
 				s.processAttestations(s.ctx)
-				cp := s.justifiedCheckptInStore()
-				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(cp.Root))
+
+				justified := s.store.JustifiedCheckpt()
+				if justified == nil {
+					log.WithError(errNilJustifiedInStore).Error("Could not get justified checkpoint")
+					continue
+				}
+				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(justified.Root))
 				if err != nil {
-					log.WithError(err).Errorf("Unable to get justified balances for root %v", cp.Root)
+					log.WithError(err).Errorf("Unable to get justified balances for root %v", justified.Root)
 					continue
 				}
 				if err := s.updateHead(s.ctx, balances); err != nil {
@@ -164,7 +177,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 		// This delays consideration in the fork choice until their slot is in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
-		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), s.TimeInStore(), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			continue
 		}
 

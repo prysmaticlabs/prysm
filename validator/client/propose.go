@@ -385,9 +385,9 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	switch b.Version() {
 
 	case version.Bellatrix:
-		block, ok := b.Proto().(*ethpb.BeaconBlockMerge)
+		block, ok := b.Proto().(*ethpb.BeaconBlockBellatrix)
 		if !ok {
-			return nil, nil, errors.New("could not convert obj to beacon block merge")
+			return nil, nil, errors.New("could not convert obj to beacon block bellatrix")
 		}
 		blockRoot, err := signing.ComputeSigningRoot(block, domain.SignatureDomain)
 		if err != nil {
@@ -580,9 +580,9 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		}
 		return
 	}
-	mergeBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_Merge)
+	bellatrixBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_Bellatrix)
 	if !ok {
-		log.Error("Not an Merge block")
+		log.Error("Not a Bellatrix block")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -590,7 +590,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 	}
 
 	// Sign returned block from beacon node
-	wb, err := wrapper.WrappedMergeBeaconBlock(mergeBlk.Merge)
+	wb, err := wrapper.WrappedBellatrixBeaconBlock(bellatrixBlk.Bellatrix)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap block")
 		if v.emitAccountMetrics {
@@ -606,12 +606,12 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		}
 		return
 	}
-	blk := &ethpb.SignedBeaconBlockMerge{
-		Block:     mergeBlk.Merge,
+	blk := &ethpb.SignedBeaconBlockBellatrix{
+		Block:     bellatrixBlk.Bellatrix,
 		Signature: sig,
 	}
 
-	signingRoot, err := signing.ComputeSigningRoot(mergeBlk.Merge, domain.SignatureDomain)
+	signingRoot, err := signing.ComputeSigningRoot(bellatrixBlk.Bellatrix, domain.SignatureDomain)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -620,7 +620,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		return
 	}
 
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(blk)
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap signed block")
 		if v.emitAccountMetrics {
@@ -641,7 +641,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, &ethpb.GenericSignedBeaconBlock{
-		Block: &ethpb.GenericSignedBeaconBlock_Merge{Merge: blk},
+		Block: &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blk},
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
@@ -653,11 +653,11 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
-		"slot":            mergeBlk.Merge.Slot,
+		"slot":            bellatrixBlk.Bellatrix.Slot,
 		"blockRoot":       blkRoot,
-		"numAttestations": len(mergeBlk.Merge.Body.Attestations),
-		"numDeposits":     len(mergeBlk.Merge.Body.Deposits),
-		"graffiti":        string(mergeBlk.Merge.Body.Graffiti),
+		"numAttestations": len(bellatrixBlk.Bellatrix.Body.Attestations),
+		"numDeposits":     len(bellatrixBlk.Bellatrix.Body.Deposits),
+		"graffiti":        string(bellatrixBlk.Bellatrix.Body.Graffiti),
 		"fork":            "bellatrix",
 	}).Info("Submitted new block")
 

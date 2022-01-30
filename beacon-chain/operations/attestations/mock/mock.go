@@ -1,4 +1,4 @@
-package attestations
+package mock
 
 import (
 	"context"

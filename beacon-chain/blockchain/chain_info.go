@@ -77,9 +77,9 @@ type FinalizationFetcher interface {
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 }
 
-// FinalizedCheckpt returns the latest finalized checkpoint from store.
+// FinalizedCheckpt returns the latest finalized checkpoint from chain store.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	cp := s.finalizedCheckptInStore()
+	cp := s.store.FinalizedCheckpt()
 	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
@@ -87,9 +87,19 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 	return ethpb.CopyCheckpoint(cp)
 }
 
-// CurrentJustifiedCheckpt returns the current justified checkpoint from store.
+// CurrentJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	cp := s.justifiedCheckptInStore()
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	}
+
+	return ethpb.CopyCheckpoint(cp)
+}
+
+// PreviousJustifiedCheckpt returns the previous justified checkpoint from chain store.
+func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.store.PrevJustifiedCheckpt()
 	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
@@ -99,17 +109,7 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 
 // BestJustifiedCheckpt returns the best justified checkpoint from store.
 func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
-	cp := s.bestJustifiedCheckptInStore()
-	if cp == nil {
-		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	}
-
-	return ethpb.CopyCheckpoint(cp)
-}
-
-// PreviousJustifiedCheckpt returns the previous justified checkpoint from store.
-func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	cp := s.prevJustifiedCheckptInStore()
+	cp := s.store.BestJustifiedCheckpt()
 	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}

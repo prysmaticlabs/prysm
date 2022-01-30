@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -59,9 +60,9 @@ type Service struct {
 	checkpointStateCache  *cache.CheckpointStateCache
 	initSyncBlocks        map[[32]byte]block.SignedBeaconBlock
 	initSyncBlocksLock    sync.RWMutex
-	justifiedBalances *stateBalanceCache
-	wsVerifier        *WeakSubjectivityVerifier
-	store             *store
+	justifiedBalances     *stateBalanceCache
+	wsVerifier            *WeakSubjectivityVerifier
+	store                 *store.Store
 }
 
 // config options for the service.
@@ -95,7 +96,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]block.SignedBeaconBlock),
 		cfg:                  &config{},
-		store:                &store{},
+		store:                &store.Store{},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
@@ -177,15 +178,13 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get justified checkpoint")
 	}
-	s.setBestJustifiedCheckptInStore(ethpb.CopyCheckpoint(justified))
-	s.setPrevJustifiedCheckptInStore(ethpb.CopyCheckpoint(justified))
-	s.setJustifiedCheckptInStore(ethpb.CopyCheckpoint(justified))
 
 	finalized, err := s.cfg.BeaconDB.FinalizedCheckpoint(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint")
 	}
-	s.setFinalizedCheckptInStore(ethpb.CopyCheckpoint(finalized))
+
+	s.store = store.New(justified, finalized)
 
 	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
 	s.cfg.ForkChoiceStore = store
@@ -443,10 +442,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	// Finalized checkpoint at genesis is a zero hash.
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 
-	s.setJustifiedCheckptInStore(ethpb.CopyCheckpoint(genesisCheckpoint))
-	s.setPrevJustifiedCheckptInStore(ethpb.CopyCheckpoint(genesisCheckpoint))
-	s.setBestJustifiedCheckptInStore(ethpb.CopyCheckpoint(genesisCheckpoint))
-	s.setFinalizedCheckptInStore(ethpb.CopyCheckpoint(genesisCheckpoint))
+	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
 	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
 		genesisBlk.Block().Slot(),
