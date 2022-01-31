@@ -34,24 +34,6 @@ const depositDeadline = 20 * time.Second
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 
-// UpdateHead updates the beacon state head.
-func (s *Service) UpdateHead(ctx context.Context) error {
-	cp := s.store.JustifiedCheckpt()
-	if cp == nil {
-		return errors.New("no justified checkpoint")
-	}
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
-	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
-		return errors.Wrap(err, msg)
-	}
-
-	if err := s.updateHead(ctx, balances); err != nil {
-		return err
-	}
-	return nil
-}
-
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
 // The block's signing root should be computed before calling this method to avoid redundant
 // computation in this method and methods it calls into.

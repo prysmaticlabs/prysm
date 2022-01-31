@@ -23,6 +23,24 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// UpdateHead updates the beacon state head.
+func (s *Service) UpdateHead(ctx context.Context) error {
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
+		return errors.New("no justified checkpoint")
+	}
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
+		return errors.Wrap(err, msg)
+	}
+
+	if err := s.updateHead(ctx, balances); err != nil {
+		return err
+	}
+	return nil
+}
+
 // This defines the current chain service's view of head.
 type head struct {
 	slot  types.Slot              // current head slot.
