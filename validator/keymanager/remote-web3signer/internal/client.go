@@ -125,7 +125,7 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 	span.AddAttributes(
 		trace.StringAttribute("httpMethod", httpMethod),
 		trace.StringAttribute("fullPath", fullPath),
-		trace.StringAttribute("hasBody", fmt.Sprintf("%v", body != nil)),
+		trace.BoolAttribute("hasBody", body != nil),
 	)
 	req, err := http.NewRequestWithContext(ctx, httpMethod, fullPath, body)
 	if err != nil {
