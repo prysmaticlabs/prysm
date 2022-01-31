@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/pagination"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -436,15 +437,15 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 
 	fSlot, err := slots.EpochStart(finalizedCheckpoint.Epoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get epoch start slot from finalized checkpoint epoch")
 	}
 	jSlot, err := slots.EpochStart(justifiedCheckpoint.Epoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get epoch start slot from justified checkpoint epoch")
 	}
 	pjSlot, err := slots.EpochStart(prevJustifiedCheckpoint.Epoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get epoch start slot from prev justified checkpoint epoch")
 	}
 	return &ethpb.ChainHead{
 		HeadSlot:                   headBlock.Block().Slot(),

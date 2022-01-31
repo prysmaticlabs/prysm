@@ -7,7 +7,10 @@ go_library(
         "interfaces.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//testing/spectest:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",

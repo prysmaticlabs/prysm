@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -515,4 +516,14 @@ func TestSafeCopy2d32Bytes(t *testing.T) {
 	output := bytesutil.SafeCopy2d32Bytes(input)
 	assert.Equal(t, false, &input == &output, "No copy was made")
 	assert.DeepEqual(t, input, output)
+}
+
+func TestNonZeroRoot(t *testing.T) {
+	input := make([]byte, fieldparams.RootLength)
+	output := bytesutil.NonZeroRoot(input)
+	assert.Equal(t, false, output)
+	copy(input[2:], "a")
+	copy(input[3:], "b")
+	output = bytesutil.NonZeroRoot(input)
+	assert.Equal(t, true, output)
 }
