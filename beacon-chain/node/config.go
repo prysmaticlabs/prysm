@@ -98,21 +98,6 @@ func configureInteropConfig(cliCtx *cli.Context) {
 }
 
 func configureExecutionSetting(cliCtx *cli.Context) {
-	if cliCtx.IsSet(flags.TerminalTotalDifficultyOverride.Name) {
-		c := params.BeaconConfig()
-		c.TerminalTotalDifficulty = cliCtx.Uint64(flags.TerminalTotalDifficultyOverride.Name)
-		params.OverrideBeaconConfig(c)
-	}
-	if cliCtx.IsSet(flags.TerminalBlockHashOverride.Name) {
-		c := params.BeaconConfig()
-		c.TerminalBlockHash = common.HexToHash(cliCtx.String(flags.TerminalBlockHashOverride.Name))
-		params.OverrideBeaconConfig(c)
-	}
-	if cliCtx.IsSet(flags.TerminalBlockHashActivationEpochOverride.Name) {
-		c := params.BeaconConfig()
-		c.TerminalBlockHashActivationEpoch = types.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
-		params.OverrideBeaconConfig(c)
-	}
 	if cliCtx.IsSet(flags.FeeRecipient.Name) {
 		c := params.BeaconConfig()
 		c.FeeRecipient = common.HexToAddress(cliCtx.String(flags.FeeRecipient.Name))
