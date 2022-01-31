@@ -16,6 +16,7 @@ import (
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -145,7 +146,7 @@ func Run(t *testing.T, config string, fork int) {
 						}
 						if c.ProposerBoostRoot != nil {
 							want := common.FromHex(*c.ProposerBoostRoot)
-							require.DeepEqual(t, want, service.ProtoArrayStore().ProposerBoost())
+							require.DeepEqual(t, bytesutil.ToBytes32(want), service.ProtoArrayStore().ProposerBoost())
 						}
 					}
 				}

@@ -25,6 +25,7 @@ go_library(
         "//beacon-chain/state/v3:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
