@@ -106,6 +106,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WalletPasswordFileFlag,
 			flags.GraffitiFileFlag,
 			flags.EnableDutyCountDown,
+			flags.Web3SignerURLFlag,
+			flags.Web3SignerPublicValidatorKeysFlag,
 		},
 	},
 	{

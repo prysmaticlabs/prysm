@@ -5,8 +5,11 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	iface2 "github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -74,4 +77,104 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, pathName, fileName string) ([
 // InitializeKeymanager --
 func (_ *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerConfig) (keymanager.IKeymanager, error) {
 	return nil, nil
+}
+
+type MockValidator struct {
+	Km keymanager.IKeymanager
+}
+
+func (_ MockValidator) Done() {
+	panic("implement me")
+}
+
+func (_ MockValidator) WaitForChainStart(_ context.Context) error {
+	panic("implement me")
+}
+
+func (_ MockValidator) WaitForSync(_ context.Context) error {
+	panic("implement me")
+}
+
+func (_ MockValidator) WaitForActivation(_ context.Context, _ chan [][48]byte) error {
+	panic("implement me")
+}
+
+func (_ MockValidator) CanonicalHeadSlot(_ context.Context) (types.Slot, error) {
+	panic("implement me")
+}
+
+func (_ MockValidator) NextSlot() <-chan types.Slot {
+	panic("implement me")
+}
+
+func (_ MockValidator) SlotDeadline(_ types.Slot) time.Time {
+	panic("implement me")
+}
+
+func (_ MockValidator) LogValidatorGainsAndLosses(_ context.Context, _ types.Slot) error {
+	panic("implement me")
+}
+
+func (_ MockValidator) UpdateDuties(_ context.Context, _ types.Slot) error {
+	panic("implement me")
+}
+
+func (_ MockValidator) RolesAt(_ context.Context, _ types.Slot) (map[[48]byte][]iface2.ValidatorRole, error) {
+	panic("implement me")
+}
+
+func (_ MockValidator) SubmitAttestation(_ context.Context, _ types.Slot, _ [48]byte) {
+	panic("implement me")
+}
+
+func (_ MockValidator) ProposeBlock(_ context.Context, _ types.Slot, _ [48]byte) {
+	panic("implement me")
+}
+
+func (_ MockValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot, _ [48]byte) {
+	panic("implement me")
+}
+
+func (_ MockValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.Slot, _ [48]byte) {
+	panic("implement me")
+}
+
+func (_ MockValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [48]byte) {
+	panic("implement me")
+}
+
+func (_ MockValidator) LogAttestationsSubmitted() {
+	panic("implement me")
+}
+
+func (_ MockValidator) LogNextDutyTimeLeft(_ types.Slot) error {
+	panic("implement me")
+}
+
+func (_ MockValidator) UpdateDomainDataCaches(_ context.Context, _ types.Slot) {
+	panic("implement me")
+}
+
+func (_ MockValidator) WaitForKeymanagerInitialization(_ context.Context) error {
+	panic("implement me")
+}
+
+func (_ MockValidator) AllValidatorsAreExited(_ context.Context) (bool, error) {
+	panic("implement me")
+}
+
+func (m MockValidator) Keymanager() (keymanager.IKeymanager, error) {
+	return m.Km, nil
+}
+
+func (_ MockValidator) ReceiveBlocks(_ context.Context, _ chan<- error) {
+	panic("implement me")
+}
+
+func (_ MockValidator) HandleKeyReload(_ context.Context, _ [][48]byte) (bool, error) {
+	panic("implement me")
+}
+
+func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
+	panic("implement me")
 }

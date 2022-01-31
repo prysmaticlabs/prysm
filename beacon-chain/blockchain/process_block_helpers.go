@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
@@ -45,7 +44,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b block.BeaconBlock) (st
 	}
 
 	// Verify block slot time is not from the future.
-	if err := slots.VerifyTime(preState.GenesisTime(), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
 
@@ -326,56 +325,6 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 	}
 
 	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot()), slot)
-}
-
-// This updates justified check point in store, if the new justified is later than stored justified or
-// the store's justified is not in chain with finalized check point.
-//
-// Spec definition:
-//   # Potentially update justified if different from store
-//        if store.justified_checkpoint != state.current_justified_checkpoint:
-//            # Update justified if new justified is later than store justified
-//            if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-//                store.justified_checkpoint = state.current_justified_checkpoint
-//                return
-//            # Update justified if store justified is not in chain with finalized checkpoint
-//            finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-//            ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
-//            if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
-//                store.justified_checkpoint = state.current_justified_checkpoint
-func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state state.BeaconState) error {
-	// Update justified if it's different than the one cached in the store.
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
-	}
-	if !attestation.CheckPointIsEqual(justified, state.CurrentJustifiedCheckpoint()) {
-		if state.CurrentJustifiedCheckpoint().Epoch > justified.Epoch {
-			s.store.SetJustifiedCheckpt(state.CurrentJustifiedCheckpoint())
-			// we don't need to check if the previous justified checkpoint was an ancestor since the new
-			// finalized checkpoint is overriding it.
-			return nil
-		}
-
-		finalized := s.store.FinalizedCheckpt()
-		if finalized == nil {
-			return errNilFinalizedInStore
-		}
-		// Update justified if store justified is not in chain with finalized check point.
-		finalizedSlot, err := slots.EpochStart(finalized.Epoch)
-		if err != nil {
-			return err
-		}
-		justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(justified.Root))
-		anc, err := s.ancestor(ctx, justifiedRoot[:], finalizedSlot)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(anc, finalized.Root) {
-			s.store.SetJustifiedCheckpt(state.CurrentJustifiedCheckpoint())
-		}
-	}
-	return nil
 }
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
