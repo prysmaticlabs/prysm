@@ -13,7 +13,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//testing/spectest:__subpackages__",
     ],
     deps = [
