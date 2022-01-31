@@ -88,3 +88,108 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 	f.store.nodesLock.RUnlock()
 	return f.Optimistic(ctx, root, slot)
 }
+
+// UpdateSyncedTips updates the synced_tips map when the block with the given root becomes VALID
+func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	// We can only update if given root is in fork choice
+	index, ok := f.store.nodesIndices[root]
+	if !ok {
+		return errInvalidNodeIndex
+	}
+
+	// We can only update if root is a leaf in fork choice
+	node := f.store.nodes[index]
+	if node.bestChild != NonExistentNode {
+		return errInvalidBestChildIndex
+	}
+
+	// Stop early if the root is part of validated tips
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
+	_, ok = f.syncedTips.validatedTips[root]
+	if ok {
+		return nil
+	}
+
+	// Cache root and slot to validated tips
+	f.syncedTips.validatedTips[root] = node.slot
+
+	// Compute the full valid path from the given node to its previous synced tip
+	// This path will now consist of fully validated blocks. Notice that
+	// the previous tip may have been outside the Fork Choice store.
+	// In this case, only one block can be in syncedTips as the whole
+	// Fork Choice would be a descendant of this block.
+	validPath := make(map[uint64]bool)
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		parentIndex := node.parent
+		if parentIndex == NonExistentNode {
+			break
+		}
+		if parentIndex >= uint64(len(f.store.nodes)) {
+			return errInvalidNodeIndex
+		}
+		node = f.store.nodes[parentIndex]
+		_, ok = f.syncedTips.validatedTips[node.root]
+		if ok {
+			break
+		}
+		validPath[parentIndex] = true
+	}
+
+	// Retrieve the list of leaves in the Fork Choice
+	// These are all the nodes that have NonExistentNode as best child.
+	var leaves []uint64
+	for i := uint64(0); i < uint64(len(f.store.nodes)); i++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		node = f.store.nodes[i]
+		if node.bestChild == NonExistentNode {
+			leaves = append(leaves, i)
+		}
+	}
+
+	// For each leaf, recompute the new tip.
+	newTips := make(map[[32]byte]types.Slot)
+	for _, i := range leaves {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		node = f.store.nodes[i]
+		j := i
+		for {
+			// Stop if we reached the previous tip
+			_, ok = f.syncedTips.validatedTips[node.root]
+			if ok {
+				newTips[node.root] = node.slot
+				break
+			}
+
+			// Stop if we reach valid path
+			_, ok = validPath[j]
+			if ok {
+				newTips[node.root] = node.slot
+				break
+			}
+
+			j = node.parent
+			if j == NonExistentNode {
+				break
+			}
+			if j >= uint64(len(f.store.nodes)) {
+				return errInvalidNodeIndex
+			}
+			node = f.store.nodes[j]
+		}
+	}
+
+	f.syncedTips.validatedTips = newTips
+	return nil
+}
