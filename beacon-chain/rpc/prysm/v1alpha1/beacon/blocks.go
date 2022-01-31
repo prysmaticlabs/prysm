@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/api/pagination"
@@ -565,32 +566,29 @@ func (bs *Server) GetWeakSubjectivityCheckpointEpoch(ctx context.Context, _ *emp
 func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.Empty) (*ethpb.WeakSubjectivityCheckpoint, error) {
 	hs, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
+		return nil, status.Error(codes.Internal, "could not get head state")
 	}
 	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity epoch: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity epoch: %v", err)
 	}
 	wsSlot, err := slots.EpochStart(wsEpoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity slot: %v", err)
+		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity slot: %v", err)
 	}
-
-	wsState, err := bs.StateGen.StateBySlot(ctx, wsSlot)
+	blks, err := bs.BeaconDB.HighestSlotBlocksBelow(ctx, wsSlot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity state: %v", err)
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("could not find highest block below slot %d", wsSlot))
 	}
-	stateRoot, err := wsState.HashTreeRoot(ctx)
+	block := blks[0]
+	blockRoot, err := block.Block().HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity state root: %v", err)
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("failed to compute hash_tree_root for block at slot=%d", block.Block().Slot()))
 	}
-	blkRoot, err := wsState.LatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity block root: %v", err)
-	}
-
+	stateRoot := bytesutil.ToBytes32(block.Block().StateRoot())
+	log.Printf("weak subjectivity checkpoint reported as epoch=%d, block root=%#x, state root=%#x", wsEpoch, blockRoot, stateRoot)
 	return &ethpb.WeakSubjectivityCheckpoint{
-		BlockRoot: blkRoot[:],
+		BlockRoot: blockRoot[:],
 		StateRoot: stateRoot[:],
 		Epoch:     wsEpoch,
 	}, nil
