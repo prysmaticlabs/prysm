@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -29,7 +30,11 @@ import (
 //        if ancestor_at_finalized_slot == store.finalized_checkpoint.root:
 //            store.justified_checkpoint = store.best_justified_checkpoint
 func (s *Service) newSlot(ctx context.Context, slot types.Slot) error {
+
 	// Reset proposer boost root in fork choice.
+	if err := s.cfg.ForkChoiceStore.ResetBoostedProposerRoot(ctx); err != nil {
+		return errors.Wrap(err, "could not reset boosted proposer root in fork choice")
+	}
 
 	// Return if it's not a new epoch.
 	if !slots.IsEpochStart(slot) {
