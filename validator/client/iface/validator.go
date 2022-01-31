@@ -51,9 +51,9 @@ type Validator interface {
 	LogAttestationsSubmitted()
 	LogNextDutyTimeLeft(slot types.Slot) error
 	UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
-	WaitForWalletInitialization(ctx context.Context) error
+	WaitForKeymanagerInitialization(ctx context.Context) error
 	AllValidatorsAreExited(ctx context.Context) (bool, error)
-	GetKeymanager() keymanager.IKeymanager
+	Keymanager() (keymanager.IKeymanager, error)
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
