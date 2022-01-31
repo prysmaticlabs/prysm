@@ -9,7 +9,7 @@ This is the core repository for Prysm, a [Golang](https://golang.org/) implement
 
 ### Getting Started
 
-A detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://docs.prylabs.network). If you still have questions, feel free to stop by our [Discord](https://discord.gg/CTYGPUJ).
+A detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://docs.prylabs.network). If you still have questions, feel free to stop by our [Discord](https://discord.gg/CTYGPUJ) .
 
 ### Staking on Mainnet
 
