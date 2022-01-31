@@ -27,7 +27,11 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 	// Monitor the key manager for updates.
 	if accountsChangedChan == nil {
 		accountsChangedChan = make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
-		sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+		km, err := v.Keymanager()
+		if err != nil {
+			return err
+		}
+		sub := km.SubscribeAccountChanges(accountsChangedChan)
 		defer func() {
 			sub.Unsubscribe()
 			close(accountsChangedChan)
