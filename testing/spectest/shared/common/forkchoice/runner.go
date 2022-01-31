@@ -98,7 +98,7 @@ func Run(t *testing.T, config string, fork int) {
 						}
 						r, err := beaconBlock.Block().HashTreeRoot()
 						require.NoError(t, err)
-						if step.Valid != nil && *step.Valid == false {
+						if step.Valid != nil && !*step.Valid {
 							require.Equal(t, true, service.ReceiveBlock(ctx, beaconBlock, r) != nil)
 						} else {
 							require.NoError(t, service.ReceiveBlock(ctx, beaconBlock, r))
