@@ -149,11 +149,15 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 		signRequestDurationSeconds.WithLabelValues(req.Method, strconv.Itoa(resp.StatusCode)).Observe(duration.Seconds())
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
-		return nil, fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request: %s, Full Response: %v", fullPath, string(requestDump), resp)
+		err = fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request: %s, Full Response: %v", fullPath, string(requestDump), resp)
+		tracing.AnnotateError(span, err)
+		return nil, err
 	} else if resp.StatusCode == http.StatusBadRequest {
-		return nil, fmt.Errorf("bad request format, Signing Request URL: %v, Signing Request: %v, Full Response: %v", fullPath, string(requestDump), resp)
+		err = fmt.Errorf("bad request format, Signing Request URL: %v, Signing Request: %v, Full Response: %v", fullPath, string(requestDump), resp)
+		tracing.AnnotateError(span, err)
+		return nil, err
 	}
-	return resp, err
+	return resp, nil
 }
 
 // unmarshalResponse is a utility method for unmarshalling responses.
