@@ -24,14 +24,14 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 const strongPass = "29384283xasjasd32%%&*@*#*"
 
-func TestServer_CreateWallet_Imported(t *testing.T) {
+func TestServer_CreateWallet_Local(t *testing.T) {
 	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
@@ -59,7 +59,7 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 		validatorService:      vs,
 	}
 	req := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_IMPORTED,
+		Keymanager:     pb.KeymanagerKind_LOCAL,
 		WalletPassword: strongPass,
 	}
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
@@ -101,7 +101,7 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestServer_CreateWallet_Imported_PasswordTooWeak(t *testing.T) {
+func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
@@ -110,7 +110,7 @@ func TestServer_CreateWallet_Imported_PasswordTooWeak(t *testing.T) {
 		walletDir:             defaultWalletPath,
 	}
 	req := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_IMPORTED,
+		Keymanager:     pb.KeymanagerKind_LOCAL,
 		WalletPassword: "", // Weak password, empty string
 	}
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
@@ -120,7 +120,7 @@ func TestServer_CreateWallet_Imported_PasswordTooWeak(t *testing.T) {
 	require.ErrorContains(t, "Password too weak", err)
 
 	req = &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_IMPORTED,
+		Keymanager:     pb.KeymanagerKind_LOCAL,
 		WalletPassword: "a", // Weak password, too short
 	}
 	_, err = s.CreateWallet(ctx, req)
@@ -313,7 +313,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -335,7 +335,7 @@ func TestServer_WalletConfig(t *testing.T) {
 
 	assert.DeepEqual(t, resp, &pb.WalletResponse{
 		WalletPath:     localWalletDir,
-		KeymanagerKind: pb.KeymanagerKind_IMPORTED,
+		KeymanagerKind: pb.KeymanagerKind_LOCAL,
 	})
 }
 
@@ -346,7 +346,7 @@ func TestServer_ImportAccounts_FailedPreconditions(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -381,14 +381,14 @@ func TestServer_ImportAccounts_FailedPreconditions(t *testing.T) {
 }
 
 func TestServer_ImportAccounts_OK(t *testing.T) {
-	imported.ResetCaches()
+	local.ResetCaches()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	ctx := context.Background()
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -490,7 +490,7 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,

@@ -22,7 +22,7 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	switch w.KeymanagerKind() {
-	case keymanager.Imported:
+	case keymanager.Local:
 		return errors.New("not possible to edit imported keymanager configuration")
 	case keymanager.Derived:
 		return errors.New("derived keymanager is not yet supported")

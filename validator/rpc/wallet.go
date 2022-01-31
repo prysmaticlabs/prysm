@@ -46,7 +46,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
-		keymanagerKind := pb.KeymanagerKind_IMPORTED
+		keymanagerKind := pb.KeymanagerKind_LOCAL
 		switch s.wallet.KeymanagerKind() {
 		case keymanager.Derived:
 			keymanagerKind = pb.KeymanagerKind_DERIVED
@@ -65,11 +65,11 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	if err := prompt.ValidatePasswordInput(req.WalletPassword); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Password too weak: %v", err)
 	}
-	if req.Keymanager == pb.KeymanagerKind_IMPORTED {
+	if req.Keymanager == pb.KeymanagerKind_LOCAL {
 		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
-				KeymanagerKind: keymanager.Imported,
+				KeymanagerKind: keymanager.Local,
 				WalletPassword: req.WalletPassword,
 			},
 			SkipMnemonicConfirm: true,
@@ -79,7 +79,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
@@ -90,7 +90,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
 				WalletPath:     walletDir,
-				KeymanagerKind: pb.KeymanagerKind_IMPORTED,
+				KeymanagerKind: pb.KeymanagerKind_LOCAL,
 			},
 		}, nil
 	}
@@ -126,8 +126,8 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 	switch s.wallet.KeymanagerKind() {
 	case keymanager.Derived:
 		keymanagerKind = pb.KeymanagerKind_DERIVED
-	case keymanager.Imported:
-		keymanagerKind = pb.KeymanagerKind_IMPORTED
+	case keymanager.Local:
+		keymanagerKind = pb.KeymanagerKind_LOCAL
 	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
 	case keymanager.Web3Signer:

@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -107,7 +107,11 @@ func (s *Server) BackupAccounts(
 
 	var keystoresToBackup []*keymanager.Keystore
 	switch km := km.(type) {
-	case *imported.Keymanager:
+	case keymanager.Local:
+		km, ok := s.keymanager.(*local.Keymanager)
+		if !ok {
+			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
+		}
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not backup accounts for imported keymanager: %v", err)
@@ -173,6 +177,9 @@ func (s *Server) DeleteAccounts(
 	if err != nil {
 		return nil, err
 	}
+	if s.wallet.KeymanagerKind() != keymanager.Local && s.wallet.KeymanagerKind() != keymanager.Derived {
+		return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
+	}
 	if err := accounts.DeleteAccount(ctx, &accounts.Config{
 		Wallet:           s.wallet,
 		Keymanager:       km,
@@ -201,6 +208,11 @@ func (s *Server) VoluntaryExit(
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
 		return nil, err
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Local && s.wallet.KeymanagerKind() != keymanager.Derived {
+		return nil, status.Error(
+			codes.FailedPrecondition, "Only Imported or Derived wallets can submit voluntary exits",
+		)
 	}
 	formattedKeys := make([]string, len(req.PublicKeys))
 	for i, key := range req.PublicKeys {

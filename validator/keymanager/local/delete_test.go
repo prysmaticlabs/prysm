@@ -1,4 +1,4 @@
-package imported
+package local
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-func TestImportedKeymanager_DeleteKeystores(t *testing.T) {
+func TestLocalKeymanager_DeleteKeystores(t *testing.T) {
 	hook := logTest.NewGlobal()
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
