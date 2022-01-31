@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -55,7 +56,7 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 		}
 		length *= comLength
 	}
-	val := reflect.ValueOf(elements)
+	val := reflect.Indirect(reflect.ValueOf(elements))
 	if val.Len() > int(length) {
 		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), val.Len(), length)
 	}
@@ -65,48 +66,89 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
-	case types.BlockRoots, types.StateRoots, types.RandaoMixes:
-		val, ok := elements.([][]byte)
+	case types.BlockRoots:
+		bVal, ok := elements.([][]byte)
 		if !ok {
-			return nil, errors.Errorf("Wanted type of %v but got %v",
-				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
+			rVal, ok := elements.(*customtypes.BlockRoots)
+			if !ok {
+				return nil, errors.Errorf("Wanted type of %v but got %v",
+					reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
+			}
+			roots := make([][]byte, len(rVal))
+			for i, r := range rVal {
+				tmp := r
+				roots[i] = tmp[:]
+			}
+			return handleByteArrays(roots, indices, convertAll)
 		}
-		return HandleByteArrays(val, indices, convertAll)
+		return handleByteArrays(bVal, indices, convertAll)
+	case types.StateRoots:
+		bVal, ok := elements.([][]byte)
+		if !ok {
+			rVal, ok := elements.(*customtypes.StateRoots)
+			if !ok {
+				return nil, errors.Errorf("Wanted type of %v but got %v",
+					reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
+			}
+			roots := make([][]byte, len(rVal))
+			for i, r := range rVal {
+				tmp := r
+				roots[i] = tmp[:]
+			}
+			return handleByteArrays(roots, indices, convertAll)
+		}
+		return handleByteArrays(bVal, indices, convertAll)
+	case types.RandaoMixes:
+		bVal, ok := elements.([][]byte)
+		if !ok {
+			mVal, ok := elements.(*customtypes.RandaoMixes)
+			if !ok {
+				return nil, errors.Errorf("Wanted type of %v but got %v",
+					reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
+			}
+			mixes := make([][]byte, len(mVal))
+			for i, r := range mVal {
+				tmp := r
+				mixes[i] = tmp[:]
+			}
+			return handleByteArrays(mixes, indices, convertAll)
+		}
+		return handleByteArrays(bVal, indices, convertAll)
 	case types.Eth1DataVotes:
 		val, ok := elements.([]*ethpb.Eth1Data)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*ethpb.Eth1Data{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return HandleEth1DataSlice(val, indices, convertAll)
+		return handleEth1DataSlice(val, indices, convertAll)
 	case types.Validators:
 		val, ok := elements.([]*ethpb.Validator)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return HandleValidatorSlice(val, indices, convertAll)
+		return handleValidatorSlice(val, indices, convertAll)
 	case types.PreviousEpochAttestations, types.CurrentEpochAttestations:
 		val, ok := elements.([]*ethpb.PendingAttestation)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]*ethpb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return HandlePendingAttestationSlice(val, indices, convertAll)
+		return handlePendingAttestationSlice(val, indices, convertAll)
 	case types.Balances:
 		val, ok := elements.([]uint64)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
 				reflect.TypeOf([]uint64{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return HandleBalanceSlice(val, indices, convertAll)
+		return handleBalanceSlice(val, indices, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
 	}
 }
 
-// HandleByteArrays computes and returns byte arrays in a slice of root format.
-func HandleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]byte, error) {
+// handleByteArrays computes and returns byte arrays in a slice of root format.
+func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
 		length = len(val)
@@ -133,8 +175,8 @@ func HandleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]by
 	return roots, nil
 }
 
-// HandleValidatorSlice returns the validator indices in a slice of root format.
-func HandleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
+// handleValidatorSlice returns the validator indices in a slice of root format.
+func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
 		length = len(val)
@@ -172,8 +214,8 @@ func HandleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 	return roots, nil
 }
 
-// HandleEth1DataSlice processes a list of eth1data and indices into the appropriate roots.
-func HandleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
+// handleEth1DataSlice processes a list of eth1data and indices into the appropriate roots.
+func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
 		length = len(val)
@@ -211,8 +253,8 @@ func HandleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 	return roots, nil
 }
 
-// HandlePendingAttestationSlice returns the root of a slice of pending attestations.
-func HandlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
+// handlePendingAttestationSlice returns the root of a slice of pending attestations.
+func handlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
 		length = len(val)
@@ -250,8 +292,8 @@ func HandlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []ui
 	return roots, nil
 }
 
-// HandleBalanceSlice returns the root of a slice of validator balances.
-func HandleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, error) {
+// handleBalanceSlice returns the root of a slice of validator balances.
+func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, error) {
 	if convertAll {
 		balancesMarshaling := make([][]byte, 0)
 		for _, b := range val {
