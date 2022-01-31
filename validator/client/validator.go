@@ -106,7 +106,7 @@ func (v *validator) Done() {
 // WaitForKeymanagerInitialization checks if the validator needs to wait for
 func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 	genesisRoot, err := v.db.GenesisValidatorsRoot(ctx)
-	if err != nil || !bytesutil.NonZeroRoot(genesisRoot) {
+	if err != nil {
 		return errors.Wrap(err, "unable to retrieve valid genesis validators root while initializing key manager")
 	}
 	if v.useWeb && v.wallet == nil {
