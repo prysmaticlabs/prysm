@@ -114,7 +114,7 @@ func Run(t *testing.T, config string, fork int) {
 						require.NoError(t, service.OnAttestation(ctx, att))
 					}
 					if step.Check != nil {
-						require.NoError(t, service.UpdateHead(ctx))
+						require.NoError(t, service.UpdateHeadWithBalances(ctx))
 						c := step.Check
 						//if c.Time != nil {
 						//	require.Equal(t, uint64(*c.Time), uint64(time.Now().Unix()))

@@ -23,8 +23,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// UpdateHead updates the beacon state head.
-func (s *Service) UpdateHead(ctx context.Context) error {
+// UpdateHeadWithBalances updates the beacon state head after getting justified balanced from cache.
+func (s *Service) UpdateHeadWithBalances(ctx context.Context) error {
 	cp := s.store.JustifiedCheckpt()
 	if cp == nil {
 		return errors.New("no justified checkpoint")
@@ -35,10 +35,7 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 		return errors.Wrap(err, msg)
 	}
 
-	if err := s.updateHead(ctx, balances); err != nil {
-		return err
-	}
-	return nil
+	return s.updateHead(ctx, balances)
 }
 
 // This defines the current chain service's view of head.
