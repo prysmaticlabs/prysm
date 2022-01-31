@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -58,10 +59,10 @@ func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 		return err
 	}
 
-	genesisTime := baseState.GenesisTime()
+	genesisTime := uint64(s.genesisTime.Unix())
 
 	// Verify attestation target is from current epoch or previous epoch.
-	if err := verifyAttTargetEpoch(ctx, genesisTime, s.TimeInStore(), tgt); err != nil {
+	if err := verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Unix()), tgt); err != nil {
 		return err
 	}
 
@@ -74,7 +75,7 @@ func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 	// validate_aggregate_proof.go and validate_beacon_attestation.go
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := slots.VerifyTime(genesisTime, s.TimeInStore(), a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := slots.VerifyTime(genesisTime, a.Data.Slot+1, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return err
 	}
 

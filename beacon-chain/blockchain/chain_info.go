@@ -326,3 +326,8 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 	}
 	return v.PublicKey(), nil
 }
+
+// SetGenesisTime sets the genesis time of beacon chain.
+func (s *Service) SetGenesisTime(t time.Time) {
+	s.genesisTime = t
+}

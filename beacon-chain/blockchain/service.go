@@ -63,6 +63,7 @@ type Service struct {
 	justifiedBalances     *stateBalanceCache
 	wsVerifier            *WeakSubjectivityVerifier
 	store                 *store.Store
+	time                  time.Time
 }
 
 // config options for the service.
@@ -83,6 +84,7 @@ type config struct {
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	FinalizedStateAtStartUp state.BeaconState
+	time                    time.Time
 }
 
 // NewService instantiates a new block service instance that will

@@ -7,12 +7,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -25,6 +27,12 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 	require.NoError(t, db.SaveState(ctx, st, r))
+	cp := &ethpb.Checkpoint{
+		Epoch: coreTime.CurrentEpoch(st),
+		Root:  r[:],
+	}
+	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 	attPool, err := attestations.NewService(ctx, &attestations.Config{
 		Pool: attestations.NewPool(),
 	})
