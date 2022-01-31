@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
@@ -24,8 +25,10 @@ import (
 	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc"
@@ -1326,4 +1329,33 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
 	require.NoError(t, err)
 	require.Equal(t, true, aggregator)
+}
+
+func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	root := make([]byte, 32)
+	copy(root[2:], "a")
+	err := db.SaveGenesisValidatorsRoot(ctx, root)
+	require.NoError(t, err)
+	w := wallet.NewWalletForWeb3Signer()
+	decodedKey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
+	require.NoError(t, err)
+	keys := [][48]byte{
+		bytesutil.ToBytes48(decodedKey),
+	}
+	v := validator{
+		db:     db,
+		useWeb: false,
+		wallet: w,
+		Web3SignerConfig: &remote_web3signer.SetupConfig{
+			BaseEndpoint:       "http://localhost:8545",
+			ProvidedPublicKeys: keys,
+		},
+	}
+	err = v.WaitForKeymanagerInitialization(context.Background())
+	require.NoError(t, err)
+	km, err := v.Keymanager()
+	require.NoError(t, err)
+	require.NotNil(t, km)
 }

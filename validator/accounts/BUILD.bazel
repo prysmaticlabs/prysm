@@ -44,6 +44,7 @@ go_library(
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/imported:go_default_library",
         "//validator/keymanager/remote:go_default_library",
+        "//validator/keymanager/remote-web3signer:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_google_uuid//:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
