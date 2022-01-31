@@ -301,7 +301,6 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, maliciouslyWithheldBlock, r, "Expected B to become the head")
 	})
-
 	t.Run("boosting necessary to sandwich attack", func(t *testing.T) {
 		// Boosting necessary to sandwich attack.
 		// Objects:

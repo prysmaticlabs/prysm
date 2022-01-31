@@ -36,9 +36,6 @@ func Run(t *testing.T, config string, fork int) {
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
-				if folder.Name() != "new_finalized_slot_is_justified_checkpoint_ancestor" {
-					t.Skip("skipping")
-				}
 				ctx := context.Background()
 				preStepsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 				require.NoError(t, err)

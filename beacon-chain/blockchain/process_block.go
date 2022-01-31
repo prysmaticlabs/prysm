@@ -180,6 +180,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if newFinalized {
 		s.store.SetPrevFinalizedCheckpt(finalized)
 		s.store.SetFinalizedCheckpt(postState.FinalizedCheckpoint())
+		s.store.SetPrevJustifiedCheckpt(justified)
+		s.store.SetJustifiedCheckpt(postState.CurrentJustifiedCheckpoint())
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))

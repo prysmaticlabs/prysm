@@ -124,7 +124,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	newStateRoot := newHeadBlock.Block().StateRoot()
 	if bytesutil.ToBytes32(newHeadBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
 		log.WithFields(logrus.Fields{
-			"NewSlot": fmt.Sprintf("%d", newHeadSlot),
+			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
 		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)

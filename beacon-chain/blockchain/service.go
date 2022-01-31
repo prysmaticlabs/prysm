@@ -63,7 +63,6 @@ type Service struct {
 	justifiedBalances     *stateBalanceCache
 	wsVerifier            *WeakSubjectivityVerifier
 	store                 *store.Store
-	time                  time.Time
 }
 
 // config options for the service.
@@ -84,7 +83,6 @@ type config struct {
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	FinalizedStateAtStartUp state.BeaconState
-	time                    time.Time
 }
 
 // NewService instantiates a new block service instance that will
@@ -180,12 +178,10 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get justified checkpoint")
 	}
-
 	finalized, err := s.cfg.BeaconDB.FinalizedCheckpoint(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint")
 	}
-
 	s.store = store.New(justified, finalized)
 
 	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
@@ -443,7 +439,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 
 	// Finalized checkpoint at genesis is a zero hash.
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
-
 	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
 	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
