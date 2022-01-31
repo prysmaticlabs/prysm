@@ -141,7 +141,9 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 	duration := time.Since(start)
 	if err != nil {
 		signRequestDurationSeconds.WithLabelValues(req.Method, "error").Observe(duration.Seconds())
-		return resp, errors.Wrap(err, "failed to execute json request")
+		err = errors.Wrap(err, "failed to execute json request")
+		tracing.AnnotateError(span, err)
+		return resp, err
 	} else {
 		signRequestDurationSeconds.WithLabelValues(req.Method, strconv.Itoa(resp.StatusCode)).Observe(duration.Seconds())
 	}
