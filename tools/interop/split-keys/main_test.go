@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 )
 
 const testMnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
@@ -64,7 +64,7 @@ func Test_spreadKeysAcrossImportedWallets(t *testing.T) {
 	// key per wallet stored on disk.
 	numWallets := 5
 	keysPerWallet := 1
-	err := spreadKeysAcrossLocalWallets(
+	err := spreadKeysAcrossImportedWallets(
 		testPubKeys,
 		testPrivKeys,
 		numWallets,
@@ -77,11 +77,11 @@ func Test_spreadKeysAcrossImportedWallets(t *testing.T) {
 	for i := 0; i < numWallets; i++ {
 		w, err := wallet.OpenWallet(ctx, &wallet.Config{
 			WalletDir:      filepath.Join(tmpDir, fmt.Sprintf("wallet_%d", i)),
-			KeymanagerKind: keymanager.Local,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: walletPassword,
 		})
 		require.NoError(t, err)
-		km, err := local.NewKeymanager(ctx, &local.SetupConfig{
+		km, err := imported.NewKeymanager(ctx, &imported.SetupConfig{
 			Wallet: w,
 		})
 		require.NoError(t, err)

@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
 )
@@ -62,7 +62,7 @@ func main() {
 	}
 
 	keysPerWallet := len(privKeys) / *numberOfWalletsFlag
-	if err := spreadKeysAcrossLocalWallets(
+	if err := spreadKeysAcrossImportedWallets(
 		pubKeys,
 		privKeys,
 		*numberOfWalletsFlag,
@@ -113,7 +113,7 @@ func generateKeysFromMnemonicList(mnemonicListFile *bufio.Scanner, keysPerMnemon
 	return
 }
 
-func spreadKeysAcrossLocalWallets(
+func spreadKeysAcrossImportedWallets(
 	pubKeys,
 	privKeys [][]byte,
 	numWallets,
@@ -125,10 +125,10 @@ func spreadKeysAcrossLocalWallets(
 	for i := 0; i < numWallets; i++ {
 		w := wallet.New(&wallet.Config{
 			WalletDir:      path.Join(walletOutputDir, fmt.Sprintf("wallet_%d", i)),
-			KeymanagerKind: keymanager.Local,
+			KeymanagerKind: keymanager.Imported,
 			WalletPassword: walletPassword,
 		})
-		km, err := local.NewKeymanager(ctx, &local.SetupConfig{
+		km, err := imported.NewKeymanager(ctx, &imported.SetupConfig{
 			Wallet: w,
 		})
 		if err != nil {

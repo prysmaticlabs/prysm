@@ -19,6 +19,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//testing/endtoend:__subpackages__",
         "//testing/slasher/simulator:__pkg__",
+        "//testing/spectest:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/altair:go_default_library",
