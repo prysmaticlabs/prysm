@@ -16,7 +16,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		jsonPayload := map[string]interface{}{
 			"timestamp":             1,
 			"random":                foo[:],
-			"suggestedFeeRecipient": bar[:],
+			"suggestedFeeRecipient": bar,
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
