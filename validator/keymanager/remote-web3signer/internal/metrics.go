@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	signRequestTimeElapse = promauto.NewHistogramVec(
+	signRequestDurationSeconds = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "client_request_duration_seconds",
+			Name:    "remote_web3signer_internal_client_request_duration_seconds",
 			Help:    "Time (in seconds) spent doing client HTTP requests",
 			Buckets: prometheus.DefBuckets,
 		},

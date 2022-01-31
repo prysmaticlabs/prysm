@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strconv"
 	"time"
@@ -121,33 +122,33 @@ func (client *ApiClient) GetServerStatus(ctx context.Context) (string, error) {
 func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
 	ctx, span := trace.StartSpan(ctx, "remote_web3signer.client.doRequest")
 	defer span.End()
-	b, err := io.ReadAll(body)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read body for request")
-	}
 	span.AddAttributes(
 		trace.StringAttribute("httpMethod", httpMethod),
 		trace.StringAttribute("fullPath", fullPath),
-		trace.StringAttribute("body", string(b)),
+		trace.StringAttribute("hasBody", fmt.Sprintf("%v", body != nil)),
 	)
 	req, err := http.NewRequestWithContext(ctx, httpMethod, fullPath, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, failed to create new Post Request Object")
 	}
 	req.Header.Set("Content-Type", "application/json")
+	requestDump, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		return nil, err
+	}
 	start := time.Now()
 	resp, err := client.RestClient.Do(req)
 	duration := time.Since(start)
 	if err != nil {
-		signRequestTimeElapse.WithLabelValues(req.Method, "error").Observe(duration.Seconds())
+		signRequestDurationSeconds.WithLabelValues(req.Method, "error").Observe(duration.Seconds())
 		return resp, errors.Wrap(err, "failed to execute json request")
 	} else {
-		signRequestTimeElapse.WithLabelValues(req.Method, strconv.Itoa(resp.StatusCode)).Observe(duration.Seconds())
+		signRequestDurationSeconds.WithLabelValues(req.Method, strconv.Itoa(resp.StatusCode)).Observe(duration.Seconds())
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
-		return nil, fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request Body: %s, Full Response: %v", fullPath, string(b), resp)
+		return nil, fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request: %s, Full Response: %v", fullPath, string(requestDump), resp)
 	} else if resp.StatusCode == http.StatusBadRequest {
-		return nil, fmt.Errorf("bad request format, Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", fullPath, string(b), resp)
+		return nil, fmt.Errorf("bad request format, Signing Request URL: %v, Signing Request: %v, Full Response: %v", fullPath, string(requestDump), resp)
 	}
 	return resp, err
 }
