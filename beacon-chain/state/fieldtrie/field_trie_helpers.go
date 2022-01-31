@@ -71,8 +71,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 		if !ok {
 			rVal, ok := elements.(*customtypes.BlockRoots)
 			if !ok {
-				return nil, errors.Errorf("Wanted type of %v but got %v",
-					reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
+				return nil, errors.Errorf("Incorrect type used for block roots")
 			}
 			roots := make([][]byte, len(rVal))
 			for i, r := range rVal {
@@ -87,8 +86,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 		if !ok {
 			rVal, ok := elements.(*customtypes.StateRoots)
 			if !ok {
-				return nil, errors.Errorf("Wanted type of %v but got %v",
-					reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
+				return nil, errors.Errorf("Incorrect type used for state roots")
 			}
 			roots := make([][]byte, len(rVal))
 			for i, r := range rVal {
@@ -103,8 +101,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 		if !ok {
 			mVal, ok := elements.(*customtypes.RandaoMixes)
 			if !ok {
-				return nil, errors.Errorf("Wanted type of %v but got %v",
-					reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
+				return nil, errors.Errorf("Incorrect type used for randao mixes")
 			}
 			mixes := make([][]byte, len(mVal))
 			for i, r := range mVal {
