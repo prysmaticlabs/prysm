@@ -23,6 +23,21 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// UpdateHeadWithBalances updates the beacon state head after getting justified balanced from cache.
+func (s *Service) UpdateHeadWithBalances(ctx context.Context) error {
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
+		return errors.New("no justified checkpoint")
+	}
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
+		return errors.Wrap(err, msg)
+	}
+
+	return s.updateHead(ctx, balances)
+}
+
 // This defines the current chain service's view of head.
 type head struct {
 	slot  types.Slot              // current head slot.
@@ -36,21 +51,6 @@ type head struct {
 func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateHead")
 	defer span.End()
-
-	// To get the proper head update, a node first checks its best justified
-	// can become justified. This is designed to prevent bounce attack and
-	// ensure head gets its best justified info.
-	bestJustified := s.store.BestJustifiedCheckpt()
-	if bestJustified == nil {
-		return errNilBestJustifiedInStore
-	}
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
-	}
-	if bestJustified.Epoch > justified.Epoch {
-		s.store.SetJustifiedCheckpt(bestJustified)
-	}
 
 	// Get head from the fork choice service.
 	f := s.store.FinalizedCheckpt()
