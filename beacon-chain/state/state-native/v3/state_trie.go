@@ -111,7 +111,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (*BeaconState, er
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Merge.
+	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Bellatrix.
 	state.StateCount.Inc()
 	return b, nil
 }
@@ -233,7 +233,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "BeaconStateMerge.HashTreeRoot")
+	_, span := trace.StartSpan(ctx, "BeaconStateBellatrix.HashTreeRoot")
 	defer span.End()
 
 	b.lock.Lock()
