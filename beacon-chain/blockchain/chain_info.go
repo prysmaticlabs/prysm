@@ -110,6 +110,7 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 // BestJustifiedCheckpt returns the best justified checkpoint from store.
 func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
 	cp := s.store.BestJustifiedCheckpt()
+	// If there is no best justified checkpoint, return the checkpoint with root as zeros to be used for genesis cases.
 	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}

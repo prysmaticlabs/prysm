@@ -116,9 +116,6 @@ func Run(t *testing.T, config string, fork int) {
 					if step.Check != nil {
 						require.NoError(t, service.UpdateHeadWithBalances(ctx))
 						c := step.Check
-						//if c.Time != nil {
-						//	require.Equal(t, uint64(*c.Time), uint64(time.Now().Unix()))
-						//}
 						if c.Head != nil {
 							r, err := service.HeadRoot(ctx)
 							require.NoError(t, err)
