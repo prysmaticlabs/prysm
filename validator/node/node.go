@@ -40,7 +40,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
 	validatorMiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
@@ -180,7 +180,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
 		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-		keyManager, err = imported.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
+		keyManager, err = local.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
 		if err != nil {
 			return errors.Wrap(err, "could not generate interop keys")
 		}

@@ -17,7 +17,7 @@ import (
 	accountsprompt "github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -52,9 +52,9 @@ var (
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
-		keymanager.Imported: "Imported Wallet (Recommended)",
-		keymanager.Derived:  "HD Wallet",
-		keymanager.Remote:   "Remote Signing Wallet (Advanced)",
+		keymanager.Local:   "Imported Wallet (Recommended)",
+		keymanager.Derived: "HD Wallet",
+		keymanager.Remote:  "Remote Signing Wallet (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {
@@ -258,8 +258,8 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 	var km keymanager.IKeymanager
 	var err error
 	switch w.KeymanagerKind() {
-	case keymanager.Imported:
-		km, err = imported.NewKeymanager(ctx, &imported.SetupConfig{
+	case keymanager.Local:
+		km, err = local.NewKeymanager(ctx, &local.SetupConfig{
 			Wallet:           w,
 			ListenForChanges: cfg.ListenForChanges,
 		})

@@ -1,4 +1,5 @@
 load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_tool_library")
 
 go_library(
     name = "go_default_library",
@@ -12,6 +13,21 @@ go_library(
         "@org_golang_x_tools//go/analysis:go_default_library",
         "@org_golang_x_tools//go/analysis/passes/inspect:go_default_library",
         "@org_golang_x_tools//go/ast/inspector:go_default_library",
+    ],
+)
+
+go_tool_library(
+    name = "go_tool_library",
+    srcs = [
+        "analyzer.go",
+        "ineffassign.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/tools/analyzers/ineffassign",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@org_golang_x_tools//go/analysis:go_tool_library",
+        "@org_golang_x_tools//go/analysis/passes/inspect:go_tool_library",
+        "@org_golang_x_tools//go/ast/inspector:go_tool_library",
     ],
 )
 
