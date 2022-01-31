@@ -38,7 +38,7 @@ func TestTips_UpdateTipsWithoutOverlap(t *testing.T) {
 
 	require.NoError(t, db.UpdateValidatedTips(ctx, oldTips))
 
-	// create a new overlapping tips to add
+	// create a new non-overlapping tips to add
 	newTips := make(map[[32]byte]types.Slot)
 	newTips[[32]byte{'D'}] = types.Slot(4)
 	newTips[[32]byte{'E'}] = types.Slot(5)

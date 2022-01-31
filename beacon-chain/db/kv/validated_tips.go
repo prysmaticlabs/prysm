@@ -46,7 +46,7 @@ func (s *Store) UpdateValidatedTips(ctx context.Context, newVals map[[32]byte]ty
 		bkt := tx.Bucket(validatedTips)
 
 		// Delete keys that are present and not in the new set.
-		for k, _ := range oldVals {
+		for k := range oldVals {
 			if _, ok := newVals[k]; !ok {
 				deleteErr := bkt.Delete(k[:])
 				if deleteErr != nil {
