@@ -84,5 +84,9 @@ go_test(
     srcs = [
         "json_marshal_unmarshal_test.go",
     ],
+    deps = [
+        "//encoding/bytesutil:go_default_library",
+        "//testing/require:go_default_library",
+	],
     embed = [":go_default_library"],
 )
