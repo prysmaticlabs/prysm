@@ -1,4 +1,4 @@
-package v1
+package v1_test
 
 import (
 	"reflect"
@@ -6,6 +6,8 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+	mock "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/mock"
 )
 
 func TestGetAggregateAndProofSignRequest(t *testing.T) {
@@ -16,22 +18,22 @@ func TestGetAggregateAndProofSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *AggregateAndProofSignRequest
+		want    *v1.AggregateAndProofSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("AGGREGATE_AND_PROOF"),
+				request:               mock.GetMockSignRequest("AGGREGATE_AND_PROOF"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockAggregateAndProofSignRequest(),
+			want:    mock.MockAggregateAndProofSignRequest(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetAggregateAndProofSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetAggregateAndProofSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAggregateAndProofSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -51,22 +53,22 @@ func TestGetAggregationSlotSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *AggregationSlotSignRequest
+		want    *v1.AggregationSlotSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("AGGREGATION_SLOT"),
+				request:               mock.GetMockSignRequest("AGGREGATION_SLOT"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockAggregationSlotSignRequest(),
+			want:    mock.MockAggregationSlotSignRequest(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetAggregationSlotSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetAggregationSlotSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAggregationSlotSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -86,21 +88,21 @@ func TestGetAttestationSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *AttestationSignRequest
+		want    *v1.AttestationSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("ATTESTATION"),
+				request:               mock.GetMockSignRequest("ATTESTATION"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want: MockAttestationSignRequest(),
+			want: mock.MockAttestationSignRequest(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetAttestationSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetAttestationSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAttestationSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -120,22 +122,22 @@ func TestGetBlockSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *BlockSignRequest
+		want    *v1.BlockSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("BLOCK"),
+				request:               mock.GetMockSignRequest("BLOCK"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockBlockSignRequest(),
+			want:    mock.MockBlockSignRequest(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetBlockSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetBlockSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlockSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -155,22 +157,22 @@ func TestGetBlockV2AltairSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *BlockV2AltairSignRequest
+		want    *v1.BlockV2AltairSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("BLOCK_V2"),
+				request:               mock.GetMockSignRequest("BLOCK_V2"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockBlockV2AltairSignRequest(),
+			want:    mock.MockBlockV2AltairSignRequest(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetBlockV2AltairSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetBlockV2AltairSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlockV2AltairSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -190,22 +192,22 @@ func TestGetRandaoRevealSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *RandaoRevealSignRequest
+		want    *v1.RandaoRevealSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("RANDAO_REVEAL"),
+				request:               mock.GetMockSignRequest("RANDAO_REVEAL"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockRandaoRevealSignRequest(),
+			want:    mock.MockRandaoRevealSignRequest(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetRandaoRevealSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetRandaoRevealSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetRandaoRevealSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -225,22 +227,22 @@ func TestGetSyncCommitteeContributionAndProofSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *SyncCommitteeContributionAndProofSignRequest
+		want    *v1.SyncCommitteeContributionAndProofSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"),
+				request:               mock.GetMockSignRequest("SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockSyncCommitteeContributionAndProofSignRequest(),
+			want:    mock.MockSyncCommitteeContributionAndProofSignRequest(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetSyncCommitteeContributionAndProofSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetSyncCommitteeContributionAndProofSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetSyncCommitteeContributionAndProofSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -260,22 +262,22 @@ func TestGetSyncCommitteeMessageSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *SyncCommitteeMessageSignRequest
+		want    *v1.SyncCommitteeMessageSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("SYNC_COMMITTEE_MESSAGE"),
+				request:               mock.GetMockSignRequest("SYNC_COMMITTEE_MESSAGE"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockSyncCommitteeMessageSignRequest(),
+			want:    mock.MockSyncCommitteeMessageSignRequest(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetSyncCommitteeMessageSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetSyncCommitteeMessageSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetSyncCommitteeMessageSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -295,22 +297,22 @@ func TestGetSyncCommitteeSelectionProofSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *SyncCommitteeSelectionProofSignRequest
+		want    *v1.SyncCommitteeSelectionProofSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("SYNC_COMMITTEE_SELECTION_PROOF"),
+				request:               mock.GetMockSignRequest("SYNC_COMMITTEE_SELECTION_PROOF"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockSyncCommitteeSelectionProofSignRequest(),
+			want:    mock.MockSyncCommitteeSelectionProofSignRequest(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetSyncCommitteeSelectionProofSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetSyncCommitteeSelectionProofSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetSyncCommitteeSelectionProofSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -330,22 +332,22 @@ func TestGetVoluntaryExitSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *VoluntaryExitSignRequest
+		want    *v1.VoluntaryExitSignRequest
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				request:               GetMockSignRequest("VOLUNTARY_EXIT"),
+				request:               mock.GetMockSignRequest("VOLUNTARY_EXIT"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockVoluntaryExitSignRequest(),
+			want:    mock.MockVoluntaryExitSignRequest(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetVoluntaryExitSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetVoluntaryExitSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetVoluntaryExitSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -267,6 +267,25 @@ var (
 		Usage: "/path/to/ca.crt for establishing a secure, TLS gRPC connection to a remote signer server",
 		Value: "",
 	}
+	// Web3SignerURLFlag defines the URL for a web3signer to connect to.
+	// example:--validators-external-signer-url=http://localhost:9000
+	// web3signer documentation can be found in Consensys' web3signer project docs
+	Web3SignerURLFlag = &cli.StringFlag{
+		Name:  "validators-external-signer-url",
+		Usage: "URL for consensys' web3signer software to use with the Prysm validator client",
+		Value: "",
+	}
+
+	// Web3SignerPublicValidatorKeysFlag defines a comma-separated list of hex string public keys or external url for web3signer to use for validator signing.
+	// example with external url: --validators-external-signer-public-keys= https://web3signer.com/api/v1/eth2/publicKeys
+	// example with public key: --validators-external-signer-public-keys=0xa99a...e44c,0xb89b...4a0b
+	// web3signer documentation can be found in Consensys' web3signer project docs```
+	Web3SignerPublicValidatorKeysFlag = &cli.StringFlag{
+		Name:  "validators-external-signer-public-keys",
+		Usage: "comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer",
+		Value: "",
+	}
+
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
 		Name:  "keymanager-kind",

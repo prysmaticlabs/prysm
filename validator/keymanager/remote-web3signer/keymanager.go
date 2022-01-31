@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
@@ -36,17 +37,18 @@ type SetupConfig struct {
 
 // Keymanager defines the web3signer keymanager.
 type Keymanager struct {
-	client                httpSignerClient
+	client                internal.HttpSignerClient
 	genesisValidatorsRoot []byte
 	publicKeysURL         string
 	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
+	validator             *validator.Validate
 }
 
 // NewKeymanager instantiates a new web3signer key manager.
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
-	if cfg.BaseEndpoint == "" || len(cfg.GenesisValidatorsRoot) == 0 {
-		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %v", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
+	if cfg.BaseEndpoint == "" || !bytesutil.NonZeroRoot(cfg.GenesisValidatorsRoot) {
+		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
 	}
 	if cfg.PublicKeysURL != "" && len(cfg.ProvidedPublicKeys) != 0 {
 		return nil, errors.New("Either a provided list of public keys or a URL to a list of public keys must be provided, but not both")
@@ -54,16 +56,17 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if cfg.PublicKeysURL == "" && len(cfg.ProvidedPublicKeys) == 0 {
 		return nil, errors.New("no valid public key options provided")
 	}
-	client, err := newApiClient(cfg.BaseEndpoint)
+	client, err := internal.NewApiClient(cfg.BaseEndpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create apiClient")
 	}
 	return &Keymanager{
-		client:                httpSignerClient(client),
+		client:                internal.HttpSignerClient(client),
 		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
 		accountsChangedFeed:   new(event.Feed),
 		publicKeysURL:         cfg.PublicKeysURL,
 		providedPublicKeys:    cfg.ProvidedPublicKeys,
+		validator:             validator.New(),
 	}, nil
 }
 
@@ -83,21 +86,19 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldpa
 
 // Sign signs the message by using a remote web3signer server.
 func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
-	signRequest, err := getSignRequestJson(request, km.genesisValidatorsRoot)
+	signRequest, err := getSignRequestJson(ctx, km.validator, request, km.genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
-
 	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), signRequest)
-
 }
 
 // getSignRequestJson returns a json request based on the SignRequest type.
-func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (SignRequestJson, error) {
+func getSignRequestJson(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (internal.SignRequestJson, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}
-	if len(genesisValidatorsRoot) != fieldparams.RootLength {
+	if !bytesutil.NonZeroRoot(genesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid genesis validators root length, genesis root: %v", genesisValidatorsRoot)
 	}
 	switch request.Object.(type) {
@@ -106,10 +107,16 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		if err != nil {
 			return nil, err
 		}
+		if err = validator.StructCtx(ctx, bockSignRequest); err != nil {
+			return nil, err
+		}
 		return json.Marshal(bockSignRequest)
 	case *validatorpb.SignRequest_AttestationData:
 		attestationSignRequest, err := v1.GetAttestationSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, attestationSignRequest); err != nil {
 			return nil, err
 		}
 		return json.Marshal(attestationSignRequest)
@@ -118,10 +125,16 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		if err != nil {
 			return nil, err
 		}
+		if err = validator.StructCtx(ctx, aggregateAndProofSignRequest); err != nil {
+			return nil, err
+		}
 		return json.Marshal(aggregateAndProofSignRequest)
 	case *validatorpb.SignRequest_Slot:
 		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, aggregationSlotSignRequest); err != nil {
 			return nil, err
 		}
 		return json.Marshal(aggregationSlotSignRequest)
@@ -130,8 +143,12 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		if err != nil {
 			return nil, err
 		}
+		if err = validator.StructCtx(ctx, blocv2AltairSignRequest); err != nil {
+			return nil, err
+		}
 		return json.Marshal(blocv2AltairSignRequest)
-	// TODO(#10053): Need to add support for Bellatrix blocks.
+	// TODO(#10053): Need to add support for merge blocks.
+
 	/*
 		case *validatorpb.SignRequest_BlockV3:
 		return "BLOCK_V3", nil
@@ -148,10 +165,16 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		if err != nil {
 			return nil, err
 		}
+		if err = validator.StructCtx(ctx, randaoRevealSignRequest); err != nil {
+			return nil, err
+		}
 		return json.Marshal(randaoRevealSignRequest)
 	case *validatorpb.SignRequest_Exit:
 		voluntaryExitRequest, err := v1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, voluntaryExitRequest); err != nil {
 			return nil, err
 		}
 		return json.Marshal(voluntaryExitRequest)
@@ -160,16 +183,25 @@ func getSignRequestJson(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		if err != nil {
 			return nil, err
 		}
+		if err = validator.StructCtx(ctx, syncCommitteeMessageRequest); err != nil {
+			return nil, err
+		}
 		return json.Marshal(syncCommitteeMessageRequest)
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
 		syncCommitteeSelectionProofRequest, err := v1.GetSyncCommitteeSelectionProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
+		if err = validator.StructCtx(ctx, syncCommitteeSelectionProofRequest); err != nil {
+			return nil, err
+		}
 		return json.Marshal(syncCommitteeSelectionProofRequest)
 	case *validatorpb.SignRequest_ContributionAndProof:
 		contributionAndProofRequest, err := v1.GetSyncCommitteeContributionAndProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, contributionAndProofRequest); err != nil {
 			return nil, err
 		}
 		return json.Marshal(contributionAndProofRequest)
@@ -186,28 +218,4 @@ func (*Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription
 	return event.NewSubscription(func(i <-chan struct{}) error {
 		return nil
 	})
-}
-
-// UnmarshalConfigFile attempts to JSON unmarshal a keymanager
-// config file into a SetupConfig struct.
-func UnmarshalConfigFile(r io.ReadCloser) (*SetupConfig, error) {
-	enc, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read config")
-	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			log.Errorf("Could not close keymanager config file: %v", err)
-		}
-	}()
-	config := &SetupConfig{}
-	if err := json.Unmarshal(enc, config); err != nil {
-		return nil, errors.Wrap(err, "could not JSON unmarshal")
-	}
-	return config, nil
-}
-
-// MarshalConfigFile for the keymanager.
-func MarshalConfigFile(_ context.Context, config *SetupConfig) ([]byte, error) {
-	return json.MarshalIndent(config, "", "\t")
 }

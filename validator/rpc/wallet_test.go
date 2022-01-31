@@ -20,7 +20,9 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
@@ -30,12 +32,31 @@ import (
 const strongPass = "29384283xasjasd32%%&*@*#*"
 
 func TestServer_CreateWallet_Imported(t *testing.T) {
+	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
-	ctx := context.Background()
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
+		validatorService:      vs,
 	}
 	req := &pb.CreateWalletRequest{
 		Keymanager:     pb.KeymanagerKind_IMPORTED,
@@ -44,7 +65,7 @@ func TestServer_CreateWallet_Imported(t *testing.T) {
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
 	// where a directory already exists
 	require.NoError(t, os.RemoveAll(defaultWalletPath))
-	_, err := s.CreateWallet(ctx, req)
+	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
 
 	importReq := &pb.ImportAccountsRequest{
@@ -301,7 +322,14 @@ func TestServer_WalletConfig(t *testing.T) {
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 	s.wallet = w
-	s.keymanager = km
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
+	s.validatorService = vs
 	resp, err := s.WalletConfig(ctx, &empty.Empty{})
 	require.NoError(t, err)
 
@@ -326,8 +354,15 @@ func TestServer_ImportAccounts_FailedPreconditions(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	ss := &Server{
-		keymanager: km,
+		validatorService: vs,
 	}
 	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{})
 	assert.ErrorContains(t, "No wallet initialized", err)
@@ -361,10 +396,17 @@ func TestServer_ImportAccounts_OK(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	ss := &Server{
-		keymanager:            km,
 		wallet:                w,
 		walletInitializedFeed: new(event.Feed),
+		validatorService:      vs,
 	}
 
 	// Create 3 keystores.
@@ -457,11 +499,19 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:            km,
 		wallet:                w,
 		walletDir:             defaultWalletPath,
 		walletInitializedFeed: new(event.Feed),
+		validatorService:      vs,
 	}
 	// First we import accounts into the wallet.
 	encryptor := keystorev4.New()
@@ -492,7 +542,16 @@ func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [
 		KeystoresPassword: strongPass,
 	})
 	require.NoError(t, err)
-	s.keymanager, err = s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	ikm, err := s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	newVS, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: s.wallet,
+		Validator: &mock.MockValidator{
+			Km: ikm,
+		},
+	})
+	require.NoError(t, err)
+	s.validatorService = newVS
 	require.NoError(t, err)
 	return s, pubKeys
 }
