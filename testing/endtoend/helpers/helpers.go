@@ -48,7 +48,9 @@ func DeleteAndCreateFile(tmpPath, fileName string) (*os.File, error) {
 			return nil, err
 		}
 	}
+
 	newFile, err := os.Create(filepath.Clean(path.Join(tmpPath, fileName)))
+
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +178,9 @@ func writeURLRespAtPath(url, fp string) error {
 	if err != nil {
 		return err
 	}
+
 	file, err := os.Create(filepath.Clean(fp))
+
 	if err != nil {
 		return err
 	}

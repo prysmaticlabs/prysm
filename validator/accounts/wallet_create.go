@@ -18,16 +18,18 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/urfave/cli/v2"
 )
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
 type CreateWalletConfig struct {
-	SkipMnemonicConfirm  bool
-	NumAccounts          int
-	RemoteKeymanagerOpts *remote.KeymanagerOpts
-	WalletCfg            *wallet.Config
-	Mnemonic25thWord     string
+	SkipMnemonicConfirm   bool
+	NumAccounts           int
+	RemoteKeymanagerOpts  *remote.KeymanagerOpts
+	Web3SignerSetupConfig *remote_web3signer.SetupConfig
+	WalletCfg             *wallet.Config
+	Mnemonic25thWord      string
 }
 
 // CreateAndSaveWalletCli from user input with a desired keymanager. If a
@@ -73,6 +75,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		if err = createLocalKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
+		// TODO(#9883) - Remove this when we have a better way to handle this. should be safe to use for now.
 		km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 		if err != nil {
 			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
@@ -116,6 +119,8 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
 		)
+	case keymanager.Web3Signer:
+		return nil, errors.New("web3signer keymanager does not require persistent wallets.")
 	default:
 		return nil, errors.Wrapf(err, errKeymanagerNotSupported, w.KeymanagerKind())
 	}
@@ -193,6 +198,9 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		}
 		createWalletConfig.RemoteKeymanagerOpts = opts
 	}
+	if keymanagerKind == keymanager.Web3Signer {
+		return nil, errors.New("web3signer keymanager does not require persistent wallets.")
+	}
 	return createWalletConfig, nil
 }
 
@@ -260,6 +268,7 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 			wallet.KeymanagerKindSelections[keymanager.Local],
 			wallet.KeymanagerKindSelections[keymanager.Derived],
 			wallet.KeymanagerKindSelections[keymanager.Remote],
+			wallet.KeymanagerKindSelections[keymanager.Web3Signer],
 		},
 	}
 	selection, _, err := promptSelect.Run()

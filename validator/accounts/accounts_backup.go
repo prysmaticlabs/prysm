@@ -48,9 +48,10 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
-	if w.KeymanagerKind() == keymanager.Remote {
+	// TODO(#9883) - Remove this when we have a better way to handle this.
+	if w.KeymanagerKind() == keymanager.Remote || w.KeymanagerKind() == keymanager.Web3Signer {
 		return errors.New(
-			"remote wallets cannot backup accounts",
+			"remote and web3signer wallets cannot backup accounts",
 		)
 	}
 	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
@@ -115,6 +116,8 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		}
 	case keymanager.Remote:
 		return errors.New("backing up keys is not supported for a remote keymanager")
+	case keymanager.Web3Signer:
+		return errors.New("backing up keys is not supported for a web3signer keymanager")
 	default:
 		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
 	}

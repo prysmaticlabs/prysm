@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -18,16 +17,19 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+<<<<<<< HEAD
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+=======
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+>>>>>>> develop
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -53,22 +55,24 @@ type ValidatorService struct {
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
 	logDutyCountDown      bool
+	interopKeysConfig     *imported.InteropKeymanagerConfig
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
 	maxCallRecvMsgSize    int
-	walletInitializedFeed *event.Feed
 	cancel                context.CancelFunc
-	db                    db.Database
+	walletInitializedFeed *event.Feed
+	wallet                *wallet.Wallet
+	graffitiStruct        *graffiti.Graffiti
 	dataDir               string
 	withCert              string
 	endpoint              string
-	validator             iface.Validator
 	ctx                   context.Context
-	keyManager            keymanager.IKeymanager
+	validator             iface.Validator
+	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
-	graffitiStruct        *graffiti.Graffiti
+	web3SignerConfig      *remote_web3signer.SetupConfig
 }
 
 // Config for the validator service.
@@ -77,19 +81,21 @@ type Config struct {
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	LogDutyCountDown           bool
+	InteropKeysConfig          *imported.InteropKeymanagerConfig
+	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
-	GrpcRetryDelay             time.Duration
 	GrpcMaxCallRecvMsgSizeFlag int
-	Endpoint                   string
+	GrpcRetryDelay             time.Duration
+	GraffitiStruct             *graffiti.Graffiti
 	Validator                  iface.Validator
 	ValDB                      db.Database
-	KeyManager                 keymanager.IKeymanager
-	GraffitiFlag               string
 	CertFlag                   string
 	DataDir                    string
 	GrpcHeadersFlag            string
-	GraffitiStruct             *graffiti.Graffiti
+	GraffitiFlag               string
+	Endpoint                   string
+	Web3SignerConfig           *remote_web3signer.SetupConfig
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -103,7 +109,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		withCert:              cfg.CertFlag,
 		dataDir:               cfg.DataDir,
 		graffiti:              []byte(cfg.GraffitiFlag),
-		keyManager:            cfg.KeyManager,
 		logValidatorBalances:  cfg.LogValidatorBalances,
 		emitAccountMetrics:    cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
@@ -112,10 +117,13 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
 		validator:             cfg.Validator,
 		db:                    cfg.ValDB,
+		wallet:                cfg.Wallet,
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		useWeb:                cfg.UseWeb,
+		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
+		web3SignerConfig:      cfg.Web3SignerConfig,
 	}, nil
 }
 
@@ -177,7 +185,6 @@ func (v *ValidatorService) Start() {
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		slashingProtectionClient:       ethpb.NewSlasherClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
-		keyManager:                     v.keyManager,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -188,12 +195,15 @@ func (v *ValidatorService) Start() {
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
 		useWeb:                         v.useWeb,
+		interopKeysConfig:              v.interopKeysConfig,
+		wallet:                         v.wallet,
 		walletInitializedFeed:          v.walletInitializedFeed,
 		blockFeed:                      new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
+		Web3SignerConfig:               v.web3SignerConfig,
 	}
 	// To resolve a race condition at startup due to the interface
 	// nature of the abstracted block type. We initialize
@@ -207,7 +217,6 @@ func (v *ValidatorService) Start() {
 
 	v.validator = valStruct
 	go run(v.ctx, v.validator)
-	go v.recheckKeys(v.ctx)
 }
 
 // Stop the validator service.
@@ -228,36 +237,13 @@ func (v *ValidatorService) Status() error {
 	return nil
 }
 
-func (v *ValidatorService) recheckKeys(ctx context.Context) {
-	var validatingKeys [][fieldparams.BLSPubkeyLength]byte
-	var err error
-	if v.useWeb {
-		initializedChan := make(chan *wallet.Wallet)
-		sub := v.walletInitializedFeed.Subscribe(initializedChan)
-		cleanup := sub.Unsubscribe
-		defer cleanup()
-		w := <-initializedChan
-		keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
-		if err != nil {
-			// log.Fatalf will prevent defer from being called
-			cleanup()
-			log.Fatalf("Could not read keymanager for wallet: %v", err)
-		}
-		v.keyManager = keyManager
-	}
-	validatingKeys, err = v.keyManager.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		log.WithError(err).Debug("Could not fetch validating keys")
-	}
-	if err := v.db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
-		log.WithError(err).Debug("Could not update public keys buckets")
-	}
-	go recheckValidatingKeysBucket(ctx, v.db, v.keyManager)
-	for _, key := range validatingKeys {
-		log.WithField(
-			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
-		).Info("Validating for public key")
-	}
+// UseInteropKeys returns the useInteropKeys flag.
+func (v *ValidatorService) InteropKeysConfig() *imported.InteropKeymanagerConfig {
+	return v.interopKeysConfig
+}
+
+func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
+	return v.validator.Keymanager()
 }
 
 // ConstructDialOptions constructs a list of grpc dial options
@@ -330,6 +316,7 @@ func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, err
 	nc := ethpb.NewNodeClient(v.conn)
 	return nc.GetGenesis(ctx, &emptypb.Empty{})
 }
+<<<<<<< HEAD
 
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
@@ -359,3 +346,5 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 		}
 	}
 }
+=======
+>>>>>>> develop

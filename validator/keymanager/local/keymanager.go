@@ -95,7 +95,15 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	return k, nil
 }
 
-// NewInteropKeymanager instantiates a new local keymanager with the deterministically generated interop keys.
+// InteropKeymanagerConfig is used on validator launch to initialize the keymanager.
+// InteropKeys are used for testing purposes.
+type InteropKeymanagerConfig struct {
+	Offset           uint64
+	NumValidatorKeys uint64
+}
+
+// NewInteropKeymanager instantiates a new imported keymanager with the deterministically generated interop keys.
+// InteropKeys are used for testing purposes.
 func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
 		accountsChangedFeed: new(event.Feed),
