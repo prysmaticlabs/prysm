@@ -23,6 +23,9 @@ import (
 // ListAccounts allows retrieval of validating keys and their petnames
 // for a user's wallet via RPC.
 func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) (*pb.ListAccountsResponse, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
+	}
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Wallet not yet initialized")
 	}
@@ -30,7 +33,11 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
-	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, err
+	}
+	keys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -71,17 +78,23 @@ func (s *Server) ListAccounts(ctx context.Context, req *pb.ListAccountsRequest) 
 func (s *Server) BackupAccounts(
 	ctx context.Context, req *pb.BackupAccountsRequest,
 ) (*pb.BackupAccountsResponse, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
+	}
 	if req.PublicKeys == nil || len(req.PublicKeys) < 1 {
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to backup")
 	}
 	if req.BackupPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Backup password cannot be empty")
 	}
-	if s.wallet == nil || s.keymanager == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet nor keymanager found")
+
+	if s.wallet == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
-		return nil, status.Error(codes.FailedPrecondition, "Only HD or imported wallets can backup accounts")
+	var err error
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, err
 	}
 	pubKeys := make([]bls.PublicKey, len(req.PublicKeys))
 	for i, key := range req.PublicKeys {
@@ -92,27 +105,20 @@ func (s *Server) BackupAccounts(
 		pubKeys[i] = pubKey
 	}
 
-	var err error
 	var keystoresToBackup []*keymanager.Keystore
-	switch s.wallet.KeymanagerKind() {
-	case keymanager.Imported:
-		km, ok := s.keymanager.(*imported.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
-		}
+	switch km := km.(type) {
+	case *imported.Keymanager:
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not backup accounts for imported keymanager: %v", err)
 		}
-	case keymanager.Derived:
-		km, ok := s.keymanager.(*derived.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
-		}
+	case *derived.Keymanager:
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not backup accounts for derived keymanager: %v", err)
 		}
+	default:
+		return nil, status.Error(codes.FailedPrecondition, "Only HD or imported wallets can backup accounts")
 	}
 	if len(keystoresToBackup) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No keystores to backup")
@@ -154,18 +160,22 @@ func (s *Server) BackupAccounts(
 func (s *Server) DeleteAccounts(
 	ctx context.Context, req *pb.DeleteAccountsRequest,
 ) (*pb.DeleteAccountsResponse, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
+	}
 	if req.PublicKeysToDelete == nil || len(req.PublicKeysToDelete) < 1 {
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
 	}
-	if s.wallet == nil || s.keymanager == nil {
+	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
-		return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, err
 	}
 	if err := accounts.DeleteAccount(ctx, &accounts.Config{
 		Wallet:           s.wallet,
-		Keymanager:       s.keymanager,
+		Keymanager:       km,
 		DeletePublicKeys: req.PublicKeysToDelete,
 	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete public keys: %v", err)
@@ -179,16 +189,18 @@ func (s *Server) DeleteAccounts(
 func (s *Server) VoluntaryExit(
 	ctx context.Context, req *pb.VoluntaryExitRequest,
 ) (*pb.VoluntaryExitResponse, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
+	}
 	if len(req.PublicKeys) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
 	}
-	if s.wallet == nil || s.keymanager == nil {
+	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Imported && s.wallet.KeymanagerKind() != keymanager.Derived {
-		return nil, status.Error(
-			codes.FailedPrecondition, "Only Imported or Derived wallets can submit voluntary exits",
-		)
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, err
 	}
 	formattedKeys := make([]string, len(req.PublicKeys))
 	for i, key := range req.PublicKeys {
@@ -197,7 +209,7 @@ func (s *Server) VoluntaryExit(
 	cfg := accounts.PerformExitCfg{
 		ValidatorClient:  s.beaconNodeValidatorClient,
 		NodeClient:       s.beaconNodeClient,
-		Keymanager:       s.keymanager,
+		Keymanager:       km,
 		RawPubKeys:       req.PublicKeys,
 		FormattedPubKeys: formattedKeys,
 	}

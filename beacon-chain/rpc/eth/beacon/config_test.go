@@ -130,7 +130,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 97, len(resp.Data))
+	assert.Equal(t, 99, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -337,6 +337,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "32", v)
 		case "INACTIVITY_PENALTY_QUOTIENT_BELLATRIX":
 			assert.Equal(t, "16777216", v)
+		case "PROPOSER_SCORE_BOOST":
+			assert.Equal(t, "70", v)
+		case "INTERVALS_PER_SLOT":
+			assert.Equal(t, "3", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
