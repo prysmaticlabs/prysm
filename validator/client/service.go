@@ -24,12 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-<<<<<<< HEAD
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-=======
 	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
->>>>>>> develop
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -316,35 +312,3 @@ func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, err
 	nc := ethpb.NewNodeClient(v.conn)
 	return nc.GetGenesis(ctx, &emptypb.Empty{})
 }
-<<<<<<< HEAD
-
-// to accounts changes in the keymanager, then updates those keys'
-// buckets in bolt DB if a bucket for a key does not exist.
-func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keymanager.IKeymanager) {
-	importedKeymanager, ok := km.(*local.Keymanager)
-	if !ok {
-		return
-	}
-	validatingPubKeysChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
-	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
-	defer func() {
-		sub.Unsubscribe()
-		close(validatingPubKeysChan)
-	}()
-	for {
-		select {
-		case keys := <-validatingPubKeysChan:
-			if err := valDB.UpdatePublicKeysBuckets(keys); err != nil {
-				log.WithError(err).Debug("Could not update public keys buckets")
-				continue
-			}
-		case <-ctx.Done():
-			return
-		case <-sub.Err():
-			log.Error("Subscriber closed, exiting goroutine")
-			return
-		}
-	}
-}
-=======
->>>>>>> develop
