@@ -107,6 +107,17 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 	return ethpb.CopyCheckpoint(cp)
 }
 
+// BestJustifiedCheckpt returns the best justified checkpoint from store.
+func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.store.BestJustifiedCheckpt()
+	// If there is no best justified checkpoint, return the checkpoint with root as zeros to be used for genesis cases.
+	if cp == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	}
+
+	return ethpb.CopyCheckpoint(cp)
+}
+
 // HeadSlot returns the slot of the head of the chain.
 func (s *Service) HeadSlot() types.Slot {
 	s.headLock.RLock()
@@ -315,4 +326,9 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 		return [fieldparams.BLSPubkeyLength]byte{}, err
 	}
 	return v.PublicKey(), nil
+}
+
+// SetGenesisTime sets the genesis time of beacon chain.
+func (s *Service) SetGenesisTime(t time.Time) {
+	s.genesisTime = t
 }
