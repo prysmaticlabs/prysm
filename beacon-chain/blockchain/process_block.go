@@ -160,11 +160,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
 	if newFinalized {
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
-		}
 		s.store.SetPrevFinalizedCheckpt(finalized)
 		s.store.SetFinalizedCheckpt(postState.FinalizedCheckpoint())
+		s.store.SetPrevJustifiedCheckpt(justified)
+		s.store.SetJustifiedCheckpt(postState.CurrentJustifiedCheckpoint())
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))

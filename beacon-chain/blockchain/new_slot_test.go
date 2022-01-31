@@ -90,7 +90,7 @@ func TestService_newSlot(t *testing.T) {
 		store.SetBestJustifiedCheckpt(test.args.bestJustified)
 		service.store = store
 
-		require.NoError(t, service.newSlot(ctx, test.args.slot))
+		require.NoError(t, service.NewSlot(ctx, test.args.slot))
 		if test.args.shouldEqual {
 			require.DeepSSZEqual(t, service.store.BestJustifiedCheckpt(), service.store.JustifiedCheckpt())
 		} else {
