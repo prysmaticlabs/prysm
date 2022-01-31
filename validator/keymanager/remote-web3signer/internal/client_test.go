@@ -125,6 +125,23 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	assert.EqualValues(t, "[162 181 170 173 156 110 254 254 123 185 177 36 58 4 52 4 243 54 41 55 207 182 179 24 51 146 152 51 23 63 71 102 48 234 44 254 176 217 221 241 95 151 202 134 133 148 136 32]", fmt.Sprintf("%v", resp[0][:]))
 }
 
+func TestClient_GetPublicKeys_EndoingError(t *testing.T) {
+	// public keys are returned hex encoded with 0x
+	json := `["a2b5aaad9c6efefe7bb9b1243a043404f3362937c","fb6b31833929833173f476630ea2cfe","b0d9ddf15fca8685948820"]`
+	// create a new reader with that JSON
+	r := ioutil.NopCloser(bytes.NewReader([]byte(json)))
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 200,
+		Body:       r,
+	}}
+	u, err := url.Parse("example.com")
+	assert.NoError(t, err)
+	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
+	resp, err := cl.GetPublicKeys(context.Background(), "example.com/api/publickeys")
+	assert.Equal(t, err.Error(), "failed to decode from Hex from the following public key index locations: 0, 1, 2, ")
+	assert.Nil(t, resp)
+}
+
 // TODO: not really in use, should be revisited
 func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
 	mock := &mockTransport{mockResponse: &http.Response{
