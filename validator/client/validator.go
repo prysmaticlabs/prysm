@@ -36,7 +36,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -77,7 +77,7 @@ type validator struct {
 	highestValidSlot                   types.Slot
 	genesisTime                        uint64
 	blockFeed                          *event.Feed
-	interopKeysConfig                  *imported.InteropKeymanagerConfig
+	interopKeysConfig                  *local.InteropKeymanagerConfig
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
 	node                               ethpb.NodeClient
@@ -120,7 +120,7 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 		v.keyManager = km
 	} else {
 		if v.interopKeysConfig != nil {
-			keyManager, err := imported.NewInteropKeymanager(ctx, v.interopKeysConfig.Offset, v.interopKeysConfig.NumValidatorKeys)
+			keyManager, err := local.NewInteropKeymanager(ctx, v.interopKeysConfig.Offset, v.interopKeysConfig.NumValidatorKeys)
 			if err != nil {
 				return errors.Wrap(err, "could not generate interop keys for key manager")
 			}

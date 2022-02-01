@@ -1,4 +1,4 @@
-package imported
+package local
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestImportedKeymanager_ExtractKeystores(t *testing.T) {
+func TestLocalKeymanager_ExtractKeystores(t *testing.T) {
 	secretKeysCache = make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
 	dr := &Keymanager{}
 	validatingKeys := make([]bls.SecretKey, 10)
