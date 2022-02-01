@@ -90,4 +90,40 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, foo[:], payloadPb.BlockHash)
 		require.DeepEqual(t, [][]byte{foo[:]}, payloadPb.Transactions)
 	})
+	t.Run("execution payload header", func(t *testing.T) {
+		jsonPayload := map[string]interface{}{
+			"parentHash":       foo[:],
+			"feeRecipient":     bar,
+			"stateRoot":        foo[:],
+			"recipientsRoot":   foo[:],
+			"logsBloom":        baz,
+			"random":           foo[:],
+			"blockNumber":      1,
+			"gasLimit":         1,
+			"gasUsed":          1,
+			"timestamp":        1,
+			"extraData":        foo[:],
+			"baseFeePerGas":    foo[:],
+			"blockHash":        foo[:],
+			"transactionsRoot": foo[:],
+		}
+		enc, err := json.Marshal(jsonPayload)
+		require.NoError(t, err)
+		payloadPb := &ExecutionPayloadHeader{}
+		require.NoError(t, json.Unmarshal(enc, payloadPb))
+		require.DeepEqual(t, foo[:], payloadPb.ParentHash)
+		require.DeepEqual(t, bar, payloadPb.FeeRecipient)
+		require.DeepEqual(t, foo[:], payloadPb.StateRoot)
+		require.DeepEqual(t, foo[:], payloadPb.RecipientsRoot)
+		require.DeepEqual(t, baz, payloadPb.LogsBloom)
+		require.DeepEqual(t, foo[:], payloadPb.Random)
+		require.DeepEqual(t, uint64(1), payloadPb.BlockNumber)
+		require.DeepEqual(t, uint64(1), payloadPb.GasLimit)
+		require.DeepEqual(t, uint64(1), payloadPb.GasUsed)
+		require.DeepEqual(t, uint64(1), payloadPb.Timestamp)
+		require.DeepEqual(t, foo[:], payloadPb.ExtraData)
+		require.DeepEqual(t, foo[:], payloadPb.BaseFeePerGas)
+		require.DeepEqual(t, foo[:], payloadPb.BlockHash)
+		require.DeepEqual(t, foo[:], payloadPb.TransactionsRoot)
+	})
 }

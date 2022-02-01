@@ -17,6 +17,16 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 }
 
 // MarshalJSON --
+func (e *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(e)
+}
+
+// UnmarshalJSON --
+func (e *ExecutionPayloadHeader) UnmarshalJSON(enc []byte) error {
+	return protojson.Unmarshal(enc, e)
+}
+
+// MarshalJSON --
 func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
 	return protojson.Marshal(p)
 }
