@@ -1,21 +1,20 @@
 package htr
 
-/*
-#include <hashtree.h>
-*/
 import "C"
 import (
 	"fmt"
-	"unsafe"
 
+	"github.com/prysmaticlabs/gohashtree"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	mathutil "github.com/prysmaticlabs/prysm/math"
 )
 
 func VectorizedSha256(arrayList [][32]byte) [][32]byte {
-	sPtr := unsafe.Pointer(&arrayList[0])
 	dList := make([][32]byte, len(arrayList)/2)
-	C.sha256_8_avx2((*C.uchar)(unsafe.Pointer(&dList[0])), (*C.uchar)(sPtr), C.ulong(len(arrayList)/2))
+	err := gohashtree.Hash(dList, arrayList)
+	if err != nil {
+		panic(err)
+	}
 	return dList
 }
 
@@ -58,14 +57,14 @@ func SinglePassRoot(arrayList [][32]byte, depth int) [32]byte {
 			elemSum++
 		}
 	}
-	sPtr := unsafe.Pointer(&resList[0])
-	C.sha256_8_avx2((*C.uchar)(unsafe.Pointer(&resList[numOfElems])), (*C.uchar)(sPtr), C.ulong(len(resList)/2))
+	//sPtr := unsafe.Pointer(&resList[0])
+	//C.sha256_8_avx2((*C.uchar)(unsafe.Pointer(&resList[numOfElems])), (*C.uchar)(sPtr), C.ulong(len(resList)/2))
 	return resList[len(resList)-1]
 }
 
 func Hash2Chunks(arrayList [][32]byte) [32]byte {
-	sPtr := unsafe.Pointer(&arrayList[0])
+	//sPtr := unsafe.Pointer(&arrayList[0])
 	dList := [32]byte{}
-	C.sha256_1_avx((*C.uchar)(unsafe.Pointer(&dList)), (*C.uchar)(sPtr), C.ulong(len(arrayList)/2))
+	//C.sha256_1_avx((*C.uchar)(unsafe.Pointer(&dList)), (*C.uchar)(sPtr), C.ulong(len(arrayList)/2))
 	return dList
 }

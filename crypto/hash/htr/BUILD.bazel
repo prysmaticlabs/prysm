@@ -2,46 +2,13 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "hashtree.go",
-        "hashtree.h",
-        "sha256_avx_x1.S",
-        "sha256_avx_x4.S",
-        "sha256_avx_x8.S",
-    ],
-    cdeps = [":htr"],
+    srcs = ["hashtree.go"],
     cgo = True,
     importpath = "github.com/prysmaticlabs/prysm/crypto/hash/htr",
     visibility = ["//visibility:public"],
-)
-
-cc_library(
-    name = "htr",
-    srcs = [
-        "hashtree.h",
-    ],
-    hdrs = [
-        "hashtree.h",
-    ],
-    # strip_include_prefix = "bindings",
-    visibility = ["//visibility:public"],
     deps = [
-        ":asm",
+        "//container/trie:go_default_library",
+        "//math:go_default_library",
+        "@com_github_prysmaticlabs_gohashtree//:go_default_library",
     ],
-)
-
-cc_library(
-    name = "asm",
-    srcs = [
-        "sha256_avx_x1.S",
-        "sha256_avx_x4.S",
-        "sha256_avx_x8.S",
-    ],
-    copts = [
-        "-g -Wall -Werror",
-    ],
-    linkopts = [
-        "-L .",
-    ],
-    linkstatic = True,
 )
