@@ -200,7 +200,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		peers = append(peers, connectPeerHavingBlocks(t, p2p, chain1, finalizedSlot, p2p.Peers()))
 	}
 
-	blockBatchLimit := flags.Get().BlockBatchLimit * 2
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit) * 2
 	pidInd := 0
 	for i := uint64(1); i < uint64(len(chain1)); i += blockBatchLimit {
 		req := &ethpb.BeaconBlocksByRangeRequest{
