@@ -1362,7 +1362,7 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 	require.NotNil(t, km)
 }
 
-func TestValidator_WaitForKeymanagerInitialization_web(t *testing.T) {
+func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	root := make([]byte, 32)
