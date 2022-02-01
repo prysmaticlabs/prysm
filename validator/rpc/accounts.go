@@ -205,11 +205,6 @@ func (s *Server) VoluntaryExit(
 	if err != nil {
 		return nil, err
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Local && s.wallet.KeymanagerKind() != keymanager.Derived {
-		return nil, status.Error(
-			codes.FailedPrecondition, "Only Imported or Derived wallets can submit voluntary exits",
-		)
-	}
 	formattedKeys := make([]string, len(req.PublicKeys))
 	for i, key := range req.PublicKeys {
 		formattedKeys[i] = fmt.Sprintf("%#x", key)
