@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"go.opencensus.io/trace"
 )
@@ -227,6 +228,13 @@ func (s *Store) JustifiedEpoch() types.Epoch {
 // FinalizedEpoch of fork choice store.
 func (s *Store) FinalizedEpoch() types.Epoch {
 	return s.finalizedEpoch
+}
+
+// ProposerBoost of fork choice store.
+func (s *Store) ProposerBoost() [fieldparams.RootLength]byte {
+	s.proposerBoostLock.RLock()
+	defer s.proposerBoostLock.RUnlock()
+	return s.proposerBoostRoot
 }
 
 // Nodes of fork choice store.
