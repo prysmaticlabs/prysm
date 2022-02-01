@@ -163,13 +163,13 @@ func (s *Service) Resync() error {
 }
 
 func (s *Service) waitForMinimumPeers() {
-	required := uint64(params.BeaconConfig().MaxPeersToSync)
+	required := params.BeaconConfig().MaxPeersToSync
 	if flags.Get().MinimumSyncPeers < required {
 		required = flags.Get().MinimumSyncPeers
 	}
 	for {
 		_, peers := s.cfg.P2P.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, s.cfg.Chain.FinalizedCheckpt().Epoch)
-		if uint64(len(peers)) >= required {
+		if len(peers) >= required {
 			break
 		}
 		log.WithFields(logrus.Fields{
