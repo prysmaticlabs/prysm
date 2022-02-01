@@ -19,7 +19,8 @@ func TestService_headSyncCommitteeFetcher_Errors(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	c := &Service{
 		cfg: &config{
-			StateGen: stategen.New(beaconDB, false),
+			StateGen:                    stategen.New(beaconDB, false),
+			SyncCommitteeHeadStateCache: cache.NewSyncCommitteeHeadState(false),
 		},
 	}
 	c.head = &head{}
@@ -37,7 +38,8 @@ func TestService_HeadDomainFetcher_Errors(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	c := &Service{
 		cfg: &config{
-			StateGen: stategen.New(beaconDB, false),
+			StateGen:                    stategen.New(beaconDB, false),
+			SyncCommitteeHeadStateCache: cache.NewSyncCommitteeHeadState(false),
 		},
 	}
 	c.head = &head{}
@@ -53,7 +55,7 @@ func TestService_HeadDomainFetcher_Errors(t *testing.T) {
 
 func TestService_HeadSyncCommitteeIndices(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
-	c := &Service{}
+	c := &Service{cfg: &config{SyncCommitteeHeadStateCache: cache.NewSyncCommitteeHeadState(false)}}
 	c.head = &head{state: s}
 
 	// Current period
@@ -76,7 +78,7 @@ func TestService_HeadSyncCommitteeIndices(t *testing.T) {
 
 func TestService_headCurrentSyncCommitteeIndices(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
-	c := &Service{}
+	c := &Service{cfg: &config{SyncCommitteeHeadStateCache: cache.NewSyncCommitteeHeadState(false)}}
 	c.head = &head{state: s}
 
 	// Process slot up to `EpochsPerSyncCommitteePeriod` so it can `ProcessSyncCommitteeUpdates`.
@@ -90,7 +92,7 @@ func TestService_headCurrentSyncCommitteeIndices(t *testing.T) {
 
 func TestService_headNextSyncCommitteeIndices(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
-	c := &Service{}
+	c := &Service{cfg: &config{SyncCommitteeHeadStateCache: cache.NewSyncCommitteeHeadState(false)}}
 	c.head = &head{state: s}
 
 	// Process slot up to `EpochsPerSyncCommitteePeriod` so it can `ProcessSyncCommitteeUpdates`.
@@ -104,7 +106,7 @@ func TestService_headNextSyncCommitteeIndices(t *testing.T) {
 
 func TestService_HeadSyncCommitteePubKeys(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
-	c := &Service{}
+	c := &Service{cfg: &config{SyncCommitteeHeadStateCache: cache.NewSyncCommitteeHeadState(false)}}
 	c.head = &head{state: s}
 
 	// Process slot up to 2 * `EpochsPerSyncCommitteePeriod` so it can run `ProcessSyncCommitteeUpdates` twice.
@@ -119,7 +121,7 @@ func TestService_HeadSyncCommitteePubKeys(t *testing.T) {
 
 func TestService_HeadSyncCommitteeDomain(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
-	c := &Service{}
+	c := &Service{cfg: &config{SyncCommitteeHeadStateCache: cache.NewSyncCommitteeHeadState(false)}}
 	c.head = &head{state: s}
 
 	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
@@ -133,7 +135,7 @@ func TestService_HeadSyncCommitteeDomain(t *testing.T) {
 
 func TestService_HeadSyncContributionProofDomain(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
-	c := &Service{}
+	c := &Service{cfg: &config{SyncCommitteeHeadStateCache: cache.NewSyncCommitteeHeadState(false)}}
 	c.head = &head{state: s}
 
 	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainContributionAndProof, s.GenesisValidatorRoot())
@@ -147,7 +149,7 @@ func TestService_HeadSyncContributionProofDomain(t *testing.T) {
 
 func TestService_HeadSyncSelectionProofDomain(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
-	c := &Service{}
+	c := &Service{cfg: &config{SyncCommitteeHeadStateCache: cache.NewSyncCommitteeHeadState(false)}}
 	c.head = &head{state: s}
 
 	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommitteeSelectionProof, s.GenesisValidatorRoot())
