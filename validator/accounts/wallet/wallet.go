@@ -18,7 +18,7 @@ import (
 	accountsprompt "github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
@@ -54,7 +54,7 @@ var (
 	)
 	// KeymanagerKindSelections as friendly text.
 	KeymanagerKindSelections = map[keymanager.Kind]string{
-		keymanager.Imported:   "Imported Wallet (Recommended)",
+		keymanager.Local:      "Imported Wallet (Recommended)",
 		keymanager.Derived:    "HD Wallet",
 		keymanager.Remote:     "Remote Signing Wallet (Advanced)",
 		keymanager.Web3Signer: "Consensys Web3Signer (Advanced)",
@@ -272,8 +272,8 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 	var km keymanager.IKeymanager
 	var err error
 	switch w.KeymanagerKind() {
-	case keymanager.Imported:
-		km, err = imported.NewKeymanager(ctx, &imported.SetupConfig{
+	case keymanager.Local:
+		km, err = local.NewKeymanager(ctx, &local.SetupConfig{
 			Wallet:           w,
 			ListenForChanges: cfg.ListenForChanges,
 		})
