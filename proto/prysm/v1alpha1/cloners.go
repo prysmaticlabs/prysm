@@ -2,6 +2,7 @@ package eth
 
 import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
 // CopyETH1Data copies the provided eth1data object.
@@ -422,12 +423,12 @@ func CopyBeaconBlockBodyBellatrix(body *BeaconBlockBodyBellatrix) *BeaconBlockBo
 }
 
 // CopyExecutionPayload copies the provided ApplicationPayload.
-func CopyExecutionPayload(payload *ExecutionPayload) *ExecutionPayload {
+func CopyExecutionPayload(payload *enginev1.ExecutionPayload) *enginev1.ExecutionPayload {
 	if payload == nil {
 		return nil
 	}
 
-	return &ExecutionPayload{
+	return &enginev1.ExecutionPayload{
 		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
