@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -51,7 +51,7 @@ type ValidatorService struct {
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
 	logDutyCountDown      bool
-	interopKeysConfig     *imported.InteropKeymanagerConfig
+	interopKeysConfig     *local.InteropKeymanagerConfig
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
@@ -77,7 +77,7 @@ type Config struct {
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	LogDutyCountDown           bool
-	InteropKeysConfig          *imported.InteropKeymanagerConfig
+	InteropKeysConfig          *local.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
 	GrpcRetriesFlag            uint
@@ -234,7 +234,7 @@ func (v *ValidatorService) Status() error {
 }
 
 // UseInteropKeys returns the useInteropKeys flag.
-func (v *ValidatorService) InteropKeysConfig() *imported.InteropKeymanagerConfig {
+func (v *ValidatorService) InteropKeysConfig() *local.InteropKeymanagerConfig {
 	return v.interopKeysConfig
 }
 
