@@ -1,10 +1,11 @@
-package enginev1
+package enginev1_test
 
 import (
 	"encoding/json"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -20,7 +21,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
-		payloadPb := &PayloadAttributes{}
+		payloadPb := &enginev1.PayloadAttributes{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, uint64(1), payloadPb.Timestamp)
 		require.DeepEqual(t, foo[:], payloadPb.Random)
@@ -34,7 +35,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
-		payloadPb := &PayloadStatus{}
+		payloadPb := &enginev1.PayloadStatus{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, "INVALID", payloadPb.Status.String())
 		require.DeepEqual(t, foo[:], payloadPb.LatestValidHash)
@@ -48,7 +49,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
-		payloadPb := &ForkchoiceState{}
+		payloadPb := &enginev1.ForkchoiceState{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, foo[:], payloadPb.HeadBlockHash)
 		require.DeepEqual(t, foo[:], payloadPb.SafeBlockHash)
@@ -73,7 +74,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
-		payloadPb := &ExecutionPayload{}
+		payloadPb := &enginev1.ExecutionPayload{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, foo[:], payloadPb.ParentHash)
 		require.DeepEqual(t, bar, payloadPb.FeeRecipient)
