@@ -46,7 +46,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}); err != nil {
 			return nil, err
 		}
-		keymanagerKind := pb.KeymanagerKind_LOCAL
+		keymanagerKind := pb.KeymanagerKind_IMPORTED
 		switch s.wallet.KeymanagerKind() {
 		case keymanager.Derived:
 			keymanagerKind = pb.KeymanagerKind_DERIVED
@@ -65,7 +65,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 	if err := prompt.ValidatePasswordInput(req.WalletPassword); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Password too weak: %v", err)
 	}
-	if req.Keymanager == pb.KeymanagerKind_LOCAL {
+	if req.Keymanager == pb.KeymanagerKind_IMPORTED {
 		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,

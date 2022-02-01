@@ -107,14 +107,10 @@ func (s *Server) BackupAccounts(
 
 	var keystoresToBackup []*keymanager.Keystore
 	switch km := km.(type) {
-	case keymanager.Local:
-		km, ok := s.keymanager.(*local.Keymanager)
-		if !ok {
-			return nil, status.Error(codes.FailedPrecondition, "Could not assert keymanager interface to concrete type")
-		}
+	case *local.Keymanager:
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not backup accounts for imported keymanager: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not backup accounts for local keymanager: %v", err)
 		}
 	case *derived.Keymanager:
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)

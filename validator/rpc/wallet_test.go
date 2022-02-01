@@ -110,7 +110,7 @@ func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 		walletDir:             defaultWalletPath,
 	}
 	req := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_LOCAL,
+		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: "", // Weak password, empty string
 	}
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
@@ -120,7 +120,7 @@ func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 	require.ErrorContains(t, "Password too weak", err)
 
 	req = &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_LOCAL,
+		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: "a", // Weak password, too short
 	}
 	_, err = s.CreateWallet(ctx, req)
