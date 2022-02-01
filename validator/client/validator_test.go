@@ -1390,7 +1390,7 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 
 }
 
-func TestValidator_WaitForKeymanagerInitialization_interop(t *testing.T) {
+func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	root := make([]byte, 32)
