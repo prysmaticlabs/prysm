@@ -81,10 +81,6 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	configureExecutionSetting(cliCtx)
-
-	assert.Equal(t, uint64(100), params.BeaconConfig().TerminalTotalDifficulty)
-	assert.Equal(t, common.HexToHash("0xA"), params.BeaconConfig().TerminalBlockHash)
-	assert.Equal(t, types.Epoch(200), params.BeaconConfig().TerminalBlockHashActivationEpoch)
 	assert.Equal(t, common.HexToAddress("0xB"), params.BeaconConfig().FeeRecipient)
 }
 
