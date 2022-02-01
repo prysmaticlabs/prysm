@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -113,6 +114,18 @@ func run(ctx context.Context, v iface.Validator) {
 	if err != nil {
 		log.Fatalf("Could not get keymanager: %v", err)
 	}
+	var validatingKeys [][fieldparams.BLSPubkeyLength]byte
+	validatingKeys, err = km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		log.WithError(err).Debug("Could not fetch validating keys")
+	}
+	db, err := v.DB()
+	if err != nil {
+		log.Fatalf("Could not get database: %v", err)
+	}
+	if err := db.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+		log.WithError(err).Debug("Could not update public keys buckets")
+	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
@@ -142,6 +155,13 @@ func run(ctx context.Context, v iface.Validator) {
 				err := v.WaitForActivation(ctx, accountsChangedChan)
 				if err != nil {
 					log.Fatalf("Could not wait for validator activation: %v", err)
+				}
+			}
+			_, ok := km.(*imported.Keymanager)
+			if ok {
+				if err := db.UpdatePublicKeysBuckets(newKeys); err != nil {
+					log.WithError(err).Debug("Could not update public keys buckets")
+					continue
 				}
 			}
 		case slot := <-v.NextSlot():

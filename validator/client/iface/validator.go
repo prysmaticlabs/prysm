@@ -7,6 +7,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -57,4 +58,5 @@ type Validator interface {
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
+	DB() (vdb.Database, error)
 }

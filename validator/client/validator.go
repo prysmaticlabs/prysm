@@ -136,7 +136,6 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 			v.keyManager = keyManager
 		}
 	}
-	recheckKeys(ctx, v.db, v.keyManager)
 	return nil
 }
 
@@ -158,55 +157,6 @@ func waitForWebWalletInitialization(ctx context.Context, walletInitializedEvent 
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return nil, nil
-		}
-	}
-}
-
-// recheckKeys checks if the validator has any keys that need to be rechecked.
-// the keymanager implements a subscription to push these updates to the validator.
-func recheckKeys(ctx context.Context, valDB vdb.Database, keyManager keymanager.IKeymanager) {
-	var validatingKeys [][fieldparams.BLSPubkeyLength]byte
-	var err error
-	validatingKeys, err = keyManager.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		log.WithError(err).Debug("Could not fetch validating keys")
-	}
-	if err := valDB.UpdatePublicKeysBuckets(validatingKeys); err != nil {
-		log.WithError(err).Debug("Could not update public keys buckets")
-	}
-	go recheckValidatingKeysBucket(ctx, valDB, keyManager)
-	for _, key := range validatingKeys {
-		log.WithField(
-			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
-		).Info("Validating for public key")
-	}
-}
-
-// to accounts changes in the keymanager, then updates those keys'
-// buckets in bolt DB if a bucket for a key does not exist.
-func recheckValidatingKeysBucket(ctx context.Context, valDB vdb.Database, km keymanager.IKeymanager) {
-	importedKeymanager, ok := km.(*imported.Keymanager)
-	if !ok {
-		return
-	}
-	validatingPubKeysChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
-	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
-	defer func() {
-		sub.Unsubscribe()
-		close(validatingPubKeysChan)
-	}()
-	for {
-		select {
-		case keys := <-validatingPubKeysChan:
-			if err := valDB.UpdatePublicKeysBuckets(keys); err != nil {
-				log.WithError(err).Debug("Could not update public keys buckets")
-				continue
-			}
-		case <-ctx.Done():
-			return
-		case <-sub.Err():
-			log.Error("Subscriber closed, exiting goroutine")
-			return
 		}
 	}
 }
@@ -735,6 +685,13 @@ func (v *validator) Keymanager() (keymanager.IKeymanager, error) {
 		return nil, errors.New("keymanager is not initialized")
 	}
 	return v.keyManager, nil
+}
+
+func (v *validator) DB() (vdb.Database, error) {
+	if v.db == nil {
+		return nil, errors.New("db is not initialized")
+	}
+	return v.db, nil
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot and committee,
