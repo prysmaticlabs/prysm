@@ -648,20 +648,20 @@ func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 
 func genPayload() *enginev1.ExecutionPayload {
 	return &enginev1.ExecutionPayload{
-		ParentHash:     bytes(),
-		FeeRecipient:   bytes(),
-		StateRoot:      bytes(),
-		RecipientsRoot: bytes(),
-		LogsBloom:      bytes(),
-		Random:         bytes(),
-		BlockNumber:    1,
-		GasLimit:       2,
-		GasUsed:        3,
-		Timestamp:      4,
-		ExtraData:      bytes(),
-		BaseFeePerGas:  bytes(),
-		BlockHash:      bytes(),
-		Transactions:   [][]byte{{'a'}, {'b'}, {'c'}},
+		ParentHash:    bytes(),
+		FeeRecipient:  bytes(),
+		StateRoot:     bytes(),
+		ReceiptsRoot:  bytes(),
+		LogsBloom:     bytes(),
+		Random:        bytes(),
+		BlockNumber:   1,
+		GasLimit:      2,
+		GasUsed:       3,
+		Timestamp:     4,
+		ExtraData:     bytes(),
+		BaseFeePerGas: bytes(),
+		BlockHash:     bytes(),
+		Transactions:  [][]byte{{'a'}, {'b'}, {'c'}},
 	}
 }
 

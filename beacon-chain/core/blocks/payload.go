@@ -186,7 +186,7 @@ func PayloadToHeader(payload *enginev1.ExecutionPayload) (*ethpb.ExecutionPayloa
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.RecipientsRoot),
+		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
 		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
 		Random:           bytesutil.SafeCopyBytes(payload.Random),
 		BlockNumber:      payload.BlockNumber,
@@ -210,7 +210,7 @@ func isEmptyPayload(p *enginev1.ExecutionPayload) bool {
 	if !bytes.Equal(p.StateRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(p.RecipientsRoot, make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(p.ReceiptsRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
 	if !bytes.Equal(p.LogsBloom, make([]byte, fieldparams.LogsBloomLength)) {

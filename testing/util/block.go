@@ -667,14 +667,14 @@ func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.B
 	}
 	if b.ExecutionPayload == nil {
 		b.ExecutionPayload = &enginev1.ExecutionPayload{
-			ParentHash:     make([]byte, 32),
-			FeeRecipient:   make([]byte, 20),
-			StateRoot:      make([]byte, 32),
-			RecipientsRoot: make([]byte, 32),
-			LogsBloom:      make([]byte, 256),
-			Random:         make([]byte, 32),
-			BaseFeePerGas:  make([]byte, 32),
-			BlockHash:      make([]byte, 32),
+			ParentHash:    make([]byte, 32),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, 32),
+			ReceiptsRoot:  make([]byte, 32),
+			LogsBloom:     make([]byte, 256),
+			Random:        make([]byte, 32),
+			BaseFeePerGas: make([]byte, 32),
+			BlockHash:     make([]byte, 32),
 		}
 	}
 	return b

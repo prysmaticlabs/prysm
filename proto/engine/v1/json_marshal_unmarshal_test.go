@@ -56,20 +56,20 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	})
 	t.Run("execution payload", func(t *testing.T) {
 		jsonPayload := map[string]interface{}{
-			"parentHash":     foo[:],
-			"feeRecipient":   bar,
-			"stateRoot":      foo[:],
-			"recipientsRoot": foo[:],
-			"logsBloom":      baz,
-			"random":         foo[:],
-			"blockNumber":    1,
-			"gasLimit":       1,
-			"gasUsed":        1,
-			"timestamp":      1,
-			"extraData":      foo[:],
-			"baseFeePerGas":  foo[:],
-			"blockHash":      foo[:],
-			"transactions":   [][]byte{foo[:]},
+			"parentHash":    foo[:],
+			"feeRecipient":  bar,
+			"stateRoot":     foo[:],
+			"receiptsRoot":  foo[:],
+			"logsBloom":     baz,
+			"random":        foo[:],
+			"blockNumber":   1,
+			"gasLimit":      1,
+			"gasUsed":       1,
+			"timestamp":     1,
+			"extraData":     foo[:],
+			"baseFeePerGas": foo[:],
+			"blockHash":     foo[:],
+			"transactions":  [][]byte{foo[:]},
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
@@ -78,7 +78,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, foo[:], payloadPb.ParentHash)
 		require.DeepEqual(t, bar, payloadPb.FeeRecipient)
 		require.DeepEqual(t, foo[:], payloadPb.StateRoot)
-		require.DeepEqual(t, foo[:], payloadPb.RecipientsRoot)
+		require.DeepEqual(t, foo[:], payloadPb.ReceiptsRoot)
 		require.DeepEqual(t, baz, payloadPb.LogsBloom)
 		require.DeepEqual(t, foo[:], payloadPb.Random)
 		require.DeepEqual(t, uint64(1), payloadPb.BlockNumber)

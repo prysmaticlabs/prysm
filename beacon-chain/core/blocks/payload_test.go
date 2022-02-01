@@ -226,7 +226,7 @@ func Test_MergeBlock(t *testing.T) {
 			name: "empty header, payload has receipt root",
 			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
-				p.RecipientsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				p.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
 			}(),
 			header: emptyPayloadHeader(),
@@ -585,7 +585,7 @@ func Test_PayloadToHeader(t *testing.T) {
 	p.ParentHash = b
 	p.FeeRecipient = b
 	p.StateRoot = b
-	p.RecipientsRoot = b
+	p.ReceiptsRoot = b
 	p.LogsBloom = b
 	p.Random = b
 	p.ExtraData = b
@@ -639,15 +639,15 @@ func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
 
 func emptyPayload() *enginev1.ExecutionPayload {
 	return &enginev1.ExecutionPayload{
-		ParentHash:     make([]byte, fieldparams.RootLength),
-		FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:      make([]byte, fieldparams.RootLength),
-		RecipientsRoot: make([]byte, fieldparams.RootLength),
-		LogsBloom:      make([]byte, fieldparams.LogsBloomLength),
-		Random:         make([]byte, fieldparams.RootLength),
-		BaseFeePerGas:  make([]byte, fieldparams.RootLength),
-		BlockHash:      make([]byte, fieldparams.RootLength),
-		Transactions:   make([][]byte, 0),
-		ExtraData:      make([]byte, 0),
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		Random:        make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		ExtraData:     make([]byte, 0),
 	}
 }
