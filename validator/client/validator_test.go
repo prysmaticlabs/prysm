@@ -1387,7 +1387,6 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	walletChan <- wallet.New(&wallet.Config{
 		KeymanagerKind: keymanager.Imported,
 	})
-
 }
 
 func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
