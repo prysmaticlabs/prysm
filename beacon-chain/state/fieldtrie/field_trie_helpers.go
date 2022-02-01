@@ -73,12 +73,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 			if !ok {
 				return nil, errors.Errorf("Incorrect type used for block roots")
 			}
-			roots := make([][]byte, len(rVal))
-			for i, r := range rVal {
-				tmp := r
-				roots[i] = tmp[:]
-			}
-			return handleByteArrays(roots, indices, convertAll)
+			return handle32ByteArrays(rVal[:], indices, convertAll)
 		}
 		return handleByteArrays(bVal, indices, convertAll)
 	case types.StateRoots:
@@ -88,12 +83,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 			if !ok {
 				return nil, errors.Errorf("Incorrect type used for state roots")
 			}
-			roots := make([][]byte, len(rVal))
-			for i, r := range rVal {
-				tmp := r
-				roots[i] = tmp[:]
-			}
-			return handleByteArrays(roots, indices, convertAll)
+			return handle32ByteArrays(rVal[:], indices, convertAll)
 		}
 		return handleByteArrays(bVal, indices, convertAll)
 	case types.RandaoMixes:
@@ -103,12 +93,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 			if !ok {
 				return nil, errors.Errorf("Incorrect type used for randao mixes")
 			}
-			mixes := make([][]byte, len(mVal))
-			for i, r := range mVal {
-				tmp := r
-				mixes[i] = tmp[:]
-			}
-			return handleByteArrays(mixes, indices, convertAll)
+			return handle32ByteArrays(mVal[:], indices, convertAll)
 		}
 		return handleByteArrays(bVal, indices, convertAll)
 	case types.Eth1DataVotes:
@@ -154,6 +139,33 @@ func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]by
 	rootCreator := func(input []byte) {
 		newRoot := bytesutil.ToBytes32(input)
 		roots = append(roots, newRoot)
+	}
+	if convertAll {
+		for i := range val {
+			rootCreator(val[i])
+		}
+		return roots, nil
+	}
+	if len(val) > 0 {
+		for _, idx := range indices {
+			if idx > uint64(len(val))-1 {
+				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
+			}
+			rootCreator(val[idx])
+		}
+	}
+	return roots, nil
+}
+
+// handle32ByteArrays computes and returns 32 byte arrays in a slice of root format.
+func handle32ByteArrays(val [][32]byte, indices []uint64, convertAll bool) ([][32]byte, error) {
+	length := len(indices)
+	if convertAll {
+		length = len(val)
+	}
+	roots := make([][32]byte, 0, length)
+	rootCreator := func(input [32]byte) {
+		roots = append(roots, input)
 	}
 	if convertAll {
 		for i := range val {
