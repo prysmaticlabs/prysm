@@ -90,6 +90,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
+	walletIntializedChannel            chan *wallet.Wallet
 }
 
 type validatorStatus struct {
@@ -109,9 +110,10 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to retrieve valid genesis validators root while initializing key manager")
 	}
+
 	if v.useWeb && v.wallet == nil {
 		// if wallet is not set, wait for it to be set through the UI
-		km, err := waitForWebWalletInitialization(ctx, v.walletInitializedFeed)
+		km, err := waitForWebWalletInitialization(ctx, v.walletInitializedFeed, v.walletIntializedChannel)
 		if err != nil {
 			return err
 		}
@@ -140,8 +142,11 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 }
 
 // subscribe to channel for when the wallet is initialized
-func waitForWebWalletInitialization(ctx context.Context, walletInitializedEvent *event.Feed) (keymanager.IKeymanager, error) {
-	walletChan := make(chan *wallet.Wallet)
+func waitForWebWalletInitialization(
+	ctx context.Context,
+	walletInitializedEvent *event.Feed,
+	walletChan chan *wallet.Wallet,
+) (keymanager.IKeymanager, error) {
 	sub := walletInitializedEvent.Subscribe(walletChan)
 	defer sub.Unsubscribe()
 	for {
