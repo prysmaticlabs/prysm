@@ -1,4 +1,4 @@
-package imported
+package local
 
 import (
 	"context"
@@ -31,13 +31,13 @@ var (
 const (
 	// KeystoreFileNameFormat exposes the filename the keystore should be formatted in.
 	KeystoreFileNameFormat = "keystore-%d.json"
-	// AccountsPath where all imported keymanager keystores are kept.
+	// AccountsPath where all local keymanager keystores are kept.
 	AccountsPath = "accounts"
 	// AccountsKeystoreFileName exposes the name of the keystore file.
 	AccountsKeystoreFileName = "all-accounts.keystore.json"
 )
 
-// Keymanager implementation for imported keystores utilizing EIP-2335.
+// Keymanager implementation for local keystores utilizing EIP-2335.
 type Keymanager struct {
 	wallet              iface.Wallet
 	accountsStore       *accountStore
@@ -75,7 +75,7 @@ func ResetCaches() {
 	lock.Unlock()
 }
 
-// NewKeymanager instantiates a new imported keymanager from configuration options.
+// NewKeymanager instantiates a new local keymanager from configuration options.
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
 		wallet:              cfg.Wallet,
@@ -134,7 +134,7 @@ func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BL
 	return km.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
-// ValidatingAccountNames for a imported keymanager.
+// ValidatingAccountNames for a local keymanager.
 func (_ *Keymanager) ValidatingAccountNames() ([]string, error) {
 	lock.RLock()
 	names := make([]string, len(orderedPublicKeys))
@@ -165,7 +165,7 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 	return nil
 }
 
-// FetchValidatingPublicKeys fetches the list of active public keys from the imported account keystores.
+// FetchValidatingPublicKeys fetches the list of active public keys from the local account keystores.
 func (_ *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	_, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
