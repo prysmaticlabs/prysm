@@ -143,7 +143,11 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 }
 
 // subscribe to channel for when the wallet is initialized
-func waitForWebWalletInitialization(ctx context.Context, walletInitializedEvent *event.Feed, walletChan chan *wallet.Wallet) (keymanager.IKeymanager, error) {
+func waitForWebWalletInitialization(
+	ctx context.Context,
+	walletInitializedEvent *event.Feed,
+	walletChan <-chan *wallet.Wallet,
+) (keymanager.IKeymanager, error) {
 	sub := walletInitializedEvent.Subscribe(walletChan)
 	defer sub.Unsubscribe()
 	for {
