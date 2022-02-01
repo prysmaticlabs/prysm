@@ -40,6 +40,13 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 	return &ForkChoice{store: s, balances: b, votes: v, syncedTips: st}
 }
 
+// SyncedTips returns the synced and validated tips from the fork choice store.
+func (f *ForkChoice) SyncedTips() map[[32]byte]types.Slot {
+	f.syncedTips.RLock()
+	defer f.syncedTips.RUnlock()
+	return f.syncedTips.validatedTips
+}
+
 // Head returns the head root from fork choice store.
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
 func (f *ForkChoice) Head(
