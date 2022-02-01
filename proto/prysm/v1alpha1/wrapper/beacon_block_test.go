@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -694,7 +695,7 @@ func TestBellatrixBeaconBlockBody_Proto(t *testing.T) {
 }
 
 func TestBellatrixBeaconBlockBody_ExecutionPayload(t *testing.T) {
-	payloads := &ethpb.ExecutionPayload{
+	payloads := &enginev1.ExecutionPayload{
 		BlockNumber: 100,
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{ExecutionPayload: payloads}
