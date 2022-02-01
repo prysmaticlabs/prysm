@@ -23,7 +23,7 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 	}
 	switch w.KeymanagerKind() {
 	case keymanager.Local:
-		return errors.New("not possible to edit imported keymanager configuration")
+		return errors.New("not possible to edit local keymanager configuration")
 	case keymanager.Derived:
 		return errors.New("derived keymanager is not yet supported")
 	case keymanager.Remote:
