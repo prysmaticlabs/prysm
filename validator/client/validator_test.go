@@ -29,7 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -1385,7 +1385,7 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	}()
 
 	walletChan <- wallet.New(&wallet.Config{
-		KeymanagerKind: keymanager.Imported,
+		KeymanagerKind: keymanager.Local,
 	})
 }
 
@@ -1399,7 +1399,7 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	v := validator{
 		db:     db,
 		useWeb: false,
-		interopKeysConfig: &imported.InteropKeymanagerConfig{
+		interopKeysConfig: &local.InteropKeymanagerConfig{
 			NumValidatorKeys: 2,
 			Offset:           1,
 		},
