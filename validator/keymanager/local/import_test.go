@@ -1,4 +1,4 @@
-package imported
+package local
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	}
 }
 
-func TestImportedKeymanager_NoDuplicates(t *testing.T) {
+func TestLocalKeymanager_NoDuplicates(t *testing.T) {
 	numKeys := 50
 	pubKeys := make([][]byte, numKeys)
 	privKeys := make([][]byte, numKeys)
@@ -93,7 +93,7 @@ func TestImportedKeymanager_NoDuplicates(t *testing.T) {
 	require.Equal(t, numKeys+1, len(dr.accountsStore.PrivateKeys))
 }
 
-func TestImportedKeymanager_ImportKeystores(t *testing.T) {
+func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 	ctx := context.Background()
 	// Setup the keymanager.
 	wallet := &mock.Wallet{
