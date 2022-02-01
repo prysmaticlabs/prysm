@@ -1377,7 +1377,7 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 		walletIntializedChannel: walletChan,
 	}
 	go func() {
-		err := v.WaitForKeymanagerInitialization(ctx)
+		err = v.WaitForKeymanagerInitialization(ctx)
 		require.NoError(t, err)
 		km, err := v.Keymanager()
 		require.NoError(t, err)
