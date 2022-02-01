@@ -26,7 +26,6 @@ go_library(
         "//proto/testing:__subpackages__",
         "//slasher:__subpackages__",
         "//testing:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//tools/blocktree:__pkg__",
         "//tools/pcli:__pkg__",
         "//validator/client:__pkg__",
@@ -64,6 +63,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//config/features:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",

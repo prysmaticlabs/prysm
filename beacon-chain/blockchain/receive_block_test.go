@@ -140,7 +140,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, err)
 			gRoot, err := gBlk.Block().HashTreeRoot()
 			require.NoError(t, err)
-			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+			s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
 			err = s.ReceiveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(tt.args.block), root)
@@ -178,7 +178,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	require.NoError(t, err)
 	gRoot, err := gBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
-	s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wg := sync.WaitGroup{}
@@ -257,7 +257,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 
 			gRoot, err := gBlk.Block().HashTreeRoot()
 			require.NoError(t, err)
-			s.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+			s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
 			blks := []block.SignedBeaconBlock{wrapper.WrappedPhase0SignedBeaconBlock(tt.args.block)}
@@ -295,7 +295,7 @@ func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
 	require.NoError(t, err)
 	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
-	s.finalizedCheckpt = &ethpb.Checkpoint{}
+	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{})
 
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
 	assert.LogsContain(t, hook, "Entering mode to save hot states in DB")
@@ -306,7 +306,7 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
-	s.finalizedCheckpt = &ethpb.Checkpoint{}
+	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{})
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
 	s.genesisTime = time.Now()
 
@@ -319,7 +319,7 @@ func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
-	s.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 10000000}
+	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 10000000})
 	s.genesisTime = time.Now()
 
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))

@@ -95,7 +95,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 		InactivityScores:            make([]uint64, numValidators),
 	}
 
-	newState, err := statealtair.InitializeFromProto(s)
+	newState, err := statealtair.InitializeFromProtoUnsafe(s)
 	if err != nil {
 		return nil, err
 	}

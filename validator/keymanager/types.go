@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -25,7 +26,7 @@ type KeysFetcher interface {
 
 // PublicKeysFetcher for validating public keys.
 type PublicKeysFetcher interface {
-	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
+	FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error)
 }
 
 // Signer allows signing messages using a validator private key.
@@ -47,7 +48,7 @@ type Deleter interface {
 
 // KeyChangeSubscriber allows subscribing to changes made to the underlying keys.
 type KeyChangeSubscriber interface {
-	SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription
+	SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription
 }
 
 // Keystore json file representation as a Go struct.
@@ -70,6 +71,8 @@ const (
 	Derived
 	// Remote keymanager capable of remote-signing data.
 	Remote
+	// Web3Signer keymanager capable of signing data using a remote signer called Web3Signer.
+	Web3Signer
 )
 
 // IncorrectPasswordErrMsg defines a common error string representing an EIP-2335
@@ -85,6 +88,8 @@ func (k Kind) String() string {
 		return "direct"
 	case Remote:
 		return "remote"
+	case Web3Signer:
+		return "web3signer"
 	default:
 		return fmt.Sprintf("%d", int(k))
 	}
@@ -99,6 +104,8 @@ func ParseKind(k string) (Kind, error) {
 		return Imported, nil
 	case "remote":
 		return Remote, nil
+	case "web3signer":
+		return Web3Signer, nil
 	default:
 		return 0, fmt.Errorf("%s is not an allowed keymanager", k)
 	}

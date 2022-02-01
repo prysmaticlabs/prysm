@@ -267,14 +267,14 @@ func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, v
 	baseRewardMultiplier := increment * factor / math.IntegerSquareRoot(bal.ActiveCurrentEpoch)
 	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 
-	// Modified in Altair and Merge.
+	// Modified in Altair and Bellatrix.
 	var inactivityDenominator uint64
 	bias := cfg.InactivityScoreBias
 	switch beaconState.Version() {
 	case version.Altair:
 		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientAltair
-	case version.Merge:
-		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientMerge
+	case version.Bellatrix:
+		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientBellatrix
 	default:
 		return nil, nil, errors.Errorf("invalid state type version: %T", beaconState.Version())
 	}

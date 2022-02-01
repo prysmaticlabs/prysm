@@ -29,6 +29,11 @@ func SignatureFromBytes(sig []byte) (Signature, error) {
 	return blst.SignatureFromBytes(sig)
 }
 
+// MultipleSignaturesFromBytes creates a slice of BLS signatures from a LittleEndian 2d-byte slice.
+func MultipleSignaturesFromBytes(sigs [][]byte) ([]Signature, error) {
+	return blst.MultipleSignaturesFromBytes(sigs)
+}
+
 // AggregatePublicKeys aggregates the provided raw public keys into a single key.
 func AggregatePublicKeys(pubs [][]byte) (PublicKey, error) {
 	return blst.AggregatePublicKeys(pubs)

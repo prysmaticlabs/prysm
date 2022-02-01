@@ -3,6 +3,7 @@ package components
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -23,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -133,8 +135,6 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
 		fmt.Sprintf("--%s=%s", flags.GraffitiFileFlag.Name, gFile),
-		fmt.Sprintf("--%s=%d", flags.InteropNumValidators.Name, validatorNum),
-		fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset),
 		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.ValidatorMetricsPort+index),
 		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.ValidatorGatewayPort+index),
 		fmt.Sprintf("--%s=localhost:%d", flags.BeaconRPCProviderFlag.Name, beaconRPCPort),
@@ -147,6 +147,25 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
 	if !v.config.UsePrysmShValidator {
 		args = append(args, features.E2EValidatorFlags...)
+	}
+	if v.config.UseWeb3RemoteSigner {
+		args = append(args, fmt.Sprintf("--%s=localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
+		// Write the pubkeys as comma seperated hex strings with 0x prefix.
+		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
+		_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
+		if err != nil {
+			return err
+		}
+		var hexPubs []string
+		for _, pub := range pubs {
+			hexPubs = append(hexPubs, "0x"+hex.EncodeToString(pub.Marshal()))
+		}
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexPubs, ",")))
+	} else {
+		// When not using remote key signer, use interop keys.
+		args = append(args,
+			fmt.Sprintf("--%s=%d", flags.InteropNumValidators.Name, validatorNum),
+			fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset))
 	}
 	args = append(args, config.ValidatorFlags...)
 

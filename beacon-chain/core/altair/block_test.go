@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -184,7 +185,7 @@ func TestProcessSyncCommittee_FilterSyncCommitteeVotes(t *testing.T) {
 
 	votedKeys, votedIndices, didntVoteIndices, err := altair.FilterSyncCommitteeVotes(beaconState, syncAggregate)
 	require.NoError(t, err)
-	votedMap := make(map[[48]byte]bool)
+	votedMap := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	for _, key := range votedKeys {
 		votedMap[bytesutil.ToBytes48(key.Marshal())] = true
 	}

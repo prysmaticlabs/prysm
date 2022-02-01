@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -32,7 +33,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 	require.Equal(t, len(proof), int(params.BeaconConfig().DepositContractTreeDepth)+1)
 	someRoot := [32]byte{1, 2, 3, 4}
 	someSig := [96]byte{1, 2, 3, 4}
-	someKey := [48]byte{1, 2, 3, 4}
+	someKey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3, 4}
 	dep := &ethpb.Deposit{
 		Proof: proof,
 		Data: &ethpb.Deposit_Data{
