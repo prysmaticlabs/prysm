@@ -15,10 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
 // BlockGenConfig is used to define the requested conditions
@@ -667,14 +667,14 @@ func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.B
 	}
 	if b.ExecutionPayload == nil {
 		b.ExecutionPayload = &enginev1.ExecutionPayload{
-			ParentHash:    make([]byte, 32),
-			FeeRecipient:  make([]byte, 20),
-			StateRoot:     make([]byte, 32),
-			RecipientsRoot:   make([]byte, 32),
-			LogsBloom:     make([]byte, 256),
-			Random:        make([]byte, 32),
-			BaseFeePerGas: make([]byte, 32),
-			BlockHash:     make([]byte, 32),
+			ParentHash:     make([]byte, 32),
+			FeeRecipient:   make([]byte, 20),
+			StateRoot:      make([]byte, 32),
+			RecipientsRoot: make([]byte, 32),
+			LogsBloom:      make([]byte, 256),
+			Random:         make([]byte, 32),
+			BaseFeePerGas:  make([]byte, 32),
+			BlockHash:      make([]byte, 32),
 		}
 	}
 	return b
