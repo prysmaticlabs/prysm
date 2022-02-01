@@ -23,18 +23,21 @@ func (s *Server) ListKeystores(
 	ctx context.Context, _ *empty.Empty,
 ) (*ethpbservice.ListKeystoresResponse, error) {
 	if !s.walletInitialized {
-		return nil, status.Error(codes.Internal, "Wallet not ready")
+		return nil, status.Error(codes.InvalidArgument, "prysm Wallet not initialized. Please create a new wallet.")
 	}
 	if s.validatorService == nil {
-		return nil, status.Error(codes.Internal, "Validator service not ready")
+		return nil, status.Error(codes.InvalidArgument, "validator service not ready. Please try again once validator is ready.")
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "could not get Prysm keymanager: %v", err)
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Derived || s.wallet.KeymanagerKind() != keymanager.Imported {
+		return nil, status.Errorf(codes.InvalidArgument, "prysm validator keys are not stored locally with this keymanager type.")
 	}
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not list keystores: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Could not retrieve keystores: %v", err)
 	}
 	keystoreResponse := make([]*ethpbservice.ListKeystoresResponse_Keystore, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
@@ -54,8 +57,9 @@ func (s *Server) ListKeystores(
 func (s *Server) ImportKeystores(
 	ctx context.Context, req *ethpbservice.ImportKeystoresRequest,
 ) (*ethpbservice.ImportKeystoresResponse, error) {
+	var err error
 	if !s.walletInitialized {
-		return nil, status.Error(codes.Internal, "Wallet not ready")
+		err = status.Error(codes.InvalidArgument, "Wallet not ready")
 	}
 	if s.validatorService == nil {
 		return nil, status.Error(codes.Internal, "Validator service not ready")
