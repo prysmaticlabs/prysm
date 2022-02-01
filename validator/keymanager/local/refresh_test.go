@@ -1,4 +1,4 @@
-package imported
+package local
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-func TestImportedKeymanager_reloadAccountsFromKeystore_MismatchedNumKeys(t *testing.T) {
+func TestLocalKeymanager_reloadAccountsFromKeystore_MismatchedNumKeys(t *testing.T) {
 	password := "Passw03rdz293**%#2"
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
@@ -46,7 +46,7 @@ func TestImportedKeymanager_reloadAccountsFromKeystore_MismatchedNumKeys(t *test
 	assert.ErrorContains(t, "do not match", err)
 }
 
-func TestImportedKeymanager_reloadAccountsFromKeystore(t *testing.T) {
+func TestLocalKeymanager_reloadAccountsFromKeystore(t *testing.T) {
 	password := "Passw03rdz293**%#2"
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
