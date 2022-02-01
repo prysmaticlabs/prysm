@@ -151,7 +151,7 @@ func ProcessSlotsUsingNextSlotCache(
 
 	// Since next slot cache only advances state by 1 slot,
 	// we check if there's more slots that need to process.
-	parentState, err = ProcessSlotsIfPossible(ctx, parentState, slot)
+	parentState, err = ProcessSlots(ctx, parentState, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slots")
 	}
