@@ -121,7 +121,7 @@ func (client *ApiClient) GetServerStatus(ctx context.Context) (string, error) {
 
 // doRequest is a utility method for requests.
 func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
-	ctx, span := trace.StartSpan(ctx, "remote_web3signer.client.doRequest")
+	ctx, span := trace.StartSpan(ctx, "remote_web3signer.Client.doRequest")
 	defer span.End()
 	span.AddAttributes(
 		trace.StringAttribute("httpMethod", httpMethod),
