@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -192,15 +193,15 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 			SyncCommitteeBits:      make([]byte, len(bitfield.NewBitvector512())),
 			SyncCommitteeSignature: make([]byte, 96),
 		},
-		ExecutionPayload: &ethpb.ExecutionPayload{
-			ParentHash:    make([]byte, 32),
-			FeeRecipient:  make([]byte, 20),
-			StateRoot:     make([]byte, 32),
-			ReceiptRoot:   make([]byte, 32),
-			LogsBloom:     make([]byte, 256),
-			Random:        make([]byte, 32),
-			BaseFeePerGas: make([]byte, 32),
-			BlockHash:     make([]byte, 32),
+		ExecutionPayload: &enginev1.ExecutionPayload{
+			ParentHash:     make([]byte, 32),
+			FeeRecipient:   make([]byte, 20),
+			StateRoot:      make([]byte, 32),
+			RecipientsRoot: make([]byte, 32),
+			LogsBloom:      make([]byte, 256),
+			Random:         make([]byte, 32),
+			BaseFeePerGas:  make([]byte, 32),
+			BlockHash:      make([]byte, 32),
 		},
 	}).HashTreeRoot()
 	if err != nil {
