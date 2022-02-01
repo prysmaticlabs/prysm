@@ -20,7 +20,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	vals := make([]*ethpb.Validator, 0, count)
 	bals := make([]uint64, 0, count)
 	for i := uint64(1); i < count; i++ {
-		someRoot := [32]byte{}
+		someRoot := [fieldparams.RootLength]byte{}
 		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
@@ -55,44 +55,44 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
 	}
 	payload := &ethpb.ExecutionPayloadHeader{
-		ParentHash:       make([]byte, 32),
+		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, 20),
-		StateRoot:        make([]byte, 32),
-		ReceiptRoot:      make([]byte, 32),
+		StateRoot:        make([]byte, fieldparams.RootLength),
+		ReceiptRoot:      make([]byte, fieldparams.RootLength),
 		LogsBloom:        make([]byte, 256),
-		Random:           make([]byte, 32),
-		BaseFeePerGas:    make([]byte, 32),
-		BlockHash:        make([]byte, 32),
-		TransactionsRoot: make([]byte, 32),
+		Random:           make([]byte, fieldparams.RootLength),
+		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+		BlockHash:        make([]byte, fieldparams.RootLength),
+		TransactionsRoot: make([]byte, fieldparams.RootLength),
 	}
 	st, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{
 		Slot:                  1,
-		GenesisValidatorsRoot: make([]byte, 32),
+		GenesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 		Fork: &ethpb.Fork{
 			PreviousVersion: make([]byte, 4),
 			CurrentVersion:  make([]byte, 4),
 			Epoch:           0,
 		},
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{
-			ParentRoot: make([]byte, 32),
-			StateRoot:  make([]byte, 32),
-			BodyRoot:   make([]byte, 32),
+			ParentRoot: make([]byte, fieldparams.RootLength),
+			StateRoot:  make([]byte, fieldparams.RootLength),
+			BodyRoot:   make([]byte, fieldparams.RootLength),
 		},
 		CurrentEpochParticipation:  []byte{},
 		PreviousEpochParticipation: []byte{},
 		Validators:                 vals,
 		Balances:                   bals,
 		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: make([]byte, 32),
-			BlockHash:   make([]byte, 32),
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
 		},
 		BlockRoots:                  mockblockRoots,
 		StateRoots:                  mockstateRoots,
 		RandaoMixes:                 mockrandaoMixes,
 		JustificationBits:           bitfield.NewBitvector4(),
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, 32)},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		CurrentSyncCommittee: &ethpb.SyncCommittee{
 			Pubkeys:         pubKeys,
@@ -119,7 +119,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
 	newRt := bytesutil.ToBytes32(st.merkleLayers[0][balances])
-	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.state.Balances)
+	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.balances)
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
 }
