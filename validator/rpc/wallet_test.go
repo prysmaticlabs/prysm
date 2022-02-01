@@ -59,7 +59,7 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		validatorService:      vs,
 	}
 	req := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_LOCAL,
+		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: strongPass,
 	}
 	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
@@ -335,7 +335,7 @@ func TestServer_WalletConfig(t *testing.T) {
 
 	assert.DeepEqual(t, resp, &pb.WalletResponse{
 		WalletPath:     localWalletDir,
-		KeymanagerKind: pb.KeymanagerKind_LOCAL,
+		KeymanagerKind: pb.KeymanagerKind_IMPORTED,
 	})
 }
 

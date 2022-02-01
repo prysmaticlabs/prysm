@@ -90,7 +90,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
 				WalletPath:     walletDir,
-				KeymanagerKind: pb.KeymanagerKind_LOCAL,
+				KeymanagerKind: pb.KeymanagerKind_IMPORTED,
 			},
 		}, nil
 	}
@@ -127,7 +127,7 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 	case keymanager.Derived:
 		keymanagerKind = pb.KeymanagerKind_DERIVED
 	case keymanager.Local:
-		keymanagerKind = pb.KeymanagerKind_LOCAL
+		keymanagerKind = pb.KeymanagerKind_IMPORTED
 	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
 	case keymanager.Web3Signer:
