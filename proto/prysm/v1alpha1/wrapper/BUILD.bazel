@@ -9,6 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/metadata:go_default_library",
