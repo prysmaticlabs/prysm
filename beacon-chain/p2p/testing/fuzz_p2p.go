@@ -61,7 +61,7 @@ func (_ *FakeP2P) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (_ *FakeP2P) FindPeersWithSubnet(_ context.Context, _ string, _, _ uint64) (bool, error) {
+func (_ *FakeP2P) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
 	return false, nil
 }
 
