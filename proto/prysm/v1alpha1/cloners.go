@@ -429,20 +429,20 @@ func CopyExecutionPayload(payload *enginev1.ExecutionPayload) *enginev1.Executio
 	}
 
 	return &enginev1.ExecutionPayload{
-		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
-		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
-		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptRoot:   bytesutil.SafeCopyBytes(payload.ReceiptRoot),
-		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
-		Random:        bytesutil.SafeCopyBytes(payload.Random),
-		BlockNumber:   payload.BlockNumber,
-		GasLimit:      payload.GasLimit,
-		GasUsed:       payload.GasUsed,
-		Timestamp:     payload.Timestamp,
-		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
-		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
-		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
-		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
+		ParentHash:     bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:   bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:      bytesutil.SafeCopyBytes(payload.StateRoot),
+		RecipientsRoot: bytesutil.SafeCopyBytes(payload.RecipientsRoot),
+		LogsBloom:      bytesutil.SafeCopyBytes(payload.LogsBloom),
+		Random:         bytesutil.SafeCopyBytes(payload.Random),
+		BlockNumber:    payload.BlockNumber,
+		GasLimit:       payload.GasLimit,
+		GasUsed:        payload.GasUsed,
+		Timestamp:      payload.Timestamp,
+		ExtraData:      bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:  bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:      bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:   bytesutil.SafeCopy2dBytes(payload.Transactions),
 	}
 }
 
