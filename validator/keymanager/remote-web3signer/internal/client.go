@@ -8,13 +8,18 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -116,29 +121,43 @@ func (client *ApiClient) GetServerStatus(ctx context.Context) (string, error) {
 
 // doRequest is a utility method for requests.
 func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
+	ctx, span := trace.StartSpan(ctx, "remote_web3signer.Client.doRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.StringAttribute("httpMethod", httpMethod),
+		trace.StringAttribute("fullPath", fullPath),
+		trace.BoolAttribute("hasBody", body != nil),
+	)
 	req, err := http.NewRequestWithContext(ctx, httpMethod, fullPath, body)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, failed to create new Post Request Object")
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.RestClient.Do(req)
+	requestDump, err := httputil.DumpRequest(req, true)
 	if err != nil {
-		return resp, errors.Wrap(err, "failed to execute json request")
+		return nil, err
+	}
+	start := time.Now()
+	resp, err := client.RestClient.Do(req)
+	duration := time.Since(start)
+	if err != nil {
+		signRequestDurationSeconds.WithLabelValues(req.Method, "error").Observe(duration.Seconds())
+		err = errors.Wrap(err, "failed to execute json request")
+		tracing.AnnotateError(span, err)
+		return resp, err
+	} else {
+		signRequestDurationSeconds.WithLabelValues(req.Method, strconv.Itoa(resp.StatusCode)).Observe(duration.Seconds())
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
-		b, err := io.ReadAll(body)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read body")
-		}
-		return nil, fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request Body: %s, Full Response: %v", fullPath, string(b), resp)
+		err = fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request: %s, Full Response: %v", fullPath, string(requestDump), resp)
+		tracing.AnnotateError(span, err)
+		return nil, err
 	} else if resp.StatusCode == http.StatusBadRequest {
-		b, err := io.ReadAll(body)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read body")
-		}
-		return nil, fmt.Errorf("bad request format, Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", fullPath, string(b), resp)
+		err = fmt.Errorf("bad request format, Signing Request URL: %v, Signing Request: %v, Full Response: %v", fullPath, string(requestDump), resp)
+		tracing.AnnotateError(span, err)
+		return nil, err
 	}
-	return resp, err
+	return resp, nil
 }
 
 // unmarshalResponse is a utility method for unmarshalling responses.
