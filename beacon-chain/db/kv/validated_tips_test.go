@@ -1,12 +1,10 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -84,7 +82,7 @@ func areTipsSame(got map[[32]byte]types.Slot, required map[[32]byte]types.Slot) 
 
 	for k, v := range got {
 		if val, ok := required[k]; ok {
-			if !bytes.Equal(bytesutil.SlotToBytesBigEndian(v), bytesutil.SlotToBytesBigEndian(val)) {
+			if uint64(v) != uint64(val) {
 				return false
 			}
 		} else {
