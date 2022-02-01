@@ -1,0 +1,68 @@
+// Copyright 2022 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.engine.v1;
+
+import "proto/eth/ext/options.proto";
+
+option csharp_namespace = "Ethereum.Engine.V1";
+option go_package = "github.com/prysmaticlabs/prysm/proto/engine/v1;enginev1";
+option java_multiple_files = true;
+option java_outer_classname = "ExecutionEngineProto";
+option java_package = "org.ethereum.engine.v1";
+option php_namespace = "Ethereum\\Engine\\v1";
+
+message ExecutionPayload {
+	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+	bytes state_root            = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes recipients_root       = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes logs_bloom            = 5 [(ethereum.eth.ext.ssz_size) = "256"];
+	bytes random                = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+	uint64 block_number         = 7;
+	uint64 gas_limit            = 8;
+	uint64 gas_used             = 9;
+	uint64 timestamp            = 10;
+	bytes extra_data            = 11 [(ethereum.eth.ext.ssz_max) = "32"];
+	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
+}
+
+message PayloadAttributes {
+	uint64 timestamp              = 1;
+	bytes random                  = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes suggested_fee_recipient = 3 [(ethereum.eth.ext.ssz_size) = "20"];
+}
+
+message PayloadStatus {
+	Status status           = 1;
+	bytes latest_valid_hash = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+	string validation_error = 3;
+	enum Status {
+		VALID                   = 0;
+		INVALID                 = 1;
+		SYNCING                 = 2;
+		ACCEPTED                = 3;
+		INVALID_BLOCK_HASH      = 4;
+		INVALID_TERMINAL_BLOCK  = 5;
+	}
+}
+
+message ForkchoiceState {
+	bytes head_block_hash      = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes safe_block_hash      = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes finalized_block_hash = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+}

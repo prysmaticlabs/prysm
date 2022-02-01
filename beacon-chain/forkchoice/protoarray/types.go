@@ -43,7 +43,7 @@ type Node struct {
 	weight         uint64                       // weight of this node.
 	bestChild      uint64                       // bestChild index of this node.
 	bestDescendant uint64                       // bestDescendant of this node.
-	graffiti       [32]byte                     // graffiti of the block node.
+	graffiti       [fieldparams.RootLength]byte // graffiti of the block node.
 }
 
 // optimisticStore defines a structure that tracks the tips of the fully
