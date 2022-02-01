@@ -13,6 +13,7 @@ go_library(
         "metrics.go",
         "new_slot.go",
         "options.go",
+        "pow_block.go",
         "process_attestation.go",
         "process_attestation_helpers.go",
         "process_block.go",
@@ -70,6 +71,7 @@ go_library(
         "//time:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_emicklei_dot//:go_default_library",
+        "@com_github_holiman_uint256//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
@@ -107,6 +109,7 @@ go_test(
         "receive_block_test.go",
         "service_test.go",
         "weak_subjectivity_checks_test.go",
+        "pow_block_test.go"
     ],
     embed = [":go_default_library"],
     gotags = ["develop"],
