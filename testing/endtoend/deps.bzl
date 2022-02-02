@@ -14,7 +14,7 @@ def e2e_deps():
 
     http_archive(
         name = "lighthouse",
-        sha256 = "7f34d87a312d03346ea36942586b8d4beeec544a1988b43adbdd1b5f50eacf29",
+        sha256 = "8a83ba0f7c24cc4e5b588e7a09bb4e5a1f919346ccf7000d3409a3690a85b221",
         build_file = "@prysm//testing/endtoend:lighthouse.BUILD",
         url = ("https://github.com/sigp/lighthouse/releases/download/%s/" + lighthouse_archive_name) % lighthouse_version,
     )
