@@ -3,6 +3,7 @@ package wrapper
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -290,7 +291,7 @@ func (w Phase0BeaconBlockBody) Proto() proto.Message {
 }
 
 // ExecutionPayload is a stub.
-func (_ Phase0BeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
+func (_ Phase0BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return nil, errors.New("ExecutionPayload is not supported in phase 0 block body")
 }
 
@@ -570,7 +571,7 @@ func (w altairBeaconBlockBody) Proto() proto.Message {
 }
 
 // ExecutionPayload is a stub.
-func (_ altairBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
+func (_ altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return nil, errors.New("ExecutionPayload is not supported in altair block body")
 }
 
@@ -837,6 +838,6 @@ func (w bellatrixBeaconBlockBody) Proto() proto.Message {
 }
 
 // ExecutionPayload returns the Execution payload of the block body.
-func (w bellatrixBeaconBlockBody) ExecutionPayload() (*eth.ExecutionPayload, error) {
+func (w bellatrixBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return w.b.ExecutionPayload, nil
 }

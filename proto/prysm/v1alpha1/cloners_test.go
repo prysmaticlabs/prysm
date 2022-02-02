@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 )
@@ -645,12 +646,12 @@ func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	}
 }
 
-func genPayload() *v1alpha1.ExecutionPayload {
-	return &v1alpha1.ExecutionPayload{
+func genPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
 		ParentHash:    bytes(),
 		FeeRecipient:  bytes(),
 		StateRoot:     bytes(),
-		ReceiptRoot:   bytes(),
+		ReceiptsRoot:  bytes(),
 		LogsBloom:     bytes(),
 		Random:        bytes(),
 		BlockNumber:   1,
