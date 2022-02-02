@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -60,16 +59,9 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
 	interop.WriteStateToDisk(state)
 
-	if features.Get().EnableNextSlotStateCache {
-		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not process slots")
-		}
-	} else {
-		state, err = ProcessSlots(ctx, state, signed.Block().Slot())
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not process slot")
-		}
+	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not process slots")
 	}
 
 	// Execute per block transition.
@@ -135,16 +127,9 @@ func CalculateStateRoot(
 
 	// Execute per slots transition.
 	var err error
-	if features.Get().EnableNextSlotStateCache {
-		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not process slots")
-		}
-	} else {
-		state, err = ProcessSlots(ctx, state, signed.Block().Slot())
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not process slot")
-		}
+	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not process slots")
 	}
 
 	// Execute per block transition.
