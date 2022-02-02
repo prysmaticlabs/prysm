@@ -153,7 +153,7 @@ func ProcessSlotsUsingNextSlotCache(
 
 	// Since next slot cache only advances state by 1 slot,
 	// we check if there's more slots that need to process.
-	parentState, err = ProcessSlotsIfPossible(ctx, parentState, slot)
+	parentState, err = ProcessSlotsIfPossible(ctx, parentState, slot, useNativeState)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slots")
 	}
@@ -162,9 +162,9 @@ func ProcessSlotsUsingNextSlotCache(
 
 // ProcessSlotsIfPossible executes ProcessSlots on the input state when target slot is above the state's slot.
 // Otherwise, it returns the input state unchanged.
-func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, targetSlot types.Slot) (state.BeaconState, error) {
+func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, targetSlot types.Slot, useNativeState bool) (state.BeaconState, error) {
 	if targetSlot > state.Slot() {
-		return ProcessSlots(ctx, state, targetSlot)
+		return ProcessSlots(ctx, state, targetSlot, useNativeState)
 	}
 	return state, nil
 }
@@ -275,7 +275,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot,
 		}
 
 		if time.CanUpgradeToBellatrix(state.Slot()) {
-			state, err = execution.UpgradeToMerge(ctx, state, useNativeState)
+			state, err = execution.UpgradeToBellatrix(ctx, state, useNativeState)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

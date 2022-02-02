@@ -666,7 +666,7 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
 		}
 	}
-	s, err = transition.ProcessSlotsIfPossible(ctx, s, epochStartSlot)
+	s, err = transition.ProcessSlotsIfPossible(ctx, s, epochStartSlot, useNativeState)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
 	}

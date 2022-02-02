@@ -227,7 +227,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 			}
 		}
 		if prysmTime.CanUpgradeToBellatrix(state.Slot()) {
-			state, err = execution.UpgradeToBellatrix(ctx, state)
+			state, err = execution.UpgradeToBellatrix(ctx, state, useNativeState)
 			if err != nil {
 				return nil, err
 			}

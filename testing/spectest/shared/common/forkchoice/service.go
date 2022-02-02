@@ -46,12 +46,12 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
 		blockchain.WithForkChoiceStore(protoarray.New(0, 0, params.BeaconConfig().ZeroHash)),
-		blockchain.WithStateGen(stategen.New(db)),
+		blockchain.WithStateGen(stategen.New(db, false)),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
 	)
-	service, err := blockchain.NewService(context.Background(), opts...)
+	service, err := blockchain.NewService(context.Background(), false, opts...)
 	require.NoError(t, err)
 	service.Start()
 	return service

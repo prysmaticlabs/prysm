@@ -3,7 +3,6 @@ package v1
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -11,13 +10,9 @@ import (
 
 // computeFieldRoots returns the hash tree root computations of every field in
 // the beacon state as a list of 32 byte roots.
-func computeFieldRoots(ctx context.Context, state *BeaconState) ([][]byte, error) {
-	protoState, ok := state.toProtoNoLock().(*ethpb.BeaconState)
-	if !ok {
-		return nil, errors.New("could not convert beacon state to proto")
-	}
+func computeFieldRoots(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
 	if features.Get().EnableSSZCache {
-		return stateutil.CachedHasher.ComputeFieldRootsWithHasherPhase0(ctx, protoState)
+		return stateutil.CachedHasher.ComputeFieldRootsWithHasherPhase0(ctx, state)
 	}
-	return stateutil.NocachedHasher.ComputeFieldRootsWithHasherPhase0(ctx, protoState)
+	return stateutil.NocachedHasher.ComputeFieldRootsWithHasherPhase0(ctx, state)
 }

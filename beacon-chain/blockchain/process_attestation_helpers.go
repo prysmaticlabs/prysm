@@ -42,7 +42,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if err != nil {
 		return nil, err
 	}
-	baseState, err = transition.ProcessSlotsIfPossible(ctx, baseState, epochStartSlot)
+	baseState, err = transition.ProcessSlotsIfPossible(ctx, baseState, epochStartSlot, s.cfg.UseNativeState)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 	}
