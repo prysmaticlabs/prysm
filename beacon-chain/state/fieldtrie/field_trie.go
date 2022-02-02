@@ -55,7 +55,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.ValueOf(elements).Len(),
+			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
@@ -65,7 +65,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.ValueOf(elements).Len(),
+			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
 		}, nil
 	default:
 		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())

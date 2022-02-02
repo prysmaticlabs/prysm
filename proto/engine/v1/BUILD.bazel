@@ -85,8 +85,8 @@ go_test(
         "json_marshal_unmarshal_test.go",
     ],
     deps = [
+        ":go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//testing/require:go_default_library",
-	],
-    embed = [":go_default_library"],
+    ],
 )
