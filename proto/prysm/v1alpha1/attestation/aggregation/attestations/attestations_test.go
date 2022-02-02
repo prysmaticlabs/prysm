@@ -226,21 +226,19 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 				assert.DeepEqual(t, w.Bytes(), got[i].AggregationBits.Bytes())
 			}
 		}
-		t.Run(fmt.Sprintf("%s/%s", tt.name, OptMaxCoverAggregation), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s", tt.name), func(t *testing.T) {
 			runner()
 		})
 	}
 
 	t.Run("broken attestation bitset", func(t *testing.T) {
 		wantErr := "bitlist cannot be nil or empty: invalid max_cover problem"
-		t.Run(string(OptMaxCoverAggregation), func(t *testing.T) {
-			_, err := Aggregate(aggtesting.MakeAttestationsFromBitlists([]bitfield.Bitlist{
-				{0b00000011, 0b0},
-				{0b00000111, 0b100},
-				{0b00000100, 0b1},
-			}))
-			assert.ErrorContains(t, wantErr, err)
-		})
+		_, err := Aggregate(aggtesting.MakeAttestationsFromBitlists([]bitfield.Bitlist{
+			{0b00000011, 0b0},
+			{0b00000111, 0b100},
+			{0b00000100, 0b1},
+		}))
+		assert.ErrorContains(t, wantErr, err)
 	})
 
 	t.Run("candidate swapping when aggregating", func(t *testing.T) {

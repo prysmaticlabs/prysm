@@ -8,16 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	// OptMaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
-	// This new variant is optimized and relies on Bitlist64 (once fully tested, `max_cover`
-	// strategy will be replaced with this one).
-	OptMaxCoverAggregation AttestationAggregationStrategy = "opt_max_cover"
-)
-
-// AttestationAggregationStrategy defines attestation aggregation strategy.
-type AttestationAggregationStrategy string
-
 // attList represents list of attestations, defined for easier en masse operations (filtering, sorting).
 type attList []*ethpb.Attestation
 
