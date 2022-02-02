@@ -62,7 +62,6 @@ type Flags struct {
 
 	// Cache toggles.
 	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	EnableNextSlotStateCache bool // EnableNextSlotStateCache enables next slot state cache to improve validator performance.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
@@ -177,11 +176,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)
 		cfg.DisableBroadcastSlashings = true
-	}
-	cfg.EnableNextSlotStateCache = true
-	if ctx.Bool(disableNextSlotStateCache.Name) {
-		logDisabled(disableNextSlotStateCache)
-		cfg.EnableNextSlotStateCache = false
 	}
 	if ctx.Bool(enableSlasherFlag.Name) {
 		log.WithField(enableSlasherFlag.Name, enableSlasherFlag.Usage).Warn(enabledFeatureFlag)
