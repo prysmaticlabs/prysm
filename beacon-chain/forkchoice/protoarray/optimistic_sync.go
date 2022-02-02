@@ -220,7 +220,7 @@ func (f *ForkChoice) Invalid(ctx context.Context, root [32]byte) error {
 	// delete the invalid node, order is important
 	f.store.nodes = append(f.store.nodes[:idx], f.store.nodes[idx+1:]...)
 	delete(f.store.nodesIndices, root)
-	// Fix best parent and best child for each node
+	// Fix parent and best child for each node
 	for _, node := range f.store.nodes {
 		if node.parent == NonExistentNode || node.parent == idx {
 			// node.parent == idx should not happen
