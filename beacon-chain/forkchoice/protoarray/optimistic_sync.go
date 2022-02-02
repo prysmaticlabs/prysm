@@ -89,7 +89,9 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 	return f.Optimistic(ctx, root, slot)
 }
 
-// UpdateSyncedTips updates the synced_tips map when the block with the given root becomes VALID
+// UpdateSyncedTips is called with the root of a block that was returned as
+// VALID by the EL. This routine recomputes and updates the synced_tips map to
+// account for this new tip.
 func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
@@ -114,7 +116,8 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	}
 
 	// Cache root and slot to validated tips
-	f.syncedTips.validatedTips[root] = node.slot
+	newTips := make(map[[32]byte]types.Slot)
+	newTips[root] = node.slot
 
 	// Compute the full valid path from the given node to its previous synced tip
 	// This path will now consist of fully validated blocks. Notice that
@@ -122,6 +125,7 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	// In this case, only one block can be in syncedTips as the whole
 	// Fork Choice would be a descendant of this block.
 	validPath := make(map[uint64]bool)
+	validPath[index] = true
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -156,7 +160,6 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	}
 
 	// For each leaf, recompute the new tip.
-	newTips := make(map[[32]byte]types.Slot)
 	for _, i := range leaves {
 		if ctx.Err() != nil {
 			return ctx.Err()
