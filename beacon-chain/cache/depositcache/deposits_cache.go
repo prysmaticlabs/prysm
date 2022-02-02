@@ -180,6 +180,10 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*e
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
+	return dc.allDeposits(untilBlk)
+}
+
+func (dc *DepositCache) allDeposits(untilBlk *big.Int) []*ethpb.Deposit {
 	var deposits []*ethpb.Deposit
 	for _, ctnr := range dc.deposits {
 		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
@@ -249,7 +253,7 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, untilBlk *big.
 	defer dc.depositsLock.RUnlock()
 
 	if dc.finalizedDeposits == nil {
-		return dc.AllDeposits(ctx, untilBlk)
+		return dc.allDeposits(untilBlk)
 	}
 
 	lastFinalizedDepositIndex := dc.finalizedDeposits.MerkleTrieIndex
