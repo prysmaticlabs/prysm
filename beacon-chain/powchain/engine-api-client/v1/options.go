@@ -2,7 +2,6 @@ package v1
 
 import (
 	"net/http"
-	"time"
 )
 
 // Option for configuring the engine API client.
@@ -15,7 +14,7 @@ type config struct {
 func defaultConfig() *config {
 	return &config{
 		httpClient: &http.Client{
-			Timeout: time.Second * 5,
+			Timeout: DefaultTimeout,
 		},
 	}
 }
