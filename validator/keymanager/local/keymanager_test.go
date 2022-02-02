@@ -1,4 +1,4 @@
-package imported
+package local
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
-func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
+func TestLocalKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
 		WalletPassword: password,
@@ -49,7 +49,7 @@ func TestImportedKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 }
 
-func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
+func TestLocalKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:          make(map[string]map[string][]byte),
 		WalletPassword: password,
@@ -82,7 +82,7 @@ func TestImportedKeymanager_FetchValidatingPrivateKeys(t *testing.T) {
 	}
 }
 
-func TestImportedKeymanager_Sign(t *testing.T) {
+func TestLocalKeymanager_Sign(t *testing.T) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
@@ -150,7 +150,7 @@ func TestImportedKeymanager_Sign(t *testing.T) {
 	}
 }
 
-func TestImportedKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
+func TestLocalKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: nil,
 	}
@@ -159,7 +159,7 @@ func TestImportedKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	assert.ErrorContains(t, "nil public key", err)
 }
 
-func TestImportedKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
+func TestLocalKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: []byte("hello world"),
 	}
