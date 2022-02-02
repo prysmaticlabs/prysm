@@ -321,7 +321,7 @@ func TestUpdateSyncedTips(t *testing.T) {
 		f.syncedTips.Lock()
 		f.syncedTips.validatedTips = tc.tips
 		f.syncedTips.Unlock()
-		err := f.UpdateSyncedTips(context.Background(), tc.root)
+		err := f.UpdateSyncedTip(context.Background(), tc.root)
 		if tc.wantedErr != nil {
 			require.ErrorIs(t, err, tc.wantedErr)
 		} else {
@@ -347,7 +347,7 @@ func TestUpdateSyncedTips(t *testing.T) {
 // And every block in the Fork choice is optimistic. Synced_Tips contains a
 // single block that is outside of Fork choice
 //
-func TestInvalid(t *testing.T) {
+func TestRemoveSyncTip(t *testing.T) {
 	tests := []struct {
 		root              [32]byte                // the root of the new INVALID block
 		tips              map[[32]byte]types.Slot // the old synced tips
@@ -429,7 +429,7 @@ func TestInvalid(t *testing.T) {
 		require.NotEqual(t, NonExistentNode, parentIndex)
 		parent := f.store.nodes[parentIndex]
 		f.store.nodesLock.Unlock()
-		err := f.Invalid(context.Background(), tc.root)
+		err := f.RemoveSyncTip(context.Background(), tc.root)
 		require.NoError(t, err)
 		f.syncedTips.RLock()
 		_, parentSyncedTip := f.syncedTips.validatedTips[parent.root]

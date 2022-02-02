@@ -89,17 +89,17 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 	return f.Optimistic(ctx, root, slot)
 }
 
-// UpdateSyncedTips updates the synced_tips map when the block with the given root becomes VALID
-func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error {
+// UpdateSyncedTip updates the synced_tips map when the block with the given root becomes VALID
+func (f *ForkChoice) UpdateSyncedTip(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
-	// We can only update if given root is in fork choice
+	// We can only update if given root is in Fork Choice
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
 		return errInvalidNodeIndex
 	}
 
-	// We can only update if root is a leaf in fork choice
+	// We can only update if root is a leaf in Fork Choice
 	node := f.store.nodes[index]
 	if node.bestChild != NonExistentNode {
 		return errInvalidBestChildIndex
@@ -144,7 +144,7 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 
 	// Retrieve the list of leaves in the Fork Choice
 	// These are all the nodes that have NonExistentNode as best child.
-	leaves, err := f.store.leaves(ctx)
+	leaves, err := f.store.leaves()
 	if err != nil {
 		return err
 	}
@@ -152,13 +152,12 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	// For each leaf, recompute the new tip.
 	newTips := make(map[[32]byte]types.Slot)
 	for _, i := range leaves {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
 		node = f.store.nodes[i]
 		j := i
 		for {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			// Stop if we reached the previous tip
 			_, ok = f.syncedTips.validatedTips[node.root]
 			if ok {
@@ -188,9 +187,8 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	return nil
 }
 
-// This function removes a node that has become INVALID according to the
-// EL. It updates the synced_tips to reflect this change.
-func (f *ForkChoice) Invalid(ctx context.Context, root [32]byte) error {
+// RemoveSyncTip removes a node with root from Fork Choice store. It updates the synced tips map.
+func (f *ForkChoice) RemoveSyncTip(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	idx, ok := f.store.nodesIndices[root]
@@ -198,7 +196,7 @@ func (f *ForkChoice) Invalid(ctx context.Context, root [32]byte) error {
 		return errInvalidNodeIndex
 	}
 	node := f.store.nodes[idx]
-	// We only support changing status of the tip of the tree
+	// We only support changing status for the tips in Fork Choice store.
 	if node.bestChild != NonExistentNode {
 		return errInvalidNodeIndex
 	}
@@ -209,26 +207,15 @@ func (f *ForkChoice) Invalid(ctx context.Context, root [32]byte) error {
 		return nil
 	}
 
-	f.syncedTips.Lock()
-	defer f.syncedTips.Unlock()
-
 	parent := f.store.nodes[parentIndex]
 	parentRoot := parent.root
-
-	// Check if after removing the child node, we need to update the
-	// parent's best child and descendant.
-	needsUpdateParentsChildren := false
-	if parent.bestChild == idx || parent.bestDescendant == idx {
-		needsUpdateParentsChildren = true
-	}
 
 	// delete the invalid node, order is important
 	f.store.nodes = append(f.store.nodes[:idx], f.store.nodes[idx+1:]...)
 	delete(f.store.nodesIndices, root)
 	// Fix parent and best child for each node
 	for _, node := range f.store.nodes {
-		if node.parent == NonExistentNode || node.parent == idx {
-			// node.parent == idx should not happen
+		if node.parent == NonExistentNode {
 			node.parent = NonExistentNode
 		} else if node.parent > idx {
 			node.parent -= 1
@@ -245,9 +232,8 @@ func (f *ForkChoice) Invalid(ctx context.Context, root [32]byte) error {
 		}
 	}
 
-	// Update the parent's best child and best descendant
-	if needsUpdateParentsChildren {
-		// look for a new child
+	// Update the parent's best child and best descendant if necessary.
+	if parent.bestChild == idx || parent.bestDescendant == idx {
 		for childIndex, child := range f.store.nodes {
 			if child.parent == parentIndex {
 				err := f.store.updateBestChildAndDescendant(
@@ -260,23 +246,27 @@ func (f *ForkChoice) Invalid(ctx context.Context, root [32]byte) error {
 		}
 	}
 
-	// Return early if the parent is not a synced_tip
+	// Return early if the parent is not a synced_tip.
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
+
 	_, ok = f.syncedTips.validatedTips[parentRoot]
 	if !ok {
 		return nil
 	}
 
-	leaves, err := f.store.leaves(ctx)
+	leaves, err := f.store.leaves()
 	if err != nil {
 		return err
 	}
 
 	for _, i := range leaves {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
 		node = f.store.nodes[i]
 		for {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
 			// Return early if the parent is still a synced tip
 			if node.root == parentRoot {
 				return nil
