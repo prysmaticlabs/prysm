@@ -89,7 +89,25 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 	return f.Optimistic(ctx, root, slot)
 }
 
-// UpdateSyncedTips updates the synced_tips map when the block with the given root becomes VALID
+// This function finds the synced tip (if any) in the Fork choice
+// that is an ancestor of the given node.
+// This internal method assumes the caller holds a lock on syncedTips
+// and s.nodesLock
+func (s *Store) findTip(node *Node, syncedTips *optimisticStore) uint64 {
+	for {
+		_, tip := syncedTips.validatedTips[node.root]
+		if tip {
+			return s.nodesIndices[node.root]
+		}
+		if node.parent == NonExistentNode {
+			return NonExistentNode
+		}
+		node = s.nodes[node.parent]
+	}
+}
+
+// This updates the synced_tips map when the block with the given root becomes
+// VALID
 func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()

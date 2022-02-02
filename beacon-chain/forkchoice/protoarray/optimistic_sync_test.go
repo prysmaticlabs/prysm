@@ -332,3 +332,99 @@ func TestUpdateSyncedTips(t *testing.T) {
 		}
 	}
 }
+
+// This tests the algorithm to find the tip of a given node
+// We start with the following diagram
+//
+//                E -- F
+//               /
+//         C -- D
+//        /      \
+//  A -- B        G -- H -- I
+//        \        \
+//         J        -- K -- L
+//
+//
+func TestFindTip(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
+	tests := []struct {
+		root   [32]byte                // the root of the block
+		tips   map[[32]byte]types.Slot // the synced tips
+		wanted [32]byte                // the root of expected tip
+	}{
+		{
+			[32]byte{'i'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+			},
+			[32]byte{'g'},
+		},
+		{
+			[32]byte{'g'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'h'}: 104,
+				[32]byte{'k'}: 106,
+			},
+			[32]byte{'d'},
+		},
+		{
+			[32]byte{'e'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 103,
+			},
+			[32]byte{'d'},
+		},
+		{
+			[32]byte{'j'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'f'}: 105,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			[32]byte{'b'},
+		},
+		{
+			[32]byte{'g'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'f'}: 105,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			[32]byte{'g'},
+		},
+	}
+	for _, tc := range tests {
+		f.store.nodesLock.RLock()
+		defer f.store.nodesLock.RUnlock()
+		node := f.store.nodes[f.store.nodesIndices[tc.root]]
+		syncedTips := &optimisticStore{
+			validatedTips: tc.tips,
+		}
+		syncedTips.RLock()
+		defer syncedTips.RUnlock()
+		idx := f.store.findTip(node, syncedTips)
+		require.Equal(t, tc.wanted, f.store.nodes[idx].root)
+	}
+}
