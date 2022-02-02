@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -237,11 +238,11 @@ func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
 				Deposits:          altairBlk.Block.Body.Deposits,
 				VoluntaryExits:    altairBlk.Block.Body.VoluntaryExits,
 				SyncAggregate:     altairBlk.Block.Body.SyncAggregate,
-				ExecutionPayload: &ethpb.ExecutionPayload{
+				ExecutionPayload: &enginev1.ExecutionPayload{
 					ParentHash:    make([]byte, fieldparams.RootLength),
 					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 					StateRoot:     make([]byte, fieldparams.RootLength),
-					ReceiptRoot:   make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 					Random:        make([]byte, fieldparams.RootLength),
 					BaseFeePerGas: make([]byte, fieldparams.RootLength),
