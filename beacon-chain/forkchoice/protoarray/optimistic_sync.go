@@ -248,8 +248,8 @@ func (f *ForkChoice) UpdateSyncTipsWithInvalidRoot(ctx context.Context, root [32
 	// Return early if the parent is not a synced_tip.
 	f.syncedTips.Lock()
 	defer f.syncedTips.Unlock()
-
-	_, ok = f.syncedTips.validatedTips[parent.root]
+	parentRoot := parent.root
+	_, ok = f.syncedTips.validatedTips[parentRoot]
 	if !ok {
 		return nil
 	}
