@@ -190,27 +190,6 @@ var (
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
 	}
-	// TerminalTotalDifficultyOverride specifies the total difficulty to manual overrides the `TERMINAL_TOTAL_DIFFICULTY` parameter.
-	TerminalTotalDifficultyOverride = &cli.Uint64Flag{
-		Name: "terminal-total-difficulty-override",
-		Usage: "Sets the total difficulty to manual overrides the default TERMINAL_TOTAL_DIFFICULTY value. " +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal difficulty. " +
-			"Incorrect usage will result in your node experience consensus failure.",
-	}
-	// TerminalBlockHashOverride specifies the terminal block hash to manual overrides the `TERMINAL_BLOCK_HASH` parameter.
-	TerminalBlockHashOverride = &cli.StringFlag{
-		Name: "terminal-block-hash-override",
-		Usage: "Sets the block hash to manual overrides the default TERMINAL_BLOCK_HASH value. " +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash. " +
-			"Incorrect usage will result in your node experience consensus failure.",
-	}
-	// TerminalBlockHashActivationEpochOverride specifies the terminal block hash epoch to manual overrides the `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` parameter.
-	TerminalBlockHashActivationEpochOverride = &cli.Uint64Flag{
-		Name: "terminal-block-hash-epoch-override",
-		Usage: "Sets the block hash epoch to manual overrides the default TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH value. " +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch. " +
-			"Incorrect usage will result in your node experience consensus failure.",
-	}
 	// FeeRecipient specifies the fee recipient for the transaction fees.
 	FeeRecipient = &cli.StringFlag{
 		Name:  "fee-recipient",
