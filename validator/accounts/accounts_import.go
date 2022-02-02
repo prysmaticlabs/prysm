@@ -115,7 +115,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			})
 		}
 
-		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
+		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Local)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +124,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			WalletDir:      cfg.WalletCfg.WalletDir,
 			WalletPassword: cfg.WalletCfg.WalletPassword,
 		})
-		if err = createImportedKeymanagerWallet(cliCtx.Context, w); err != nil {
+		if err = createLocalKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(

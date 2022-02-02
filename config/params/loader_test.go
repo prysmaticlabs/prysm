@@ -3,12 +3,14 @@ package params_test
 import (
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"gopkg.in/yaml.v2"
@@ -216,6 +218,19 @@ func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
 			t.Errorf("expected conversion to be: %v got: %v", line.wanted, res)
 		}
 	}
+}
+
+func TestConfigParityYaml(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	testDir := bazel.TestTmpDir()
+	yamlDir := filepath.Join(testDir, "config.yaml")
+
+	testCfg := params.E2ETestConfig()
+	yamlObj := params.ConfigToYaml(testCfg)
+	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
+
+	params.LoadChainConfigFile(yamlDir)
+	assert.DeepEqual(t, params.BeaconConfig(), testCfg)
 }
 
 // configFilePath sets the proper config and returns the relevant

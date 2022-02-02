@@ -1,4 +1,4 @@
-package imported
+package local
 
 import (
 	"context"
@@ -92,7 +92,7 @@ func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
 	}
 }
 
-// Replaces the accounts store struct in the imported keymanager with
+// Replaces the accounts store struct in the local keymanager with
 // the contents of a keystore file by decrypting it with the accounts password.
 func (km *Keymanager) reloadAccountsFromKeystore(keystore *AccountsKeystoreRepresentation) error {
 	decryptor := keystorev4.New()

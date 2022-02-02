@@ -1,4 +1,4 @@
-package imported
+package local
 
 import (
 	"context"

@@ -1,8 +1,8 @@
 /*
-Package imported defines an implementation of an on-disk, EIP-2335 keystore.json
+Package local defines an implementation of an on-disk, EIP-2335 keystore.json
 approach towards defining validator accounts in Prysm. A validating private key is
 encrypted using a passphrase and its resulting encrypted file is stored as a
-keystore.json file under a unique, human-readable, account namespace. This imported keymanager approach
+keystore.json file under a unique, human-readable, account namespace. This local keymanager approach
 relies on storing account information on-disk, making it trivial to import, backup and
 list all associated accounts for a user.
 
@@ -13,4 +13,4 @@ support for KECCAK-256. Passwords utilized for key encryptions are strings of ar
 The password is first converted to its NFKD representation, stripped of control codes specified
 in the EIP link above, and finally the password is UTF-8 encoded.
 */
-package imported
+package local
