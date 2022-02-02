@@ -89,8 +89,8 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 	return f.Optimistic(ctx, root, slot)
 }
 
-// UpdateSyncTipsWithValidRoot updates the synced_tips map when the block with the given root becomes VALID
-func (f *ForkChoice) UpdateSyncTipsWithValidRoot(ctx context.Context, root [32]byte) error {
+// UpdateSyncedTipsWithValidRoot updates the synced_tips map when the block with the given root becomes VALID
+func (f *ForkChoice) UpdateSyncedTipsWithValidRoot(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	// We can only update if given root is in Fork Choice
@@ -187,8 +187,8 @@ func (f *ForkChoice) UpdateSyncTipsWithValidRoot(ctx context.Context, root [32]b
 	return nil
 }
 
-// UpdateSyncTipsWithInvalidRoot updates the synced_tips map when the block with the given root becomes INVALID.
-func (f *ForkChoice) UpdateSyncTipsWithInvalidRoot(ctx context.Context, root [32]byte) error {
+// UpdateSyncedTipsWithInvalidRoot updates the synced_tips map when the block with the given root becomes INVALID.
+func (f *ForkChoice) UpdateSyncedTipsWithInvalidRoot(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	idx, ok := f.store.nodesIndices[root]

@@ -321,7 +321,7 @@ func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 		f.syncedTips.Lock()
 		f.syncedTips.validatedTips = tc.tips
 		f.syncedTips.Unlock()
-		err := f.UpdateSyncTipsWithValidRoot(context.Background(), tc.root)
+		err := f.UpdateSyncedTipsWithValidRoot(context.Background(), tc.root)
 		if tc.wantedErr != nil {
 			require.ErrorIs(t, err, tc.wantedErr)
 		} else {
@@ -429,7 +429,7 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 		require.NotEqual(t, NonExistentNode, parentIndex)
 		parent := f.store.nodes[parentIndex]
 		f.store.nodesLock.Unlock()
-		err := f.UpdateSyncTipsWithInvalidRoot(context.Background(), tc.root)
+		err := f.UpdateSyncedTipsWithInvalidRoot(context.Background(), tc.root)
 		require.NoError(t, err)
 		f.syncedTips.RLock()
 		_, parentSyncedTip := f.syncedTips.validatedTips[parent.root]
