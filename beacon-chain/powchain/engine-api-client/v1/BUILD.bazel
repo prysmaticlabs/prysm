@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "client.go",
+        "errors.go",
         "options.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1",
