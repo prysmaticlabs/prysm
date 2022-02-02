@@ -9,12 +9,6 @@ import (
 )
 
 const (
-	// NaiveAggregation is an aggregation strategy without any optimizations.
-	NaiveAggregation AttestationAggregationStrategy = "naive"
-
-	// MaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
-	MaxCoverAggregation AttestationAggregationStrategy = "max_cover"
-
 	// OptMaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
 	// This new variant is optimized and relies on Bitlist64 (once fully tested, `max_cover`
 	// strategy will be replaced with this one).
