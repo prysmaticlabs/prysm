@@ -92,7 +92,10 @@ go_test(
         "state_test.go",
         "state_trie_test.go",
         "types_test.go",
-    ],
+    ] + select({
+        "//config:mainnet": ["beacon_state_mainnet_test.go"],
+        "//config:minimal": ["beacon_state_minimal_test.go"],
+    }),
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state:go_default_library",
@@ -118,9 +121,9 @@ go_test(
 ssz_gen_marshal(
     name = "ssz_generated_files",
     srcs = select({
-           "//config:mainnet": ["beacon_state_mainnet.go"],
-           "//config:minimal": ["beacon_state_minimal.go"],
-        }),
+        "//config:mainnet": ["beacon_state_mainnet.go"],
+        "//config:minimal": ["beacon_state_minimal.go"],
+    }),
     includes = [
         "//beacon-chain/state/state-native/custom-types:go_default_library",
         "//config/fieldparams:go_default_library",

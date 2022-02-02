@@ -5,18 +5,22 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // MapForkInfo maps the eth2.ForkInfo proto to the Web3Signer spec.
-func MapForkInfo(from *ethpb.Fork, genesisValidatorsRoot []byte) (*ForkInfo, error) {
-	if from == nil {
-		return nil, fmt.Errorf("fork info is nil")
+func MapForkInfo(slot types.Slot, genesisValidatorsRoot []byte) (*ForkInfo, error) {
+	fork, err := forks.Fork(slots.ToEpoch(slot))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get fork info")
 	}
 	forkData := &Fork{
-		PreviousVersion: hexutil.Encode(from.PreviousVersion),
-		CurrentVersion:  hexutil.Encode(from.CurrentVersion),
-		Epoch:           fmt.Sprint(from.Epoch),
+		PreviousVersion: hexutil.Encode(fork.PreviousVersion),
+		CurrentVersion:  hexutil.Encode(fork.CurrentVersion),
+		Epoch:           fmt.Sprint(fork.Epoch),
 	}
 	return &ForkInfo{
 		Fork:                  forkData,
@@ -53,8 +57,8 @@ func MapAttestation(attestation *ethpb.Attestation) (*Attestation, error) {
 		return nil, err
 	}
 	return &Attestation{
+		AggregationBits: hexutil.Encode(attestation.AggregationBits),
 		Data:            data,
-		AggregationBits: hexutil.Encode(attestation.AggregationBits.Bytes()),
 		Signature:       hexutil.Encode(attestation.Signature),
 	}, nil
 }
@@ -293,14 +297,15 @@ func MapBeaconBlockAltair(block *ethpb.BeaconBlockAltair) (*BeaconBlockAltair, e
 		return nil, errors.Wrap(err, "could not map beacon block body for altair")
 	}
 	return &BeaconBlockAltair{
-		Slot: fmt.Sprint(block.Slot),
-		Body: body,
+		Slot:          fmt.Sprint(block.Slot),
+		ProposerIndex: fmt.Sprint(block.ProposerIndex),
 		ParentRoot: hexutil.Encode(
 			block.ParentRoot,
 		),
 		StateRoot: hexutil.Encode(
 			block.StateRoot,
 		),
+		Body: body,
 	}, nil
 }
 
@@ -330,7 +335,7 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 		Deposits:          make([]*Deposit, len(body.Deposits)),
 		VoluntaryExits:    make([]*SignedVoluntaryExit, len(body.VoluntaryExits)),
 		SyncAggregate: &SyncAggregate{
-			SyncCommitteeBits:      hexutil.Encode(body.SyncAggregate.SyncCommitteeBits.Bytes()),
+			SyncCommitteeBits:      hexutil.Encode(body.SyncAggregate.SyncCommitteeBits),
 			SyncCommitteeSignature: hexutil.Encode(body.SyncAggregate.SyncCommitteeSignature),
 		},
 	}
@@ -373,17 +378,6 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 	return block, nil
 }
 
-// MapSyncCommitteeMessage maps the eth2.SyncCommitteeMessage proto to the Web3Signer spec.
-func MapSyncCommitteeMessage(message *ethpb.SyncCommitteeMessage) (*SyncCommitteeMessage, error) {
-	if message == nil {
-		return nil, fmt.Errorf("sync committee message is nil")
-	}
-	return &SyncCommitteeMessage{
-		BeaconBlockRoot: hexutil.Encode(message.BlockRoot),
-		Slot:            fmt.Sprint(message.Slot),
-	}, nil
-}
-
 // MapSyncAggregatorSelectionData maps the eth2.SyncAggregatorSelectionData proto to the Web3Signer spec.
 func MapSyncAggregatorSelectionData(data *ethpb.SyncAggregatorSelectionData) (*SyncAggregatorSelectionData, error) {
 	if data == nil {
@@ -413,7 +407,7 @@ func MapContributionAndProof(contribution *ethpb.ContributionAndProof) (*Contrib
 			Slot:              fmt.Sprint(contribution.Contribution.Slot),
 			BeaconBlockRoot:   hexutil.Encode(contribution.Contribution.BlockRoot),
 			SubcommitteeIndex: fmt.Sprint(contribution.Contribution.SubcommitteeIndex),
-			AggregationBits:   hexutil.Encode(contribution.Contribution.AggregationBits.Bytes()),
+			AggregationBits:   hexutil.Encode(contribution.Contribution.AggregationBits),
 			Signature:         hexutil.Encode(contribution.Contribution.Signature),
 		},
 	}, nil

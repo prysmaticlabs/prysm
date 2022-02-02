@@ -38,12 +38,12 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.validatorsInternal()
+	return b.validatorsVal()
 }
 
-// validatorsInternal participating in consensus on the beacon chain.
+// validatorsVal participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) validatorsInternal() []*ethpb.Validator {
+func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 	if b.validators == nil {
 		return nil
 	}
@@ -183,12 +183,12 @@ func (b *BeaconState) Balances() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.balancesInternal()
+	return b.balancesVal()
 }
 
 // balances of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) balancesInternal() []uint64 {
+func (b *BeaconState) balancesVal() []uint64 {
 	if b.balances == nil {
 		return nil
 	}
@@ -234,12 +234,12 @@ func (b *BeaconState) Slashings() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.slashingsInternal()
+	return b.slashingsVal()
 }
 
 // slashings of validators on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slashingsInternal() []uint64 {
+func (b *BeaconState) slashingsVal() []uint64 {
 	if b.slashings == nil {
 		return nil
 	}

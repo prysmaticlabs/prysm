@@ -15,7 +15,7 @@ import (
 func TestUpgradeToBellatrix(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	preForkState := st.Copy()
-	mSt, err := execution.UpgradeToMerge(context.Background(), st, false)
+	mSt, err := execution.UpgradeToBellatrix(context.Background(), st, false)
 	require.NoError(t, err)
 
 	require.Equal(t, preForkState.GenesisTime(), mSt.GenesisTime())

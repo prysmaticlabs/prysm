@@ -27,7 +27,7 @@ import (
 )
 
 func TestService_Constants(t *testing.T) {
-	if uint64(params.BeaconConfig().MaxPeersToSync)*flags.Get().BlockBatchLimit > uint64(1000) {
+	if params.BeaconConfig().MaxPeersToSync*flags.Get().BlockBatchLimit > 1000 {
 		t.Fatal("rpc rejects requests over 1000 range slots")
 	}
 }

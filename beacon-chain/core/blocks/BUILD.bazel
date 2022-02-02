@@ -19,7 +19,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//testing/spectest:__subpackages__",
         "//testing/util:__pkg__",
         "//validator:__subpackages__",
@@ -41,6 +40,7 @@ go_library(
         "//encoding/ssz:go_default_library",
         "//math:go_default_library",
         "//network/forks:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/attestation:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
@@ -92,6 +92,7 @@ go_test(
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//encoding/ssz:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/attestation:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation:go_default_library",

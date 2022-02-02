@@ -18,6 +18,12 @@ type ValidatorIndexOutOfRangeError struct {
 	message string
 }
 
+var (
+	// ErrNilValidatorsInState returns when accessing validators in the state while the state has a
+	// nil slice for the validators field.
+	ErrNilValidatorsInState = errors.New("state has nil validator slice")
+)
+
 // NewValidatorIndexOutOfRangeError creates a new error instance.
 func NewValidatorIndexOutOfRangeError(index types.ValidatorIndex) ValidatorIndexOutOfRangeError {
 	return ValidatorIndexOutOfRangeError{
@@ -39,12 +45,12 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.validatorsInternal()
+	return b.validatorsVal()
 }
 
-// validatorsInternal participating in consensus on the beacon chain.
+// validatorsVal participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) validatorsInternal() []*ethpb.Validator {
+func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 	if b.validators == nil {
 		return nil
 	}
@@ -101,7 +107,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (state.ReadOnlyValidator, error) {
 	if b.validators == nil {
-		return nil, state.ErrNilValidatorsInState
+		return nil, ErrNilValidatorsInState
 	}
 	if uint64(len(b.validators)) <= uint64(idx) {
 		e := NewValidatorIndexOutOfRangeError(idx)
@@ -184,12 +190,12 @@ func (b *BeaconState) Balances() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.balancesInternal()
+	return b.balancesVal()
 }
 
-// balancesInternal of validators participating in consensus on the beacon chain.
+// balancesVal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) balancesInternal() []uint64 {
+func (b *BeaconState) balancesVal() []uint64 {
 	if b.balances == nil {
 		return nil
 	}
@@ -235,12 +241,12 @@ func (b *BeaconState) Slashings() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.slashingsInternal()
+	return b.slashingsVal()
 }
 
-// slashingsInternal of validators on the beacon chain.
+// slashingsVal of validators on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slashingsInternal() []uint64 {
+func (b *BeaconState) slashingsVal() []uint64 {
 	if b.slashings == nil {
 		return nil
 	}
@@ -250,9 +256,9 @@ func (b *BeaconState) slashingsInternal() []uint64 {
 	return res
 }
 
-// inactivityScoresInternal of validators participating in consensus on the beacon chain.
+// inactivityScoresVal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) inactivityScoresInternal() []uint64 {
+func (b *BeaconState) inactivityScoresVal() []uint64 {
 	if b.inactivityScores == nil {
 		return nil
 	}
@@ -271,5 +277,5 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.inactivityScoresInternal(), nil
+	return b.inactivityScoresVal(), nil
 }

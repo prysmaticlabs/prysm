@@ -558,7 +558,7 @@ func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(conf)
 	defer params.UseMainnetConfig()
 
-	st, _ := util.DeterministicGenesisStateMerge(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
 	require.Equal(t, version.Bellatrix, st.Version())
 	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10, false)
@@ -588,7 +588,7 @@ func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
 }
 
-func TestProcessSlots_ThroughMergeEpoch(t *testing.T) {
+func TestProcessSlots_ThroughBellatrixEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
 	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
@@ -609,4 +609,30 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	s, err := transition.ProcessSlotsUsingNextSlotCache(context.Background(), s, r, 5, false)
 	require.NoError(t, err)
 	require.Equal(t, types.Slot(5), s.Slot())
+}
+
+func TestProcessSlotsConditionally(t *testing.T) {
+	ctx := context.Background()
+	s, _ := util.DeterministicGenesisState(t, 1)
+
+	t.Run("target slot below current slot", func(t *testing.T) {
+		require.NoError(t, s.SetSlot(5))
+		s, err := transition.ProcessSlotsIfPossible(ctx, s, 4)
+		require.NoError(t, err)
+		assert.Equal(t, types.Slot(5), s.Slot())
+	})
+
+	t.Run("target slot equal current slot", func(t *testing.T) {
+		require.NoError(t, s.SetSlot(5))
+		s, err := transition.ProcessSlotsIfPossible(ctx, s, 5)
+		require.NoError(t, err)
+		assert.Equal(t, types.Slot(5), s.Slot())
+	})
+
+	t.Run("target slot above current slot", func(t *testing.T) {
+		require.NoError(t, s.SetSlot(5))
+		s, err := transition.ProcessSlotsIfPossible(ctx, s, 6)
+		require.NoError(t, err)
+		assert.Equal(t, types.Slot(6), s.Slot())
+	})
 }

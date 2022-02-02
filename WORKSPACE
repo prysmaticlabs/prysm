@@ -60,10 +60,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "62ca106be173579c0a167deb23358fdfe71ffa1e4cfdddf5582af26520f1c66f",
+    sha256 = "de69a09dc70417580aabf20a28619bb3ef60d038470c7cf8442fafcf627c21cb",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
     ],
 )
 
@@ -85,16 +85,13 @@ http_archive(
     name = "io_bazel_rules_go",
     patch_args = ["-p1"],
     patches = [
-        # Required until https://github.com/bazelbuild/rules_go/pull/2450 merges otherwise nilness
-        # nogo check fails for certain third_party dependencies.
-        "//third_party:io_bazel_rules_go.patch",
         # Expose internals of go_test for custom build transitions.
         "//third_party:io_bazel_rules_go_test.patch",
     ],
-    sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
+    sha256 = "2b1641428dff9018f9e85c0384f03ec6c10660d935b750e3fa1492a281a53b0f",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
     ],
 )
 
@@ -341,16 +338,6 @@ git_repository(
 # Group the sources of the library so that CMake rule have access to it
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
 
-http_archive(
-    name = "sigp_beacon_fuzz_corpora",
-    build_file = "//third_party:beacon-fuzz/corpora.BUILD",
-    sha256 = "42993d0901a316afda45b4ba6d53c7c21f30c551dcec290a4ca131c24453d1ef",
-    strip_prefix = "beacon-fuzz-corpora-bac24ad78d45cc3664c0172241feac969c1ac29b",
-    urls = [
-        "https://github.com/sigp/beacon-fuzz-corpora/archive/bac24ad78d45cc3664c0172241feac969c1ac29b.tar.gz",
-    ],
-)
-
 # External dependencies
 
 http_archive(
@@ -376,6 +363,10 @@ prysm_deps()
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
+
+load("@prysm//testing/endtoend:deps.bzl", "e2e_deps")
+
+e2e_deps()
 
 load(
     "@io_bazel_rules_docker//go:image.bzl",

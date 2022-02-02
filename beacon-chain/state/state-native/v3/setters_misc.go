@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -54,6 +55,9 @@ func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	if len(val) != fieldparams.RootLength {
+		return errors.New("incorrect validator root length")
+	}
 	b.genesisValidatorsRoot = bytesutil.ToBytes32(val)
 	b.markFieldAsDirty(genesisValidatorRoot)
 	return nil
@@ -92,9 +96,9 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	b.sharedFieldReferences[historicalRoots].MinusRef()
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
-	roots := make([][32]byte, len(val))
+	roots := make([][fieldparams.RootLength]byte, len(val))
 	for i, r := range val {
-		roots[i] = bytesutil.ToBytes32(r)
+		copy(roots[i][:], r)
 	}
 	b.historicalRoots = roots
 	b.markFieldAsDirty(historicalRoots)
@@ -109,7 +113,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 
 	roots := b.historicalRoots
 	if b.sharedFieldReferences[historicalRoots].Refs() > 1 {
-		roots = make([][32]byte, len(b.historicalRoots))
+		roots = make([][fieldparams.RootLength]byte, len(b.historicalRoots))
 		copy(roots, b.historicalRoots)
 		b.sharedFieldReferences[historicalRoots].MinusRef()
 		b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)

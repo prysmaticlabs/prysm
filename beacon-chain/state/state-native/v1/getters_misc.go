@@ -2,8 +2,6 @@ package v1
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -13,12 +11,6 @@ func (b *BeaconState) GenesisTime() uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisTimeInternal()
-}
-
-// genesisTime of the beacon state as a uint64.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisTimeInternal() uint64 {
 	return b.genesisTime
 }
 
@@ -27,14 +19,7 @@ func (b *BeaconState) GenesisValidatorRoot() []byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	r := b.genesisValidatorRootInternal()
-	return r[:]
-}
-
-// genesisValidatorRootInternal of the beacon state.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisValidatorRootInternal() [32]byte {
-	return b.genesisValidatorsRoot
+	return b.genesisValidatorsRoot[:]
 }
 
 // Version of the beacon state. This method
@@ -49,12 +34,6 @@ func (b *BeaconState) Slot() types.Slot {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.slotInternal()
-}
-
-// slot of the current beacon chain state.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slotInternal() types.Slot {
 	return b.slot
 }
 
@@ -67,12 +46,12 @@ func (b *BeaconState) Fork() *ethpb.Fork {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.forkInternal()
+	return b.forkVal()
 }
 
-// forkInternal version of the beacon chain.
+// forkVal version of the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) forkInternal() *ethpb.Fork {
+func (b *BeaconState) forkVal() *ethpb.Fork {
 	if b.fork == nil {
 		return nil
 	}
@@ -97,20 +76,7 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	rootsArr := b.historicalRootsInternal()
-	roots := make([][]byte, len(rootsArr))
-	for i, r := range rootsArr {
-		tmp := r
-		roots[i] = tmp[:]
-	}
-
-	return roots
-}
-
-// historicalRootsInternal based on epochs stored in the beacon state.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) historicalRootsInternal() customtypes.HistoricalRoots {
-	return bytesutil.SafeCopy2d32Bytes(b.historicalRoots)
+	return b.historicalRoots.Slice()
 }
 
 // balancesLength returns the length of the balances slice.

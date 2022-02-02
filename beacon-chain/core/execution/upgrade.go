@@ -11,9 +11,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// UpgradeToMerge updates inputs a generic state to return the version Merge state.
+// UpgradeToBellatrix updates inputs a generic state to return the version Bellatrix state.
 // It inserts an empty `ExecutionPayloadHeader` into the state.
-func UpgradeToMerge(ctx context.Context, state state.BeaconState, useNativeState bool) (state.BeaconState, error) {
+func UpgradeToBellatrix(ctx context.Context, state state.BeaconState, useNativeState bool) (state.BeaconState, error) {
 	epoch := time.CurrentEpoch(state)
 
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
@@ -84,7 +84,7 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState, useNativeState
 	}
 
 	if useNativeState {
-		return v3native.InitializeFromProto(s)
+		return v3native.InitializeFromProtoUnsafe(s)
 	}
-	return v3.InitializeFromProto(s)
+	return v3.InitializeFromProtoUnsafe(s)
 }

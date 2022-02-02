@@ -116,52 +116,6 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (*BeaconState, er
 	return b, nil
 }
 
-func Initialize() (*BeaconState, error) {
-	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
-	sRoots := customtypes.StateRoots([fieldparams.StateRootsLength][32]byte{})
-	bRoots := customtypes.BlockRoots([fieldparams.BlockRootsLength][32]byte{})
-	mixes := customtypes.RandaoMixes([fieldparams.RandaoMixesLength][32]byte{})
-	b := &BeaconState{
-		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
-		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler([]*ethpb.Validator{}),
-		stateRoots:            &sRoots,
-		blockRoots:            &bRoots,
-		randaoMixes:           &mixes,
-	}
-
-	var err error
-	for i := 0; i < fieldCount; i++ {
-		b.dirtyFields[types.FieldIndex(i)] = true
-		b.rebuildTrie[types.FieldIndex(i)] = true
-		b.dirtyIndices[types.FieldIndex(i)] = []uint64{}
-		b.stateFieldLeaves[types.FieldIndex(i)], err = fieldtrie.NewFieldTrie(types.FieldIndex(i), types.BasicArray, nil, 0)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
-	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
-	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
-	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
-	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
-	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Merge.
-
-	state.StateCount.Inc()
-	return b, nil
-}
-
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() state.BeaconState {
 	b.lock.RLock()
@@ -190,17 +144,17 @@ func (b *BeaconState) Copy() state.BeaconState {
 		inactivityScores:           b.inactivityScores,
 
 		// Everything else, too small to be concerned about, constant size.
-		fork:                         b.fork,
-		latestBlockHeader:            b.latestBlockHeader,
-		eth1Data:                     b.eth1Data,
-		justificationBits:            b.justificationBits,
-		previousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
-		currentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
-		finalizedCheckpoint:          b.finalizedCheckpoint,
 		genesisValidatorsRoot:        b.genesisValidatorsRoot,
-		currentSyncCommittee:         b.currentSyncCommittee,
-		nextSyncCommittee:            b.nextSyncCommittee,
-		latestExecutionPayloadHeader: b.latestExecutionPayloadHeader,
+		fork:                         b.forkVal(),
+		latestBlockHeader:            b.latestBlockHeaderVal(),
+		eth1Data:                     b.eth1DataVal(),
+		justificationBits:            b.justificationBitsVal(),
+		previousJustifiedCheckpoint:  b.previousJustifiedCheckpointVal(),
+		currentJustifiedCheckpoint:   b.currentJustifiedCheckpointVal(),
+		finalizedCheckpoint:          b.finalizedCheckpointVal(),
+		currentSyncCommittee:         b.currentSyncCommitteeVal(),
+		nextSyncCommittee:            b.nextSyncCommitteeVal(),
+		latestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal(),
 
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
@@ -285,24 +239,11 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		layers := stateutil.Merkleize(fieldRoots)
-		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return [fieldparams.RootLength]byte{}, err
 	}
-
-	for field := range b.dirtyFields {
-		root, err := b.rootSelector(field)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		b.merkleLayers[0][field] = root[:]
-		b.recomputeRoot(int(field))
-		delete(b.dirtyFields, field)
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return [fieldparams.RootLength]byte{}, err
 	}
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
@@ -313,7 +254,11 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	if len(b.merkleLayers) > 0 {
 		return nil
 	}
-	fieldRoots, err := computeFieldRoots(ctx, b)
+	protoState, ok := b.ToProtoUnsafe().(*ethpb.BeaconStateBellatrix)
+	if !ok {
+		return errors.New("state is of the wrong type")
+	}
+	fieldRoots, err := computeFieldRoots(ctx, protoState)
 	if err != nil {
 		return err
 	}

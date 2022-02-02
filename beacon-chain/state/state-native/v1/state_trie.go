@@ -38,19 +38,19 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 
 	var bRoots customtypes.BlockRoots
 	for i, r := range st.BlockRoots {
-		bRoots[i] = bytesutil.ToBytes32(r)
+		copy(bRoots[i][:], r)
 	}
 	var sRoots customtypes.StateRoots
 	for i, r := range st.StateRoots {
-		sRoots[i] = bytesutil.ToBytes32(r)
+		copy(sRoots[i][:], r)
 	}
 	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
 	for i, r := range st.HistoricalRoots {
-		hRoots[i] = bytesutil.ToBytes32(r)
+		copy(hRoots[i][:], r)
 	}
 	var mixes customtypes.RandaoMixes
 	for i, m := range st.RandaoMixes {
-		mixes[i] = bytesutil.ToBytes32(m)
+		copy(mixes[i][:], m)
 	}
 
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
@@ -112,50 +112,6 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
 	return b, nil
 }
 
-func Initialize() (*BeaconState, error) {
-	fieldCount := params.BeaconConfig().BeaconStateFieldCount
-	sRoots := customtypes.StateRoots([fieldparams.StateRootsLength][32]byte{})
-	bRoots := customtypes.BlockRoots([fieldparams.BlockRootsLength][32]byte{})
-	mixes := customtypes.RandaoMixes([fieldparams.RandaoMixesLength][32]byte{})
-	b := &BeaconState{
-		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 10),
-		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:         stateutil.NewValMapHandler([]*ethpb.Validator{}),
-		stateRoots:            &sRoots,
-		blockRoots:            &bRoots,
-		randaoMixes:           &mixes,
-	}
-
-	var err error
-	for i := 0; i < fieldCount; i++ {
-		b.dirtyFields[types.FieldIndex(i)] = true
-		b.rebuildTrie[types.FieldIndex(i)] = true
-		b.dirtyIndices[types.FieldIndex(i)] = []uint64{}
-		b.stateFieldLeaves[types.FieldIndex(i)], err = fieldtrie.NewFieldTrie(types.FieldIndex(i), types.BasicArray, nil, 0)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[previousEpochAttestations] = stateutil.NewRef(1)
-	b.sharedFieldReferences[currentEpochAttestations] = stateutil.NewRef(1)
-	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
-	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[validators] = stateutil.NewRef(1)
-	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-
-	state.StateCount.Inc()
-	return b, nil
-}
-
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() state.BeaconState {
 	b.lock.RLock()
@@ -184,16 +140,14 @@ func (b *BeaconState) Copy() state.BeaconState {
 		validators:      b.validators,
 
 		// Everything else, too small to be concerned about, constant size.
-		genesisValidatorsRoot: b.genesisValidatorsRoot,
-		justificationBits:     b.justificationBits,
-
-		// Everything else, too small to be concerned about, constant size.
-		fork:                        b.fork,
-		latestBlockHeader:           b.latestBlockHeader,
-		eth1Data:                    b.eth1Data,
-		previousJustifiedCheckpoint: b.previousJustifiedCheckpoint,
-		currentJustifiedCheckpoint:  b.currentJustifiedCheckpoint,
-		finalizedCheckpoint:         b.finalizedCheckpoint,
+		genesisValidatorsRoot:       b.genesisValidatorsRoot,
+		justificationBits:           b.justificationBitsVal(),
+		fork:                        b.forkVal(),
+		latestBlockHeader:           b.latestBlockHeaderVal(),
+		eth1Data:                    b.eth1DataVal(),
+		previousJustifiedCheckpoint: b.previousJustifiedCheckpointVal(),
+		currentJustifiedCheckpoint:  b.currentJustifiedCheckpointVal(),
+		finalizedCheckpoint:         b.finalizedCheckpointVal(),
 
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
@@ -278,25 +232,11 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
-	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		layers := stateutil.Merkleize(fieldRoots)
-		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return [32]byte{}, err
 	}
-
-	for field := range b.dirtyFields {
-		root, err := b.rootSelector(ctx, field)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		b.merkleLayers[0][field] = root[:]
-		b.recomputeRoot(int(field))
-		delete(b.dirtyFields, field)
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return [32]byte{}, err
 	}
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
@@ -307,7 +247,11 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	if len(b.merkleLayers) > 0 {
 		return nil
 	}
-	fieldRoots, err := computeFieldRoots(ctx, b)
+	protoState, ok := b.ToProtoUnsafe().(*ethpb.BeaconState)
+	if !ok {
+		return errors.New("state is of the wrong type")
+	}
+	fieldRoots, err := computeFieldRoots(ctx, protoState)
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // SetStateRoots for the beacon state. Updates the state roots
@@ -17,9 +16,9 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	b.sharedFieldReferences[stateRoots].MinusRef()
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
 
-	var rootsArr [fieldparams.StateRootsLength][32]byte
+	var rootsArr [fieldparams.StateRootsLength][fieldparams.RootLength]byte
 	for i := 0; i < len(rootsArr); i++ {
-		rootsArr[i] = bytesutil.ToBytes32(val[i])
+		copy(rootsArr[i][:], val[i])
 	}
 	roots := customtypes.StateRoots(rootsArr)
 	b.stateRoots = &roots

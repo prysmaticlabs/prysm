@@ -3,7 +3,6 @@ package v1
 import (
 	"fmt"
 
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -16,12 +15,12 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.latestBlockHeaderInternal()
+	return b.latestBlockHeaderVal()
 }
 
-// latestBlockHeaderInternal stored within the beacon state.
+// latestBlockHeaderVal stored within the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestBlockHeaderInternal() *ethpb.BeaconBlockHeader {
+func (b *BeaconState) latestBlockHeaderVal() *ethpb.BeaconBlockHeader {
 	if b.latestBlockHeader == nil {
 		return nil
 	}
@@ -53,19 +52,7 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	rootsArr := b.blockRootsInternal()
-	roots := make([][]byte, len(rootsArr))
-	for i, r := range rootsArr {
-		tmp := r
-		roots[i] = tmp[:]
-	}
-	return roots
-}
-
-// blockRootsInternal kept track of in the beacon state.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRootsInternal() *customtypes.BlockRoots {
-	return b.blockRoots
+	return b.blockRoots.Slice()
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an

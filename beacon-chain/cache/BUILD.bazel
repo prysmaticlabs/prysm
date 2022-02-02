@@ -1,39 +1,31 @@
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
-# gazelle:exclude committee_disabled.go
-# gazelle:exclude proposer_indices_disabled.go
 go_library(
     name = "go_default_library",
     srcs = [
+        "active_balance.go",
+        "active_balance_disabled.go",  # keep
         "attestation_data.go",
         "checkpoint_state.go",
+        "committee.go",
+        "committee_disabled.go",  # keep
         "committees.go",
         "common.go",
         "doc.go",
         "error.go",
+        "proposer_indices.go",
+        "proposer_indices_disabled.go",  # keep
         "proposer_indices_type.go",
         "skip_slot_cache.go",
         "subnet_ids.go",
+        "sync_committee.go",
+        "sync_committee_disabled.go",  # keep
         "sync_committee_head_state.go",
         "sync_subnet_ids.go",
-    ] + select({
-        "//testing/fuzz:fuzzing_enabled": [
-            "active_balance_disabled.go",
-            "committee_disabled.go",
-            "proposer_indices_disabled.go",
-            "sync_committee_disabled.go",
-        ],
-        "//conditions:default": [
-            "active_balance.go",
-            "committee.go",
-            "proposer_indices.go",
-            "sync_committee.go",
-        ],
-    }),
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//tools:__subpackages__",
     ],
     deps = [

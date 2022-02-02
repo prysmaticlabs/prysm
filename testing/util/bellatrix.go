@@ -17,11 +17,11 @@ import (
 // BlockSignatureBellatrix calculates the post-state root of the block and returns the signature.
 func BlockSignatureBellatrix(
 	bState state.BeaconState,
-	block *ethpb.BeaconBlockMerge,
+	block *ethpb.BeaconBlockBellatrix,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
 	var err error
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(&ethpb.SignedBeaconBlockMerge{Block: block})
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: block})
 	if err != nil {
 		return nil, err
 	}

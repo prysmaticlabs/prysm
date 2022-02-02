@@ -31,17 +31,17 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 	require.NoError(t, err)
 	got := s.BlockRoots()
 	want := make([][]byte, fieldparams.BlockRootsLength)
-	for i, _ := range want {
-		want[i] = make([]byte, 32)
+	for i := range want {
+		want[i] = make([]byte, fieldparams.RootLength)
 	}
 	require.DeepEqual(t, want, got)
 
 	want = make([][]byte, fieldparams.BlockRootsLength)
-	for i, _ := range want {
+	for i := range want {
 		if i == 0 {
-			want[i] = bytesutil.PadTo([]byte{'a'}, 32)
+			want[i] = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 		} else {
-			want[i] = make([]byte, 32)
+			want[i] = make([]byte, fieldparams.RootLength)
 		}
 
 	}
@@ -60,9 +60,9 @@ func TestBeaconState_BlockRootAtIndex(t *testing.T) {
 	require.NoError(t, err)
 	got, err := s.BlockRootAtIndex(0)
 	require.NoError(t, err)
-	require.DeepEqual(t, bytesutil.PadTo([]byte{}, 32), got)
+	require.DeepEqual(t, bytesutil.PadTo([]byte{}, fieldparams.RootLength), got)
 
-	r := [fieldparams.BlockRootsLength][32]byte{{'a'}}
+	r := [fieldparams.BlockRootsLength][fieldparams.RootLength]byte{{'a'}}
 	bRoots := make([][]byte, len(r))
 	for i, root := range r {
 		tmp := root
@@ -72,6 +72,6 @@ func TestBeaconState_BlockRootAtIndex(t *testing.T) {
 	require.NoError(t, err)
 	got, err = s.BlockRootAtIndex(0)
 	require.NoError(t, err)
-	want := bytesutil.PadTo([]byte{'a'}, 32)
+	want := bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 	require.DeepSSZEqual(t, want, got)
 }

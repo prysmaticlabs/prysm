@@ -13,11 +13,11 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHea
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.latestExecutionPayloadHeaderInternal(), nil
+	return b.latestExecutionPayloadHeaderVal(), nil
 }
 
-// latestExecutionPayloadHeaderInternal of the beacon state.
+// latestExecutionPayloadHeaderVal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestExecutionPayloadHeaderInternal() *ethpb.ExecutionPayloadHeader {
+func (b *BeaconState) latestExecutionPayloadHeaderVal() *ethpb.ExecutionPayloadHeader {
 	return ethpb.CopyExecutionPayloadHeader(b.latestExecutionPayloadHeader)
 }

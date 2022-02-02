@@ -1,15 +1,16 @@
-package v1
+package v1_test
 
 import (
 	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/testing/util"
-
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/mock"
 )
 
 func TestMapAggregateAndProof(t *testing.T) {
@@ -19,7 +20,7 @@ func TestMapAggregateAndProof(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *AggregateAndProof
+		want    *v1.AggregateAndProof
 		wantErr bool
 	}{
 		{
@@ -27,13 +28,25 @@ func TestMapAggregateAndProof(t *testing.T) {
 			args: args{
 				from: &ethpb.AggregateAttestationAndProof{
 					AggregatorIndex: 0,
-					Aggregate:       util.NewAttestation(),
-					SelectionProof:  make([]byte, fieldparams.BLSSignatureLength),
+					Aggregate: &ethpb.Attestation{
+						AggregationBits: bitfield.Bitlist{0b1101},
+						Data: &ethpb.AttestationData{
+							BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+							Source: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+							Target: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+						},
+						Signature: make([]byte, 96),
+					},
+					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 				},
 			},
-			want: &AggregateAndProof{
+			want: &v1.AggregateAndProof{
 				AggregatorIndex: "0",
-				Aggregate:       MockAttestation(),
+				Aggregate:       mock.MockAttestation(),
 				SelectionProof:  hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 			},
 			wantErr: false,
@@ -41,7 +54,7 @@ func TestMapAggregateAndProof(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapAggregateAndProof(tt.args.from)
+			got, err := v1.MapAggregateAndProof(tt.args.from)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapAggregateAndProof() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -60,21 +73,33 @@ func TestMapAttestation(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *Attestation
+		want    *v1.Attestation
 		wantErr bool
 	}{
 		{
 			name: "HappyPathTest",
 			args: args{
-				attestation: util.NewAttestation(),
+				attestation: &ethpb.Attestation{
+					AggregationBits: bitfield.Bitlist{0b1101},
+					Data: &ethpb.AttestationData{
+						BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+						Source: &ethpb.Checkpoint{
+							Root: make([]byte, fieldparams.RootLength),
+						},
+						Target: &ethpb.Checkpoint{
+							Root: make([]byte, fieldparams.RootLength),
+						},
+					},
+					Signature: make([]byte, 96),
+				},
 			},
-			want:    MockAttestation(),
+			want:    mock.MockAttestation(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapAttestation(tt.args.attestation)
+			got, err := v1.MapAttestation(tt.args.attestation)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapAttestation() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -93,21 +118,29 @@ func TestMapAttestationData(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *AttestationData
+		want    *v1.AttestationData
 		wantErr bool
 	}{
 		{
 			name: "HappyPathTest",
 			args: args{
-				data: util.NewAttestation().Data,
+				data: &ethpb.AttestationData{
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+					Source: &ethpb.Checkpoint{
+						Root: make([]byte, fieldparams.RootLength),
+					},
+					Target: &ethpb.Checkpoint{
+						Root: make([]byte, fieldparams.RootLength),
+					},
+				},
 			},
-			want:    MockAttestation().Data,
+			want:    mock.MockAttestation().Data,
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapAttestationData(tt.args.data)
+			got, err := v1.MapAttestationData(tt.args.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapAttestationData() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -126,7 +159,7 @@ func TestMapAttesterSlashing(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *AttesterSlashing
+		want    *v1.AttesterSlashing
 		wantErr bool
 	}{
 		{
@@ -135,26 +168,42 @@ func TestMapAttesterSlashing(t *testing.T) {
 				slashing: &ethpb.AttesterSlashing{
 					Attestation_1: &ethpb.IndexedAttestation{
 						AttestingIndices: []uint64{0, 1, 2},
-						Data:             util.NewAttestation().Data,
-						Signature:        make([]byte, fieldparams.BLSSignatureLength),
+						Data: &ethpb.AttestationData{
+							BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+							Source: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+							Target: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+						},
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
 					},
 					Attestation_2: &ethpb.IndexedAttestation{
 						AttestingIndices: []uint64{0, 1, 2},
-						Data:             util.NewAttestation().Data,
-						Signature:        make([]byte, fieldparams.BLSSignatureLength),
+						Data: &ethpb.AttestationData{
+							BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+							Source: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+							Target: &ethpb.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+						},
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
 					},
 				},
 			},
-			want: &AttesterSlashing{
-				Attestation_1: MockIndexedAttestation(),
-				Attestation_2: MockIndexedAttestation(),
+			want: &v1.AttesterSlashing{
+				Attestation_1: mock.MockIndexedAttestation(),
+				Attestation_2: mock.MockIndexedAttestation(),
 			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapAttesterSlashing(tt.args.slashing)
+			got, err := v1.MapAttesterSlashing(tt.args.slashing)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapAttesterSlashing() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -173,7 +222,7 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *BeaconBlockAltair
+		want    *v1.BeaconBlockAltair
 		wantErr bool
 	}{
 		{
@@ -220,18 +269,46 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 							{
 								Attestation_1: &ethpb.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+									Data: &ethpb.AttestationData{
+										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+										Source: &ethpb.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+										Target: &ethpb.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
 								},
 								Attestation_2: &ethpb.IndexedAttestation{
 									AttestingIndices: []uint64{0, 1, 2},
-									Data:             util.NewAttestation().Data,
-									Signature:        make([]byte, fieldparams.BLSSignatureLength),
+									Data: &ethpb.AttestationData{
+										BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+										Source: &ethpb.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+										Target: &ethpb.Checkpoint{
+											Root: make([]byte, fieldparams.RootLength),
+										},
+									},
+									Signature: make([]byte, fieldparams.BLSSignatureLength),
 								},
 							},
 						},
 						Attestations: []*ethpb.Attestation{
-							util.NewAttestation(),
+							{
+								AggregationBits: bitfield.Bitlist{0b1101},
+								Data: &ethpb.AttestationData{
+									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+									Source: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+									Target: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+								},
+								Signature: make([]byte, 96),
+							},
 						},
 						Deposits: []*ethpb.Deposit{
 							{
@@ -255,18 +332,18 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 						},
 						SyncAggregate: &ethpb.SyncAggregate{
 							SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
-							SyncCommitteeBits:      bitfield.NewBitvector512(),
+							SyncCommitteeBits:      mock.MockSyncComitteeBits(),
 						},
 					},
 				},
 			},
-			want:    MockBeaconBlockAltair(),
+			want:    mock.MockBeaconBlockAltair(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapBeaconBlockAltair(tt.args.block)
+			got, err := v1.MapBeaconBlockAltair(tt.args.block)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapBeaconBlockAltair() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -285,7 +362,7 @@ func TestMapBeaconBlockBody(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *BeaconBlockBody
+		want    *v1.BeaconBlockBody
 		wantErr bool
 	}{
 		{
@@ -327,18 +404,46 @@ func TestMapBeaconBlockBody(t *testing.T) {
 						{
 							Attestation_1: &ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{0, 1, 2},
-								Data:             util.NewAttestation().Data,
-								Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								Data: &ethpb.AttestationData{
+									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+									Source: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+									Target: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+								},
+								Signature: make([]byte, fieldparams.BLSSignatureLength),
 							},
 							Attestation_2: &ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{0, 1, 2},
-								Data:             util.NewAttestation().Data,
-								Signature:        make([]byte, fieldparams.BLSSignatureLength),
+								Data: &ethpb.AttestationData{
+									BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+									Source: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+									Target: &ethpb.Checkpoint{
+										Root: make([]byte, fieldparams.RootLength),
+									},
+								},
+								Signature: make([]byte, fieldparams.BLSSignatureLength),
 							},
 						},
 					},
 					Attestations: []*ethpb.Attestation{
-						util.NewAttestation(),
+						{
+							AggregationBits: bitfield.Bitlist{0b1101},
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+								Source: &ethpb.Checkpoint{
+									Root: make([]byte, fieldparams.RootLength),
+								},
+								Target: &ethpb.Checkpoint{
+									Root: make([]byte, fieldparams.RootLength),
+								},
+							},
+							Signature: make([]byte, 96),
+						},
 					},
 					Deposits: []*ethpb.Deposit{
 						{
@@ -362,13 +467,13 @@ func TestMapBeaconBlockBody(t *testing.T) {
 					},
 				},
 			},
-			want:    MockBeaconBlockBody(),
+			want:    mock.MockBeaconBlockBody(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapBeaconBlockBody(tt.args.body)
+			got, err := v1.MapBeaconBlockBody(tt.args.body)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapBeaconBlockBody() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -387,7 +492,7 @@ func TestMapContributionAndProof(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *ContributionAndProof
+		want    *v1.ContributionAndProof
 		wantErr bool
 	}{
 		{
@@ -399,18 +504,18 @@ func TestMapContributionAndProof(t *testing.T) {
 						Slot:              0,
 						BlockRoot:         make([]byte, fieldparams.RootLength),
 						SubcommitteeIndex: 0,
-						AggregationBits:   bitfield.NewBitvector128(),
+						AggregationBits:   mock.MockAggregationBits(),
 						Signature:         make([]byte, fieldparams.BLSSignatureLength),
 					},
 					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 				},
 			},
-			want: MockContributionAndProof(),
+			want: mock.MockContributionAndProof(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapContributionAndProof(tt.args.contribution)
+			got, err := v1.MapContributionAndProof(tt.args.contribution)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapContributionAndProof() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -424,33 +529,29 @@ func TestMapContributionAndProof(t *testing.T) {
 
 func TestMapForkInfo(t *testing.T) {
 	type args struct {
-		from                  *ethpb.Fork
+		slot                  types.Slot
 		genesisValidatorsRoot []byte
 	}
 
 	tests := []struct {
 		name    string
 		args    args
-		want    *ForkInfo
+		want    *v1.ForkInfo
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
 			args: args{
-				from: &ethpb.Fork{
-					PreviousVersion: make([]byte, 4),
-					CurrentVersion:  make([]byte, 4),
-					Epoch:           0,
-				},
+				slot:                  0,
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    MockForkInfo(),
+			want:    mock.MockForkInfo(),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapForkInfo(tt.args.from, tt.args.genesisValidatorsRoot)
+			got, err := v1.MapForkInfo(tt.args.slot, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapForkInfo() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -469,7 +570,7 @@ func TestMapSyncAggregatorSelectionData(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *SyncAggregatorSelectionData
+		want    *v1.SyncAggregatorSelectionData
 		wantErr bool
 	}{
 		{
@@ -480,7 +581,7 @@ func TestMapSyncAggregatorSelectionData(t *testing.T) {
 					SubcommitteeIndex: 0,
 				},
 			},
-			want: &SyncAggregatorSelectionData{
+			want: &v1.SyncAggregatorSelectionData{
 				Slot:              "0",
 				SubcommitteeIndex: "0",
 			},
@@ -489,54 +590,13 @@ func TestMapSyncAggregatorSelectionData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapSyncAggregatorSelectionData(tt.args.data)
+			got, err := v1.MapSyncAggregatorSelectionData(tt.args.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MapSyncAggregatorSelectionData() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MapSyncAggregatorSelectionData() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMapSyncCommitteeMessage(t *testing.T) {
-	type args struct {
-		message *ethpb.SyncCommitteeMessage
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *SyncCommitteeMessage
-		wantErr bool
-	}{
-		{
-			name: "Happy Path Test",
-			args: args{
-				message: &ethpb.SyncCommitteeMessage{
-					Slot:           0,
-					BlockRoot:      make([]byte, fieldparams.RootLength),
-					ValidatorIndex: 0,
-					Signature:      make([]byte, fieldparams.BLSSignatureLength),
-				},
-			},
-			want: &SyncCommitteeMessage{
-				Slot:            "0",
-				BeaconBlockRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := MapSyncCommitteeMessage(tt.args.message)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MapSyncCommitteeMessage() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MapSyncCommitteeMessage() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

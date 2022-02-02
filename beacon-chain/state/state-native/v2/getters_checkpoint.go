@@ -17,12 +17,12 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.justificationBitsInternal()
+	return b.justificationBitsVal()
 }
 
-// justificationBitsInternal marking which epochs have been justified in the beacon chain.
+// justificationBitsVal marking which epochs have been justified in the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) justificationBitsInternal() bitfield.Bitvector4 {
+func (b *BeaconState) justificationBitsVal() bitfield.Bitvector4 {
 	if b.justificationBits == nil {
 		return nil
 	}
@@ -41,12 +41,12 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.previousJustifiedCheckpointInternal()
+	return b.previousJustifiedCheckpointVal()
 }
 
-// previousJustifiedCheckpointInternal denoting an epoch and block root.
+// previousJustifiedCheckpointVal denoting an epoch and block root.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousJustifiedCheckpointInternal() *ethpb.Checkpoint {
+func (b *BeaconState) previousJustifiedCheckpointVal() *ethpb.Checkpoint {
 	return ethpb.CopyCheckpoint(b.previousJustifiedCheckpoint)
 }
 
@@ -59,12 +59,12 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.currentJustifiedCheckpointInternal()
+	return b.currentJustifiedCheckpointVal()
 }
 
 // currentJustifiedCheckpoint denoting an epoch and block root.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentJustifiedCheckpointInternal() *ethpb.Checkpoint {
+func (b *BeaconState) currentJustifiedCheckpointVal() *ethpb.Checkpoint {
 	return ethpb.CopyCheckpoint(b.currentJustifiedCheckpoint)
 }
 
@@ -103,12 +103,12 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.finalizedCheckpointInternal()
+	return b.finalizedCheckpointVal()
 }
 
-// finalizedCheckpointInternal denoting an epoch and block root.
+// finalizedCheckpointVal denoting an epoch and block root.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) finalizedCheckpointInternal() *ethpb.Checkpoint {
+func (b *BeaconState) finalizedCheckpointVal() *ethpb.Checkpoint {
 	return ethpb.CopyCheckpoint(b.finalizedCheckpoint)
 }
 

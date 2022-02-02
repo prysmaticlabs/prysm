@@ -99,13 +99,13 @@ func UpgradeToAltair(ctx context.Context, beaconState state.BeaconState, useNati
 	var newState state.BeaconStateAltair
 	if useNativeState {
 		var err error
-		newState, err = statealtairnative.InitializeFromProto(s)
+		newState, err = statealtairnative.InitializeFromProtoUnsafe(s)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		var err error
-		newState, err = statealtair.InitializeFromProto(s)
+		newState, err = statealtair.InitializeFromProtoUnsafe(s)
 		if err != nil {
 			return nil, err
 		}

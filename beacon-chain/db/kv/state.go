@@ -417,7 +417,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 	}
 
 	switch {
-	case hasMergeKey(enc):
+	case hasBellatrixKey(enc):
 		// Marshal state bytes to altair beacon state.
 		protoState := &ethpb.BeaconStateBellatrix{}
 		if err := protoState.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {

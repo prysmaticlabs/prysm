@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -59,11 +59,11 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	keystore, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
-	// We initialize a wallet with a imported keymanager.
+	// We initialize a wallet with a local keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flag required for ImportAccounts to work.
@@ -74,7 +74,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})
@@ -154,11 +154,11 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	keystore2, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
-	// We initialize a wallet with a imported keymanager.
+	// We initialize a wallet with a local keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flag required for ImportAccounts to work.
@@ -169,7 +169,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})
@@ -211,18 +211,18 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
-	imported.ResetCaches()
+	local.ResetCaches()
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})
@@ -232,11 +232,11 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 }
 
 func TestPrepareClients_AddsGRPCHeaders(t *testing.T) {
-	imported.ResetCaches()
+	local.ResetCaches()
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		grpcHeaders:         "Authorization=Basic some-token,Some-Other-Header=some-value",
@@ -244,7 +244,7 @@ func TestPrepareClients_AddsGRPCHeaders(t *testing.T) {
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})

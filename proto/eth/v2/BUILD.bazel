@@ -16,6 +16,7 @@ proto_library(
     deps = [
         "//proto/eth/ext:proto",
         "//proto/eth/v1:proto",
+        "//proto/engine/v1:proto",
     ],
 )
 
@@ -32,13 +33,14 @@ ssz_gen_marshal(
     go_proto = ":go_proto",
     includes = [
         "//proto/eth/v1:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "//beacon-chain/state/state-native/custom-types:go_default_library",
     ],
     objs = [
+    	"BeaconStateV2",
         "SignedBeaconBlockAltair",
-        "BeaconStateV2",
-        "SignedBeaconBlockMerge",
+        "SignedBeaconBlockBellatrix",
     ],
 )
 
@@ -54,6 +56,7 @@ go_proto_library(
         "//beacon-chain/state/state-native/custom-types:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//proto/eth/v1:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",

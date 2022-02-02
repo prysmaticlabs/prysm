@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -254,8 +255,8 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	// Test the start function.
 	chainService.Start()
 
-	require.DeepEqual(t, blkRoot[:], chainService.finalizedCheckpt.Root, "Finalize Checkpoint root is incorrect")
-	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.justifiedCheckpt.Root, "Justified Checkpoint root is incorrect")
+	require.DeepEqual(t, blkRoot[:], chainService.store.FinalizedCheckpt().Root, "Finalize Checkpoint root is incorrect")
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.store.JustifiedCheckpt().Root, "Justified Checkpoint root is incorrect")
 
 	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
 
@@ -450,9 +451,10 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:              &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
-		finalizedCheckpt: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		cfg:   &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
+		store: &store.Store{},
 	}
+	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
 	block := util.NewBeaconBlock()
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -516,9 +518,10 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(b)
 	s := &Service{
-		cfg:              &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
-		finalizedCheckpt: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		cfg:   &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
+		store: &store.Store{},
 	}
+	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
 	r, err := block.Block.HashTreeRoot()
 	require.NoError(b, err)

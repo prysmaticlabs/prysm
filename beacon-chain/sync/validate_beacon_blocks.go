@@ -14,11 +14,13 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -224,6 +226,47 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	if blk.Block().ProposerIndex() != idx {
 		s.setBadBlock(ctx, blockRoot)
 		return errors.New("incorrect proposer index")
+	}
+
+	return validateBellatrixBeaconBlock(parentState, blk.Block())
+}
+
+// validateBellatrixBeaconBlock validates the block for the Bellatrix fork.
+// spec code:
+//   If the execution is enabled for the block -- i.e. is_execution_enabled(state, block.body) then validate the following:
+//      [REJECT] The block's execution payload timestamp is correct with respect to the slot --
+//      i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+func validateBellatrixBeaconBlock(parentState state.BeaconState, blk block.BeaconBlock) error {
+	// Error if block and state are not the same version
+	if parentState.Version() != blk.Version() {
+		return errors.New("block and state are not the same version")
+	}
+	if parentState.Version() != version.Bellatrix || blk.Version() != version.Bellatrix {
+		return nil
+	}
+
+	body := blk.Body()
+	executionEnabled, err := blocks.ExecutionEnabled(parentState, body)
+	if err != nil {
+		return err
+	}
+	if !executionEnabled {
+		return nil
+	}
+
+	t, err := slots.ToTime(parentState.GenesisTime(), blk.Slot())
+	if err != nil {
+		return err
+	}
+	payload, err := body.ExecutionPayload()
+	if err != nil {
+		return err
+	}
+	if payload == nil {
+		return errors.New("execution payload is nil")
+	}
+	if payload.Timestamp != uint64(t.Unix()) {
+		return errors.New("incorrect timestamp")
 	}
 
 	return nil

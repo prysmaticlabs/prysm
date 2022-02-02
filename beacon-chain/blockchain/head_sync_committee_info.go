@@ -19,7 +19,7 @@ import (
 )
 
 // Initialize the state cache for sync committees.
-var syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState(false)
+var syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState()
 
 // HeadSyncCommitteeFetcher is the interface that wraps the head sync committee related functions.
 // The head sync committee functions return callers sync committee indices and public keys with respect to current head state.
@@ -143,7 +143,7 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 	defer mLock.Unlock()
 
 	// If there's already a head state exists with the request slot, we don't need to process slots.
-	cachedState, err := s.cfg.SyncCommitteeHeadStateCache.Get(slot)
+	cachedState, err := syncCommitteeHeadStateCache.Get(slot)
 	switch {
 	case err == nil:
 		syncHeadStateHit.Inc()
@@ -157,14 +157,12 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 		if headState == nil || headState.IsNil() {
 			return nil, errors.New("nil state")
 		}
-		if slot > headState.Slot() {
-			headState, err = transition.ProcessSlots(ctx, headState, slot, s.cfg.UseNativeState)
-			if err != nil {
-				return nil, err
-			}
+		headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slot)
+		if err != nil {
+			return nil, err
 		}
 		syncHeadStateMiss.Inc()
-		err = s.cfg.SyncCommitteeHeadStateCache.Put(slot, headState)
+		err = syncCommitteeHeadStateCache.Put(slot, headState)
 		return headState, err
 	default:
 		// In the event, we encounter another error

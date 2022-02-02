@@ -26,7 +26,6 @@ go_library(
         "//proto/testing:__subpackages__",
         "//slasher:__subpackages__",
         "//testing:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//tools/blocktree:__pkg__",
         "//tools/pcli:__pkg__",
         "//validator/client:__pkg__",

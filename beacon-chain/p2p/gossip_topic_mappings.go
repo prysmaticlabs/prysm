@@ -25,8 +25,13 @@ var gossipTopicMappings = map[string]proto.Message{
 // GossipTopicMappings is a function to return the assigned data type
 // versioned by epoch.
 func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
-	if topic == BlockSubnetTopicFormat && epoch >= params.BeaconConfig().AltairForkEpoch {
-		return &ethpb.SignedBeaconBlockAltair{}
+	if topic == BlockSubnetTopicFormat {
+		if epoch >= params.BeaconConfig().BellatrixForkEpoch {
+			return &ethpb.SignedBeaconBlockBellatrix{}
+		}
+		if epoch >= params.BeaconConfig().AltairForkEpoch {
+			return &ethpb.SignedBeaconBlockAltair{}
+		}
 	}
 	return gossipTopicMappings[topic]
 }
@@ -51,4 +56,5 @@ func init() {
 	}
 	// Specially handle Altair Objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockAltair{})] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
 }

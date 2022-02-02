@@ -7,6 +7,7 @@ import (
 
 	fssz "github.com/ferranbt/fastssz"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	common "github.com/prysmaticlabs/prysm/testing/spectest/shared/common/ssz_static"
@@ -34,7 +35,7 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	var obj interface{}
 	switch folderName {
 	case "ExecutionPayload":
-		obj = &ethpb.ExecutionPayload{}
+		obj = &enginev1.ExecutionPayload{}
 	case "ExecutionPayloadHeader":
 		obj = &ethpb.ExecutionPayloadHeader{}
 	case "Attestation":
@@ -46,9 +47,9 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "AggregateAndProof":
 		obj = &ethpb.AggregateAttestationAndProof{}
 	case "BeaconBlock":
-		obj = &ethpb.BeaconBlockMerge{}
+		obj = &ethpb.BeaconBlockBellatrix{}
 	case "BeaconBlockBody":
-		obj = &ethpb.BeaconBlockBodyMerge{}
+		obj = &ethpb.BeaconBlockBodyBellatrix{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
@@ -81,7 +82,7 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "SignedAggregateAndProof":
 		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
-		obj = &ethpb.SignedBeaconBlockMerge{}
+		obj = &ethpb.SignedBeaconBlockBellatrix{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
 	case "SignedVoluntaryExit":

@@ -2,8 +2,6 @@ package v1
 
 import (
 	"fmt"
-
-	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 )
 
 // RandaoMixes of block proposers on the beacon chain.
@@ -15,20 +13,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	mixesArr := b.randaoMixesInternal()
-	mixes := make([][]byte, len(mixesArr))
-	for i, m := range mixesArr {
-		tmp := m
-		mixes[i] = tmp[:]
-	}
-
-	return mixes
-}
-
-// randaoMixesInternal of block proposers on the beacon chain.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) randaoMixesInternal() *customtypes.RandaoMixes {
-	return b.randaoMixes
+	return b.randaoMixes.Slice()
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an

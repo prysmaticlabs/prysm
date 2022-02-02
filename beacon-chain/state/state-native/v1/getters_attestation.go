@@ -13,12 +13,12 @@ func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.previousEpochAttestationsInternal(), nil
+	return b.previousEpochAttestationsVal(), nil
 }
 
-// previousEpochAttestationsInternal corresponding to blocks on the beacon chain.
+// previousEpochAttestationsVal corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochAttestationsInternal() []*ethpb.PendingAttestation {
+func (b *BeaconState) previousEpochAttestationsVal() []*ethpb.PendingAttestation {
 	return ethpb.CopyPendingAttestationSlice(b.previousEpochAttestations)
 }
 
@@ -31,11 +31,11 @@ func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, e
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.currentEpochAttestationsInternal(), nil
+	return b.currentEpochAttestationsVal(), nil
 }
 
 // currentEpochAttestations corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochAttestationsInternal() []*ethpb.PendingAttestation {
+func (b *BeaconState) currentEpochAttestationsVal() []*ethpb.PendingAttestation {
 	return ethpb.CopyPendingAttestationSlice(b.currentEpochAttestations)
 }

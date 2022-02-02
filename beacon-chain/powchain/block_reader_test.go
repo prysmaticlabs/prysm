@@ -13,6 +13,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -27,7 +28,7 @@ func setDefaultMocks(service *Service) *Service {
 }
 
 func TestLatestMainchainInfo_OK(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 
 	beaconDB := dbutil.SetupDB(t)
@@ -223,7 +224,7 @@ func TestBlockExistsWithCache_HeaderNotCached(t *testing.T) {
 
 func TestService_BlockNumberByTimestamp(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	web3Service, err := NewService(context.Background(),
 		false,
@@ -251,7 +252,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 
 func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	web3Service, err := NewService(context.Background(),
 		false,
@@ -285,7 +286,7 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 
 func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	web3Service, err := NewService(context.Background(),
 		false,

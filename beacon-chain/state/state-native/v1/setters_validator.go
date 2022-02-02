@@ -106,7 +106,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64
 
 	bals := b.balances
 	if b.sharedFieldReferences[balances].Refs() > 1 {
-		bals = b.balancesInternal()
+		bals = b.balancesVal()
 		b.sharedFieldReferences[balances].MinusRef()
 		b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	}
@@ -143,7 +143,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 
 	s := b.slashings
 	if b.sharedFieldReferences[slashings].Refs() > 1 {
-		s = b.slashingsInternal()
+		s = b.slashingsVal()
 		b.sharedFieldReferences[slashings].MinusRef()
 		b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
 	}
@@ -188,7 +188,7 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 
 	bals := b.balances
 	if b.sharedFieldReferences[balances].Refs() > 1 {
-		bals = b.balancesInternal()
+		bals = b.balancesVal()
 		b.sharedFieldReferences[balances].MinusRef()
 		b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	}

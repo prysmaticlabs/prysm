@@ -68,7 +68,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
 		if v.emitAccountMetrics {
@@ -100,7 +100,7 @@ func (v *validator) proposeBlockPhase0(ctx context.Context, slot types.Slot, pub
 	}
 
 	// Sign returned block from beacon node
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wrapper.WrappedPhase0BeaconBlock(b))
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, slot, wrapper.WrappedPhase0BeaconBlock(b))
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -178,7 +178,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
 		if v.emitAccountMetrics {
@@ -226,7 +226,7 @@ func (v *validator) proposeBlockAltair(ctx context.Context, slot types.Slot, pub
 		}
 		return
 	}
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wb)
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, slot, wb)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -343,7 +343,7 @@ func ProposeExit(
 }
 
 // Sign randao reveal with randao domain and private key.
-func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch) ([]byte, error) {
+func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, slot types.Slot) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 	if err != nil {
 		return nil, errors.Wrap(err, domainDataErr)
@@ -363,6 +363,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Epoch{Epoch: epoch},
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, err
@@ -371,7 +372,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [fieldparams.BL
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, b block.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, slot types.Slot, b block.BeaconBlock) ([]byte, *ethpb.DomainResponse, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, domainDataErr)
@@ -384,9 +385,9 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	switch b.Version() {
 
 	case version.Bellatrix:
-		block, ok := b.Proto().(*ethpb.BeaconBlockMerge)
+		block, ok := b.Proto().(*ethpb.BeaconBlockBellatrix)
 		if !ok {
-			return nil, nil, errors.New("could not convert obj to beacon block merge")
+			return nil, nil, errors.New("could not convert obj to beacon block bellatrix")
 		}
 		blockRoot, err := signing.ComputeSigningRoot(block, domain.SignatureDomain)
 		if err != nil {
@@ -416,6 +417,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 			SigningRoot:     blockRoot[:],
 			SignatureDomain: domain.SignatureDomain,
 			Object:          &validatorpb.SignRequest_BlockV2{BlockV2: block},
+			SigningSlot:     slot,
 		})
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")
@@ -435,6 +437,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 			SigningRoot:     blockRoot[:],
 			SignatureDomain: domain.SignatureDomain,
 			Object:          &validatorpb.SignRequest_Block{Block: block},
+			SigningSlot:     slot,
 		})
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")
@@ -550,7 +553,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
 		if v.emitAccountMetrics {
@@ -577,9 +580,9 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		}
 		return
 	}
-	mergeBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_Merge)
+	bellatrixBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_Bellatrix)
 	if !ok {
-		log.Error("Not an Merge block")
+		log.Error("Not a Bellatrix block")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -587,7 +590,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 	}
 
 	// Sign returned block from beacon node
-	wb, err := wrapper.WrappedMergeBeaconBlock(mergeBlk.Merge)
+	wb, err := wrapper.WrappedBellatrixBeaconBlock(bellatrixBlk.Bellatrix)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap block")
 		if v.emitAccountMetrics {
@@ -595,7 +598,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		}
 		return
 	}
-	sig, domain, err := v.signBlock(ctx, pubKey, epoch, wb)
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, slot, wb)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
@@ -603,12 +606,12 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		}
 		return
 	}
-	blk := &ethpb.SignedBeaconBlockMerge{
-		Block:     mergeBlk.Merge,
+	blk := &ethpb.SignedBeaconBlockBellatrix{
+		Block:     bellatrixBlk.Bellatrix,
 		Signature: sig,
 	}
 
-	signingRoot, err := signing.ComputeSigningRoot(mergeBlk.Merge, domain.SignatureDomain)
+	signingRoot, err := signing.ComputeSigningRoot(bellatrixBlk.Bellatrix, domain.SignatureDomain)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -617,7 +620,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		return
 	}
 
-	wsb, err := wrapper.WrappedMergeSignedBeaconBlock(blk)
+	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap signed block")
 		if v.emitAccountMetrics {
@@ -638,7 +641,7 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, &ethpb.GenericSignedBeaconBlock{
-		Block: &ethpb.GenericSignedBeaconBlock_Merge{Merge: blk},
+		Block: &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blk},
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
@@ -650,11 +653,11 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
-		"slot":            mergeBlk.Merge.Slot,
+		"slot":            bellatrixBlk.Bellatrix.Slot,
 		"blockRoot":       blkRoot,
-		"numAttestations": len(mergeBlk.Merge.Body.Attestations),
-		"numDeposits":     len(mergeBlk.Merge.Body.Deposits),
-		"graffiti":        string(mergeBlk.Merge.Body.Graffiti),
+		"numAttestations": len(bellatrixBlk.Bellatrix.Body.Attestations),
+		"numDeposits":     len(bellatrixBlk.Bellatrix.Body.Deposits),
+		"graffiti":        string(bellatrixBlk.Bellatrix.Body.Graffiti),
 		"fork":            "bellatrix",
 	}).Info("Submitted new block")
 

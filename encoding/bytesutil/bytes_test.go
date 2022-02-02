@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -459,4 +460,23 @@ func TestReverseByteOrder(t *testing.T) {
 	// check that the input is not modified and the output is reversed
 	assert.Equal(t, bytes.Equal(input, []byte{0, 1, 2, 3, 4, 5}), true)
 	assert.Equal(t, bytes.Equal(expectedResult, output), true)
+}
+
+func TestSafeCopy2d32Bytes(t *testing.T) {
+	input := make([][32]byte, 2)
+	input[0] = bytesutil.ToBytes32([]byte{'a'})
+	input[1] = bytesutil.ToBytes32([]byte{'b'})
+	output := bytesutil.SafeCopy2d32Bytes(input)
+	assert.Equal(t, false, &input == &output, "No copy was made")
+	assert.DeepEqual(t, input, output)
+}
+
+func TestNonZeroRoot(t *testing.T) {
+	input := make([]byte, fieldparams.RootLength)
+	output := bytesutil.NonZeroRoot(input)
+	assert.Equal(t, false, output)
+	copy(input[2:], "a")
+	copy(input[3:], "b")
+	output = bytesutil.NonZeroRoot(input)
+	assert.Equal(t, true, output)
 }

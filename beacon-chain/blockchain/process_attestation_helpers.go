@@ -42,11 +42,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if err != nil {
 		return nil, err
 	}
-	if epochStartSlot > baseState.Slot() {
-		baseState, err = transition.ProcessSlots(ctx, baseState, epochStartSlot, s.cfg.UseNativeState)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
-		}
+	baseState, err = transition.ProcessSlotsIfPossible(ctx, baseState, epochStartSlot)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 	}
 
 	// Sharing the same state across caches is perfectly fine here, the fetching

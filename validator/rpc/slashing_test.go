@@ -37,7 +37,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,

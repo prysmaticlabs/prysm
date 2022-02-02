@@ -6,7 +6,6 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -31,7 +30,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 
 	var rootsArr [fieldparams.BlockRootsLength][32]byte
 	for i := 0; i < len(rootsArr); i++ {
-		rootsArr[i] = bytesutil.ToBytes32(val[i])
+		copy(rootsArr[i][:], val[i])
 	}
 	roots := customtypes.BlockRoots(rootsArr)
 	b.blockRoots = &roots

@@ -32,8 +32,8 @@ type BeaconState struct {
 	balances                    []uint64                    `ssz-gen:"true" ssz-max:"1099511627776"`
 	randaoMixes                 *customtypes.RandaoMixes    `ssz-gen:"true" ssz-size:"65536,32"`
 	slashings                   []uint64                    `ssz-gen:"true" ssz-size:"8192"`
-	previousEpochAttestations   []*ethpb.PendingAttestation `ssz-gen:"true" ssz-max:"1099511627776"`
-	currentEpochAttestations    []*ethpb.PendingAttestation `ssz-gen:"true" ssz-max:"1099511627776"`
+	previousEpochAttestations   []*ethpb.PendingAttestation `ssz-gen:"true" ssz-max:"4096"`
+	currentEpochAttestations    []*ethpb.PendingAttestation `ssz-gen:"true" ssz-max:"4096"`
 	justificationBits           bitfield.Bitvector4         `ssz-gen:"true" ssz-size:"1"`
 	previousJustifiedCheckpoint *ethpb.Checkpoint           `ssz-gen:"true"`
 	currentJustifiedCheckpoint  *ethpb.Checkpoint           `ssz-gen:"true"`
