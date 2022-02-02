@@ -198,15 +198,20 @@ func (f *ForkChoice) Invalid(ctx context.Context, root [32]byte) error {
 		return errInvalidNodeIndex
 	}
 	node := f.store.nodes[idx]
+	// We only support changing status of the tip of the tree
+	if node.bestChild != NonExistentNode {
+		return errInvalidNodeIndex
+	}
+
 	parentIndex := node.parent
-
-	f.syncedTips.Lock()
-	defer f.syncedTips.Unlock()
-
 	// This should not happen
 	if parentIndex == NonExistentNode {
 		return nil
 	}
+
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
+
 	parent := f.store.nodes[parentIndex]
 	parentRoot := parent.root
 
