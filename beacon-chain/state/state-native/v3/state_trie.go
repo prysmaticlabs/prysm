@@ -383,14 +383,14 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 				maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
 				elemSize := uint64(8)
 				balLimit := (maxBalCap*elemSize + 31) / 32
-				err := b.resetFieldTrie(field, b.state.Balances, balLimit)
+				err := b.resetFieldTrie(field, b.balances, balLimit)
 				if err != nil {
 					return [32]byte{}, err
 				}
 				delete(b.rebuildTrie, field)
 				return b.stateFieldLeaves[field].TrieRoot()
 			}
-			return b.recomputeFieldTrie(balances, b.state.Balances)
+			return b.recomputeFieldTrie(balances, b.balances)
 		}
 		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
 	case randaoMixes:
