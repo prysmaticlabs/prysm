@@ -3,6 +3,7 @@
 package field_params
 
 const (
+	Preset                          = "minimal"
 	BlockRootsLength                = 64            // SLOTS_PER_HISTORICAL_ROOT
 	StateRootsLength                = 64            // SLOTS_PER_HISTORICAL_ROOT
 	RandaoMixesLength               = 64            // EPOCHS_PER_HISTORICAL_VECTOR
