@@ -243,6 +243,12 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) ([]*ethpbser
 	for i := 0; i < len(cfg.Keystores); i++ {
 		passwords[i] = cfg.AccountPassword
 	}
+	if len(passwords) == 0 {
+		return nil, errors.New("no passwords provided for keystores")
+	}
+	if len(passwords) != len(cfg.Keystores) {
+		return nil, errors.New("number of passwords does not match number of keystores")
+	}
 	return cfg.Importer.ImportKeystores(
 		ctx,
 		cfg.Keystores,
