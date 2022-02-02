@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"fmt"
+	"github.com/golang/protobuf/ptypes/empty"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -41,6 +42,18 @@ func (e *blockIdParseError) Error() string {
 	return e.message
 }
 
+func (bs *Server) GetWeakSubjectivity(context.Context, *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
+	return &ethpbv1.WeakSubjectivityResponse{
+		Data: &ethpbv1.WeakSubjectivityData{
+			WsCheckpoint: &ethpbv1.Checkpoint{
+				Epoch: 0,
+				Root: make([]byte, 32),
+			},
+			StateRoot: make([]byte, 32),
+		},
+	}, nil
+}
+
 // GetBlockHeader retrieves block header for given block id.
 func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockHeaderResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockHeader")
@@ -49,7 +62,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockHeader")
 	}
 	v1alpha1Header, err := blk.Header()
 	if err != nil {
@@ -232,7 +245,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlock")
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -255,7 +268,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockSSZ")
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -277,7 +290,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockV2")
 	}
 	if phase0Blk != nil {
 		v1Blk, err := migration.SignedBeaconBlock(blk)
@@ -317,7 +330,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockSSZV2")
 	}
 	if phase0Blk != nil {
 		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
@@ -467,7 +480,7 @@ func (bs *Server) blocksFromId(ctx context.Context, blockId []byte) (
 	blk, err := bs.blockFromBlockID(ctx, blockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "blocksFromId")
 	}
 	phase0Blk, err := blk.PbPhase0Block()
 	// Assume we have an Altair block when Phase 0 block is unsupported.

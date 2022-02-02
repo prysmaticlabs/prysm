@@ -1842,6 +1842,108 @@ func (x *DepositContract) GetAddress() string {
 	return ""
 }
 
+type WeakSubjectivityResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Data *WeakSubjectivityData `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (x *WeakSubjectivityResponse) Reset() {
+	*x = WeakSubjectivityResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[36]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WeakSubjectivityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WeakSubjectivityResponse) ProtoMessage() {}
+
+func (x *WeakSubjectivityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[36]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WeakSubjectivityResponse.ProtoReflect.Descriptor instead.
+func (*WeakSubjectivityResponse) Descriptor() ([]byte, []int) {
+	return file_proto_eth_v1_beacon_chain_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *WeakSubjectivityResponse) GetData() *WeakSubjectivityData {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type WeakSubjectivityData struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	WsCheckpoint *Checkpoint `protobuf:"bytes,1,opt,name=ws_checkpoint,json=wsCheckpoint,proto3" json:"ws_checkpoint,omitempty"`
+	StateRoot    []byte      `protobuf:"bytes,2,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty"`
+}
+
+func (x *WeakSubjectivityData) Reset() {
+	*x = WeakSubjectivityData{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[37]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WeakSubjectivityData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WeakSubjectivityData) ProtoMessage() {}
+
+func (x *WeakSubjectivityData) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[37]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WeakSubjectivityData.ProtoReflect.Descriptor instead.
+func (*WeakSubjectivityData) Descriptor() ([]byte, []int) {
+	return file_proto_eth_v1_beacon_chain_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *WeakSubjectivityData) GetWsCheckpoint() *Checkpoint {
+	if x != nil {
+		return x.WsCheckpoint
+	}
+	return nil
+}
+
+func (x *WeakSubjectivityData) GetStateRoot() []byte {
+	if x != nil {
+		return x.StateRoot
+	}
+	return nil
+}
+
 type GenesisResponse_Genesis struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1855,7 +1957,7 @@ type GenesisResponse_Genesis struct {
 func (x *GenesisResponse_Genesis) Reset() {
 	*x = GenesisResponse_Genesis{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[36]
+		mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1868,7 +1970,7 @@ func (x *GenesisResponse_Genesis) String() string {
 func (*GenesisResponse_Genesis) ProtoMessage() {}
 
 func (x *GenesisResponse_Genesis) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[36]
+	mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1916,7 +2018,7 @@ type StateRootResponse_StateRoot struct {
 func (x *StateRootResponse_StateRoot) Reset() {
 	*x = StateRootResponse_StateRoot{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[37]
+		mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1929,7 +2031,7 @@ func (x *StateRootResponse_StateRoot) String() string {
 func (*StateRootResponse_StateRoot) ProtoMessage() {}
 
 func (x *StateRootResponse_StateRoot) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[37]
+	mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1965,7 +2067,7 @@ type StateFinalityCheckpointResponse_StateFinalityCheckpoint struct {
 func (x *StateFinalityCheckpointResponse_StateFinalityCheckpoint) Reset() {
 	*x = StateFinalityCheckpointResponse_StateFinalityCheckpoint{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[38]
+		mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1978,7 +2080,7 @@ func (x *StateFinalityCheckpointResponse_StateFinalityCheckpoint) String() strin
 func (*StateFinalityCheckpointResponse_StateFinalityCheckpoint) ProtoMessage() {}
 
 func (x *StateFinalityCheckpointResponse_StateFinalityCheckpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[38]
+	mi := &file_proto_eth_v1_beacon_chain_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2286,7 +2388,20 @@ var file_proto_eth_v1_beacon_chain_proto_rawDesc = []byte{
 	0x69, 0x74, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74, 0x12, 0x19, 0x0a, 0x08, 0x63, 0x68,
 	0x61, 0x69, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x63, 0x68,
 	0x61, 0x69, 0x6e, 0x49, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x42,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x22,
+	0x55, 0x0a, 0x18, 0x57, 0x65, 0x61, 0x6b, 0x53, 0x75, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x69, 0x76,
+	0x69, 0x74, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x39, 0x0a, 0x04, 0x64,
+	0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x65, 0x74, 0x68, 0x65,
+	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x57, 0x65, 0x61, 0x6b,
+	0x53, 0x75, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x44, 0x61, 0x74, 0x61,
+	0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x77, 0x0a, 0x14, 0x57, 0x65, 0x61, 0x6b, 0x53, 0x75,
+	0x62, 0x6a, 0x65, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x44, 0x61, 0x74, 0x61, 0x12, 0x40,
+	0x0a, 0x0d, 0x77, 0x73, 0x5f, 0x63, 0x68, 0x65, 0x63, 0x6b, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
+	0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x70, 0x6f, 0x69,
+	0x6e, 0x74, 0x52, 0x0c, 0x77, 0x73, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x70, 0x6f, 0x69, 0x6e, 0x74,
+	0x12, 0x1d, 0x0a, 0x0a, 0x73, 0x74, 0x61, 0x74, 0x65, 0x5f, 0x72, 0x6f, 0x6f, 0x74, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x73, 0x74, 0x61, 0x74, 0x65, 0x52, 0x6f, 0x6f, 0x74, 0x42,
 	0x7a, 0x0a, 0x13, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
 	0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x42, 0x10, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x43, 0x68,
 	0x61, 0x69, 0x6e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2b, 0x67, 0x69, 0x74, 0x68,
@@ -2310,7 +2425,7 @@ func file_proto_eth_v1_beacon_chain_proto_rawDescGZIP() []byte {
 	return file_proto_eth_v1_beacon_chain_proto_rawDescData
 }
 
-var file_proto_eth_v1_beacon_chain_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
+var file_proto_eth_v1_beacon_chain_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_proto_eth_v1_beacon_chain_proto_goTypes = []interface{}{
 	(*GenesisResponse)(nil),                                         // 0: ethereum.eth.v1.GenesisResponse
 	(*StateRequest)(nil),                                            // 1: ethereum.eth.v1.StateRequest
@@ -2348,58 +2463,62 @@ var file_proto_eth_v1_beacon_chain_proto_goTypes = []interface{}{
 	(*SpecResponse)(nil),                                            // 33: ethereum.eth.v1.SpecResponse
 	(*DepositContractResponse)(nil),                                 // 34: ethereum.eth.v1.DepositContractResponse
 	(*DepositContract)(nil),                                         // 35: ethereum.eth.v1.DepositContract
-	(*GenesisResponse_Genesis)(nil),                                 // 36: ethereum.eth.v1.GenesisResponse.Genesis
-	(*StateRootResponse_StateRoot)(nil),                             // 37: ethereum.eth.v1.StateRootResponse.StateRoot
-	(*StateFinalityCheckpointResponse_StateFinalityCheckpoint)(nil), // 38: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint
-	nil,                           // 39: ethereum.eth.v1.SpecResponse.DataEntry
-	(*Fork)(nil),                  // 40: ethereum.eth.v1.Fork
-	(ValidatorStatus)(0),          // 41: ethereum.eth.v1.ValidatorStatus
-	(*ValidatorContainer)(nil),    // 42: ethereum.eth.v1.ValidatorContainer
-	(*Committee)(nil),             // 43: ethereum.eth.v1.Committee
-	(*Attestation)(nil),           // 44: ethereum.eth.v1.Attestation
-	(*BeaconBlockHeader)(nil),     // 45: ethereum.eth.v1.BeaconBlockHeader
-	(*BeaconBlock)(nil),           // 46: ethereum.eth.v1.BeaconBlock
-	(*AttesterSlashing)(nil),      // 47: ethereum.eth.v1.AttesterSlashing
-	(*ProposerSlashing)(nil),      // 48: ethereum.eth.v1.ProposerSlashing
-	(*SignedVoluntaryExit)(nil),   // 49: ethereum.eth.v1.SignedVoluntaryExit
-	(*timestamppb.Timestamp)(nil), // 50: google.protobuf.Timestamp
-	(*Checkpoint)(nil),            // 51: ethereum.eth.v1.Checkpoint
+	(*WeakSubjectivityResponse)(nil),                                // 36: ethereum.eth.v1.WeakSubjectivityResponse
+	(*WeakSubjectivityData)(nil),                                    // 37: ethereum.eth.v1.WeakSubjectivityData
+	(*GenesisResponse_Genesis)(nil),                                 // 38: ethereum.eth.v1.GenesisResponse.Genesis
+	(*StateRootResponse_StateRoot)(nil),                             // 39: ethereum.eth.v1.StateRootResponse.StateRoot
+	(*StateFinalityCheckpointResponse_StateFinalityCheckpoint)(nil), // 40: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint
+	nil,                           // 41: ethereum.eth.v1.SpecResponse.DataEntry
+	(*Fork)(nil),                  // 42: ethereum.eth.v1.Fork
+	(ValidatorStatus)(0),          // 43: ethereum.eth.v1.ValidatorStatus
+	(*ValidatorContainer)(nil),    // 44: ethereum.eth.v1.ValidatorContainer
+	(*Committee)(nil),             // 45: ethereum.eth.v1.Committee
+	(*Attestation)(nil),           // 46: ethereum.eth.v1.Attestation
+	(*BeaconBlockHeader)(nil),     // 47: ethereum.eth.v1.BeaconBlockHeader
+	(*BeaconBlock)(nil),           // 48: ethereum.eth.v1.BeaconBlock
+	(*AttesterSlashing)(nil),      // 49: ethereum.eth.v1.AttesterSlashing
+	(*ProposerSlashing)(nil),      // 50: ethereum.eth.v1.ProposerSlashing
+	(*SignedVoluntaryExit)(nil),   // 51: ethereum.eth.v1.SignedVoluntaryExit
+	(*Checkpoint)(nil),            // 52: ethereum.eth.v1.Checkpoint
+	(*timestamppb.Timestamp)(nil), // 53: google.protobuf.Timestamp
 }
 var file_proto_eth_v1_beacon_chain_proto_depIdxs = []int32{
-	36, // 0: ethereum.eth.v1.GenesisResponse.data:type_name -> ethereum.eth.v1.GenesisResponse.Genesis
-	37, // 1: ethereum.eth.v1.StateRootResponse.data:type_name -> ethereum.eth.v1.StateRootResponse.StateRoot
-	40, // 2: ethereum.eth.v1.StateForkResponse.data:type_name -> ethereum.eth.v1.Fork
-	38, // 3: ethereum.eth.v1.StateFinalityCheckpointResponse.data:type_name -> ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint
-	41, // 4: ethereum.eth.v1.StateValidatorsRequest.status:type_name -> ethereum.eth.v1.ValidatorStatus
-	42, // 5: ethereum.eth.v1.StateValidatorsResponse.data:type_name -> ethereum.eth.v1.ValidatorContainer
+	38, // 0: ethereum.eth.v1.GenesisResponse.data:type_name -> ethereum.eth.v1.GenesisResponse.Genesis
+	39, // 1: ethereum.eth.v1.StateRootResponse.data:type_name -> ethereum.eth.v1.StateRootResponse.StateRoot
+	42, // 2: ethereum.eth.v1.StateForkResponse.data:type_name -> ethereum.eth.v1.Fork
+	40, // 3: ethereum.eth.v1.StateFinalityCheckpointResponse.data:type_name -> ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint
+	43, // 4: ethereum.eth.v1.StateValidatorsRequest.status:type_name -> ethereum.eth.v1.ValidatorStatus
+	44, // 5: ethereum.eth.v1.StateValidatorsResponse.data:type_name -> ethereum.eth.v1.ValidatorContainer
 	9,  // 6: ethereum.eth.v1.ValidatorBalancesResponse.data:type_name -> ethereum.eth.v1.ValidatorBalance
-	42, // 7: ethereum.eth.v1.StateValidatorResponse.data:type_name -> ethereum.eth.v1.ValidatorContainer
-	43, // 8: ethereum.eth.v1.StateCommitteesResponse.data:type_name -> ethereum.eth.v1.Committee
-	44, // 9: ethereum.eth.v1.BlockAttestationsResponse.data:type_name -> ethereum.eth.v1.Attestation
+	44, // 7: ethereum.eth.v1.StateValidatorResponse.data:type_name -> ethereum.eth.v1.ValidatorContainer
+	45, // 8: ethereum.eth.v1.StateCommitteesResponse.data:type_name -> ethereum.eth.v1.Committee
+	46, // 9: ethereum.eth.v1.BlockAttestationsResponse.data:type_name -> ethereum.eth.v1.Attestation
 	15, // 10: ethereum.eth.v1.BlockRootResponse.data:type_name -> ethereum.eth.v1.BlockRootContainer
 	21, // 11: ethereum.eth.v1.BlockHeadersResponse.data:type_name -> ethereum.eth.v1.BlockHeaderContainer
 	21, // 12: ethereum.eth.v1.BlockHeaderResponse.data:type_name -> ethereum.eth.v1.BlockHeaderContainer
 	22, // 13: ethereum.eth.v1.BlockHeaderContainer.header:type_name -> ethereum.eth.v1.BeaconBlockHeaderContainer
-	45, // 14: ethereum.eth.v1.BeaconBlockHeaderContainer.message:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	47, // 14: ethereum.eth.v1.BeaconBlockHeaderContainer.message:type_name -> ethereum.eth.v1.BeaconBlockHeader
 	25, // 15: ethereum.eth.v1.BlockResponse.data:type_name -> ethereum.eth.v1.BeaconBlockContainer
-	46, // 16: ethereum.eth.v1.BeaconBlockContainer.message:type_name -> ethereum.eth.v1.BeaconBlock
-	44, // 17: ethereum.eth.v1.SubmitAttestationsRequest.data:type_name -> ethereum.eth.v1.Attestation
-	44, // 18: ethereum.eth.v1.AttestationsPoolResponse.data:type_name -> ethereum.eth.v1.Attestation
-	47, // 19: ethereum.eth.v1.AttesterSlashingsPoolResponse.data:type_name -> ethereum.eth.v1.AttesterSlashing
-	48, // 20: ethereum.eth.v1.ProposerSlashingPoolResponse.data:type_name -> ethereum.eth.v1.ProposerSlashing
-	49, // 21: ethereum.eth.v1.VoluntaryExitsPoolResponse.data:type_name -> ethereum.eth.v1.SignedVoluntaryExit
-	40, // 22: ethereum.eth.v1.ForkScheduleResponse.data:type_name -> ethereum.eth.v1.Fork
-	39, // 23: ethereum.eth.v1.SpecResponse.data:type_name -> ethereum.eth.v1.SpecResponse.DataEntry
+	48, // 16: ethereum.eth.v1.BeaconBlockContainer.message:type_name -> ethereum.eth.v1.BeaconBlock
+	46, // 17: ethereum.eth.v1.SubmitAttestationsRequest.data:type_name -> ethereum.eth.v1.Attestation
+	46, // 18: ethereum.eth.v1.AttestationsPoolResponse.data:type_name -> ethereum.eth.v1.Attestation
+	49, // 19: ethereum.eth.v1.AttesterSlashingsPoolResponse.data:type_name -> ethereum.eth.v1.AttesterSlashing
+	50, // 20: ethereum.eth.v1.ProposerSlashingPoolResponse.data:type_name -> ethereum.eth.v1.ProposerSlashing
+	51, // 21: ethereum.eth.v1.VoluntaryExitsPoolResponse.data:type_name -> ethereum.eth.v1.SignedVoluntaryExit
+	42, // 22: ethereum.eth.v1.ForkScheduleResponse.data:type_name -> ethereum.eth.v1.Fork
+	41, // 23: ethereum.eth.v1.SpecResponse.data:type_name -> ethereum.eth.v1.SpecResponse.DataEntry
 	35, // 24: ethereum.eth.v1.DepositContractResponse.data:type_name -> ethereum.eth.v1.DepositContract
-	50, // 25: ethereum.eth.v1.GenesisResponse.Genesis.genesis_time:type_name -> google.protobuf.Timestamp
-	51, // 26: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint.previous_justified:type_name -> ethereum.eth.v1.Checkpoint
-	51, // 27: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint.current_justified:type_name -> ethereum.eth.v1.Checkpoint
-	51, // 28: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint.finalized:type_name -> ethereum.eth.v1.Checkpoint
-	29, // [29:29] is the sub-list for method output_type
-	29, // [29:29] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	37, // 25: ethereum.eth.v1.WeakSubjectivityResponse.data:type_name -> ethereum.eth.v1.WeakSubjectivityData
+	52, // 26: ethereum.eth.v1.WeakSubjectivityData.ws_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	53, // 27: ethereum.eth.v1.GenesisResponse.Genesis.genesis_time:type_name -> google.protobuf.Timestamp
+	52, // 28: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint.previous_justified:type_name -> ethereum.eth.v1.Checkpoint
+	52, // 29: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint.current_justified:type_name -> ethereum.eth.v1.Checkpoint
+	52, // 30: ethereum.eth.v1.StateFinalityCheckpointResponse.StateFinalityCheckpoint.finalized:type_name -> ethereum.eth.v1.Checkpoint
+	31, // [31:31] is the sub-list for method output_type
+	31, // [31:31] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_proto_eth_v1_beacon_chain_proto_init() }
@@ -2845,7 +2964,7 @@ func file_proto_eth_v1_beacon_chain_proto_init() {
 			}
 		}
 		file_proto_eth_v1_beacon_chain_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GenesisResponse_Genesis); i {
+			switch v := v.(*WeakSubjectivityResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2857,7 +2976,7 @@ func file_proto_eth_v1_beacon_chain_proto_init() {
 			}
 		}
 		file_proto_eth_v1_beacon_chain_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StateRootResponse_StateRoot); i {
+			switch v := v.(*WeakSubjectivityData); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2869,6 +2988,30 @@ func file_proto_eth_v1_beacon_chain_proto_init() {
 			}
 		}
 		file_proto_eth_v1_beacon_chain_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GenesisResponse_Genesis); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_eth_v1_beacon_chain_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*StateRootResponse_StateRoot); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_eth_v1_beacon_chain_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*StateFinalityCheckpointResponse_StateFinalityCheckpoint); i {
 			case 0:
 				return &v.state
@@ -2890,7 +3033,7 @@ func file_proto_eth_v1_beacon_chain_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_eth_v1_beacon_chain_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   40,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

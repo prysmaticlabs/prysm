@@ -47,27 +47,52 @@ var latestCmd = &cli.Command{
 	},
 }
 
-func cliActionLatest(_ *cli.Context) error {
-	ctx := context.Background()
+func setupClient() (*openapi.Client, error) {
 	f := latestFlags
 	log.Printf("--beacon-node-url=%s", f.BeaconNodeHost)
 
 	opts := make([]openapi.ClientOpt, 0)
 	timeout, err := time.ParseDuration(f.Timeout)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	opts = append(opts, openapi.WithTimeout(timeout))
 	validatedHost, err := validHostname(latestFlags.BeaconNodeHost)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	log.Printf("host:port=%s", validatedHost)
 	client, err := openapi.NewClient(validatedHost, opts...)
 	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
+func cliActionLatest(_ *cli.Context) error {
+	ctx := context.Background()
+	client, err := setupClient()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	_, err = openapi.DownloadOriginData(ctx, client)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	return nil
+}
+
+func _cliActionLatest(_ *cli.Context) error {
+	ctx := context.Background()
+	client, err := setupClient()
+	if err != nil {
 		return err
 	}
+
 	stateReader, err := client.GetStateById(openapi.StateIdHead)
+	if err != nil {
+		return errors.Wrap(err, "error fetching head state")
+	}
 	stateBytes, err := io.ReadAll(stateReader)
 	if err != nil {
 		return errors.Wrap(err, "failed to read response body for get head state api call")

@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,6 +38,9 @@ const (
 const (
 	StateIdHead = "head"
 )
+
+var ErrNotOK = errors.New("did not receive 2xx response from API")
+var ErrNotFound = errors.Wrap(ErrNotOK, "recv 404 NotFound response from API")
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
@@ -369,6 +373,50 @@ func (c *Client) GetForkSchedule() (params.OrderedForkSchedule, error) {
 	return ofs, nil
 }
 
+type wscResponse struct {
+	BlockRoot string
+	StateRoot string
+	Epoch     string
+}
+
+// GetWeakSubjectivityCheckpoint calls an entirely different rpc method than GetWeakSubjectivityCheckpointEpoch
+// This endpoint is much slower, because it uses stategen to generate the BeaconState at the beginning of the
+// weak subjectivity epoch. This also results in a different set of state+block roots, because this endpoint currently
+// uses the state's latest_block_header for the block hash, while the checkpoint sync code assumes that the block
+// is from the first slot in the epoch and the state is from the subesequent slot.
+func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpoint, error) {
+	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_CHECKPOINT_PATH)
+	r, err := c.c.Get(u.String())
+	if err != nil {
+		return nil, err
+	}
+	if r.StatusCode != http.StatusOK {
+		return nil, non200Err(r)
+	}
+	v := &wscResponse{}
+	err = json.NewDecoder(r.Body).Decode(v)
+	if err != nil {
+		return nil, err
+	}
+	epoch, err := strconv.ParseUint(v.Epoch, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	blockRoot, err := base64.StdEncoding.DecodeString(v.BlockRoot)
+	if err != nil {
+		return nil, err
+	}
+	stateRoot, err := base64.StdEncoding.DecodeString(v.StateRoot)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpb.WeakSubjectivityCheckpoint{
+		Epoch:     types.Epoch(epoch),
+		BlockRoot: blockRoot,
+		StateRoot: stateRoot,
+	}, nil
+}
+
 func non200Err(response *http.Response) error {
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	var body string
@@ -377,5 +425,11 @@ func non200Err(response *http.Response) error {
 	} else {
 		body = "response body:\n" + string(bodyBytes)
 	}
-	return fmt.Errorf("got non-200 status, code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
+	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
+	switch response.StatusCode {
+	case 404:
+		return errors.Wrap(ErrNotFound, msg)
+	default:
+		return errors.Wrap(ErrNotOK, msg)
+	}
 }

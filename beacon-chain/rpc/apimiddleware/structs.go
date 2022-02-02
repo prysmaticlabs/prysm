@@ -19,6 +19,13 @@ type genesisResponse_GenesisJson struct {
 	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
 }
 
+type weakSubjectivityResponse struct {
+	Data struct {
+		Checkpoint *checkpointJson `json:"ws_checkpoint"`
+		StateRoot string `json:"state_root" hex:"true"`
+	} `json:"data"`
+}
+
 // stateRootResponseJson is used in /beacon/states/{state_id}/root API endpoint.
 type stateRootResponseJson struct {
 	Data *stateRootResponse_StateRootJson `json:"data"`
