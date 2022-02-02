@@ -32,7 +32,7 @@ func (s *Server) ListKeystores(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not get Prysm keymanager: %v", err)
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Derived && s.wallet.KeymanagerKind() != keymanager.Imported {
+	if s.wallet.KeymanagerKind() != keymanager.Derived && s.wallet.KeymanagerKind() != keymanager.Local {
 		return nil, status.Errorf(codes.FailedPrecondition, "prysm validator keys are not stored locally with this keymanager type.")
 	}
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
