@@ -204,7 +204,7 @@ func (f *ForkChoice) UpdateSyncTipsWithInvalidRoot(ctx context.Context, root [32
 	parentIndex := node.parent
 	// This should not happen
 	if parentIndex == NonExistentNode {
-		return nil
+		return errInvalidNodeIndex
 	}
 
 	parent := copyNode(f.store.nodes[parentIndex])
