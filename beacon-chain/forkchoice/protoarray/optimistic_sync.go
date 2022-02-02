@@ -89,8 +89,8 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 	return f.Optimistic(ctx, root, slot)
 }
 
-// UpdateSyncedTip updates the synced_tips map when the block with the given root becomes VALID
-func (f *ForkChoice) UpdateSyncedTip(ctx context.Context, root [32]byte) error {
+// UpdateSyncTipsWithValidRoot updates the synced_tips map when the block with the given root becomes VALID
+func (f *ForkChoice) UpdateSyncTipsWithValidRoot(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	// We can only update if given root is in Fork Choice
@@ -187,8 +187,8 @@ func (f *ForkChoice) UpdateSyncedTip(ctx context.Context, root [32]byte) error {
 	return nil
 }
 
-// RemoveSyncTip removes a node with root from Fork Choice store. It updates the synced tips map.
-func (f *ForkChoice) RemoveSyncTip(ctx context.Context, root [32]byte) error {
+// UpdateSyncTipsWithInvalidRoot updates the synced_tips map when the block with the given root becomes INVALID.
+func (f *ForkChoice) UpdateSyncTipsWithInvalidRoot(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	idx, ok := f.store.nodesIndices[root]
@@ -207,8 +207,7 @@ func (f *ForkChoice) RemoveSyncTip(ctx context.Context, root [32]byte) error {
 		return nil
 	}
 
-	parent := f.store.nodes[parentIndex]
-	parentRoot := parent.root
+	parent := copyNode(f.store.nodes[parentIndex])
 
 	// delete the invalid node, order is important
 	f.store.nodes = append(f.store.nodes[:idx], f.store.nodes[idx+1:]...)
@@ -250,7 +249,7 @@ func (f *ForkChoice) RemoveSyncTip(ctx context.Context, root [32]byte) error {
 	f.syncedTips.Lock()
 	defer f.syncedTips.Unlock()
 
-	_, ok = f.syncedTips.validatedTips[parentRoot]
+	_, ok = f.syncedTips.validatedTips[parent.root]
 	if !ok {
 		return nil
 	}
