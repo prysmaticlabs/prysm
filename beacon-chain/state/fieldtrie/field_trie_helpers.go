@@ -67,35 +67,32 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots:
-		bVal, ok := elements.([][]byte)
-		if !ok {
-			rVal, ok := elements.(*customtypes.BlockRoots)
-			if !ok {
-				return nil, errors.Errorf("Incorrect type used for block roots")
-			}
-			return handle32ByteArrays(rVal[:], indices, convertAll)
+		switch val := elements.(type) {
+		case [][]byte:
+			return handleByteArrays(val, indices, convertAll)
+		case *customtypes.BlockRoots:
+			return handle32ByteArrays(val[:], indices, convertAll)
+		default:
+			return nil, errors.Errorf("Incorrect type used for block roots")
 		}
-		return handleByteArrays(bVal, indices, convertAll)
 	case types.StateRoots:
-		bVal, ok := elements.([][]byte)
-		if !ok {
-			rVal, ok := elements.(*customtypes.StateRoots)
-			if !ok {
-				return nil, errors.Errorf("Incorrect type used for state roots")
-			}
-			return handle32ByteArrays(rVal[:], indices, convertAll)
+		switch val := elements.(type) {
+		case [][]byte:
+			return handleByteArrays(val, indices, convertAll)
+		case *customtypes.StateRoots:
+			return handle32ByteArrays(val[:], indices, convertAll)
+		default:
+			return nil, errors.Errorf("Incorrect type used for state roots")
 		}
-		return handleByteArrays(bVal, indices, convertAll)
 	case types.RandaoMixes:
-		bVal, ok := elements.([][]byte)
-		if !ok {
-			mVal, ok := elements.(*customtypes.RandaoMixes)
-			if !ok {
-				return nil, errors.Errorf("Incorrect type used for randao mixes")
-			}
-			return handle32ByteArrays(mVal[:], indices, convertAll)
+		switch val := elements.(type) {
+		case [][]byte:
+			return handleByteArrays(val, indices, convertAll)
+		case *customtypes.RandaoMixes:
+			return handle32ByteArrays(val[:], indices, convertAll)
+		default:
+			return nil, errors.Errorf("Incorrect type used for randao mixes")
 		}
-		return handleByteArrays(bVal, indices, convertAll)
 	case types.Eth1DataVotes:
 		val, ok := elements.([]*ethpb.Eth1Data)
 		if !ok {
