@@ -1,5 +1,4 @@
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
-load("@io_bazel_rules_go//go:def.bzl", "go_tool_library")
 
 go_library(
     name = "go_default_library",
@@ -13,24 +12,12 @@ go_library(
     ],
 )
 
-go_tool_library(
-    name = "go_tool_library",
-    srcs = ["analyzer.go"],
-    importpath = "errcheck",
-    visibility = ["//visibility:public"],
-    deps = [
-        "@org_golang_x_tools//go/analysis:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/inspect:go_tool_library",
-        "@org_golang_x_tools//go/ast/inspector:go_tool_library",
-    ],
-)
-
 go_test(
     name = "go_default_test",
     srcs = ["embedded_walker_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//shared/testutil/assert:go_default_library",
-        "//shared/testutil/require:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )

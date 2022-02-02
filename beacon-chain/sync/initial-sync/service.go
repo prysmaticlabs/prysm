@@ -9,22 +9,22 @@ import (
 
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async/abool"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/runtime"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
-var _ shared.Service = (*Service)(nil)
+var _ runtime.Service = (*Service)(nil)
 
 // blockchainService defines the interface for interaction with block chain service.
 type blockchainService interface {
@@ -82,13 +82,13 @@ func (s *Service) Start() {
 		log.WithField("genesisTime", genesis).Info("Due to Sync Being Disabled, entering regular sync immediately.")
 		return
 	}
-	if genesis.After(timeutils.Now()) {
+	if genesis.After(prysmTime.Now()) {
 		s.markSynced(genesis)
 		log.WithField("genesisTime", genesis).Info("Genesis time has not arrived - not syncing")
 		return
 	}
-	currentSlot := core.SlotsSince(genesis)
-	if core.SlotToEpoch(currentSlot) == 0 {
+	currentSlot := slots.Since(genesis)
+	if slots.ToEpoch(currentSlot) == 0 {
 		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
 		s.markSynced(genesis)
 		return
@@ -96,7 +96,7 @@ func (s *Service) Start() {
 	s.chainStarted.Set()
 	log.Info("Starting initial chain sync...")
 	// Are we already in sync, or close to it?
-	if core.SlotToEpoch(s.cfg.Chain.HeadSlot()) == core.SlotToEpoch(currentSlot) {
+	if slots.ToEpoch(s.cfg.Chain.HeadSlot()) == slots.ToEpoch(currentSlot) {
 		log.Info("Already synced to the current chain head")
 		s.markSynced(genesis)
 		return

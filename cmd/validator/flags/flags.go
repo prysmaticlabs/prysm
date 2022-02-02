@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -207,10 +207,10 @@ var (
 		Value: "",
 	}
 	// ExitAllFlag allows stakers to select all validating keys for exit. This will still require the staker
-	// to confirm a prompt for this action given it is a dangerous one.
+	// to confirm a userprompt for this action given it is a dangerous one.
 	ExitAllFlag = &cli.BoolFlag{
 		Name:  "exit-all",
-		Usage: "Exit all validators. This will still require the staker to confirm a prompt for the action",
+		Usage: "Exit all validators. This will still require the staker to confirm a userprompt for the action",
 	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
@@ -267,16 +267,35 @@ var (
 		Usage: "/path/to/ca.crt for establishing a secure, TLS gRPC connection to a remote signer server",
 		Value: "",
 	}
+	// Web3SignerURLFlag defines the URL for a web3signer to connect to.
+	// example:--validators-external-signer-url=http://localhost:9000
+	// web3signer documentation can be found in Consensys' web3signer project docs
+	Web3SignerURLFlag = &cli.StringFlag{
+		Name:  "validators-external-signer-url",
+		Usage: "URL for consensys' web3signer software to use with the Prysm validator client",
+		Value: "",
+	}
+
+	// Web3SignerPublicValidatorKeysFlag defines a comma-separated list of hex string public keys or external url for web3signer to use for validator signing.
+	// example with external url: --validators-external-signer-public-keys= https://web3signer.com/api/v1/eth2/publicKeys
+	// example with public key: --validators-external-signer-public-keys=0xa99a...e44c,0xb89b...4a0b
+	// web3signer documentation can be found in Consensys' web3signer project docs```
+	Web3SignerPublicValidatorKeysFlag = &cli.StringFlag{
+		Name:  "validators-external-signer-public-keys",
+		Usage: "comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer",
+		Value: "",
+	}
+
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
 		Name:  "keymanager-kind",
 		Usage: "Kind of keymanager, either imported, derived, or remote, specified during wallet creation",
 		Value: "",
 	}
-	// SkipDepositConfirmationFlag skips the y/n confirmation prompt for sending a deposit to the deposit contract.
+	// SkipDepositConfirmationFlag skips the y/n confirmation userprompt for sending a deposit to the deposit contract.
 	SkipDepositConfirmationFlag = &cli.BoolFlag{
 		Name:  "skip-deposit-confirmation",
-		Usage: "Skips the y/n confirmation prompt for sending a deposit to the deposit contract",
+		Usage: "Skips the y/n confirmation userprompt for sending a deposit to the deposit contract",
 		Value: false,
 	}
 	// EnableWebFlag enables controlling the validator client via the Prysm web ui. This is a work in progress.
@@ -308,7 +327,7 @@ var (
 // DefaultValidatorDir returns OS-specific default validator directory.
 func DefaultValidatorDir() string {
 	// Try to place the data folder in the user's home dir
-	home := fileutil.HomeDir()
+	home := file.HomeDir()
 	if home != "" {
 		if runtime.GOOS == "darwin" {
 			return filepath.Join(home, "Library", "Eth2Validators")

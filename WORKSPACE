@@ -60,10 +60,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "62ca106be173579c0a167deb23358fdfe71ffa1e4cfdddf5582af26520f1c66f",
+    sha256 = "de69a09dc70417580aabf20a28619bb3ef60d038470c7cf8442fafcf627c21cb",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
     ],
 )
 
@@ -76,25 +76,22 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
-    strip_prefix = "rules_docker-0.17.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
+    sha256 = "1f4e59843b61981a96835dc4ac377ad4da9f8c334ebe5e0bb3f58f80c09735f4",
+    strip_prefix = "rules_docker-0.19.0",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.19.0/rules_docker-v0.19.0.tar.gz"],
 )
 
 http_archive(
     name = "io_bazel_rules_go",
     patch_args = ["-p1"],
     patches = [
-        # Required until https://github.com/bazelbuild/rules_go/pull/2450 merges otherwise nilness
-        # nogo check fails for certain third_party dependencies.
-        "//third_party:io_bazel_rules_go.patch",
         # Expose internals of go_test for custom build transitions.
         "//third_party:io_bazel_rules_go_test.patch",
     ],
-    sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
+    sha256 = "2b1641428dff9018f9e85c0384f03ec6c10660d935b750e3fa1492a281a53b0f",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.29.0/rules_go-v0.29.0.zip",
     ],
 )
 
@@ -137,6 +134,34 @@ container_repositories()
 load(
     "@io_bazel_rules_docker//container:container.bzl",
     "container_pull",
+)
+
+container_pull(
+    name = "cc_image_base",
+    digest = "sha256:2c4bb6b7236db0a55ec54ba8845e4031f5db2be957ac61867872bf42e56c4deb",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+)
+
+container_pull(
+    name = "cc_debug_image_base",
+    digest = "sha256:3680c61e81f68fc00bfb5e1ec65e8e678aaafa7c5f056bc2681c29527ebbb30c",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+)
+
+container_pull(
+    name = "go_image_base",
+    digest = "sha256:ba7a315f86771332e76fa9c3d423ecfdbb8265879c6f1c264d6fff7d4fa460a4",
+    registry = "gcr.io",
+    repository = "distroless/base",
+)
+
+container_pull(
+    name = "go_debug_image_base",
+    digest = "sha256:efd8711717d9e9b5d0dbb20ea10876dab0609c923bc05321b912f9239090ca80",
+    registry = "gcr.io",
+    repository = "distroless/base",
 )
 
 container_pull(
@@ -194,10 +219,12 @@ filegroup(
 )
     """,
     sha256 = "91434d5fd5e1c6eb7b0174fed2afe25e09bddf00e1e4c431db931b2cee4e7773",
-    url = "https://github.com/eth2-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
+    url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.1.0-beta.4"
+consensus_spec_version = "v1.1.8"
+
+bls_test_version = "v0.1.1"
 
 http_archive(
     name = "consensus_spec_tests_general",
@@ -211,7 +238,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "d2d501453cf29777896a5f9ae52e93921f34330e57fcc5b55e4982d4795236b9",
+    sha256 = "e4d2b7830e85734442d7172887dcd4edc0985d6256bafedb3353ab477a1433c0",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -227,7 +254,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "b152f1f03a4fdacd1882fe867bdfbd5067e74ed3c532bd01d81e7adf6cc3737a",
+    sha256 = "4a88d01ad12260220ab5c8efdeec6534bac48a47f29ba4f7977ea14c9d07b0fe",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -243,7 +270,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "6046f89c679a9ffda217dee6f021eb7c4fe91aad6ff940fae4d2cf894cc61cbb",
+    sha256 = "0033fe107d9d2adb8d4fcb60dfb1c43fc5a54f0af970525c962124221757c266",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -258,9 +285,24 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "26a0a2c3022a3c5354f3204c7e441580df2e585dbde22a43a1d43f885b3a221c",
+    sha256 = "3fc3b8809d140a1ab61350fbd410f33add2851a63829d874dcb620babba603de",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
+)
+
+http_archive(
+    name = "bls_spec_tests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "93c7d006e7c5b882cbd11dc9ec6c5d0e07f4a8c6b27a32f964eb17cf2db9763a",
+    url = "https://github.com/ethereum/bls12-381-tests/releases/download/%s/bls_tests_yaml.tar.gz" % bls_test_version,
 )
 
 http_archive(
@@ -274,9 +316,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "9dc47bf6b14aed7fac8833e35ab83a69131b43fa5789b3256bf1ac3d4861aeb8",
-    strip_prefix = "eth2-networks-7fa1b868985ee24aad65567f9250cf7fa86f97b1",
-    url = "https://github.com/eth2-clients/eth2-networks/archive/7fa1b868985ee24aad65567f9250cf7fa86f97b1.tar.gz",
+    sha256 = "4e8a18b21d056c4032605621b1a6632198eabab57cb90c61e273f344c287f1b2",
+    strip_prefix = "eth2-networks-791a5369c5981e829698b17fbcdcdacbdaba97c8",
+    url = "https://github.com/eth-clients/eth2-networks/archive/791a5369c5981e829698b17fbcdcdacbdaba97c8.tar.gz",
 )
 
 http_archive(
@@ -296,16 +338,6 @@ git_repository(
 # Group the sources of the library so that CMake rule have access to it
 all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
 
-http_archive(
-    name = "sigp_beacon_fuzz_corpora",
-    build_file = "//third_party:beacon-fuzz/corpora.BUILD",
-    sha256 = "42993d0901a316afda45b4ba6d53c7c21f30c551dcec290a4ca131c24453d1ef",
-    strip_prefix = "beacon-fuzz-corpora-bac24ad78d45cc3664c0172241feac969c1ac29b",
-    urls = [
-        "https://github.com/sigp/beacon-fuzz-corpora/archive/bac24ad78d45cc3664c0172241feac969c1ac29b.tar.gz",
-    ],
-)
-
 # External dependencies
 
 http_archive(
@@ -317,9 +349,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "54ce527b83d092da01127f2e3816f4d5cfbab69354caba8537f1ea55889b6d7c",
+    sha256 = "f196fe4367c2d2d01d36565c0dc6eecfa4f03adba1fc03a61d62953fce606e1f",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.0-beta.4/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.2/prysm-web-ui.tar.gz",
     ],
 )
 
@@ -331,6 +363,10 @@ prysm_deps()
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
+
+load("@prysm//testing/endtoend:deps.bzl", "e2e_deps")
+
+e2e_deps()
 
 load(
     "@io_bazel_rules_docker//go:image.bzl",
@@ -349,10 +385,6 @@ load(
 )
 
 _cc_image_repos()
-
-load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
-
-geth_dependencies()
 
 load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
 

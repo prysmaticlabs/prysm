@@ -10,10 +10,9 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -37,7 +36,7 @@ func (s *Server) registerBeaconClient() error {
 		return errors.New("no dial options for beacon chain gRPC client")
 	}
 
-	s.ctx = grpcutils.AppendHeaders(s.ctx, s.clientGrpcHeaders)
+	s.ctx = grpcutil.AppendHeaders(s.ctx, s.clientGrpcHeaders)
 
 	conn, err := grpc.DialContext(s.ctx, s.beaconClientEndpoint, dialOpts...)
 	if err != nil {
@@ -48,7 +47,7 @@ func (s *Server) registerBeaconClient() error {
 	}
 	s.beaconChainClient = ethpb.NewBeaconChainClient(conn)
 	s.beaconNodeClient = ethpb.NewNodeClient(conn)
-	s.beaconNodeHealthClient = pb.NewHealthClient(conn)
+	s.beaconNodeHealthClient = ethpb.NewHealthClient(conn)
 	s.beaconNodeValidatorClient = ethpb.NewBeaconNodeValidatorClient(conn)
 	return nil
 }

@@ -9,14 +9,15 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -42,11 +43,11 @@ func (e *blockIdParseError) Error() string {
 
 // GetBlockHeader retrieves block header for given block id.
 func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockHeaderResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockHeader")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockHeader")
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +83,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 
 // ListBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
 func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeadersRequest) (*ethpbv1.BlockHeadersResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockHeaders")
+	ctx, span := trace.StartSpan(ctx, "beacon.ListBlockHeaders")
 	defer span.End()
 
 	var err error
@@ -144,39 +145,80 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
 // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
 // still broadcast but a different status code is returned (202).
-func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv1.BeaconBlockContainer) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.SubmitBlock")
+func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBlockContainerV2) (*emptypb.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
-	blk := req.Message
-	rBlock, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: blk, Signature: req.Signature})
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
-	}
-	v1alpha1Block := wrapper.WrappedPhase0SignedBeaconBlock(rBlock)
+	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
+	if ok {
+		phase0Blk := phase0BlkContainer.Phase0Block
+		v1alpha1Blk, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: phase0Blk, Signature: req.Signature})
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+		}
+		wrappedPhase0Blk := wrapper.WrappedPhase0SignedBeaconBlock(v1alpha1Blk)
 
-	root, err := blk.HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-	}
+		root, err := phase0Blk.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+		}
 
-	// Do not block proposal critical path with debug logging or block feed updates.
-	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-			"Block proposal received via RPC")
-		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: v1alpha1Block},
-		})
-	}()
+		// Do not block proposal critical path with debug logging or block feed updates.
+		defer func() {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+				"Block proposal received via RPC")
+			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+				Type: blockfeed.ReceivedBlock,
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedPhase0Blk},
+			})
+		}()
 
-	// Broadcast the new block to the network.
-	if err := bs.Broadcaster.Broadcast(ctx, v1alpha1Block.Proto()); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-	}
+		// Broadcast the new block to the network.
+		if err := bs.Broadcaster.Broadcast(ctx, wrappedPhase0Blk.Proto()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		}
 
-	if err := bs.BlockReceiver.ReceiveBlock(ctx, v1alpha1Block, root); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedPhase0Blk, root); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		}
+	} else {
+		altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
+		if !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not get Altair block from request")
+		}
+		altairBlk := altairBlkContainer.AltairBlock
+		v1alpha1Blk, err := migration.AltairToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockAltair{Message: altairBlk, Signature: req.Signature})
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+		}
+		wrappedAltairBlk, err := wrapper.WrappedAltairSignedBeaconBlock(v1alpha1Blk)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not prepare Altair block")
+		}
+
+		root, err := altairBlk.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+		}
+
+		// Do not block proposal critical path with debug logging or block feed updates.
+		defer func() {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+				"Block proposal received via RPC")
+			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+				Type: blockfeed.ReceivedBlock,
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedAltairBlk},
+			})
+		}()
+
+		// Broadcast the new block to the network.
+		if err := bs.Broadcaster.Broadcast(ctx, wrappedAltairBlk.Proto()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		}
+
+		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedAltairBlk, root); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		}
 	}
 
 	return &emptypb.Empty{}, nil
@@ -184,11 +226,11 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv1.BeaconBlockConta
 
 // GetBlock retrieves block details for given block ID.
 func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlock")
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -207,11 +249,11 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 
 // GetBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
 func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockSSZResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockSSZ")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZ")
 	defer span.End()
 
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -229,12 +271,13 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 
 // GetBlockV2 retrieves block details for given block ID.
 func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (*ethpbv2.BlockResponseV2, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockAltair")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockV2")
 	defer span.End()
 
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
+		return nil, err
 	}
 	if phase0Blk != nil {
 		v1Blk, err := migration.SignedBeaconBlock(blk)
@@ -243,27 +286,49 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_PHASE0,
-			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block:     &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
+			Data: &ethpbv2.SignedBeaconBlockContainerV2{
+				Message:   &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
 				Signature: v1Blk.Signature,
 			},
 		}, nil
 	}
-	altairBlk, err := blk.PbAltairBlock()
+
+	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check for Altair block")
+		altairBlk, err := blk.PbAltairBlock()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check for block")
+		}
+		if altairBlk != nil {
+			v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+			}
+			return &ethpbv2.BlockResponseV2{
+				Version: ethpbv2.Version_ALTAIR,
+				Data: &ethpbv2.SignedBeaconBlockContainerV2{
+					Message:   &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
+					Signature: blk.Signature(),
+				},
+			}, nil
+		}
+		return nil, status.Errorf(codes.Internal, "Could not check for block")
 	}
-	v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	if bellatrixBlk != nil {
+		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		return &ethpbv2.BlockResponseV2{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.SignedBeaconBlockContainerV2{
+				Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Blk},
+				Signature: blk.Signature(),
+			},
+		}, nil
 	}
-	return &ethpbv2.BlockResponseV2{
-		Version: ethpbv2.Version_ALTAIR,
-		Data: &ethpbv2.BeaconBlockContainerV2{
-			Block:     &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
-			Signature: blk.Signature(),
-		},
-	}, nil
+
+	return nil, nil
 }
 
 // GetBlockSSZV2 returns the SSZ-serialized version of the beacon block for given block ID.
@@ -272,8 +337,9 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	defer span.End()
 
 	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
+		return nil, err
 	}
 	if phase0Blk != nil {
 		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
@@ -284,7 +350,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
 		}
-		return &ethpbv2.BlockSSZResponseV2{Data: sszBlock}, nil
+		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_PHASE0, Data: sszBlock}, nil
 	}
 	altairBlk, err := blk.PbAltairBlock()
 	if err != nil {
@@ -302,12 +368,12 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
 	}
-	return &ethpbv2.BlockSSZResponseV2{Data: sszData}, nil
+	return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_ALTAIR, Data: sszData}, nil
 }
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
 func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockRootResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetBlockRoot")
+	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockRoot")
 	defer span.End()
 
 	var root []byte
@@ -329,8 +395,8 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
-		if blk == nil || blk.IsNil() {
-			return nil, status.Error(codes.NotFound, "Could not find genesis block")
+		if err := helpers.BeaconBlockIsNil(blk); err != nil {
+			return nil, status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
 		}
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
@@ -339,14 +405,13 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		root = blkRoot[:]
 	default:
 		if len(req.BlockId) == 32 {
-			block, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(req.BlockId))
+			blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(req.BlockId))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
 			}
-			if block == nil || block.IsNil() {
-				return nil, status.Error(codes.NotFound, "Could not find any blocks with given root")
+			if err := helpers.BeaconBlockIsNil(blk); err != nil {
+				return nil, status.Errorf(codes.NotFound, "Could not find block: %v", err)
 			}
-
 			root = req.BlockId
 		} else {
 			slot, err := strconv.ParseUint(string(req.BlockId), 10, 64)
@@ -387,31 +452,32 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 
 // ListBlockAttestations retrieves attestation included in requested block.
 func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockAttestationsResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.ListBlockAttestations")
+	ctx, span := trace.StartSpan(ctx, "beacon.ListBlockAttestations")
 	defer span.End()
 
-	rBlk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
-	}
+	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
 	}
-	if rBlk == nil || rBlk.IsNil() {
-		return nil, status.Errorf(codes.NotFound, "Could not find requested block")
+	if phase0Blk != nil {
+		v1Blk, err := migration.SignedBeaconBlock(blk)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		return &ethpbv1.BlockAttestationsResponse{
+			Data: v1Blk.Block.Body.Attestations,
+		}, nil
 	}
-
-	blk, err := rBlk.PbPhase0Block()
+	altairBlk, err := blk.PbAltairBlock()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get raw block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check for Altair block")
 	}
-
-	v1Block, err := migration.V1Alpha1ToV1SignedBlock(blk)
+	v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to v1 block")
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	return &ethpbv1.BlockAttestationsResponse{
-		Data: v1Block.Block.Body.Attestations,
+		Data: v2Blk.Body.Attestations,
 	}, nil
 }
 
@@ -421,7 +487,7 @@ func (bs *Server) blocksFromId(ctx context.Context, blockId []byte) (
 	err error,
 ) {
 	blk, err := bs.blockFromBlockID(ctx, blockId)
-	err = handleGetBlock(blk, err)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -484,13 +550,13 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 			if numBlks == 1 {
 				break
 			}
-			for i, block := range blks {
+			for i, b := range blks {
 				canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, roots[i])
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 				}
 				if canonical {
-					blk = block
+					blk = b
 					break
 				}
 			}
@@ -499,15 +565,15 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 	return blk, nil
 }
 
-func handleGetBlock(blk block.SignedBeaconBlock, err error) error {
+func handleGetBlockError(blk block.SignedBeaconBlock, err error) error {
 	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	if blk == nil || blk.IsNil() {
-		return status.Errorf(codes.Internal, "Could not find requested block")
+	if err := helpers.BeaconBlockIsNil(blk); err != nil {
+		return status.Errorf(codes.NotFound, "Could not find requested block: %v", err)
 	}
 	return nil
 }

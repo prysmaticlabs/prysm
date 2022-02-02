@@ -9,10 +9,11 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	bolt "go.etcd.io/bbolt"
 )
@@ -45,7 +46,7 @@ func TestPendingAttestationRecords_Len(t *testing.T) {
 func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 1
-	pubKeys := make([][48]byte, numValidators)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	validatorDB := setupDB(t, pubKeys)
 	tests := []struct {
 		name                string
@@ -116,7 +117,7 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 func TestStore_CheckSlashableAttestation_SurroundVote_MultipleTargetsPerSource(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 1
-	pubKeys := make([][48]byte, numValidators)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	validatorDB := setupDB(t, pubKeys)
 
 	// Create an attestation with source 1 and target 50, save it.
@@ -142,7 +143,7 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 1
 	numEpochs := types.Epoch(54000)
-	pubKeys := make([][48]byte, numValidators)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	validatorDB := setupDB(t, pubKeys)
 
 	// Attest to every (source = epoch, target = epoch + 1) sequential pair
@@ -219,8 +220,8 @@ func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
 		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
 	})
-	p0 := [48]byte{0}
-	p1 := [48]byte{1}
+	p0 := [fieldparams.BLSPubkeyLength]byte{0}
+	p1 := [fieldparams.BLSPubkeyLength]byte{1}
 	// Can save.
 	require.NoError(
 		t,
@@ -278,8 +279,8 @@ func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 		require.NoError(t, validatorDB.Close(), "Failed to close database")
 		require.NoError(t, validatorDB.ClearDB(), "Failed to clear database")
 	})
-	p0 := [48]byte{0}
-	p1 := [48]byte{1}
+	p0 := [fieldparams.BLSPubkeyLength]byte{0}
+	p1 := [fieldparams.BLSPubkeyLength]byte{1}
 	// Can save.
 	require.NoError(
 		t,
@@ -332,7 +333,7 @@ func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 func TestStore_SaveAttestationsForPubKey(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 1
-	pubKeys := make([][48]byte, numValidators)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	validatorDB := setupDB(t, pubKeys)
 	atts := make([]*ethpb.IndexedAttestation, 0)
 	signingRoots := make([][32]byte, 0)
@@ -374,14 +375,14 @@ func TestSaveAttestationForPubKey_BatchWrites_FullCapacity(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	numValidators := attestationBatchCapacity
-	pubKeys := make([][48]byte, numValidators)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	validatorDB := setupDB(t, pubKeys)
 
 	// For each public key, we attempt to save an attestation with signing root.
 	var wg sync.WaitGroup
 	for i, pubKey := range pubKeys {
 		wg.Add(1)
-		go func(j types.Epoch, pk [48]byte, w *sync.WaitGroup) {
+		go func(j types.Epoch, pk [fieldparams.BLSPubkeyLength]byte, w *sync.WaitGroup) {
 			defer w.Done()
 			var signingRoot [32]byte
 			copy(signingRoot[:], fmt.Sprintf("%d", j))
@@ -431,14 +432,14 @@ func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testin
 	// test force flushing to the DB based on a timer instead
 	// of the max capacity being reached.
 	numValidators := attestationBatchCapacity / 2
-	pubKeys := make([][48]byte, numValidators)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	validatorDB := setupDB(t, pubKeys)
 
 	// For each public key, we attempt to save an attestation with signing root.
 	var wg sync.WaitGroup
 	for i, pubKey := range pubKeys {
 		wg.Add(1)
-		go func(j types.Epoch, pk [48]byte, w *sync.WaitGroup) {
+		go func(j types.Epoch, pk [fieldparams.BLSPubkeyLength]byte, w *sync.WaitGroup) {
 			defer w.Done()
 			var signingRoot [32]byte
 			copy(signingRoot[:], fmt.Sprintf("%d", j))
@@ -482,20 +483,20 @@ func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testin
 func BenchmarkStore_CheckSlashableAttestation_Surround_SafeAttestation_54kEpochs(b *testing.B) {
 	numValidators := 1
 	numEpochs := types.Epoch(54000)
-	pubKeys := make([][48]byte, numValidators)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	benchCheckSurroundVote(b, pubKeys, numEpochs, false /* surround */)
 }
 
 func BenchmarkStore_CheckSurroundVote_Surround_Slashable_54kEpochs(b *testing.B) {
 	numValidators := 1
 	numEpochs := types.Epoch(54000)
-	pubKeys := make([][48]byte, numValidators)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	benchCheckSurroundVote(b, pubKeys, numEpochs, true /* surround */)
 }
 
 func benchCheckSurroundVote(
 	b *testing.B,
-	pubKeys [][48]byte,
+	pubKeys [][fieldparams.BLSPubkeyLength]byte,
 	numEpochs types.Epoch,
 	shouldSurround bool,
 ) {

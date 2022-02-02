@@ -10,11 +10,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
-	"github.com/prysmaticlabs/prysm/shared/abool"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/async/abool"
+	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -52,7 +53,7 @@ var blockedBuckets = [][]byte{
 
 // Config represents store's config object.
 type Config struct {
-	PubKeys         [][48]byte
+	PubKeys         [][fieldparams.BLSPubkeyLength]byte
 	InitialMMapSize int
 }
 
@@ -107,12 +108,12 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
 func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, error) {
-	hasDir, err := fileutil.HasDir(dirPath)
+	hasDir, err := file.HasDir(dirPath)
 	if err != nil {
 		return nil, err
 	}
 	if !hasDir {
-		if err := fileutil.MkdirAll(dirPath); err != nil {
+		if err := file.MkdirAll(dirPath); err != nil {
 			return nil, err
 		}
 	}
@@ -162,7 +163,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		}
 	}
 
-	if featureconfig.Get().EnableSlashingProtectionPruning {
+	if features.Get().EnableSlashingProtectionPruning {
 		// Prune attesting records older than the current weak subjectivity period.
 		if err := kv.PruneAttestations(ctx); err != nil {
 			return nil, errors.Wrap(err, "could not prune old attestations from DB")
@@ -177,7 +178,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 }
 
 // UpdatePublicKeysBuckets for a specified list of keys.
-func (s *Store) UpdatePublicKeysBuckets(pubKeys [][48]byte) error {
+func (s *Store) UpdatePublicKeysBuckets(pubKeys [][fieldparams.BLSPubkeyLength]byte) error {
 	return s.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		for _, pubKey := range pubKeys {

@@ -10,24 +10,26 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/urfave/cli/v2"
 )
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
 type CreateWalletConfig struct {
-	SkipMnemonicConfirm  bool
-	NumAccounts          int
-	RemoteKeymanagerOpts *remote.KeymanagerOpts
-	WalletCfg            *wallet.Config
-	Mnemonic25thWord     string
+	SkipMnemonicConfirm   bool
+	NumAccounts           int
+	RemoteKeymanagerOpts  *remote.KeymanagerOpts
+	Web3SignerSetupConfig *remote_web3signer.SetupConfig
+	WalletCfg             *wallet.Config
+	Mnemonic25thWord      string
 }
 
 // CreateAndSaveWalletCli from user input with a desired keymanager. If a
@@ -69,19 +71,20 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 	})
 	var err error
 	switch w.KeymanagerKind() {
-	case keymanager.Imported:
-		if err = createImportedKeymanagerWallet(ctx, w); err != nil {
+	case keymanager.Local:
+		if err = createLocalKeymanagerWallet(ctx, w); err != nil {
 			return nil, errors.Wrap(err, "could not initialize wallet")
 		}
+		// TODO(#9883) - Remove this when we have a better way to handle this. should be safe to use for now.
 		km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 		if err != nil {
 			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 		}
-		importedKm, ok := km.(*imported.Keymanager)
+		localKm, ok := km.(*local.Keymanager)
 		if !ok {
 			return nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
 		}
-		accountsKeystore, err := importedKm.CreateAccountsKeystore(ctx, make([][]byte, 0), make([][]byte, 0))
+		accountsKeystore, err := localKm.CreateAccountsKeystore(ctx, make([][]byte, 0), make([][]byte, 0))
 		if err != nil {
 			return nil, err
 		}
@@ -89,7 +92,7 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		if err != nil {
 			return nil, err
 		}
-		if err = w.WriteFileAtPath(ctx, imported.AccountsPath, imported.AccountsKeystoreFileName, encodedAccounts); err != nil {
+		if err = w.WriteFileAtPath(ctx, local.AccountsPath, local.AccountsKeystoreFileName, encodedAccounts); err != nil {
 			return nil, err
 		}
 
@@ -116,6 +119,8 @@ func CreateWalletWithKeymanager(ctx context.Context, cfg *CreateWalletConfig) (*
 		log.WithField("--wallet-dir", cfg.WalletCfg.WalletDir).Info(
 			"Successfully created wallet with remote keymanager configuration",
 		)
+	case keymanager.Web3Signer:
+		return nil, errors.New("web3signer keymanager does not require persistent wallets.")
 	default:
 		return nil, errors.Wrapf(err, errKeymanagerNotSupported, w.KeymanagerKind())
 	}
@@ -127,17 +132,17 @@ func extractKeymanagerKindFromCli(cliCtx *cli.Context) (keymanager.Kind, error) 
 }
 
 func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keymanager.Kind) (*CreateWalletConfig, error) {
-	walletDir, err := prompt.InputDirectory(cliCtx, prompt.WalletDirPromptText, flags.WalletDirFlag)
+	walletDir, err := userprompt.InputDirectory(cliCtx, userprompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {
 		return nil, err
 	}
-	walletPassword, err := promptutil.InputPassword(
+	walletPassword, err := prompt.InputPassword(
 		cliCtx,
 		flags.WalletPasswordFileFlag,
 		wallet.NewWalletPasswordPromptText,
 		wallet.ConfirmPasswordPromptText,
 		true, /* Should confirm password */
-		promptutil.ValidatePasswordInput,
+		prompt.ValidatePasswordInput,
 	)
 	if err != nil {
 		return nil, err
@@ -160,14 +165,14 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		createWalletConfig.NumAccounts = int(numAccounts)
 	}
 	if keymanagerKind == keymanager.Derived && !skipMnemonic25thWord && !has25thWordFile {
-		resp, err := promptutil.ValidatePrompt(
-			os.Stdin, newMnemonicPassphraseYesNoText, promptutil.ValidateYesOrNo,
+		resp, err := prompt.ValidatePrompt(
+			os.Stdin, newMnemonicPassphraseYesNoText, prompt.ValidateYesOrNo,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not validate choice")
 		}
 		if strings.EqualFold(resp, "y") {
-			mnemonicPassphrase, err := promptutil.InputPassword(
+			mnemonicPassphrase, err := prompt.InputPassword(
 				cliCtx,
 				flags.Mnemonic25thWordFileFlag,
 				newMnemonicPassphrasePromptText,
@@ -187,16 +192,19 @@ func extractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keym
 		}
 	}
 	if keymanagerKind == keymanager.Remote {
-		opts, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
+		opts, err := userprompt.InputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not input remote keymanager config")
 		}
 		createWalletConfig.RemoteKeymanagerOpts = opts
 	}
+	if keymanagerKind == keymanager.Web3Signer {
+		return nil, errors.New("web3signer keymanager does not require persistent wallets.")
+	}
 	return createWalletConfig, nil
 }
 
-func createImportedKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet) error {
+func createLocalKeymanagerWallet(_ context.Context, wallet *wallet.Wallet) error {
 	if wallet == nil {
 		return errors.New("nil wallet")
 	}
@@ -257,14 +265,15 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			wallet.KeymanagerKindSelections[keymanager.Imported],
+			wallet.KeymanagerKindSelections[keymanager.Local],
 			wallet.KeymanagerKindSelections[keymanager.Derived],
 			wallet.KeymanagerKindSelections[keymanager.Remote],
+			wallet.KeymanagerKindSelections[keymanager.Web3Signer],
 		},
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
-		return keymanager.Imported, fmt.Errorf("could not select wallet type: %w", prompt.FormatPromptError(err))
+		return keymanager.Local, fmt.Errorf("could not select wallet type: %w", userprompt.FormatPromptError(err))
 	}
 	return keymanager.Kind(selection), nil
 }

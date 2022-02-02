@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/timeutils"
+	"github.com/prysmaticlabs/prysm/config/params"
+	mathutil "github.com/prysmaticlabs/prysm/math"
+	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -22,12 +22,12 @@ func (f *blocksFetcher) peerLock(pid peer.ID) *peerLock {
 	f.Lock()
 	defer f.Unlock()
 	if lock, ok := f.peerLocks[pid]; ok && lock != nil {
-		lock.accessed = timeutils.Now()
+		lock.accessed = prysmTime.Now()
 		return lock
 	}
 	f.peerLocks[pid] = &peerLock{
 		Mutex:    sync.Mutex{},
-		accessed: timeutils.Now(),
+		accessed: prysmTime.Now(),
 	}
 	return f.peerLocks[pid]
 }
@@ -76,7 +76,7 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 			headEpoch := f.chain.FinalizedCheckpt().Epoch
 			_, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 		} else {
-			headEpoch := core.SlotToEpoch(f.chain.HeadSlot())
+			headEpoch := slots.ToEpoch(f.chain.HeadSlot())
 			_, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
 		}
 		if len(peers) >= required {
@@ -92,7 +92,7 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 // filterPeers returns transformed list of peers, weight sorted by scores and capacity remaining.
 // List can be further constrained using peersPercentage, where only percentage of peers are returned.
 func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) []peer.ID {
-	ctx, span := trace.StartSpan(ctx, "initialsync.filterPeers")
+	_, span := trace.StartSpan(ctx, "initialsync.filterPeers")
 	defer span.End()
 
 	if len(peers) == 0 {

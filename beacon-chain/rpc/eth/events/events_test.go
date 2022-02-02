@@ -6,6 +6,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/async/event"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -15,11 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/mock"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/mock"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -48,7 +49,7 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedBlock := testutil.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
+		wantedBlock := util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
 			Block: &eth.BeaconBlock{
 				Slot: 8,
 			},
@@ -88,7 +89,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedAttV1alpha1 := testutil.HydrateAttestation(&eth.Attestation{
+		wantedAttV1alpha1 := util.HydrateAttestation(&eth.Attestation{
 			Data: &eth.AttestationData{
 				Slot: 8,
 			},
@@ -123,7 +124,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		defer ctrl.Finish()
 
 		wantedAttV1alpha1 := &eth.AggregateAttestationAndProof{
-			Aggregate: testutil.HydrateAttestation(&eth.Attestation{}),
+			Aggregate: util.HydrateAttestation(&eth.Attestation{}),
 		}
 		wantedAtt := migration.V1Alpha1AggregateAttAndProofToV1(wantedAttV1alpha1)
 		genericResponse, err := anypb.New(wantedAtt)
@@ -180,6 +181,49 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				Type: operation.ExitReceived,
 				Data: &operation.ExitReceivedData{
 					Exit: wantedExitV1alpha1,
+				},
+			},
+			feed: srv.OperationNotifier.OperationFeed(),
+		})
+	})
+	t.Run(SyncCommitteeContributionTopic, func(t *testing.T) {
+		ctx := context.Background()
+		srv, ctrl, mockStream := setupServer(ctx, t)
+		defer ctrl.Finish()
+
+		wantedContributionV1alpha1 := &eth.SignedContributionAndProof{
+			Message: &eth.ContributionAndProof{
+				AggregatorIndex: 1,
+				Contribution: &eth.SyncCommitteeContribution{
+					Slot:              1,
+					BlockRoot:         []byte("root"),
+					SubcommitteeIndex: 1,
+					AggregationBits:   bitfield.NewBitvector128(),
+					Signature:         []byte("sig"),
+				},
+				SelectionProof: []byte("proof"),
+			},
+			Signature: []byte("sig"),
+		}
+		wantedContribution := migration.V1Alpha1SignedContributionAndProofToV2(wantedContributionV1alpha1)
+		genericResponse, err := anypb.New(wantedContribution)
+		require.NoError(t, err)
+
+		wantedMessage := &gateway.EventSource{
+			Event: SyncCommitteeContributionTopic,
+			Data:  genericResponse,
+		}
+
+		assertFeedSendAndReceive(ctx, &assertFeedArgs{
+			t:             t,
+			srv:           srv,
+			topics:        []string{SyncCommitteeContributionTopic},
+			stream:        mockStream,
+			shouldReceive: wantedMessage,
+			itemToSend: &feed.Event{
+				Type: operation.SyncCommitteeContributionReceived,
+				Data: &operation.SyncCommitteeContributionReceivedData{
+					Contribution: wantedContributionV1alpha1,
 				},
 			},
 			feed: srv.OperationNotifier.OperationFeed(),
@@ -284,6 +328,65 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			},
 			feed: srv.StateNotifier.StateFeed(),
 		})
+	})
+}
+
+func TestStreamEvents_CommaSeparatedTopics(t *testing.T) {
+	ctx := context.Background()
+	srv, ctrl, mockStream := setupServer(ctx, t)
+	defer ctrl.Finish()
+
+	wantedHead := &ethpb.EventHead{
+		Slot:                      8,
+		Block:                     make([]byte, 32),
+		State:                     make([]byte, 32),
+		EpochTransition:           true,
+		PreviousDutyDependentRoot: make([]byte, 32),
+		CurrentDutyDependentRoot:  make([]byte, 32),
+	}
+	headGenericResponse, err := anypb.New(wantedHead)
+	require.NoError(t, err)
+	wantedHeadMessage := &gateway.EventSource{
+		Event: HeadTopic,
+		Data:  headGenericResponse,
+	}
+
+	assertFeedSendAndReceive(ctx, &assertFeedArgs{
+		t:             t,
+		srv:           srv,
+		topics:        []string{HeadTopic + "," + FinalizedCheckpointTopic},
+		stream:        mockStream,
+		shouldReceive: wantedHeadMessage,
+		itemToSend: &feed.Event{
+			Type: statefeed.NewHead,
+			Data: wantedHead,
+		},
+		feed: srv.StateNotifier.StateFeed(),
+	})
+
+	wantedCheckpoint := &ethpb.EventFinalizedCheckpoint{
+		Block: make([]byte, 32),
+		State: make([]byte, 32),
+		Epoch: 8,
+	}
+	checkpointGenericResponse, err := anypb.New(wantedCheckpoint)
+	require.NoError(t, err)
+	wantedCheckpointMessage := &gateway.EventSource{
+		Event: FinalizedCheckpointTopic,
+		Data:  checkpointGenericResponse,
+	}
+
+	assertFeedSendAndReceive(ctx, &assertFeedArgs{
+		t:             t,
+		srv:           srv,
+		topics:        []string{HeadTopic + "," + FinalizedCheckpointTopic},
+		stream:        mockStream,
+		shouldReceive: wantedCheckpointMessage,
+		itemToSend: &feed.Event{
+			Type: statefeed.FinalizedCheckpoint,
+			Data: wantedCheckpoint,
+		},
+		feed: srv.StateNotifier.StateFeed(),
 	})
 }
 

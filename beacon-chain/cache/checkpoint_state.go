@@ -7,9 +7,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
 )
 
 var (
@@ -47,7 +47,7 @@ func NewCheckpointStateCache() *CheckpointStateCache {
 func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (state.BeaconState, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	h, err := hashutil.HashProto(cp)
+	h, err := hash.HashProto(cp)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (state.Be
 func (c *CheckpointStateCache) AddCheckpointState(cp *ethpb.Checkpoint, s state.ReadOnlyBeaconState) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	h, err := hashutil.HashProto(cp)
+	h, err := hash.HashProto(cp)
 	if err != nil {
 		return err
 	}

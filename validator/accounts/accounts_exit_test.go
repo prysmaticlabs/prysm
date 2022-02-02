@@ -9,14 +9,15 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mock"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -25,8 +26,8 @@ import (
 func TestExitAccountsCli_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	mockNodeClient := mock.NewMockNodeClient(ctrl)
+	mockValidatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	mockNodeClient := mock2.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
@@ -58,11 +59,11 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	keystore, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
-	// We initialize a wallet with a imported keymanager.
+	// We initialize a wallet with a local keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flag required for ImportAccounts to work.
@@ -73,7 +74,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})
@@ -111,8 +112,8 @@ func TestExitAccountsCli_OK(t *testing.T) {
 func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	mockNodeClient := mock.NewMockNodeClient(ctrl)
+	mockValidatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	mockNodeClient := mock2.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
@@ -153,11 +154,11 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	keystore2, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
 
-	// We initialize a wallet with a imported keymanager.
+	// We initialize a wallet with a local keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flag required for ImportAccounts to work.
@@ -168,7 +169,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})
@@ -210,18 +211,18 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 }
 
 func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
-	imported.ResetCaches()
+	local.ResetCaches()
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})
@@ -231,11 +232,11 @@ func TestPrepareWallet_EmptyWalletReturnsError(t *testing.T) {
 }
 
 func TestPrepareClients_AddsGRPCHeaders(t *testing.T) {
-	imported.ResetCaches()
+	local.ResetCaches()
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		grpcHeaders:         "Authorization=Basic some-token,Some-Other-Header=some-value",
@@ -243,7 +244,7 @@ func TestPrepareClients_AddsGRPCHeaders(t *testing.T) {
 	_, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})
@@ -271,7 +272,7 @@ func TestDisplayExitInfo_NoKeys(t *testing.T) {
 func TestPrepareAllKeys(t *testing.T) {
 	key1 := bytesutil.ToBytes48([]byte("key1"))
 	key2 := bytesutil.ToBytes48([]byte("key2"))
-	raw, formatted := prepareAllKeys([][48]byte{key1, key2})
+	raw, formatted := prepareAllKeys([][fieldparams.BLSPubkeyLength]byte{key1, key2})
 	require.Equal(t, 2, len(raw))
 	require.Equal(t, 2, len(formatted))
 	assert.DeepEqual(t, bytesutil.ToBytes48([]byte{107, 101, 121, 49}), bytesutil.ToBytes48(raw[0]))

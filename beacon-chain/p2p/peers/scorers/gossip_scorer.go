@@ -8,6 +8,11 @@ import (
 
 var _ Scorer = (*GossipScorer)(nil)
 
+const (
+	// The boundary till which a peer's gossip score is acceptable.
+	gossipThreshold = -100.0
+)
+
 // GossipScorer represents scorer that evaluates peers based on their gossip performance.
 // Gossip scoring metrics are periodically calculated in libp2p's internal pubsub module.
 type GossipScorer struct {
@@ -58,7 +63,7 @@ func (s *GossipScorer) isBadPeer(pid peer.ID) bool {
 	if !ok {
 		return false
 	}
-	return peerData.GossipScore < 0
+	return peerData.GossipScore < gossipThreshold
 }
 
 // BadPeers returns the peers that are considered bad.

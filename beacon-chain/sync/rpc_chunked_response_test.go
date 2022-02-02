@@ -6,19 +6,21 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestExtractBlockDataType(t *testing.T) {
 	// Precompute digests
-	genDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().ZeroHash[:])
+	genDigest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
-	altairDigest, err := helpers.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
+	altairDigest, err := signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, params.BeaconConfig().ZeroHash[:])
+	require.NoError(t, err)
+	bellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
 
 	type args struct {
@@ -75,6 +77,19 @@ func TestExtractBlockDataType(t *testing.T) {
 			},
 			want: func() block.SignedBeaconBlock {
 				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+				require.NoError(t, err)
+				return wsb
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "bellatrix fork version",
+			args: args{
+				digest: bellatrixDigest[:],
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want: func() block.SignedBeaconBlock {
+				wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 				require.NoError(t, err)
 				return wsb
 			}(),

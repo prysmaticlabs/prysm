@@ -7,18 +7,20 @@ import (
 	"testing"
 
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
 	customState, err := v1.InitializeFromProto(genesis)
@@ -55,7 +57,7 @@ func setupGenesisState(tb testing.TB, count uint64) *ethpb.BeaconState {
 	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		genesisState.Validators = append(genesisState.Validators, &ethpb.Validator{
@@ -76,7 +78,7 @@ func setupGenesisState(tb testing.TB, count uint64) *ethpb.BeaconState {
 func BenchmarkCloneValidators_Proto(b *testing.B) {
 	b.StopTimer()
 	validators := make([]*ethpb.Validator, 16384)
-	somePubKey := [48]byte{1, 2, 3}
+	somePubKey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3}
 	someRoot := [32]byte{3, 4, 5}
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -99,7 +101,7 @@ func BenchmarkCloneValidators_Proto(b *testing.B) {
 func BenchmarkCloneValidators_Manual(b *testing.B) {
 	b.StopTimer()
 	validators := make([]*ethpb.Validator, 16384)
-	somePubKey := [48]byte{1, 2, 3}
+	somePubKey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3}
 	someRoot := [32]byte{3, 4, 5}
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -121,7 +123,8 @@ func BenchmarkCloneValidators_Manual(b *testing.B) {
 
 func BenchmarkStateClone_Proto(b *testing.B) {
 	b.StopTimer()
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(b)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(b, 64)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -132,7 +135,8 @@ func BenchmarkStateClone_Proto(b *testing.B) {
 
 func BenchmarkStateClone_Manual(b *testing.B) {
 	b.StopTimer()
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(b)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(b, 64)
 	st, err := v1.InitializeFromProto(genesis)
 	require.NoError(b, err)
@@ -173,7 +177,8 @@ func cloneValidatorsManually(vals []*ethpb.Validator) []*ethpb.Validator {
 }
 
 func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(t, 64)
 	a, err := v1.InitializeFromProto(genesis)
 	require.NoError(t, err)
@@ -209,7 +214,8 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 }
 
 func TestForkManualCopy_OK(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(t, 64)
 	a, err := v1.InitializeFromProto(genesis)
 	require.NoError(t, err)

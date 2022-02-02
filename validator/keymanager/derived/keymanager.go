@@ -5,12 +5,14 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	util "github.com/wealdtech/go-eth2-util"
 )
 
@@ -32,7 +34,7 @@ type SetupConfig struct {
 
 // Keymanager implementation for derived, HD keymanager using EIP-2333 and EIP-2334.
 type Keymanager struct {
-	importedKM *imported.Keymanager
+	localKM *local.Keymanager
 }
 
 // NewKeymanager instantiates a new derived keymanager from configuration options.
@@ -40,7 +42,7 @@ func NewKeymanager(
 	ctx context.Context,
 	cfg *SetupConfig,
 ) (*Keymanager, error) {
-	importedKM, err := imported.NewKeymanager(ctx, &imported.SetupConfig{
+	localKM, err := local.NewKeymanager(ctx, &local.SetupConfig{
 		Wallet:           cfg.Wallet,
 		ListenForChanges: cfg.ListenForChanges,
 	})
@@ -48,7 +50,7 @@ func NewKeymanager(
 		return nil, err
 	}
 	return &Keymanager{
-		importedKM: importedKM,
+		localKM: localKM,
 	}, nil
 }
 
@@ -74,7 +76,7 @@ func (km *Keymanager) RecoverAccountsFromMnemonic(
 		privKeys[i] = privKey.Marshal()
 		pubKeys[i] = privKey.PublicKey().Marshal()
 	}
-	return km.importedKM.ImportKeypairs(ctx, privKeys, pubKeys)
+	return km.localKM.ImportKeypairs(ctx, privKeys, pubKeys)
 }
 
 // ExtractKeystores retrieves the secret keys for specified public keys
@@ -83,37 +85,46 @@ func (km *Keymanager) RecoverAccountsFromMnemonic(
 func (km *Keymanager) ExtractKeystores(
 	ctx context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*keymanager.Keystore, error) {
-	return km.importedKM.ExtractKeystores(ctx, publicKeys, password)
+	return km.localKM.ExtractKeystores(ctx, publicKeys, password)
 }
 
 // ValidatingAccountNames for the derived keymanager.
 func (km *Keymanager) ValidatingAccountNames(_ context.Context) ([]string, error) {
-	return km.importedKM.ValidatingAccountNames()
+	return km.localKM.ValidatingAccountNames()
 }
 
 // Sign signs a message using a validator key.
 func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	return km.importedKM.Sign(ctx, req)
+	return km.localKM.Sign(ctx, req)
 }
 
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
-	return km.importedKM.FetchValidatingPublicKeys(ctx)
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	return km.localKM.FetchValidatingPublicKeys(ctx)
 }
 
 // FetchValidatingPrivateKeys fetches the list of validating private keys from the keymanager.
 func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byte, error) {
-	return km.importedKM.FetchValidatingPrivateKeys(ctx)
+	return km.localKM.FetchValidatingPrivateKeys(ctx)
 }
 
-// DeleteAccounts for a derived keymanager.
-func (km *Keymanager) DeleteAccounts(ctx context.Context, publicKeys [][]byte) error {
-	return km.importedKM.DeleteAccounts(ctx, publicKeys)
+// ImportKeystores for a derived keymanager.
+func (km *Keymanager) ImportKeystores(
+	ctx context.Context, keystores []*keymanager.Keystore, passwords []string,
+) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+	return km.localKM.ImportKeystores(ctx, keystores, passwords)
+}
+
+// DeleteKeystores for a derived keymanager.
+func (km *Keymanager) DeleteKeystores(
+	ctx context.Context, publicKeys [][]byte,
+) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return km.localKM.DeleteKeystores(ctx, publicKeys)
 }
 
 // SubscribeAccountChanges creates an event subscription for a channel
 // to listen for public key changes at runtime, such as when new validator accounts
 // are imported into the keymanager while the validator process is running.
-func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
-	return km.importedKM.SubscribeAccountChanges(pubKeysChan)
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
+	return km.localKM.SubscribeAccountChanges(pubKeysChan)
 }

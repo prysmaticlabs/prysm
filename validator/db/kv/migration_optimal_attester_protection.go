@@ -5,9 +5,10 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/progressutil"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -59,7 +60,7 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 		return err
 	}
 
-	bar := progressutil.InitializeProgressBar(numKeys, "Migrating attesting history to more efficient format")
+	bar := progress.InitializeProgressBar(numKeys, "Migrating attesting history to more efficient format")
 	for i, publicKey := range publicKeyBytes {
 		attestingHistory := deprecatedEncodedAttestingHistory(attestingHistoryBytes[i])
 		err = s.db.Update(func(tx *bolt.Tx) error {
@@ -114,7 +115,7 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 // Migrate attester protection from the more optimal format to the old format in the DB.
 func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error {
 	// First we extract the public keys we are migrating down for.
-	pubKeys := make([][48]byte, 0)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	err := s.view(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
 		if b := mb.Get(migrationOptimalAttesterProtectionKey); b == nil {
@@ -193,7 +194,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 		if bkt == nil {
 			return nil
 		}
-		bar := progressutil.InitializeProgressBar(len(pubKeys), "Migrating attesting history to old format")
+		bar := progress.InitializeProgressBar(len(pubKeys), "Migrating attesting history to old format")
 		for _, pubKey := range pubKeys {
 			// Now we write the attesting history using the data we extracted
 			// from the buckets accordingly.

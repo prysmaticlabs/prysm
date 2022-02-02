@@ -7,10 +7,10 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,7 +25,7 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 	}
 	s.setSeenCommitteeIndicesSlot(a.Data.Slot, a.Data.CommitteeIndex, a.AggregationBits)
 
-	exists, err := s.cfg.AttPool.HasAggregatedAttestation(a)
+	exists, err := s.cfg.attPool.HasAggregatedAttestation(a)
 	if err != nil {
 		return errors.Wrap(err, "Could not determine if attestation pool has this atttestation")
 	}
@@ -33,29 +33,29 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 		return nil
 	}
 
-	return s.cfg.AttPool.SaveUnaggregatedAttestation(a)
+	return s.cfg.attPool.SaveUnaggregatedAttestation(a)
 }
 
-func (s *Service) persistentSubnetIndices() []uint64 {
+func (_ *Service) persistentSubnetIndices() []uint64 {
 	return cache.SubnetIDs.GetAllSubnets()
 }
 
-func (s *Service) aggregatorSubnetIndices(currentSlot types.Slot) []uint64 {
-	endEpoch := core.SlotToEpoch(currentSlot) + 1
+func (_ *Service) aggregatorSubnetIndices(currentSlot types.Slot) []uint64 {
+	endEpoch := slots.ToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
 	var commIds []uint64
 	for i := currentSlot; i <= endSlot; i++ {
 		commIds = append(commIds, cache.SubnetIDs.GetAggregatorSubnetIDs(i)...)
 	}
-	return sliceutil.SetUint64(commIds)
+	return slice.SetUint64(commIds)
 }
 
-func (s *Service) attesterSubnetIndices(currentSlot types.Slot) []uint64 {
-	endEpoch := core.SlotToEpoch(currentSlot) + 1
+func (_ *Service) attesterSubnetIndices(currentSlot types.Slot) []uint64 {
+	endEpoch := slots.ToEpoch(currentSlot) + 1
 	endSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(endEpoch))
 	var commIds []uint64
 	for i := currentSlot; i <= endSlot; i++ {
 		commIds = append(commIds, cache.SubnetIDs.GetAttesterSubnetIDs(i)...)
 	}
-	return sliceutil.SetUint64(commIds)
+	return slice.SetUint64(commIds)
 }

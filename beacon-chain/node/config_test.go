@@ -6,12 +6,13 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -60,14 +61,27 @@ func TestConfigureProofOfWork(t *testing.T) {
 	set.String(flags.DepositContractFlag.Name, "", "")
 	require.NoError(t, set.Set(flags.ChainID.Name, strconv.Itoa(100)))
 	require.NoError(t, set.Set(flags.NetworkID.Name, strconv.Itoa(200)))
-	require.NoError(t, set.Set(flags.DepositContractFlag.Name, "deposit"))
+	require.NoError(t, set.Set(flags.DepositContractFlag.Name, "deposit-contract"))
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	configureEth1Config(cliCtx)
 
 	assert.Equal(t, uint64(100), params.BeaconConfig().DepositChainID)
 	assert.Equal(t, uint64(200), params.BeaconConfig().DepositNetworkID)
-	assert.Equal(t, "deposit", params.BeaconConfig().DepositContractAddress)
+	assert.Equal(t, "deposit-contract", params.BeaconConfig().DepositContractAddress)
+}
+
+func TestConfigureExecutionSetting(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.FeeRecipient.Name, "", "")
+	require.NoError(t, set.Set(flags.FeeRecipient.Name, "0xB"))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	configureExecutionSetting(cliCtx)
+	assert.Equal(t, common.HexToAddress("0xB"), params.BeaconConfig().FeeRecipient)
 }
 
 func TestConfigureNetwork(t *testing.T) {

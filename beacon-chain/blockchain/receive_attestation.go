@@ -7,22 +7,28 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
+// AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
+// root of an attestation's target checkpoint.
+type AttestationStateFetcher interface {
+	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error)
+}
+
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
+	AttestationStateFetcher
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
-	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error)
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
 }
@@ -36,28 +42,28 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	if err := s.onAttestation(ctx, att); err != nil {
+	if err := s.OnAttestation(ctx, att); err != nil {
 		return errors.Wrap(err, "could not process attestation")
 	}
 
 	return nil
 }
 
-// AttestationPreState returns the pre state of attestation.
-func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (state.BeaconState, error) {
-	ss, err := core.StartSlot(att.Data.Target.Epoch)
+// AttestationTargetState returns the pre state of attestation.
+func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error) {
+	ss, err := slots.EpochStart(target.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	if err := core.ValidateSlotClock(ss, uint64(s.genesisTime.Unix())); err != nil {
+	if err := slots.ValidateClock(ss, uint64(s.genesisTime.Unix())); err != nil {
 		return nil, err
 	}
-	return s.getAttPreState(ctx, att.Data.Target)
+	return s.getAttPreState(ctx, target)
 }
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
-	targetSlot, err := core.StartSlot(a.Data.Target.Epoch)
+	targetSlot, err := slots.EpochStart(a.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}
@@ -82,7 +88,10 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	}
 
 	f := s.FinalizedCheckpt()
-	ss, err := core.StartSlot(f.Epoch)
+	if f == nil {
+		return errNilFinalizedInStore
+	}
+	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
 	}
@@ -98,39 +107,66 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 }
 
 // This routine processes fork choice attestations from the pool to account for validator votes and fork choice.
-func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- struct{}) {
+func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	subscribedToStateEvents <- struct{}{}
-	<-stateChannel
-	stateSub.Unsubscribe()
-
-	if s.genesisTime.IsZero() {
-		log.Warn("ProcessAttestations routine waiting for genesis time")
-		for s.genesisTime.IsZero() {
-			time.Sleep(1 * time.Second)
-		}
-		log.Warn("Genesis time received, now available to process attestations")
-	}
-
-	st := slotutil.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
-	for {
+	stateSub := stateFeed.Subscribe(stateChannel)
+	go func() {
 		select {
 		case <-s.ctx.Done():
+			stateSub.Unsubscribe()
 			return
-		case <-st.C():
-			// Continue when there's no fork choice attestation, there's nothing to process and update head.
-			// This covers the condition when the node is still initial syncing to the head of the chain.
-			if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
-				continue
+		case <-stateChannel:
+			stateSub.Unsubscribe()
+			break
+		}
+
+		if s.genesisTime.IsZero() {
+			log.Warn("ProcessAttestations routine waiting for genesis time")
+			for s.genesisTime.IsZero() {
+				if err := s.ctx.Err(); err != nil {
+					log.WithError(err).Error("Giving up waiting for genesis time")
+					return
+				}
+				time.Sleep(1 * time.Second)
 			}
-			s.processAttestations(s.ctx)
-			if err := s.updateHead(s.ctx, s.getJustifiedBalances()); err != nil {
-				log.Warnf("Resolving fork due to new attestation: %v", err)
+			log.Warn("Genesis time received, now available to process attestations")
+		}
+
+		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+		for {
+			select {
+			case <-s.ctx.Done():
+				return
+			case <-st.C():
+				if err := s.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+					log.WithError(err).Error("Could not process new slot")
+					return
+				}
+
+				// Continue when there's no fork choice attestation, there's nothing to process and update head.
+				// This covers the condition when the node is still initial syncing to the head of the chain.
+				if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
+					continue
+				}
+				s.processAttestations(s.ctx)
+
+				justified := s.store.JustifiedCheckpt()
+				if justified == nil {
+					log.WithError(errNilJustifiedInStore).Error("Could not get justified checkpoint")
+					continue
+				}
+				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(justified.Root))
+				if err != nil {
+					log.WithError(err).Errorf("Unable to get justified balances for root %v", justified.Root)
+					continue
+				}
+				if err := s.updateHead(s.ctx, balances); err != nil {
+					log.WithError(err).Warn("Resolving fork due to new attestation")
+				}
 			}
 		}
-	}
+	}()
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
@@ -141,7 +177,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 		// This delays consideration in the fork choice until their slot is in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
-		if err := core.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			continue
 		}
 

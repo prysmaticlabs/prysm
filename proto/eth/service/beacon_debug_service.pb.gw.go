@@ -539,15 +539,15 @@ func RegisterBeaconDebugHandlerClient(ctx context.Context, mux *runtime.ServeMux
 }
 
 var (
-	pattern_BeaconDebug_GetBeaconState_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"eth", "v1", "debug", "beacon", "states", "state_id"}, ""))
+	pattern_BeaconDebug_GetBeaconState_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"internal", "eth", "v1", "debug", "beacon", "states", "state_id"}, ""))
 
-	pattern_BeaconDebug_GetBeaconStateSSZ_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"eth", "v1", "debug", "beacon", "states", "state_id", "ssz"}, ""))
+	pattern_BeaconDebug_GetBeaconStateSSZ_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"internal", "eth", "v1", "debug", "beacon", "states", "state_id", "ssz"}, ""))
 
-	pattern_BeaconDebug_GetBeaconStateV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"eth", "v2", "debug", "beacon", "states", "state_id"}, ""))
+	pattern_BeaconDebug_GetBeaconStateV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"internal", "eth", "v2", "debug", "beacon", "states", "state_id"}, ""))
 
-	pattern_BeaconDebug_GetBeaconStateSSZV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"eth", "v2", "debug", "beacon", "states", "state_id", "ssz"}, ""))
+	pattern_BeaconDebug_GetBeaconStateSSZV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6, 2, 7}, []string{"internal", "eth", "v2", "debug", "beacon", "states", "state_id", "ssz"}, ""))
 
-	pattern_BeaconDebug_ListForkChoiceHeads_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1", "debug", "beacon", "heads"}, ""))
+	pattern_BeaconDebug_ListForkChoiceHeads_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "debug", "beacon", "heads"}, ""))
 )
 
 var (

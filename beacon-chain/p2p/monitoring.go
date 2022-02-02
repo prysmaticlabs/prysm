@@ -11,6 +11,10 @@ var (
 		Help: "The number of peers in a given state.",
 	},
 		[]string{"state"})
+	totalPeerCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "libp2p_peers",
+		Help: "Tracks the total number of libp2p peers",
+	})
 	repeatPeerConnections = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "p2p_repeat_attempts",
 		Help: "The number of repeat attempts the connection handler is triggered for a peer.",
@@ -42,6 +46,7 @@ var (
 )
 
 func (s *Service) updateMetrics() {
+	totalPeerCount.Set(float64(len(s.peers.Connected())))
 	p2pPeerCount.WithLabelValues("Connected").Set(float64(len(s.peers.Connected())))
 	p2pPeerCount.WithLabelValues("Disconnected").Set(float64(len(s.peers.Disconnected())))
 	p2pPeerCount.WithLabelValues("Connecting").Set(float64(len(s.peers.Connecting())))

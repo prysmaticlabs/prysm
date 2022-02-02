@@ -1,16 +1,17 @@
 package validators
 
 import (
+	"context"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestHasVoted_OK(t *testing.T) {
@@ -46,7 +47,7 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	}}
 	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	newState, err := InitiateValidatorExit(state, 0)
+	newState, err := InitiateValidatorExit(context.Background(), state, 0)
 	require.NoError(t, err)
 	v, err := newState.ValidatorAtIndex(0)
 	require.NoError(t, err)
@@ -64,7 +65,7 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 	}}
 	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	newState, err := InitiateValidatorExit(state, idx)
+	newState, err := InitiateValidatorExit(context.Background(), state, idx)
 	require.NoError(t, err)
 	v, err := newState.ValidatorAtIndex(idx)
 	require.NoError(t, err)
@@ -83,7 +84,7 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	}}
 	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
-	newState, err := InitiateValidatorExit(state, idx)
+	newState, err := InitiateValidatorExit(context.Background(), state, idx)
 	require.NoError(t, err)
 
 	// Because of exit queue overflow,
@@ -121,12 +122,12 @@ func TestSlashValidator_OK(t *testing.T) {
 
 	slashedIdx := types.ValidatorIndex(2)
 
-	proposer, err := helpers.BeaconProposerIndex(state)
+	proposer, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err, "Could not get proposer")
 	proposerBal, err := state.BalanceAtIndex(proposer)
 	require.NoError(t, err)
 	cfg := params.BeaconConfig()
-	slashedState, err := SlashValidator(state, slashedIdx, cfg.MinSlashingPenaltyQuotient, cfg.ProposerRewardQuotient)
+	slashedState, err := SlashValidator(context.Background(), state, slashedIdx, cfg.MinSlashingPenaltyQuotient, cfg.ProposerRewardQuotient)
 	require.NoError(t, err, "Could not slash validator")
 	state, ok := slashedState.(*v1.BeaconState)
 	require.Equal(t, true, ok)
@@ -134,7 +135,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	v, err := state.ValidatorAtIndex(slashedIdx)
 	require.NoError(t, err)
 	assert.Equal(t, true, v.Slashed, "Validator not slashed despite supposed to being slashed")
-	assert.Equal(t, core.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector, v.WithdrawableEpoch, "Withdrawable epoch not the expected value")
+	assert.Equal(t, time.CurrentEpoch(state)+params.BeaconConfig().EpochsPerSlashingsVector, v.WithdrawableEpoch, "Withdrawable epoch not the expected value")
 
 	maxBalance := params.BeaconConfig().MaxEffectiveBalance
 	slashedBalance := state.Slashings()[state.Slot().Mod(uint64(params.BeaconConfig().EpochsPerSlashingsVector))]
@@ -204,7 +205,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := v1.InitializeFromProto(tt.state)
 		require.NoError(t, err)
-		activatedIndices := ActivatedValidatorIndices(core.CurrentEpoch(s), tt.state.Validators)
+		activatedIndices := ActivatedValidatorIndices(time.CurrentEpoch(s), tt.state.Validators)
 		assert.DeepEqual(t, tt.wanted, activatedIndices)
 	}
 }
@@ -258,7 +259,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := v1.InitializeFromProto(tt.state)
 		require.NoError(t, err)
-		slashedIndices := SlashedValidatorIndices(core.CurrentEpoch(s), tt.state.Validators)
+		slashedIndices := SlashedValidatorIndices(time.CurrentEpoch(s), tt.state.Validators)
 		assert.DeepEqual(t, tt.wanted, slashedIndices)
 	}
 }
@@ -318,7 +319,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 	for _, tt := range tests {
 		s, err := v1.InitializeFromProto(tt.state)
 		require.NoError(t, err)
-		activeCount, err := helpers.ActiveValidatorCount(s, core.PrevEpoch(s))
+		activeCount, err := helpers.ActiveValidatorCount(context.Background(), s, time.PrevEpoch(s))
 		require.NoError(t, err)
 		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
 		require.NoError(t, err)

@@ -1,0 +1,13 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    testonly = True,
+    srcs = ["types.go"],
+    importpath = "github.com/prysmaticlabs/prysm/testing/endtoend/types",
+    visibility = ["//testing/endtoend:__subpackages__"],
+    deps = [
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+    ],
+)

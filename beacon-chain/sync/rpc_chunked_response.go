@@ -4,15 +4,15 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/p2putils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // chunkBlockWriter writes the given message as a chunked response to the given network
@@ -20,27 +20,34 @@ import (
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
 func (s *Service) chunkBlockWriter(stream libp2pcore.Stream, blk block.SignedBeaconBlock) error {
 	SetStreamWriteDeadline(stream, defaultWriteDuration)
-	return WriteBlockChunk(stream, s.cfg.Chain, s.cfg.P2P.Encoding(), blk)
+	return WriteBlockChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), blk)
 }
 
-// WriteChunk object to stream.
+// WriteBlockChunk writes block chunk object to stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
 func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, blk block.SignedBeaconBlock) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	obtainedCtx := []byte{}
+	var obtainedCtx []byte
 	switch blk.Version() {
 	case version.Phase0:
 		valRoot := chain.GenesisValidatorRoot()
-		digest, err := p2putils.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}
 		obtainedCtx = digest[:]
 	case version.Altair:
 		valRoot := chain.GenesisValidatorRoot()
-		digest, err := p2putils.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, valRoot[:])
+		if err != nil {
+			return err
+		}
+		obtainedCtx = digest[:]
+	case version.Bellatrix:
+		valRoot := chain.GenesisValidatorRoot()
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().BellatrixForkEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}
@@ -124,7 +131,7 @@ func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (blo
 	}
 	vRoot := chain.GenesisValidatorRoot()
 	for k, blkFunc := range types.BlockMap {
-		rDigest, err := helpers.ComputeForkDigest(k[:], vRoot[:])
+		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {
 			return nil, err
 		}

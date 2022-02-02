@@ -9,13 +9,15 @@ def _go_test_transition_impl(settings, attr):
     if attr.eth_network == "minimal":
         settings["//proto:network"] = "minimal"
         settings["@io_bazel_rules_go//go/config:tags"] += ["minimal"]
-    elif attr.eth_network == "mainnet": # Default / optional
+    elif attr.eth_network == "mainnet":  # Default / optional
         settings["//proto:network"] = "mainnet"
         settings["@io_bazel_rules_go//go/config:tags"] += ["mainnet"]
 
     if attr.gotags:
         settings["@io_bazel_rules_go//go/config:tags"] += attr.gotags
 
+    if str(settings["//command_line_option:compilation_mode"]) == "dbg":
+        settings["@io_bazel_rules_go//go/config:debug"] = True
     return settings
 
 go_test_transition = transition(
@@ -23,10 +25,14 @@ go_test_transition = transition(
     inputs = [
         "@io_bazel_rules_go//go/config:tags",
         "//proto:network",
+        "//command_line_option:compilation_mode",
+        "@io_bazel_rules_go//go/config:debug",
     ],
     outputs = [
         "@io_bazel_rules_go//go/config:tags",
         "//proto:network",
+        "//command_line_option:compilation_mode",
+        "@io_bazel_rules_go//go/config:debug",
     ],
 )
 
@@ -46,19 +52,8 @@ def _go_test_transition_rule(**kwargs):
 
 go_test = _go_test_transition_rule(**go_test_kwargs)
 
-def go_library(name, **kwargs):
-    gc_goopts = []
-
-    if "gc_goopts" in kwargs:
-        go_goopts = kwargs["gc_goopts"]
-
-    gc_goopts += select({
-        "@prysm//tools/go:libfuzz_enabled": ["-d=libfuzzer,checkptr"],
-        "//conditions:default": [],
-    })
-
-    kwargs["gc_goopts"] = gc_goopts
-    _go_library(name = name, **kwargs)
+# Alias retained for future ease of use.
+go_library = _go_library
 
 # Maybe download a repository rule, if it doesn't exist already.
 def maybe(repo_rule, name, **kwargs):
@@ -67,13 +62,6 @@ def maybe(repo_rule, name, **kwargs):
 
 # A wrapper around go_repository to add gazelle directives.
 def go_repository(name, **kwargs):
-    # Some third party go tools may be used by the fuzzing pipeline to generate code. This causes
-    # an issue when running with --config=fuzz and is not necessary since the dependency is not
-    # part of the final binary.
-    if "nofuzz" in kwargs:
-        kwargs.pop("nofuzz", None)
-        return maybe(_go_repository, name, **kwargs)
-
     directives = []
     if "build_directives" in kwargs:
         directives = kwargs["build_directives"]

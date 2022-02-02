@@ -13,19 +13,19 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.BeaconState) {
@@ -76,7 +76,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 			BodyRoot:      someRoot[:],
 		},
 	}
-	header1.Signature, err = helpers.ComputeDomainAndSign(state, core.CurrentEpoch(state), header1.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	header1.Signature, err = signing.ComputeDomainAndSign(state, coreTime.CurrentEpoch(state), header1.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
 	require.NoError(t, err)
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
@@ -88,7 +88,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 			BodyRoot:      someRoot2[:],
 		},
 	}
-	header2.Signature, err = helpers.ComputeDomainAndSign(state, core.CurrentEpoch(state), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
+	header2.Signature, err = signing.ComputeDomainAndSign(state, coreTime.CurrentEpoch(state), header2.Header, params.BeaconConfig().DomainBeaconProposer, privKey)
 	require.NoError(t, err)
 
 	slashing := &ethpb.ProposerSlashing{
@@ -114,10 +114,10 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	slashing, s := setupValidProposerSlashing(t)
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			Chain:       &mock.ChainService{State: s, Genesis: time.Now()},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s, Genesis: time.Now()},
+			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenProposerSlashingCache: lruwrpr.New(10),
 	}
@@ -136,7 +136,9 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 		},
 	}
 
-	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
+	res, err := r.validateProposerSlashing(ctx, "", m)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, true, valid, "Failed validation")
 	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
 }
@@ -154,10 +156,10 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	defer cancel()
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			Chain:       &mock.ChainService{State: state},
-			InitialSync: &mockSync.Sync{IsSyncing: false},
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: state},
+			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenProposerSlashingCache: lruwrpr.New(10),
 	}
@@ -172,7 +174,9 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
+	res, err := r.validateProposerSlashing(ctx, "", m)
+	assert.NotNil(t, err)
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Slashing from the far distant future should have timed out and returned false")
 }
 
@@ -183,10 +187,10 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 	slashing, s := setupValidProposerSlashing(t)
 
 	r := &Service{
-		cfg: &Config{
-			P2P:         p,
-			Chain:       &mock.ChainService{State: s},
-			InitialSync: &mockSync.Sync{IsSyncing: true},
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s},
+			initialSync: &mockSync.Sync{IsSyncing: true},
 		},
 	}
 
@@ -200,6 +204,8 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
+	res, err := r.validateProposerSlashing(ctx, "", m)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Did not fail validation")
 }

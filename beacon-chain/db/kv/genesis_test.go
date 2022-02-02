@@ -7,16 +7,16 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestStore_SaveGenesisData(t *testing.T) {
 	ctx := context.Background()
 	db := setupDB(t)
 
-	gs, err := testutil.NewBeaconState()
+	gs, err := util.NewBeaconState()
 	assert.NoError(t, err)
 
 	assert.NoError(t, db.SaveGenesisData(ctx, gs))

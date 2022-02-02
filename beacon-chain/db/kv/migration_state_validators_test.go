@@ -8,11 +8,11 @@ import (
 	"github.com/golang/snappy"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/config/features"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"go.etcd.io/bbolt"
 )
 
@@ -60,7 +60,7 @@ func Test_migrateStateValidators(t *testing.T) {
 			},
 			eval: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator) {
 				// disable the flag and see if the code mandates that flag.
-				resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				resetCfg := features.InitWithReset(&features.Flags{
 					EnableHistoricalSpaceRepresentation: false,
 				})
 				defer resetCfg()
@@ -75,7 +75,7 @@ func Test_migrateStateValidators(t *testing.T) {
 
 				// create a new state and save it
 				blockRoot := [32]byte{'B'}
-				st, err := testutil.NewBeaconState()
+				st, err := util.NewBeaconState()
 				newValidators := validators(10)
 				assert.NoError(t, err)
 				assert.NoError(t, st.SetSlot(101))
@@ -186,7 +186,7 @@ func Test_migrateStateValidators(t *testing.T) {
 			// add a state with the given validators
 			vals := validators(10)
 			blockRoot := [32]byte{'A'}
-			st, err := testutil.NewBeaconState()
+			st, err := util.NewBeaconState()
 			assert.NoError(t, err)
 			assert.NoError(t, st.SetSlot(100))
 			assert.NoError(t, st.SetValidators(vals))
@@ -194,7 +194,7 @@ func Test_migrateStateValidators(t *testing.T) {
 			assert.NoError(t, err)
 
 			// enable historical state representation flag to test this
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				EnableHistoricalSpaceRepresentation: true,
 			})
 			defer resetCfg()
@@ -289,13 +289,13 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 			// add a state with the given validators
 			vals := validators(10)
 			blockRoot := [32]byte{'A'}
-			st, _ := testutil.DeterministicGenesisStateAltair(t, 20)
+			st, _ := util.DeterministicGenesisStateAltair(t, 20)
 			assert.NoError(t, st.SetSlot(100))
 			assert.NoError(t, st.SetValidators(vals))
 			assert.NoError(t, dbStore.SaveState(context.Background(), st, blockRoot))
 
 			// enable historical state representation flag to test this
-			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			resetCfg := features.InitWithReset(&features.Flags{
 				EnableHistoricalSpaceRepresentation: true,
 			})
 			defer resetCfg()

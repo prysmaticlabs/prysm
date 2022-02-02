@@ -7,23 +7,23 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
 // Clients who receive a proposer slashing on this topic MUST validate the conditions within VerifyProposerSlashing before
 // forwarding it across the network.
-func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
-	if pid == s.cfg.P2P.PeerID() {
-		return pubsub.ValidationAccept
+	if pid == s.cfg.p2p.PeerID() {
+		return pubsub.ValidationAccept, nil
 	}
 
 	// The head state will be too far away to validate any slashing.
-	if s.cfg.InitialSync.Syncing() {
-		return pubsub.ValidationIgnore
+	if s.cfg.initialSync.Syncing() {
+		return pubsub.ValidationIgnore, nil
 	}
 
 	ctx, span := trace.StartSpan(ctx, "sync.validateProposerSlashing")
@@ -31,33 +31,32 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
-		log.WithError(err).Debug("Could not decode message")
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationReject
+		tracing.AnnotateError(span, err)
+		return pubsub.ValidationReject, err
 	}
 
 	slashing, ok := m.(*ethpb.ProposerSlashing)
 	if !ok {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, errWrongMessage
 	}
 
 	if slashing.Header_1 == nil || slashing.Header_1.Header == nil {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, errNilMessage
 	}
 	if s.hasSeenProposerSlashingIndex(slashing.Header_1.Header.ProposerIndex) {
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationIgnore, nil
 	}
 
-	headState, err := s.cfg.Chain.HeadState(ctx)
+	headState, err := s.cfg.chain.HeadState(ctx)
 	if err != nil {
-		return pubsub.ValidationIgnore
+		return pubsub.ValidationIgnore, err
 	}
 	if err := blocks.VerifyProposerSlashing(headState, slashing); err != nil {
-		return pubsub.ValidationReject
+		return pubsub.ValidationReject, err
 	}
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
-	return pubsub.ValidationAccept
+	return pubsub.ValidationAccept, nil
 }
 
 // Returns true if the node has already received a valid proposer slashing received for the proposer with index

@@ -4,11 +4,11 @@ import (
 	"context"
 	"math"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -73,7 +73,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 	}
 
 	// Only on an epoch boundary slot, saves epoch boundary state in epoch boundary root state cache.
-	if core.IsEpochStart(st.Slot()) {
+	if slots.IsEpochStart(st.Slot()) {
 		if err := s.epochBoundaryStateCache.put(blockRoot, st); err != nil {
 			return err
 		}

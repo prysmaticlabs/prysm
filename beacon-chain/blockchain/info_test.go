@@ -9,11 +9,11 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestService_TreeHandler(t *testing.T) {
@@ -22,23 +22,24 @@ func TestService_TreeHandler(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	headState, err := testutil.NewBeaconState()
+	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetBalances([]uint64{params.BeaconConfig().GweiPerEth}))
-	cfg := &Config{
-		BeaconDB: beaconDB,
-		ForkChoiceStore: protoarray.New(
-			0, // justifiedEpoch
-			0, // finalizedEpoch
-			[32]byte{'a'},
-		),
-		StateGen: stategen.New(beaconDB),
+	fcs := protoarray.New(
+		0, // justifiedEpoch
+		0, // finalizedEpoch
+		[32]byte{'a'},
+	)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
 	}
-	s, err := NewService(ctx, cfg)
+	s, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, [32]byte{'a'}, [32]byte{'g'}, [32]byte{'c'}, 0, 0))
 	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'c'}, 0, 0))
-	s.setHead([32]byte{'a'}, wrapper.WrappedPhase0SignedBeaconBlock(testutil.NewBeaconBlock()), headState)
+	s.setHead([32]byte{'a'}, wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()), headState)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(s.TreeHandler)

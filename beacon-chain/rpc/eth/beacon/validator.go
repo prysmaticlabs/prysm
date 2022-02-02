@@ -6,15 +6,16 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -38,14 +39,17 @@ func (e *invalidValidatorIdError) Error() string {
 
 // GetValidator returns a validator specified by state and id or public key along with status and balance.
 func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorRequest) (*ethpb.StateValidatorResponse, error) {
-	state, err := bs.StateFetcher.State(ctx, req.StateId)
+	ctx, span := trace.StartSpan(ctx, "beacon.GetValidator")
+	defer span.End()
+
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 	if len(req.ValidatorId) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Validator ID is required")
 	}
-	valContainer, err := valContainersByRequestIds(state, [][]byte{req.ValidatorId})
+	valContainer, err := valContainersByRequestIds(st, [][]byte{req.ValidatorId})
 	if err != nil {
 		return nil, handleValContainerErr(err)
 	}
@@ -57,12 +61,15 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 
 // ListValidators returns filterable list of validators with their balance, status and index.
 func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
-	state, err := bs.StateFetcher.State(ctx, req.StateId)
+	ctx, span := trace.StartSpan(ctx, "beacon.ListValidators")
+	defer span.End()
+
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	valContainers, err := valContainersByRequestIds(state, req.Id)
+	valContainers, err := valContainersByRequestIds(st, req.Id)
 	if err != nil {
 		return nil, handleValContainerErr(err)
 	}
@@ -80,7 +87,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		}
 		filterStatus[ss] = true
 	}
-	epoch := core.SlotToEpoch(state.Slot())
+	epoch := slots.ToEpoch(st.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
 	for _, vc := range valContainers {
 		readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
@@ -104,12 +111,15 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 
 // ListValidatorBalances returns a filterable list of validator balances.
 func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.ValidatorBalancesRequest) (*ethpb.ValidatorBalancesResponse, error) {
-	state, err := bs.StateFetcher.State(ctx, req.StateId)
+	ctx, span := trace.StartSpan(ctx, "beacon.ListValidatorBalances")
+	defer span.End()
+
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	valContainers, err := valContainersByRequestIds(state, req.Id)
+	valContainers, err := valContainersByRequestIds(st, req.Id)
 	if err != nil {
 		return nil, handleValContainerErr(err)
 	}
@@ -126,25 +136,28 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 // ListCommittees retrieves the committees for the given state at the given epoch.
 // If the requested slot and index are defined, only those committees are returned.
 func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommitteesRequest) (*ethpb.StateCommitteesResponse, error) {
-	state, err := bs.StateFetcher.State(ctx, req.StateId)
+	ctx, span := trace.StartSpan(ctx, "beacon.ListCommittees")
+	defer span.End()
+
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	epoch := core.SlotToEpoch(state.Slot())
+	epoch := slots.ToEpoch(st.Slot())
 	if req.Epoch != nil {
 		epoch = *req.Epoch
 	}
-	activeCount, err := corehelpers.ActiveValidatorCount(state, epoch)
+	activeCount, err := corehelpers.ActiveValidatorCount(ctx, st, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
 
-	startSlot, err := core.StartSlot(epoch)
+	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid epoch: %v", err)
 	}
-	endSlot, err := core.EndSlot(epoch)
+	endSlot, err := slots.EpochEnd(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid epoch: %v", err)
 	}
@@ -158,7 +171,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 			if req.Index != nil && index != *req.Index {
 				continue
 			}
-			committee, err := corehelpers.BeaconCommitteeFromState(state, slot, index)
+			committee, err := corehelpers.BeaconCommitteeFromState(ctx, st, slot, index)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not get committee: %v", err)
 			}
@@ -176,11 +189,11 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 // This function returns the validator object based on the passed in ID. The validator ID could be its public key,
 // or its index.
 func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) ([]*ethpb.ValidatorContainer, error) {
-	epoch := core.SlotToEpoch(state.Slot())
+	epoch := slots.ToEpoch(state.Slot())
 	var valContainers []*ethpb.ValidatorContainer
+	allBalances := state.Balances()
 	if len(validatorIds) == 0 {
 		allValidators := state.Validators()
-		allBalances := state.Balances()
 		valContainers = make([]*ethpb.ValidatorContainer, len(allValidators))
 		for i, validator := range allValidators {
 			readOnlyVal, err := v1.NewValidator(validator)
@@ -236,7 +249,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 			}
 			valContainers = append(valContainers, &ethpb.ValidatorContainer{
 				Index:     valIndex,
-				Balance:   v1Validator.EffectiveBalance,
+				Balance:   allBalances[valIndex],
 				Status:    subStatus,
 				Validator: v1Validator,
 			})

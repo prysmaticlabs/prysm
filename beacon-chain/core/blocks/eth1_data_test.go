@@ -8,12 +8,12 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -164,7 +164,7 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block = &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data: &ethpb.Eth1Data{

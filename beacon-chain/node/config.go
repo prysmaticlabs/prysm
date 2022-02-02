@@ -1,16 +1,17 @@
 package node
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/tracing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )
 
 func configureTracing(cliCtx *cli.Context) error {
-	return tracing.Setup(
+	return tracing2.Setup(
 		"beacon-chain", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
 		cliCtx.String(cmd.TracingEndpointFlag.Name),
@@ -93,5 +94,13 @@ func configureInteropConfig(cliCtx *cli.Context) {
 		bCfg := params.BeaconConfig()
 		bCfg.ConfigName = "interop"
 		params.OverrideBeaconConfig(bCfg)
+	}
+}
+
+func configureExecutionSetting(cliCtx *cli.Context) {
+	if cliCtx.IsSet(flags.FeeRecipient.Name) {
+		c := params.BeaconConfig()
+		c.FeeRecipient = common.HexToAddress(cliCtx.String(flags.FeeRecipient.Name))
+		params.OverrideBeaconConfig(c)
 	}
 }

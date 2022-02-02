@@ -16,12 +16,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStatus(t *testing.T) {
@@ -548,6 +549,10 @@ func TestPrune(t *testing.T) {
 }
 
 func TestPeerIPTracker(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnablePeerScorer: false,
+	})
+	defer resetCfg()
 	maxBadResponses := 2
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
@@ -686,6 +691,10 @@ func TestAtInboundPeerLimit(t *testing.T) {
 }
 
 func TestPrunePeers(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnablePeerScorer: false,
+	})
+	defer resetCfg()
 	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
 		PeerLimit: 30,
 		ScorerParams: &scorers.Config{

@@ -11,10 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/prysmaticlabs/prysm/shared/iputils"
-	_ "github.com/prysmaticlabs/prysm/shared/maxprocs"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/network"
+	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestBootnode_OK(t *testing.T) {
-	ipAddr, err := iputils.ExternalIPv4()
+	ipAddr, err := network.ExternalIPv4()
 	require.NoError(t, err)
 	privKey := extractPrivateKey()
 	cfg := discover.Config{

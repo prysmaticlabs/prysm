@@ -7,13 +7,13 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
 )
@@ -33,7 +33,7 @@ func NewPool() *Pool {
 func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.AttesterSlashing {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	ctx, span := trace.StartSpan(ctx, "operations.PendingAttesterSlashing")
+	_, span := trace.StartSpan(ctx, "operations.PendingAttesterSlashing")
 	defer span.End()
 
 	// Update prom metric.
@@ -63,7 +63,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnl
 			continue
 		}
 		attSlashing := slashing.attesterSlashing
-		slashedVal := sliceutil.IntersectionUint64(attSlashing.Attestation_1.AttestingIndices, attSlashing.Attestation_2.AttestingIndices)
+		slashedVal := slice.IntersectionUint64(attSlashing.Attestation_1.AttestingIndices, attSlashing.Attestation_2.AttestingIndices)
 		for _, idx := range slashedVal {
 			included[types.ValidatorIndex(idx)] = true
 		}
@@ -80,7 +80,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnl
 func (p *Pool) PendingProposerSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.ProposerSlashing {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	ctx, span := trace.StartSpan(ctx, "operations.PendingProposerSlashing")
+	_, span := trace.StartSpan(ctx, "operations.PendingProposerSlashing")
 	defer span.End()
 
 	// Update prom metric.
@@ -129,8 +129,9 @@ func (p *Pool) InsertAttesterSlashing(
 		return errors.Wrap(err, "could not verify attester slashing")
 	}
 
-	slashedVal := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+	slashedVal := slice.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
 	cantSlash := make([]uint64, 0, len(slashedVal))
+	slashingReason := ""
 	for _, val := range slashedVal {
 		// Has this validator index been included recently?
 		ok, err := p.validatorSlashingPreconditionCheck(state, types.ValidatorIndex(val))
@@ -140,6 +141,7 @@ func (p *Pool) InsertAttesterSlashing(
 		// If the validator has already exited, has already been slashed, or if its index
 		// has been recently included in the pool of slashings, skip including this indice.
 		if !ok {
+			slashingReason = "validator already exited/slashed or already recently included in slashings pool"
 			cantSlash = append(cantSlash, val)
 			continue
 		}
@@ -150,6 +152,7 @@ func (p *Pool) InsertAttesterSlashing(
 			return uint64(p.pendingAttesterSlashing[i].validatorToSlash) >= val
 		})
 		if found != len(p.pendingAttesterSlashing) && uint64(p.pendingAttesterSlashing[found].validatorToSlash) == val {
+			slashingReason = "validator already exist in list of pending slashings, no need to attempt to slash again"
 			cantSlash = append(cantSlash, val)
 			continue
 		}
@@ -166,7 +169,11 @@ func (p *Pool) InsertAttesterSlashing(
 		numPendingAttesterSlashings.Set(float64(len(p.pendingAttesterSlashing)))
 	}
 	if len(cantSlash) == len(slashedVal) {
-		return fmt.Errorf("could not slash any of %d validators in submitted slashing", len(slashedVal))
+		return fmt.Errorf(
+			"could not slash any of %d validators in submitted slashing: %s",
+			len(slashedVal),
+			slashingReason,
+		)
 	}
 	return nil
 }
@@ -175,12 +182,12 @@ func (p *Pool) InsertAttesterSlashing(
 // has been included recently, the validator is already exited, or the validator was already slashed.
 func (p *Pool) InsertProposerSlashing(
 	ctx context.Context,
-	state state.BeaconState,
+	state state.ReadOnlyBeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	ctx, span := trace.StartSpan(ctx, "operations.InsertProposerSlashing")
+	_, span := trace.StartSpan(ctx, "operations.InsertProposerSlashing")
 	defer span.End()
 
 	if err := blocks.VerifyProposerSlashing(state, slashing); err != nil {
@@ -225,7 +232,7 @@ func (p *Pool) InsertProposerSlashing(
 func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	slashedVal := sliceutil.IntersectionUint64(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
+	slashedVal := slice.IntersectionUint64(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
 	for _, val := range slashedVal {
 		i := sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
 			return uint64(p.pendingAttesterSlashing[i].validatorToSlash) >= val
@@ -275,7 +282,7 @@ func (p *Pool) validatorSlashingPreconditionCheck(
 		return false, err
 	}
 	// Checking if the validator is slashable.
-	if !helpers.IsSlashableValidatorUsingTrie(validator, core.CurrentEpoch(state)) {
+	if !helpers.IsSlashableValidatorUsingTrie(validator, time.CurrentEpoch(state)) {
 		return false, nil
 	}
 	return true, nil

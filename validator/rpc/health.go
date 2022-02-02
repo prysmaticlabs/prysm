@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -39,7 +39,7 @@ func (s *Server) GetBeaconNodeConnection(ctx context.Context, _ *emptypb.Empty) 
 }
 
 // GetLogsEndpoints for the beacon and validator client.
-func (s *Server) GetLogsEndpoints(ctx context.Context, _ *emptypb.Empty) (*validatorpb.LogsEndpointResponse, error) {
+func (_ *Server) GetLogsEndpoints(_ context.Context, _ *emptypb.Empty) (*validatorpb.LogsEndpointResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "unimplemented")
 }
 

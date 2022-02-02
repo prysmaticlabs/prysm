@@ -8,10 +8,10 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
@@ -35,16 +35,7 @@ var backOffPeriod = 10 * time.Second
 func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
-	if err := v.WaitForWalletInitialization(ctx); err != nil {
-		// log.Fatalf will prevent defer from being called
-		cleanup()
-		log.Fatalf("Wallet is not ready: %v", err)
-	}
-	if featureconfig.Get().SlasherProtection {
-		if err := v.SlasherReady(ctx); err != nil {
-			log.Fatalf("Slasher is not ready: %v", err)
-		}
-	}
+
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
@@ -68,6 +59,14 @@ func run(ctx context.Context, v iface.Validator) {
 		if err != nil {
 			log.Fatalf("Could not determine if beacon chain started: %v", err)
 		}
+
+		err = v.WaitForKeymanagerInitialization(ctx)
+		if err != nil {
+			// log.Fatalf will prevent defer from being called
+			cleanup()
+			log.Fatalf("Wallet is not ready: %v", err)
+		}
+
 		err = v.WaitForSync(ctx)
 		if isConnectionError(err) {
 			log.Warnf("Could not determine if beacon chain started: %v", err)
@@ -109,8 +108,12 @@ func run(ctx context.Context, v iface.Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 
-	accountsChangedChan := make(chan [][48]byte, 1)
-	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
+	km, err := v.Keymanager()
+	if err != nil {
+		log.Fatalf("Could not get keymanager: %v", err)
+	}
+	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -144,7 +147,7 @@ func run(ctx context.Context, v iface.Validator) {
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
-			remoteKm, ok := v.GetKeymanager().(remote.RemoteKeymanager)
+			remoteKm, ok := km.(remote.RemoteKeymanager)
 			if ok {
 				_, err := remoteKm.ReloadPublicKeys(ctx)
 				if err != nil {
@@ -176,7 +179,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 
 			// Start fetching domain data for the next epoch.
-			if core.IsEpochEnd(slot) {
+			if slots.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
 
@@ -191,7 +194,7 @@ func run(ctx context.Context, v iface.Validator) {
 			for pubKey, roles := range allRoles {
 				wg.Add(len(roles))
 				for _, role := range roles {
-					go func(role iface.ValidatorRole, pubKey [48]byte) {
+					go func(role iface.ValidatorRole, pubKey [fieldparams.BLSPubkeyLength]byte) {
 						defer wg.Done()
 						switch role {
 						case iface.RoleAttester:
@@ -212,10 +215,18 @@ func run(ctx context.Context, v iface.Validator) {
 					}(role, pubKey)
 				}
 			}
-			// Wait for all processes to complete, then report span complete.
 
+			// Wait for all processes to complete, then report span complete.
 			go func() {
 				wg.Wait()
+				defer span.End()
+				defer func() {
+					if err := recover(); err != nil { // catch any panic in logging
+						log.WithField("err", err).
+							Error("Panic occurred when logging validator report. This" +
+								" should never happen! Please file a report at github.com/prysmaticlabs/prysm/issues/new")
+					}
+				}()
 				// Log this client performance in the previous epoch
 				v.LogAttestationsSubmitted()
 				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
@@ -224,7 +235,6 @@ func run(ctx context.Context, v iface.Validator) {
 				if err := v.LogNextDutyTimeLeft(slot); err != nil {
 					log.WithError(err).Error("Could not report next count down")
 				}
-				span.End()
 			}()
 		}
 	}

@@ -3,10 +3,11 @@ package altair
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	log "github.com/sirupsen/logrus"
 )
 
 // ProcessSyncCommitteeUpdates  processes sync client committee updates for the beacon state.
@@ -18,7 +19,7 @@ import (
 //        state.current_sync_committee = state.next_sync_committee
 //        state.next_sync_committee = get_next_sync_committee(state)
 func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconStateAltair) (state.BeaconStateAltair, error) {
-	nextEpoch := core.NextEpoch(beaconState)
+	nextEpoch := time.NextEpoch(beaconState)
 	if nextEpoch%params.BeaconConfig().EpochsPerSyncCommitteePeriod == 0 {
 		nextSyncCommittee, err := beaconState.NextSyncCommittee()
 		if err != nil {
@@ -35,7 +36,7 @@ func ProcessSyncCommitteeUpdates(ctx context.Context, beaconState state.BeaconSt
 			return nil, err
 		}
 		if err := helpers.UpdateSyncCommitteeCache(beaconState); err != nil {
-			return nil, err
+			log.WithError(err).Error("Could not update sync committee cache")
 		}
 	}
 	return beaconState, nil

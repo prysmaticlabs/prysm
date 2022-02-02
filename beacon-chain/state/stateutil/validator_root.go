@@ -2,19 +2,18 @@ package stateutil
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/htrutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ValidatorRootWithHasher describes a method from which the hash tree root
 // of a validator is returned.
-func ValidatorRootWithHasher(hasher htrutils.HashFn, validator *ethpb.Validator) ([32]byte, error) {
+func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
 	var fieldRoots [][32]byte
 	if validator != nil {
 		pubkey := bytesutil.ToBytes48(validator.PublicKey)
@@ -41,35 +40,35 @@ func ValidatorRootWithHasher(hasher htrutils.HashFn, validator *ethpb.Validator)
 		binary.LittleEndian.PutUint64(withdrawalBuf[:8], uint64(validator.WithdrawableEpoch))
 
 		// Public key.
-		pubKeyChunks, err := htrutils.Pack([][]byte{pubkey[:]})
+		pubKeyChunks, err := ssz.Pack([][]byte{pubkey[:]})
 		if err != nil {
 			return [32]byte{}, err
 		}
-		pubKeyRoot, err := htrutils.BitwiseMerkleize(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
+		pubKeyRoot, err := ssz.BitwiseMerkleize(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
 		if err != nil {
 			return [32]byte{}, err
 		}
 		fieldRoots = [][32]byte{pubKeyRoot, withdrawCreds, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
 			activationBuf, exitBuf, withdrawalBuf}
 	}
-	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // Uint64ListRootWithRegistryLimit computes the HashTreeRoot Merkleization of
 // a list of uint64 and mixed with registry limit.
 func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
-	hasher := hashutil.CustomSHA256Hasher()
-	balancesMarshaling := make([][]byte, 0)
+	hasher := hash.CustomSHA256Hasher()
+	balancesMarshaling := make([][]byte, 0, len(balances))
 	for i := 0; i < len(balances); i++ {
 		balanceBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(balanceBuf, balances[i])
 		balancesMarshaling = append(balancesMarshaling, balanceBuf)
 	}
-	balancesChunks, err := htrutils.Pack(balancesMarshaling)
+	balancesChunks, err := ssz.Pack(balancesMarshaling)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
 	}
-	maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
+	maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
 	elemSize := uint64(8)
 	balLimit := (maxBalCap*elemSize + 31) / 32
 	if balLimit == 0 {
@@ -79,19 +78,19 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 			balLimit = uint64(len(balances))
 		}
 	}
-	balancesRootsRoot, err := htrutils.BitwiseMerkleize(hasher, balancesChunks, uint64(len(balancesChunks)), balLimit)
+	balancesRootsRoot, err := ssz.BitwiseMerkleize(hasher, balancesChunks, uint64(len(balancesChunks)), balLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
 	}
 
 	balancesLengthRoot := make([]byte, 32)
 	binary.LittleEndian.PutUint64(balancesLengthRoot, uint64(len(balances)))
-	return htrutils.MixInLength(balancesRootsRoot, balancesLengthRoot), nil
+	return ssz.MixInLength(balancesRootsRoot, balancesLengthRoot), nil
 }
 
-// ValidatorEncKey returns the encoded key in bytes of input `validator`,
+// validatorEncKey returns the encoded key in bytes of input `validator`,
 // the returned key bytes can be used for caching purposes.
-func ValidatorEncKey(validator *ethpb.Validator) []byte {
+func validatorEncKey(validator *ethpb.Validator) []byte {
 	if validator == nil {
 		return nil
 	}
@@ -126,43 +125,4 @@ func ValidatorEncKey(validator *ethpb.Validator) []byte {
 	copy(enc[113:121], withdrawalBuf[:8])
 
 	return enc
-}
-
-// HandleValidatorSlice returns the validator indices in a slice of root format.
-func HandleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
-	length := len(indices)
-	if convertAll {
-		length = len(val)
-	}
-	roots := make([][32]byte, 0, length)
-	hasher := hashutil.CustomSHA256Hasher()
-	rootCreator := func(input *ethpb.Validator) error {
-		newRoot, err := ValidatorRootWithHasher(hasher, input)
-		if err != nil {
-			return err
-		}
-		roots = append(roots, newRoot)
-		return nil
-	}
-	if convertAll {
-		for i := range val {
-			err := rootCreator(val[i])
-			if err != nil {
-				return nil, err
-			}
-		}
-		return roots, nil
-	}
-	if len(val) > 0 {
-		for _, idx := range indices {
-			if idx > uint64(len(val))-1 {
-				return nil, fmt.Errorf("index %d greater than number of validators %d", idx, len(val))
-			}
-			err := rootCreator(val[idx])
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return roots, nil
 }

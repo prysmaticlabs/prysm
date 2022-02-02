@@ -1,7 +1,7 @@
 // Package properpermissions implements a static analyzer to ensure that Prysm does not
 // use ioutil.MkdirAll or os.WriteFile as they are unsafe when it comes to guaranteeing
 // file permissions and not overriding existing permissions. Instead, users are warned
-// to utilize shared/fileutil as the canonical solution.
+// to utilize shared/file as the canonical solution.
 package properpermissions
 
 import (
@@ -19,7 +19,7 @@ const Doc = "Tool to enforce usage of Prysm's internal file-writing utils instea
 
 var (
 	errUnsafePackage = errors.New(
-		"os and ioutil dir and file writing functions are not permissions-safe, use shared/fileutil",
+		"os and ioutil dir and file writing functions are not permissions-safe, use shared/file",
 	)
 	disallowedFns = []string{"MkdirAll", "WriteFile"}
 )

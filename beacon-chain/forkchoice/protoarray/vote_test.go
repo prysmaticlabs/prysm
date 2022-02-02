@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestVotes_CanFindHead(t *testing.T) {
@@ -273,7 +273,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//        9  10
 	f.store.pruneThreshold = 1
 	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
-	assert.Equal(t, 6, len(f.store.nodes), "Incorrect nodes length after prune")
+	assert.Equal(t, 5, len(f.store.nodes), "Incorrect nodes length after prune")
 
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
 	require.NoError(t, err)

@@ -137,6 +137,7 @@ go_library(
     importpath = "github.com/herumi/bls-eth-go-binary/bls",
     srcs = [
         "bls/bls.go",
+        "bls/eth.go",
         "bls/callback.go",
         "bls/cast.go",
         "bls/mcl.go",
@@ -149,11 +150,10 @@ go_library(
     copts = OPTS,
     visibility = [
         # Additional access will require security approval.
-        "@prysm//shared/bls/herumi:__pkg__",
+        "@prysm//crypto/bls/herumi:__pkg__",
         "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
     ],
     clinkopts = select({
-        "@prysm//fuzz:fuzzing_enabled": ["-Wl,--unresolved-symbols=ignore-all", "-fsanitize=address"],
         "//conditions:default": [],
     }),
 )

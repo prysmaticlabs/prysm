@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -41,7 +41,7 @@ func TestNode_Builds(t *testing.T) {
 	_, err := accounts.CreateWalletWithKeymanager(context.Context, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      dir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: walletPassword,
 		},
 	})

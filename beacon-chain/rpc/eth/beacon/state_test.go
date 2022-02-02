@@ -7,13 +7,13 @@ import (
 
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -72,7 +72,7 @@ func TestGetGenesis(t *testing.T) {
 
 func TestGetStateRoot(t *testing.T) {
 	ctx := context.Background()
-	fakeState, err := sharedtestutil.NewBeaconState()
+	fakeState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	stateRoot, err := fakeState.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestGetStateFork(t *testing.T) {
 		}
 		return nil
 	}
-	fakeState, err := sharedtestutil.NewBeaconState(fillFork)
+	fakeState, err := util.NewBeaconState(fillFork)
 	require.NoError(t, err)
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
@@ -134,7 +134,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		}
 		return nil
 	}
-	fakeState, err := sharedtestutil.NewBeaconState(fillCheckpoints)
+	fakeState, err := util.NewBeaconState(fillCheckpoints)
 	require.NoError(t, err)
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{

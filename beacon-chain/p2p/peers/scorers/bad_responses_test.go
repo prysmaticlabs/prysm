@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestScorers_BadResponses_Score(t *testing.T) {
@@ -30,12 +30,12 @@ func TestScorers_BadResponses_Score(t *testing.T) {
 
 	assert.Equal(t, 0.0, scorer.Score("peer1"), "Unexpected score for unregistered peer")
 	scorer.Increment("peer1")
-	assert.Equal(t, -0.25, scorer.Score("peer1"))
+	assert.Equal(t, -2.5, scorer.Score("peer1"))
 	scorer.Increment("peer1")
-	assert.Equal(t, -0.5, scorer.Score("peer1"))
+	assert.Equal(t, float64(-5), scorer.Score("peer1"))
 	scorer.Increment("peer1")
 	scorer.Increment("peer1")
-	assert.Equal(t, -1.0, scorer.Score("peer1"))
+	assert.Equal(t, -100.0, scorer.Score("peer1"))
 	assert.Equal(t, true, scorer.IsBadPeer("peer1"))
 }
 

@@ -4,21 +4,20 @@ import (
 	"reflect"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/protobuf/proto"
 )
 
 // gossipTopicMappings represent the protocol ID to protobuf message type map for easy
 // lookup.
 var gossipTopicMappings = map[string]proto.Message{
-	BlockSubnetTopicFormat:                    &pb.SignedBeaconBlock{},
-	AttestationSubnetTopicFormat:              &pb.Attestation{},
-	ExitSubnetTopicFormat:                     &pb.SignedVoluntaryExit{},
-	ProposerSlashingSubnetTopicFormat:         &pb.ProposerSlashing{},
-	AttesterSlashingSubnetTopicFormat:         &pb.AttesterSlashing{},
-	AggregateAndProofSubnetTopicFormat:        &pb.SignedAggregateAttestationAndProof{},
+	BlockSubnetTopicFormat:                    &ethpb.SignedBeaconBlock{},
+	AttestationSubnetTopicFormat:              &ethpb.Attestation{},
+	ExitSubnetTopicFormat:                     &ethpb.SignedVoluntaryExit{},
+	ProposerSlashingSubnetTopicFormat:         &ethpb.ProposerSlashing{},
+	AttesterSlashingSubnetTopicFormat:         &ethpb.AttesterSlashing{},
+	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{},
 	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
 }
@@ -26,8 +25,13 @@ var gossipTopicMappings = map[string]proto.Message{
 // GossipTopicMappings is a function to return the assigned data type
 // versioned by epoch.
 func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
-	if topic == BlockSubnetTopicFormat && epoch >= params.BeaconConfig().AltairForkEpoch {
-		return &ethpb.SignedBeaconBlockAltair{}
+	if topic == BlockSubnetTopicFormat {
+		if epoch >= params.BeaconConfig().BellatrixForkEpoch {
+			return &ethpb.SignedBeaconBlockBellatrix{}
+		}
+		if epoch >= params.BeaconConfig().AltairForkEpoch {
+			return &ethpb.SignedBeaconBlockAltair{}
+		}
 	}
 	return gossipTopicMappings[topic]
 }
@@ -35,7 +39,7 @@ func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
 // AllTopics returns all topics stored in our
 // gossip mapping.
 func AllTopics() []string {
-	topics := []string{}
+	var topics []string
 	for k := range gossipTopicMappings {
 		topics = append(topics, k)
 	}
@@ -52,4 +56,5 @@ func init() {
 	}
 	// Specially handle Altair Objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockAltair{})] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
 }

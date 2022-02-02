@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"go.opencensus.io/trace"
 )
 
@@ -47,7 +47,7 @@ func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big
 
 // BlockExistsWithCache returns true if the block exists in cache, its height and any possible error encountered.
 func (s *Service) BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExistsWithCache")
+	_, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExistsWithCache")
 	defer span.End()
 	if exists, hdrInfo, err := s.headerCache.HeaderInfoByHash(hash); exists || err != nil {
 		if err != nil {
@@ -76,7 +76,7 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 
 	if s.eth1DataFetcher == nil {
 		err := errors.New("nil eth1DataFetcher")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return [32]byte{}, err
 	}
 
@@ -96,7 +96,7 @@ func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint6
 	defer span.End()
 	if s.eth1DataFetcher == nil {
 		err := errors.New("nil eth1DataFetcher")
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return 0, err
 	}
 

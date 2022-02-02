@@ -6,9 +6,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"go.opencensus.io/trace"
 )
@@ -22,7 +23,7 @@ var failedPostAttSignExternalErr = "attempted to make slashable attestation, rej
 func (v *validator) slashableAttestationCheck(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,
-	pubKey [48]byte,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
 	signingRoot [32]byte,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.postAttSignUpdate")
@@ -45,7 +46,7 @@ func (v *validator) slashableAttestationCheck(
 	if err != nil {
 		return err
 	}
-	signingRootsDiffer := slashutil.SigningRootsDiffer(existingSigningRoot, signingRoot)
+	signingRootsDiffer := slashings.SigningRootsDiffer(existingSigningRoot, signingRoot)
 
 	// Based on EIP3076, validator should refuse to sign any attestation with target epoch less
 	// than or equal to the minimum target epoch present in that signer’s attestations.
@@ -81,8 +82,12 @@ func (v *validator) slashableAttestationCheck(
 		return errors.Wrap(err, "could not save attestation history for validator public key")
 	}
 
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		if !v.protector.CommitAttestation(ctx, indexedAtt) {
+	if features.Get().RemoteSlasherProtection {
+		slashing, err := v.slashingProtectionClient.IsSlashableAttestation(ctx, indexedAtt)
+		if err != nil {
+			return errors.Wrap(err, "could not check if attestation is slashable")
+		}
+		if slashing != nil && len(slashing.AttesterSlashings) > 0 {
 			if v.emitAccountMetrics {
 				ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}

@@ -33,8 +33,8 @@ generates SSZ marshal related code based on defined data structures. These gener
 also be updated and checked in as frequently.
 
 ```bash
-./scripts/update-go-pbs.sh
-./scripts/update-go-ssz.sh
+./hack/update-go-pbs.sh
+./hack/update-go-ssz.sh
 ```
 
 *Recommendation: Use go build only for local development and use bazel build for production.*

@@ -10,9 +10,9 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 const (
@@ -40,6 +40,9 @@ var errInvalidTopic = errors.New("invalid topic format")
 
 // Specifies the fixed size context length.
 const digestLength = 4
+
+// Specifies the prefix for any pubsub topic.
+const gossipTopicPrefix = "/eth2/"
 
 // JoinTopic will join PubSub topic, if not already joined.
 func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
@@ -139,7 +142,7 @@ func pubsubGossipParam() pubsub.GossipSubParams {
 	// messages have a longer time to be propagated. This
 	// comes with the tradeoff of larger memory usage and
 	// size of the seen message cache.
-	if featureconfig.Get().EnableLargerGossipHistory {
+	if features.Get().EnableLargerGossipHistory {
 		gParams.HistoryLength = 12
 		gParams.HistoryGossip = 5
 	}
@@ -167,20 +170,21 @@ func convertTopicScores(topicMap map[string]*pubsub.TopicScoreSnapshot) map[stri
 	return newMap
 }
 
-// Extracts the relevant fork digest from the gossip topic.
+// ExtractGossipDigest extracts the relevant fork digest from the gossip topic.
+// Topics are in the form of /eth2/{fork-digest}/{topic} and this method extracts the
+// fork digest from the topic string to a 4 byte array.
 func ExtractGossipDigest(topic string) ([4]byte, error) {
-	splitParts := strings.Split(topic, "/")
-	parts := []string{}
-	for _, p := range splitParts {
-		if p == "" {
-			continue
-		}
-		parts = append(parts, p)
+	// Ensure the topic prefix is correct.
+	if len(topic) < len(gossipTopicPrefix)+1 || topic[:len(gossipTopicPrefix)] != gossipTopicPrefix {
+		return [4]byte{}, errInvalidTopic
 	}
-	if len(parts) < 2 {
-		return [4]byte{}, errors.Wrapf(errInvalidTopic, "it only has %d parts: %v", len(parts), parts)
+	start := len(gossipTopicPrefix)
+	end := strings.Index(topic[start:], "/")
+	if end == -1 { // Ensure a topic suffix exists.
+		return [4]byte{}, errInvalidTopic
 	}
-	strDigest := parts[1]
+	end += start
+	strDigest := topic[start:end]
 	digest, err := hex.DecodeString(strDigest)
 	if err != nil {
 		return [4]byte{}, err

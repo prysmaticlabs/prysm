@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -12,13 +13,14 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -44,7 +46,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	ctx := context.Background()
 	addr := common.Address{1, 2, 3}
 	require.NoError(t, db.SaveDepositContractAddress(ctx, addr))
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
 	ns := &Server{
@@ -146,4 +148,29 @@ func TestNodeServer_ListPeers(t *testing.T) {
 	assert.Equal(t, 2, len(res.Peers))
 	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Peers[0].Direction))
 	assert.Equal(t, ethpb.PeerDirection_OUTBOUND, res.Peers[1].Direction)
+}
+
+func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
+	server := grpc.NewServer()
+	eps := []string{"foo", "bar"}
+	errs := []error{fmt.Errorf("error 1"), fmt.Errorf("error 2")}
+	errStrs := []string{"error 1", "error 2"}
+	mockFetcher := &testutil.MockPOWChainInfoFetcher{
+		CurrEndpoint: eps[0],
+		CurrError:    errs[0],
+		Endpoints:    eps,
+		Errors:       errs,
+	}
+	ns := &Server{
+		POWChainInfoFetcher: mockFetcher,
+	}
+	ethpb.RegisterNodeServer(server, ns)
+	reflection.Register(server)
+
+	res, err := ns.GetETH1ConnectionStatus(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
+	assert.Equal(t, eps[0], res.CurrentAddress)
+	assert.Equal(t, errStrs[0], res.CurrentConnectionError)
+	assert.DeepSSZEqual(t, eps, res.Addresses)
+	assert.DeepSSZEqual(t, errStrs, res.ConnectionErrors)
 }

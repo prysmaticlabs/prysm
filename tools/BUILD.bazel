@@ -1,15 +1,7 @@
 load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
 load("@io_bazel_rules_docker//contrib:passwd.bzl", "passwd_entry", "passwd_file")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load("@io_bazel_rules_docker//cc:image.bzl", CC_DEFAULT_BASE = "DEFAULT_BASE")
-load("@io_bazel_rules_docker//go:image.bzl", GO_DEFAULT_BASE = "DEFAULT_BASE")
 load("//tools:build_settings.bzl", "base_image")
-
-sh_binary(
-    name = "fuzz_wrapper",
-    srcs = ["fuzz_wrapper.sh"],
-    tags = ["manual"],
-)
 
 ################################################################################
 ##                      Docker images as non-root user                        ##
@@ -49,6 +41,20 @@ pkg_tar(
     package_dir = "etc",
     tags = ["manual"],
 )
+
+CC_DEFAULT_BASE = select({
+    "@io_bazel_rules_docker//:debug": "@cc_debug_image_base//image",
+    "@io_bazel_rules_docker//:fastbuild": "@cc_image_base//image",
+    "@io_bazel_rules_docker//:optimized": "@cc_image_base//image",
+    "//conditions:default": "@cc_image_base//image",
+})
+
+GO_DEFAULT_BASE = select({
+    "@io_bazel_rules_docker//:debug": "@go_debug_image_base//image",
+    "@io_bazel_rules_docker//:fastbuild": "@go_image_base//image",
+    "@io_bazel_rules_docker//:optimized": "@go_image_base//image",
+    "//conditions:default": "@go_image_base//image",
+})
 
 # Include it in our base image as a tar.
 container_image(

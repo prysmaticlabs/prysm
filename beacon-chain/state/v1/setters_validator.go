@@ -4,8 +4,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // SetValidators for the beacon state. Updates the entire
@@ -103,6 +103,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 
 	b.state.Balances = val
 	b.markFieldAsDirty(balances)
+	b.rebuildTrie[balances] = true
 	return nil
 }
 
@@ -128,6 +129,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64
 	bals[idx] = val
 	b.state.Balances = bals
 	b.markFieldAsDirty(balances)
+	b.addDirtyIndices(balances, []uint64{uint64(idx)})
 	return nil
 }
 
@@ -219,6 +221,8 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 	}
 
 	b.state.Balances = append(bals, bal)
+	balIdx := len(b.state.Balances) - 1
 	b.markFieldAsDirty(balances)
+	b.addDirtyIndices(balances, []uint64{uint64(balIdx)})
 	return nil
 }

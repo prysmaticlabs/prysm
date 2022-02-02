@@ -9,9 +9,9 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -19,8 +19,8 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := New(beaconDB)
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	b := testutil.NewBeaconBlock()
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -39,10 +39,10 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 
 	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	stateSlot := types.Slot(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
 	fRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 
 	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
-	beaconState, pks := testutil.DeterministicGenesisState(t, 32)
+	beaconState, pks := util.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -79,14 +79,14 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
-	b1, err := testutil.GenerateFullBlock(beaconState, pks, testutil.DefaultBlockGenConfig(), 1)
+	b1, err := util.GenerateFullBlock(beaconState, pks, util.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b1)))
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: r1[:]}))
 
-	b4, err := testutil.GenerateFullBlock(beaconState, pks, testutil.DefaultBlockGenConfig(), 4)
+	b4, err := util.GenerateFullBlock(beaconState, pks, util.DefaultBlockGenConfig(), 4)
 	require.NoError(t, err)
 	r4, err := b4.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -119,10 +119,10 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 
 	service := New(beaconDB)
 	service.slotsPerArchivedPoint = 1
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	stateSlot := types.Slot(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
 	fRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)

@@ -7,8 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -17,9 +18,9 @@ func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 	// numKeys should be more than batch size for testing.
 	// See: https://github.com/prysmaticlabs/prysm/issues/8509
 	numKeys := 2*publicKeyMigrationBatchSize + 1
-	pubKeys := make([][48]byte, numKeys)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numKeys)
 	for i := 0; i < numKeys; i++ {
-		var pk [48]byte
+		var pk [fieldparams.BLSPubkeyLength]byte
 		copy(pk[:], fmt.Sprintf("%d", i))
 		pubKeys[i] = pk
 	}
@@ -118,9 +119,9 @@ func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
 	// numKeys should be more than batch size for testing.
 	// See: https://github.com/prysmaticlabs/prysm/issues/8509
 	numKeys := 2*publicKeyMigrationBatchSize + 1
-	pubKeys := make([][48]byte, numKeys)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numKeys)
 	for i := 0; i < numKeys; i++ {
-		var pk [48]byte
+		var pk [fieldparams.BLSPubkeyLength]byte
 		copy(pk[:], fmt.Sprintf("%d", i))
 		pubKeys[i] = pk
 	}

@@ -1,6 +1,11 @@
 package apimiddleware
 
-import "github.com/prysmaticlabs/prysm/shared/gateway"
+import (
+	"strings"
+
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+)
 
 // genesisResponseJson is used in /beacon/genesis API endpoint.
 type genesisResponseJson struct {
@@ -78,13 +83,13 @@ type blockHeaderResponseJson struct {
 
 // blockResponseJson is used in /beacon/blocks/{block_id} API endpoint.
 type blockResponseJson struct {
-	Data *beaconBlockContainerJson `json:"data"`
+	Data *signedBeaconBlockContainerJson `json:"data"`
 }
 
 // blockV2ResponseJson is used in /v2/beacon/blocks/{block_id} API endpoint.
 type blockV2ResponseJson struct {
-	Version string                      `json:"version" enum:"true"`
-	Data    *beaconBlockContainerV2Json `json:"data"`
+	Version string                            `json:"version" enum:"true"`
+	Data    *signedBeaconBlockContainerV2Json `json:"data"`
 }
 
 // blockRootResponseJson is used in /beacon/blocks/{block_id}/root API endpoint.
@@ -170,6 +175,12 @@ type beaconStateResponseJson struct {
 	Data *beaconStateJson `json:"data"`
 }
 
+// beaconStateV2ResponseJson is used in /v2/debug/beacon/states/{state_id} API endpoint.
+type beaconStateV2ResponseJson struct {
+	Version string                      `json:"version" enum:"true"`
+	Data    *beaconStateContainerV2Json `json:"data"`
+}
+
 // forkChoiceHeadsResponseJson is used in /debug/beacon/heads API endpoint.
 type forkChoiceHeadsResponseJson struct {
 	Data []*forkChoiceHeadJson `json:"data"`
@@ -217,6 +228,12 @@ type produceBlockResponseJson struct {
 	Data *beaconBlockJson `json:"data"`
 }
 
+// produceBlockResponseV2Json is used in /v2/validator/blocks/{slot} API endpoint.
+type produceBlockResponseV2Json struct {
+	Version string                      `json:"version"`
+	Data    *beaconBlockContainerV2Json `json:"data"`
+}
+
 // produceAttestationDataResponseJson is used in /validator/attestation_data API endpoint.
 type produceAttestationDataResponseJson struct {
 	Data *attestationDataJson `json:"data"`
@@ -258,6 +275,11 @@ type submitAggregateAndProofsRequestJson struct {
 	Data []*signedAggregateAttestationAndProofJson `json:"data"`
 }
 
+// produceSyncCommitteeContributionResponseJson is used in /validator/sync_committee_contribution API endpoint.
+type produceSyncCommitteeContributionResponseJson struct {
+	Data *syncCommitteeContributionJson `json:"data"`
+}
+
 // submitContributionAndProofsRequestJson is used in /validator/contribution_and_proofs API endpoint.
 type submitContributionAndProofsRequestJson struct {
 	Data []*signedContributionAndProofJson `json:"data"`
@@ -276,7 +298,7 @@ type blockRootContainerJson struct {
 	Root string `json:"root" hex:"true"`
 }
 
-type beaconBlockContainerJson struct {
+type signedBeaconBlockContainerJson struct {
 	Message   *beaconBlockJson `json:"message"`
 	Signature string           `json:"signature" hex:"true"`
 }
@@ -300,15 +322,27 @@ type beaconBlockBodyJson struct {
 	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
 }
 
-type beaconBlockContainerV2Json struct {
-	Phase0Block *beaconBlockJson       `json:"phase0Block"`
-	AltairBlock *beaconBlockAltairJson `json:"altairBlock"`
-	Signature   string                 `json:"signature" hex:"true"`
+type signedBeaconBlockContainerV2Json struct {
+	Phase0Block    *beaconBlockJson          `json:"phase0_block"`
+	AltairBlock    *beaconBlockAltairJson    `json:"altair_block"`
+	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
+	Signature      string                    `json:"signature" hex:"true"`
 }
 
-type beaconBlockAltairContainerJson struct {
+type beaconBlockContainerV2Json struct {
+	Phase0Block    *beaconBlockJson          `json:"phase0_block"`
+	AltairBlock    *beaconBlockAltairJson    `json:"altair_block"`
+	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
+}
+
+type signedBeaconBlockAltairContainerJson struct {
 	Message   *beaconBlockAltairJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
+}
+
+type signedBeaconBlockBellatrixContainerJson struct {
+	Message   *beaconBlockBellatrixJson `json:"message"`
+	Signature string                    `json:"signature" hex:"true"`
 }
 
 type beaconBlockAltairJson struct {
@@ -317,6 +351,14 @@ type beaconBlockAltairJson struct {
 	ParentRoot    string                     `json:"parent_root" hex:"true"`
 	StateRoot     string                     `json:"state_root" hex:"true"`
 	Body          *beaconBlockBodyAltairJson `json:"body"`
+}
+
+type beaconBlockBellatrixJson struct {
+	Slot          string                        `json:"slot"`
+	ProposerIndex string                        `json:"proposer_index"`
+	ParentRoot    string                        `json:"parent_root" hex:"true"`
+	StateRoot     string                        `json:"state_root" hex:"true"`
+	Body          *beaconBlockBodyBellatrixJson `json:"body"`
 }
 
 type beaconBlockBodyAltairJson struct {
@@ -329,6 +371,36 @@ type beaconBlockBodyAltairJson struct {
 	Deposits          []*depositJson             `json:"deposits"`
 	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
 	SyncAggregate     *syncAggregateJson         `json:"sync_aggregate"`
+}
+
+type beaconBlockBodyBellatrixJson struct {
+	RandaoReveal      string                     `json:"randao_reveal" hex:"true"`
+	Eth1Data          *eth1DataJson              `json:"eth1_data"`
+	Graffiti          string                     `json:"graffiti" hex:"true"`
+	ProposerSlashings []*proposerSlashingJson    `json:"proposer_slashings"`
+	AttesterSlashings []*attesterSlashingJson    `json:"attester_slashings"`
+	Attestations      []*attestationJson         `json:"attestations"`
+	Deposits          []*depositJson             `json:"deposits"`
+	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
+	SyncAggregate     *syncAggregateJson         `json:"sync_aggregate"`
+	ExecutionPayload  *executionPayloadJson      `json:"execution_payload"`
+}
+
+type executionPayloadJson struct {
+	ParentHash    string   `json:"parent_hash" hex:"true"`
+	CoinBase      string   `json:"coinbase" hex:"true"`
+	StateRoot     string   `json:"state_root" hex:"true"`
+	ReceiptRoot   string   `json:"receipt_root" hex:"true"`
+	LogsBloom     string   `json:"logs_bloom" hex:"true"`
+	Random        string   `json:"random" hex:"true"`
+	BlockNumber   string   `json:"block_number"`
+	GasLimit      string   `json:"gas_limit"`
+	GasUsed       string   `json:"gas_used"`
+	TimeStamp     string   `json:"timestamp"`
+	ExtraData     string   `json:"extra_data" hex:"true"`
+	BaseFeePerGas string   `json:"base_fee_per_gas" hex:"true"`
+	BlockHash     string   `json:"block_hash" hex:"true"`
+	Transactions  []string `json:"transactions" hex:"true"`
 }
 
 type syncAggregateJson struct {
@@ -474,6 +546,38 @@ type beaconStateJson struct {
 	FinalizedCheckpoint         *checkpointJson           `json:"finalized_checkpoint"`
 }
 
+type beaconStateV2Json struct {
+	GenesisTime                 string                 `json:"genesis_time"`
+	GenesisValidatorsRoot       string                 `json:"genesis_validators_root" hex:"true"`
+	Slot                        string                 `json:"slot"`
+	Fork                        *forkJson              `json:"fork"`
+	LatestBlockHeader           *beaconBlockHeaderJson `json:"latest_block_header"`
+	BlockRoots                  []string               `json:"block_roots" hex:"true"`
+	StateRoots                  []string               `json:"state_roots" hex:"true"`
+	HistoricalRoots             []string               `json:"historical_roots" hex:"true"`
+	Eth1Data                    *eth1DataJson          `json:"eth1_data"`
+	Eth1DataVotes               []*eth1DataJson        `json:"eth1_data_votes"`
+	Eth1DepositIndex            string                 `json:"eth1_deposit_index"`
+	Validators                  []*validatorJson       `json:"validators"`
+	Balances                    []string               `json:"balances"`
+	RandaoMixes                 []string               `json:"randao_mixes" hex:"true"`
+	Slashings                   []string               `json:"slashings"`
+	PreviousEpochParticipation  EpochParticipation     `json:"previous_epoch_participation"`
+	CurrentEpochParticipation   EpochParticipation     `json:"current_epoch_participation"`
+	JustificationBits           string                 `json:"justification_bits" hex:"true"`
+	PreviousJustifiedCheckpoint *checkpointJson        `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint  *checkpointJson        `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint         *checkpointJson        `json:"finalized_checkpoint"`
+	InactivityScores            []string               `json:"inactivity_scores"`
+	CurrentSyncCommittee        *syncCommitteeJson     `json:"current_sync_committee"`
+	NextSyncCommittee           *syncCommitteeJson     `json:"next_sync_committee"`
+}
+
+type beaconStateContainerV2Json struct {
+	Phase0State *beaconStateJson   `json:"phase0_state"`
+	AltairState *beaconStateV2Json `json:"altair_state"`
+}
+
 type forkJson struct {
 	PreviousVersion string `json:"previous_version" hex:"true"`
 	CurrentVersion  string `json:"current_version" hex:"true"`
@@ -507,6 +611,11 @@ type committeeJson struct {
 	Index      string   `json:"index"`
 	Slot       string   `json:"slot"`
 	Validators []string `json:"validators"`
+}
+
+type syncCommitteeJson struct {
+	Pubkeys         []string `json:"pubkeys" hex:"true"`
+	AggregatePubkey string   `json:"aggregate_pubkey" hex:"true"`
 }
 
 type syncCommitteeValidatorsJson struct {
@@ -595,6 +704,7 @@ type syncCommitteeContributionJson struct {
 
 // sszResponseJson is a common abstraction over all SSZ responses.
 type sszResponseJson interface {
+	SSZVersion() string
 	SSZData() string
 }
 
@@ -607,6 +717,24 @@ func (ssz *blockSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
+func (*blockSSZResponseJson) SSZVersion() string {
+	return strings.ToLower(ethpbv2.Version_PHASE0.String())
+}
+
+// blockSSZResponseV2Json is used in /v2/beacon/blocks/{block_id} API endpoint.
+type blockSSZResponseV2Json struct {
+	Version string `json:"version"`
+	Data    string `json:"data"`
+}
+
+func (ssz *blockSSZResponseV2Json) SSZData() string {
+	return ssz.Data
+}
+
+func (ssz *blockSSZResponseV2Json) SSZVersion() string {
+	return ssz.Version
+}
+
 // beaconStateSSZResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
 type beaconStateSSZResponseJson struct {
 	Data string `json:"data"`
@@ -614,6 +742,24 @@ type beaconStateSSZResponseJson struct {
 
 func (ssz *beaconStateSSZResponseJson) SSZData() string {
 	return ssz.Data
+}
+
+func (*beaconStateSSZResponseJson) SSZVersion() string {
+	return strings.ToLower(ethpbv2.Version_PHASE0.String())
+}
+
+// beaconStateSSZResponseV2Json is used in /v2/debug/beacon/states/{state_id} API endpoint.
+type beaconStateSSZResponseV2Json struct {
+	Version string `json:"version"`
+	Data    string `json:"data"`
+}
+
+func (ssz *beaconStateSSZResponseV2Json) SSZData() string {
+	return ssz.Data
+}
+
+func (ssz *beaconStateSSZResponseV2Json) SSZVersion() string {
+	return ssz.Version
 }
 
 // ---------------
@@ -658,19 +804,30 @@ type eventChainReorgJson struct {
 // Error handling.
 // ---------------
 
-// submitAttestationsErrorJson is a JSON representation of the error returned when submitting attestations.
-type submitAttestationsErrorJson struct {
-	gateway.DefaultErrorJson
-	Failures []*singleAttestationVerificationFailureJson `json:"failures"`
+// indexedVerificationFailureErrorJson is a JSON representation of the error returned when verifying an indexed object.
+type indexedVerificationFailureErrorJson struct {
+	apimiddleware.DefaultErrorJson
+	Failures []*singleIndexedVerificationFailureJson `json:"failures"`
 }
 
-// singleAttestationVerificationFailureJson is a JSON representation of a failure when verifying a single submitted attestation.
-type singleAttestationVerificationFailureJson struct {
+// singleIndexedVerificationFailureJson is a JSON representation of a an issue when verifying a single indexed object e.g. an item in an array.
+type singleIndexedVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
+}
+
+type nodeSyncDetailsErrorJson struct {
+	apimiddleware.DefaultErrorJson
+	SyncDetails syncDetails `json:"sync_details"`
 }
 
 type eventErrorJson struct {
 	StatusCode int    `json:"status_code"`
 	Message    string `json:"message"`
+}
+
+type syncDetails struct {
+	HeadSlot     string `json:"head_slot"`
+	SyncDistance string `json:"sync_distance"`
+	IsSyncing    bool   `json:"is_syncing"`
 }

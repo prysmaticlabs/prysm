@@ -6,11 +6,11 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestCorrect_ActiveValidatorsCount(t *testing.T) {
@@ -25,7 +25,7 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 		ctx: context.Background(),
 		cfg: &Config{DB: db},
 	}
-	bState, err := testutil.NewBeaconState(func(state *ethpb.BeaconState) error {
+	bState, err := util.NewBeaconState(func(state *ethpb.BeaconState) error {
 		validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{
@@ -63,16 +63,14 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 	assert.Equal(t, int(params.BeaconConfig().MinGenesisActiveValidatorCount)+100, int(vals), "mainnet genesis active count isn't accurate")
 }
 
-func TestLoggingParameters(t *testing.T) {
+func TestLoggingParameters(_ *testing.T) {
 	logGossipParameters("testing", nil)
 	logGossipParameters("testing", &pubsub.TopicScoreParams{})
 	// Test out actual gossip parameters.
 	logGossipParameters("testing", defaultBlockTopicParams())
-	p, err := defaultAggregateSubnetTopicParams(10000)
-	assert.NoError(t, err)
+	p := defaultAggregateSubnetTopicParams(10000)
 	logGossipParameters("testing", p)
-	p, err = defaultAggregateTopicParams(10000)
-	assert.NoError(t, err)
+	p = defaultAggregateTopicParams(10000)
 	logGossipParameters("testing", p)
 	logGossipParameters("testing", defaultAttesterSlashingTopicParams())
 	logGossipParameters("testing", defaultProposerSlashingTopicParams())

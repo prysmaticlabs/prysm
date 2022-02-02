@@ -10,13 +10,14 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -44,7 +45,7 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, beaconDB)
-	c.finalizedCheckpt = cp
+	c.store.SetFinalizedCheckpt(cp)
 
 	assert.Equal(t, cp.Epoch, c.FinalizedCheckpt().Epoch, "Unexpected finalized epoch")
 }
@@ -55,9 +56,9 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	genesisRoot := [32]byte{'A'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c := setupBeaconChain(t, beaconDB)
-	c.finalizedCheckpt = cp
-	c.genesisRoot = genesisRoot
-	assert.DeepEqual(t, c.genesisRoot[:], c.FinalizedCheckpt().Root)
+	c.store.SetFinalizedCheckpt(cp)
+	c.originBlockRoot = genesisRoot
+	assert.DeepEqual(t, c.originBlockRoot[:], c.FinalizedCheckpt().Root)
 }
 
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
@@ -66,7 +67,7 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	c := setupBeaconChain(t, beaconDB)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
 	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c.justifiedCheckpt = cp
+	c.store.SetJustifiedCheckpt(cp)
 	assert.Equal(t, cp.Epoch, c.CurrentJustifiedCheckpt().Epoch, "Unexpected justified epoch")
 }
 
@@ -76,9 +77,9 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	c := setupBeaconChain(t, beaconDB)
 	genesisRoot := [32]byte{'B'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c.justifiedCheckpt = cp
-	c.genesisRoot = genesisRoot
-	assert.DeepEqual(t, c.genesisRoot[:], c.CurrentJustifiedCheckpt().Root)
+	c.store.SetJustifiedCheckpt(cp)
+	c.originBlockRoot = genesisRoot
+	assert.DeepEqual(t, c.originBlockRoot[:], c.CurrentJustifiedCheckpt().Root)
 }
 
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
@@ -87,7 +88,7 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, beaconDB)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
-	c.prevJustifiedCheckpt = cp
+	c.store.SetPrevJustifiedCheckpt(cp)
 	assert.Equal(t, cp.Epoch, c.PreviousJustifiedCheckpt().Epoch, "Unexpected previous justified epoch")
 }
 
@@ -97,9 +98,9 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	genesisRoot := [32]byte{'C'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c := setupBeaconChain(t, beaconDB)
-	c.prevJustifiedCheckpt = cp
-	c.genesisRoot = genesisRoot
-	assert.DeepEqual(t, c.genesisRoot[:], c.PreviousJustifiedCheckpt().Root)
+	c.store.SetPrevJustifiedCheckpt(cp)
+	c.originBlockRoot = genesisRoot
+	assert.DeepEqual(t, c.originBlockRoot[:], c.PreviousJustifiedCheckpt().Root)
 }
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
@@ -120,9 +121,9 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 
 func TestHeadRoot_UseDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	c := &Service{cfg: &Config{BeaconDB: beaconDB}}
+	c := &Service{cfg: &config{BeaconDB: beaconDB}}
 	c.head = &head{root: params.BeaconConfig().ZeroHash}
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
@@ -134,7 +135,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
 	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
@@ -217,7 +218,7 @@ func TestIsCanonical_Ok(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	c := setupBeaconChain(t, beaconDB)
 
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -233,7 +234,7 @@ func TestIsCanonical_Ok(t *testing.T) {
 }
 
 func TestService_HeadValidatorsIndices(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 10)
+	s, _ := util.DeterministicGenesisState(t, 10)
 	c := &Service{}
 
 	c.head = &head{}
@@ -248,7 +249,7 @@ func TestService_HeadValidatorsIndices(t *testing.T) {
 }
 
 func TestService_HeadSeed(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 1)
+	s, _ := util.DeterministicGenesisState(t, 1)
 	c := &Service{}
 	seed, err := helpers.Seed(s, 0, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
@@ -265,7 +266,7 @@ func TestService_HeadSeed(t *testing.T) {
 }
 
 func TestService_HeadGenesisValidatorRoot(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 1)
+	s, _ := util.DeterministicGenesisState(t, 1)
 	c := &Service{}
 
 	c.head = &head{}
@@ -278,14 +279,14 @@ func TestService_HeadGenesisValidatorRoot(t *testing.T) {
 }
 
 func TestService_ProtoArrayStore(t *testing.T) {
-	c := &Service{cfg: &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
+	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
 	p := c.ProtoArrayStore()
 	require.Equal(t, 0, int(p.FinalizedEpoch()))
 }
 
 func TestService_ChainHeads(t *testing.T) {
 	ctx := context.Background()
-	c := &Service{cfg: &Config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
+	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 0, 0))
@@ -298,23 +299,37 @@ func TestService_ChainHeads(t *testing.T) {
 }
 
 func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 10)
+	s, _ := util.DeterministicGenesisState(t, 10)
 	c := &Service{}
 	c.head = &head{state: s}
 
-	_, e := c.HeadPublicKeyToValidatorIndex(context.Background(), [48]byte{})
+	_, e := c.HeadPublicKeyToValidatorIndex([fieldparams.BLSPubkeyLength]byte{})
 	require.Equal(t, false, e)
 
 	v, err := s.ValidatorAtIndex(0)
 	require.NoError(t, err)
 
-	i, e := c.HeadPublicKeyToValidatorIndex(context.Background(), bytesutil.ToBytes48(v.PublicKey))
+	i, e := c.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(v.PublicKey))
 	require.Equal(t, true, e)
 	require.Equal(t, types.ValidatorIndex(0), i)
 }
 
+func TestService_HeadPublicKeyToValidatorIndexNil(t *testing.T) {
+	c := &Service{}
+	c.head = nil
+
+	idx, e := c.HeadPublicKeyToValidatorIndex([fieldparams.BLSPubkeyLength]byte{})
+	require.Equal(t, false, e)
+	require.Equal(t, types.ValidatorIndex(0), idx)
+
+	c.head = &head{state: nil}
+	i, e := c.HeadPublicKeyToValidatorIndex([fieldparams.BLSPubkeyLength]byte{})
+	require.Equal(t, false, e)
+	require.Equal(t, types.ValidatorIndex(0), i)
+}
+
 func TestService_HeadValidatorIndexToPublicKey(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisState(t, 10)
+	s, _ := util.DeterministicGenesisState(t, 10)
 	c := &Service{}
 	c.head = &head{state: s}
 
@@ -325,4 +340,18 @@ func TestService_HeadValidatorIndexToPublicKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, bytesutil.ToBytes48(v.PublicKey), p)
+}
+
+func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
+	c := &Service{}
+	c.head = nil
+
+	p, err := c.HeadValidatorIndexToPublicKey(context.Background(), 0)
+	require.NoError(t, err)
+	require.Equal(t, [fieldparams.BLSPubkeyLength]byte{}, p)
+
+	c.head = &head{state: nil}
+	p, err = c.HeadValidatorIndexToPublicKey(context.Background(), 0)
+	require.NoError(t, err)
+	require.Equal(t, [fieldparams.BLSPubkeyLength]byte{}, p)
 }

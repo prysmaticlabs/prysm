@@ -2,79 +2,88 @@ package gateway
 
 import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // MuxConfig contains configuration that should be used when registering the beacon node in the gateway.
 type MuxConfig struct {
-	Handler       gateway.MuxHandler
-	V1PbMux       gateway.PbMux
-	V1Alpha1PbMux gateway.PbMux
+	Handler      gateway.MuxHandler
+	EthPbMux     *gateway.PbMux
+	V1AlphaPbMux *gateway.PbMux
 }
 
 // DefaultConfig returns a fully configured MuxConfig with standard gateway behavior.
-func DefaultConfig(enableDebugRPCEndpoints bool) MuxConfig {
-	v1Alpha1Registrations := []gateway.PbHandlerRegistration{
-		ethpbalpha.RegisterNodeHandler,
-		ethpbalpha.RegisterBeaconChainHandler,
-		ethpbalpha.RegisterBeaconNodeValidatorHandler,
-		ethpbalpha.RegisterHealthHandler,
-	}
-	v1Registrations := []gateway.PbHandlerRegistration{
-		ethpbservice.RegisterBeaconNodeHandler,
-		ethpbservice.RegisterBeaconChainHandler,
-		ethpbservice.RegisterBeaconValidatorHandler,
-		ethpbservice.RegisterEventsHandler,
-	}
-	if enableDebugRPCEndpoints {
-		v1Alpha1Registrations = append(v1Alpha1Registrations, ethpbalpha.RegisterDebugHandler)
-		v1Registrations = append(v1Registrations, ethpbservice.RegisterBeaconDebugHandler)
+func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
+	var v1AlphaPbHandler, ethPbHandler *gateway.PbMux
+	if flags.EnableHTTPPrysmAPI(httpModules) {
+		v1AlphaRegistrations := []gateway.PbHandlerRegistration{
+			ethpbalpha.RegisterNodeHandler,
+			ethpbalpha.RegisterBeaconChainHandler,
+			ethpbalpha.RegisterBeaconNodeValidatorHandler,
+			ethpbalpha.RegisterHealthHandler,
+		}
+		if enableDebugRPCEndpoints {
+			v1AlphaRegistrations = append(v1AlphaRegistrations, ethpbalpha.RegisterDebugHandler)
 
+		}
+		v1AlphaMux := gwruntime.NewServeMux(
+			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+				Marshaler: &gwruntime.JSONPb{
+					MarshalOptions: protojson.MarshalOptions{
+						EmitUnpopulated: true,
+					},
+					UnmarshalOptions: protojson.UnmarshalOptions{
+						DiscardUnknown: true,
+					},
+				},
+			}),
+			gwruntime.WithMarshalerOption(
+				"text/event-stream", &gwruntime.EventSourceJSONPb{},
+			),
+		)
+		v1AlphaPbHandler = &gateway.PbMux{
+			Registrations: v1AlphaRegistrations,
+			Patterns:      []string{"/eth/v1alpha1/", "/eth/v1alpha2/"},
+			Mux:           v1AlphaMux,
+		}
 	}
-	v1Alpha1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					EmitUnpopulated: true,
+	if flags.EnableHTTPEthAPI(httpModules) {
+		ethRegistrations := []gateway.PbHandlerRegistration{
+			ethpbservice.RegisterBeaconNodeHandler,
+			ethpbservice.RegisterBeaconChainHandler,
+			ethpbservice.RegisterBeaconValidatorHandler,
+			ethpbservice.RegisterEventsHandler,
+		}
+		if enableDebugRPCEndpoints {
+			ethRegistrations = append(ethRegistrations, ethpbservice.RegisterBeaconDebugHandler)
+
+		}
+		ethMux := gwruntime.NewServeMux(
+			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
+				Marshaler: &gwruntime.JSONPb{
+					MarshalOptions: protojson.MarshalOptions{
+						UseProtoNames:   true,
+						EmitUnpopulated: true,
+					},
+					UnmarshalOptions: protojson.UnmarshalOptions{
+						DiscardUnknown: true,
+					},
 				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{},
-		),
-	)
-	v1Mux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					UseProtoNames:   true,
-					EmitUnpopulated: true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-	)
-	v1Alpha1PbHandler := gateway.PbMux{
-		Registrations: v1Alpha1Registrations,
-		Patterns:      []string{"/eth/v1alpha1/"},
-		Mux:           v1Alpha1Mux,
-	}
-	v1PbHandler := gateway.PbMux{
-		Registrations: v1Registrations,
-		Patterns:      []string{"/eth/v1/"},
-		Mux:           v1Mux,
+			}),
+		)
+		ethPbHandler = &gateway.PbMux{
+			Registrations: ethRegistrations,
+			Patterns:      []string{"/internal/eth/v1/", "/internal/eth/v2/"},
+			Mux:           ethMux,
+		}
 	}
 
 	return MuxConfig{
-		V1PbMux:       v1PbHandler,
-		V1Alpha1PbMux: v1Alpha1PbHandler,
+		EthPbMux:     ethPbHandler,
+		V1AlphaPbMux: v1AlphaPbHandler,
 	}
 }

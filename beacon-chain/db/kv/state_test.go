@@ -9,16 +9,15 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	v1alpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -29,7 +28,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
 
@@ -50,7 +49,7 @@ func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()
@@ -60,7 +59,7 @@ func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
 	stateValidators := validators(10)
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
 	require.NoError(t, st.SetValidators(stateValidators))
@@ -103,7 +102,7 @@ func TestStateAltair_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()
@@ -113,7 +112,7 @@ func TestStateAltair_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
 	stateValidators := validators(10)
-	st, _ := testutil.DeterministicGenesisStateAltair(t, 20)
+	st, _ := util.DeterministicGenesisStateAltair(t, 20)
 	require.NoError(t, st.SetSlot(100))
 	require.NoError(t, st.SetValidators(stateValidators))
 
@@ -155,7 +154,7 @@ func TestState_CanSaveRetrieveValidatorEntriesFromCache(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()
@@ -165,7 +164,7 @@ func TestState_CanSaveRetrieveValidatorEntriesFromCache(t *testing.T) {
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
 	stateValidators := validators(10)
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
 	require.NoError(t, st.SetValidators(stateValidators))
@@ -183,7 +182,7 @@ func TestState_CanSaveRetrieveValidatorEntriesFromCache(t *testing.T) {
 		assert.Equal(t, true, ok)
 		require.NotNil(t, data)
 
-		valEntry, vType := data.(*v1alpha.Validator)
+		valEntry, vType := data.(*ethpb.Validator)
 		assert.Equal(t, true, vType)
 		require.NotNil(t, valEntry)
 
@@ -211,7 +210,7 @@ func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()
@@ -221,7 +220,7 @@ func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
 	stateValidators := validators(10)
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
 	require.NoError(t, st.SetValidators(stateValidators))
@@ -266,7 +265,7 @@ func TestState_DeleteState(t *testing.T) {
 	db := setupDB(t)
 
 	// enable historical state representation flag to test this
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		EnableHistoricalSpaceRepresentation: true,
 	})
 	defer resetCfg()
@@ -279,12 +278,12 @@ func TestState_DeleteState(t *testing.T) {
 
 	// create two states with the same set of validators.
 	stateValidators := validators(10)
-	st1, err := testutil.NewBeaconState()
+	st1, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st1.SetSlot(100))
 	require.NoError(t, st1.SetValidators(stateValidators))
 
-	st2, err := testutil.NewBeaconState()
+	st2, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st2.SetSlot(101))
 	require.NoError(t, st2.SetValidators(stateValidators))
@@ -347,7 +346,7 @@ func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 
 	headRoot := [32]byte{'B'}
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), headRoot))
@@ -367,12 +366,12 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 	blockRoots := make([][32]byte, 0)
 	evenBlockRoots := make([][32]byte, 0)
 	for i := 0; i < len(totalBlocks); i++ {
-		b := testutil.NewBeaconBlock()
+		b := util.NewBeaconBlock()
 		b.Block.Slot = types.Slot(i)
 		totalBlocks[i] = wrapper.WrappedPhase0SignedBeaconBlock(b)
 		r, err := totalBlocks[i].Block().HashTreeRoot()
 		require.NoError(t, err)
-		st, err := testutil.NewBeaconState()
+		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(types.Slot(i)))
 		require.NoError(t, db.SaveState(context.Background(), st, r))
@@ -401,7 +400,7 @@ func TestStore_DeleteGenesisState(t *testing.T) {
 
 	genesisBlockRoot := [32]byte{'A'}
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
 	require.NoError(t, db.SaveState(ctx, st, genesisBlockRoot))
@@ -416,7 +415,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.ParentRoot = genesis[:]
 	blk.Block.Slot = 100
 
@@ -425,7 +424,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	finalizedBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	finalizedState, err := testutil.NewBeaconState()
+	finalizedState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, finalizedState.SetSlot(100))
 	require.NoError(t, db.SaveState(ctx, finalizedState, finalizedBlockRoot))
@@ -442,14 +441,14 @@ func TestStore_DeleteHeadState(t *testing.T) {
 	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesis))
 
-	blk := testutil.NewBeaconBlock()
+	blk := util.NewBeaconBlock()
 	blk.Block.ParentRoot = genesis[:]
 	blk.Block.Slot = 100
 	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
 
 	headBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
 	require.NoError(t, db.SaveState(ctx, st, headBlockRoot))
@@ -461,12 +460,12 @@ func TestStore_DeleteHeadState(t *testing.T) {
 func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	db := setupDB(t)
 
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1))
 	s0 := st.InnerStateUnsafe()
@@ -476,7 +475,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	r1, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	st, err = testutil.NewBeaconState()
+	st, err = util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
 	s1 := st.InnerStateUnsafe()
@@ -486,7 +485,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	r2, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	st, err = testutil.NewBeaconState()
+	st, err = util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1000))
 	s2 := st.InnerStateUnsafe()
@@ -509,19 +508,19 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 	db := setupDB(t)
 
-	genesisState, err := testutil.NewBeaconState()
+	genesisState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
 
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1))
 	require.NoError(t, db.SaveState(context.Background(), st, r))
@@ -541,7 +540,7 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	db := setupDB(t)
 
-	genesisState, err := testutil.NewBeaconState()
+	genesisState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
@@ -551,7 +550,7 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	slotsPerArchivedPoint := types.Slot(128)
 	prevRoot := genesisRoot
 	for i := types.Slot(1); i <= slotsPerArchivedPoint; i++ {
-		b := testutil.NewBeaconBlock()
+		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		b.Block.ParentRoot = prevRoot[:]
 		r, err := b.Block.HashTreeRoot()
@@ -560,7 +559,7 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 		bRoots = append(bRoots, r)
 		prevRoot = r
 
-		st, err := testutil.NewBeaconState()
+		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(i))
 		require.NoError(t, db.SaveState(context.Background(), st, r))
@@ -584,20 +583,20 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 	db := setupDB(t)
 
-	genesisState, err := testutil.NewBeaconState()
+	genesisState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
 
 	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
-		b := testutil.NewBeaconBlock()
+		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 
-		st, err := testutil.NewBeaconState()
+		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(i))
 		require.NoError(t, db.SaveState(context.Background(), st, r))
@@ -611,7 +610,7 @@ func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 	db := setupDB(t)
 
-	genesisState, err := testutil.NewBeaconState()
+	genesisState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	genesisRoot := [32]byte{'a'}
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
@@ -619,14 +618,14 @@ func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 
 	var unfinalizedRoots [][32]byte
 	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
-		b := testutil.NewBeaconBlock()
+		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 		unfinalizedRoots = append(unfinalizedRoots, r)
 
-		st, err := testutil.NewBeaconState()
+		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(i))
 		require.NoError(t, db.SaveState(context.Background(), st, r))
@@ -647,7 +646,7 @@ func TestAltairState_CanSaveRetrieve(t *testing.T) {
 
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
-	st, _ := testutil.DeterministicGenesisStateAltair(t, 1)
+	st, _ := util.DeterministicGenesisStateAltair(t, 1)
 	require.NoError(t, st.SetSlot(100))
 
 	require.NoError(t, db.SaveState(context.Background(), st, r))
@@ -670,7 +669,7 @@ func TestAltairState_CanDelete(t *testing.T) {
 
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
-	st, _ := testutil.DeterministicGenesisStateAltair(t, 1)
+	st, _ := util.DeterministicGenesisStateAltair(t, 1)
 	require.NoError(t, st.SetSlot(100))
 
 	require.NoError(t, db.SaveState(context.Background(), st, r))
@@ -713,7 +712,7 @@ func checkStateSaveTime(b *testing.B, saveCount int) {
 		key := make([]byte, 32)
 		_, err := rand.Read(key)
 		require.NoError(b, err)
-		st, err := testutil.NewBeaconState()
+		st, err := util.NewBeaconState()
 		require.NoError(b, err)
 
 		// Add some more new validator to the base validator.
@@ -730,7 +729,7 @@ func checkStateSaveTime(b *testing.B, saveCount int) {
 
 	// create a state to save in benchmark
 	r := [32]byte{'A'}
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(b, err)
 	require.NoError(b, st.SetValidators(initialSetOfValidators))
 
@@ -749,7 +748,7 @@ func checkStateReadTime(b *testing.B, saveCount int) {
 
 	// Save a state to read in benchmark
 	r := [32]byte{'A'}
-	st, err := testutil.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(b, err)
 	require.NoError(b, st.SetValidators(initialSetOfValidators))
 	require.NoError(b, db.SaveState(context.Background(), st, r))
@@ -759,7 +758,7 @@ func checkStateReadTime(b *testing.B, saveCount int) {
 		key := make([]byte, 32)
 		_, err := rand.Read(key)
 		require.NoError(b, err)
-		st, err = testutil.NewBeaconState()
+		st, err = util.NewBeaconState()
 		require.NoError(b, err)
 
 		// Add some more new validator to the base validator.
@@ -780,6 +779,100 @@ func checkStateReadTime(b *testing.B, saveCount int) {
 		_, err := db.State(context.Background(), r)
 		require.NoError(b, err)
 	}
+}
+
+func TestStateBellatrix_CanSaveRetrieveValidatorEntries(t *testing.T) {
+	db := setupDB(t)
+
+	// enable historical state representation flag to test this
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnableHistoricalSpaceRepresentation: true,
+	})
+	defer resetCfg()
+
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r))
+
+	stateValidators := validators(10)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 20)
+	require.NoError(t, st.SetSlot(100))
+	require.NoError(t, st.SetValidators(stateValidators))
+
+	ctx := context.Background()
+	require.NoError(t, db.SaveState(ctx, st, r))
+	assert.Equal(t, true, db.HasState(context.Background(), r))
+
+	savedS, err := db.State(context.Background(), r)
+	require.NoError(t, err)
+
+	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe(), "saved state with validators and retrieved state are not matching")
+
+	// check if the index of the second state is still present.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		idxBkt := tx.Bucket(blockRootValidatorHashesBucket)
+		data := idxBkt.Get(r[:])
+		require.NotEqual(t, 0, len(data))
+		return nil
+	})
+	require.NoError(t, err)
+
+	// check if all the validator entries are still intact in the validator entry bucket.
+	err = db.db.Update(func(tx *bolt.Tx) error {
+		valBkt := tx.Bucket(stateValidatorsBucket)
+		// if any of the original validator entry is not present, then fail the test.
+		for _, val := range stateValidators {
+			hash, hashErr := val.HashTreeRoot()
+			assert.NoError(t, hashErr)
+			data := valBkt.Get(hash[:])
+			require.NotNil(t, data)
+			require.NotEqual(t, 0, len(data))
+		}
+		return nil
+	})
+	require.NoError(t, err)
+}
+
+func TestBellatrixState_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r))
+
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	require.NoError(t, st.SetSlot(100))
+
+	require.NoError(t, db.SaveState(context.Background(), st, r))
+	require.Equal(t, true, db.HasState(context.Background(), r))
+
+	savedS, err := db.State(context.Background(), r)
+	require.NoError(t, err)
+
+	require.DeepSSZEqual(t, st.InnerStateUnsafe(), savedS.InnerStateUnsafe())
+
+	savedS, err = db.State(context.Background(), [32]byte{'B'})
+	require.NoError(t, err)
+	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+}
+
+func TestBellatrixState_CanDelete(t *testing.T) {
+	db := setupDB(t)
+
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, db.HasState(context.Background(), r))
+
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	require.NoError(t, st.SetSlot(100))
+
+	require.NoError(t, db.SaveState(context.Background(), st, r))
+	require.Equal(t, true, db.HasState(context.Background(), r))
+
+	require.NoError(t, db.DeleteState(context.Background(), r))
+	savedS, err := db.State(context.Background(), r)
+	require.NoError(t, err)
+	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
 func BenchmarkState_CheckStateSaveTime_1(b *testing.B)  { checkStateSaveTime(b, 1) }

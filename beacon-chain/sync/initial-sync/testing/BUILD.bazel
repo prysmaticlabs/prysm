@@ -7,6 +7,5 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//fuzz:__pkg__",
     ],
 )

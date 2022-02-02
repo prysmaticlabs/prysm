@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -23,7 +23,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 	var backupsDir string
 	var err error
 	if outputDir != "" {
-		backupsDir, err = fileutil.ExpandPath(outputDir)
+		backupsDir, err = file.ExpandPath(outputDir)
 		if err != nil {
 			return err
 		}
@@ -34,11 +34,11 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 	if err != nil {
 		return err
 	}
-	if head == nil || head.IsNil() {
-		return errors.New("no head block")
+	if err := helpers.BeaconBlockIsNil(head); err != nil {
+		return err
 	}
 	// Ensure the backups directory exists.
-	if err := fileutil.HandleBackupDir(backupsDir, permissionOverride); err != nil {
+	if err := file.HandleBackupDir(backupsDir, permissionOverride); err != nil {
 		return err
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block().Slot()))

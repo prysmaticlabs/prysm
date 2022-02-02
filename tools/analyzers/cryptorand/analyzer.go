@@ -16,7 +16,7 @@ import (
 // Doc explaining the tool.
 const Doc = "Tool to enforce the use of stronger crypto: crypto/rand instead of math/rand"
 
-var errWeakCrypto = errors.New("crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/shared/rand")
+var errWeakCrypto = errors.New("crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/crypto/rand")
 
 // Analyzer runs static analysis.
 var Analyzer = &analysis.Analyzer{
@@ -50,7 +50,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		case *ast.ImportSpec:
 			// Collect aliases to rand packages.
 			pkg := stmt.Path.Value
-			if strings.HasSuffix(pkg, "/rand\"") && !strings.Contains(pkg, "/prysm/shared/rand") {
+			if strings.HasSuffix(pkg, "/rand\"") && !strings.Contains(pkg, "/prysm/crypto/rand") {
 				if stmt.Name != nil {
 					aliases[stmt.Name.Name] = stmt.Path.Value
 				} else {

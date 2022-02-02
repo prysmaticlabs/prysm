@@ -6,15 +6,15 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slashutil"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ProcessAttesterSlashings is one of the operations performed
@@ -42,40 +42,62 @@ func ProcessAttesterSlashings(
 	slashings []*ethpb.AttesterSlashing,
 	slashFunc slashValidatorFunc,
 ) (state.BeaconState, error) {
-	for idx, slashing := range slashings {
-		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
-			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
+	var err error
+	for _, slashing := range slashings {
+		beaconState, err = ProcessAttesterSlashing(ctx, beaconState, slashing, slashFunc)
+		if err != nil {
+			return nil, err
 		}
-		slashableIndices := slashableAttesterIndices(slashing)
-		sort.SliceStable(slashableIndices, func(i, j int) bool {
-			return slashableIndices[i] < slashableIndices[j]
-		})
-		currentEpoch := core.SlotToEpoch(beaconState.Slot())
-		var err error
-		var slashedAny bool
-		var val state.ReadOnlyValidator
-		for _, validatorIndex := range slashableIndices {
-			val, err = beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(validatorIndex))
+	}
+	return beaconState, nil
+}
+
+// ProcessAttesterSlashing processes individual attester slashing.
+func ProcessAttesterSlashing(
+	ctx context.Context,
+	beaconState state.BeaconState,
+	slashing *ethpb.AttesterSlashing,
+	slashFunc slashValidatorFunc,
+) (state.BeaconState, error) {
+	if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
+		return nil, errors.Wrap(err, "could not verify attester slashing")
+	}
+	slashableIndices := SlashableAttesterIndices(slashing)
+	sort.SliceStable(slashableIndices, func(i, j int) bool {
+		return slashableIndices[i] < slashableIndices[j]
+	})
+	currentEpoch := slots.ToEpoch(beaconState.Slot())
+	var err error
+	var slashedAny bool
+	var val state.ReadOnlyValidator
+	for _, validatorIndex := range slashableIndices {
+		val, err = beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(validatorIndex))
+		if err != nil {
+			return nil, err
+		}
+		if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
+			cfg := params.BeaconConfig()
+			var slashingQuotient uint64
+			switch {
+			case beaconState.Version() == version.Phase0:
+				slashingQuotient = cfg.MinSlashingPenaltyQuotient
+			case beaconState.Version() == version.Altair:
+				slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
+			case beaconState.Version() == version.Bellatrix:
+				slashingQuotient = cfg.MinSlashingPenaltyQuotientBellatrix
+			default:
+				return nil, errors.New("unknown state version")
+			}
+			beaconState, err = slashFunc(ctx, beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "could not slash validator index %d",
+					validatorIndex)
 			}
-			if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), currentEpoch) {
-				cfg := params.BeaconConfig()
-				slashingQuotient := cfg.MinSlashingPenaltyQuotient
-				if beaconState.Version() == version.Altair {
-					slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-				}
-				beaconState, err = slashFunc(beaconState, types.ValidatorIndex(validatorIndex), slashingQuotient, cfg.ProposerRewardQuotient)
-				if err != nil {
-					return nil, errors.Wrapf(err, "could not slash validator index %d",
-						validatorIndex)
-				}
-				slashedAny = true
-			}
+			slashedAny = true
 		}
-		if !slashedAny {
-			return nil, errors.New("unable to slash any validator despite confirmed attester slashing")
-		}
+	}
+	if !slashedAny {
+		return nil, errors.New("unable to slash any validator despite confirmed attester slashing")
 	}
 	return beaconState, nil
 }
@@ -124,19 +146,20 @@ func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 	if data1 == nil || data2 == nil || data1.Target == nil || data2.Target == nil || data1.Source == nil || data2.Source == nil {
 		return false
 	}
-	isDoubleVote := !attestationutil.AttDataIsEqual(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
+	isDoubleVote := !attestation.AttDataIsEqual(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
 	att1 := &ethpb.IndexedAttestation{Data: data1}
 	att2 := &ethpb.IndexedAttestation{Data: data2}
 	// Check if att1 is surrounding att2.
-	isSurroundVote := slashutil.IsSurround(att1, att2)
+	isSurroundVote := slashings.IsSurround(att1, att2)
 	return isDoubleVote || isSurroundVote
 }
 
-func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
+// SlashableAttesterIndices returns the intersection of attester indices from both attestations in this slashing.
+func SlashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
 		return nil
 	}
 	indices1 := slashing.Attestation_1.AttestingIndices
 	indices2 := slashing.Attestation_2.AttestingIndices
-	return sliceutil.IntersectionUint64(indices1, indices2)
+	return slice.IntersectionUint64(indices1, indices2)
 }

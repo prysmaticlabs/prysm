@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 )
 
 func TestMain(m *testing.M) {

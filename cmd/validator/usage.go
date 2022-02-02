@@ -5,10 +5,10 @@ import (
 	"io"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/urfave/cli/v2"
 )
 
@@ -106,11 +106,13 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WalletPasswordFileFlag,
 			flags.GraffitiFileFlag,
 			flags.EnableDutyCountDown,
+			flags.Web3SignerURLFlag,
+			flags.Web3SignerPublicValidatorKeysFlag,
 		},
 	},
 	{
 		Name:  "features",
-		Flags: featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
+		Flags: features.ActiveFlags(features.ValidatorFlags),
 	},
 	{
 		Name: "interop",

@@ -3,13 +3,13 @@ package altair
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statealtair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 )
 
 // UpgradeToAltair updates input state to return the version Altair state.
@@ -63,7 +63,7 @@ import (
 //    post.next_sync_committee = get_next_sync_committee(post)
 //    return post
 func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.BeaconStateAltair, error) {
-	epoch := core.CurrentEpoch(state)
+	epoch := time.CurrentEpoch(state)
 
 	numValidators := state.NumValidators()
 	s := &ethpb.BeaconStateAltair{
@@ -95,7 +95,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 		InactivityScores:            make([]uint64, numValidators),
 	}
 
-	newState, err := statealtair.InitializeFromProto(s)
+	newState, err := statealtair.InitializeFromProtoUnsafe(s)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	if err != nil {
 		return nil, err
 	}
-	newState, err = TranslateParticipation(newState, prevEpochAtts)
+	newState, err = TranslateParticipation(ctx, newState, prevEpochAtts)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 //        for index in get_attesting_indices(state, data, attestation.aggregation_bits):
 //            for flag_index in participation_flag_indices:
 //                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-func TranslateParticipation(state *statealtair.BeaconState, atts []*ethpb.PendingAttestation) (*statealtair.BeaconState, error) {
+func TranslateParticipation(ctx context.Context, state *statealtair.BeaconState, atts []*ethpb.PendingAttestation) (*statealtair.BeaconState, error) {
 	epochParticipation, err := state.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err
@@ -148,11 +148,11 @@ func TranslateParticipation(state *statealtair.BeaconState, atts []*ethpb.Pendin
 		if err != nil {
 			return nil, err
 		}
-		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}
-		indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 		if err != nil {
 			return nil, err
 		}
@@ -161,14 +161,35 @@ func TranslateParticipation(state *statealtair.BeaconState, atts []*ethpb.Pendin
 		targetFlagIndex := cfg.TimelyTargetFlagIndex
 		headFlagIndex := cfg.TimelyHeadFlagIndex
 		for _, index := range indices {
-			if participatedFlags[sourceFlagIndex] && !HasValidatorFlag(epochParticipation[index], sourceFlagIndex) {
-				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+			has, err := HasValidatorFlag(epochParticipation[index], sourceFlagIndex)
+			if err != nil {
+				return nil, err
 			}
-			if participatedFlags[targetFlagIndex] && !HasValidatorFlag(epochParticipation[index], targetFlagIndex) {
-				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+			if participatedFlags[sourceFlagIndex] && !has {
+				epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], sourceFlagIndex)
+				if err != nil {
+					return nil, err
+				}
 			}
-			if participatedFlags[headFlagIndex] && !HasValidatorFlag(epochParticipation[index], headFlagIndex) {
-				epochParticipation[index] = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+			has, err = HasValidatorFlag(epochParticipation[index], targetFlagIndex)
+			if err != nil {
+				return nil, err
+			}
+			if participatedFlags[targetFlagIndex] && !has {
+				epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], targetFlagIndex)
+				if err != nil {
+					return nil, err
+				}
+			}
+			has, err = HasValidatorFlag(epochParticipation[index], headFlagIndex)
+			if err != nil {
+				return nil, err
+			}
+			if participatedFlags[headFlagIndex] && !has {
+				epochParticipation[index], err = AddValidatorFlag(epochParticipation[index], headFlagIndex)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}

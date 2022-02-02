@@ -3,25 +3,26 @@ package altair_test
 import (
 	"context"
 	"fmt"
+	"math"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	h := &ethpb.BeaconBlockHeader{
 		StateRoot:  bytesutil.PadTo([]byte{'a'}, 32),
 		ParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
@@ -58,7 +59,7 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	require.DeepEqual(t, next, c)
 
 	// Test boundary condition.
-	slot := params.BeaconConfig().SlotsPerEpoch * types.Slot(core.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	slot := params.BeaconConfig().SlotsPerEpoch * types.Slot(time.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
 	require.NoError(t, s.SetSlot(slot))
 	boundaryCommittee, err := altair.NextSyncCommittee(context.Background(), s)
 	require.NoError(t, err)
@@ -66,7 +67,7 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 }
 
 func TestProcessParticipationFlagUpdates_CanRotate(t *testing.T) {
-	s, _ := testutil.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	c, err := s.CurrentEpochParticipation()
 	require.NoError(t, err)
 	require.DeepEqual(t, make([]byte, params.BeaconConfig().MaxValidatorsPerCommittee), c)
@@ -180,4 +181,17 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 			assert.Equal(t, tt.want, newState.Balances()[0], "ProcessSlashings({%v}) = newState; newState.Balances[0] = %d", original, newState.Balances()[0])
 		})
 	}
+}
+
+func TestProcessSlashings_BadValue(t *testing.T) {
+	base := &ethpb.BeaconStateAltair{
+		Slot:       0,
+		Validators: []*ethpb.Validator{{Slashed: true}},
+		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
+		Slashings:  []uint64{math.MaxUint64, 1e9},
+	}
+	s, err := stateAltair.InitializeFromProto(base)
+	require.NoError(t, err)
+	_, err = epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplierAltair)
+	require.ErrorContains(t, "addition overflows", err)
 }

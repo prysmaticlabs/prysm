@@ -2,17 +2,20 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // Initialize the state cache for sync committees.
@@ -21,8 +24,7 @@ var syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState()
 // HeadSyncCommitteeFetcher is the interface that wraps the head sync committee related functions.
 // The head sync committee functions return callers sync committee indices and public keys with respect to current head state.
 type HeadSyncCommitteeFetcher interface {
-	HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error)
-	HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error)
+	HeadSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error)
 	HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) ([][]byte, error)
 }
 
@@ -49,9 +51,35 @@ func (s *Service) HeadSyncContributionProofDomain(ctx context.Context, slot type
 	return s.domainWithHeadState(ctx, slot, params.BeaconConfig().DomainContributionAndProof)
 }
 
-// HeadCurrentSyncCommitteeIndices returns the input validator `index`'s position indices in the current sync committee with respect to `slot`.
+// HeadSyncCommitteeIndices returns the sync committee index position using the head state. Input `slot` is taken in consideration
+// where validator's duty for `slot - 1` is used for block inclusion in `slot`. That means when a validator is at epoch boundary
+// across EPOCHS_PER_SYNC_COMMITTEE_PERIOD then the valiator will be considered using next period sync committee.
+//
+// Spec definition:
+// Being assigned to a sync committee for a given slot means that the validator produces and broadcasts signatures for slot - 1 for inclusion in slot.
+// This means that when assigned to an epoch sync committee signatures must be produced and broadcast for slots on range
+// [compute_start_slot_at_epoch(epoch) - 1, compute_start_slot_at_epoch(epoch) + SLOTS_PER_EPOCH - 1)
+// rather than for the range
+// [compute_start_slot_at_epoch(epoch), compute_start_slot_at_epoch(epoch) + SLOTS_PER_EPOCH)
+func (s *Service) HeadSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+	nextSlotEpoch := slots.ToEpoch(slot + 1)
+	currentEpoch := slots.ToEpoch(slot)
+
+	switch {
+	case slots.SyncCommitteePeriod(nextSlotEpoch) == slots.SyncCommitteePeriod(currentEpoch):
+		return s.headCurrentSyncCommitteeIndices(ctx, index, slot)
+	// At sync committee period boundary, validator should sample the next epoch sync committee.
+	case slots.SyncCommitteePeriod(nextSlotEpoch) == slots.SyncCommitteePeriod(currentEpoch)+1:
+		return s.headNextSyncCommitteeIndices(ctx, index, slot)
+	default:
+		// Impossible condition.
+		return nil, errors.New("could get calculate sync subcommittee based on the period")
+	}
+}
+
+// headCurrentSyncCommitteeIndices returns the input validator `index`'s position indices in the current sync committee with respect to `slot`.
 // Head state advanced up to `slot` is used for calculation.
-func (s *Service) HeadCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+func (s *Service) headCurrentSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
 	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
 	if err != nil {
 		return nil, err
@@ -59,9 +87,9 @@ func (s *Service) HeadCurrentSyncCommitteeIndices(ctx context.Context, index typ
 	return helpers.CurrentPeriodSyncSubcommitteeIndices(headState, index)
 }
 
-// HeadNextSyncCommitteeIndices returns the input validator `index`'s position indices in the next sync committee with respect to `slot`.
+// headNextSyncCommitteeIndices returns the input validator `index`'s position indices in the next sync committee with respect to `slot`.
 // Head state advanced up to `slot` is used for calculation.
-func (s *Service) HeadNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+func (s *Service) headNextSyncCommitteeIndices(ctx context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
 	headState, err := s.getSyncCommitteeHeadState(ctx, slot)
 	if err != nil {
 		return nil, err
@@ -77,11 +105,11 @@ func (s *Service) HeadSyncCommitteePubKeys(ctx context.Context, slot types.Slot,
 		return nil, err
 	}
 
-	nextSlotEpoch := core.SlotToEpoch(headState.Slot() + 1)
-	currEpoch := core.SlotToEpoch(headState.Slot())
+	nextSlotEpoch := slots.ToEpoch(headState.Slot() + 1)
+	currEpoch := slots.ToEpoch(headState.Slot())
 
 	var syncCommittee *ethpb.SyncCommittee
-	if currEpoch == nextSlotEpoch || core.SyncCommitteePeriod(currEpoch) == core.SyncCommitteePeriod(nextSlotEpoch) {
+	if currEpoch == nextSlotEpoch || slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(nextSlotEpoch) {
 		syncCommittee, err = headState.CurrentSyncCommittee()
 		if err != nil {
 			return nil, err
@@ -102,7 +130,7 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, doma
 	if err != nil {
 		return nil, err
 	}
-	return helpers.Domain(headState.Fork(), core.SlotToEpoch(headState.Slot()), domain, headState.GenesisValidatorRoot())
+	return signing.Domain(headState.Fork(), slots.ToEpoch(headState.Slot()), domain, headState.GenesisValidatorRoot())
 }
 
 // returns the head state that is advanced up to `slot`. It utilizes the cache `syncCommitteeHeadState` by retrieving using `slot` as key.
@@ -110,6 +138,9 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot types.Slot, doma
 func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
 	var headState state.BeaconState
 	var err error
+	mLock := async.NewMultilock(fmt.Sprintf("%s-%d", "syncHeadState", slot))
+	mLock.Lock()
+	defer mLock.Unlock()
 
 	// If there's already a head state exists with the request slot, we don't need to process slots.
 	cachedState, err := syncCommitteeHeadStateCache.Get(slot)
@@ -126,11 +157,9 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot types.Slot
 		if headState == nil || headState.IsNil() {
 			return nil, errors.New("nil state")
 		}
-		if slot > headState.Slot() {
-			headState, err = transition.ProcessSlots(ctx, headState, slot)
-			if err != nil {
-				return nil, err
-			}
+		headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slot)
+		if err != nil {
+			return nil, err
 		}
 		syncHeadStateMiss.Inc()
 		err = syncCommitteeHeadStateCache.Put(slot, headState)

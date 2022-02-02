@@ -7,12 +7,12 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection/local/standard-protection-format/format"
+	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 )
 
@@ -37,7 +37,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: strongPass,
 		},
 		SkipMnemonicConfirm: true,
@@ -112,6 +112,9 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	defer func() {
 		require.NoError(t, validatorDB.Close())
 	}()
+	genesisValidatorsRoot := [32]byte{1}
+	err = validatorDB.SaveGenesisValidatorsRoot(ctx, genesisValidatorsRoot[:])
+	require.NoError(t, err)
 
 	_, err = s.ExportSlashingProtection(ctx, &empty.Empty{})
 	require.NoError(t, err)

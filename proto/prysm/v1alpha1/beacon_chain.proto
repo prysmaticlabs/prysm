@@ -441,6 +441,9 @@ message BeaconBlockContainer {
 
         // Representing an altair block.
         SignedBeaconBlockAltair altair_block = 4;
+
+        // Representing an bellatrix block.
+        SignedBeaconBlockBellatrix bellatrix_block = 5;
     }
 }
 
@@ -680,14 +683,16 @@ message ValidatorPerformanceRequest {
 
 message ValidatorPerformanceResponse {
     // A list of validator effective balances mapped 1-to-1 with the request's
-	// public keys.
+    // public keys.
     repeated uint64 current_effective_balances = 1;
     // The slot of when validator's attestation got included in the chain at previous epoch, the slot
     // is mapped 1-to-1 with the request's public keys.
-    repeated uint64 inclusion_slots = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    // Deprecated: This field can no longer be fetched from the beacon state after the Altair hard fork.
+    repeated uint64 inclusion_slots = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot", deprecated = true];
     // The distance of when validator submitted and got included in the chain, the distance
     // is mapped 1-to-1 with the request's public keys.
-    repeated uint64 inclusion_distances = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    // Deprecated: This field can no longer be fetched from the beacon state after the Altair hard fork.
+    repeated uint64 inclusion_distances = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot", deprecated = true];
     // Whether the list of validator recently correctly voted for source at previous epoch, the result
     // is mapped 1-to-1 with the request's public keys.
     repeated bool correctly_voted_source = 4;
@@ -697,19 +702,21 @@ message ValidatorPerformanceResponse {
     // Whether the list of validator recently correctly voted for head at previous epoch, the result
     // is mapped 1-to-1 with the request's public keys.
     repeated bool correctly_voted_head = 6;
-    // The balance of validators before epoch transition, the balance is mapped 1-to-1 with the requests's
+    // The balance of validators before epoch transition, the balance is mapped 1-to-1 with the requests'
     // public keys.
     repeated uint64 balances_before_epoch_transition = 7;
-    // The balance of validators after epoch transition, the balance is mapped 1-to-1 with the requests's
+    // The balance of validators after epoch transition, the balance is mapped 1-to-1 with the requests'
     // public keys.
     repeated uint64 balances_after_epoch_transition = 8;
     // The total number of validators from the request not found in
     // in the beacon chain.
     repeated bytes missing_validators = 9;
-	// The average active validator balance in the beacon chain.
+    // The average active validator balance in the beacon chain.
     float average_active_validator_balance = 10;
     // The public keys in the order they are in of the response.
     repeated bytes public_keys = 11 [(ethereum.eth.ext.ssz_size) = "?,48"];
+    // The inactivity score of the validator tracks validator participation. [New in Altair]
+    repeated uint64 inactivity_scores = 12;
 }
 
 message ValidatorQueue {
@@ -891,10 +898,12 @@ message IndividualVotesRespond {
         bool is_previous_epoch_head_attester = 12;
         // The current effective balance of the validator.
         uint64 current_epoch_effective_balance_gwei = 13;
-        // The slots of when the validator's attestation got included in the block.
-        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-        // How many slots have passed until the validator's attestation got included in the block.
-        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+        // The slots of when the validator's attestation got included in the block. Only available in phase0.
+        uint64 inclusion_slot = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot", deprecated = true];
+        // How many slots have passed until the validator's attestation got included in the block. Only available in phase0.
+        uint64 inclusion_distance = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot", deprecated = true];
+        // The inactivity score of the validator tracks validator participation. [New in Altair]
+        uint64 inactivity_score = 16;
     }
 
     repeated IndividualVote individual_votes = 1;

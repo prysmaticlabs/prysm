@@ -11,7 +11,7 @@ import (
 	"github.com/libp2p/go-tcp-transport"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // buildOptions for the libp2p host.

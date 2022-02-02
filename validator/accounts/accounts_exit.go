@@ -9,21 +9,23 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/promptutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // PerformExitCfg for account voluntary exits.
@@ -56,6 +58,20 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	validatorClient, nodeClient, err := prepareClients(cliCtx)
 	if err != nil {
 		return err
+	}
+	if nodeClient == nil {
+		return errors.New("could not prepare beacon node client")
+	}
+	syncStatus, err := (*nodeClient).GetSyncStatus(cliCtx.Context, &emptypb.Empty{})
+	if err != nil {
+		return err
+	}
+	if syncStatus == nil {
+		return errors.New("could not get sync status")
+	}
+
+	if (*syncStatus).Syncing {
+		return errors.New("could not perform exit: beacon node is syncing.")
 	}
 
 	cfg := PerformExitCfg{
@@ -112,14 +128,19 @@ func PerformVoluntaryExit(
 	return rawExitedKeys, formattedExitedKeys, nil
 }
 
-func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km keymanager.IKeymanager, err error) {
+func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte, km keymanager.IKeymanager, err error) {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, wallet.ErrNoWalletFound
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not open wallet")
 	}
-
+	// TODO(#9883) - Remove this when we have a better way to handle this.
+	if w.KeymanagerKind() == keymanager.Web3Signer {
+		return nil, nil, errors.New(
+			"web3signer wallets cannot exit accounts through cli command yet. please perform this on the remote signer node",
+		)
+	}
 	km, err = w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
@@ -138,7 +159,7 @@ func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km key
 func interact(
 	cliCtx *cli.Context,
 	r io.Reader,
-	validatingPublicKeys [][48]byte,
+	validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte,
 ) (rawPubKeys [][]byte, formattedPubKeys []string, err error) {
 	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
 		// Allow the user to interactively select the accounts to exit or optionally
@@ -147,7 +168,7 @@ func interact(
 			cliCtx,
 			flags.VoluntaryExitPublicKeysFlag,
 			validatingPublicKeys,
-			prompt.SelectAccountsVoluntaryExitPromptText,
+			userprompt.SelectAccountsVoluntaryExitPromptText,
 		)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")
@@ -163,8 +184,8 @@ func interact(
 		if !cliCtx.IsSet(flags.VoluntaryExitPublicKeysFlag.Name) {
 			if len(filteredPubKeys) == 1 {
 				promptText := "Are you sure you want to perform a voluntary exit on 1 account? (%s) Y/N"
-				resp, err := promptutil.ValidatePrompt(
-					r, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), promptutil.ValidateYesOrNo,
+				resp, err := prompt.ValidatePrompt(
+					r, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), prompt.ValidateYesOrNo,
 				)
 				if err != nil {
 					return nil, nil, err
@@ -181,7 +202,7 @@ func interact(
 				} else {
 					promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
 				}
-				resp, err := promptutil.ValidatePrompt(r, promptText, promptutil.ValidateYesOrNo)
+				resp, err := prompt.ValidatePrompt(r, promptText, prompt.ValidateYesOrNo)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -203,8 +224,8 @@ func interact(
 	promptQuestion := "If you still want to continue with the voluntary exit, please input a phrase found at the end " +
 		"of the page from the above URL"
 	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
-	resp, err := promptutil.ValidatePrompt(r, promptText, func(input string) error {
-		return promptutil.ValidatePhrase(input, exitPassphrase)
+	resp, err := prompt.ValidatePrompt(r, promptText, func(input string) error {
+		return prompt.ValidatePhrase(input, exitPassphrase)
 	})
 	if err != nil {
 		return nil, nil, err
@@ -216,7 +237,7 @@ func interact(
 	return rawPubKeys, formattedPubKeys, nil
 }
 
-func prepareAllKeys(validatingKeys [][48]byte) (raw [][]byte, formatted []string) {
+func prepareAllKeys(validatingKeys [][fieldparams.BLSPubkeyLength]byte) (raw [][]byte, formatted []string) {
 	raw = make([][]byte, len(validatingKeys))
 	formatted = make([]string, len(validatingKeys))
 	for i, pk := range validatingKeys {
@@ -239,7 +260,7 @@ func prepareClients(cliCtx *cli.Context) (*ethpb.BeaconNodeValidatorClient, *eth
 	}
 
 	grpcHeaders := strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ",")
-	cliCtx.Context = grpcutils.AppendHeaders(cliCtx.Context, grpcHeaders)
+	cliCtx.Context = grpcutil.AppendHeaders(cliCtx.Context, grpcHeaders)
 
 	conn, err := grpc.DialContext(cliCtx.Context, cliCtx.String(flags.BeaconRPCProviderFlag.Name), dialOpts...)
 	if err != nil {

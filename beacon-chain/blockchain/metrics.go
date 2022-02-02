@@ -10,11 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 var (
@@ -63,6 +63,10 @@ var (
 		Name: "beacon_previous_justified_root",
 		Help: "Previous justified root of the processed state",
 	})
+	activeValidatorCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_current_active_validators",
+		Help: "Current total active validators",
+	})
 	validatorsCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "validator_count",
 		Help: "The total number of validators",
@@ -78,6 +82,10 @@ var (
 	currentEth1DataDepositCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "current_eth1_data_deposit_count",
 		Help: "The current eth1 deposit count in the last processed state eth1data field.",
+	})
+	processedDepositsCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_processed_deposits_total",
+		Help: "Total number of deposits processed",
 	})
 	stateTrieReferences = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "field_references",
@@ -100,7 +108,7 @@ var (
 		Help: "The total amount of ether, in gwei, that has been used in voting attestation head of previous epoch",
 	})
 	reorgCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "beacon_reorg_total",
+		Name: "beacon_reorgs_total",
 		Help: "Count the number of times beacon chain has a reorg",
 	})
 	saveOrphanedAttCount = promauto.NewCounter(prometheus.CounterOpts{
@@ -121,6 +129,14 @@ var (
 	syncHeadStateHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "sync_head_state_hit",
 		Help: "The number of sync head state requests that are present in the cache.",
+	})
+	stateBalanceCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "state_balance_cache_hit",
+		Help: "Count the number of state balance cache hits.",
+	})
+	stateBalanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "state_balance_cache_miss",
+		Help: "Count the number of state balance cache hits.",
 	})
 )
 
@@ -194,6 +210,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	activeBalance += exitingBalance + slashingBalance
 	activeEffectiveBalance += exitingEffectiveBalance + slashingEffectiveBalance
 
+	activeValidatorCount.Set(float64(activeInstances))
 	validatorsCount.WithLabelValues("Pending").Set(float64(pendingInstances))
 	validatorsCount.WithLabelValues("Active").Set(float64(activeInstances))
 	validatorsCount.WithLabelValues("Exiting").Set(float64(exitingInstances))
@@ -220,6 +237,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	beaconFinalizedEpoch.Set(float64(postState.FinalizedCheckpointEpoch()))
 	beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(postState.FinalizedCheckpoint().Root)))
 	currentEth1DataDepositCount.Set(float64(postState.Eth1Data().DepositCount))
+	processedDepositsCount.Set(float64(postState.Eth1DepositIndex() + 1))
 
 	var b *precompute.Balance
 	var v []*precompute.Validator
@@ -235,8 +253,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	case version.Altair:
-		v, b, err = altair.InitializeEpochValidators(ctx, headState)
+	case version.Altair, version.Bellatrix:
+		v, b, err = altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return err
 		}

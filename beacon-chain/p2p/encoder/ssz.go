@@ -10,13 +10,14 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
 )
 
 var _ NetworkEncoding = (*SszNetworkEncoder)(nil)
 
 // MaxGossipSize allowed for gossip messages.
-var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib
+var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib.
+var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize   // 1 Mib.
 
 // This pool defines the sync pool for our buffered snappy writers, so that they
 // can be constantly reused.
@@ -34,7 +35,7 @@ type SszNetworkEncoder struct{}
 const ProtocolSuffixSSZSnappy = "ssz_snappy"
 
 // EncodeGossip the proto gossip message to the io.Writer.
-func (e SszNetworkEncoder) EncodeGossip(w io.Writer, msg fastssz.Marshaler) (int, error) {
+func (_ SszNetworkEncoder) EncodeGossip(w io.Writer, msg fastssz.Marshaler) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
@@ -51,7 +52,7 @@ func (e SszNetworkEncoder) EncodeGossip(w io.Writer, msg fastssz.Marshaler) (int
 
 // EncodeWithMaxLength the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
 // to indicate the size of the message. This checks that the encoded message isn't larger than the provided max limit.
-func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg fastssz.Marshaler) (int, error) {
+func (_ SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg fastssz.Marshaler) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
@@ -59,11 +60,11 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg fastssz.Marshale
 	if err != nil {
 		return 0, err
 	}
-	if uint64(len(b)) > params.BeaconNetworkConfig().MaxChunkSize {
+	if uint64(len(b)) > MaxChunkSize {
 		return 0, fmt.Errorf(
 			"size of encoded message is %d which is larger than the provided max limit of %d",
 			len(b),
-			params.BeaconNetworkConfig().MaxChunkSize,
+			MaxChunkSize,
 		)
 	}
 	// write varint first
@@ -74,17 +75,17 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg fastssz.Marshale
 	return writeSnappyBuffer(w, b)
 }
 
-func (e SszNetworkEncoder) doDecode(b []byte, to fastssz.Unmarshaler) error {
+func doDecode(b []byte, to fastssz.Unmarshaler) error {
 	return to.UnmarshalSSZ(b)
 }
 
 // DecodeGossip decodes the bytes to the protobuf gossip message provided.
-func (e SszNetworkEncoder) DecodeGossip(b []byte, to fastssz.Unmarshaler) error {
+func (_ SszNetworkEncoder) DecodeGossip(b []byte, to fastssz.Unmarshaler) error {
 	b, err := DecodeSnappy(b, MaxGossipSize)
 	if err != nil {
 		return err
 	}
-	return e.doDecode(b, to)
+	return doDecode(b, to)
 }
 
 // DecodeSnappy decodes a snappy compressed message.
@@ -110,11 +111,11 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to fastssz.Unmarshal
 	if err != nil {
 		return err
 	}
-	if msgLen > params.BeaconNetworkConfig().MaxChunkSize {
+	if msgLen > MaxChunkSize {
 		return fmt.Errorf(
 			"remaining bytes %d goes over the provided max limit of %d",
 			msgLen,
-			params.BeaconNetworkConfig().MaxChunkSize,
+			MaxChunkSize,
 		)
 	}
 	msgMax, err := e.MaxLength(msgLen)
@@ -133,17 +134,17 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to fastssz.Unmarshal
 	if err != nil {
 		return err
 	}
-	return e.doDecode(buf, to)
+	return doDecode(buf, to)
 }
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.
-func (e SszNetworkEncoder) ProtocolSuffix() string {
+func (_ SszNetworkEncoder) ProtocolSuffix() string {
 	return "/" + ProtocolSuffixSSZSnappy
 }
 
 // MaxLength specifies the maximum possible length of an encoded
 // chunk of data.
-func (e SszNetworkEncoder) MaxLength(length uint64) (int, error) {
+func (_ SszNetworkEncoder) MaxLength(length uint64) (int, error) {
 	// Defensive check to prevent potential issues when casting to int64.
 	if length > math.MaxInt64 {
 		return 0, errors.Errorf("invalid length provided: %d", length)
@@ -198,4 +199,14 @@ func newBufferedWriter(w io.Writer) *snappy.Writer {
 	}
 	bufW.Reset(w)
 	return bufW
+}
+
+// SetMaxGossipSizeForBellatrix sets the MaxGossipSize to 10Mb.
+func SetMaxGossipSizeForBellatrix() {
+	MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSizeBellatrix
+}
+
+// SetMaxChunkSizeForBellatrix sets the MaxChunkSize to 10Mb.
+func SetMaxChunkSizeForBellatrix() {
+	MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSizeBellatrix
 }

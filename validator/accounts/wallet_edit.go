@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/validator/accounts/prompt"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
@@ -22,8 +22,8 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not open wallet")
 	}
 	switch w.KeymanagerKind() {
-	case keymanager.Imported:
-		return errors.New("not possible to edit imported keymanager configuration")
+	case keymanager.Local:
+		return errors.New("not possible to edit local keymanager configuration")
 	case keymanager.Derived:
 		return errors.New("derived keymanager is not yet supported")
 	case keymanager.Remote:
@@ -38,7 +38,7 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 		log.Info("Current configuration")
 		// Prints the current configuration to stdout.
 		fmt.Println(opts)
-		newCfg, err := prompt.InputRemoteKeymanagerConfig(cliCtx)
+		newCfg, err := userprompt.InputRemoteKeymanagerConfig(cliCtx)
 		if err != nil {
 			return errors.Wrap(err, "could not get keymanager config")
 		}

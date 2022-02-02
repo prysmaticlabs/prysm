@@ -3,7 +3,10 @@
 package flags
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"encoding/hex"
+	"strings"
+
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -53,6 +56,12 @@ var (
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
+	// HTTPModules define the set of enabled HTTP APIs.
+	HTTPModules = &cli.StringFlag{
+		Name:  "http-modules",
+		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
+		Value: strings.Join([]string{PrysmAPIModule, EthAPIModule}, ","),
+	}
 	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
 	DisableGRPCGateway = &cli.BoolFlag{
 		Name:  "disable-grpc-gateway",
@@ -69,13 +78,6 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "The port on which the gateway server runs on",
 		Value: 3500,
-	}
-	// EthApiPort specifies the port which runs the official Ethereum REST API.
-	// Serves JSON values conforming to the specification: https://ethereum.github.io/beacon-apis/
-	EthApiPort = &cli.IntFlag{
-		Name:  "eth-api-port",
-		Usage: "The port which exposes a REST API conforming to the official Ethereum API specification.",
-		Value: 3501,
 	}
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
 	GPRCGatewayCorsDomain = &cli.StringFlag{
@@ -109,10 +111,10 @@ var (
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
-	// section of DB.
+	// section of beaconDB.
 	SlotsPerArchivedPoint = &cli.IntFlag{
 		Name:  "slots-per-archive-point",
-		Usage: "The slot durations of when an archived state gets saved in the DB.",
+		Usage: "The slot durations of when an archived state gets saved in the beaconDB.",
 		Value: 2048,
 	}
 	// DisableDiscv5 disables running discv5.
@@ -143,10 +145,10 @@ var (
 		Name:  "enable-debug-rpc-endpoints",
 		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state.",
 	}
-	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation subnets or not.
+	// SubscribeToAllSubnets defines a flag to specify whether to subscribe to all possible attestation/sync subnets or not.
 	SubscribeToAllSubnets = &cli.BoolFlag{
 		Name:  "subscribe-all-subnets",
-		Usage: "Subscribe to all possible attestation subnets.",
+		Usage: "Subscribe to all possible attestation and sync subnets.",
 	}
 	// HistoricalSlasherNode is a set of beacon node flags required for performing historical detection with a slasher.
 	HistoricalSlasherNode = &cli.BoolFlag{
@@ -181,5 +183,17 @@ var (
 		Name: "genesis-state",
 		Usage: "Load a genesis state from ssz file. Testnet genesis files can be found in the " +
 			"eth2-clients/eth2-testnets repository on github.",
+	}
+	// MinPeersPerSubnet defines a flag to set the minimum number of peers that a node will attempt to peer with for a subnet.
+	MinPeersPerSubnet = &cli.Uint64Flag{
+		Name:  "minimum-peers-per-subnet",
+		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
+		Value: 6,
+	}
+	// FeeRecipient specifies the fee recipient for the transaction fees.
+	FeeRecipient = &cli.StringFlag{
+		Name:  "fee-recipient",
+		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state.",
+		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
 	}
 )

@@ -2,12 +2,11 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -43,8 +42,8 @@ func V1Alpha1ToV1SignedBlock(alphaBlk *ethpbalpha.SignedBeaconBlock) (*ethpbv1.S
 }
 
 // V1ToV1Alpha1SignedBlock converts a v1 SignedBeaconBlock proto to a v1alpha1 proto.
-func V1ToV1Alpha1SignedBlock(alphaBlk *ethpbv1.SignedBeaconBlock) (*ethpbalpha.SignedBeaconBlock, error) {
-	marshaledBlk, err := proto.Marshal(alphaBlk)
+func V1ToV1Alpha1SignedBlock(v1Blk *ethpbv1.SignedBeaconBlock) (*ethpbalpha.SignedBeaconBlock, error) {
+	marshaledBlk, err := proto.Marshal(v1Blk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
@@ -353,28 +352,23 @@ func SignedBeaconBlock(block block.SignedBeaconBlock) (*ethpbv1.SignedBeaconBloc
 	return v1Block, nil
 }
 
-// V1Alpha1BeaconBlockAltairToV2 converts a v1alpha1 Altair beacon block to a v2 Altair block.
-func V1Alpha1BeaconBlockAltairToV2(v1alpha1Block *ethpbalpha.BeaconBlockAltair) (*ethpbv2.BeaconBlockAltair, error) {
-	marshaledBlk, err := proto.Marshal(v1alpha1Block)
+func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
+	sourceFork := state.Fork()
+	sourceLatestBlockHeader := state.LatestBlockHeader()
+	sourceEth1Data := state.Eth1Data()
+	sourceEth1DataVotes := state.Eth1DataVotes()
+	sourceValidators := state.Validators()
+	sourcePrevEpochAtts, err := state.PreviousEpochAttestations()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal block")
+		return nil, errors.Wrapf(err, "could not get previous epoch attestations from state")
 	}
-	v2Block := &ethpbv2.BeaconBlockAltair{}
-	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal block")
+	sourceCurrEpochAtts, err := state.CurrentEpochAttestations()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get current epoch attestations from state")
 	}
-	return v2Block, nil
-}
-
-func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconStateV2, error) {
-	sourceFork := altairState.Fork()
-	sourceLatestBlockHeader := altairState.LatestBlockHeader()
-	sourceEth1Data := altairState.Eth1Data()
-	sourceEth1DataVotes := altairState.Eth1DataVotes()
-	sourceValidators := altairState.Validators()
-	sourcePrevJustifiedCheckpoint := altairState.PreviousJustifiedCheckpoint()
-	sourceCurrJustifiedCheckpoint := altairState.CurrentJustifiedCheckpoint()
-	sourceFinalizedCheckpoint := altairState.FinalizedCheckpoint()
+	sourcePrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
+	sourceCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint()
+	sourceFinalizedCheckpoint := state.FinalizedCheckpoint()
 
 	resultEth1DataVotes := make([]*ethpbv1.Eth1Data, len(sourceEth1DataVotes))
 	for i, vote := range sourceEth1DataVotes {
@@ -397,32 +391,55 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 			WithdrawableEpoch:          validator.WithdrawableEpoch,
 		}
 	}
+	resultPrevEpochAtts := make([]*ethpbv1.PendingAttestation, len(sourcePrevEpochAtts))
+	for i, att := range sourcePrevEpochAtts {
+		data := att.Data
+		resultPrevEpochAtts[i] = &ethpbv1.PendingAttestation{
+			AggregationBits: att.AggregationBits,
+			Data: &ethpbv1.AttestationData{
+				Slot:            data.Slot,
+				Index:           data.CommitteeIndex,
+				BeaconBlockRoot: data.BeaconBlockRoot,
+				Source: &ethpbv1.Checkpoint{
+					Epoch: data.Source.Epoch,
+					Root:  data.Source.Root,
+				},
+				Target: &ethpbv1.Checkpoint{
+					Epoch: data.Target.Epoch,
+					Root:  data.Target.Root,
+				},
+			},
+			InclusionDelay: att.InclusionDelay,
+			ProposerIndex:  att.ProposerIndex,
+		}
+	}
+	resultCurrEpochAtts := make([]*ethpbv1.PendingAttestation, len(sourceCurrEpochAtts))
+	for i, att := range sourceCurrEpochAtts {
+		data := att.Data
+		resultCurrEpochAtts[i] = &ethpbv1.PendingAttestation{
+			AggregationBits: att.AggregationBits,
+			Data: &ethpbv1.AttestationData{
+				Slot:            data.Slot,
+				Index:           data.CommitteeIndex,
+				BeaconBlockRoot: data.BeaconBlockRoot,
+				Source: &ethpbv1.Checkpoint{
+					Epoch: data.Source.Epoch,
+					Root:  data.Source.Root,
+				},
+				Target: &ethpbv1.Checkpoint{
+					Epoch: data.Target.Epoch,
+					Root:  data.Target.Root,
+				},
+			},
+			InclusionDelay: att.InclusionDelay,
+			ProposerIndex:  att.ProposerIndex,
+		}
+	}
 
-	sourcePrevEpochParticipation, err := altairState.PreviousEpochParticipation()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get previous epoch participation")
-	}
-	sourceCurrEpochParticipation, err := altairState.CurrentEpochParticipation()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get current epoch participation")
-	}
-	sourceInactivityScores, err := altairState.InactivityScores()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get inactivity scores")
-	}
-	sourceCurrSyncCommittee, err := altairState.CurrentSyncCommittee()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get current sync committee")
-	}
-	sourceNextSyncCommittee, err := altairState.NextSyncCommittee()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get next sync committee")
-	}
-
-	result := &ethpbv2.BeaconStateV2{
-		GenesisTime:           altairState.GenesisTime(),
-		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(altairState.GenesisValidatorRoot()),
-		Slot:                  altairState.Slot(),
+	result := &ethpbv1.BeaconState{
+		GenesisTime:           state.GenesisTime(),
+		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(state.GenesisValidatorRoot()),
+		Slot:                  state.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
 			CurrentVersion:  bytesutil.SafeCopyBytes(sourceFork.CurrentVersion),
@@ -435,23 +452,23 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bytesutil.SafeCopy2dBytes(altairState.BlockRoots()),
-		StateRoots:      bytesutil.SafeCopy2dBytes(altairState.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(altairState.HistoricalRoots()),
+		BlockRoots:      bytesutil.SafeCopy2dBytes(state.BlockRoots()),
+		StateRoots:      bytesutil.SafeCopy2dBytes(state.StateRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(state.HistoricalRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
 			BlockHash:    bytesutil.SafeCopyBytes(sourceEth1Data.BlockHash),
 		},
-		Eth1DataVotes:              resultEth1DataVotes,
-		Eth1DepositIndex:           altairState.Eth1DepositIndex(),
-		Validators:                 resultValidators,
-		Balances:                   altairState.Balances(),
-		RandaoMixes:                bytesutil.SafeCopy2dBytes(altairState.RandaoMixes()),
-		Slashings:                  altairState.Slashings(),
-		PreviousEpochParticipation: bytesutil.SafeCopyBytes(sourcePrevEpochParticipation),
-		CurrentEpochParticipation:  bytesutil.SafeCopyBytes(sourceCurrEpochParticipation),
-		JustificationBits:          bytesutil.SafeCopyBytes(altairState.JustificationBits()),
+		Eth1DataVotes:             resultEth1DataVotes,
+		Eth1DepositIndex:          state.Eth1DepositIndex(),
+		Validators:                resultValidators,
+		Balances:                  state.Balances(),
+		RandaoMixes:               bytesutil.SafeCopy2dBytes(state.RandaoMixes()),
+		Slashings:                 state.Slashings(),
+		PreviousEpochAttestations: resultPrevEpochAtts,
+		CurrentEpochAttestations:  resultCurrEpochAtts,
+		JustificationBits:         bytesutil.SafeCopyBytes(state.JustificationBits()),
 		PreviousJustifiedCheckpoint: &ethpbv1.Checkpoint{
 			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
 			Root:  bytesutil.SafeCopyBytes(sourcePrevJustifiedCheckpoint.Root),
@@ -463,15 +480,6 @@ func BeaconStateAltairToV2(altairState *statev2.BeaconState) (*ethpbv2.BeaconSta
 		FinalizedCheckpoint: &ethpbv1.Checkpoint{
 			Epoch: sourceFinalizedCheckpoint.Epoch,
 			Root:  bytesutil.SafeCopyBytes(sourceFinalizedCheckpoint.Root),
-		},
-		InactivityScores: sourceInactivityScores,
-		CurrentSyncCommittee: &ethpbv2.SyncCommittee{
-			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceCurrSyncCommittee.Pubkeys),
-			AggregatePubkey: bytesutil.SafeCopyBytes(sourceCurrSyncCommittee.AggregatePubkey),
-		},
-		NextSyncCommittee: &ethpbv2.SyncCommittee{
-			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceNextSyncCommittee.Pubkeys),
-			AggregatePubkey: bytesutil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
 		},
 	}
 

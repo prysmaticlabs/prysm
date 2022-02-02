@@ -10,14 +10,14 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -37,7 +37,7 @@ var (
 
 // GetIdentity retrieves data about the node's network presence.
 func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.IdentityResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "nodeV1.GetIdentity")
+	_, span := trace.StartSpan(ctx, "node.GetIdentity")
 	defer span.End()
 
 	peerId := ns.PeerManager.PeerID().Pretty()
@@ -63,7 +63,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ide
 		discoveryAddresses[i] = sourceDisc[i].String()
 	}
 
-	metadata := &ethpb.Metadata{
+	meta := &ethpb.Metadata{
 		SeqNumber: ns.MetadataProvider.MetadataSeq(),
 		Attnets:   ns.MetadataProvider.Metadata().AttnetsBitfield(),
 	}
@@ -74,14 +74,14 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ide
 			Enr:                enr,
 			P2PAddresses:       p2pAddresses,
 			DiscoveryAddresses: discoveryAddresses,
-			Metadata:           metadata,
+			Metadata:           meta,
 		},
 	}, nil
 }
 
 // GetPeer retrieves data about the given peer.
 func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.PeerResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "nodev1.GetPeer")
+	_, span := trace.StartSpan(ctx, "node.GetPeer")
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
@@ -134,11 +134,11 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 
 // ListPeers retrieves data about the node's network peers.
 func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethpb.PeersResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "nodev1.ListPeers")
+	_, span := trace.StartSpan(ctx, "node.ListPeers")
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
-	emptyStateFilter, emptyDirectionFilter := ns.handleEmptyFilters(req)
+	emptyStateFilter, emptyDirectionFilter := handleEmptyFilters(req)
 
 	if emptyStateFilter && emptyDirectionFilter {
 		allIds := peerStatus.All()
@@ -230,7 +230,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 
 // PeerCount retrieves retrieves number of known peers.
 func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerCountResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "nodev1.PeerCount")
+	_, span := trace.StartSpan(ctx, "node.PeerCount")
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
@@ -247,8 +247,8 @@ func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerC
 
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
-func (ns *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "nodev1.Version")
+func (_ *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
+	_, span := trace.StartSpan(ctx, "node.GetVersion")
 	defer span.End()
 
 	v := fmt.Sprintf("Prysm/%s (%s %s)", version.SemanticVersion(), runtime.GOOS, runtime.GOARCH)
@@ -262,7 +262,7 @@ func (ns *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.Vers
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
 // if it is, what block it is up to.
 func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.SyncingResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "nodev1.GetSyncStatus")
+	_, span := trace.StartSpan(ctx, "node.GetSyncStatus")
 	defer span.End()
 
 	headSlot := ns.HeadFetcher.HeadSlot()
@@ -284,14 +284,14 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 //    "503":
 //      description: Node not initialized or having issues
 func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "nodev1.GetHealth")
+	ctx, span := trace.StartSpan(ctx, "node.GetHealth")
 	defer span.End()
 
 	if ns.SyncChecker.Synced() {
 		return &emptypb.Empty{}, nil
 	}
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
-		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutils.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent))); err != nil {
+		if err := grpc.SetHeader(ctx, metadata.Pairs(grpcutil.HttpCodeMetadataKey, strconv.Itoa(http.StatusPartialContent))); err != nil {
 			// We return a positive result because failing to set a non-gRPC related header should not cause the gRPC call to fail.
 			return &emptypb.Empty{}, nil
 		}
@@ -300,7 +300,7 @@ func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Emp
 	return &emptypb.Empty{}, status.Error(codes.Internal, "Node not initialized or having issues")
 }
 
-func (ns *Server) handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection bool) {
+func handleEmptyFilters(req *ethpb.PeersRequest) (emptyState, emptyDirection bool) {
 	emptyState = true
 	for _, stateFilter := range req.State {
 		normalized := strings.ToUpper(stateFilter.String())

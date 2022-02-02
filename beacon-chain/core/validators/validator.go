@@ -5,13 +5,16 @@
 package validators
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // InitiateValidatorExit takes in validator index and updates
@@ -37,7 +40,7 @@ import (
 //    # Set validator exit epoch and withdrawable epoch
 //    validator.exit_epoch = exit_queue_epoch
 //    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-func InitiateValidatorExit(s state.BeaconState, idx types.ValidatorIndex) (state.BeaconState, error) {
+func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx types.ValidatorIndex) (state.BeaconState, error) {
 	validator, err := s.ValidatorAtIndex(idx)
 	if err != nil {
 		return nil, err
@@ -55,7 +58,7 @@ func InitiateValidatorExit(s state.BeaconState, idx types.ValidatorIndex) (state
 	if err != nil {
 		return nil, err
 	}
-	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(core.CurrentEpoch(s)))
+	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(time.CurrentEpoch(s)))
 
 	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
 	exitQueueEpoch := types.Epoch(0)
@@ -76,7 +79,7 @@ func InitiateValidatorExit(s state.BeaconState, idx types.ValidatorIndex) (state
 	if err != nil {
 		return nil, err
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(s, core.CurrentEpoch(s))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, s, time.CurrentEpoch(s))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active validator count")
 	}
@@ -123,15 +126,16 @@ func InitiateValidatorExit(s state.BeaconState, idx types.ValidatorIndex) (state
 //    increase_balance(state, proposer_index, proposer_reward)
 //    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
 func SlashValidator(
+	ctx context.Context,
 	s state.BeaconState,
 	slashedIdx types.ValidatorIndex,
 	penaltyQuotient uint64,
 	proposerRewardQuotient uint64) (state.BeaconState, error) {
-	s, err := InitiateValidatorExit(s, slashedIdx)
+	s, err := InitiateValidatorExit(ctx, s, slashedIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
 	}
-	currentEpoch := core.SlotToEpoch(s.Slot())
+	currentEpoch := slots.ToEpoch(s.Slot())
 	validator, err := s.ValidatorAtIndex(slashedIdx)
 	if err != nil {
 		return nil, err
@@ -157,7 +161,7 @@ func SlashValidator(
 		return nil, err
 	}
 
-	proposerIdx, err := helpers.BeaconProposerIndex(s)
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, s)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get proposer idx")
 	}

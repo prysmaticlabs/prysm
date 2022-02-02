@@ -10,11 +10,11 @@ import (
 
 	gogo "github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -77,10 +77,10 @@ func TestSszNetworkEncoder_EncodeWithMaxLength(t *testing.T) {
 	e := &encoder.SszNetworkEncoder{}
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconNetworkConfig()
-	c.MaxChunkSize = uint64(5)
+	encoder.MaxChunkSize = uint64(5)
 	params.OverrideBeaconNetworkConfig(c)
 	_, err := e.EncodeWithMaxLength(buf, msg)
-	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", params.BeaconNetworkConfig().MaxChunkSize)
+	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", encoder.MaxChunkSize)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -95,7 +95,7 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconNetworkConfig()
 	maxChunkSize := uint64(5)
-	c.MaxChunkSize = maxChunkSize
+	encoder.MaxChunkSize = maxChunkSize
 	params.OverrideBeaconNetworkConfig(c)
 	_, err := e.EncodeGossip(buf, msg)
 	require.NoError(t, err)
@@ -107,13 +107,13 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 
 func TestSszNetworkEncoder_DecodeWithMultipleFrames(t *testing.T) {
 	buf := new(bytes.Buffer)
-	st, _ := testutil.DeterministicGenesisState(t, 100)
+	st, _ := util.DeterministicGenesisState(t, 100)
 	e := &encoder.SszNetworkEncoder{}
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconNetworkConfig()
 	// 4 * 1 Mib
 	maxChunkSize := uint64(1 << 22)
-	c.MaxChunkSize = maxChunkSize
+	encoder.MaxChunkSize = maxChunkSize
 	params.OverrideBeaconNetworkConfig(c)
 	_, err := e.EncodeWithMaxLength(buf, st.InnerStateUnsafe().(*ethpb.BeaconState))
 	require.NoError(t, err)

@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"go.opencensus.io/trace"
 
+	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
@@ -34,7 +34,7 @@ const syncLockerVal = 100
 // with those peers. This method will block until the required amount of
 // peers are found, the method only exits in the event of context timeouts.
 func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
-	index, threshold uint64) (bool, error) {
+	index uint64, threshold int) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
@@ -56,7 +56,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		return false, errors.New("no subnet exists for provided topic")
 	}
 
-	currNum := uint64(len(s.pubsub.ListPeers(topic)))
+	currNum := len(s.pubsub.ListPeers(topic))
 	wg := new(sync.WaitGroup)
 	for {
 		if err := ctx.Err(); err != nil {
@@ -81,7 +81,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		}
 		// Wait for all dials to be completed.
 		wg.Wait()
-		currNum = uint64(len(s.pubsub.ListPeers(topic)))
+		currNum = len(s.pubsub.ListPeers(topic))
 	}
 	return true, nil
 }

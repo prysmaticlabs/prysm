@@ -7,15 +7,17 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 const maxRandomByte = uint64(1<<8 - 1)
@@ -97,8 +99,8 @@ func NextSyncCommittee(ctx context.Context, s state.BeaconStateAltair) (*ethpb.S
 //        i += 1
 //    return sync_committee_indices
 func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
-	epoch := core.NextEpoch(s)
-	indices, err := helpers.ActiveValidatorIndices(s, epoch)
+	epoch := coreTime.NextEpoch(s)
+	indices, err := helpers.ActiveValidatorIndices(ctx, s, epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +112,7 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([
 	cfg := params.BeaconConfig()
 	syncCommitteeSize := cfg.SyncCommitteeSize
 	cIndices := make([]types.ValidatorIndex, 0, syncCommitteeSize)
-	hashFunc := hashutil.CustomSHA256Hasher()
+	hashFunc := hash.CustomSHA256Hasher()
 
 	for i := types.ValidatorIndex(0); uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize; i++ {
 		if ctx.Err() != nil {
@@ -173,27 +175,27 @@ func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx types
 //    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
-	if len(sig) != params.BeaconConfig().BLSSignatureLength {
+	if len(sig) != fieldparams.BLSSignatureLength {
 		return false, errors.New("incorrect sig length")
 	}
 
 	cfg := params.BeaconConfig()
-	modulo := mathutil.Max(1, cfg.SyncCommitteeSize/cfg.SyncCommitteeSubnetCount/cfg.TargetAggregatorsPerSyncSubcommittee)
-	hashedSig := hashutil.Hash(sig)
+	modulo := math.Max(1, cfg.SyncCommitteeSize/cfg.SyncCommitteeSubnetCount/cfg.TargetAggregatorsPerSyncSubcommittee)
+	hashedSig := hash.Hash(sig)
 	return bytesutil.FromBytes8(hashedSig[:8])%modulo == 0, nil
 }
 
 // ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.
 func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
-	if err := core.ValidateSlotClock(slot, uint64(genesisTime.Unix())); err != nil {
+	if err := slots.ValidateClock(slot, uint64(genesisTime.Unix())); err != nil {
 		return err
 	}
-	messageTime, err := core.SlotToTime(uint64(genesisTime.Unix()), slot)
+	messageTime, err := slots.ToTime(uint64(genesisTime.Unix()), slot)
 	if err != nil {
 		return err
 	}
-	currentSlot := core.SlotsSince(genesisTime)
-	slotStartTime, err := core.SlotToTime(uint64(genesisTime.Unix()), currentSlot)
+	currentSlot := slots.Since(genesisTime)
+	slotStartTime, err := slots.ToTime(uint64(genesisTime.Unix()), currentSlot)
 	if err != nil {
 		return err
 	}
@@ -214,8 +216,8 @@ func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDispar
 		return fmt.Errorf(
 			"sync message slot %d not within allowable range of %d to %d (current slot)",
 			slot,
-			lowerBound.Unix(),
-			upperBound.Unix(),
+			uint64(lowerBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
+			uint64(upperBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
 		)
 	}
 	return nil

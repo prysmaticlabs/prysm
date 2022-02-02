@@ -20,7 +20,7 @@ type MockPeerManager struct {
 }
 
 // Disconnect .
-func (m *MockPeerManager) Disconnect(peer.ID) error {
+func (_ *MockPeerManager) Disconnect(peer.ID) error {
 	return nil
 }
 
@@ -48,12 +48,12 @@ func (m MockPeerManager) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 }
 
 // RefreshENR .
-func (m MockPeerManager) RefreshENR() {}
+func (_ MockPeerManager) RefreshENR() {}
 
 // FindPeersWithSubnet .
-func (m MockPeerManager) FindPeersWithSubnet(_ context.Context, _ string, _, _ uint64) (bool, error) {
+func (_ MockPeerManager) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
 	return true, nil
 }
 
 // AddPingMethod .
-func (m MockPeerManager) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {}
+func (_ MockPeerManager) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {}

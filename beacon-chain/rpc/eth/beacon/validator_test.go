@@ -8,31 +8,31 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	sharedtestutil "github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestGetValidator(t *testing.T) {
 	ctx := context.Background()
 
-	var state state.BeaconState
-	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head Get Validator by index", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
@@ -47,11 +47,11 @@ func TestGetValidator(t *testing.T) {
 	t.Run("Head Get Validator by pubkey", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
-		pubKey := state.PubkeyAtIndex(types.ValidatorIndex(20))
+		pubKey := st.PubkeyAtIndex(types.ValidatorIndex(20))
 		resp, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
 			StateId:     []byte("head"),
 			ValidatorId: pubKey[:],
@@ -64,7 +64,7 @@ func TestGetValidator(t *testing.T) {
 	t.Run("Validator ID required", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 		_, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
@@ -77,13 +77,13 @@ func TestGetValidator(t *testing.T) {
 func TestListValidators(t *testing.T) {
 	ctx := context.Background()
 
-	var state state.BeaconState
-	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List All Validators", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
@@ -100,7 +100,7 @@ func TestListValidators(t *testing.T) {
 	t.Run("Head List Validators by index", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
@@ -120,14 +120,14 @@ func TestListValidators(t *testing.T) {
 	t.Run("Head List Validators by pubkey", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 		idNums := []types.ValidatorIndex{20, 66, 90, 100}
-		pubkey1 := state.PubkeyAtIndex(types.ValidatorIndex(20))
-		pubkey2 := state.PubkeyAtIndex(types.ValidatorIndex(66))
-		pubkey3 := state.PubkeyAtIndex(types.ValidatorIndex(90))
-		pubkey4 := state.PubkeyAtIndex(types.ValidatorIndex(100))
+		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
+		pubkey2 := st.PubkeyAtIndex(types.ValidatorIndex(66))
+		pubkey3 := st.PubkeyAtIndex(types.ValidatorIndex(90))
+		pubkey4 := st.PubkeyAtIndex(types.ValidatorIndex(100))
 		pubKeys := [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
 			StateId: []byte("head"),
@@ -144,15 +144,15 @@ func TestListValidators(t *testing.T) {
 	t.Run("Head List Validators by both index and pubkey", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
 		idNums := []types.ValidatorIndex{20, 90, 170, 129}
-		pubkey1 := state.PubkeyAtIndex(types.ValidatorIndex(20))
-		pubkey2 := state.PubkeyAtIndex(types.ValidatorIndex(90))
-		pubkey3 := state.PubkeyAtIndex(types.ValidatorIndex(170))
-		pubkey4 := state.PubkeyAtIndex(types.ValidatorIndex(129))
+		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
+		pubkey2 := st.PubkeyAtIndex(types.ValidatorIndex(90))
+		pubkey3 := st.PubkeyAtIndex(types.ValidatorIndex(170))
+		pubkey4 := st.PubkeyAtIndex(types.ValidatorIndex(129))
 		pubkeys := [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]}
 		ids := [][]byte{pubkey1[:], []byte("90"), pubkey3[:], []byte("129")}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
@@ -170,11 +170,11 @@ func TestListValidators(t *testing.T) {
 	t.Run("Unknown public key is ignored", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
-		existingKey := state.PubkeyAtIndex(types.ValidatorIndex(1))
+		existingKey := st.PubkeyAtIndex(types.ValidatorIndex(1))
 		pubkeys := [][]byte{existingKey[:], []byte(strings.Repeat("f", 48))}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
 			StateId: []byte("head"),
@@ -188,7 +188,7 @@ func TestListValidators(t *testing.T) {
 	t.Run("Unknown index is ignored", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
@@ -206,8 +206,8 @@ func TestListValidators(t *testing.T) {
 func TestListValidators_Status(t *testing.T) {
 	ctx := context.Background()
 
-	var state state.BeaconState
-	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	validators := []*eth.Validator{
@@ -270,14 +270,14 @@ func TestListValidators_Status(t *testing.T) {
 		},
 	}
 	for _, validator := range validators {
-		require.NoError(t, state.AppendValidator(validator))
-		require.NoError(t, state.AppendBalance(params.BeaconConfig().MaxEffectiveBalance))
+		require.NoError(t, st.AppendValidator(validator))
+		require.NoError(t, st.AppendBalance(params.BeaconConfig().MaxEffectiveBalance))
 	}
 
 	t.Run("Head List All ACTIVE Validators", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 		}
 
@@ -310,7 +310,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All ACTIVE_ONGOING Validators", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 		}
 
@@ -338,11 +338,11 @@ func TestListValidators_Status(t *testing.T) {
 		}
 	})
 
-	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*35))
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*35))
 	t.Run("Head List All EXITED Validators", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 		}
 
@@ -373,7 +373,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All PENDING_INITIALIZED and EXITED_UNSLASHED Validators", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 		}
 
@@ -404,7 +404,7 @@ func TestListValidators_Status(t *testing.T) {
 	t.Run("Head List All PENDING and EXITED Validators", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
-				ChainInfoFetcher: &chainMock.ChainService{State: state},
+				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
 		}
 
@@ -437,13 +437,19 @@ func TestListValidators_Status(t *testing.T) {
 func TestListValidatorBalances(t *testing.T) {
 	ctx := context.Background()
 
-	var state state.BeaconState
-	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
+	var st state.BeaconState
+	count := uint64(8192)
+	st, _ = util.DeterministicGenesisState(t, count)
+	balances := make([]uint64, count)
+	for i := uint64(0); i < count; i++ {
+		balances[i] = i
+	}
+	require.NoError(t, st.SetBalances(balances))
 
 	t.Run("Head List Validators Balance by index", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
@@ -456,21 +462,21 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
+			assert.Equal(t, balances[val.Index], val.Balance)
 		}
 	})
 
 	t.Run("Head List Validators Balance by pubkey", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 		idNums := []types.ValidatorIndex{20, 66, 90, 100}
-		pubkey1 := state.PubkeyAtIndex(types.ValidatorIndex(20))
-		pubkey2 := state.PubkeyAtIndex(types.ValidatorIndex(66))
-		pubkey3 := state.PubkeyAtIndex(types.ValidatorIndex(90))
-		pubkey4 := state.PubkeyAtIndex(types.ValidatorIndex(100))
+		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
+		pubkey2 := st.PubkeyAtIndex(types.ValidatorIndex(66))
+		pubkey3 := st.PubkeyAtIndex(types.ValidatorIndex(90))
+		pubkey4 := st.PubkeyAtIndex(types.ValidatorIndex(100))
 		pubKeys := [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]}
 		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
 			StateId: []byte("head"),
@@ -479,20 +485,20 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
+			assert.Equal(t, balances[val.Index], val.Balance)
 		}
 	})
 
 	t.Run("Head List Validators Balance by both index and pubkey", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
 		idNums := []types.ValidatorIndex{20, 90, 170, 129}
-		pubkey1 := state.PubkeyAtIndex(types.ValidatorIndex(20))
-		pubkey3 := state.PubkeyAtIndex(types.ValidatorIndex(170))
+		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
+		pubkey3 := st.PubkeyAtIndex(types.ValidatorIndex(170))
 		ids := [][]byte{pubkey1[:], []byte("90"), pubkey3[:], []byte("129")}
 		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
 			StateId: []byte("head"),
@@ -501,7 +507,7 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, err)
 		for i, val := range resp.Data {
 			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.Balance)
+			assert.Equal(t, balances[val.Index], val.Balance)
 		}
 	})
 }
@@ -509,14 +515,14 @@ func TestListValidatorBalances(t *testing.T) {
 func TestListCommittees(t *testing.T) {
 	ctx := context.Background()
 
-	var state state.BeaconState
-	state, _ = sharedtestutil.DeterministicGenesisState(t, 8192)
-	epoch := core.SlotToEpoch(state.Slot())
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 8192)
+	epoch := slots.ToEpoch(st.Slot())
 
 	t.Run("Head All Committees", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
@@ -527,14 +533,14 @@ func TestListCommittees(t *testing.T) {
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch)*2, len(resp.Data))
 		for _, datum := range resp.Data {
 			assert.Equal(t, true, datum.Index == types.CommitteeIndex(0) || datum.Index == types.CommitteeIndex(1))
-			assert.Equal(t, epoch, core.SlotToEpoch(datum.Slot))
+			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 		}
 	})
 
 	t.Run("Head All Committees of Epoch 10", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 		epoch := types.Epoch(10)
@@ -551,7 +557,7 @@ func TestListCommittees(t *testing.T) {
 	t.Run("Head All Committees of Slot 4", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
@@ -564,7 +570,7 @@ func TestListCommittees(t *testing.T) {
 		assert.Equal(t, 2, len(resp.Data))
 		index := types.CommitteeIndex(0)
 		for _, datum := range resp.Data {
-			assert.Equal(t, epoch, core.SlotToEpoch(datum.Slot))
+			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 			assert.Equal(t, slot, datum.Slot)
 			assert.Equal(t, index, datum.Index)
 			index++
@@ -574,7 +580,7 @@ func TestListCommittees(t *testing.T) {
 	t.Run("Head All Committees of Index 1", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
@@ -587,7 +593,7 @@ func TestListCommittees(t *testing.T) {
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch), len(resp.Data))
 		slot := types.Slot(0)
 		for _, datum := range resp.Data {
-			assert.Equal(t, epoch, core.SlotToEpoch(datum.Slot))
+			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 			assert.Equal(t, slot, datum.Slot)
 			assert.Equal(t, index, datum.Index)
 			slot++
@@ -597,7 +603,7 @@ func TestListCommittees(t *testing.T) {
 	t.Run("Head All Committees of Slot 2, Index 1", func(t *testing.T) {
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
-				BeaconState: state,
+				BeaconState: st,
 			},
 		}
 
@@ -611,7 +617,7 @@ func TestListCommittees(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(resp.Data))
 		for _, datum := range resp.Data {
-			assert.Equal(t, epoch, core.SlotToEpoch(datum.Slot))
+			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
 			assert.Equal(t, slot, datum.Slot)
 			assert.Equal(t, index, datum.Index)
 		}

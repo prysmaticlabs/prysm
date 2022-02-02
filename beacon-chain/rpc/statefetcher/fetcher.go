@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // StateIdParseError represents an error scenario where a state ID could not be parsed.
@@ -204,7 +204,7 @@ func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head block")
 	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -215,7 +215,7 @@ func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis block")
 	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -230,7 +230,7 @@ func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -245,7 +245,7 @@ func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get justified block")
 	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil

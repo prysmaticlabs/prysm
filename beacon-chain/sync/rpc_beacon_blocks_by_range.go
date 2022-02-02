@@ -10,11 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -36,8 +36,8 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	if err := s.validateRangeRequest(m); err != nil {
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
-		s.cfg.P2P.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-		traceutil.AnnotateError(span, err)
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		tracing.AnnotateError(span, err)
 		return err
 	}
 
@@ -72,14 +72,14 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	var prevRoot [32]byte
 	for startSlot <= endReqSlot {
 		if err := s.rateLimiter.validateRequest(stream, allowedBlocksPerSecond); err != nil {
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 
 		if endSlot-startSlot > rangeLimit {
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrInvalidRequest.Error(), stream)
 			err := p2ptypes.ErrInvalidRequest
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 
@@ -123,11 +123,11 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	defer span.End()
 
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot).SetSlotStep(step)
-	blks, roots, err := s.cfg.DB.Blocks(ctx, filter)
+	blks, roots, err := s.cfg.beaconDB.Blocks(ctx, filter)
 	if err != nil {
 		log.WithError(err).Debug("Could not retrieve blocks")
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 	// handle genesis case
@@ -136,7 +136,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		if err != nil {
 			log.WithError(err).Debug("Could not retrieve genesis block")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-			traceutil.AnnotateError(span, err)
+			tracing.AnnotateError(span, err)
 			return err
 		}
 		blks = append([]block.SignedBeaconBlock{genBlock}, blks...)
@@ -147,7 +147,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	blks, roots, err = s.dedupBlocksAndRoots(blks, roots)
 	if err != nil {
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 	blks, roots = s.sortBlocksAndRoots(blks, roots)
@@ -155,7 +155,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	blks, err = s.filterBlocks(ctx, blks, roots, prevRoot, step, startSlot)
 	if err != nil && err != p2ptypes.ErrInvalidParent {
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-		traceutil.AnnotateError(span, err)
+		tracing.AnnotateError(span, err)
 		return err
 	}
 	for _, b := range blks {
@@ -165,7 +165,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-			traceutil.AnnotateError(span, chunkErr)
+			tracing.AnnotateError(span, chunkErr)
 			return chunkErr
 		}
 
@@ -183,7 +183,7 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 	// Add a buffer for possible large range requests from nodes syncing close to the
 	// head of the chain.
 	buffer := rangeLimit * 2
-	highestExpectedSlot := s.cfg.Chain.CurrentSlot().Add(uint64(buffer))
+	highestExpectedSlot := s.cfg.chain.CurrentSlot().Add(uint64(buffer))
 
 	// Ensure all request params are within appropriate bounds
 	if count == 0 || count > maxRequestBlocks {
@@ -215,7 +215,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []block.SignedBeaconBlo
 
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	for i, b := range blks {
-		isCanonical, err := s.cfg.Chain.IsCanonical(ctx, roots[i])
+		isCanonical, err := s.cfg.chain.IsCanonical(ctx, roots[i])
 		if err != nil {
 			return nil, err
 		}
@@ -247,11 +247,11 @@ func (s *Service) filterBlocks(ctx context.Context, blks []block.SignedBeaconBlo
 }
 
 func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream) {
-	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.P2P)
+	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.p2p)
 }
 
 func (s *Service) retrieveGenesisBlock(ctx context.Context) (block.SignedBeaconBlock, [32]byte, error) {
-	genBlock, err := s.cfg.DB.GenesisBlock(ctx)
+	genBlock, err := s.cfg.beaconDB.GenesisBlock(ctx)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}

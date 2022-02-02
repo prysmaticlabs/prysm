@@ -7,9 +7,9 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/patrickmn/go-cache"
 	types "github.com/prysmaticlabs/eth2-types"
-	lruwrpr "github.com/prysmaticlabs/prysm/shared/lru"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/container/slice"
 )
 
 type subnetIDs struct {
@@ -44,7 +44,7 @@ func (s *subnetIDs) AddAttesterSubnetID(slot types.Slot, subnetID uint64) {
 	ids := []uint64{subnetID}
 	val, exists := s.attester.Get(slot)
 	if exists {
-		ids = sliceutil.UnionUint64(append(val.([]uint64), ids...))
+		ids = slice.UnionUint64(append(val.([]uint64), ids...))
 	}
 	s.attester.Add(slot, ids)
 }
@@ -72,7 +72,7 @@ func (s *subnetIDs) AddAggregatorSubnetID(slot types.Slot, subnetID uint64) {
 	ids := []uint64{subnetID}
 	val, exists := s.aggregator.Get(slot)
 	if exists {
-		ids = sliceutil.UnionUint64(append(val.([]uint64), ids...))
+		ids = slice.UnionUint64(append(val.([]uint64), ids...))
 	}
 	s.aggregator.Add(slot, ids)
 }
@@ -117,7 +117,7 @@ func (s *subnetIDs) GetAllSubnets() []uint64 {
 		}
 		committees = append(committees, v.Object.([]uint64)...)
 	}
-	return sliceutil.SetUint64(committees)
+	return slice.SetUint64(committees)
 }
 
 // AddPersistentCommittee adds the relevant committee for that particular validator along with its

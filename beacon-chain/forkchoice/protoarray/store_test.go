@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStore_PruneThreshold(t *testing.T) {
@@ -185,7 +185,7 @@ func TestStore_ApplyScoreChanges_InvalidDeltaLength(t *testing.T) {
 	s := &Store{}
 
 	// This will fail because node indices has length of 0, and delta list has a length of 1.
-	err := s.applyWeightChanges(context.Background(), 0, 0, []int{1})
+	err := s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{1})
 	assert.ErrorContains(t, errInvalidDeltaLength.Error(), err)
 }
 
@@ -193,7 +193,7 @@ func TestStore_ApplyScoreChanges_UpdateEpochs(t *testing.T) {
 	s := &Store{}
 
 	// The justified and finalized epochs in Store should be updated to 1 and 1 given the following input.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 1, 1, []int{}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), 1, 1, []uint64{}, []int{}))
 	assert.Equal(t, types.Epoch(1), s.justifiedEpoch, "Did not update justified epoch")
 	assert.Equal(t, types.Epoch(1), s.finalizedEpoch, "Did not update finalized epoch")
 }
@@ -207,7 +207,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {
 
 	// Each node gets one unique vote. The weight should look like 103 <- 102 <- 101 because
 	// they get propagated back.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []int{1, 1, 1}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{1, 1, 1}))
 	assert.Equal(t, uint64(103), s.nodes[0].weight)
 	assert.Equal(t, uint64(102), s.nodes[1].weight)
 	assert.Equal(t, uint64(101), s.nodes[2].weight)
@@ -222,7 +222,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsNegativeDelta(t *testing.T) {
 
 	// Each node gets one unique vote which contributes to negative delta.
 	// The weight should look like 97 <- 98 <- 99 because they get propagated back.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []int{-1, -1, -1}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{-1, -1, -1}))
 	assert.Equal(t, uint64(97), s.nodes[0].weight)
 	assert.Equal(t, uint64(98), s.nodes[1].weight)
 	assert.Equal(t, uint64(99), s.nodes[2].weight)
@@ -236,7 +236,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsMixedDelta(t *testing.T) {
 		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
 
 	// Each node gets one mixed vote. The weight should look like 100 <- 200 <- 250.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []int{-100, -50, 150}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{-100, -50, 150}))
 	assert.Equal(t, uint64(100), s.nodes[0].weight)
 	assert.Equal(t, uint64(200), s.nodes[1].weight)
 	assert.Equal(t, uint64(250), s.nodes[2].weight)
@@ -399,11 +399,30 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	numOfNodes := 100
 	indices := make(map[[32]byte]uint64)
 	nodes := make([]*Node, 0)
-	for i := 0; i < numOfNodes; i++ {
+	nodes = append(nodes, &Node{
+		slot:           types.Slot(0),
+		root:           indexToHash(uint64(0)),
+		bestDescendant: uint64(numOfNodes - 1),
+		bestChild:      uint64(1),
+		parent:         NonExistentNode,
+	})
+	for i := 1; i < numOfNodes-1; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{slot: types.Slot(i), root: indexToHash(uint64(i)),
-			bestDescendant: NonExistentNode, bestChild: NonExistentNode})
+		nodes = append(nodes, &Node{
+			slot:           types.Slot(i),
+			root:           indexToHash(uint64(i)),
+			bestDescendant: uint64(numOfNodes - 1),
+			bestChild:      uint64(i + 1),
+			parent:         uint64(i) - 1,
+		})
 	}
+	nodes = append(nodes, &Node{
+		slot:           types.Slot(numOfNodes - 1),
+		root:           indexToHash(uint64(numOfNodes - 1)),
+		bestDescendant: NonExistentNode,
+		bestChild:      NonExistentNode,
+		parent:         uint64(numOfNodes - 2),
+	})
 
 	s := &Store{nodes: nodes, nodesIndices: indices}
 
@@ -417,6 +436,51 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	assert.Equal(t, 80, len(s.nodes), "Incorrect nodes count")
 	assert.Equal(t, 80, len(s.nodesIndices), "Incorrect node indices count")
 }
+
+// This unit tests starts with a simple branch like this
+//
+//       - 1
+//     /
+// -- 0 -- 2
+//
+// And we finalize 1. As a result only 1 should survive
+func TestStore_Prune_NoDanglingBranch(t *testing.T) {
+	nodes := []*Node{
+		{
+			slot:           100,
+			bestChild:      1,
+			bestDescendant: 1,
+			root:           indexToHash(uint64(0)),
+			parent:         NonExistentNode,
+		},
+		{
+			slot:           101,
+			root:           indexToHash(uint64(1)),
+			bestChild:      NonExistentNode,
+			bestDescendant: NonExistentNode,
+			parent:         0,
+		},
+		{
+			slot:           101,
+			root:           indexToHash(uint64(2)),
+			parent:         0,
+			bestChild:      NonExistentNode,
+			bestDescendant: NonExistentNode,
+		},
+	}
+	s := &Store{
+		pruneThreshold: 0,
+		nodes:          nodes,
+		nodesIndices: map[[32]byte]uint64{
+			indexToHash(uint64(0)): 0,
+			indexToHash(uint64(1)): 1,
+			indexToHash(uint64(2)): 2,
+		},
+	}
+	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
+	require.Equal(t, len(s.nodes), 1)
+}
+
 func TestStore_LeadsToViableHead(t *testing.T) {
 	tests := []struct {
 		n              *Node

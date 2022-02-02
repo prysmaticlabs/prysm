@@ -18,17 +18,17 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -36,20 +36,19 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	slashingiface "github.com/prysmaticlabs/prysm/validator/slashing-protection/iface"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// reconnectPeriod is the frequency that we try to restart our
-// slasher connection when the slasher client connection is not ready.
-var reconnectPeriod = 5 * time.Second
-
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
-var keyRefetchPeriod = 30 * time.Second
+var (
+	keyRefetchPeriod = 30 * time.Second
+)
 
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
@@ -66,28 +65,32 @@ type validator struct {
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	prevBalanceLock                    sync.RWMutex
 	slashableKeysLock                  sync.RWMutex
+	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
 	walletInitializedFeed              *event.Feed
-	blockFeed                          *event.Feed
-	genesisTime                        uint64
-	highestValidSlot                   types.Slot
-	domainDataCache                    *ristretto.Cache
-	aggregatedSlotCommitteeIDCache     *lru.Cache
-	ticker                             slotutil.Ticker
-	prevBalance                        map[[48]byte]uint64
-	duties                             *ethpb.DutiesResponse
-	startBalances                      map[[48]byte]uint64
 	attLogs                            map[[32]byte]*attSubmitted
+	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
+	duties                             *ethpb.DutiesResponse
+	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
+	graffitiOrderedIndex               uint64
+	aggregatedSlotCommitteeIDCache     *lru.Cache
+	domainDataCache                    *ristretto.Cache
+	highestValidSlot                   types.Slot
+	genesisTime                        uint64
+	blockFeed                          *event.Feed
+	interopKeysConfig                  *local.InteropKeymanagerConfig
+	wallet                             *wallet.Wallet
+	graffitiStruct                     *graffiti.Graffiti
 	node                               ethpb.NodeClient
-	keyManager                         keymanager.IKeymanager
-	beaconClient                       ethpb.BeaconChainClient
-	validatorClient                    ethpb.BeaconNodeValidatorClient
-	protector                          slashingiface.Protector
+	slashingProtectionClient           ethpb.SlasherClient
 	db                                 vdb.Database
+	beaconClient                       ethpb.BeaconChainClient
+	keyManager                         keymanager.IKeymanager
+	ticker                             slots.Ticker
+	validatorClient                    ethpb.BeaconNodeValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
-	graffitiStruct                     *graffiti.Graffiti
-	graffitiOrderedIndex               uint64
-	eipImportBlacklistedPublicKeys     map[[48]byte]bool
+	Web3SignerConfig                   *remote_web3signer.SetupConfig
+	walletIntializedChannel            chan *wallet.Wallet
 }
 
 type validatorStatus struct {
@@ -101,33 +104,114 @@ func (v *validator) Done() {
 	v.ticker.Done()
 }
 
-// WaitForWalletInitialization checks if the validator needs to wait for
-func (v *validator) WaitForWalletInitialization(ctx context.Context) error {
-	// This function should only run if we are using managing the
-	// validator client using the Prysm web UI.
-	if !v.useWeb {
-		return nil
+// WaitForKeymanagerInitialization checks if the validator needs to wait for
+func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
+	genesisRoot, err := v.db.GenesisValidatorsRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "unable to retrieve valid genesis validators root while initializing key manager")
 	}
-	if v.keyManager != nil {
-		return nil
+
+	if v.useWeb && v.wallet == nil {
+		// if wallet is not set, wait for it to be set through the UI
+		km, err := waitForWebWalletInitialization(ctx, v.walletInitializedFeed, v.walletIntializedChannel)
+		if err != nil {
+			return err
+		}
+		v.keyManager = km
+	} else {
+		if v.interopKeysConfig != nil {
+			keyManager, err := local.NewInteropKeymanager(ctx, v.interopKeysConfig.Offset, v.interopKeysConfig.NumValidatorKeys)
+			if err != nil {
+				return errors.Wrap(err, "could not generate interop keys for key manager")
+			}
+			v.keyManager = keyManager
+		} else if v.wallet == nil {
+			return errors.New("wallet not set")
+		} else {
+			if v.Web3SignerConfig != nil {
+				v.Web3SignerConfig.GenesisValidatorsRoot = genesisRoot
+			}
+			keyManager, err := v.wallet.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true, Web3SignerConfig: v.Web3SignerConfig})
+			if err != nil {
+				return errors.Wrap(err, "could not initialize key manager")
+			}
+			v.keyManager = keyManager
+		}
 	}
-	walletChan := make(chan *wallet.Wallet)
-	sub := v.walletInitializedFeed.Subscribe(walletChan)
+	recheckKeys(ctx, v.db, v.keyManager)
+	return nil
+}
+
+// subscribe to channel for when the wallet is initialized
+func waitForWebWalletInitialization(
+	ctx context.Context,
+	walletInitializedEvent *event.Feed,
+	walletChan chan *wallet.Wallet,
+) (keymanager.IKeymanager, error) {
+	sub := walletInitializedEvent.Subscribe(walletChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case w := <-walletChan:
 			keyManager, err := w.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
 			if err != nil {
-				return errors.Wrap(err, "could not read keymanager")
+				return nil, errors.Wrap(err, "could not read keymanager")
 			}
-			v.keyManager = keyManager
-			return nil
+			return keyManager, nil
 		case <-ctx.Done():
-			return errors.New("context canceled")
+			return nil, errors.New("context canceled")
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
-			return nil
+			return nil, nil
+		}
+	}
+}
+
+// recheckKeys checks if the validator has any keys that need to be rechecked.
+// the keymanager implements a subscription to push these updates to the validator.
+func recheckKeys(ctx context.Context, valDB vdb.Database, keyManager keymanager.IKeymanager) {
+	var validatingKeys [][fieldparams.BLSPubkeyLength]byte
+	var err error
+	validatingKeys, err = keyManager.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		log.WithError(err).Debug("Could not fetch validating keys")
+	}
+	if err := valDB.UpdatePublicKeysBuckets(validatingKeys); err != nil {
+		log.WithError(err).Debug("Could not update public keys buckets")
+	}
+	go recheckValidatingKeysBucket(ctx, valDB, keyManager)
+	for _, key := range validatingKeys {
+		log.WithField(
+			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
+		).Info("Validating for public key")
+	}
+}
+
+// to accounts changes in the keymanager, then updates those keys'
+// buckets in bolt DB if a bucket for a key does not exist.
+func recheckValidatingKeysBucket(ctx context.Context, valDB vdb.Database, km keymanager.IKeymanager) {
+	importedKeymanager, ok := km.(*local.Keymanager)
+	if !ok {
+		return
+	}
+	validatingPubKeysChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
+	sub := importedKeymanager.SubscribeAccountChanges(validatingPubKeysChan)
+	defer func() {
+		sub.Unsubscribe()
+		close(validatingPubKeysChan)
+	}()
+	for {
+		select {
+		case keys := <-validatingPubKeysChan:
+			if err := valDB.UpdatePublicKeysBuckets(keys); err != nil {
+				log.WithError(err).Debug("Could not update public keys buckets")
+				continue
+			}
+		case <-ctx.Done():
+			return
+		case <-sub.Err():
+			log.Error("Subscriber closed, exiting goroutine")
+			return
 		}
 	}
 }
@@ -188,7 +272,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slotutil.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 	return nil
 }
@@ -209,7 +293,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	for {
 		select {
 		// Poll every half slot.
-		case <-time.After(slotutil.DivideSlotBy(2 /* twice per slot */)):
+		case <-time.After(slots.DivideSlotBy(2 /* twice per slot */)):
 			s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
 				return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
@@ -222,37 +306,6 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 			return errors.New("context has been canceled, exiting goroutine")
 		}
 	}
-}
-
-// SlasherReady checks if slasher that was configured as external protection
-// is reachable.
-func (v *validator) SlasherReady(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "validator.SlasherReady")
-	defer span.End()
-	if featureconfig.Get().SlasherProtection {
-		err := v.protector.Status()
-		if err == nil {
-			return nil
-		}
-		ticker := time.NewTicker(reconnectPeriod)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				log.WithError(err).Info("Slasher connection wasn't ready. Trying again")
-				err = v.protector.Status()
-				if err != nil {
-					continue
-				}
-				log.Info("Slasher connection is ready")
-				return nil
-			case <-ctx.Done():
-				log.Debug("Context closed, exiting reconnect external protection")
-				return ctx.Err()
-			}
-		}
-	}
-	return nil
 }
 
 // ReceiveBlocks starts a gRPC client stream listener to obtain
@@ -392,7 +445,7 @@ func (v *validator) SlotDeadline(slot types.Slot) time.Time {
 // CheckDoppelGanger checks if the current actively provided keys have
 // any duplicates active in the network.
 func (v *validator) CheckDoppelGanger(ctx context.Context) error {
-	if !featureconfig.Get().EnableDoppelGanger {
+	if !features.Get().EnableDoppelGanger {
 		return nil
 	}
 	pubkeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
@@ -418,7 +471,7 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 				&ethpb.DoppelGangerRequest_ValidatorRequest{
 					PublicKey:  copiedKey[:],
 					Epoch:      0,
-					SignedRoot: make([]byte, 32),
+					SignedRoot: make([]byte, fieldparams.RootLength),
 				})
 			continue
 		}
@@ -445,11 +498,11 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 	return buildDuplicateError(resp.Responses)
 }
 
-func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorResponse) error {
+func buildDuplicateError(response []*ethpb.DoppelGangerResponse_ValidatorResponse) error {
 	duplicates := make([][]byte, 0)
-	for _, valRes := range respones {
+	for _, valRes := range response {
 		if valRes.DuplicateExists {
-			copiedKey := [48]byte{}
+			copiedKey := [fieldparams.BLSPubkeyLength]byte{}
 			copy(copiedKey[:], valRes.PublicKey)
 			duplicates = append(duplicates, copiedKey[:])
 		}
@@ -460,7 +513,7 @@ func buildDuplicateError(respones []*ethpb.DoppelGangerResponse_ValidatorRespons
 	return errors.Errorf("Duplicate instances exists in the network for validator keys: %#x", duplicates)
 }
 
-// Ensures that the latest attestion history is retrieved.
+// Ensures that the latest attestation history is retrieved.
 func retrieveLatestRecord(recs []*kv.AttestationRecord) *kv.AttestationRecord {
 	if len(recs) == 0 {
 		return nil
@@ -492,7 +545,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 		return nil
 	}
 	// Set deadline to end of epoch.
-	ss, err := core.StartSlot(core.SlotToEpoch(slot) + 1)
+	ss, err := slots.EpochStart(slots.ToEpoch(slot) + 1)
 	if err != nil {
 		return err
 	}
@@ -507,7 +560,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 	}
 
 	// Filter out the slashable public keys from the duties request.
-	filteredKeys := make([][48]byte, 0, len(validatingKeys))
+	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0, len(validatingKeys))
 	v.slashableKeysLock.RLock()
 	for _, pubKey := range validatingKeys {
 		if ok := v.eipImportBlacklistedPublicKeys[pubKey]; !ok {
@@ -616,8 +669,8 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte][]iface.ValidatorRole, error) {
-	rolesAt := make(map[[48]byte][]iface.ValidatorRole)
+func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole, error) {
+	rolesAt := make(map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole)
 	for validator, duty := range v.duties.Duties {
 		var roles []iface.ValidatorRole
 
@@ -649,7 +702,7 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 		// broadcasts signatures for `slot - 1` for inclusion in `slot`. At the last slot of the epoch,
 		// the validator checks whether it's in the sync committee of following epoch.
 		inSyncCommittee := false
-		if core.IsEpochEnd(slot) {
+		if slots.IsEpochEnd(slot) {
 			if v.duties.NextEpochDuties[validator].IsSyncCommittee {
 				roles = append(roles, iface.RoleSyncCommittee)
 				inSyncCommittee = true
@@ -674,21 +727,24 @@ func (v *validator) RolesAt(ctx context.Context, slot types.Slot) (map[[48]byte]
 			roles = append(roles, iface.RoleUnknown)
 		}
 
-		var pubKey [48]byte
+		var pubKey [fieldparams.BLSPubkeyLength]byte
 		copy(pubKey[:], duty.PublicKey)
 		rolesAt[pubKey] = roles
 	}
 	return rolesAt, nil
 }
 
-// GetKeymanager returns the underlying validator's keymanager.
-func (v *validator) GetKeymanager() keymanager.IKeymanager {
-	return v.keyManager
+// Keymanager returns the underlying validator's keymanager.
+func (v *validator) Keymanager() (keymanager.IKeymanager, error) {
+	if v.keyManager == nil {
+		return nil, errors.New("keymanager is not initialized")
+	}
+	return v.keyManager, nil
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot and committee,
 // it uses a modulo calculated by validator count in committee and samples randomness around it.
-func (v *validator) isAggregator(ctx context.Context, committee []types.ValidatorIndex, slot types.Slot, pubKey [48]byte) (bool, error) {
+func (v *validator) isAggregator(ctx context.Context, committee []types.ValidatorIndex, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
@@ -699,7 +755,7 @@ func (v *validator) isAggregator(ctx context.Context, committee []types.Validato
 		return false, err
 	}
 
-	b := hashutil.Hash(slotSig)
+	b := hash.Hash(slotSig)
 
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
 }
@@ -711,7 +767,7 @@ func (v *validator) isAggregator(ctx context.Context, committee []types.Validato
 // def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
 //    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
-func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Slot, pubKey [48]byte) (bool, error) {
+func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) (bool, error) {
 	res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,
@@ -751,7 +807,7 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot types.Slot)
 		params.BeaconConfig().DomainSelectionProof[:],
 		params.BeaconConfig().DomainAggregateAndProof[:],
 	} {
-		_, err := v.domainData(ctx, core.SlotToEpoch(slot), d)
+		_, err := v.domainData(ctx, slots.ToEpoch(slot), d)
 		if err != nil {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
@@ -883,14 +939,11 @@ func validatorSubscribeKey(slot types.Slot, committeeID types.CommitteeIndex) [6
 
 // This tracks all validators' voting status.
 type voteStats struct {
-	startEpoch            types.Epoch
-	includedAttestedCount uint64
-	totalAttestedCount    uint64
-	totalDistance         types.Slot
-	correctSources        uint64
-	totalSources          uint64
-	correctTargets        uint64
-	totalTargets          uint64
-	correctHeads          uint64
-	totalHeads            uint64
+	startEpoch          types.Epoch
+	totalAttestedCount  uint64
+	totalRequestedCount uint64
+	totalDistance       types.Slot
+	totalCorrectSource  uint64
+	totalCorrectTarget  uint64
+	totalCorrectHead    uint64
 }

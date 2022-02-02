@@ -7,11 +7,11 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -221,7 +221,7 @@ func (q *blocksQueue) loop() {
 						"highestExpectedSlot":       q.highestExpectedSlot,
 						"noRequiredPeersErrRetries": q.exitConditions.noRequiredPeersErrRetries,
 						"event":                     eventTick,
-						"epoch":                     core.SlotToEpoch(fsm.start),
+						"epoch":                     slots.ToEpoch(fsm.start),
 						"start":                     fsm.start,
 						"error":                     err.Error(),
 					}).Debug("Can not trigger event")
@@ -263,7 +263,7 @@ func (q *blocksQueue) loop() {
 				if err := fsm.trigger(eventDataReceived, response); err != nil {
 					log.WithFields(logrus.Fields{
 						"event": eventDataReceived,
-						"epoch": core.SlotToEpoch(fsm.start),
+						"epoch": slots.ToEpoch(fsm.start),
 						"error": err.Error(),
 					}).Debug("Can not process event")
 					fsm.setState(stateNew)
@@ -419,16 +419,16 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		// All machines are skipped, FSMs need reset.
 		startSlot := q.chain.HeadSlot() + 1
 		if q.mode == modeNonConstrained && startSlot > bestFinalizedSlot {
-			q.staleEpochs[core.SlotToEpoch(startSlot)]++
+			q.staleEpochs[slots.ToEpoch(startSlot)]++
 			// If FSMs have been reset enough times, try to explore alternative forks.
-			if q.staleEpochs[core.SlotToEpoch(startSlot)] >= maxResetAttempts {
-				delete(q.staleEpochs, core.SlotToEpoch(startSlot))
+			if q.staleEpochs[slots.ToEpoch(startSlot)] >= maxResetAttempts {
+				delete(q.staleEpochs, slots.ToEpoch(startSlot))
 				fork, err := q.blocksFetcher.findFork(ctx, startSlot)
 				if err == nil {
 					return stateSkipped, q.resetFromFork(ctx, fork)
 				}
 				log.WithFields(logrus.Fields{
-					"epoch": core.SlotToEpoch(startSlot),
+					"epoch": slots.ToEpoch(startSlot),
 					"error": err.Error(),
 				}).Debug("Can not explore alternative branches")
 			}
@@ -439,7 +439,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 // onCheckStaleEvent is an event that allows to mark stale epochs,
 // so that they can be re-processed.
-func (q *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
+func (_ *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()

@@ -13,8 +13,7 @@ import (
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	types "github.com/prysmaticlabs/eth2-types"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -22,11 +21,12 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
@@ -55,17 +55,17 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 	}{
 		{
 			name: "Is syncing",
-			svc: NewService(context.Background(), &Config{
-				P2P:               mockp2p.NewTestP2P(t),
-				InitialSync:       &mockSync.Sync{IsSyncing: true},
-				Chain:             chainService,
-				StateNotifier:     chainService.StateNotifier(),
-				OperationNotifier: chainService.OperationNotifier(),
-			}),
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: true}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB)
 				msg.BlockRoot = headRoot[:]
-				s.cfg.DB = beaconDB
+				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				return s, topic
 			},
@@ -83,17 +83,17 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		},
 		{
 			name: "Bad Topic",
-			svc: NewService(context.Background(), &Config{
-				P2P:               mockp2p.NewTestP2P(t),
-				InitialSync:       &mockSync.Sync{IsSyncing: false},
-				Chain:             chainService,
-				StateNotifier:     chainService.StateNotifier(),
-				OperationNotifier: chainService.OperationNotifier(),
-			}),
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB)
 				msg.BlockRoot = headRoot[:]
-				s.cfg.DB = beaconDB
+				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				return s, topic
 			},
@@ -111,16 +111,16 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		},
 		{
 			name: "Future Slot Message",
-			svc: NewService(context.Background(), &Config{
-				P2P:               mockp2p.NewTestP2P(t),
-				InitialSync:       &mockSync.Sync{IsSyncing: false},
-				Chain:             chainService,
-				StateNotifier:     chainService.StateNotifier(),
-				OperationNotifier: chainService.OperationNotifier(),
-			}),
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(beaconDB)
-				s.cfg.DB = beaconDB
+				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				return s, topic
 			},
@@ -138,16 +138,16 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		},
 		{
 			name: "Already Seen Message",
-			svc: NewService(context.Background(), &Config{
-				P2P:               mockp2p.NewTestP2P(t),
-				InitialSync:       &mockSync.Sync{IsSyncing: false},
-				Chain:             chainService,
-				StateNotifier:     chainService.StateNotifier(),
-				OperationNotifier: chainService.OperationNotifier(),
-			}),
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(beaconDB)
-				s.cfg.DB = beaconDB
+				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 
 				s.setSeenSyncMessageIndexSlot(1, 1, 0)
@@ -167,18 +167,18 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		},
 		{
 			name: "Non-existent block root",
-			svc: NewService(context.Background(), &Config{
-				P2P:               mockp2p.NewTestP2P(t),
-				InitialSync:       &mockSync.Sync{IsSyncing: false},
-				Chain:             chainService,
-				StateNotifier:     chainService.StateNotifier(),
-				OperationNotifier: chainService.OperationNotifier(),
-			}),
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(beaconDB)
-				s.cfg.DB = beaconDB
+				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.beaconDB = beaconDB
 				s.initCaches()
-				s.cfg.Chain = &mockChain.ChainService{
+				s.cfg.chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
 					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(10)),
 				}
@@ -201,24 +201,24 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		},
 		{
 			name: "Subnet is non-existent",
-			svc: NewService(context.Background(), &Config{
-				P2P:               mockp2p.NewTestP2P(t),
-				InitialSync:       &mockSync.Sync{IsSyncing: false},
-				Chain:             chainService,
-				StateNotifier:     chainService.StateNotifier(),
-				OperationNotifier: chainService.OperationNotifier(),
-			}),
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(beaconDB)
-				s.cfg.DB = beaconDB
+				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
 				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
-				s.cfg.Chain = &mockChain.ChainService{
-					CurrentSyncCommitteeIndices: []types.CommitteeIndex{0},
-					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+				s.cfg.chain = &mockChain.ChainService{
+					SyncCommitteeIndices: []types.CommitteeIndex{0},
+					ValidatorsRoot:       [32]byte{'A'},
+					Genesis:              time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 				}
 				numOfVals := hState.NumValidators()
 
@@ -226,7 +226,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Signature = emptySig[:]
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
-				msg.Slot = core.PrevSlot(hState.Slot())
+				msg.Slot = slots.PrevSlot(hState.Slot())
 
 				// Set Bad Topic and Subnet
 				digest, err := s.currentForkDigest()
@@ -249,21 +249,21 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		},
 		{
 			name: "Validator is non-existent",
-			svc: NewService(context.Background(), &Config{
-				P2P:               mockp2p.NewTestP2P(t),
-				InitialSync:       &mockSync.Sync{IsSyncing: false},
-				Chain:             chainService,
-				StateNotifier:     chainService.StateNotifier(),
-				OperationNotifier: chainService.OperationNotifier(),
-			}),
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(beaconDB)
-				s.cfg.DB = beaconDB
+				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
 				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
-				s.cfg.Chain = &mockChain.ChainService{
+				s.cfg.chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
 					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 				}
@@ -274,7 +274,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Signature = emptySig[:]
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
-				msg.Slot = core.PrevSlot(hState.Slot())
+				msg.Slot = slots.PrevSlot(hState.Slot())
 
 				digest, err := s.currentForkDigest()
 				assert.NoError(t, err)
@@ -296,16 +296,16 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		},
 		{
 			name: "Invalid Sync Committee Signature",
-			svc: NewService(context.Background(), &Config{
-				P2P:               mockp2p.NewTestP2P(t),
-				InitialSync:       &mockSync.Sync{IsSyncing: false},
-				Chain:             chainService,
-				StateNotifier:     chainService.StateNotifier(),
-				OperationNotifier: chainService.OperationNotifier(),
-			}),
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(beaconDB)
-				s.cfg.DB = beaconDB
+				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
 				hState, err := beaconDB.State(context.Background(), headRoot)
@@ -317,17 +317,17 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				msg.Signature = emptySig[:]
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
-				msg.Slot = core.PrevSlot(hState.Slot())
+				msg.Slot = slots.PrevSlot(hState.Slot())
 
-				d, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-				s.cfg.Chain = &mockChain.ChainService{
-					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
-					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
-					SyncCommitteeDomain:         d,
-					PublicKey:                   bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
+				s.cfg.chain = &mockChain.ChainService{
+					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
+					ValidatorsRoot:       [32]byte{'A'},
+					Genesis:              time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					SyncCommitteeDomain:  d,
+					PublicKey:            bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
 				}
 
 				// Set Topic and Subnet
@@ -351,16 +351,16 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		},
 		{
 			name: "Valid Sync Committee Signature",
-			svc: NewService(context.Background(), &Config{
-				P2P:               mockp2p.NewTestP2P(t),
-				InitialSync:       &mockSync.Sync{IsSyncing: false},
-				Chain:             chainService,
-				StateNotifier:     chainService.StateNotifier(),
-				OperationNotifier: chainService.OperationNotifier(),
-			}),
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.StateGen = stategen.New(beaconDB)
-				s.cfg.DB = beaconDB
+				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
 				hState, err := beaconDB.State(context.Background(), headRoot)
@@ -370,24 +370,24 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				numOfVals := hState.NumValidators()
 
 				chosenVal := numOfVals - 10
-				d, err := helpers.Domain(hState.Fork(), core.SlotToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
+				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorRoot())
 				assert.NoError(t, err)
 				rawBytes := p2ptypes.SSZBytes(headRoot[:])
-				sigRoot, err := helpers.ComputeSigningRoot(&rawBytes, d)
+				sigRoot, err := signing.ComputeSigningRoot(&rawBytes, d)
 				assert.NoError(t, err)
 
-				s.cfg.Chain = &mockChain.ChainService{
-					CurrentSyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
-					ValidatorsRoot:              [32]byte{'A'},
-					Genesis:                     time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
-					SyncCommitteeDomain:         d,
-					PublicKey:                   bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
+				s.cfg.chain = &mockChain.ChainService{
+					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
+					ValidatorsRoot:       [32]byte{'A'},
+					Genesis:              time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
+					SyncCommitteeDomain:  d,
+					PublicKey:            bytesutil.ToBytes48(keys[chosenVal].PublicKey().Marshal()),
 				}
 
 				msg.Signature = keys[chosenVal].Sign(sigRoot[:]).Marshal()
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
-				msg.Slot = core.PrevSlot(hState.Slot())
+				msg.Slot = slots.PrevSlot(hState.Slot())
 
 				// Set Topic and Subnet
 				digest, err := s.currentForkDigest()
@@ -423,7 +423,8 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ReceivedFrom:  "",
 				ValidatorData: nil,
 			}
-			if got := tt.svc.validateSyncCommitteeMessage(tt.args.ctx, tt.args.pid, msg); got != tt.want {
+			if got, err := tt.svc.validateSyncCommitteeMessage(tt.args.ctx, tt.args.pid, msg); got != tt.want {
+				_ = err
 				t.Errorf("validateSyncCommitteeMessage() = %v, want %v", got, tt.want)
 			}
 		})
@@ -466,7 +467,8 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 			s := &Service{}
 			s, _ = tt.setupSvc(s, tt.msg, "")
 			f := s.ignoreHasSeenSyncMsg(tt.msg, tt.committee)
-			result := f(context.Background())
+			result, err := f(context.Background())
+			_ = err
 			require.Equal(t, tt.want, result)
 		})
 	}
@@ -475,15 +477,15 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 	tests := []struct {
 		name             string
-		cfg              *Config
+		cfg              *config
 		setupTopic       func(s *Service) string
 		committeeIndices []types.CommitteeIndex
 		want             pubsub.ValidationResult
 	}{
 		{
 			name: "invalid",
-			cfg: &Config{
-				Chain: &mockChain.ChainService{
+			cfg: &config{
+				chain: &mockChain.ChainService{
 					Genesis:        time.Now(),
 					ValidatorsRoot: [32]byte{1},
 				},
@@ -496,8 +498,8 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 		},
 		{
 			name: "valid",
-			cfg: &Config{
-				Chain: &mockChain.ChainService{
+			cfg: &config{
+				chain: &mockChain.ChainService{
 					Genesis:        time.Now(),
 					ValidatorsRoot: [32]byte{1},
 				},
@@ -521,7 +523,8 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 			}
 			topic := tt.setupTopic(s)
 			f := s.rejectIncorrectSyncCommittee(tt.committeeIndices, topic)
-			result := f(context.Background())
+			result, err := f(context.Background())
+			_ = err
 			require.Equal(t, tt.want, result)
 		})
 	}
@@ -552,7 +555,8 @@ func Test_ignoreEmptyCommittee(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := ignoreEmptyCommittee(tt.committee)
-			result := f(context.Background())
+			result, err := f(context.Background())
+			_ = err
 			require.Equal(t, tt.want, result)
 		})
 	}

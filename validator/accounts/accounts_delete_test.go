@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 )
 
 func TestDeleteAccounts_Noninteractive(t *testing.T) {
@@ -33,11 +33,11 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	// Only delete keys 0 and 1.
 	deletePublicKeys := strings.Join(generatedPubKeys[0:2], ",")
 
-	// We initialize a wallet with a imported keymanager.
+	// We initialize a wallet with a local keymanager.
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flags required for ImportAccounts to work.
@@ -48,7 +48,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})
@@ -60,9 +60,9 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	// We attempt to delete the accounts specified.
 	require.NoError(t, DeleteAccountCli(cliCtx))
 
-	keymanager, err := imported.NewKeymanager(
+	keymanager, err := local.NewKeymanager(
 		cliCtx.Context,
-		&imported.SetupConfig{
+		&local.SetupConfig{
 			Wallet:           w,
 			ListenForChanges: false,
 		},

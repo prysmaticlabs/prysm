@@ -7,8 +7,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -17,7 +17,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.Chain, s.cfg.P2P, id, blockRoots, func(blk block.SignedBeaconBlock) error {
+	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.chain, s.cfg.p2p, id, blockRoots, func(blk block.SignedBeaconBlock) error {
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
@@ -62,7 +62,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	s.rateLimiter.add(stream, int64(len(blockRoots)))
 
 	for _, root := range blockRoots {
-		blk, err := s.cfg.DB.Block(ctx, root)
+		blk, err := s.cfg.beaconDB.Block(ctx, root)
 		if err != nil {
 			log.WithError(err).Debug("Could not fetch block")
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)

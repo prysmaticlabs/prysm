@@ -45,7 +45,7 @@ service BeaconValidator {
   //  - 503: Beacon node is currently syncing, try again later
   rpc GetAttesterDuties(v1.AttesterDutiesRequest) returns (v1.AttesterDutiesResponse) {
     option (google.api.http) = {
-      post: "/eth/v1/validator/duties/attester/{epoch}"
+      post: "/internal/eth/v1/validator/duties/attester/{epoch}"
       body: "*"
     };
   }
@@ -59,7 +59,7 @@ service BeaconValidator {
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
   rpc GetProposerDuties(v1.ProposerDutiesRequest) returns (v1.ProposerDutiesResponse) {
-    option (google.api.http) = { get: "/eth/v1/validator/duties/proposer/{epoch}" };
+    option (google.api.http) = { get: "/internal/eth/v1/validator/duties/proposer/{epoch}" };
   }
 
   // GetSyncCommitteeDuties requests the beacon node to provide a set of sync committee duties for a particular epoch.
@@ -71,7 +71,7 @@ service BeaconValidator {
   //  - 503: Beacon node is currently syncing, try again later
   rpc GetSyncCommitteeDuties(v2.SyncCommitteeDutiesRequest) returns (v2.SyncCommitteeDutiesResponse) {
     option (google.api.http) = {
-      post: "/eth/v1/validator/duties/sync/{epoch}"
+      post: "/internal/eth/v1/validator/duties/sync/{epoch}"
       body: "*"
     };
   }
@@ -85,7 +85,7 @@ service BeaconValidator {
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
   rpc ProduceBlock(v1.ProduceBlockRequest) returns (v1.ProduceBlockResponse) {
-    option (google.api.http) = { get: "/eth/v1/validator/blocks/{slot}" };
+    option (google.api.http) = { get: "/internal/eth/v1/validator/blocks/{slot}" };
   }
 
 
@@ -98,7 +98,7 @@ service BeaconValidator {
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
   rpc ProduceBlockV2(v1.ProduceBlockRequest) returns (v2.ProduceBlockResponseV2) {
-    option (google.api.http) = { get: "/eth/v2/validator/blocks/{slot}" };
+    option (google.api.http) = { get: "/internal/eth/v2/validator/blocks/{slot}" };
   }
 
   // ProduceAttestationData requests that the beacon node produces attestation data for
@@ -110,7 +110,7 @@ service BeaconValidator {
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
   rpc ProduceAttestationData(v1.ProduceAttestationDataRequest) returns (v1.ProduceAttestationDataResponse) {
-    option (google.api.http) = { get: "/eth/v1/validator/attestation_data" };
+    option (google.api.http) = { get: "/internal/eth/v1/validator/attestation_data" };
   }
 
   // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot,
@@ -121,7 +121,7 @@ service BeaconValidator {
   // - 400: Invalid request syntax
   // - 500: Beacon node internal error
   rpc GetAggregateAttestation(v1.AggregateAttestationRequest) returns (v1.AggregateAttestationResponse) {
-    option (google.api.http) = { get: "/eth/v1/validator/aggregate_attestation" };
+    option (google.api.http) = { get: "/internal/eth/v1/validator/aggregate_attestation" };
   }
 
   // SubmitAggregateAndProofs verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
@@ -132,7 +132,7 @@ service BeaconValidator {
   // - 500: Beacon node internal error
   rpc SubmitAggregateAndProofs(v1.SubmitAggregateAndProofsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      post: "/eth/v1/validator/aggregate_and_proofs"
+      post: "/internal/eth/v1/validator/aggregate_and_proofs"
       body: "*"
     };
   }
@@ -152,7 +152,7 @@ service BeaconValidator {
   // - 503: Beacon node is currently syncing, try again later
   rpc SubmitBeaconCommitteeSubscription(v1.SubmitBeaconCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      post: "/eth/v1/validator/beacon_committee_subscriptions"
+      post: "/internal/eth/v1/validator/beacon_committee_subscriptions"
       body: "*"
     };
   }
@@ -165,7 +165,7 @@ service BeaconValidator {
   // - 500: Beacon node internal error
   rpc SubmitSyncCommitteeSubscription(v2.SubmitSyncCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      post: "/eth/v1/validator/sync_committee_subscriptions"
+      post: "/internal/eth/v1/validator/sync_committee_subscriptions"
       body: "*"
     };
   }
@@ -178,7 +178,7 @@ service BeaconValidator {
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
   rpc ProduceSyncCommitteeContribution(v2.ProduceSyncCommitteeContributionRequest) returns (v2.ProduceSyncCommitteeContributionResponse) {
-    option (google.api.http) = { get: "/eth/v1/validator/sync_committee_contribution" };
+    option (google.api.http) = { get: "/internal/eth/v1/validator/sync_committee_contribution" };
   }
 
   // SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
@@ -189,7 +189,7 @@ service BeaconValidator {
   // - 500: Beacon node internal error
   rpc SubmitContributionAndProofs(v2.SubmitContributionAndProofsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      post: "/eth/v1/validator/contribution_and_proofs"
+      post: "/internal/eth/v1/validator/contribution_and_proofs"
       body: "*"
     };
   }

@@ -6,13 +6,13 @@ import (
 	"path"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/fileutil"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/io/file"
 )
 
 // WriteStateToDisk as a state ssz. Writes to temp directory. Debug!
 func WriteStateToDisk(state state.ReadOnlyBeaconState) {
-	if !featureconfig.Get().WriteSSZStateTransitions {
+	if !features.Get().WriteSSZStateTransitions {
 		return
 	}
 	fp := path.Join(os.TempDir(), fmt.Sprintf("beacon_state_%d.ssz", state.Slot()))
@@ -22,7 +22,7 @@ func WriteStateToDisk(state state.ReadOnlyBeaconState) {
 		log.WithError(err).Error("Failed to ssz encode state")
 		return
 	}
-	if err := fileutil.WriteFile(fp, enc); err != nil {
+	if err := file.WriteFile(fp, enc); err != nil {
 		log.WithError(err).Error("Failed to write to disk")
 	}
 }

@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStore_EIPBlacklistedPublicKeys(t *testing.T) {
 	ctx := context.Background()
 	numValidators := 100
-	publicKeys := make([][48]byte, numValidators)
+	publicKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	for i := 0; i < numValidators; i++ {
-		key := [48]byte{}
+		key := [fieldparams.BLSPubkeyLength]byte{}
 		copy(key[:], fmt.Sprintf("%d", i))
 		publicKeys[i] = key
 	}
@@ -32,7 +33,7 @@ func TestStore_EIPBlacklistedPublicKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	// Keys are not guaranteed to be ordered, so we create a map for comparisons.
-	want := make(map[[48]byte]bool)
+	want := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	for _, pubKey := range publicKeys[:50] {
 		want[pubKey] = true
 	}

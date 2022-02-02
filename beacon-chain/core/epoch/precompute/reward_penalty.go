@@ -3,11 +3,11 @@ package precompute
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/math"
 )
 
 type attesterRewardsFunc func(state.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, []uint64, error)
@@ -23,7 +23,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	proRewardsFunc proposerRewardsFunc,
 ) (state.BeaconState, error) {
 	// Can't process rewards and penalties in genesis epoch.
-	if core.CurrentEpoch(state) == 0 {
+	if time.CurrentEpoch(state) == 0 {
 		return state, nil
 	}
 
@@ -47,7 +47,10 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 		// Compute the post balance of the validator after accounting for the
 		// attester and proposer rewards and penalties.
-		validatorBals[i] = helpers.IncreaseBalanceWithVal(validatorBals[i], attsRewards[i]+proposerRewards[i])
+		validatorBals[i], err = helpers.IncreaseBalanceWithVal(validatorBals[i], attsRewards[i]+proposerRewards[i])
+		if err != nil {
+			return nil, err
+		}
 		validatorBals[i] = helpers.DecreaseBalanceWithVal(validatorBals[i], attsPenalties[i])
 
 		vp[i].AfterEpochTransitionBalance = validatorBals[i]
@@ -66,10 +69,10 @@ func AttestationsDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Val
 	numOfVals := state.NumValidators()
 	rewards := make([]uint64, numOfVals)
 	penalties := make([]uint64, numOfVals)
-	prevEpoch := core.PrevEpoch(state)
+	prevEpoch := time.PrevEpoch(state)
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 
-	sqrtActiveCurrentEpoch := mathutil.IntegerSquareRoot(pBal.ActiveCurrentEpoch)
+	sqrtActiveCurrentEpoch := math.IntegerSquareRoot(pBal.ActiveCurrentEpoch)
 	for i, v := range vp {
 		rewards[i], penalties[i] = attestationDelta(pBal, sqrtActiveCurrentEpoch, v, prevEpoch, finalizedEpoch)
 	}
@@ -158,7 +161,7 @@ func ProposersDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Valida
 	rewards := make([]uint64, numofVals)
 
 	totalBalance := pBal.ActiveCurrentEpoch
-	balanceSqrt := mathutil.IntegerSquareRoot(totalBalance)
+	balanceSqrt := math.IntegerSquareRoot(totalBalance)
 	// Balance square root cannot be 0, this prevents division by 0.
 	if balanceSqrt == 0 {
 		balanceSqrt = 1

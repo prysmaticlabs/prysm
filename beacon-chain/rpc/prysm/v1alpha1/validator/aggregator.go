@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -37,8 +38,8 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
 
-	epoch := core.SlotToEpoch(req.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(st, epoch)
+	epoch := slots.ToEpoch(req.Slot)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(ctx, st, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
 	}
@@ -46,7 +47,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
 	}
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
+	committee, err := helpers.BeaconCommittee(ctx, activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +118,7 @@ func (vs *Server) SubmitSignedAggregateSelectionProof(
 		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
 		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
 	}
-	emptySig := make([]byte, params.BeaconConfig().BLSSignatureLength)
+	emptySig := make([]byte, fieldparams.BLSSignatureLength)
 	if bytes.Equal(req.SignedAggregateAndProof.Signature, emptySig) ||
 		bytes.Equal(req.SignedAggregateAndProof.Message.SelectionProof, emptySig) {
 		return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")

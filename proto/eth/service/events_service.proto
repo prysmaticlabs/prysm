@@ -34,7 +34,7 @@ option php_namespace = "Ethereum\\Eth\\Service";
 service Events {
     rpc StreamEvents(v1.StreamEventsRequest) returns (stream gateway.EventSource) {
         option (google.api.http) = {
-            get: "/eth/v1/events"
+            get: "/internal/eth/v1/events"
         };
     }
 }

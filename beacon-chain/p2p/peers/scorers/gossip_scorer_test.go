@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestScorers_Gossip_Score(t *testing.T) {
@@ -30,10 +30,10 @@ func TestScorers_Gossip_Score(t *testing.T) {
 		{
 			name: "existent bad peer",
 			update: func(scorer *scorers.GossipScorer) {
-				scorer.SetGossipData("peer1", -10.0, 1, nil)
+				scorer.SetGossipData("peer1", -101.0, 1, nil)
 			},
 			check: func(scorer *scorers.GossipScorer) {
-				assert.Equal(t, -10.0, scorer.Score("peer1"), "Unexpected score")
+				assert.Equal(t, -101.0, scorer.Score("peer1"), "Unexpected score")
 				assert.Equal(t, true, scorer.IsBadPeer("peer1"), "Unexpected good peer")
 			},
 		},

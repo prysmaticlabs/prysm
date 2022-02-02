@@ -18,6 +18,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -26,19 +27,18 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
-	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type dummyIdentity enode.ID
 
-func (id dummyIdentity) Verify(_ *enr.Record, _ []byte) error { return nil }
-func (id dummyIdentity) NodeAddr(_ *enr.Record) []byte        { return id[:] }
+func (_ dummyIdentity) Verify(_ *enr.Record, _ []byte) error { return nil }
+func (id dummyIdentity) NodeAddr(_ *enr.Record) []byte       { return id[:] }
 
 func TestGetVersion(t *testing.T) {
 	semVer := version.SemanticVersion()
@@ -66,7 +66,7 @@ func TestGetHealth(t *testing.T) {
 	require.NoError(t, err)
 	stream, ok := grpc.ServerTransportStreamFromContext(ctx).(*grpcruntime.ServerTransportStream)
 	require.Equal(t, true, ok, "type assertion failed")
-	assert.Equal(t, stream.Header()[strings.ToLower(grpcutils.HttpCodeMetadataKey)][0], strconv.Itoa(http.StatusPartialContent))
+	assert.Equal(t, stream.Header()[strings.ToLower(grpcutil.HttpCodeMetadataKey)][0], strconv.Itoa(http.StatusPartialContent))
 	checker.IsSynced = true
 	_, err = s.GetHealth(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
@@ -163,7 +163,7 @@ func TestGetIdentity(t *testing.T) {
 func TestSyncStatus(t *testing.T) {
 	currentSlot := new(types.Slot)
 	*currentSlot = 110
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	err = state.SetSlot(100)
 	require.NoError(t, err)

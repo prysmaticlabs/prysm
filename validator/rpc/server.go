@@ -2,26 +2,24 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
+	"path/filepath"
 	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/io/logs"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
-	"github.com/prysmaticlabs/prysm/shared/rand"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -53,17 +51,16 @@ type Config struct {
 	WalletInitializedFeed    *event.Feed
 	NodeGatewayEndpoint      string
 	Wallet                   *wallet.Wallet
-	Keymanager               keymanager.IKeymanager
 }
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	logsStreamer              logutil.Streamer
+	logsStreamer              logs.Streamer
 	streamLogsBufferSize      int
 	beaconChainClient         ethpb.BeaconChainClient
 	beaconNodeClient          ethpb.NodeClient
 	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
-	beaconNodeHealthClient    pb.HealthClient
+	beaconNodeHealthClient    ethpb.HealthClient
 	valDB                     db.Database
 	ctx                       context.Context
 	cancel                    context.CancelFunc
@@ -76,12 +73,11 @@ type Server struct {
 	host                      string
 	port                      string
 	listener                  net.Listener
-	keymanager                keymanager.IKeymanager
 	withCert                  string
 	withKey                   string
 	credentialError           error
 	grpcServer                *grpc.Server
-	jwtKey                    []byte
+	jwtSecret                 []byte
 	validatorService          *client.ValidatorService
 	syncChecker               client.SyncChecker
 	genesisFetcher            client.GenesisFetcher
@@ -102,7 +98,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 	return &Server{
 		ctx:                      ctx,
 		cancel:                   cancel,
-		logsStreamer:             logutil.NewStreamServer(),
+		logsStreamer:             logs.NewStreamServer(),
 		streamLogsBufferSize:     1000, // Enough to handle most bursts of logs in the validator client.
 		host:                     cfg.Host,
 		port:                     cfg.Port,
@@ -122,7 +118,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		walletInitializedFeed:    cfg.WalletInitializedFeed,
 		walletInitialized:        cfg.Wallet != nil,
 		wallet:                   cfg.Wallet,
-		keymanager:               cfg.Keymanager,
 		nodeGatewayEndpoint:      cfg.NodeGatewayEndpoint,
 		validatorMonitoringHost:  cfg.ValidatorMonitoringHost,
 		validatorMonitoringPort:  cfg.ValidatorMonitoringPort,
@@ -147,7 +142,7 @@ func (s *Server) Start() {
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(
-				recovery.WithRecoveryHandlerContext(traceutil.RecoveryHandlerFunc),
+				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_opentracing.UnaryServerInterceptor(),
@@ -174,13 +169,6 @@ func (s *Server) Start() {
 		log.WithError(err).Fatal("Could not register beacon chain gRPC client")
 	}
 
-	// We create a new, random JWT key upon validator startup.
-	jwtKey, err := createRandomJWTKey()
-	if err != nil {
-		log.WithError(err).Fatal("Could not initialize validator jwt key")
-	}
-	s.jwtKey = jwtKey
-
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
 	validatorpb.RegisterAuthServer(s.grpcServer, s)
@@ -188,6 +176,7 @@ func (s *Server) Start() {
 	validatorpb.RegisterHealthServer(s.grpcServer, s)
 	validatorpb.RegisterBeaconServer(s.grpcServer, s)
 	validatorpb.RegisterAccountsServer(s.grpcServer, s)
+	ethpbservice.RegisterKeyManagementServer(s.grpcServer, s)
 	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
 	go func() {
@@ -197,8 +186,18 @@ func (s *Server) Start() {
 			}
 		}
 	}()
-	go s.checkUserSignup(s.ctx)
 	log.WithField("address", address).Info("gRPC server listening on address")
+	if s.walletDir != "" {
+		token, err := s.initializeAuthToken(s.walletDir)
+		if err != nil {
+			log.Errorf("Could not initialize web auth token: %v", err)
+			return
+		}
+		validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
+		logValidatorWebAuth(validatorWebAddr, token)
+		authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
+		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
+	}
 }
 
 // Stop the gRPC server.
@@ -214,17 +213,4 @@ func (s *Server) Stop() error {
 // Status returns nil or credentialError.
 func (s *Server) Status() error {
 	return s.credentialError
-}
-
-func createRandomJWTKey() ([]byte, error) {
-	r := rand.NewGenerator()
-	jwtKey := make([]byte, 32)
-	n, err := r.Read(jwtKey)
-	if err != nil {
-		return nil, err
-	}
-	if n != len(jwtKey) {
-		return nil, errors.New("could not create appropriately sized random JWT key")
-	}
-	return jwtKey, nil
 }

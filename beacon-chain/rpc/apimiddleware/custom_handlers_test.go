@@ -10,13 +10,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
-	"github.com/prysmaticlabs/prysm/shared/gateway"
-	"github.com/prysmaticlabs/prysm/shared/grpcutils"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/r3labs/sse"
 )
+
+type testSSZResponseJson struct {
+	Version string `json:"version"`
+	Data    string `json:"data"`
+}
+
+func (t testSSZResponseJson) SSZVersion() string {
+	return t.Version
+}
+
+func (t testSSZResponseJson) SSZData() string {
+	return t.Data
+}
 
 func TestSSZRequested(t *testing.T) {
 	t.Run("ssz_requested", func(t *testing.T) {
@@ -48,10 +61,10 @@ func TestSSZRequested(t *testing.T) {
 }
 
 func TestPrepareSSZRequestForProxying(t *testing.T) {
-	middleware := &gateway.ApiProxyMiddleware{
-		GatewayAddress: "http://gateway.example",
+	middleware := &apimiddleware.ApiProxyMiddleware{
+		GatewayAddress: "http://apimiddleware.example",
 	}
-	endpoint := gateway.Endpoint{
+	endpoint := apimiddleware.Endpoint{
 		Path: "http://foo.example",
 	}
 	var body bytes.Buffer
@@ -59,18 +72,27 @@ func TestPrepareSSZRequestForProxying(t *testing.T) {
 
 	errJson := prepareSSZRequestForProxying(middleware, endpoint, request, "/ssz")
 	require.Equal(t, true, errJson == nil)
-	assert.Equal(t, "/ssz", request.URL.Path)
+	assert.Equal(t, "/internal/ssz", request.URL.Path)
 }
 
 func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		ssz, errJson := serializeMiddlewareResponseIntoSSZ("Zm9v")
+		j := testSSZResponseJson{
+			Version: "Version",
+			Data:    "Zm9v",
+		}
+		v, ssz, errJson := serializeMiddlewareResponseIntoSSZ(j)
 		require.Equal(t, true, errJson == nil)
 		assert.DeepEqual(t, []byte("foo"), ssz)
+		assert.Equal(t, "version", v)
 	})
 
 	t.Run("invalid_data", func(t *testing.T) {
-		_, errJson := serializeMiddlewareResponseIntoSSZ("invalid")
+		j := testSSZResponseJson{
+			Version: "Version",
+			Data:    "invalid",
+		}
+		_, _, errJson := serializeMiddlewareResponseIntoSSZ(j)
 		require.Equal(t, false, errJson == nil)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode response body into base64"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
@@ -78,18 +100,22 @@ func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
 }
 
 func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
+	responseSsz := []byte("ssz")
+	version := "version"
+	fileName := "test.ssz"
+
 	t.Run("ok", func(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
-				"Grpc-Metadata-" + grpcutils.HttpCodeMetadataKey: []string{"204"},
+				"Grpc-Metadata-" + grpc.HttpCodeMetadataKey: []string{"204"},
 			},
 		}
-		responseSsz := []byte("ssz")
+
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
-		errJson := writeSSZResponseHeaderAndBody(response, writer, responseSsz, "test.ssz")
+		errJson := writeSSZResponseHeaderAndBody(response, writer, responseSsz, version, fileName)
 		require.Equal(t, true, errJson == nil)
 		v, ok := writer.Header()["Foo"]
 		require.Equal(t, true, ok, "header not found")
@@ -107,6 +133,10 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "attachment; filename=test.ssz", v[0])
+		v, ok = writer.Header()["Eth-Consensus-Version"]
+		require.Equal(t, true, ok, "header not found")
+		require.Equal(t, 1, len(v), "wrong number of header values")
+		assert.Equal(t, "version", v[0])
 		assert.Equal(t, 204, writer.Code)
 	})
 
@@ -115,11 +145,10 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 			Header:     http.Header{},
 			StatusCode: 204,
 		}
-		responseSsz := []byte("ssz")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
-		errJson := writeSSZResponseHeaderAndBody(response, writer, responseSsz, "test.ssz")
+		errJson := writeSSZResponseHeaderAndBody(response, writer, responseSsz, version, fileName)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, 204, writer.Code)
 	})
@@ -128,14 +157,14 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		response := &http.Response{
 			Header: http.Header{
 				"Foo": []string{"foo"},
-				"Grpc-Metadata-" + grpcutils.HttpCodeMetadataKey: []string{"invalid"},
+				"Grpc-Metadata-" + grpc.HttpCodeMetadataKey: []string{"invalid"},
 			},
 		}
 		responseSsz := []byte("ssz")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
-		errJson := writeSSZResponseHeaderAndBody(response, writer, responseSsz, "test.ssz")
+		errJson := writeSSZResponseHeaderAndBody(response, writer, responseSsz, version, fileName)
 		require.Equal(t, false, errJson == nil)
 		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not parse status code"))
 		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())

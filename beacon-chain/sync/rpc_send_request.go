@@ -8,12 +8,12 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // ErrInvalidFetchedData is thrown if stream fails to provide requested blocks.
@@ -28,7 +28,7 @@ func SendBeaconBlocksByRangeRequest(
 	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *pb.BeaconBlocksByRangeRequest, blockProcessor BeaconBlockProcessor,
 ) ([]block.SignedBeaconBlock, error) {
-	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRangeMessageName, core.SlotToEpoch(chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRangeMessageName, slots.ToEpoch(chain.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func SendBeaconBlocksByRootRequest(
 	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *p2ptypes.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
 ) ([]block.SignedBeaconBlock, error) {
-	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRootsMessageName, core.SlotToEpoch(chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRootsMessageName, slots.ToEpoch(chain.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}

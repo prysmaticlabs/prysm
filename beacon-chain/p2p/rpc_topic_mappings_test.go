@@ -7,11 +7,11 @@ import (
 
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestVerifyRPCMappings(t *testing.T) {
@@ -102,7 +102,7 @@ func TestTopicFromMessage_CorrectType(t *testing.T) {
 		assert.Equal(t, SchemaVersionV1, version)
 	}
 
-	// After Fork
+	// Altair Fork
 	for m := range messageMapping {
 		topic, err := TopicFromMessage(m, forkEpoch)
 		assert.NoError(t, err)

@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestResume(t *testing.T) {
@@ -18,17 +18,17 @@ func TestResume(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	service := New(beaconDB)
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, root))
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, root))
 	require.NoError(t, service.beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: root[:]}))
 
-	resumeState, err := service.Resume(ctx)
+	resumeState, err := service.Resume(ctx, beaconState)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, beaconState.InnerStateUnsafe(), resumeState.InnerStateUnsafe())
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch, service.finalizedInfo.slot, "Did not get watned slot")

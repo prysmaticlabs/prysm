@@ -8,16 +8,16 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -38,9 +38,9 @@ func TestSaveHead_Different(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 
-	testutil.NewBeaconBlock()
+	util.NewBeaconBlock()
 	oldBlock := wrapper.WrappedPhase0SignedBeaconBlock(
-		testutil.NewBeaconBlock(),
+		util.NewBeaconBlock(),
 	)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
@@ -51,14 +51,14 @@ func TestSaveHead_Different(t *testing.T) {
 		block: oldBlock,
 	}
 
-	newHeadSignedBlock := testutil.NewBeaconBlock()
+	newHeadSignedBlock := util.NewBeaconBlock()
 	newHeadSignedBlock.Block.Slot = 1
 	newHeadBlock := newHeadSignedBlock.Block
 
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	headState, err := testutil.NewBeaconState()
+	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
@@ -81,7 +81,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	oldBlock := wrapper.WrappedPhase0SignedBeaconBlock(
-		testutil.NewBeaconBlock(),
+		util.NewBeaconBlock(),
 	)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
@@ -93,7 +93,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	}
 
 	reorgChainParent := [32]byte{'B'}
-	newHeadSignedBlock := testutil.NewBeaconBlock()
+	newHeadSignedBlock := util.NewBeaconBlock()
 	newHeadSignedBlock.Block.Slot = 1
 	newHeadSignedBlock.Block.ParentRoot = reorgChainParent[:]
 	newHeadBlock := newHeadSignedBlock.Block
@@ -101,7 +101,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	headState, err := testutil.NewBeaconState()
+	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
@@ -123,40 +123,42 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
+	ctx := context.Background()
 
-	state, _ := testutil.DeterministicGenesisState(t, 100)
+	state, _ := util.DeterministicGenesisState(t, 100)
 	r := [32]byte{'a'}
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: r[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
-	require.NoError(t, service.cacheJustifiedStateBalances(context.Background(), r))
-	require.DeepEqual(t, service.getJustifiedBalances(), state.Balances(), "Incorrect justified balances")
+	balances, err := service.justifiedBalances.get(ctx, r)
+	require.NoError(t, err)
+	require.DeepEqual(t, balances, state.Balances(), "Incorrect justified balances")
 }
 
 func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 
-	b := testutil.NewBeaconBlock()
+	b := util.NewBeaconBlock()
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.finalizedCheckpt = &ethpb.Checkpoint{}
-	service.bestJustifiedCheckpt = &ethpb.Checkpoint{}
+	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{})
+	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
 
 	require.NoError(t, service.updateHead(context.Background(), []uint64{}))
 }
 
 func Test_notifyNewHeadEvent(t *testing.T) {
 	t.Run("genesis_state_root", func(t *testing.T) {
-		bState, _ := testutil.DeterministicGenesisState(t, 10)
+		bState, _ := util.DeterministicGenesisState(t, 10)
 		notifier := &mock.MockStateNotifier{RecordEvents: true}
 		srv := &Service{
-			cfg: &Config{
+			cfg: &config{
 				StateNotifier: notifier,
 			},
-			genesisRoot: [32]byte{1},
+			originBlockRoot: [32]byte{1},
 		}
 		newHeadStateRoot := [32]byte{2}
 		newHeadRoot := [32]byte{3}
@@ -172,24 +174,24 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			Block:                     newHeadRoot[:],
 			State:                     newHeadStateRoot[:],
 			EpochTransition:           false,
-			PreviousDutyDependentRoot: srv.genesisRoot[:],
-			CurrentDutyDependentRoot:  srv.genesisRoot[:],
+			PreviousDutyDependentRoot: srv.originBlockRoot[:],
+			CurrentDutyDependentRoot:  srv.originBlockRoot[:],
 		}
 		require.DeepSSZEqual(t, wanted, eventHead)
 	})
 	t.Run("non_genesis_values", func(t *testing.T) {
-		bState, _ := testutil.DeterministicGenesisState(t, 10)
+		bState, _ := util.DeterministicGenesisState(t, 10)
 		notifier := &mock.MockStateNotifier{RecordEvents: true}
 		genesisRoot := [32]byte{1}
 		srv := &Service{
-			cfg: &Config{
+			cfg: &config{
 				StateNotifier: notifier,
 			},
-			genesisRoot: genesisRoot,
+			originBlockRoot: genesisRoot,
 		}
-		epoch1Start, err := core.StartSlot(1)
+		epoch1Start, err := slots.EpochStart(1)
 		require.NoError(t, err)
-		epoch2Start, err := core.StartSlot(1)
+		epoch2Start, err := slots.EpochStart(1)
 		require.NoError(t, err)
 		require.NoError(t, bState.SetSlot(epoch1Start))
 
@@ -206,7 +208,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			Slot:                      epoch2Start,
 			Block:                     newHeadRoot[:],
 			State:                     newHeadStateRoot[:],
-			EpochTransition:           false,
+			EpochTransition:           true,
 			PreviousDutyDependentRoot: genesisRoot[:],
 			CurrentDutyDependentRoot:  make([]byte, 32),
 		}
@@ -215,13 +217,13 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		CorrectlyInsertOrphanedAtts: true,
 	})
 	defer resetCfg()
 
-	genesis, keys := testutil.DeterministicGenesisState(t, 64)
-	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
+	genesis, keys := util.DeterministicGenesisState(t, 64)
+	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -241,13 +243,13 @@ func TestSaveOrphanedAtts(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+	resetCfg := features.InitWithReset(&features.Flags{
 		CorrectlyInsertOrphanedAtts: true,
 	})
 	defer resetCfg()
 
-	genesis, keys := testutil.DeterministicGenesisState(t, 64)
-	b, err := testutil.GenerateFullBlock(genesis, keys, testutil.DefaultBlockGenConfig(), 1)
+	genesis, keys := util.DeterministicGenesisState(t, 64)
+	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
