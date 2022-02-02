@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -67,25 +67,25 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	}
 }
 
-func TestListAccounts_ImportedKeymanager(t *testing.T) {
+func TestListAccounts_LocalKeymanager(t *testing.T) {
 	walletDir, passwordsDir, walletPasswordFile := setupWalletAndPasswordsDir(t)
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		walletDir:          walletDir,
 		passwordsDir:       passwordsDir,
-		keymanagerKind:     keymanager.Imported,
+		keymanagerKind:     keymanager.Local,
 		walletPasswordFile: walletPasswordFile,
 	})
 	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: "Passwordz0320$",
 		},
 	})
 	require.NoError(t, err)
-	km, err := imported.NewKeymanager(
+	km, err := local.NewKeymanager(
 		cliCtx.Context,
-		&imported.SetupConfig{
+		&local.SetupConfig{
 			Wallet:           w,
 			ListenForChanges: false,
 		},
@@ -107,10 +107,10 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list imported keymanager accounts function.
+	// We call the list local keymanager accounts function.
 	require.NoError(
 		t,
-		listImportedKeymanagerAccounts(
+		listLocalKeymanagerAccounts(
 			context.Background(),
 			true, /* show deposit data */
 			true, /*show private keys */
@@ -129,7 +129,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 
 	// Expected output example:
 	/*
-		(keymanager kind) imported wallet
+		(keymanager kind) local wallet
 
 		Showing 5 validator accounts
 		View the eth1 deposit transaction data for your accounts by running `validator accounts list --show-deposit-data
@@ -180,7 +180,7 @@ func TestListAccounts_ImportedKeymanager(t *testing.T) {
 	require.Equal(t, lineCount, len(lines))
 
 	// Assert the keymanager kind is printed on the first line.
-	kindString := "imported"
+	kindString := "local"
 	kindFound := strings.Contains(lines[0], kindString)
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
@@ -258,7 +258,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	// We call the list imported keymanager accounts function.
+	// We call the list local keymanager accounts function.
 	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true, keymanager))
 
 	require.NoError(t, writer.Close())

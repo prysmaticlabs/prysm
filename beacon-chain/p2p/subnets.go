@@ -35,11 +35,12 @@ const syncLockerVal = 100
 // subscribed to a particular subnet. Then we try to connect
 // with those peers. This method will block until the required amount of
 // peers are found, the method only exits in the event of context timeouts.
-func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, subIndex, threshold uint64) (bool, error) {
+func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
+	index uint64, threshold int) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
-	span.AddAttributes(trace.Int64Attribute("index", int64(subIndex)))
+	span.AddAttributes(trace.Int64Attribute("index", int64(index)))
 
 	if s.dv5Listener == nil {
 		// return if discovery isn't set
@@ -50,14 +51,14 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, subInde
 	iterator := s.dv5Listener.RandomNodes()
 	switch {
 	case strings.Contains(topic, GossipAttestationMessage):
-		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(subIndex))
+		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(index))
 	case strings.Contains(topic, GossipSyncCommitteeMessage):
-		iterator = filterNodes(ctx, iterator, s.filterPeerForSyncSubnet(subIndex))
+		iterator = filterNodes(ctx, iterator, s.filterPeerForSyncSubnet(index))
 	default:
 		return false, errors.New("no subnet exists for provided topic")
 	}
 
-	currNum := uint64(len(s.pubsub.ListPeers(topic)))
+	currNum := len(s.pubsub.ListPeers(topic))
 	wg := new(sync.WaitGroup)
 	for {
 		if err := ctx.Err(); err != nil {
@@ -82,7 +83,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string, subInde
 		}
 		// Wait for all dials to be completed.
 		wg.Wait()
-		currNum = uint64(len(s.pubsub.ListPeers(topic)))
+		currNum = len(s.pubsub.ListPeers(topic))
 	}
 	return true, nil
 }
