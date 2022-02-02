@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -231,7 +232,47 @@ func TestServer_ImportKeystores(t *testing.T) {
 		}
 	})
 }
+
+func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
+	ctx := context.Background()
+	w := wallet.NewWalletForWeb3Signer()
+	root := make([]byte, fieldparams.RootLength)
+	root[0] = 1
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remote_web3signer.SetupConfig{
+		BaseEndpoint:          "example.com",
+		GenesisValidatorsRoot: root,
+		PublicKeysURL:         "example.com/public_keys",
+	}})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
+	s := &Server{
+		walletInitialized: true,
+		wallet:            w,
+		validatorService:  vs,
+	}
+	response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+		Keystores: []string{"hi"},
+		Passwords: []string{"hi"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(response.Statuses))
+	require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
+	require.Equal(t, "Keymanager kind cannot import keys", response.Statuses[0].Message)
+}
+
 func TestServer_DeleteKeystores(t *testing.T) {
+	t.Run("wallet not ready", func(t *testing.T) {
+		s := Server{}
+		response, err := s.DeleteKeystores(context.Background(), &ethpbservice.DeleteKeystoresRequest{})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(response.Statuses))
+	})
 	ctx := context.Background()
 	srv := setupServerWithWallet(t)
 
@@ -365,6 +406,74 @@ func TestServer_DeleteKeystores(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
+	ctx := context.Background()
+	srv := setupServerWithWallet(t)
+
+	// We recover 3 accounts from a test mnemonic.
+	numAccounts := 3
+	km, er := srv.validatorService.Keymanager()
+	require.NoError(t, er)
+	dr, ok := km.(*derived.Keymanager)
+	require.Equal(t, true, ok)
+	err := dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, "", numAccounts)
+	require.NoError(t, err)
+	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+
+	// Create a validator database.
+	validatorDB, err := kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{
+		PubKeys: publicKeys,
+	})
+	require.NoError(t, err)
+	err = validatorDB.SaveGenesisValidatorsRoot(ctx, make([]byte, fieldparams.RootLength))
+	require.NoError(t, err)
+	srv.valDB = validatorDB
+
+	// Have to close it after import is done otherwise it complains db is not open.
+	defer func() {
+		require.NoError(t, validatorDB.Close())
+	}()
+
+	response, err := srv.DeleteKeystores(context.Background(), &ethpbservice.DeleteKeystoresRequest{
+		PublicKeys: [][]byte{[]byte("a")},
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(response.Statuses))
+	require.Equal(t, ethpbservice.DeletedKeystoreStatus_ERROR, response.Statuses[0].Status)
+	require.Equal(t, "non duplicate keys that were existing were deleted, but could not export slashing protection history.", response.Statuses[0].Message)
+}
+
+func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
+	ctx := context.Background()
+	w := wallet.NewWalletForWeb3Signer()
+	root := make([]byte, fieldparams.RootLength)
+	root[0] = 1
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remote_web3signer.SetupConfig{
+		BaseEndpoint:          "example.com",
+		GenesisValidatorsRoot: root,
+		PublicKeysURL:         "example.com/public_keys",
+	}})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
+	s := &Server{
+		walletInitialized: true,
+		wallet:            w,
+		validatorService:  vs,
+	}
+	response, err := s.DeleteKeystores(ctx, &ethpbservice.DeleteKeystoresRequest{PublicKeys: [][]byte{[]byte("a")}})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(response.Statuses))
+	require.Equal(t, ethpbservice.DeletedKeystoreStatus_ERROR, response.Statuses[0].Status)
+	require.Equal(t, "keymanager kind cannot delete keys", response.Statuses[0].Message)
 }
 
 func setupServerWithWallet(t testing.TB) *Server {

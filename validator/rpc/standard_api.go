@@ -172,7 +172,8 @@ func (s *Server) DeleteKeystores(
 
 	exportedHistory, err := s.slashingProtectionHistoryForDeletedKeys(ctx, req.PublicKeys, statuses)
 	if err != nil {
-		statuses := groupErrorsExport(req, "non duplicate keys that were existing were deleted, but could not get slashing protection history. Please try again.")
+		log.Warnf("Could not get slashing protection history for deleted keys: %v", err)
+		statuses := groupErrorsExport(req, "non duplicate keys that were existing were deleted, but could not export slashing protection history.")
 		return &ethpbservice.DeleteKeystoresResponse{Statuses: statuses}, nil
 	}
 	jsonHist, err := json.Marshal(exportedHistory)
