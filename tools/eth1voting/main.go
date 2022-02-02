@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/config/params"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
