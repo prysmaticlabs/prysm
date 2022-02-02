@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
@@ -228,6 +229,16 @@ func SafeCopy2dBytes(ary [][]byte) [][]byte {
 	return nil
 }
 
+// SafeCopy2d32Bytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
+func SafeCopy2d32Bytes(ary [][32]byte) [][32]byte {
+	if ary != nil {
+		copied := make([][32]byte, len(ary))
+		copy(copied, ary)
+		return copied
+	}
+	return nil
+}
+
 // ReverseBytes32Slice will reverse the provided slice's order.
 func ReverseBytes32Slice(arr [][32]byte) [][32]byte {
 	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
@@ -393,4 +404,9 @@ func ReverseByteOrder(input []byte) []byte {
 		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
 	}
 	return b
+}
+
+// NonZeroRoot returns whether or not a root is of proper length and non-zero hash.
+func NonZeroRoot(root []byte) bool {
+	return len(root) == fieldparams.RootLength && string(make([]byte, fieldparams.RootLength)) != string(root)
 }

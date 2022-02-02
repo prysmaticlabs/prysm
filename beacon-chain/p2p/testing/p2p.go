@@ -349,7 +349,7 @@ func (p *TestP2P) Peers() *peers.Status {
 }
 
 // FindPeersWithSubnet mocks the p2p func.
-func (_ *TestP2P) FindPeersWithSubnet(_ context.Context, _ string, _, _ uint64) (bool, error) {
+func (_ *TestP2P) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
 	return false, nil
 }
 

@@ -77,31 +77,45 @@ type FinalizationFetcher interface {
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 }
 
-// FinalizedCheckpt returns the latest finalized checkpoint from head state.
+// FinalizedCheckpt returns the latest finalized checkpoint from chain store.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	if s.finalizedCheckpt == nil {
+	cp := s.store.FinalizedCheckpt()
+	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return ethpb.CopyCheckpoint(s.finalizedCheckpt)
+	return ethpb.CopyCheckpoint(cp)
 }
 
-// CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
+// CurrentJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.justifiedCheckpt == nil {
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return ethpb.CopyCheckpoint(s.justifiedCheckpt)
+	return ethpb.CopyCheckpoint(cp)
 }
 
-// PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
+// PreviousJustifiedCheckpt returns the previous justified checkpoint from chain store.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.prevJustifiedCheckpt == nil {
+	cp := s.store.PrevJustifiedCheckpt()
+	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return ethpb.CopyCheckpoint(s.prevJustifiedCheckpt)
+	return ethpb.CopyCheckpoint(cp)
+}
+
+// BestJustifiedCheckpt returns the best justified checkpoint from store.
+func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.store.BestJustifiedCheckpt()
+	// If there is no best justified checkpoint, return the checkpoint with root as zeros to be used for genesis cases.
+	if cp == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	}
+
+	return ethpb.CopyCheckpoint(cp)
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -312,4 +326,9 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 		return [fieldparams.BLSPubkeyLength]byte{}, err
 	}
 	return v.PublicKey(), nil
+}
+
+// SetGenesisTime sets the genesis time of beacon chain.
+func (s *Service) SetGenesisTime(t time.Time) {
+	s.genesisTime = t
 }

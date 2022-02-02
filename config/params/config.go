@@ -63,6 +63,10 @@ type BeaconChainConfig struct {
 	SafeSlotsToUpdateJustified       types.Slot  `yaml:"SAFE_SLOTS_TO_UPDATE_JUSTIFIED" spec:"true"`      // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
 	SecondsPerETH1Block              uint64      `yaml:"SECONDS_PER_ETH1_BLOCK" spec:"true"`              // SecondsPerETH1Block is the approximate time for a single eth1 block to be produced.
 
+	// Fork choice algorithm constants.
+	ProposerScoreBoost uint64 `yaml:"PROPOSER_SCORE_BOOST" spec:"true"` // ProposerScoreBoost defines a value that is a % of the committee weight for fork-choice boosting.
+	IntervalsPerSlot   uint64 `yaml:"INTERVALS_PER_SLOT" spec:"true"`   // IntervalsPerSlot defines the number of fork choice intervals in a slot defined in the fork choice spec.
+
 	// Ethereum PoW parameters.
 	DepositChainID         uint64 `yaml:"DEPOSIT_CHAIN_ID" spec:"true"`         // DepositChainID of the eth1 network. This used for replay protection.
 	DepositNetworkID       uint64 `yaml:"DEPOSIT_NETWORK_ID" spec:"true"`       // DepositNetworkID of the eth1 network. This used for replay protection.
@@ -170,12 +174,12 @@ type BeaconChainConfig struct {
 
 	// Updated penalty values. This moves penalty parameters toward their final, maximum security values.
 	// Note: We do not override previous configuration values but instead creates new values and replaces usage throughout.
-	InactivityPenaltyQuotientAltair      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_ALTAIR" spec:"true"`      // InactivityPenaltyQuotientAltair for penalties during inactivity post Altair hard fork.
-	MinSlashingPenaltyQuotientAltair     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR" spec:"true"`    // MinSlashingPenaltyQuotientAltair for slashing penalties post Altair hard fork.
-	ProportionalSlashingMultiplierAltair uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"` // ProportionalSlashingMultiplierAltair for slashing penalties' multiplier post Alair hard fork.
-	MinSlashingPenaltyQuotientMerge      uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_MERGE" spec:"true"`     // MinSlashingPenaltyQuotientMerge for slashing penalties post Bellatrix hard fork.
-	ProportionalSlashingMultiplierMerge  uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_MERGE" spec:"true"`  // ProportionalSlashingMultiplierMerge for slashing penalties' multiplier post Bellatrix hard fork.
-	InactivityPenaltyQuotientMerge       uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_MERGE" spec:"true"`       // InactivityPenaltyQuotientMerge for penalties during inactivity post Bellatrix hard fork.
+	InactivityPenaltyQuotientAltair         uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_ALTAIR" spec:"true"`         // InactivityPenaltyQuotientAltair for penalties during inactivity post Altair hard fork.
+	MinSlashingPenaltyQuotientAltair        uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR" spec:"true"`       // MinSlashingPenaltyQuotientAltair for slashing penalties post Altair hard fork.
+	ProportionalSlashingMultiplierAltair    uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR" spec:"true"`    // ProportionalSlashingMultiplierAltair for slashing penalties' multiplier post Alair hard fork.
+	MinSlashingPenaltyQuotientBellatrix     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX" spec:"true"`    // MinSlashingPenaltyQuotientBellatrix for slashing penalties post Bellatrix hard fork.
+	ProportionalSlashingMultiplierBellatrix uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX" spec:"true"` // ProportionalSlashingMultiplierBellatrix for slashing penalties' multiplier post Bellatrix hard fork.
+	InactivityPenaltyQuotientBellatrix      uint64 `yaml:"INACTIVITY_PENALTY_QUOTIENT_BELLATRIX" spec:"true"`      // InactivityPenaltyQuotientBellatrix for penalties during inactivity post Bellatrix hard fork.
 
 	// Light client
 	MinSyncCommitteeParticipants uint64 `yaml:"MIN_SYNC_COMMITTEE_PARTICIPANTS" spec:"true"` // MinSyncCommitteeParticipants defines the minimum amount of sync committee participants for which the light client acknowledges the signature.
@@ -183,7 +187,7 @@ type BeaconChainConfig struct {
 	// Bellatrix
 	TerminalBlockHash                common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`                  // TerminalBlockHash of beacon chain.
 	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
-	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of Bellatrixexperimental bellatrix spec. This value is type is currently TBD: https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/beacon-chain.md#transition-settings
+	TerminalTotalDifficulty          uint64         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of the experimental Bellatrix spec. This value is type is currently TBD: https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/beacon-chain.md#transition-settings
 	FeeRecipient                     common.Address // FeeRecipient where the transaction fee goes to.
 }
 

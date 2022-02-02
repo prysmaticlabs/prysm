@@ -13,8 +13,8 @@ import (
 	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	slashingsmock "github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings/mock"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -270,7 +270,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 
 	s := &Server{
 		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashings.PoolMock{PendingAttSlashings: []*ethpbv1alpha1.AttesterSlashing{slashing1, slashing2}},
+		SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []*ethpbv1alpha1.AttesterSlashing{slashing1, slashing2}},
 	}
 
 	resp, err := s.ListPoolAttesterSlashings(context.Background(), &emptypb.Empty{})
@@ -330,7 +330,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 
 	s := &Server{
 		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashings.PoolMock{PendingPropSlashings: []*ethpbv1alpha1.ProposerSlashing{slashing1, slashing2}},
+		SlashingsPool:    &slashingsmock.PoolMock{PendingPropSlashings: []*ethpbv1alpha1.ProposerSlashing{slashing1, slashing2}},
 	}
 
 	resp, err := s.ListPoolProposerSlashings(context.Background(), &emptypb.Empty{})
@@ -360,7 +360,7 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 
 	s := &Server{
 		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
-		VoluntaryExitsPool: &voluntaryexits.PoolMock{Exits: []*ethpbv1alpha1.SignedVoluntaryExit{exit1, exit2}},
+		VoluntaryExitsPool: &mock.PoolMock{Exits: []*ethpbv1alpha1.SignedVoluntaryExit{exit1, exit2}},
 	}
 
 	resp, err := s.ListPoolVoluntaryExits(context.Background(), &emptypb.Empty{})
@@ -432,7 +432,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashings.PoolMock{},
+		SlashingsPool:    &slashingsmock.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
 
@@ -475,7 +475,7 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashings.PoolMock{},
+		SlashingsPool:    &slashingsmock.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
 
@@ -539,7 +539,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashings.PoolMock{},
+		SlashingsPool:    &slashingsmock.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
 
@@ -575,7 +575,7 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashings.PoolMock{},
+		SlashingsPool:    &slashingsmock.PoolMock{},
 		Broadcaster:      broadcaster,
 	}
 
@@ -618,7 +618,7 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
-		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
+		VoluntaryExitsPool: &mock.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
 
@@ -656,7 +656,7 @@ func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
-		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
+		VoluntaryExitsPool: &mock.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
 
@@ -691,7 +691,7 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 	broadcaster := &p2pMock.MockBroadcaster{}
 	s := &Server{
 		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
-		VoluntaryExitsPool: &voluntaryexits.PoolMock{},
+		VoluntaryExitsPool: &mock.PoolMock{},
 		Broadcaster:        broadcaster,
 	}
 

@@ -143,9 +143,9 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.finalizedCheckpt = &ethpb.Checkpoint{}
-	service.bestJustifiedCheckpt = &ethpb.Checkpoint{}
+	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{})
+	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
 
 	require.NoError(t, service.updateHead(context.Background(), []uint64{}))
 }

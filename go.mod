@@ -36,7 +36,7 @@ require (
 	github.com/json-iterator/go v1.1.11
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
-	github.com/kr/pretty v0.2.1
+	github.com/kr/pretty v0.3.0
 	github.com/libp2p/go-libp2p v0.17.0
 	github.com/libp2p/go-libp2p-blankhost v0.3.0
 	github.com/libp2p/go-libp2p-core v0.13.0
@@ -103,6 +103,7 @@ require (
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/go-logr/logr v0.2.1 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
+	github.com/go-playground/validator/v10 v10.10.0
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
@@ -117,4 +118,4 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20210702154020-550e1cd83ec1
 
-replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-20211123050228-97d96f38caae
+replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-20220110145812-fafb696cae88

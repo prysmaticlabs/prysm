@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "block_roots.go",
         "byte32.go",
+        "historical_roots.go",
         "randao_mixes.go",
         "state_roots.go",
     ],
@@ -21,9 +22,13 @@ go_test(
     srcs = [
         "block_roots_test.go",
         "byte32_test.go",
+        "historical_roots_test.go",
         "randao_mixes_test.go",
         "state_roots_test.go",
     ],
     embed = [":go_default_library"],
-    deps = ["//config/fieldparams:go_default_library"],
+    deps = [
+        "//config/fieldparams:go_default_library",
+        "//testing/assert:go_default_library",
+    ],
 )

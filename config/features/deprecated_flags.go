@@ -36,6 +36,30 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedEnableBatchGossipVerification = &cli.BoolFlag{
+		Name:   "enable-batch-gossip-verification",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+
+	deprecatedEnableGetBlockOptimizations = &cli.BoolFlag{
+		Name:   "enable-get-block-optimizations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+
+	deprecatedEnableBalanceTrieComputation = &cli.BoolFlag{
+		Name:   "enable-balance-trie-computation",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+
+	deprecatedDisableNextSlotStateCache = &cli.BoolFlag{
+		Name:   "disable-next-slot-state-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedAttestationAggregationStrategy = &cli.BoolFlag{
 		Name:   "attestation-aggregation-strategy",
 		Usage:  deprecatedUsage,
@@ -54,6 +78,10 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedCorrectlyPruneCanonicalAtts,
 	deprecatedCorrectlyInsertOrphanedAtts,
 	deprecatedNextSlotStateCache,
+	deprecatedEnableBatchGossipVerification,
+	deprecatedEnableGetBlockOptimizations,
+	deprecatedEnableBalanceTrieComputation,
+	deprecatedDisableNextSlotStateCache,
 	deprecatedAttestationAggregationStrategy,
 	deprecatedForceOptMaxCoverAggregationStategy,
 }

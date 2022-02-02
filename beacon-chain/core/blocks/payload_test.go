@@ -10,6 +10,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -157,7 +158,7 @@ func Test_MergeComplete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, _ := util.DeterministicGenesisStateMerge(t, 1)
+			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.payload))
 			got, err := blocks.MergeComplete(st)
 			require.NoError(t, err)
@@ -171,7 +172,7 @@ func Test_MergeComplete(t *testing.T) {
 func Test_MergeBlock(t *testing.T) {
 	tests := []struct {
 		name    string
-		payload *ethpb.ExecutionPayload
+		payload *enginev1.ExecutionPayload
 		header  *ethpb.ExecutionPayloadHeader
 		want    bool
 	}{
@@ -193,7 +194,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has parent hash",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
@@ -203,7 +204,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has fee recipient",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.FeeRecipientLength)
 				return p
@@ -213,7 +214,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has state root",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
@@ -223,9 +224,9 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has receipt root",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
-				p.ReceiptRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				p.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
 			}(),
 			header: emptyPayloadHeader(),
@@ -233,7 +234,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has logs bloom",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
 				return p
@@ -243,7 +244,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has random",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.Random = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
@@ -253,7 +254,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has base fee",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
@@ -263,7 +264,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has block hash",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
@@ -273,7 +274,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has tx",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.Transactions = [][]byte{{'a'}}
 				return p
@@ -283,7 +284,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has extra data",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.ExtraData = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
@@ -293,7 +294,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has block number",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.BlockNumber = 1
 				return p
@@ -303,7 +304,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has gas limit",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.GasLimit = 1
 				return p
@@ -313,7 +314,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has gas used",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.GasUsed = 1
 				return p
@@ -323,7 +324,7 @@ func Test_MergeBlock(t *testing.T) {
 		},
 		{
 			name: "empty header, payload has timestamp",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.Timestamp = 1
 				return p
@@ -334,11 +335,11 @@ func Test_MergeBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, _ := util.DeterministicGenesisStateMerge(t, 1)
+			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
-			blk := util.NewBeaconBlockMerge()
+			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedMergeBeaconBlockBody(blk.Block.Body)
+			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsMergeBlock(st, body)
 			require.NoError(t, err)
@@ -352,7 +353,7 @@ func Test_MergeBlock(t *testing.T) {
 func Test_ExecutionEnabled(t *testing.T) {
 	tests := []struct {
 		name    string
-		payload *ethpb.ExecutionPayload
+		payload *enginev1.ExecutionPayload
 		header  *ethpb.ExecutionPayloadHeader
 		want    bool
 	}{
@@ -375,7 +376,7 @@ func Test_ExecutionEnabled(t *testing.T) {
 		{
 			name:   "empty header, non-empty payload",
 			header: emptyPayloadHeader(),
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.Timestamp = 1
 				return p
@@ -389,7 +390,7 @@ func Test_ExecutionEnabled(t *testing.T) {
 				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.Timestamp = 1
 				return p
@@ -399,11 +400,11 @@ func Test_ExecutionEnabled(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, _ := util.DeterministicGenesisStateMerge(t, 1)
+			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
-			blk := util.NewBeaconBlockMerge()
+			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedMergeBeaconBlockBody(blk.Block.Body)
+			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.ExecutionEnabled(st, body)
 			require.NoError(t, err)
@@ -417,7 +418,7 @@ func Test_ExecutionEnabled(t *testing.T) {
 func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 	tests := []struct {
 		name    string
-		payload *ethpb.ExecutionPayload
+		payload *enginev1.ExecutionPayload
 		header  *ethpb.ExecutionPayloadHeader
 		err     error
 	}{
@@ -429,7 +430,7 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 		},
 		{
 			name: "validate passes",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
@@ -443,7 +444,7 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 		},
 		{
 			name: "incorrect blockhash",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
@@ -458,7 +459,7 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, _ := util.DeterministicGenesisStateMerge(t, 1)
+			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
 			err := blocks.ValidatePayloadWhenMergeCompletes(st, tt.payload)
 			if err != nil {
@@ -471,19 +472,19 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 }
 
 func Test_ValidatePayload(t *testing.T) {
-	st, _ := util.DeterministicGenesisStateMerge(t, 1)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	require.NoError(t, err)
 	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	require.NoError(t, err)
 	tests := []struct {
 		name    string
-		payload *ethpb.ExecutionPayload
+		payload *enginev1.ExecutionPayload
 		err     error
 	}{
 		{
 			name: "validate passes",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				h := emptyPayload()
 				h.Random = random
 				h.Timestamp = uint64(ts.Unix())
@@ -497,7 +498,7 @@ func Test_ValidatePayload(t *testing.T) {
 		},
 		{
 			name: "incorrect timestamp",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				h := emptyPayload()
 				h.Random = random
 				h.Timestamp = 1
@@ -519,19 +520,19 @@ func Test_ValidatePayload(t *testing.T) {
 }
 
 func Test_ProcessPayload(t *testing.T) {
-	st, _ := util.DeterministicGenesisStateMerge(t, 1)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	require.NoError(t, err)
 	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	require.NoError(t, err)
 	tests := []struct {
 		name    string
-		payload *ethpb.ExecutionPayload
+		payload *enginev1.ExecutionPayload
 		err     error
 	}{
 		{
 			name: "process passes",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				h := emptyPayload()
 				h.Random = random
 				h.Timestamp = uint64(ts.Unix())
@@ -545,7 +546,7 @@ func Test_ProcessPayload(t *testing.T) {
 		},
 		{
 			name: "incorrect timestamp",
-			payload: func() *ethpb.ExecutionPayload {
+			payload: func() *enginev1.ExecutionPayload {
 				h := emptyPayload()
 				h.Random = random
 				h.Timestamp = 1
@@ -584,7 +585,7 @@ func Test_PayloadToHeader(t *testing.T) {
 	p.ParentHash = b
 	p.FeeRecipient = b
 	p.StateRoot = b
-	p.ReceiptRoot = b
+	p.ReceiptsRoot = b
 	p.LogsBloom = b
 	p.Random = b
 	p.ExtraData = b
@@ -611,7 +612,7 @@ func Test_PayloadToHeader(t *testing.T) {
 }
 
 func BenchmarkBellatrixComplete(b *testing.B) {
-	st, _ := util.DeterministicGenesisStateMerge(b, 1)
+	st, _ := util.DeterministicGenesisStateBellatrix(b, 1)
 	require.NoError(b, st.SetLatestExecutionPayloadHeader(emptyPayloadHeader()))
 
 	b.ResetTimer()
@@ -636,12 +637,12 @@ func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
 	}
 }
 
-func emptyPayload() *ethpb.ExecutionPayload {
-	return &ethpb.ExecutionPayload{
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptRoot:   make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 		Random:        make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
