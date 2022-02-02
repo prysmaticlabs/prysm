@@ -7,9 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // SyncCommitteeHeadStateCache for the latest head state requested by a sync committee participant.
@@ -51,13 +50,14 @@ func (c *SyncCommitteeHeadStateCache) Get(slot types.Slot) (state.BeaconState, e
 	if !exists {
 		return nil, ErrNotFound
 	}
-	var st state.BeaconState
-	st, ok := val.(*v2.BeaconState)
+	st, ok := val.(state.BeaconState)
 	if !ok {
-		st, ok = val.(*v3.BeaconState)
-		if !ok {
-			return nil, ErrIncorrectType
-		}
+		return nil, ErrIncorrectType
+	}
+	switch st.Version() {
+	case version.Altair, version.Bellatrix:
+	default:
+		return nil, ErrIncorrectType
 	}
 	return st, nil
 }
