@@ -84,18 +84,18 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 }
 
 // NewPayload --
-func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (*pb.PayloadStatus, error) {
+func (_ *Client) NewPayload(_ context.Context, _ *pb.ExecutionPayload) (*pb.PayloadStatus, error) {
 	return nil, errors.New("unimplemented")
 }
 
 // ForkchoiceUpdated --
-func (c *Client) ForkchoiceUpdated(
-	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
+func (_ *Client) ForkchoiceUpdated(
+	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
 ) (*ForkchoiceUpdatedResponse, error) {
 	return nil, errors.New("unimplemented")
 }
 
 // GetPayload --
-func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
+func (_ *Client) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
 	return nil, errors.New("unimplemented")
 }
