@@ -32,9 +32,8 @@ func TestServer_ListKeystores(t *testing.T) {
 	t.Run("wallet not ready", func(t *testing.T) {
 		s := Server{}
 		_, err := s.ListKeystores(context.Background(), &empty.Empty{})
-		require.ErrorContains(t, "Wallet not ready", err)
+		require.ErrorContains(t, "prysm Wallet not initialized. Please create a new wallet.", err)
 	})
-
 	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
@@ -61,13 +60,6 @@ func TestServer_ListKeystores(t *testing.T) {
 		wallet:            w,
 		validatorService:  vs,
 	}
-
-	t.Run("no keystores found", func(t *testing.T) {
-		resp, err := s.ListKeystores(context.Background(), &empty.Empty{})
-		require.NoError(t, err)
-		require.Equal(t, true, len(resp.Keystores) == 0)
-	})
-
 	numAccounts := 50
 	dr, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
@@ -94,10 +86,10 @@ func TestServer_ListKeystores(t *testing.T) {
 func TestServer_ImportKeystores(t *testing.T) {
 	t.Run("wallet not ready", func(t *testing.T) {
 		s := Server{}
-		_, err := s.ImportKeystores(context.Background(), nil)
-		require.ErrorContains(t, "Wallet not ready", err)
+		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(response.Statuses))
 	})
-
 	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
@@ -124,28 +116,43 @@ func TestServer_ImportKeystores(t *testing.T) {
 		wallet:            w,
 		validatorService:  vs,
 	}
-	t.Run("prevents importing if faulty keystore in request", func(t *testing.T) {
-		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+	t.Run("200 response even if faulty keystore in request", func(t *testing.T) {
+		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
 			Keystores: []string{"hi"},
 			Passwords: []string{"hi"},
 		})
-		require.NotNil(t, err)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(response.Statuses))
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
 	})
-	t.Run("error if no passwords in request", func(t *testing.T) {
-		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+	t.Run("200 response even if  no passwords in request", func(t *testing.T) {
+		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
 			Keystores: []string{"hi"},
 			Passwords: []string{},
 		})
-		require.ErrorContains(t, "No passwords provided", err)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(response.Statuses))
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
 	})
-	t.Run("error if number of passwords does not match number of keystores", func(t *testing.T) {
-		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+	t.Run("200 response even if  keystores more than passwords in request", func(t *testing.T) {
+		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
+			Keystores: []string{"hi", "hi"},
+			Passwords: []string{"hi"},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 2, len(response.Statuses))
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
+	})
+	t.Run("200 response even if number of passwords does not match number of keystores", func(t *testing.T) {
+		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
 			Keystores: []string{"hi"},
 			Passwords: []string{"hi", "hi"},
 		})
-		require.ErrorContains(t, "Number of passwords does not match", err)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(response.Statuses))
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
 	})
-	t.Run("prevents importing if faulty slashing protection data", func(t *testing.T) {
+	t.Run("200 response even if faulty slashing protection data", func(t *testing.T) {
 		numKeystores := 5
 		password := "12345678"
 		encodedKeystores := make([]string, numKeystores)

@@ -112,12 +112,6 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 func (km *Keymanager) ImportKeystores(
 	ctx context.Context, keystores []*keymanager.Keystore, passwords []string,
 ) ([]*ethpbservice.ImportedKeystoreStatus, error) {
-	if len(passwords) == 0 {
-		return nil, errors.New("no passwords provided for keystores")
-	}
-	if len(passwords) != len(keystores) {
-		return nil, errors.New("number of passwords does not match number of keystores")
-	}
 	return km.importedKM.ImportKeystores(ctx, keystores, passwords)
 }
 
