@@ -24,6 +24,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
@@ -69,7 +70,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	}, p2pService.Digest)
 	r.markForChainStart()
 
-	p2pService.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)})
+	p2pService.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, fieldparams.BLSSignatureLength)})
 
 	if util.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -247,7 +248,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		panic("bad")
 	}, p.Digest)
 	r.markForChainStart()
-	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)})
+	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, fieldparams.BLSSignatureLength)})
 
 	if util.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -489,7 +490,7 @@ func TestFilterSubnetPeers(t *testing.T) {
 	// Try with only peers from subnet 20.
 	wantedPeers = []peer.ID{p2.BHost.ID()}
 	// Connect an excess amount of peers in the particular subnet.
-	for i := uint64(1); i <= flags.Get().MinimumPeersPerSubnet; i++ {
+	for i := 1; i <= flags.Get().MinimumPeersPerSubnet; i++ {
 		nPeer := createPeer(t, subnet20)
 		p.Connect(nPeer)
 		wantedPeers = append(wantedPeers, nPeer.BHost.ID())

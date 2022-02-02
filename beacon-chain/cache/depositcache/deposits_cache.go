@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -52,7 +53,7 @@ type DepositCache struct {
 	pendingDeposits   []*ethpb.DepositContainer
 	deposits          []*ethpb.DepositContainer
 	finalizedDeposits *FinalizedDeposits
-	depositsByKey     map[[48]byte][]*ethpb.DepositContainer
+	depositsByKey     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer
 	depositsLock      sync.RWMutex
 }
 
@@ -68,7 +69,7 @@ func New() (*DepositCache, error) {
 	return &DepositCache{
 		pendingDeposits:   []*ethpb.DepositContainer{},
 		deposits:          []*ethpb.DepositContainer{},
-		depositsByKey:     map[[48]byte][]*ethpb.DepositContainer{},
+		depositsByKey:     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer{},
 		finalizedDeposits: &FinalizedDeposits{Deposits: finalizedDepositsTrie, MerkleTrieIndex: -1},
 	}, nil
 }
@@ -179,6 +180,10 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*e
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
+	return dc.allDeposits(untilBlk)
+}
+
+func (dc *DepositCache) allDeposits(untilBlk *big.Int) []*ethpb.Deposit {
 	var deposits []*ethpb.Deposit
 	for _, ctnr := range dc.deposits {
 		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
@@ -248,7 +253,7 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, untilBlk *big.
 	defer dc.depositsLock.RUnlock()
 
 	if dc.finalizedDeposits == nil {
-		return dc.AllDeposits(ctx, untilBlk)
+		return dc.allDeposits(untilBlk)
 	}
 
 	lastFinalizedDepositIndex := dc.finalizedDeposits.MerkleTrieIndex

@@ -25,12 +25,12 @@ go_library(
         "state_summary.go",
         "state_summary_cache.go",
         "utils.go",
+        "validated_tips.go",
         "wss.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/kv",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//tools:__subpackages__",
     ],
     deps = [
@@ -77,8 +77,6 @@ go_test(
     srcs = [
         "archived_point_test.go",
         "backup_test.go",
-        "block_altair_test.go",
-        "block_merge_test.go",
         "blocks_test.go",
         "checkpoint_test.go",
         "deposit_contract_test.go",
@@ -95,6 +93,7 @@ go_test(
         "state_summary_test.go",
         "state_test.go",
         "utils_test.go",
+        "validated_tips_test.go",
     ],
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
@@ -105,6 +104,7 @@ go_test(
         "//beacon-chain/state/v1:go_default_library",
         "//beacon-chain/state/v2:go_default_library",
         "//config/features:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

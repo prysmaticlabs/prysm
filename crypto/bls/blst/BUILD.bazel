@@ -109,6 +109,7 @@ go_library(
         ): [
             "//crypto/bls/common:go_default_library",
             "//config/features:go_default_library",
+            "//config/fieldparams:go_default_library",
             "//config/params:go_default_library",
             "//crypto/rand:go_default_library",
             "@com_github_dgraph_io_ristretto//:go_default_library",

@@ -11,6 +11,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -105,7 +106,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("foo"),
 				},
-				Signature: bytesutil.PadTo([]byte("A"), params.BeaconConfig().BLSSignatureLength),
+				Signature: bytesutil.PadTo([]byte("A"), fieldparams.BLSSignatureLength),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
@@ -113,7 +114,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("bar"),
 				},
-				Signature: bytesutil.PadTo([]byte("B"), params.BeaconConfig().BLSSignatureLength),
+				Signature: bytesutil.PadTo([]byte("B"), fieldparams.BLSSignatureLength),
 			},
 		},
 	}
@@ -233,10 +234,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	require.Equal(t, uint64(32000000000), newState.Balances()[2])
 }
 
-func TestProcessProposerSlashings_AppliesCorrectStatusMerge(t *testing.T) {
+func TestProcessProposerSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	proposerIdx := types.ValidatorIndex(1)
 
 	header1 := &ethpb.SignedBeaconBlockHeader{

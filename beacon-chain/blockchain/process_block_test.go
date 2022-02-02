@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -117,11 +117,10 @@ func TestStore_OnBlock(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service.justifiedCheckpt = &ethpb.Checkpoint{Root: validGenesisRoot[:]}
-			service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: validGenesisRoot[:]}
-			service.finalizedCheckpt = &ethpb.Checkpoint{Root: validGenesisRoot[:]}
-			service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: validGenesisRoot[:]}
-			service.finalizedCheckpt.Root = roots[0]
+			service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: validGenesisRoot[:]})
+			service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{Root: validGenesisRoot[:]})
+			service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: roots[0]})
+			service.store.SetPrevFinalizedCheckpt(&ethpb.Checkpoint{Root: validGenesisRoot[:]})
 
 			root, err := tt.blk.Block.HashTreeRoot()
 			assert.NoError(t, err)
@@ -147,9 +146,8 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	service.finalizedCheckpt = &ethpb.Checkpoint{
-		Root: gRoot[:],
-	}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
+
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{})
 	service.saveInitSyncBlock(gRoot, wrapper.WrappedPhase0SignedBeaconBlock(genesis))
 
@@ -211,7 +209,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 
 	diff := params.BeaconConfig().SlotsPerEpoch.Sub(1).Mul(params.BeaconConfig().SecondsPerSlot)
 	service.genesisTime = time.Unix(time.Now().Unix()-int64(diff), 0)
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
+	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: lastJustifiedRoot[:]})
 	update, err = service.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
 	require.NoError(t, err)
 	assert.Equal(t, true, update, "Should be able to update justified")
@@ -239,7 +237,7 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 
 	diff := params.BeaconConfig().SlotsPerEpoch.Sub(1).Mul(params.BeaconConfig().SecondsPerSlot)
 	service.genesisTime = time.Unix(time.Now().Unix()-int64(diff), 0)
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
+	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: lastJustifiedRoot[:]})
 
 	update, err := service.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
 	require.NoError(t, err)
@@ -265,9 +263,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	service.finalizedCheckpt = &ethpb.Checkpoint{
-		Root: gRoot[:],
-	}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{})
 	service.saveInitSyncBlock(gRoot, wrapper.WrappedPhase0SignedBeaconBlock(genesis))
 
@@ -295,15 +291,13 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
-	service.finalizedCheckpt = &ethpb.Checkpoint{
-		Root: gRoot[:],
-	}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{})
 	service.saveInitSyncBlock(gRoot, wrapper.WrappedPhase0SignedBeaconBlock(genesis))
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 	err = service.verifyBlkPreState(ctx, wrapper.WrappedPhase0BeaconBlock(b.Block))
 	wanted := "could not reconstruct parent state"
 	assert.ErrorContains(t, wanted, err)
@@ -332,8 +326,8 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(signedBlock)))
 	r, err := signedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
-	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
+	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: []byte{'A'}})
+	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{Root: []byte{'A'}})
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, st.Copy(), r))
@@ -344,13 +338,13 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	require.NoError(t, s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: r[:]}))
 	require.NoError(t, service.updateJustified(context.Background(), s))
 
-	assert.Equal(t, s.CurrentJustifiedCheckpoint().Epoch, service.bestJustifiedCheckpt.Epoch, "Incorrect justified epoch in service")
+	assert.Equal(t, s.CurrentJustifiedCheckpoint().Epoch, service.store.BestJustifiedCheckpt().Epoch, "Incorrect justified epoch in service")
 
 	// Could not update
-	service.bestJustifiedCheckpt.Epoch = 2
+	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{Root: []byte{'A'}, Epoch: 2})
 	require.NoError(t, service.updateJustified(context.Background(), s))
 
-	assert.Equal(t, types.Epoch(2), service.bestJustifiedCheckpt.Epoch, "Incorrect justified epoch in service")
+	assert.Equal(t, types.Epoch(2), service.store.BestJustifiedCheckpt().Epoch, "Incorrect justified epoch in service")
 }
 
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
@@ -364,7 +358,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: make([]byte, 32)}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: make([]byte, 32)})
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -405,7 +399,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: make([]byte, 32)}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: make([]byte, 32)})
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -450,7 +444,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
 	// Set finalized epoch to 1.
-	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 1})
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -742,89 +736,6 @@ func TestEnsureRootNotZeroHashes(t *testing.T) {
 	assert.Equal(t, root, r, "Did not get wanted justified root")
 }
 
-func TestFinalizedImpliesNewJustified(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-	}
-	ctx := context.Background()
-	type args struct {
-		cachedCheckPoint        *ethpb.Checkpoint
-		stateCheckPoint         *ethpb.Checkpoint
-		diffFinalizedCheckPoint bool
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.Checkpoint
-	}{
-		{
-			name: "Same justified, do nothing",
-			args: args{
-				cachedCheckPoint: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-				stateCheckPoint:  &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-			},
-			want: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-		},
-		{
-			name: "Different justified, higher epoch, cache new justified",
-			args: args{
-				cachedCheckPoint: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-				stateCheckPoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'b'}},
-			},
-			want: &ethpb.Checkpoint{Epoch: 2, Root: []byte{'b'}},
-		},
-		{
-			name: "finalized has different justified, cache new justified",
-			args: args{
-				cachedCheckPoint:        &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-				stateCheckPoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'b'}},
-				diffFinalizedCheckPoint: true,
-			},
-			want: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'b'}},
-		},
-	}
-	for _, test := range tests {
-		beaconState, err := util.NewBeaconState()
-		require.NoError(t, err)
-		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(test.args.stateCheckPoint))
-		service, err := NewService(ctx, opts...)
-		require.NoError(t, err)
-		service.justifiedCheckpt = test.args.cachedCheckPoint
-		require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo(test.want.Root, 32)}))
-		genesisState, err := util.NewBeaconState()
-		require.NoError(t, err)
-		require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, genesisState, bytesutil.ToBytes32(test.want.Root)))
-
-		if test.args.diffFinalizedCheckPoint {
-			b1 := util.NewBeaconBlock()
-			b1.Block.Slot = 1
-			b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
-			r1, err := b1.Block.HashTreeRoot()
-			require.NoError(t, err)
-			b100 := util.NewBeaconBlock()
-			b100.Block.Slot = 100
-			b100.Block.ParentRoot = r1[:]
-			r100, err := b100.Block.HashTreeRoot()
-			require.NoError(t, err)
-			for _, b := range []*ethpb.SignedBeaconBlock{b1, b100} {
-				beaconBlock := util.NewBeaconBlock()
-				beaconBlock.Block.Slot = b.Block.Slot
-				beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-				require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)))
-			}
-			service.finalizedCheckpt = &ethpb.Checkpoint{Root: []byte{'c'}, Epoch: 1}
-			service.justifiedCheckpt.Root = r100[:]
-		}
-
-		require.NoError(t, service.finalizedImpliesNewJustified(ctx, beaconState))
-		assert.Equal(t, true, attestation.CheckPointIsEqual(test.want, service.justifiedCheckpt), "Did not get wanted check point")
-	}
-}
-
 func TestVerifyBlkDescendant(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
@@ -891,9 +802,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	for _, tt := range tests {
 		service, err := NewService(ctx, opts...)
 		require.NoError(t, err)
-		service.finalizedCheckpt = &ethpb.Checkpoint{
-			Root: tt.args.finalizedRoot[:],
-		}
+		service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: tt.args.finalizedRoot[:]})
 		err = service.VerifyBlkDescendant(ctx, tt.args.parentRoot)
 		if tt.wantedErr != "" {
 			assert.ErrorContains(t, tt.wantedErr, err)
@@ -919,12 +828,12 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, beaconState, gRoot))
 	service.originBlockRoot = gRoot
 	currentCp := &ethpb.Checkpoint{Epoch: 1}
-	service.justifiedCheckpt = currentCp
+	service.store.SetJustifiedCheckpt(currentCp)
 	newCp := &ethpb.Checkpoint{Epoch: 2, Root: gRoot[:]}
 
 	require.NoError(t, service.updateJustifiedInitSync(ctx, newCp))
 
-	assert.DeepSSZEqual(t, currentCp, service.prevJustifiedCheckpt, "Incorrect previous justified checkpoint")
+	assert.DeepSSZEqual(t, currentCp, service.PreviousJustifiedCheckpt(), "Incorrect previous justified checkpoint")
 	assert.DeepSSZEqual(t, newCp, service.CurrentJustifiedCheckpt(), "Incorrect current justified checkpoint in cache")
 	cp, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
@@ -980,7 +889,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.NoError(t, err)
 	gRoot, err := gBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 
 	testState := gs.Copy()
 	for i := types.Slot(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
@@ -1019,7 +928,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	require.NoError(t, err)
 	gRoot, err := gBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
-	service.finalizedCheckpt = &ethpb.Checkpoint{Root: gRoot[:]}
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 	gs = gs.Copy()
 	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10}))
 	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
@@ -1027,7 +936,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	for i := uint64(0); i < uint64(4*params.BeaconConfig().SlotsPerEpoch); i++ {
 		root := []byte(strconv.Itoa(int(i)))
 		assert.NoError(t, depositCache.InsertDeposit(ctx, &ethpb.Deposit{Data: &ethpb.Deposit_Data{
-			PublicKey:             bytesutil.FromBytes48([48]byte{}),
+			PublicKey:             bytesutil.FromBytes48([fieldparams.BLSPubkeyLength]byte{}),
 			WithdrawalCredentials: params.BeaconConfig().ZeroHash[:],
 			Amount:                0,
 			Signature:             zeroSig[:],

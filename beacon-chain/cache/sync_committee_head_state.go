@@ -55,7 +55,7 @@ func (c *SyncCommitteeHeadStateCache) Get(slot types.Slot) (state.BeaconState, e
 		return nil, ErrIncorrectType
 	}
 	switch st.Version() {
-	case version.Altair, version.Merge:
+	case version.Altair, version.Bellatrix:
 	default:
 		return nil, ErrIncorrectType
 	}

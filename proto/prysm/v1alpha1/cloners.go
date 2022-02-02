@@ -2,6 +2,7 @@ package eth
 
 import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
 // CopyETH1Data copies the provided eth1data object.
@@ -377,37 +378,37 @@ func CopySyncAggregate(a *SyncAggregate) *SyncAggregate {
 	}
 }
 
-// CopySignedBeaconBlockMerge copies the provided SignedBeaconBlockMerge.
-func CopySignedBeaconBlockMerge(sigBlock *SignedBeaconBlockMerge) *SignedBeaconBlockMerge {
+// CopySignedBeaconBlockBellatrix copies the provided SignedBeaconBlockBellatrix.
+func CopySignedBeaconBlockBellatrix(sigBlock *SignedBeaconBlockBellatrix) *SignedBeaconBlockBellatrix {
 	if sigBlock == nil {
 		return nil
 	}
-	return &SignedBeaconBlockMerge{
-		Block:     CopyBeaconBlockMerge(sigBlock.Block),
+	return &SignedBeaconBlockBellatrix{
+		Block:     CopyBeaconBlockBellatrix(sigBlock.Block),
 		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
 	}
 }
 
-// CopyBeaconBlockMerge copies the provided BeaconBlockMerge.
-func CopyBeaconBlockMerge(block *BeaconBlockMerge) *BeaconBlockMerge {
+// CopyBeaconBlockBellatrix copies the provided BeaconBlockBellatrix.
+func CopyBeaconBlockBellatrix(block *BeaconBlockBellatrix) *BeaconBlockBellatrix {
 	if block == nil {
 		return nil
 	}
-	return &BeaconBlockMerge{
+	return &BeaconBlockBellatrix{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
 		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
-		Body:          CopyBeaconBlockBodyMerge(block.Body),
+		Body:          CopyBeaconBlockBodyBellatrix(block.Body),
 	}
 }
 
-// CopyBeaconBlockBodyMerge copies the provided BeaconBlockBodyMerge.
-func CopyBeaconBlockBodyMerge(body *BeaconBlockBodyMerge) *BeaconBlockBodyMerge {
+// CopyBeaconBlockBodyBellatrix copies the provided BeaconBlockBodyBellatrix.
+func CopyBeaconBlockBodyBellatrix(body *BeaconBlockBodyBellatrix) *BeaconBlockBodyBellatrix {
 	if body == nil {
 		return nil
 	}
-	return &BeaconBlockBodyMerge{
+	return &BeaconBlockBodyBellatrix{
 		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
 		Eth1Data:          CopyETH1Data(body.Eth1Data),
 		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
@@ -422,16 +423,16 @@ func CopyBeaconBlockBodyMerge(body *BeaconBlockBodyMerge) *BeaconBlockBodyMerge 
 }
 
 // CopyExecutionPayload copies the provided ApplicationPayload.
-func CopyExecutionPayload(payload *ExecutionPayload) *ExecutionPayload {
+func CopyExecutionPayload(payload *enginev1.ExecutionPayload) *enginev1.ExecutionPayload {
 	if payload == nil {
 		return nil
 	}
 
-	return &ExecutionPayload{
+	return &enginev1.ExecutionPayload{
 		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptRoot:   bytesutil.SafeCopyBytes(payload.ReceiptRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
 		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
 		Random:        bytesutil.SafeCopyBytes(payload.Random),
 		BlockNumber:   payload.BlockNumber,

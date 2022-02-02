@@ -18,6 +18,7 @@ var (
 	checkpointBucket        = []byte("check-point")
 	powchainBucket          = []byte("powchain")
 	stateValidatorsBucket   = []byte("state-validators")
+	validatedTips           = []byte("validated-synced-tips")
 
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
 	slotsHasObjectBucket = []byte("slots-has-objects")
@@ -46,8 +47,8 @@ var (
 
 	// Below keys are used to identify objects are to be fork compatible.
 	// Objects that are only compatible with specific forks should be prefixed with such keys.
-	altairKey = []byte("altair")
-	mergeKey  = []byte("merge")
+	altairKey    = []byte("altair")
+	bellatrixKey = []byte("merge")
 	// block root included in the beacon state used by weak subjectivity initial sync
 	originBlockRootKey = []byte("origin-block-root")
 

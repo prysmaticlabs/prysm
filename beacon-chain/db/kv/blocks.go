@@ -204,58 +204,6 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, []
 	return len(blockRoots) > 0, blockRoots, nil
 }
 
-// deleteBlock by block root.
-func (s *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlock")
-	defer span.End()
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		enc := bkt.Get(blockRoot[:])
-		if enc == nil {
-			return nil
-		}
-		blk, err := unmarshalBlock(ctx, enc)
-		if err != nil {
-			return err
-		}
-		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
-		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not delete root for DB indices")
-		}
-		s.blockCache.Del(string(blockRoot[:]))
-		return bkt.Delete(blockRoot[:])
-	})
-}
-
-// deleteBlocks by block roots.
-func (s *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlocks")
-	defer span.End()
-
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		for _, blockRoot := range blockRoots {
-			enc := bkt.Get(blockRoot[:])
-			if enc == nil {
-				return nil
-			}
-			blk, err := unmarshalBlock(ctx, enc)
-			if err != nil {
-				return err
-			}
-			indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
-			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-				return errors.Wrap(err, "could not delete root for DB indices")
-			}
-			s.blockCache.Del(string(blockRoot[:]))
-			if err := bkt.Delete(blockRoot[:]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
 // SaveBlock to the db.
 func (s *Store) SaveBlock(ctx context.Context, signed block.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
@@ -267,7 +215,6 @@ func (s *Store) SaveBlock(ctx context.Context, signed block.SignedBeaconBlock) e
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return nil
 	}
-
 	return s.SaveBlocks(ctx, []block.SignedBeaconBlock{signed})
 }
 
@@ -636,13 +583,13 @@ func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, err
 			return nil, err
 		}
 		return wrapper.WrappedAltairSignedBeaconBlock(rawBlock)
-	case hasMergeKey(enc):
-		rawBlock := &ethpb.SignedBeaconBlockMerge{}
-		err := rawBlock.UnmarshalSSZ(enc[len(mergeKey):])
+	case hasBellatrixKey(enc):
+		rawBlock := &ethpb.SignedBeaconBlockBellatrix{}
+		err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):])
 		if err != nil {
 			return nil, err
 		}
-		return wrapper.WrappedMergeSignedBeaconBlock(rawBlock)
+		return wrapper.WrappedBellatrixSignedBeaconBlock(rawBlock)
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock := &ethpb.SignedBeaconBlock{}
@@ -661,8 +608,8 @@ func marshalBlock(_ context.Context, blk block.SignedBeaconBlock) ([]byte, error
 		return nil, err
 	}
 	switch blk.Version() {
-	case version.Merge:
-		return snappy.Encode(nil, append(mergeKey, obj...)), nil
+	case version.Bellatrix:
+		return snappy.Encode(nil, append(bellatrixKey, obj...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, obj...)), nil
 	case version.Phase0:

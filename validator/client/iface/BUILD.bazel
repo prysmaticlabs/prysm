@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/client/iface",
     visibility = ["//validator:__subpackages__"],
     deps = [
+        "//config/fieldparams:go_default_library",
         "//validator/keymanager:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],

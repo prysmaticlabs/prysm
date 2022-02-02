@@ -19,9 +19,11 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/cmd"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -446,7 +448,7 @@ func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: nil,
 		},
-		StateGen: &stategen.MockStateManager{
+		StateGen: &mockstategen.MockStateManager{
 			StatesBySlot: map[types.Slot]state.BeaconState{
 				0: nil,
 			},
@@ -1265,7 +1267,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 
 	bs := &Server{
 		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
@@ -1496,7 +1498,7 @@ func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
 	require.NoError(t, headState.SetSlot(0))
 	epoch := types.Epoch(50)
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))
-	mockStateGen := &stategen.MockStateManager{
+	mockStateGen := &mockstategen.MockStateManager{
 		StatesBySlot: map[types.Slot]state.BeaconState{
 			0: (*v1.BeaconState)(nil),
 		},
