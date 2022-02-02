@@ -29,6 +29,7 @@ type BeaconNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	enr     string
+	ids     []string
 	started chan struct{}
 }
 
@@ -60,6 +61,12 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
 	return helpers.WaitOnNodes(ctx, nodes, func() {
+		if s.config.UseFixedPeerIDs {
+			for i := 0; i < len(nodes); i++ {
+				s.ids = append(s.ids, nodes[i].(*BeaconNode).peerID)
+			}
+			s.config.PeerIDs = s.ids
+		}
 		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
 	})
@@ -77,6 +84,7 @@ type BeaconNode struct {
 	started chan struct{}
 	index   int
 	enr     string
+	peerID  string
 }
 
 // NewBeaconNode creates and returns a beacon node.
@@ -102,6 +110,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	expectedNumOfPeers := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount - 1
 
 	args := []string{
 		fmt.Sprintf("--%s=%s/eth2-beacon-node-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
@@ -112,6 +121,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%d", flags.MinSyncPeers.Name, e2e.TestParams.BeaconNodeCount-1),
 		fmt.Sprintf("--%s=%d", cmdshared.P2PUDPPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+10),
 		fmt.Sprintf("--%s=%d", cmdshared.P2PTCPPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+20),
+		fmt.Sprintf("--%s=%d", cmdshared.P2PMaxPeers.Name, expectedNumOfPeers),
 		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.BeaconNodeMetricsPort+index),
 		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+40),
 		fmt.Sprintf("--%s=%d", flags.ContractDeploymentBlock.Name, 0),
@@ -156,6 +166,14 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 
 	if err = helpers.WaitForTextInFile(stdOutFile, "gRPC server listening on port"); err != nil {
 		return fmt.Errorf("could not find multiaddr for node %d, this means the node had issues starting: %w", index, err)
+	}
+
+	if config.UseFixedPeerIDs {
+		peerId, err := helpers.FindFollowingTextInFile(stdOutFile, "Running node with peer id of ")
+		if err != nil {
+			return fmt.Errorf("could not find peer id: %w", err)
+		}
+		node.peerID = peerId
 	}
 
 	// Mark node as ready.
