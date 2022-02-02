@@ -42,7 +42,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	if err := s.onAttestation(ctx, att); err != nil {
+	if err := s.OnAttestation(ctx, att); err != nil {
 		return errors.Wrap(err, "could not process attestation")
 	}
 
@@ -139,7 +139,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-st.C():
-				if err := s.newSlot(s.ctx, s.CurrentSlot()); err != nil {
+				if err := s.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("Could not process new slot")
 					return
 				}

@@ -88,7 +88,7 @@ var (
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
-	MinSyncPeers = &cli.Uint64Flag{
+	MinSyncPeers = &cli.IntFlag{
 		Name:  "min-sync-peers",
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
@@ -123,13 +123,13 @@ var (
 		Usage: "Does not run the discoveryV5 dht.",
 	}
 	// BlockBatchLimit specifies the requested block batch size.
-	BlockBatchLimit = &cli.Uint64Flag{
+	BlockBatchLimit = &cli.IntFlag{
 		Name:  "block-batch-limit",
 		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
 		Value: 64,
 	}
 	// BlockBatchLimitBurstFactor specifies the factor by which block batch size may increase.
-	BlockBatchLimitBurstFactor = &cli.Uint64Flag{
+	BlockBatchLimitBurstFactor = &cli.IntFlag{
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 10,
@@ -189,27 +189,6 @@ var (
 		Name:  "minimum-peers-per-subnet",
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
-	}
-	// TerminalTotalDifficultyOverride specifies the total difficulty to manual overrides the `TERMINAL_TOTAL_DIFFICULTY` parameter.
-	TerminalTotalDifficultyOverride = &cli.Uint64Flag{
-		Name: "terminal-total-difficulty-override",
-		Usage: "Sets the total difficulty to manual overrides the default TERMINAL_TOTAL_DIFFICULTY value. " +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal difficulty. " +
-			"Incorrect usage will result in your node experience consensus failure.",
-	}
-	// TerminalBlockHashOverride specifies the terminal block hash to manual overrides the `TERMINAL_BLOCK_HASH` parameter.
-	TerminalBlockHashOverride = &cli.StringFlag{
-		Name: "terminal-block-hash-override",
-		Usage: "Sets the block hash to manual overrides the default TERMINAL_BLOCK_HASH value. " +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash. " +
-			"Incorrect usage will result in your node experience consensus failure.",
-	}
-	// TerminalBlockHashActivationEpochOverride specifies the terminal block hash epoch to manual overrides the `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` parameter.
-	TerminalBlockHashActivationEpochOverride = &cli.Uint64Flag{
-		Name: "terminal-block-hash-epoch-override",
-		Usage: "Sets the block hash epoch to manual overrides the default TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH value. " +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch. " +
-			"Incorrect usage will result in your node experience consensus failure.",
 	}
 	// FeeRecipient specifies the fee recipient for the transaction fees.
 	FeeRecipient = &cli.StringFlag{
