@@ -1,6 +1,6 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")  # gazelle:keep
 
-lighthouse_version = "v2.1.1"
+lighthouse_version = "v2.1.2"
 lighthouse_archive_name = "lighthouse-%s-x86_64-unknown-linux-gnu-portable.tar.gz" % lighthouse_version
 
 def e2e_deps():

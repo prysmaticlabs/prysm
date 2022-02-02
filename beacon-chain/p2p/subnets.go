@@ -136,7 +136,7 @@ func (s *Service) filterPeerForSyncSubnet(index uint64) func(node *enode.Node) b
 func (s *Service) hasPeerWithSubnet(topic string) bool {
 	// In the event peer threshold is lower, we will choose the lower
 	// threshold.
-	minPeers := mathutil.Min(1, flags.Get().MinimumPeersPerSubnet)
+	minPeers := mathutil.Min(1, uint64(flags.Get().MinimumPeersPerSubnet))
 	return len(s.pubsub.ListPeers(topic+s.Encoding().ProtocolSuffix())) >= int(minPeers)
 }
 
