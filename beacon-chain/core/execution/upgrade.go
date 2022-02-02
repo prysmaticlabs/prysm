@@ -5,14 +5,14 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// UpgradeToMerge updates inputs a generic state to return the version Merge state.
+// UpgradeToBellatrix updates inputs a generic state to return the version Bellatrix state.
 // It inserts an empty `ExecutionPayloadHeader` into the state.
-func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+func UpgradeToBellatrix(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	epoch := time.CurrentEpoch(state)
 
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
@@ -36,13 +36,13 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		return nil, err
 	}
 
-	s := &ethpb.BeaconStateMerge{
+	s := &ethpb.BeaconStateBellatrix{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
-			CurrentVersion:  params.BeaconConfig().MergeForkVersion,
+			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:           state.LatestBlockHeader(),
@@ -82,5 +82,5 @@ func UpgradeToMerge(ctx context.Context, state state.BeaconState) (state.BeaconS
 		},
 	}
 
-	return v3.InitializeFromProto(s)
+	return v3.InitializeFromProtoUnsafe(s)
 }

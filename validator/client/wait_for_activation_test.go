@@ -9,6 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -19,7 +20,7 @@ import (
 	walletMock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/validator/client/testutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	remotekeymanagermock "github.com/prysmaticlabs/prysm/validator/keymanager/remote/mock"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/tyler-smith/go-bip39"
@@ -32,10 +33,10 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -66,10 +67,10 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -98,10 +99,10 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -133,10 +134,10 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -168,10 +169,10 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -209,10 +210,10 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 		fetchNoKeys: true,
@@ -235,7 +236,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		resp,
 		nil,
 	)
-	assert.NoError(t, v.waitForActivation(context.Background(), make(chan [][48]byte)), "Could not wait for activation")
+	assert.NoError(t, v.waitForActivation(context.Background(), make(chan [][fieldparams.BLSPubkeyLength]byte)), "Could not wait for activation")
 	assert.LogsContain(t, hook, msgNoKeysFetched)
 	assert.LogsContain(t, hook, "Validator activated")
 }
@@ -249,14 +250,14 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 	t.Run("Imported keymanager", func(t *testing.T) {
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		inactivePubKey := [48]byte{}
+		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		activePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		activePubKey := [48]byte{}
+		activePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
 		km := &mockKeymanager{
-			keysMap: map[[48]byte]bls.SecretKey{
+			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 				inactivePubKey: inactivePrivKey,
 			},
 		}
@@ -300,7 +301,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
 			km.keysMap[activePubKey] = activePrivKey
-			km.SimulateAccountChanges(make([][48]byte, 0))
+			km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
 		}()
 
 		assert.NoError(t, v.WaitForActivation(context.Background(), nil))
@@ -313,12 +314,12 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		inactivePrivKey, err :=
 			util.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 0))
 		require.NoError(t, err)
-		inactivePubKey := [48]byte{}
+		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		activePrivKey, err :=
 			util.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 1))
 		require.NoError(t, err)
-		activePubKey := [48]byte{}
+		activePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
 		wallet := &walletMock.Wallet{
 			Files:            make(map[string]map[string][]byte),
@@ -369,13 +370,13 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			nil,
 		)
 
-		channel := make(chan [][48]byte)
+		channel := make(chan [][fieldparams.BLSPubkeyLength]byte)
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
 			err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 2)
 			require.NoError(t, err)
-			channel <- [][48]byte{}
+			channel <- [][fieldparams.BLSPubkeyLength]byte{}
 		}()
 
 		assert.NoError(t, v.waitForActivation(context.Background(), channel))
@@ -397,8 +398,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 
 	inactiveKey := bytesutil.ToBytes48([]byte("inactive"))
 	activeKey := bytesutil.ToBytes48([]byte("active"))
-	km := remote.NewMock()
-	km.PublicKeys = [][48]byte{inactiveKey, activeKey}
+	km := remotekeymanagermock.NewMock()
+	km.PublicKeys = [][fieldparams.BLSPubkeyLength]byte{inactiveKey, activeKey}
 	slot := types.Slot(0)
 
 	t.Run("activated", func(t *testing.T) {
@@ -460,8 +461,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 	t.Run("reloaded", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		hook := logTest.NewGlobal()
-		remoteKm := remote.NewMock()
-		remoteKm.PublicKeys = [][48]byte{inactiveKey}
+		remoteKm := remotekeymanagermock.NewMock()
+		remoteKm.PublicKeys = [][fieldparams.BLSPubkeyLength]byte{inactiveKey}
 
 		tickerChan := make(chan types.Slot)
 		ticker := &slotutilmock.MockTicker{
@@ -475,7 +476,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		go func() {
 			tickerChan <- slot
 			time.Sleep(time.Second)
-			remoteKm.PublicKeys = [][48]byte{inactiveKey, activeKey}
+			remoteKm.PublicKeys = [][fieldparams.BLSPubkeyLength]byte{inactiveKey, activeKey}
 			tickerChan <- slot
 			// Cancel after timeout to avoid waiting on channel forever in case test goes wrong.
 			time.Sleep(time.Second)

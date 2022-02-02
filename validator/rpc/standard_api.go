@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -24,7 +25,14 @@ func (s *Server) ListKeystores(
 	if !s.walletInitialized {
 		return nil, status.Error(codes.Internal, "Wallet not ready")
 	}
-	pubKeys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
+	if s.validatorService == nil {
+		return nil, status.Error(codes.Internal, "Validator service not ready")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+	}
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not list keystores: %v", err)
 	}
@@ -49,7 +57,14 @@ func (s *Server) ImportKeystores(
 	if !s.walletInitialized {
 		return nil, status.Error(codes.Internal, "Wallet not ready")
 	}
-	importer, ok := s.keymanager.(keymanager.Importer)
+	if s.validatorService == nil {
+		return nil, status.Error(codes.Internal, "Validator service not ready")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+	}
+	importer, ok := km.(keymanager.Importer)
 	if !ok {
 		return nil, status.Error(codes.Internal, "Keymanager kind cannot import keys")
 	}
@@ -100,7 +115,14 @@ func (s *Server) DeleteKeystores(
 	if !s.walletInitialized {
 		return nil, status.Error(codes.Internal, "Wallet not ready")
 	}
-	deleter, ok := s.keymanager.(keymanager.Deleter)
+	if s.validatorService == nil {
+		return nil, status.Error(codes.Internal, "Validator service not ready")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+	}
+	deleter, ok := km.(keymanager.Deleter)
 	if !ok {
 		return nil, status.Error(codes.Internal, "Keymanager kind cannot delete keys")
 	}
@@ -170,8 +192,8 @@ func (s *Server) transformDeletedKeysStatuses(
 }
 
 // Gets a map of all public keys in the database, useful for O(1) lookups.
-func (s *Server) publicKeysInDB(ctx context.Context) (map[[48]byte]bool, error) {
-	pubKeysInDB := make(map[[48]byte]bool)
+func (s *Server) publicKeysInDB(ctx context.Context) (map[[fieldparams.BLSPubkeyLength]byte]bool, error) {
+	pubKeysInDB := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	attestedPublicKeys, err := s.valDB.AttestedPublicKeys(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attested public keys from DB: %v", err)

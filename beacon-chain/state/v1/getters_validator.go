@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -15,12 +16,6 @@ import (
 type ValidatorIndexOutOfRangeError struct {
 	message string
 }
-
-var (
-	// ErrNilValidatorsInState returns when accessing validators in the state while the state has a
-	// nil slice for the validators field.
-	ErrNilValidatorsInState = errors.New("state has nil validator slice")
-)
 
 // NewValidatorIndexOutOfRangeError creates a new error instance.
 func NewValidatorIndexOutOfRangeError(index types.ValidatorIndex) ValidatorIndexOutOfRangeError {
@@ -120,7 +115,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (state.
 		return nil, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
-		return nil, ErrNilValidatorsInState
+		return nil, state.ErrNilValidatorsInState
 	}
 	if uint64(len(b.state.Validators)) <= uint64(idx) {
 		e := NewValidatorIndexOutOfRangeError(idx)
@@ -134,7 +129,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (state.
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
-func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex, bool) {
+func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
 	if b == nil || b.valMapHandler == nil || b.valMapHandler.IsNil() {
 		return 0, false
 	}
@@ -151,18 +146,18 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (types.ValidatorIndex
 
 // PubkeyAtIndex returns the pubkey at the given
 // validator index.
-func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [48]byte {
+func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte {
 	if !b.hasInnerState() {
-		return [48]byte{}
+		return [fieldparams.BLSPubkeyLength]byte{}
 	}
 	if uint64(idx) >= uint64(len(b.state.Validators)) {
-		return [48]byte{}
+		return [fieldparams.BLSPubkeyLength]byte{}
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
 	if b.state.Validators[idx] == nil {
-		return [48]byte{}
+		return [fieldparams.BLSPubkeyLength]byte{}
 	}
 	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
 }

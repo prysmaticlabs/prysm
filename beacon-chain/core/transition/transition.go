@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -142,21 +143,34 @@ func ProcessSlotsUsingNextSlotCache(
 	if err != nil {
 		return nil, err
 	}
+	cachedStateExists := nextSlotState != nil && !nextSlotState.IsNil()
 	// If the next slot state is not nil (i.e. cache hit).
 	// We replace next slot state with parent state.
-	if nextSlotState != nil && !nextSlotState.IsNil() {
+	if cachedStateExists {
 		parentState = nextSlotState
 	}
 
+	// In the event our cached state has advanced our
+	// state to the desired slot, we exit early.
+	if cachedStateExists && parentState.Slot() == slot {
+		return parentState, nil
+	}
 	// Since next slot cache only advances state by 1 slot,
 	// we check if there's more slots that need to process.
-	if slot > parentState.Slot() {
-		parentState, err = ProcessSlots(ctx, parentState, slot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process slots")
-		}
+	parentState, err = ProcessSlots(ctx, parentState, slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process slots")
 	}
 	return parentState, nil
+}
+
+// ProcessSlotsIfPossible executes ProcessSlots on the input state when target slot is above the state's slot.
+// Otherwise, it returns the input state unchanged.
+func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, targetSlot types.Slot) (state.BeaconState, error) {
+	if targetSlot > state.Slot() {
+		return ProcessSlots(ctx, state, targetSlot)
+	}
+	return state, nil
 }
 
 // ProcessSlots process through skip slots and apply epoch transition when it's needed
@@ -241,7 +255,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Merge:
+			case version.Altair, version.Bellatrix:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
@@ -258,6 +272,14 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 
 		if time.CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if time.CanUpgradeToBellatrix(state.Slot()) {
+			state, err = execution.UpgradeToBellatrix(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

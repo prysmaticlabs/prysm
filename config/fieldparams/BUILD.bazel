@@ -12,7 +12,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["mainnet_test.go"],
+    srcs = [
+        "common_test.go",
+        "mainnet_test.go",
+    ],
     deps = [
         ":go_default_library",
         "//config/params:go_default_library",
@@ -22,7 +25,10 @@ go_test(
 
 go_test(
     name = "go_minimal_test",
-    srcs = ["minimal_test.go"],
+    srcs = [
+        "common_test.go",
+        "minimal_test.go",
+    ],
     eth_network = "minimal",
     deps = [
         ":go_default_library",

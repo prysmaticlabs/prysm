@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
@@ -16,7 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
@@ -46,11 +49,17 @@ func TestServer_ListKeystores(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
-
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 
 	t.Run("no keystores found", func(t *testing.T) {
@@ -103,11 +112,17 @@ func TestServer_ImportKeystores(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
-
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 	t.Run("prevents importing if faulty keystore in request", func(t *testing.T) {
 		_, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
@@ -157,7 +172,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		password := "12345678"
 		keystores := make([]*keymanager.Keystore, numKeystores)
 		passwords := make([]string, numKeystores)
-		publicKeys := make([][48]byte, numKeystores)
+		publicKeys := make([][fieldparams.BLSPubkeyLength]byte, numKeystores)
 		for i := 0; i < numKeystores; i++ {
 			keystores[i] = createRandomKeystore(t, password)
 			pubKey, err := hex.DecodeString(keystores[i].Pubkey)
@@ -215,7 +230,9 @@ func TestServer_DeleteKeystores(t *testing.T) {
 
 	// We recover 3 accounts from a test mnemonic.
 	numAccounts := 3
-	dr, ok := srv.keymanager.(*derived.Keymanager)
+	km, er := srv.validatorService.Keymanager()
+	require.NoError(t, er)
+	dr, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
 	err := dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
@@ -261,7 +278,7 @@ func TestServer_DeleteKeystores(t *testing.T) {
 	})
 
 	// For ease of test setup, we'll give each public key a string identifier.
-	publicKeysWithId := map[string][48]byte{
+	publicKeysWithId := map[string][fieldparams.BLSPubkeyLength]byte{
 		"a": publicKeys[0],
 		"b": publicKeys[1],
 		"c": publicKeys[2],
@@ -358,11 +375,18 @@ func setupServerWithWallet(t testing.TB) *Server {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 
 	return &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 }
 

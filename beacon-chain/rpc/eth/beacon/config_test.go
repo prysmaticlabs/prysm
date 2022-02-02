@@ -47,8 +47,8 @@ func TestGetSpec(t *testing.T) {
 	config.GenesisForkVersion = []byte("GenesisForkVersion")
 	config.AltairForkVersion = []byte("AltairForkVersion")
 	config.AltairForkEpoch = 100
-	config.MergeForkVersion = []byte("MergeForkVersion")
-	config.MergeForkEpoch = 101
+	config.BellatrixForkVersion = []byte("BellatrixForkVersion")
+	config.BellatrixForkEpoch = 101
 	config.ShardingForkVersion = []byte("ShardingForkVersion")
 	config.ShardingForkEpoch = 102
 	config.MinAnchorPowBlockDifficulty = 1000
@@ -130,7 +130,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 97, len(resp.Data))
+	assert.Equal(t, 99, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -191,9 +191,9 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("AltairForkVersion")), v)
 		case "ALTAIR_FORK_EPOCH":
 			assert.Equal(t, "100", v)
-		case "MERGE_FORK_VERSION":
-			assert.Equal(t, "0x"+hex.EncodeToString([]byte("MergeForkVersion")), v)
-		case "MERGE_FORK_EPOCH":
+		case "BELLATRIX_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("BellatrixForkVersion")), v)
+		case "BELLATRIX_FORK_EPOCH":
 			assert.Equal(t, "101", v)
 		case "SHARDING_FORK_VERSION":
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("ShardingForkVersion")), v)
@@ -331,12 +331,16 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "73", v)
 		case "FeeRecipient":
 			assert.Equal(t, common.HexToAddress("FeeRecipient"), v)
-		case "PROPORTIONAL_SLASHING_MULTIPLIER_MERGE":
+		case "PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX":
 			assert.Equal(t, "3", v)
-		case "MIN_SLASHING_PENALTY_QUOTIENT_MERGE":
+		case "MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX":
 			assert.Equal(t, "32", v)
-		case "INACTIVITY_PENALTY_QUOTIENT_MERGE":
+		case "INACTIVITY_PENALTY_QUOTIENT_BELLATRIX":
 			assert.Equal(t, "16777216", v)
+		case "PROPOSER_SCORE_BOOST":
+			assert.Equal(t, "70", v)
+		case "INTERVALS_PER_SLOT":
+			assert.Equal(t, "3", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
@@ -399,5 +403,5 @@ func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// Genesis and Altair.
-	assert.Equal(t, 2, len(resp.Data))
+	assert.Equal(t, 3, len(resp.Data))
 }

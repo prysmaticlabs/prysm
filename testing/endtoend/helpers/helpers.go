@@ -48,7 +48,9 @@ func DeleteAndCreateFile(tmpPath, fileName string) (*os.File, error) {
 			return nil, err
 		}
 	}
-	newFile, err := os.Create(path.Join(tmpPath, fileName))
+
+	newFile, err := os.Create(filepath.Clean(path.Join(tmpPath, fileName)))
+
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +163,7 @@ func WritePprofFiles(testDir string, index int) error {
 	return writeURLRespAtPath(url, filePath)
 }
 
-func writeURLRespAtPath(url, filePath string) error {
+func writeURLRespAtPath(url, fp string) error {
 	resp, err := http.Get(url) // #nosec G107 -- Safe, used internally
 	if err != nil {
 		return err
@@ -176,7 +178,9 @@ func writeURLRespAtPath(url, filePath string) error {
 	if err != nil {
 		return err
 	}
-	file, err := os.Create(filePath)
+
+	file, err := os.Create(filepath.Clean(fp))
+
 	if err != nil {
 		return err
 	}

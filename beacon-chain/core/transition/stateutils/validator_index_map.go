@@ -5,14 +5,15 @@ package stateutils
 
 import (
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // ValidatorIndexMap builds a lookup map for quickly determining the index of
 // a validator by their public key.
-func ValidatorIndexMap(validators []*ethpb.Validator) map[[48]byte]types.ValidatorIndex {
-	m := make(map[[48]byte]types.ValidatorIndex, len(validators))
+func ValidatorIndexMap(validators []*ethpb.Validator) map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex {
+	m := make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex, len(validators))
 	if validators == nil {
 		return m
 	}

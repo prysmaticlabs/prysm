@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/math"
@@ -22,11 +23,15 @@ import (
 // from the gRPC server.
 //
 // If the channel parameter is nil, WaitForActivation creates and manages its own channel.
-func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan chan [][48]byte) error {
+func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan chan [][fieldparams.BLSPubkeyLength]byte) error {
 	// Monitor the key manager for updates.
 	if accountsChangedChan == nil {
-		accountsChangedChan = make(chan [][48]byte, 1)
-		sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+		accountsChangedChan = make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
+		km, err := v.Keymanager()
+		if err != nil {
+			return err
+		}
+		sub := km.SubscribeAccountChanges(accountsChangedChan)
 		defer func() {
 			sub.Unsubscribe()
 			close(accountsChangedChan)
@@ -43,7 +48,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 // the accountsChangedChan. When an event signal is received, restart the waitForActivation routine.
 // 4) If the stream is reset in error, restart the routine.
 // 5) If the stream returns a response indicating one or more validators are active, exit the routine.
-func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan [][48]byte) error {
+func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 

@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -60,16 +59,9 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
 	interop.WriteStateToDisk(state)
 
-	if features.Get().EnableNextSlotStateCache {
-		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not process slots")
-		}
-	} else {
-		state, err = ProcessSlots(ctx, state, signed.Block().Slot())
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not process slot")
-		}
+	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not process slots")
 	}
 
 	// Execute per block transition.
@@ -135,16 +127,9 @@ func CalculateStateRoot(
 
 	// Execute per slots transition.
 	var err error
-	if features.Get().EnableNextSlotStateCache {
-		state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not process slots")
-		}
-	} else {
-		state, err = ProcessSlots(ctx, state, signed.Block().Slot())
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not process slot")
-		}
+	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not process slots")
 	}
 
 	// Execute per block transition.
@@ -152,7 +137,7 @@ func CalculateStateRoot(
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
-	if signed.Version() == version.Altair {
+	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return [32]byte{}, err
@@ -198,7 +183,7 @@ func ProcessBlockNoVerifyAnySig(
 	if err != nil {
 		return nil, nil, err
 	}
-	if signed.Version() == version.Altair {
+	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return nil, nil, err
@@ -273,7 +258,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair:
+	case version.Altair, version.Bellatrix:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
@@ -287,6 +272,16 @@ func ProcessOperationsNoVerifyAttsSigs(
 
 // ProcessBlockForStateRoot processes the state for state root computation. It skips proposer signature
 // and randao signature verifications.
+//
+// Spec pseudocode definition:
+// def process_block(state: BeaconState, block: BeaconBlock) -> None:
+//    process_block_header(state, block)
+//    if is_execution_enabled(state, block.body):
+//        process_execution_payload(state, block.body.execution_payload, EXECUTION_ENGINE)  # [New in Bellatrix]
+//    process_randao(state, block.body)
+//    process_eth1_data(state, block.body)
+//    process_operations(state, block.body)
+//    process_sync_aggregate(state, block.body.sync_aggregate)
 func ProcessBlockForStateRoot(
 	ctx context.Context,
 	state state.BeaconState,
@@ -302,12 +297,29 @@ func ProcessBlockForStateRoot(
 	body := blk.Body()
 	bodyRoot, err := body.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not hash tree root beacon block body")
 	}
 	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
+	}
+
+	if state.Version() == version.Bellatrix {
+		enabled, err := b.ExecutionEnabled(state, blk.Body())
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if execution is enabled")
+		}
+		if enabled {
+			payload, err := blk.Body().ExecutionPayload()
+			if err != nil {
+				return nil, err
+			}
+			state, err = b.ProcessPayload(state, payload)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process execution payload")
+			}
+		}
 	}
 
 	state, err = b.ProcessRandaoNoVerify(state, signed.Block().Body().RandaoReveal())

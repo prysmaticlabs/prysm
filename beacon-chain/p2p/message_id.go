@@ -2,6 +2,7 @@ package p2p
 
 import (
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -45,7 +46,7 @@ func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
 		return string(msg)
 	}
 	if fEpoch >= params.BeaconConfig().AltairForkEpoch {
-		return altairMsgID(pmsg)
+		return postAltairMsgID(pmsg, fEpoch)
 	}
 	decodedData, err := encoder.DecodeSnappy(pmsg.Data, params.BeaconNetworkConfig().GossipMaxSize)
 	if err != nil {
@@ -69,12 +70,18 @@ func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
 // + message.topic + snappy_decompress(message.data))[:20]. Otherwise, set message-id to the first 20 bytes of the SHA256 hash of the concatenation
 // of the following data: MESSAGE_DOMAIN_INVALID_SNAPPY, the length of the topic byte string (encoded as little-endian uint64),
 // the topic byte string, and the raw message data: i.e. SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + uint_to_bytes(uint64(len(message.topic))) + message.topic + message.data)[:20].
-func altairMsgID(pmsg *pubsub_pb.Message) string {
+func postAltairMsgID(pmsg *pubsub_pb.Message, fEpoch types.Epoch) string {
 	topic := *pmsg.Topic
 	topicLen := uint64(len(topic))
 	topicLenBytes := bytesutil.Uint64ToBytesLittleEndian(topicLen)
 
-	decodedData, err := encoder.DecodeSnappy(pmsg.Data, params.BeaconNetworkConfig().GossipMaxSize)
+	// beyond Bellatrix epoch, allow 10 Mib gossip data size
+	gossipPubSubSize := params.BeaconNetworkConfig().GossipMaxSize
+	if fEpoch >= params.BeaconConfig().BellatrixForkEpoch {
+		gossipPubSubSize = params.BeaconNetworkConfig().GossipMaxSizeBellatrix
+	}
+
+	decodedData, err := encoder.DecodeSnappy(pmsg.Data, gossipPubSubSize)
 	if err != nil {
 		totalLength := len(params.BeaconNetworkConfig().MessageDomainInvalidSnappy) + len(topicLenBytes) + int(topicLen) + len(pmsg.Data)
 		combinedData := make([]byte, 0, totalLength)

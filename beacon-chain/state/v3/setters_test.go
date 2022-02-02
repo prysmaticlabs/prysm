@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -42,7 +43,7 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 	}
-	st, err := InitializeFromProto(&ethpb.BeaconStateMerge{
+	st, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{
 		Slot:                         1,
 		CurrentEpochParticipation:    []byte{},
 		PreviousEpochParticipation:   []byte{},
@@ -56,7 +57,7 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	require.NoError(t, err)
 	_, err = st.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	for i := stateTypes.FieldIndex(0); i < stateTypes.FieldIndex(params.BeaconConfig().BeaconStateMergeFieldCount); i++ {
+	for i := stateTypes.FieldIndex(0); i < stateTypes.FieldIndex(params.BeaconConfig().BeaconStateBellatrixFieldCount); i++ {
 		st.dirtyFields[i] = true
 	}
 	_, err = st.HashTreeRoot(context.Background())
@@ -80,7 +81,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	bals := make([]uint64, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -124,7 +125,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 	}
-	st, err := InitializeFromProto(&ethpb.BeaconStateMerge{
+	st, err := InitializeFromProto(&ethpb.BeaconStateBellatrix{
 		Slot:                  1,
 		GenesisValidatorsRoot: make([]byte, 32),
 		Fork: &ethpb.Fork{

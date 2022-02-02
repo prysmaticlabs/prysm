@@ -21,7 +21,9 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
+	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
@@ -48,10 +50,17 @@ func TestServer_ListAccounts(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 	numAccounts := 50
 	dr, ok := km.(*derived.Keymanager)
@@ -113,10 +122,17 @@ func TestServer_BackupAccounts(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 	numAccounts := 50
 	dr, ok := km.(*derived.Keymanager)
@@ -183,10 +199,17 @@ func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:        km,
 		walletInitialized: true,
 		wallet:            w,
+		validatorService:  vs,
 	}
 	numAccounts := 5
 	dr, ok := km.(*derived.Keymanager)
@@ -198,8 +221,9 @@ func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
 		PublicKeysToDelete: nil,
 	})
 	assert.ErrorContains(t, "No public keys specified to delete", err)
-
-	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
+	ikm, err := s.validatorService.Keymanager()
+	require.NoError(t, err)
+	keys, err := ikm.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeysToDelete: bytesutil.FromBytes48Array(keys),
@@ -208,9 +232,31 @@ func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
 }
 
 func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
-	s := &Server{}
 	ctx := context.Background()
-	_, err := s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
+	localWalletDir := setupWalletDir(t)
+	defaultWalletPath = localWalletDir
+	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      defaultWalletPath,
+			KeymanagerKind: keymanager.Derived,
+			WalletPassword: strongPass,
+		},
+		SkipMnemonicConfirm: true,
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
+	s := &Server{
+		validatorService: vs,
+	}
+	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
 	assert.ErrorContains(t, "No public keys specified to delete", err)
 	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
 		PublicKeysToDelete: make([][]byte, 1),
@@ -221,7 +267,9 @@ func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
 func TestServer_DeleteAccounts_OK_ImportedWallet(t *testing.T) {
 	s, pubKeys := createImportedWalletWithAccounts(t, 3)
 	ctx := context.Background()
-	keys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
+	ikm, err := s.validatorService.Keymanager()
+	require.NoError(t, err)
+	keys, err := ikm.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	require.Equal(t, len(pubKeys), len(keys))
 
@@ -230,11 +278,10 @@ func TestServer_DeleteAccounts_OK_ImportedWallet(t *testing.T) {
 		PublicKeysToDelete: pubKeys[:1], // Delete the 0th public key
 	})
 	require.NoError(t, err)
-	s.keymanager, err = s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
+	km, err := s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
-
 	// We expect one of the keys to have been deleted.
-	keys, err = s.keymanager.FetchValidatingPublicKeys(ctx)
+	keys, err = km.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, len(pubKeys)-1, len(keys))
 }
@@ -288,12 +335,20 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+	})
+	require.NoError(t, err)
 	s := &Server{
-		keymanager:                km,
 		walletInitialized:         true,
 		wallet:                    w,
 		beaconNodeClient:          mockNodeClient,
 		beaconNodeValidatorClient: mockValidatorClient,
+		validatorService:          vs,
 	}
 	numAccounts := 2
 	dr, ok := km.(*derived.Keymanager)

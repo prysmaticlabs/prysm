@@ -234,10 +234,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	require.Equal(t, uint64(32000000000), newState.Balances()[2])
 }
 
-func TestProcessProposerSlashings_AppliesCorrectStatusMerge(t *testing.T) {
+func TestProcessProposerSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	beaconState, privKeys := util.DeterministicGenesisStateMerge(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	proposerIdx := types.ValidatorIndex(1)
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
