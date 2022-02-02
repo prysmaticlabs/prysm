@@ -143,15 +143,21 @@ func ProcessSlotsUsingNextSlotCache(
 	if err != nil {
 		return nil, err
 	}
+	cachedStateExists := nextSlotState != nil && !nextSlotState.IsNil()
 	// If the next slot state is not nil (i.e. cache hit).
 	// We replace next slot state with parent state.
-	if nextSlotState != nil && !nextSlotState.IsNil() {
+	if cachedStateExists {
 		parentState = nextSlotState
 	}
 
+	// In the event our cached state has advanced our
+	// state to the desired slot, we exit early.
+	if cachedStateExists && parentState.Slot() == slot {
+		return parentState, nil
+	}
 	// Since next slot cache only advances state by 1 slot,
 	// we check if there's more slots that need to process.
-	parentState, err = ProcessSlotsIfPossible(ctx, parentState, slot)
+	parentState, err = ProcessSlots(ctx, parentState, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slots")
 	}
