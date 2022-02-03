@@ -12,7 +12,7 @@ import (
 )
 
 func TestClient_IPC(t *testing.T) {
-	server := newTestServer(t)
+	server := newTestIPCServer(t)
 	defer server.Stop()
 	rpcClient := rpc.DialInProc(server)
 	defer rpcClient.Close()
@@ -41,6 +41,10 @@ func TestClient_IPC(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
+}
+
+func TestClient_HTTP(t *testing.T) {
+
 }
 
 type customError struct {
@@ -136,7 +140,7 @@ func Test_handleRPCError(t *testing.T) {
 	}
 }
 
-func newTestServer(t *testing.T) *rpc.Server {
+func newTestIPCServer(t *testing.T) *rpc.Server {
 	server := rpc.NewServer()
 	err := server.RegisterName("engine", new(testEngineService))
 	require.NoError(t, err)
