@@ -10,21 +10,35 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestGetPayload(t *testing.T) {
+func TestClient_IPC(t *testing.T) {
 	server := newTestServer(t)
 	defer server.Stop()
 	rpcClient := rpc.DialInProc(server)
 	defer rpcClient.Close()
 	client := &Client{}
 	client.rpc = rpcClient
-
 	ctx := context.Background()
 	fix := fixtures()
-	want := fix["ExecutionPayload"].(*pb.ExecutionPayload)
-	payloadId := [8]byte{1}
-	resp, err := client.GetPayload(ctx, payloadId)
-	require.NoError(t, err)
-	require.DeepEqual(t, want, resp)
+
+	t.Run("engine_getPayloadV1", func(t *testing.T) {
+		want := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		payloadId := [8]byte{1}
+		resp, err := client.GetPayload(ctx, payloadId)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
+	t.Run("engine_forkchoiceUpdatedV1", func(t *testing.T) {
+		want := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		resp, err := client.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, &pb.PayloadAttributes{})
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
+	t.Run("engine_newPayloadV1", func(t *testing.T) {
+		want := fix["PayloadStatus"].(*pb.PayloadStatus)
+		resp, err := client.NewPayload(ctx, &pb.ExecutionPayload{})
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
 }
 
 func Test_handleRPCError(t *testing.T) {
@@ -58,8 +72,19 @@ func fixtures() map[string]interface{} {
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 	}
+	status := &pb.PayloadStatus{
+		Status:          pb.PayloadStatus_ACCEPTED,
+		LatestValidHash: foo[:],
+		ValidationError: "",
+	}
+	forkChoiceResp := &ForkchoiceUpdatedResponse{
+		Status:    status,
+		PayloadId: [8]byte{1},
+	}
 	return map[string]interface{}{
-		"ExecutionPayload": executionPayloadFixture,
+		"ExecutionPayload":          executionPayloadFixture,
+		"PayloadStatus":             status,
+		"ForkchoiceUpdatedResponse": forkChoiceResp,
 	}
 }
 
@@ -91,15 +116,15 @@ func (s *testEngineService) GetPayloadV1(
 }
 
 func (s *testEngineService) ForkchoiceUpdatedV1(
-	ctx context.Context, payloadId [8]byte,
-) *pb.ExecutionPayload {
+	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
+) *ForkchoiceUpdatedResponse {
 	fix := fixtures()
-	return fix["ExecutionPayload"].(*pb.ExecutionPayload)
+	return fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 }
 
 func (s *testEngineService) NewPayloadV1(
-	ctx context.Context, payloadId [8]byte,
-) *pb.ExecutionPayload {
+	ctx context.Context, payload *pb.ExecutionPayload,
+) *pb.PayloadStatus {
 	fix := fixtures()
-	return fix["ExecutionPayload"].(*pb.ExecutionPayload)
+	return fix["PayloadStatus"].(*pb.PayloadStatus)
 }
