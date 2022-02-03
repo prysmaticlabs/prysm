@@ -301,7 +301,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 }
 
 func TestValidatorReferences_RemainsConsistent(t *testing.T) {
-	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
+	s, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{PublicKey: []byte{'A'}},
 			{PublicKey: []byte{'B'}},
@@ -311,6 +311,8 @@ func TestValidatorReferences_RemainsConsistent(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	a, ok := s.(*BeaconState)
+	require.Equal(t, true, ok)
 
 	// Create a second state.
 	copied := a.Copy()
