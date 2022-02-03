@@ -54,7 +54,7 @@ type HeadFetcher interface {
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
-	IsOptimistic() bool
+	IsOptimistic() (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
