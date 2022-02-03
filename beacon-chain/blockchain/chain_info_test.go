@@ -355,3 +355,14 @@ func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, [fieldparams.BLSPubkeyLength]byte{}, p)
 }
+
+func TestService_IsOptimistic(t *testing.T) {
+	ctx := context.Background()
+	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
+
+	opt, err := c.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, opt)
+}
