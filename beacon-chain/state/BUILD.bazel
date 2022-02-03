@@ -12,8 +12,8 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//contracts/deposit:__subpackages__",
-        "//proto/prysm/v1alpha1:__subpackages__",
         "//proto/migration:__pkg__",
+        "//proto/prysm/v1alpha1:__subpackages__",
         "//proto/testing:__subpackages__",
         "//slasher/rpc:__subpackages__",
         "//testing/benchmark:__pkg__",
