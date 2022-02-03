@@ -28,7 +28,7 @@ func ExportStandardProtectionJSON(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis validators root from DB")
 	}
-	if genesisValidatorsRoot == nil || !bytesutil.NonZeroRoot(genesisValidatorsRoot) {
+	if genesisValidatorsRoot == nil || !bytesutil.IsValidRoot(genesisValidatorsRoot) {
 		return nil, errors.New(
 			"genesis validators root is empty, perhaps you are not connected to your beacon node",
 		)
