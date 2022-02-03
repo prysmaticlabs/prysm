@@ -139,6 +139,10 @@ var (
 		Name:  "disable-balance-trie-computation",
 		Usage: "This disables optimized hash tree root operations for our balance field.",
 	}
+	enableUseNativeState = &cli.BoolFlag{
+		Name:  "enable-use-native-state",
+		Usage: "Enables representing the beacon state as a pure Go struct",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.

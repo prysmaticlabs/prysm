@@ -80,6 +80,8 @@ type Flags struct {
 	KeystoreImportDebounceInterval time.Duration
 
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
+
+	EnableUseNativeState bool // EnableUseNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 }
 
 var featureConfig *Flags
@@ -224,6 +226,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBalanceTrieComputation.Name) {
 		logDisabled(disableBalanceTrieComputation)
 		cfg.EnableBalanceTrieComputation = false
+	}
+	cfg.EnableUseNativeState = false
+	if ctx.Bool(enableUseNativeState.Name) {
+		logDisabled(enableUseNativeState)
+		cfg.EnableUseNativeState = true
 	}
 	Init(cfg)
 }
