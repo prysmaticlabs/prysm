@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -43,7 +44,6 @@ func (e *blockIdParseError) Error() string {
 }
 
 func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
-	/*
 	hs, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "could not get head state")
@@ -76,9 +76,6 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 			StateRoot: stateRoot[:],
 		},
 	}, nil
-
-	 */
-	return nil, status.Error(codes.NotFound, "not implemented")
 }
 
 // GetBlockHeader retrieves block header for given block id.

@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/api/pagination"
@@ -543,53 +542,5 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		PreviousJustifiedSlot:      pjSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
-	}, nil
-}
-
-// GetWeakSubjectivityCheckpointEpoch only computes the epoch for the weak subjectivity checkpoint.
-func (bs *Server) GetWeakSubjectivityCheckpointEpoch(ctx context.Context, _ *emptypb.Empty) (*ethpb.WeakSubjectivityCheckpointEpoch, error) {
-	hs, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get weak subjectivity epoch: %v", err)
-	}
-
-	return &ethpb.WeakSubjectivityCheckpointEpoch{
-		Epoch: uint64(wsEpoch),
-	}, nil
-}
-
-// GetWeakSubjectivityCheckpoint retrieves weak subjectivity state root, block root, and epoch.
-func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.Empty) (*ethpb.WeakSubjectivityCheckpoint, error) {
-	hs, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "could not get head state")
-	}
-	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity epoch: %v", err)
-	}
-	wsSlot, err := slots.EpochStart(wsEpoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity slot: %v", err)
-	}
-	blks, err := bs.BeaconDB.HighestSlotBlocksBelow(ctx, wsSlot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("could not find highest block below slot %d", wsSlot))
-	}
-	block := blks[0]
-	blockRoot, err := block.Block().HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("failed to compute hash_tree_root for block at slot=%d", block.Block().Slot()))
-	}
-	stateRoot := bytesutil.ToBytes32(block.Block().StateRoot())
-	log.Printf("weak subjectivity checkpoint reported as epoch=%d, block root=%#x, state root=%#x", wsEpoch, blockRoot, stateRoot)
-	return &ethpb.WeakSubjectivityCheckpoint{
-		BlockRoot: blockRoot[:],
-		StateRoot: stateRoot[:],
-		Epoch:     wsEpoch,
 	}, nil
 }

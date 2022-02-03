@@ -380,12 +380,12 @@ type wscResponse struct {
 	Epoch     string
 }
 
-// GetWeakSubjectivityCheckpoint calls an entirely different rpc method than GetWeakSubjectivityCheckpointEpoch
+// GetWeakSubjectivity calls an entirely different rpc method than GetWeakSubjectivityCheckpointEpoch
 // This endpoint is much slower, because it uses stategen to generate the BeaconState at the beginning of the
 // weak subjectivity epoch. This also results in a different set of state+block roots, because this endpoint currently
 // uses the state's latest_block_header for the block hash, while the checkpoint sync code assumes that the block
 // is from the first slot in the epoch and the state is from the subesequent slot.
-func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpoint, error) {
+func (c *Client) GetWeakSubjectivity() (*WeakSubjectivityData, error) {
 	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_PATH)
 	r, err := c.c.Get(u.String())
 	if err != nil {
@@ -411,10 +411,10 @@ func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpo
 	if err != nil {
 		return nil, err
 	}
-	return &ethpb.WeakSubjectivityCheckpoint{
+	return &WeakSubjectivityData{
 		Epoch:     types.Epoch(epoch),
-		BlockRoot: blockRoot,
-		StateRoot: stateRoot,
+		BlockRoot: bytesutil.ToBytes32(blockRoot),
+		StateRoot: bytesutil.ToBytes32(stateRoot),
 	}, nil
 }
 

@@ -1,11 +1,11 @@
 package helpers
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"strconv"
 	"strings"
 
@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -122,20 +122,20 @@ func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconS
 //    current_epoch = compute_epoch_at_slot(get_current_slot(store))
 //    return current_epoch <= ws_state_epoch + ws_period
 func IsWithinWeakSubjectivityPeriod(
-	ctx context.Context, currentEpoch types.Epoch, wsState state.ReadOnlyBeaconState, wsCheckpoint *eth.WeakSubjectivityCheckpoint) (bool, error) {
+	ctx context.Context, currentEpoch types.Epoch, wsState state.ReadOnlyBeaconState, wsStateRoot [32]byte, wsEpoch types.Epoch) (bool, error) {
 	// Make sure that incoming objects are not nil.
-	if wsState == nil || wsState.IsNil() || wsState.LatestBlockHeader() == nil || wsCheckpoint == nil {
+	if wsState == nil || wsState.IsNil() || wsState.LatestBlockHeader() == nil {
 		return false, errors.New("invalid weak subjectivity state or checkpoint")
 	}
 
 	// Assert that state and checkpoint have the same root and epoch.
-	if !bytes.Equal(wsState.LatestBlockHeader().StateRoot, wsCheckpoint.StateRoot) {
+	if bytesutil.ToBytes32(wsState.LatestBlockHeader().StateRoot) != wsStateRoot {
 		return false, fmt.Errorf("state (%#x) and checkpoint (%#x) roots do not match",
-			wsState.LatestBlockHeader().StateRoot, wsCheckpoint.StateRoot)
+			wsState.LatestBlockHeader().StateRoot, wsStateRoot)
 	}
-	if slots.ToEpoch(wsState.Slot()) != wsCheckpoint.Epoch {
+	if slots.ToEpoch(wsState.Slot()) != wsEpoch {
 		return false, fmt.Errorf("state (%v) and checkpoint (%v) epochs do not match",
-			slots.ToEpoch(wsState.Slot()), wsCheckpoint.Epoch)
+			slots.ToEpoch(wsState.Slot()), wsEpoch)
 	}
 
 	// Compare given epoch to state epoch + weak subjectivity period.
@@ -164,7 +164,7 @@ func LatestWeakSubjectivityEpoch(ctx context.Context, st state.ReadOnlyBeaconSta
 }
 
 // ParseWeakSubjectivityInputString parses "blocks_root:epoch_number" string into a checkpoint.
-func ParseWeakSubjectivityInputString(wsCheckpointString string) (*eth.Checkpoint, error) {
+func ParseWeakSubjectivityInputString(wsCheckpointString string) (*v1alpha1.Checkpoint, error) {
 	if wsCheckpointString == "" {
 		return nil, nil
 	}
@@ -197,7 +197,7 @@ func ParseWeakSubjectivityInputString(wsCheckpointString string) (*eth.Checkpoin
 		return nil, err
 	}
 
-	return &eth.Checkpoint{
+	return &v1alpha1.Checkpoint{
 		Epoch: types.Epoch(epoch),
 		Root:  bRoot,
 	}, nil

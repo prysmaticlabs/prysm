@@ -7,8 +7,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/sniff"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
@@ -17,8 +15,13 @@ import (
 
 var ErrMismatchedLatestBlockRoot = errors.New("block root in state does not match value from api")
 
+type WeakSubjectivityData struct {
+	BlockRoot [32]byte
+	StateRoot [32]byte
+	Epoch types.Epoch
+}
 type OriginData struct {
-	Checkpoint *ethpb.WeakSubjectivityCheckpoint
+	WeakSubjectivity *WeakSubjectivityData
 	StateBytes []byte
 	blockBytes []byte
 }
@@ -127,9 +130,9 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", blockRoot, realBlockRoot)
 
 	return &OriginData{
-		Checkpoint:         &ethpb.WeakSubjectivityCheckpoint{
-			BlockRoot: blockRoot[:],
-			StateRoot: stateRoot[:],
+		WeakSubjectivity: &WeakSubjectivityData{
+			BlockRoot: blockRoot,
+			StateRoot: stateRoot,
 			Epoch:     epoch,
 		},
 		StateBytes: stateBytes,
@@ -144,7 +147,7 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 // different technique where we first download the head state which can be used to compute the
 // weak subjectivity epoch on the client side.
 func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error) {
-	wsc, err := client.GetWeakSubjectivityCheckpoint()
+	ws, err := client.GetWeakSubjectivity()
 	if err != nil {
 		// a 404 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
 		if !errors.Is(err, ErrNotFound) {
@@ -153,12 +156,12 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 		// ok so it's a 404, use the head state method
 		return downloadBackwardsCompatible(ctx, client)
 	}
-	log.Printf("server weak subjectivity checkpoint response - epoch=%d, block_root=%#x, state_root=%#x", wsc.Epoch, wsc.BlockRoot, wsc.StateRoot)
+	log.Printf("server weak subjectivity checkpoint response - epoch=%d, block_root=%#x, state_root=%#x", ws.Epoch, ws.BlockRoot, ws.StateRoot)
 
 	// use first slot of the epoch for the block slot
-	slot, err := slots.EpochStart(wsc.Epoch)
+	slot, err := slots.EpochStart(ws.Epoch)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("Error computing first slot of epoch=%d", wsc.Epoch))
+		return nil, errors.Wrap(err, fmt.Sprintf("Error computing first slot of epoch=%d", ws.Epoch))
 	}
 	log.Printf("requesting checkpoint state at slot %d", slot)
 
@@ -191,9 +194,9 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 		return nil, errors.Wrap(err, "error computing hash_tree_root of latest_block_header")
 	}
 	log.Printf("found hash_tree_root(state.latest_block_header)=%#x", blockRoot)
-	if blockRoot != bytesutil.ToBytes32(wsc.BlockRoot) {
+	if blockRoot != ws.BlockRoot {
 		log.Warn("checkpoint block root doesn't match hash_tree_root(state.latest_block_header)")
-		msg := fmt.Sprintf("api block_root=%#x, hash_tree_root(state.latest_block_header)=%#x", wsc.BlockRoot, blockRoot)
+		msg := fmt.Sprintf("api block_root=%#x, hash_tree_root(state.latest_block_header)=%#x", ws.BlockRoot, blockRoot)
 		return nil, errors.Wrap(ErrMismatchedLatestBlockRoot, msg)
 	}
 
@@ -218,7 +221,7 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	log.Printf("BeaconState htr=%#xd, Block state_root=%#x", stateRoot, block.Block().StateRoot())
 	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", blockRoot, realBlockRoot)
 	return &OriginData{
-		Checkpoint: wsc,
+		WeakSubjectivity: ws,
 		StateBytes: stateBytes,
 		blockBytes: blockBytes,
 	}, nil
