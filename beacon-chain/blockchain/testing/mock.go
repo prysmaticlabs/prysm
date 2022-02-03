@@ -440,6 +440,6 @@ func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ type
 }
 
 // IsOptimistic mocks the same method in the chain service.
-func (s *ChainService) IsOptimistic(ctx context.Context) (bool, error) {
+func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 	return false, nil
 }
