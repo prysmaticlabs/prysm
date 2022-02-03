@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -31,7 +32,8 @@ func TestClient_IPC(t *testing.T) {
 		want := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		resp, err := client.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, &pb.PayloadAttributes{})
 		require.NoError(t, err)
-		require.DeepEqual(t, want, resp)
+		require.DeepEqual(t, want.Status, resp.Status)
+		require.DeepEqual(t, want.PayloadId, resp.PayloadId)
 	})
 	t.Run("engine_newPayloadV1", func(t *testing.T) {
 		want := fix["PayloadStatus"].(*pb.PayloadStatus)
@@ -41,8 +43,97 @@ func TestClient_IPC(t *testing.T) {
 	})
 }
 
-func Test_handleRPCError(t *testing.T) {
+type customError struct {
+	code int
+}
 
+func (c *customError) ErrorCode() int {
+	return c.code
+}
+
+func (c *customError) Error() string {
+	return "something went wrong"
+}
+
+type dataError struct {
+	code int
+	data interface{}
+}
+
+func (c *dataError) ErrorCode() int {
+	return c.code
+}
+
+func (c *dataError) Error() string {
+	return "something went wrong"
+}
+
+func (c *dataError) ErrorData() interface{} {
+	return c.data
+}
+
+func Test_handleRPCError(t *testing.T) {
+	got := handleRPCError(nil)
+	require.Equal(t, true, got == nil)
+
+	var tests = []struct {
+		name             string
+		expected         error
+		expectedContains string
+		given            error
+	}{
+		{
+			name:             "not an rpc error",
+			expectedContains: "got an unexpected error",
+			given:            errors.New("foo"),
+		},
+		{
+			name:             "ErrParse",
+			expectedContains: ErrParse.Error(),
+			given:            &customError{code: -32700},
+		},
+		{
+			name:             "ErrInvalidRequest",
+			expectedContains: ErrInvalidRequest.Error(),
+			given:            &customError{code: -32600},
+		},
+		{
+			name:             "ErrMethodNotFound",
+			expectedContains: ErrMethodNotFound.Error(),
+			given:            &customError{code: -32601},
+		},
+		{
+			name:             "ErrInvalidParams",
+			expectedContains: ErrInvalidParams.Error(),
+			given:            &customError{code: -32602},
+		},
+		{
+			name:             "ErrInternal",
+			expectedContains: ErrInternal.Error(),
+			given:            &customError{code: -32603},
+		},
+		{
+			name:             "ErrUnknownPayload",
+			expectedContains: ErrUnknownPayload.Error(),
+			given:            &customError{code: -32001},
+		},
+		{
+			name:             "ErrServer unexpected no data",
+			expectedContains: "got an unexpected error",
+			given:            &customError{code: -32000},
+		},
+		{
+			name:             "ErrServer with data",
+			expectedContains: ErrServer.Error(),
+			given:            &dataError{code: -32000, data: 5},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := handleRPCError(tt.given)
+			require.ErrorContains(t, tt.expectedContains, got)
+		})
+	}
 }
 
 func newTestServer(t *testing.T) *rpc.Server {

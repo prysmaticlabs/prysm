@@ -2,6 +2,7 @@ package enginev1_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -35,6 +36,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
+		fmt.Printf("%v", string(enc))
 		payloadPb := &enginev1.PayloadStatus{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, "INVALID", payloadPb.Status.String())

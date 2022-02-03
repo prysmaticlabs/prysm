@@ -1,6 +1,8 @@
 package enginev1
 
-import "google.golang.org/protobuf/encoding/protojson"
+import (
+	"google.golang.org/protobuf/encoding/protojson"
+)
 
 // MarshalJSON defines a custom json.Marshaler interface implementation
 // that uses protojson underneath the hood, as protojson will respect
@@ -28,11 +30,31 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 
 // MarshalJSON --
 func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
+	//type Alias PayloadStatus
+	//return json.Marshal(&struct {
+	//Status string `json:"status"`
+	//*Alias
+	//}{
+	//Status: p.Status.String(),
+	//Alias:  (*Alias)(p),
+	//})
 	return protojson.Marshal(p)
 }
 
 // UnmarshalJSON --
 func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
+	//type Alias PayloadStatus
+	//aux := &struct {
+	//Status string `json:"status"`
+	//*Alias
+	//}{
+	//Alias: (*Alias)(p),
+	//}
+	//if err := json.Unmarshal(enc, &aux); err != nil {
+	//return err
+	//}
+	//p.Status = PayloadStatus_Status(PayloadStatus_Status_value[aux.Status])
+	//return nil
 	return protojson.Unmarshal(enc, p)
 }
 

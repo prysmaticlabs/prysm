@@ -67,14 +67,14 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 	return c, nil
 }
 
-// NewPayload --
+// NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
 func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (*pb.PayloadStatus, error) {
 	result := &pb.PayloadStatus{}
-	err := c.rpc.CallContext(ctx, result, ForkchoiceUpdatedMethod, payload)
+	err := c.rpc.CallContext(ctx, result, NewPayloadMethod, payload)
 	return result, handleRPCError(err)
 }
 
-// ForkchoiceUpdated --
+// ForkchoiceUpdated calls the engine_forkchoiceUpdatedV1 method via JSON-RPC.
 func (c *Client) ForkchoiceUpdated(
 	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 ) (*ForkchoiceUpdatedResponse, error) {
@@ -83,7 +83,7 @@ func (c *Client) ForkchoiceUpdated(
 	return result, handleRPCError(err)
 }
 
-// GetPayload --
+// GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
 func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
 	result := &pb.ExecutionPayload{}
 	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, payloadId)
