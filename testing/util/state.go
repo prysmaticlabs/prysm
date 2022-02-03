@@ -70,12 +70,7 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (state.Beac
 		}
 	}
 
-	var st, err = v1.InitializeFromProtoUnsafe(seed)
-	if err != nil {
-		return nil, err
-	}
-
-	return st.Copy().(*v1.BeaconState), nil
+	return v1.InitializeFromProto(seed)
 }
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round

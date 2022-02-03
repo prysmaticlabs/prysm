@@ -357,7 +357,10 @@ func (s *Service) startFromPOWChain() error {
 // onPowchainStart initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
-	preGenesisState := s.cfg.ChainStartFetcher.PreGenesisState()
+	preGenesisState, err := s.cfg.ChainStartFetcher.PreGenesisState()
+	if err != nil {
+		log.Fatalf("Could not get pre-genesis state")
+	}
 	initializedState, err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.cfg.ChainStartFetcher.ChainStartEth1Data())
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
@@ -405,7 +408,9 @@ func (s *Service) initializeBeaconChain(
 	log.Info("Initialized beacon chain genesis state")
 
 	// Clear out all pre-genesis data now that the state is initialized.
-	s.cfg.ChainStartFetcher.ClearPreGenesisData()
+	if err := s.cfg.ChainStartFetcher.ClearPreGenesisData(); err != nil {
+		return nil, errors.Wrap(err, "could not clear pre-genesis data")
+	}
 
 	// Update committee shuffled indices for genesis epoch.
 	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {

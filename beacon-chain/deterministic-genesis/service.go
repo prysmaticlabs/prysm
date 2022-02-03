@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -131,13 +132,17 @@ func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState returns an empty beacon state.
-func (_ *Service) PreGenesisState() state.BeaconState {
-	return &v1.BeaconState{}
+func (_ *Service) PreGenesisState() (state.BeaconState, error) {
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize state")
+	}
+	return s, nil
 }
 
 // ClearPreGenesisData --
-func (_ *Service) ClearPreGenesisData() {
-	// no-op
+func (_ *Service) ClearPreGenesisData() error {
+	return nil
 }
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.
