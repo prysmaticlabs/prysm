@@ -443,4 +443,3 @@ func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ type
 func (s *ChainService) IsOptimistic(ctx context.Context) (bool, error) {
 	return false, nil
 }
-
