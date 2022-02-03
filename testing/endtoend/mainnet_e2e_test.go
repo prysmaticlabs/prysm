@@ -30,6 +30,7 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
+	_, crossClient := os.LookupEnv("RUN_CROSS_CLIENT")
 	if usePrysmSh {
 		// If using prysm.sh, run for only 6 epochs.
 		// TODO(#9166): remove this block once v2 changes are live.
@@ -60,15 +61,16 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 			"--enable-tracing",
 			"--trace-sample-fraction=1.0",
 		},
-		ValidatorFlags:      []string{},
-		EpochsToRun:         uint64(epochsToRun),
-		TestSync:            true,
-		TestDeposits:        true,
-		UseFixedPeerIDs:     true,
-		UsePrysmShValidator: usePrysmSh,
-		UsePprof:            !longRunning,
-		TracingSinkEndpoint: tracingEndpoint,
-		Evaluators:          evals,
+		ValidatorFlags:          []string{},
+		EpochsToRun:             uint64(epochsToRun),
+		TestSync:                true,
+		TestDeposits:            true,
+		UseFixedPeerIDs:         true,
+		UseValidatorCrossClient: crossClient,
+		UsePrysmShValidator:     usePrysmSh,
+		UsePprof:                !longRunning,
+		TracingSinkEndpoint:     tracingEndpoint,
+		Evaluators:              evals,
 	}
 
 	newTestRunner(t, testConfig).run()
