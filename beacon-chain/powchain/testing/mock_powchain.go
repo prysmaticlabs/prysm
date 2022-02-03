@@ -124,13 +124,13 @@ func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState --
-func (m *POWChain) PreGenesisState() state.BeaconState {
-	return m.GenesisState
+func (m *POWChain) PreGenesisState() (state.BeaconState, error) {
+	return m.GenesisState, nil
 }
 
 // ClearPreGenesisData --
-func (_ *POWChain) ClearPreGenesisData() {
-	// no-op
+func (_ *POWChain) ClearPreGenesisData() error {
+	return nil
 }
 
 // IsConnectedToETH1 --

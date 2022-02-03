@@ -84,8 +84,8 @@ func (_ *FaultyMockPOWChain) PreGenesisState() (state.BeaconState, error) {
 }
 
 // ClearPreGenesisData --
-func (_ *FaultyMockPOWChain) ClearPreGenesisData() {
-	// no-op
+func (_ *FaultyMockPOWChain) ClearPreGenesisData() error {
+	return nil
 }
 
 // IsConnectedToETH1 --

@@ -18,8 +18,10 @@ import (
 func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	// This test showcases the logic on a the RandaoMixes field with the GC finalizer.
 
-	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{RandaoMixes: [][]byte{[]byte("foo")}})
+	s, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{RandaoMixes: [][]byte{[]byte("foo")}})
 	require.NoError(t, err)
+	a, ok := s.(*BeaconState)
+	require.Equal(t, true, ok)
 	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].Refs(), "Expected a single reference for RANDAO mixes")
 
 	func() {
@@ -44,7 +46,7 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 
 func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	root1, root2 := bytesutil.ToBytes32([]byte("foo")), bytesutil.ToBytes32([]byte("bar"))
-	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
+	s, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		BlockRoots: [][]byte{
 			root1[:],
 		},
@@ -52,6 +54,9 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 			root1[:],
 		},
 	})
+	require.NoError(t, err)
+	a, ok := s.(*BeaconState)
+	require.Equal(t, true, ok)
 	require.NoError(t, err)
 	assertRefCount(t, a, blockRoots, 1)
 	assertRefCount(t, a, stateRoots, 1)
@@ -115,11 +120,14 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 
 	val1, val2 := []byte("foo"), []byte("bar")
-	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
+	s, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		RandaoMixes: [][]byte{
 			val1,
 		},
 	})
+	require.NoError(t, err)
+	a, ok := s.(*BeaconState)
+	require.Equal(t, true, ok)
 	require.NoError(t, err)
 	assertRefCount(t, a, randaoMixes, 1)
 
@@ -181,8 +189,10 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 		}
 	}
 
-	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	s, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
 	require.NoError(t, err)
+	a, ok := s.(*BeaconState)
+	require.Equal(t, true, ok)
 	assertRefCount(t, a, previousEpochAttestations, 1)
 	assertRefCount(t, a, currentEpochAttestations, 1)
 
