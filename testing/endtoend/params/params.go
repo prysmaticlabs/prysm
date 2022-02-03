@@ -53,6 +53,22 @@ var StandardLighthouseNodeCount = 2
 // DepositCount is the amount of deposits E2E makes on a separate validator client.
 var DepositCount = uint64(64)
 
+// Values that are used by both the beacon node and validator clients
+// to assign the relevant ports to.
+const (
+	BootnodeMetricsOffset = 20
+	ETH1WSOffset          = 1
+
+	PrysmBeaconUDPOffset     = 10
+	PrysmBeaconTCPOffset     = 20
+	PrysmBeaconGatewayOffset = 40
+	PrysmPprofOffset         = 50
+
+	LighthouseP2PPortOffset     = 200
+	LighthouseHTTPPortOffset    = 250
+	LighthouseMetricsPortOffset = 300
+)
+
 // Init initializes the E2E config, properly handling test sharding.
 func Init(beaconNodeCount int) error {
 	testPath := bazel.TestTmpDir()
