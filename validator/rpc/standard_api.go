@@ -23,17 +23,17 @@ func (s *Server) ListKeystores(
 	ctx context.Context, _ *empty.Empty,
 ) (*ethpbservice.ListKeystoresResponse, error) {
 	if !s.walletInitialized {
-		return nil, status.Error(codes.FailedPrecondition, "prysm Wallet not initialized. Please create a new wallet.")
+		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
 	}
 	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "validator service not ready. Please try again once validator is ready.")
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready. Please try again once validator is ready.")
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not get Prysm keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager: %v", err)
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Derived && s.wallet.KeymanagerKind() != keymanager.Local {
-		return nil, status.Errorf(codes.FailedPrecondition, "prysm validator keys are not stored locally with this keymanager type.")
+		return nil, status.Errorf(codes.FailedPrecondition, "Prysm validator keys are not stored locally with this keymanager type.")
 	}
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -58,11 +58,11 @@ func (s *Server) ImportKeystores(
 	ctx context.Context, req *ethpbservice.ImportKeystoresRequest,
 ) (*ethpbservice.ImportKeystoresResponse, error) {
 	if !s.walletInitialized {
-		statuses := groupErrorsImport(req, "prysm Wallet not initialized. Please create a new wallet.")
+		statuses := groupImportErrors(req, "Prysm Wallet not initialized. Please create a new wallet.")
 		return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
 	}
 	if s.validatorService == nil {
-		statuses := groupErrorsImport(req, "validator service not ready. Please try again once validator is ready.")
+		statuses := groupImportErrors(req, "Validator service not ready. Please try again once validator is ready.")
 		return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
 	}
 	km, err := s.validatorService.Keymanager()
@@ -71,7 +71,7 @@ func (s *Server) ImportKeystores(
 	}
 	importer, ok := km.(keymanager.Importer)
 	if !ok {
-		statuses := groupErrorsImport(req, "Keymanager kind cannot import keys")
+		statuses := groupImportErrors(req, "Keymanager kind cannot import keys")
 		return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
 	}
 	if len(req.Keystores) == 0 {
@@ -106,15 +106,17 @@ func (s *Server) ImportKeystores(
 	if len(req.Passwords) == 0 {
 		req.Passwords = make([]string, len(req.Keystores))
 	}
-	if len(req.Passwords) != len(req.Keystores) {
-		if len(req.Passwords) > len(req.Keystores) {
-			req.Passwords = req.Passwords[:len(req.Keystores)]
-		} else {
-			passwordList := make([]string, len(req.Keystores))
-			copy(passwordList, req.Passwords)
-			req.Passwords = passwordList
-		}
+
+	// req.Passwords and req.Keystores are checked for 0 length in code above.
+	if len(req.Passwords) > len(req.Keystores) {
+		req.Passwords = req.Passwords[:len(req.Keystores)]
 	}
+	if len(req.Passwords) < len(req.Keystores) {
+		passwordList := make([]string, len(req.Keystores))
+		copy(passwordList, req.Passwords)
+		req.Passwords = passwordList
+	}
+
 	statuses, err := importer.ImportKeystores(ctx, keystores, req.Passwords)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not import keystores: %v", err)
@@ -125,7 +127,7 @@ func (s *Server) ImportKeystores(
 	return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
 }
 
-func groupErrorsImport(req *ethpbservice.ImportKeystoresRequest, errorMessage string) []*ethpbservice.ImportedKeystoreStatus {
+func groupImportErrors(req *ethpbservice.ImportKeystoresRequest, errorMessage string) []*ethpbservice.ImportedKeystoreStatus {
 	statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(req.Keystores))
 	for i := 0; i < len(req.Keystores); i++ {
 		statuses[i] = &ethpbservice.ImportedKeystoreStatus{
@@ -141,20 +143,20 @@ func (s *Server) DeleteKeystores(
 	ctx context.Context, req *ethpbservice.DeleteKeystoresRequest,
 ) (*ethpbservice.DeleteKeystoresResponse, error) {
 	if !s.walletInitialized {
-		statuses := groupErrorsExport(req, "prysm Wallet not initialized. Please create a new wallet.")
+		statuses := groupExportErrors(req, "Prysm Wallet not initialized. Please create a new wallet.")
 		return &ethpbservice.DeleteKeystoresResponse{Statuses: statuses}, nil
 	}
 	if s.validatorService == nil {
-		statuses := groupErrorsExport(req, "validator service not ready")
+		statuses := groupExportErrors(req, "Validator service not ready")
 		return &ethpbservice.DeleteKeystoresResponse{Statuses: statuses}, nil
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not get keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
 	}
 	deleter, ok := km.(keymanager.Deleter)
 	if !ok {
-		statuses := groupErrorsExport(req, "keymanager kind cannot delete keys")
+		statuses := groupExportErrors(req, "Keymanager kind cannot delete keys")
 		return &ethpbservice.DeleteKeystoresResponse{Statuses: statuses}, nil
 	}
 	if len(req.PublicKeys) == 0 {
@@ -173,7 +175,7 @@ func (s *Server) DeleteKeystores(
 	exportedHistory, err := s.slashingProtectionHistoryForDeletedKeys(ctx, req.PublicKeys, statuses)
 	if err != nil {
 		log.Warnf("Could not get slashing protection history for deleted keys: %v", err)
-		statuses := groupErrorsExport(req, "non duplicate keys that were existing were deleted, but could not export slashing protection history.")
+		statuses := groupExportErrors(req, "Non duplicate keys that were existing were deleted, but could not export slashing protection history.")
 		return &ethpbservice.DeleteKeystoresResponse{Statuses: statuses}, nil
 	}
 	jsonHist, err := json.Marshal(exportedHistory)
@@ -190,7 +192,7 @@ func (s *Server) DeleteKeystores(
 	}, nil
 }
 
-func groupErrorsExport(req *ethpbservice.DeleteKeystoresRequest, errorMessage string) []*ethpbservice.DeletedKeystoreStatus {
+func groupExportErrors(req *ethpbservice.DeleteKeystoresRequest, errorMessage string) []*ethpbservice.DeletedKeystoreStatus {
 	statuses := make([]*ethpbservice.DeletedKeystoreStatus, len(req.PublicKeys))
 	for i := 0; i < len(req.PublicKeys); i++ {
 		statuses[i] = &ethpbservice.DeletedKeystoreStatus{

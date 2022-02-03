@@ -33,7 +33,7 @@ func TestServer_ListKeystores(t *testing.T) {
 	t.Run("wallet not ready", func(t *testing.T) {
 		s := Server{}
 		_, err := s.ListKeystores(context.Background(), &empty.Empty{})
-		require.ErrorContains(t, "prysm Wallet not initialized. Please create a new wallet.", err)
+		require.ErrorContains(t, "Prysm Wallet not initialized. Please create a new wallet.", err)
 	})
 	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
@@ -443,7 +443,7 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(response.Statuses))
 	require.Equal(t, ethpbservice.DeletedKeystoreStatus_ERROR, response.Statuses[0].Status)
-	require.Equal(t, "non duplicate keys that were existing were deleted, but could not export slashing protection history.", response.Statuses[0].Message)
+	require.Equal(t, "Non duplicate keys that were existing were deleted, but could not export slashing protection history.", response.Statuses[0].Message)
 }
 
 func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
@@ -473,7 +473,7 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(response.Statuses))
 	require.Equal(t, ethpbservice.DeletedKeystoreStatus_ERROR, response.Statuses[0].Status)
-	require.Equal(t, "keymanager kind cannot delete keys", response.Statuses[0].Message)
+	require.Equal(t, "Keymanager kind cannot delete keys", response.Statuses[0].Message)
 }
 
 func setupServerWithWallet(t testing.TB) *Server {
