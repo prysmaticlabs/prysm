@@ -19,6 +19,8 @@ import (
 )
 
 var _ e2etypes.ComponentRunner = (*LighthouseBeaconNode)(nil)
+var _ e2etypes.ComponentRunner = (*LighthouseBeaconNodeSet)(nil)
+var _ e2etypes.BeaconNodeSet = (*LighthouseBeaconNodeSet)(nil)
 
 // LighthouseBeaconNodeSet represents set of lighthouse beacon nodes.
 type LighthouseBeaconNodeSet struct {

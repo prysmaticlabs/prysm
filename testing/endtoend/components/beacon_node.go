@@ -23,6 +23,7 @@ import (
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
 var _ e2etypes.ComponentRunner = (*BeaconNodeSet)(nil)
+var _ e2etypes.BeaconNodeSet = (*BeaconNodeSet)(nil)
 
 // BeaconNodeSet represents set of beacon nodes.
 type BeaconNodeSet struct {

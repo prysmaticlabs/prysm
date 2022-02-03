@@ -11,18 +11,19 @@ import (
 
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
-	TestSync            bool
-	UsePrysmShValidator bool
-	UsePprof            bool
-	UseWeb3RemoteSigner bool
-	TestDeposits        bool
-	UseFixedPeerIDs     bool
-	EpochsToRun         uint64
-	TracingSinkEndpoint string
-	Evaluators          []Evaluator
-	BeaconFlags         []string
-	ValidatorFlags      []string
-	PeerIDs             []string
+	TestSync                bool
+	UsePrysmShValidator     bool
+	UsePprof                bool
+	UseWeb3RemoteSigner     bool
+	TestDeposits            bool
+	UseFixedPeerIDs         bool
+	UseValidatorCrossClient bool
+	EpochsToRun             uint64
+	TracingSinkEndpoint     string
+	Evaluators              []Evaluator
+	BeaconFlags             []string
+	ValidatorFlags          []string
+	PeerIDs                 []string
 }
 
 // Evaluator defines the structure of the evaluators used to
@@ -39,4 +40,12 @@ type ComponentRunner interface {
 	Start(ctx context.Context) error
 	// Started checks whether an underlying component is started and ready to be queried.
 	Started() <-chan struct{}
+}
+
+// BeaconNodeSet defines an interface for an object that fulfills the duties
+// of a group of beacon nodes.
+type BeaconNodeSet interface {
+	ComponentRunner
+	// SetENR provides the relevant bootnode's enr to the beacon nodes.
+	SetENR(enr string)
 }
