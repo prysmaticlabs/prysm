@@ -51,7 +51,7 @@ func (node *BootNode) Start(ctx context.Context) error {
 	args := []string{
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.BootNodePort),
-		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+20),
+		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+e2e.BootnodeMetricsOffset),
 		"--debug",
 	}
 
