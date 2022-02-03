@@ -518,12 +518,28 @@ func TestSafeCopy2d32Bytes(t *testing.T) {
 	assert.DeepEqual(t, input, output)
 }
 
-func TestNonZeroRoot(t *testing.T) {
+func TestZeroRoot(t *testing.T) {
 	input := make([]byte, fieldparams.RootLength)
-	output := bytesutil.NonZeroRoot(input)
+	output := bytesutil.ZeroRoot(input)
+	assert.Equal(t, true, output)
+	copy(input[2:], "a")
+	copy(input[3:], "b")
+	output = bytesutil.ZeroRoot(input)
+	assert.Equal(t, false, output)
+}
+
+func TestIsRoot(t *testing.T) {
+	input := make([]byte, fieldparams.RootLength)
+	output := bytesutil.IsRoot(input)
+	assert.Equal(t, true, output)
+}
+
+func TestIsValidRoot(t *testing.T) {
+	input := make([]byte, fieldparams.RootLength)
+	output := bytesutil.IsValidRoot(input)
 	assert.Equal(t, false, output)
 	copy(input[2:], "a")
 	copy(input[3:], "b")
-	output = bytesutil.NonZeroRoot(input)
+	output = bytesutil.IsValidRoot(input)
 	assert.Equal(t, true, output)
 }
