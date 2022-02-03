@@ -37,7 +37,7 @@ func (s *Server) ListKeystores(
 	}
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, "Could not retrieve keystores: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not retrieve keystores: %v", err)
 	}
 	keystoreResponse := make([]*ethpbservice.ListKeystoresResponse_Keystore, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
@@ -84,10 +84,8 @@ func (s *Server) ImportKeystores(
 		if err != nil {
 			// we want to ignore unmarshal errors for now, proper status in importKeystore
 			k.Pubkey = "invalid format"
-			keystores[i] = k
-		} else {
-			keystores[i] = k
 		}
+		keystores[i] = k
 	}
 	if req.SlashingProtection != "" {
 		if err := slashingprotection.ImportStandardProtectionJSON(
