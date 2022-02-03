@@ -2,9 +2,9 @@ package openapi
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	"io"
 	"io/ioutil"
 	"net"
@@ -24,10 +24,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
-
 const (
 	GET_WEAK_SUBJECTIVITY_CHECKPOINT_EPOCH_PATH = "/eth/v1alpha1/beacon/weak_subjectivity_checkpoint_epoch"
-	GET_WEAK_SUBJECTIVITY_CHECKPOINT_PATH = "/eth/v1alpha1/beacon/weak_subjectivity_checkpoint"
+	GET_WEAK_SUBJECTIVITY_PATH = "/eth/v1/beacon/weak_subjectivity"
 	GET_SIGNED_BLOCK_PATH = "/eth/v2/beacon/blocks"
 	GET_STATE_PATH = "/eth/v2/debug/beacon/states"
 	GET_FORK_SCHEDULE_PATH = "/eth/v1/config/fork_schedule"
@@ -219,7 +218,9 @@ func (c *Client) GetBlockByRoot(blockHex string) (io.Reader, error) {
 	if r.StatusCode != http.StatusOK {
 		return nil, non200Err(r)
 	}
-	return r.Body, nil
+	b := bytes.NewBuffer(nil)
+	_, err = io.Copy(b, r.Body)
+	return b, nil
 }
 
 // GetStateByRoot retrieves a BeaconStateAltair with the given root via the beacon node API
@@ -385,7 +386,7 @@ type wscResponse struct {
 // uses the state's latest_block_header for the block hash, while the checkpoint sync code assumes that the block
 // is from the first slot in the epoch and the state is from the subesequent slot.
 func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpoint, error) {
-	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_CHECKPOINT_PATH)
+	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_PATH)
 	r, err := c.c.Get(u.String())
 	if err != nil {
 		return nil, err
@@ -393,20 +394,20 @@ func (c *Client) GetWeakSubjectivityCheckpoint() (*ethpb.WeakSubjectivityCheckpo
 	if r.StatusCode != http.StatusOK {
 		return nil, non200Err(r)
 	}
-	v := &wscResponse{}
+	v := &apimiddleware.WeakSubjectivityResponse{}
 	err = json.NewDecoder(r.Body).Decode(v)
 	if err != nil {
 		return nil, err
 	}
-	epoch, err := strconv.ParseUint(v.Epoch, 10, 64)
+	epoch, err := strconv.ParseUint(v.Data.Checkpoint.Epoch, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	blockRoot, err := base64.StdEncoding.DecodeString(v.BlockRoot)
+	blockRoot, err := hexutil.Decode(v.Data.Checkpoint.Root)
 	if err != nil {
 		return nil, err
 	}
-	stateRoot, err := base64.StdEncoding.DecodeString(v.StateRoot)
+	stateRoot, err := hexutil.Decode(v.Data.StateRoot)
 	if err != nil {
 		return nil, err
 	}
