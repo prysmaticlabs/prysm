@@ -68,18 +68,58 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 }
 
 // NewPayload --
-func (*Client) NewPayload(_ context.Context, _ *pb.ExecutionPayload) (*pb.PayloadStatus, error) {
-	return nil, errors.New("unimplemented")
+func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (*pb.PayloadStatus, error) {
+	result := &pb.PayloadStatus{}
+	err := c.rpc.CallContext(ctx, result, ForkchoiceUpdatedMethod, payload)
+	return result, handleRPCError(err)
 }
 
 // ForkchoiceUpdated --
-func (*Client) ForkchoiceUpdated(
-	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
+func (c *Client) ForkchoiceUpdated(
+	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 ) (*ForkchoiceUpdatedResponse, error) {
-	return nil, errors.New("unimplemented")
+	result := &ForkchoiceUpdatedResponse{}
+	err := c.rpc.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
+	return result, handleRPCError(err)
 }
 
 // GetPayload --
-func (*Client) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
-	return nil, errors.New("unimplemented")
+func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
+	result := &pb.ExecutionPayload{}
+	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, payloadId)
+	return result, handleRPCError(err)
+}
+
+// Handles errors received from the RPC server according to the specification.
+func handleRPCError(err error) error {
+	if err == nil {
+		return nil
+	}
+	e, ok := err.(rpc.Error)
+	if !ok {
+		return errors.Wrap(err, "got an unexpected error")
+	}
+	switch e.ErrorCode() {
+	case -32700:
+		return ErrParse
+	case -32600:
+		return ErrInvalidRequest
+	case -32601:
+		return ErrMethodNotFound
+	case -32602:
+		return ErrInvalidParams
+	case -32603:
+		return ErrInternal
+	case -32001:
+		return ErrUnknownPayload
+	case -32000:
+		// Only -32000 status codes are data errors in the RPC specification.
+		errWithData, ok := err.(rpc.DataError)
+		if !ok {
+			return errors.Wrap(err, "got an unexpected error")
+		}
+		return errors.Wrapf(ErrServer, "%v", errWithData.ErrorData())
+	default:
+		return err
+	}
 }
