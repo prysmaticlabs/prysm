@@ -110,13 +110,20 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 	}
 	kPath := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-validator-%d", index)
 	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-testnet-%d", index)
+	httpOffset := e2e.LighthouseHTTPPortOffset
+	// In the event we want to run a LH validator with a non LH
+	// beacon node, we split half the validators to run with
+	// lighthouse and the other half with prysm.
+	if v.config.UseValidatorCrossClient && index%2 == 0 {
+		httpOffset = e2e.PrysmBeaconGatewayOffset
+	}
 	args := []string{
 		"validator_client",
 		"--debug-level=debug",
 		"--init-slashing-protection",
 		fmt.Sprintf("--datadir=%s", kPath),
 		fmt.Sprintf("--testnet-dir=%s", testNetDir),
-		fmt.Sprintf("--beacon-nodes=http://localhost:%d", e2e.TestParams.BeaconNodeRPCPort+index+250),
+		fmt.Sprintf("--beacon-nodes=http://localhost:%d", e2e.TestParams.BeaconNodeRPCPort+index+httpOffset),
 	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
