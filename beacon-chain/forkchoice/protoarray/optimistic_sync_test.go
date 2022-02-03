@@ -345,7 +345,7 @@ func TestUpdateSyncedTips(t *testing.T) {
 //         J        -- K -- L
 //
 //
-func TestFindTip(t *testing.T) {
+func TestFindSyncedTip(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
@@ -424,7 +424,8 @@ func TestFindTip(t *testing.T) {
 		}
 		syncedTips.RLock()
 		defer syncedTips.RUnlock()
-		idx := f.store.findTip(node, syncedTips)
+		idx, err := f.store.findSyncedTip(ctx, node, syncedTips)
+		require.NoError(t, err)
 		require.Equal(t, tc.wanted, f.store.nodes[idx].root)
 	}
 }

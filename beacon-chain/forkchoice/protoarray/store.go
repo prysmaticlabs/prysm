@@ -624,7 +624,10 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 	canonicalNodesMap := make(map[uint64]uint64, uint64(len(s.nodes))-finalizedIndex)
 	canonicalNodes := make([]*Node, 1, uint64(len(s.nodes))-finalizedIndex)
 	finalizedNode := s.nodes[finalizedIndex]
-	finalizedTipIndex := s.findTip(finalizedNode, syncedTips)
+	finalizedTipIndex, err := s.findSyncedTip(ctx, finalizedNode, syncedTips)
+	if err != nil {
+		return err
+	}
 	finalizedNode.parent = NonExistentNode
 	canonicalNodes[0] = finalizedNode
 	canonicalNodesMap[finalizedIndex] = uint64(0)
@@ -638,11 +641,10 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 			node.parent = parentIdx
 			canonicalNodes = append(canonicalNodes, node)
 		} else {
-			// Remove node and synced tip that is not part
-			// of finalized branch.
+			// Remove node and synced tip that is not part of finalized branch.
 			delete(s.nodesIndices, node.root)
-			_, isTip := syncedTips.validatedTips[node.root]
-			if isTip && idx != finalizedTipIndex {
+			_, ok := syncedTips.validatedTips[node.root]
+			if ok && idx != finalizedTipIndex {
 				delete(syncedTips.validatedTips, node.root)
 			}
 		}
