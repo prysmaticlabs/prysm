@@ -336,16 +336,17 @@ func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 // We test the algorithm to update a node from SYNCING to INVALID
 // We start with the same diagram as above:
 //
-//                E -- F
-//               /
-//         C -- D
-//        /      \
-//  A -- B        G -- H -- I
-//        \        \
-//         J        -- K -- L
+//                         E(2) -- F(1)
+//                        /
+//             C(7) -- D(6)
+//            /           \
+//  A(10) -- B(9)          G(3) -- H(1) -- I(0)
+//            \               \
+//             J(1)             -- K(1) -- L(0)
 //
 // And every block in the Fork choice is optimistic. Synced_Tips contains a
-// single block that is outside of Fork choice
+// single block that is outside of Fork choice. The numbers in parenthesis are
+// the weights of the nodes before removal
 //
 func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 	tests := []struct {
@@ -354,6 +355,7 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 		wantedParentTip   bool
 		newBestChild      uint64
 		newBestDescendant uint64
+		newParentWeight   uint64
 	}{
 		{
 			[32]byte{'j'},
@@ -365,6 +367,7 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 			false,
 			3,
 			4,
+			8,
 		},
 		{
 			[32]byte{'j'},
@@ -374,6 +377,7 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 			true,
 			3,
 			4,
+			8,
 		},
 		{
 			[32]byte{'i'},
@@ -386,6 +390,7 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 			true,
 			NonExistentNode,
 			NonExistentNode,
+			1,
 		},
 		{
 			[32]byte{'i'},
@@ -397,6 +402,7 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 			false,
 			NonExistentNode,
 			NonExistentNode,
+			1,
 		},
 	}
 	for _, tc := range tests {
@@ -415,10 +421,14 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
 		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
 		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
+		weights := []uint64{10, 10, 9, 7, 1, 6, 2, 3, 1, 1, 1, 0, 0}
 		f.syncedTips.Lock()
 		f.syncedTips.validatedTips = tc.tips
 		f.syncedTips.Unlock()
 		f.store.nodesLock.Lock()
+		for i, node := range f.store.nodes {
+			node.weight = weights[i]
+		}
 		// Make j be the best child and descendant of b
 		nodeB := f.store.nodes[2]
 		nodeB.bestChild = 4
@@ -437,5 +447,6 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 		require.Equal(t, tc.wantedParentTip, parentSyncedTip)
 		require.Equal(t, tc.newBestChild, parent.bestChild)
 		require.Equal(t, tc.newBestDescendant, parent.bestDescendant)
+		require.Equal(t, tc.newParentWeight, parent.weight)
 	}
 }

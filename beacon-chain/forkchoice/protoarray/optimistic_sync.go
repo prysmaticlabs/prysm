@@ -206,7 +206,16 @@ func (f *ForkChoice) UpdateSyncedTipsWithInvalidRoot(ctx context.Context, root [
 	if parentIndex == NonExistentNode {
 		return errInvalidNodeIndex
 	}
-
+	// Update the weights of the nodes subtracting the INVALID node's weight
+	weight := node.weight
+	node = f.store.nodes[parentIndex]
+	for {
+		node.weight -= weight
+		if node.parent == NonExistentNode {
+			break
+		}
+		node = f.store.nodes[node.parent]
+	}
 	parent := copyNode(f.store.nodes[parentIndex])
 
 	// delete the invalid node, order is important
