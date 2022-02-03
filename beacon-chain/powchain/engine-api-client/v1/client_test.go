@@ -10,12 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func Test_handleRPCError(t *testing.T) {
-
-}
-
 func TestGetPayload(t *testing.T) {
-	server := newTestServer()
+	server := newTestServer(t)
 	defer server.Stop()
 	rpcClient := rpc.DialInProc(server)
 	defer rpcClient.Close()
@@ -31,11 +27,14 @@ func TestGetPayload(t *testing.T) {
 	require.DeepEqual(t, want, resp)
 }
 
-func newTestServer() *rpc.Server {
+func Test_handleRPCError(t *testing.T) {
+
+}
+
+func newTestServer(t *testing.T) *rpc.Server {
 	server := rpc.NewServer()
-	if err := server.RegisterName("engine", new(testEngineService)); err != nil {
-		panic(err)
-	}
+	err := server.RegisterName("engine", new(testEngineService))
+	require.NoError(t, err)
 	return server
 }
 
@@ -85,6 +84,20 @@ func (testError) ErrorData() interface{} { return "testError data" }
 func (s *testEngineService) NoArgsRets() {}
 
 func (s *testEngineService) GetPayloadV1(
+	ctx context.Context, payloadId [8]byte,
+) *pb.ExecutionPayload {
+	fix := fixtures()
+	return fix["ExecutionPayload"].(*pb.ExecutionPayload)
+}
+
+func (s *testEngineService) ForkchoiceUpdatedV1(
+	ctx context.Context, payloadId [8]byte,
+) *pb.ExecutionPayload {
+	fix := fixtures()
+	return fix["ExecutionPayload"].(*pb.ExecutionPayload)
+}
+
+func (s *testEngineService) NewPayloadV1(
 	ctx context.Context, payloadId [8]byte,
 ) *pb.ExecutionPayload {
 	fix := fixtures()
