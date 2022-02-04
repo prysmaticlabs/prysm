@@ -25,20 +25,21 @@ option java_package = "org.ethereum.engine.v1";
 option php_namespace = "Ethereum\\Engine\\v1";
 
 message ExecutionPayload {
-	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
-	bytes state_root            = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes receipts_root         = 4 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes logs_bloom            = 5 [(ethereum.eth.ext.ssz_size) = "256"];
-	bytes random                = 6 [(ethereum.eth.ext.ssz_size) = "32"];
-	uint64 block_number         = 7;
-	uint64 gas_limit            = 8;
-	uint64 gas_used             = 9;
-	uint64 timestamp            = 10;
-	bytes extra_data            = 11 [(ethereum.eth.ext.ssz_max) = "32"];
-	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
-	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
+    bytes aggregation_bits = 1 [(ethereum.eth.ext.ssz_max) = "2048"];
+	bytes parent_hash           = 1  [(ethereum.eth.ext.ssz_size) = "32",  (ethereum.eth.ext.cast_type) = "Bytes"];
+	bytes fee_recipient         = 2  [(ethereum.eth.ext.ssz_size) = "20",  (ethereum.eth.ext.cast_type) = "Bytes"];
+	bytes state_root            = 3  [(ethereum.eth.ext.ssz_size) = "32",  (ethereum.eth.ext.cast_type) = "Bytes"];
+	bytes receipts_root         = 4  [(ethereum.eth.ext.ssz_size) = "32",  (ethereum.eth.ext.cast_type) = "Bytes"];
+	bytes logs_bloom            = 5  [(ethereum.eth.ext.ssz_size) = "256", (ethereum.eth.ext.cast_type) = "Bytes"];
+	bytes random                = 6  [(ethereum.eth.ext.ssz_size) = "32",  (ethereum.eth.ext.cast_type) = "Bytes"];
+	uint64 block_number         = 7  [(ethereum.eth.ext.cast_type) = "Quantity"];
+	uint64 gas_limit            = 8  [(ethereum.eth.ext.cast_type) = "Quantity"];
+	uint64 gas_used             = 9  [(ethereum.eth.ext.cast_type) = "Quantity"];
+	uint64 timestamp            = 10 [(ethereum.eth.ext.cast_type) = "Quantity"];
+	bytes extra_data            = 11 [(ethereum.eth.ext.ssz_max) = "32", (ethereum.eth.ext.cast_type) = "Bytes"];
+	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32", (ethereum.eth.ext.cast_type) = "Bytes"];
+	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32", (ethereum.eth.ext.cast_type) = "Bytes"];
+	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824", (ethereum.eth.ext.cast_type = "BytesList")];
 }
 
 message PayloadAttributes {
