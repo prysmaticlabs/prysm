@@ -76,7 +76,7 @@ func (_ *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState --
 func (_ *FaultyMockPOWChain) PreGenesisState() (state.BeaconState, error) {
-	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
+	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not initialize state")
 	}
