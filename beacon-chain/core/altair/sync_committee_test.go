@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -46,9 +47,9 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 		errString string
 	}{
 		{
-			name: "nil state",
+			name: "nil inner state",
 			args: args{
-				state: nil,
+				state: &v2.BeaconState{},
 			},
 			wantErr:   true,
 			errString: "nil inner state",
@@ -158,9 +159,9 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 		errString string
 	}{
 		{
-			name: "nil state",
+			name: "nil inner state",
 			args: args{
-				state: nil,
+				state: &v2.BeaconState{},
 			},
 			wantErr:   true,
 			errString: "nil inner state",
