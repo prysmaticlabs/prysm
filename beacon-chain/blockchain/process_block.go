@@ -17,13 +17,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
@@ -142,6 +142,14 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}
 	}
 
+	// We add a proposer score boost to fork choice for the block root if applicable, right after
+	// running a successful state transition for the block.
+	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
+		ctx, signed.Block().Slot(), blockRoot, s.genesisTime,
+	); err != nil {
+		return err
+	}
+
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
@@ -191,11 +199,10 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
 	if newFinalized {
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
-		}
 		s.store.SetPrevFinalizedCheckpt(finalized)
 		s.store.SetFinalizedCheckpt(postState.FinalizedCheckpoint())
+		s.store.SetPrevJustifiedCheckpt(justified)
+		s.store.SetJustifiedCheckpt(postState.CurrentJustifiedCheckpoint())
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
@@ -266,18 +273,16 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	})
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	if features.Get().EnableNextSlotStateCache {
-		go func() {
-			// Use a custom deadline here, since this method runs asynchronously.
-			// We ignore the parent method's context and instead create a new one
-			// with a custom deadline, therefore using the background context instead.
-			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-			defer cancel()
-			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-				log.WithError(err).Debug("could not update next slot state cache")
-			}
-		}()
-	}
+	go func() {
+		// Use a custom deadline here, since this method runs asynchronously.
+		// We ignore the parent method's context and instead create a new one
+		// with a custom deadline, therefore using the background context instead.
+		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+		defer cancel()
+		if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+			log.WithError(err).Debug("could not update next slot state cache")
+		}
+	}()
 
 	// Save justified check point to db.
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
@@ -683,34 +688,21 @@ func (s *Service) validateTerminalBlock(b block.SignedBeaconBlock) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get transition parent block")
 	}
-	if !validTerminalPowBlock(transitionBlk, parentTransitionBlk) {
+	transitionBlkTTD, err := uint256.FromHex(transitionBlk.TotalDifficulty)
+	if err != nil {
+		return err
+	}
+	transitionParentBlkTTD, err := uint256.FromHex(parentTransitionBlk.TotalDifficulty)
+	if err != nil {
+		return err
+	}
+	if !validTerminalPowBlock(transitionBlkTTD, transitionParentBlkTTD) {
 		return errors.New("invalid difficulty for terminal block")
 	}
 	return nil
 }
 
-// validates terminal pow block by comparing own total difficulty with parent's total difficulty.
-//
-// def is_valid_terminal_pow_block(block: PowBlock, parent: PowBlock) -> bool:
-//    is_total_difficulty_reached = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
-//    is_parent_total_difficulty_valid = parent.total_difficulty < TERMINAL_TOTAL_DIFFICULTY
-//    return is_total_difficulty_reached and is_parent_total_difficulty_valid
-func validTerminalPowBlock(transitionBlock *powchain.ExecutionBlock, transitionParentBlock *powchain.ExecutionBlock) bool {
-	transitionBlkTTD, err := uint256.FromHex(transitionBlock.TotalDifficulty)
-	if err != nil {
-		return false
-	}
-	transitionParentBlkTTD, err := uint256.FromHex(transitionParentBlock.TotalDifficulty)
-	if err != nil {
-		return false
-	}
-	terminalTotalDifficulty := uint256.NewInt(params.BeaconConfig().TerminalTotalDifficulty)
-	totalDifficultyReached := transitionBlkTTD.Cmp(terminalTotalDifficulty) >= 0
-	parentTotalDifficultyValid := terminalTotalDifficulty.Cmp(transitionParentBlkTTD) >= 0
-	return totalDifficultyReached && parentTotalDifficultyValid
-}
-
-func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst.ExecutableDataV1 {
+func executionPayloadToExecutableData(payload *enginev1.ExecutionPayload) *catalyst.ExecutableDataV1 {
 	// Convert the base fee bytes from little endian to big endian
 	baseFeeInBigEndian := bytesutil.ReverseByteOrder(payload.BaseFeePerGas)
 	baseFeePerGas := new(big.Int)
@@ -721,7 +713,7 @@ func executionPayloadToExecutableData(payload *ethpb.ExecutionPayload) *catalyst
 		ParentHash:    common.BytesToHash(payload.ParentHash),
 		FeeRecipient:  common.BytesToAddress(payload.FeeRecipient),
 		StateRoot:     common.BytesToHash(payload.StateRoot),
-		ReceiptsRoot:  common.BytesToHash(payload.ReceiptRoot),
+		ReceiptsRoot:  common.BytesToHash(payload.ReceiptsRoot),
 		LogsBloom:     payload.LogsBloom,
 		Random:        common.BytesToHash(payload.Random),
 		Number:        payload.BlockNumber,

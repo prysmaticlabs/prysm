@@ -63,7 +63,6 @@ type Flags struct {
 
 	// Cache toggles.
 	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	EnableNextSlotStateCache bool // EnableNextSlotStateCache enables next slot state cache to improve validator performance.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
@@ -80,8 +79,6 @@ type Flags struct {
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
-
-	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 }
 
 var featureConfig *Flags
@@ -164,11 +161,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
 	}
-	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
-	if ctx.Bool(forceOptMaxCoverAggregationStategy.Name) {
-		logEnabled(forceOptMaxCoverAggregationStategy)
-		cfg.AttestationAggregationStrategy = "opt_max_cover"
-	}
 	if ctx.Bool(enablePeerScorer.Name) {
 		logEnabled(enablePeerScorer)
 		cfg.EnablePeerScorer = true
@@ -183,11 +175,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)
 		cfg.DisableBroadcastSlashings = true
-	}
-	cfg.EnableNextSlotStateCache = true
-	if ctx.Bool(disableNextSlotStateCache.Name) {
-		logDisabled(disableNextSlotStateCache)
-		cfg.EnableNextSlotStateCache = false
 	}
 	if ctx.Bool(enableSlasherFlag.Name) {
 		log.WithField(enableSlasherFlag.Name, enableSlasherFlag.Usage).Warn(enabledFeatureFlag)

@@ -60,17 +60,19 @@ type Keystore struct {
 	Name    string                 `json:"name"`
 }
 
-// Kind defines an enum for either imported, derived, or remote-signing
+// Kind defines an enum for either local, derived, or remote-signing
 // keystores for Prysm wallets.
 type Kind int
 
 const (
-	// Imported keymanager defines an on-disk, encrypted keystore-capable store.
-	Imported Kind = iota
+	// Local keymanager defines an on-disk, encrypted keystore-capable store.
+	Local Kind = iota
 	// Derived keymanager using a hierarchical-deterministic algorithm.
 	Derived
 	// Remote keymanager capable of remote-signing data.
 	Remote
+	// Web3Signer keymanager capable of signing data using a remote signer called Web3Signer.
+	Web3Signer
 )
 
 // IncorrectPasswordErrMsg defines a common error string representing an EIP-2335
@@ -82,10 +84,12 @@ func (k Kind) String() string {
 	switch k {
 	case Derived:
 		return "derived"
-	case Imported:
+	case Local:
 		return "direct"
 	case Remote:
 		return "remote"
+	case Web3Signer:
+		return "web3signer"
 	default:
 		return fmt.Sprintf("%d", int(k))
 	}
@@ -97,9 +101,11 @@ func ParseKind(k string) (Kind, error) {
 	case "derived":
 		return Derived, nil
 	case "direct":
-		return Imported, nil
+		return Local, nil
 	case "remote":
 		return Remote, nil
+	case "web3signer":
+		return Web3Signer, nil
 	default:
 		return 0, fmt.Errorf("%s is not an allowed keymanager", k)
 	}

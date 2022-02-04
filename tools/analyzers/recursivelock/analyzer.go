@@ -5,7 +5,6 @@ package recursivelock
 import (
 	"errors"
 	"fmt"
-
 	"go/ast"
 	"go/token"
 	"go/types"
@@ -39,10 +38,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.FuncDecl)(nil),
 		(*ast.FuncLit)(nil),
 		(*ast.File)(nil),
+		(*ast.IfStmt)(nil),
 		(*ast.ReturnStmt)(nil),
 	}
 
-	var keepTrackOf tracker
+	keepTrackOf := &tracker{}
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		if keepTrackOf.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.funcLitEnd {
 			return
@@ -57,78 +57,90 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			keepTrackOf.retEnd = token.NoPos
 			keepTrackOf.incFRU()
 		}
+		keepTrackOf = stmtSelector(node, pass, keepTrackOf, inspect)
+	})
+	return nil, nil
+}
 
-		switch stmt := node.(type) {
-		case *ast.CallExpr:
-			call := getCallInfo(pass.TypesInfo, stmt)
-			if call == nil {
-				break
-			}
-			name := call.name
-			selMap := mapSelTypes(stmt, pass)
-			if selMap == nil {
-				break
-			}
-			if keepTrackOf.rLockSelector != nil {
-				if keepTrackOf.foundRLock > 0 {
-					if keepTrackOf.rLockSelector.isEqual(selMap, 0) {
+func stmtSelector(node ast.Node, pass *analysis.Pass, keepTrackOf *tracker, inspect *inspector.Inspector) *tracker {
+	switch stmt := node.(type) {
+	case *ast.CallExpr:
+		call := getCallInfo(pass.TypesInfo, stmt)
+		if call == nil {
+			break
+		}
+		name := call.name
+		selMap := mapSelTypes(stmt, pass)
+		if selMap == nil {
+			break
+		}
+		if keepTrackOf.rLockSelector != nil {
+			if keepTrackOf.foundRLock > 0 {
+				if keepTrackOf.rLockSelector.isEqual(selMap, 0) {
+					pass.Reportf(
+						node.Pos(),
+						fmt.Sprintf(
+							"%v",
+							errNestedRLock,
+						),
+					)
+				} else {
+					if stack := hasNestedRLock(keepTrackOf.rLockSelector, selMap, call, inspect, pass, make(map[string]bool)); stack != "" {
 						pass.Reportf(
 							node.Pos(),
 							fmt.Sprintf(
-								"%v",
+								"%v\n%v",
 								errNestedRLock,
+								stack,
 							),
 						)
-					} else {
-						if stack := hasNestedRLock(keepTrackOf.rLockSelector, selMap, call, inspect, pass, make(map[string]bool)); stack != "" {
-							pass.Reportf(
-								node.Pos(),
-								fmt.Sprintf(
-									"%v\n%v",
-									errNestedRLock,
-									stack,
-								),
-							)
-						}
 					}
 				}
-				if name == "RUnlock" && keepTrackOf.rLockSelector.isEqual(selMap, 1) {
-					keepTrackOf.deincFRU()
-				}
-			} else if name == "RLock" && keepTrackOf.foundRLock == 0 {
-				keepTrackOf.rLockSelector = selMap
-				keepTrackOf.incFRU()
 			}
-
-		case *ast.File:
-			keepTrackOf = tracker{}
-
-		case *ast.FuncDecl:
-			keepTrackOf = tracker{}
-			keepTrackOf.funcEnd = stmt.End()
-
-		case *ast.FuncLit:
-			if keepTrackOf.funcLitEnd == token.NoPos {
-				keepTrackOf.funcLitEnd = stmt.End()
-			}
-
-		case *ast.DeferStmt:
-			call := getCallInfo(pass.TypesInfo, stmt.Call)
-			if keepTrackOf.deferEnd == token.NoPos {
-				keepTrackOf.deferEnd = stmt.End()
-			}
-			if call != nil && call.name == "RUnlock" {
-				keepTrackOf.deferredRUnlock = true
-			}
-
-		case *ast.ReturnStmt:
-			if keepTrackOf.deferredRUnlock && keepTrackOf.retEnd == token.NoPos {
+			if name == "RUnlock" && keepTrackOf.rLockSelector.isEqual(selMap, 1) {
 				keepTrackOf.deincFRU()
-				keepTrackOf.retEnd = stmt.End()
 			}
+		} else if name == "RLock" && keepTrackOf.foundRLock == 0 {
+			keepTrackOf.rLockSelector = selMap
+			keepTrackOf.incFRU()
 		}
-	})
-	return nil, nil
+
+	case *ast.File:
+		keepTrackOf = &tracker{}
+
+	case *ast.FuncDecl:
+		keepTrackOf = &tracker{}
+		keepTrackOf.funcEnd = stmt.End()
+
+	case *ast.FuncLit:
+		if keepTrackOf.funcLitEnd == token.NoPos {
+			keepTrackOf.funcLitEnd = stmt.End()
+		}
+	case *ast.IfStmt:
+		stmts := stmt.Body.List
+		for i := 0; i < len(stmts); i++ {
+			keepTrackOf = stmtSelector(stmts[i], pass, keepTrackOf, inspect)
+		}
+		keepTrackOf = stmtSelector(stmt.Else, pass, keepTrackOf, inspect)
+	case *ast.DeferStmt:
+		call := getCallInfo(pass.TypesInfo, stmt.Call)
+		if keepTrackOf.deferEnd == token.NoPos {
+			keepTrackOf.deferEnd = stmt.End()
+		}
+		if call != nil && call.name == "RUnlock" {
+			keepTrackOf.deferredRUnlock = true
+		}
+
+	case *ast.ReturnStmt:
+		for i := 0; i < len(stmt.Results); i++ {
+			keepTrackOf = stmtSelector(stmt.Results[i], pass, keepTrackOf, inspect)
+		}
+		if keepTrackOf.deferredRUnlock && keepTrackOf.retEnd == token.NoPos {
+			keepTrackOf.deincFRU()
+			keepTrackOf.retEnd = stmt.End()
+		}
+	}
+	return keepTrackOf
 }
 
 type tracker struct {

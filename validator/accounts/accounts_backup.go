@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/urfave/cli/v2"
 )
 
@@ -48,9 +48,10 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
-	if w.KeymanagerKind() == keymanager.Remote {
+	// TODO(#9883) - Remove this when we have a better way to handle this.
+	if w.KeymanagerKind() == keymanager.Remote || w.KeymanagerKind() == keymanager.Web3Signer {
 		return errors.New(
-			"remote wallets cannot backup accounts",
+			"remote and web3signer wallets cannot backup accounts",
 		)
 	}
 	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
@@ -95,14 +96,14 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 
 	var keystoresToBackup []*keymanager.Keystore
 	switch w.KeymanagerKind() {
-	case keymanager.Imported:
-		km, ok := km.(*imported.Keymanager)
+	case keymanager.Local:
+		km, ok := km.(*local.Keymanager)
 		if !ok {
 			return errors.New("could not assert keymanager interface to concrete type")
 		}
 		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
 		if err != nil {
-			return errors.Wrap(err, "could not backup accounts for imported keymanager")
+			return errors.Wrap(err, "could not backup accounts for local keymanager")
 		}
 	case keymanager.Derived:
 		km, ok := km.(*derived.Keymanager)
@@ -115,6 +116,8 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		}
 	case keymanager.Remote:
 		return errors.New("backing up keys is not supported for a remote keymanager")
+	case keymanager.Web3Signer:
+		return errors.New("backing up keys is not supported for a web3signer keymanager")
 	default:
 		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
 	}

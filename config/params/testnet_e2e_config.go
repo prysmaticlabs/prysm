@@ -15,6 +15,14 @@ func UseE2EConfig() {
 	OverrideBeaconNetworkConfig(cfg)
 }
 
+// UseE2EMainnetConfig for beacon chain services.
+func UseE2EMainnetConfig() {
+	beaconConfig = E2EMainnetTestConfig()
+
+	cfg := BeaconNetworkConfig().Copy()
+	OverrideBeaconNetworkConfig(cfg)
+}
+
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
 // Warning: This config is only for testing, it is not meant for use outside of E2E.
 func E2ETestConfig() *BeaconChainConfig {
@@ -49,4 +57,37 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]
 
 	return e2eConfig
+}
+
+func E2EMainnetTestConfig() *BeaconChainConfig {
+	e2eConfig := MainnetConfig().Copy()
+
+	// Misc.
+	e2eConfig.MinGenesisActiveValidatorCount = 256
+	e2eConfig.GenesisDelay = 25 // 25 seconds so E2E has enough time to process deposits and get started.
+	e2eConfig.ChurnLimitQuotient = 65536
+
+	// Time parameters.
+	e2eConfig.SecondsPerSlot = 6
+	e2eConfig.SqrRootSlotsPerEpoch = 5
+	e2eConfig.SecondsPerETH1Block = 2
+	e2eConfig.Eth1FollowDistance = 4
+	e2eConfig.ShardCommitteePeriod = 4
+
+	// PoW parameters.
+	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
+	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
+
+	// Altair Fork Parameters.
+	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
+
+	// Prysm constants.
+	e2eConfig.ConfigName = ConfigNames[EndToEnd]
+
+	return e2eConfig
+}
+
+// E2EMainnetConfigYaml returns the e2e config in yaml format.
+func E2EMainnetConfigYaml() []byte {
+	return ConfigToYaml(E2EMainnetTestConfig())
 }

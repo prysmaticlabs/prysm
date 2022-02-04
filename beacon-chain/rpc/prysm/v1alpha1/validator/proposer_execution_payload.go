@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -54,7 +54,7 @@ import (
 //        fee_recipient=fee_recipient,
 //    )
 //    return execution_engine.notify_forkchoice_updated(parent_hash, finalized_block_hash, payload_attributes)
-func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*ethpb.ExecutionPayload, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*enginev1.ExecutionPayload, error) {
 	// TODO_MERGE: Reuse the same head state as in building phase0 block attestation.
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
@@ -143,12 +143,12 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*et
 	return executableDataToExecutionPayload(data), nil
 }
 
-func executableDataToExecutionPayload(ed *catalyst.ExecutableDataV1) *ethpb.ExecutionPayload {
-	return &ethpb.ExecutionPayload{
+func executableDataToExecutionPayload(ed *catalyst.ExecutableDataV1) *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
 		ParentHash:    bytesutil.PadTo(ed.ParentHash.Bytes(), 32),
 		FeeRecipient:  bytesutil.PadTo(ed.FeeRecipient.Bytes(), 20),
 		StateRoot:     bytesutil.PadTo(ed.StateRoot.Bytes(), 32),
-		ReceiptRoot:   bytesutil.PadTo(ed.ReceiptsRoot.Bytes(), 32),
+		ReceiptsRoot:  bytesutil.PadTo(ed.ReceiptsRoot.Bytes(), 32),
 		LogsBloom:     bytesutil.PadTo(ed.LogsBloom, 256),
 		Random:        bytesutil.PadTo(ed.Random.Bytes(), 32),
 		BlockNumber:   ed.Number,

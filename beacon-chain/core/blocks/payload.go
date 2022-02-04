@@ -10,6 +10,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -77,7 +78,7 @@ func ExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, er
 //    # Verify consistency of the parent hash with respect to the previous execution payload header
 //    if is_merge_complete(state):
 //        assert payload.parent_hash == state.latest_execution_payload_header.block_hash
-func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
+func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload *enginev1.ExecutionPayload) error {
 	complete, err := MergeComplete(st)
 	if err != nil {
 		return err
@@ -104,7 +105,7 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload *ethpb.Exec
 //    assert payload.random == get_randao_mix(state, get_current_epoch(state))
 //    # Verify timestamp
 //    assert payload.timestamp == compute_timestamp_at_slot(state, state.slot)
-func ValidatePayload(st state.BeaconState, payload *ethpb.ExecutionPayload) error {
+func ValidatePayload(st state.BeaconState, payload *enginev1.ExecutionPayload) error {
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		return err
@@ -155,7 +156,7 @@ func ValidatePayload(st state.BeaconState, payload *ethpb.ExecutionPayload) erro
 //        block_hash=payload.block_hash,
 //        transactions_root=hash_tree_root(payload.transactions),
 //    )
-func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (state.BeaconState, error) {
+func ProcessPayload(st state.BeaconState, payload *enginev1.ExecutionPayload) (state.BeaconState, error) {
 	if err := ValidatePayloadWhenMergeCompletes(st, payload); err != nil {
 		return nil, err
 	}
@@ -175,7 +176,7 @@ func ProcessPayload(st state.BeaconState, payload *ethpb.ExecutionPayload) (stat
 }
 
 // PayloadToHeader converts `payload` into execution payload header format.
-func PayloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHeader, error) {
+func PayloadToHeader(payload *enginev1.ExecutionPayload) (*ethpb.ExecutionPayloadHeader, error) {
 	txRoot, err := ssz.TransactionsRoot(payload.Transactions)
 	if err != nil {
 		return nil, err
@@ -185,7 +186,7 @@ func PayloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptRoot),
+		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
 		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
 		Random:           bytesutil.SafeCopyBytes(payload.Random),
 		BlockNumber:      payload.BlockNumber,
@@ -199,7 +200,7 @@ func PayloadToHeader(payload *ethpb.ExecutionPayload) (*ethpb.ExecutionPayloadHe
 	}, nil
 }
 
-func isEmptyPayload(p *ethpb.ExecutionPayload) bool {
+func isEmptyPayload(p *enginev1.ExecutionPayload) bool {
 	if !bytes.Equal(p.ParentHash, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
@@ -209,7 +210,7 @@ func isEmptyPayload(p *ethpb.ExecutionPayload) bool {
 	if !bytes.Equal(p.StateRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(p.ReceiptRoot, make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(p.ReceiptsRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
 	if !bytes.Equal(p.LogsBloom, make([]byte, fieldparams.LogsBloomLength)) {
@@ -291,12 +292,12 @@ func isEmptyHeader(h *ethpb.ExecutionPayloadHeader) bool {
 	return true
 }
 
-func EmptyPayload() *ethpb.ExecutionPayload {
-	return &ethpb.ExecutionPayload{
+func EmptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptRoot:   make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 		Random:        make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),

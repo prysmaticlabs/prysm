@@ -25,7 +25,14 @@ func (s *Server) ListKeystores(
 	if !s.walletInitialized {
 		return nil, status.Error(codes.Internal, "Wallet not ready")
 	}
-	pubKeys, err := s.keymanager.FetchValidatingPublicKeys(ctx)
+	if s.validatorService == nil {
+		return nil, status.Error(codes.Internal, "Validator service not ready")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+	}
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not list keystores: %v", err)
 	}
@@ -50,7 +57,14 @@ func (s *Server) ImportKeystores(
 	if !s.walletInitialized {
 		return nil, status.Error(codes.Internal, "Wallet not ready")
 	}
-	importer, ok := s.keymanager.(keymanager.Importer)
+	if s.validatorService == nil {
+		return nil, status.Error(codes.Internal, "Validator service not ready")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+	}
+	importer, ok := km.(keymanager.Importer)
 	if !ok {
 		return nil, status.Error(codes.Internal, "Keymanager kind cannot import keys")
 	}
@@ -101,7 +115,14 @@ func (s *Server) DeleteKeystores(
 	if !s.walletInitialized {
 		return nil, status.Error(codes.Internal, "Wallet not ready")
 	}
-	deleter, ok := s.keymanager.(keymanager.Deleter)
+	if s.validatorService == nil {
+		return nil, status.Error(codes.Internal, "Validator service not ready")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+	}
+	deleter, ok := km.(keymanager.Deleter)
 	if !ok {
 		return nil, status.Error(codes.Internal, "Keymanager kind cannot delete keys")
 	}

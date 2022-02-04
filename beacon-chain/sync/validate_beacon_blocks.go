@@ -208,16 +208,9 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	}
 	// In the event the block is more than an epoch ahead from its
 	// parent state, we have to advance the state forward.
-	if features.Get().EnableNextSlotStateCache {
-		parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, blk.Block().ParentRoot(), blk.Block().Slot())
-		if err != nil {
-			return err
-		}
-	} else {
-		parentState, err = transition.ProcessSlots(ctx, parentState, blk.Block().Slot())
-		if err != nil {
-			return err
-		}
+	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, blk.Block().ParentRoot(), blk.Block().Slot())
+	if err != nil {
+		return err
 	}
 	idx, err := helpers.BeaconProposerIndex(ctx, parentState)
 	if err != nil {
