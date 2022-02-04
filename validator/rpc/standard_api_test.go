@@ -72,13 +72,13 @@ func TestServer_ListKeystores(t *testing.T) {
 	t.Run("returns proper data with existing keystores", func(t *testing.T) {
 		resp, err := s.ListKeystores(context.Background(), &empty.Empty{})
 		require.NoError(t, err)
-		require.Equal(t, numAccounts, len(resp.Keystores))
+		require.Equal(t, numAccounts, len(resp.Data))
 		for i := 0; i < numAccounts; i++ {
-			require.DeepEqual(t, expectedKeys[i][:], resp.Keystores[i].ValidatingPubkey)
+			require.DeepEqual(t, expectedKeys[i][:], resp.Data[i].ValidatingPubkey)
 			require.Equal(
 				t,
 				fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i),
-				resp.Keystores[i].DerivationPath,
+				resp.Data[i].DerivationPath,
 			)
 		}
 	})
@@ -89,7 +89,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		s := Server{}
 		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{})
 		require.NoError(t, err)
-		require.Equal(t, 0, len(response.Statuses))
+		require.Equal(t, 0, len(response.Data))
 	})
 	ctx := context.Background()
 	localWalletDir := setupWalletDir(t)
@@ -123,8 +123,8 @@ func TestServer_ImportKeystores(t *testing.T) {
 			Passwords: []string{"hi"},
 		})
 		require.NoError(t, err)
-		require.Equal(t, 1, len(response.Statuses))
-		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
+		require.Equal(t, 1, len(response.Data))
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
 	})
 	t.Run("200 response even if  no passwords in request", func(t *testing.T) {
 		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
@@ -132,8 +132,8 @@ func TestServer_ImportKeystores(t *testing.T) {
 			Passwords: []string{},
 		})
 		require.NoError(t, err)
-		require.Equal(t, 1, len(response.Statuses))
-		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
+		require.Equal(t, 1, len(response.Data))
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
 	})
 	t.Run("200 response even if  keystores more than passwords in request", func(t *testing.T) {
 		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
@@ -141,8 +141,8 @@ func TestServer_ImportKeystores(t *testing.T) {
 			Passwords: []string{"hi"},
 		})
 		require.NoError(t, err)
-		require.Equal(t, 2, len(response.Statuses))
-		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
+		require.Equal(t, 2, len(response.Data))
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
 	})
 	t.Run("200 response even if number of passwords does not match number of keystores", func(t *testing.T) {
 		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
@@ -150,8 +150,8 @@ func TestServer_ImportKeystores(t *testing.T) {
 			Passwords: []string{"hi", "hi"},
 		})
 		require.NoError(t, err)
-		require.Equal(t, 1, len(response.Statuses))
-		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
+		require.Equal(t, 1, len(response.Data))
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
 	})
 	t.Run("200 response even if faulty slashing protection data", func(t *testing.T) {
 		numKeystores := 5
@@ -170,8 +170,8 @@ func TestServer_ImportKeystores(t *testing.T) {
 			SlashingProtection: "foobar",
 		})
 		require.NoError(t, err)
-		require.Equal(t, numKeystores, len(resp.Statuses))
-		for _, st := range resp.Statuses {
+		require.Equal(t, numKeystores, len(resp.Data))
+		for _, st := range resp.Data {
 			require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, st.Status)
 		}
 	})
@@ -226,8 +226,8 @@ func TestServer_ImportKeystores(t *testing.T) {
 			SlashingProtection: string(encodedSlashingProtection),
 		})
 		require.NoError(t, err)
-		require.Equal(t, numKeystores, len(resp.Statuses))
-		for _, status := range resp.Statuses {
+		require.Equal(t, numKeystores, len(resp.Data))
+		for _, status := range resp.Data {
 			require.Equal(t, ethpbservice.ImportedKeystoreStatus_IMPORTED, status.Status)
 		}
 	})
@@ -261,9 +261,9 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 		Passwords: []string{"hi"},
 	})
 	require.NoError(t, err)
-	require.Equal(t, 1, len(response.Statuses))
-	require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Statuses[0].Status)
-	require.Equal(t, "Keymanager kind cannot import keys", response.Statuses[0].Message)
+	require.Equal(t, 1, len(response.Data))
+	require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
+	require.Equal(t, "Keymanager kind cannot import keys", response.Data[0].Message)
 }
 
 func TestServer_DeleteKeystores(t *testing.T) {
@@ -271,7 +271,7 @@ func TestServer_DeleteKeystores(t *testing.T) {
 		s := Server{}
 		response, err := s.DeleteKeystores(context.Background(), &ethpbservice.DeleteKeystoresRequest{})
 		require.NoError(t, err)
-		require.Equal(t, 0, len(response.Statuses))
+		require.Equal(t, 0, len(response.Data))
 	})
 	ctx := context.Background()
 	srv := setupServerWithWallet(t)
@@ -319,7 +319,7 @@ func TestServer_DeleteKeystores(t *testing.T) {
 
 	t.Run("no slashing protection response if no keys in request even if we have a history in DB", func(t *testing.T) {
 		resp, err := srv.DeleteKeystores(context.Background(), &ethpbservice.DeleteKeystoresRequest{
-			PublicKeys: nil,
+			Pubkeys: nil,
 		})
 		require.NoError(t, err)
 		require.Equal(t, "", resp.SlashingProtection)
@@ -379,9 +379,9 @@ func TestServer_DeleteKeystores(t *testing.T) {
 			pk := publicKeysWithId[tc.keys[i].id]
 			keys[i] = pk[:]
 		}
-		resp, err := srv.DeleteKeystores(ctx, &ethpbservice.DeleteKeystoresRequest{PublicKeys: keys})
+		resp, err := srv.DeleteKeystores(ctx, &ethpbservice.DeleteKeystoresRequest{Pubkeys: keys})
 		require.NoError(t, err)
-		require.Equal(t, len(keys), len(resp.Statuses))
+		require.Equal(t, len(keys), len(resp.Data))
 		slashingProtectionData := &format.EIPSlashingProtectionFormat{}
 		require.NoError(t, json.Unmarshal([]byte(resp.SlashingProtection), slashingProtectionData))
 		require.Equal(t, true, len(slashingProtectionData.Data) > 0)
@@ -390,7 +390,7 @@ func TestServer_DeleteKeystores(t *testing.T) {
 			require.Equal(
 				t,
 				tc.wantStatuses[i],
-				resp.Statuses[i].Status,
+				resp.Data[i].Status,
 				fmt.Sprintf("Checking status for key %s", tc.keys[i].id),
 			)
 			if tc.keys[i].wantProtectionData {
@@ -438,12 +438,14 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 	}()
 
 	response, err := srv.DeleteKeystores(context.Background(), &ethpbservice.DeleteKeystoresRequest{
-		PublicKeys: [][]byte{[]byte("a")},
+		Pubkeys: [][]byte{[]byte("a")},
 	})
 	require.NoError(t, err)
-	require.Equal(t, 1, len(response.Statuses))
-	require.Equal(t, ethpbservice.DeletedKeystoreStatus_ERROR, response.Statuses[0].Status)
-	require.Equal(t, "Non duplicate keys that were existing were deleted, but could not export slashing protection history.", response.Statuses[0].Message)
+	require.Equal(t, 1, len(response.Data))
+	require.Equal(t, ethpbservice.DeletedKeystoreStatus_ERROR, response.Data[0].Status)
+	require.Equal(t, "Non duplicate keys that were existing were deleted, but could not export slashing protection history.",
+		response.Data[0].Message,
+	)
 }
 
 func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
@@ -451,11 +453,12 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	w := wallet.NewWalletForWeb3Signer()
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remote_web3signer.SetupConfig{
-		BaseEndpoint:          "example.com",
-		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "example.com/public_keys",
-	}})
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false,
+		Web3SignerConfig: &remote_web3signer.SetupConfig{
+			BaseEndpoint:          "example.com",
+			GenesisValidatorsRoot: root,
+			PublicKeysURL:         "example.com/public_keys",
+		}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
@@ -469,11 +472,11 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 		wallet:            w,
 		validatorService:  vs,
 	}
-	response, err := s.DeleteKeystores(ctx, &ethpbservice.DeleteKeystoresRequest{PublicKeys: [][]byte{[]byte("a")}})
+	response, err := s.DeleteKeystores(ctx, &ethpbservice.DeleteKeystoresRequest{Pubkeys: [][]byte{[]byte("a")}})
 	require.NoError(t, err)
-	require.Equal(t, 1, len(response.Statuses))
-	require.Equal(t, ethpbservice.DeletedKeystoreStatus_ERROR, response.Statuses[0].Status)
-	require.Equal(t, "Keymanager kind cannot delete keys", response.Statuses[0].Message)
+	require.Equal(t, 1, len(response.Data))
+	require.Equal(t, ethpbservice.DeletedKeystoreStatus_ERROR, response.Data[0].Status)
+	require.Equal(t, "Keymanager kind cannot delete keys", response.Data[0].Message)
 }
 
 func setupServerWithWallet(t testing.TB) *Server {
