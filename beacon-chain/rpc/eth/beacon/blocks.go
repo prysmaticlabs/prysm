@@ -71,7 +71,7 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 		Data: &ethpbv1.WeakSubjectivityData{
 			WsCheckpoint: &ethpbv1.Checkpoint{
 				Epoch: wsEpoch,
-				Root: blockRoot[:],
+				Root:  blockRoot[:],
 			},
 			StateRoot: stateRoot[:],
 		},

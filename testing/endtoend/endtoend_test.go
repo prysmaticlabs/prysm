@@ -454,7 +454,7 @@ func DownloadCheckpoint(ctx context.Context, conn *grpc.ClientConn) (*checkpoint
 	}
 	ws := resp.Data
 	cp := &checkpoint{
-		epoch: ws.WsCheckpoint.Epoch,
+		epoch:     ws.WsCheckpoint.Epoch,
 		stateRoot: bytesutil.ToBytes32(ws.StateRoot),
 		blockRoot: bytesutil.ToBytes32(ws.WsCheckpoint.Root),
 	}

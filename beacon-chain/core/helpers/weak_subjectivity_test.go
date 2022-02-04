@@ -167,7 +167,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, err)
 				return beaconState
 			},
-			genWsCheckpoint: func() ([32]byte, [32]byte, types.Epoch){
+			genWsCheckpoint: func() ([32]byte, [32]byte, types.Epoch) {
 				var sr [32]byte
 				copy(sr[:], bytesutil.PadTo([]byte("stateroot"), 32))
 				return sr, [32]byte{}, 42

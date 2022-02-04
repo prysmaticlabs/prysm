@@ -23,7 +23,7 @@ type params struct {
 	ContractAddress       common.Address
 	BootNodePort          int
 	BeaconNodeRPCPort     int
-	BeaconNodeOAPIPort	  int
+	BeaconNodeOAPIPort    int
 	BeaconNodeMetricsPort int
 	ValidatorMetricsPort  int
 	ValidatorGatewayPort  int

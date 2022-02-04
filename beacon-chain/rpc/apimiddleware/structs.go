@@ -22,7 +22,7 @@ type genesisResponse_GenesisJson struct {
 type WeakSubjectivityResponse struct {
 	Data *struct {
 		Checkpoint *checkpointJson `json:"ws_checkpoint"`
-		StateRoot string `json:"state_root" hex:"true"`
+		StateRoot  string          `json:"state_root" hex:"true"`
 	} `json:"data"`
 }
 

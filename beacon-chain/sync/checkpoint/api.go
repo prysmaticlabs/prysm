@@ -24,7 +24,7 @@ type APIInitializer struct {
 	c *openapi.Client
 }
 
-func NewAPIInitializer (beaconNodeHost string) (*APIInitializer, error) {
+func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
 	c, err := openapi.NewClient(beaconNodeHost)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to parse beacon node url or hostname - %s", beaconNodeHost))

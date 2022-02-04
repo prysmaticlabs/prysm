@@ -50,8 +50,8 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
-	minimumSlot types.Slot
-	beaconDBInitType BeaconDBInitType
+	minimumSlot             types.Slot
+	beaconDBInitType        BeaconDBInitType
 }
 
 // This tracks the config in the event of long non-finality,
@@ -80,6 +80,7 @@ func WithMinimumSlot(min types.Slot) StateGenOption {
 }
 
 type BeaconDBInitType uint
+
 const (
 	BeaconDBInitTypeGenesisState = iota
 	BeaconDBInitTypeCheckpoint
@@ -95,7 +96,7 @@ func WithInitType(t BeaconDBInitType) StateGenOption {
 type StateGenOption func(*State)
 
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase, opts... StateGenOption) *State {
+func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
 	s := &State{
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),

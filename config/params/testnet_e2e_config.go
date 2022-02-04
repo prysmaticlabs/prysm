@@ -1,5 +1,11 @@
 package params
 
+import (
+	"math"
+
+	types "github.com/prysmaticlabs/eth2-types"
+)
+
 const altairE2EForkEpoch = 6
 
 // UseE2EConfig for beacon chain services.
@@ -44,6 +50,13 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.AltairForkVersion = []byte{0x1, 0x0, 0xFF, 0xFF}
 	e2eConfig.ShardingForkVersion = []byte{0x3, 0x0, 0xFF, 0xFF}
 	e2eConfig.MergeForkVersion = []byte{0x2, 0x0, 0xFF, 0xFF}
+
+	e2eConfig.ForkVersionSchedule = map[[4]byte]types.Epoch{
+		{0x00, 0x00, 0xFF, 0xFF}: 0,
+		{0x1, 0x0, 0xFF, 0xFF}:   math.MaxUint64,
+		{0x3, 0x0, 0xFF, 0xFF}:   math.MaxUint64,
+		{0x2, 0x0, 0xFF, 0xFF}:   math.MaxUint64,
+	}
 
 	return e2eConfig
 }

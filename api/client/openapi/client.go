@@ -24,13 +24,14 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
+
 const (
 	GET_WEAK_SUBJECTIVITY_PATH = "/eth/v1/beacon/weak_subjectivity"
-	GET_SIGNED_BLOCK_PATH = "/eth/v2/beacon/blocks"
-	GET_STATE_PATH = "/eth/v2/debug/beacon/states"
-	GET_FORK_SCHEDULE_PATH = "/eth/v1/config/fork_schedule"
-	GET_FORK_FOR_STATE = "/eth/v1/beacon/states/{{.StateId}}/fork"
-	GET_BLOCK_ROOT = "/eth/v1/beacon/blocks/{{.BlockId}}/root"
+	GET_SIGNED_BLOCK_PATH      = "/eth/v2/beacon/blocks"
+	GET_STATE_PATH             = "/eth/v2/debug/beacon/states"
+	GET_FORK_SCHEDULE_PATH     = "/eth/v1/config/fork_schedule"
+	GET_FORK_FOR_STATE         = "/eth/v1/beacon/states/{{.StateId}}/fork"
+	GET_BLOCK_ROOT             = "/eth/v1/beacon/blocks/{{.BlockId}}/root"
 )
 
 const (
@@ -137,7 +138,7 @@ func (c *Client) GetBlockRoot(blockId string) ([32]byte, error) {
 	var root [32]byte
 	t := template.Must(template.New("get-block-root").Parse(GET_BLOCK_ROOT))
 	b := bytes.NewBuffer(nil)
-	err := t.Execute(b, struct{BlockId string}{BlockId: blockId})
+	err := t.Execute(b, struct{ BlockId string }{BlockId: blockId})
 	if err != nil {
 		return root, errors.Wrap(err, fmt.Sprintf("unable to generate path w/ blockId=%s", blockId))
 	}
@@ -158,7 +159,7 @@ func (c *Client) GetBlockRoot(blockId string) ([32]byte, error) {
 	if r.StatusCode != http.StatusOK {
 		return root, non200Err(r)
 	}
-	jsonr := &struct{Data struct{Root string}}{}
+	jsonr := &struct{ Data struct{ Root string } }{}
 	err = json.NewDecoder(r.Body).Decode(jsonr)
 	if err != nil {
 		return root, errors.Wrap(err, "error decoding json data from get block root response")
@@ -236,7 +237,7 @@ func (c *Client) GetStateById(stateId string) (io.Reader, error) {
 func (c *Client) GetForkForState(stateId string) (*ethpb.Fork, error) {
 	t := template.Must(template.New("get-for-for-state").Parse(GET_FORK_FOR_STATE))
 	b := bytes.NewBuffer(nil)
-	err := t.Execute(b, struct{StateId string}{StateId: stateId})
+	err := t.Execute(b, struct{ StateId string }{StateId: stateId})
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to generate path w/ stateId=%s", stateId))
 	}
@@ -252,7 +253,7 @@ func (c *Client) GetForkForState(stateId string) (*ethpb.Fork, error) {
 		return nil, non200Err(r)
 	}
 	fr := &forkResponse{}
-	dataWrapper := &struct{Data *forkResponse}{Data: fr}
+	dataWrapper := &struct{ Data *forkResponse }{Data: fr}
 	err = json.NewDecoder(r.Body).Decode(dataWrapper)
 	if err != nil {
 		return nil, errors.Wrap(err, "error decoding json response in GetForkForState")
@@ -287,9 +288,9 @@ func (f *forkResponse) Fork() (*ethpb.Fork, error) {
 		return nil, fmt.Errorf("got %d byte version, expected 4 bytes. version hex=%s", len(pSlice), f.PreviousVersion)
 	}
 	return &ethpb.Fork{
-		CurrentVersion: cSlice,
+		CurrentVersion:  cSlice,
 		PreviousVersion: pSlice,
-		Epoch: types.Epoch(epoch),
+		Epoch:           types.Epoch(epoch),
 	}, nil
 }
 

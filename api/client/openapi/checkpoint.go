@@ -18,12 +18,12 @@ var ErrMismatchedLatestBlockRoot = errors.New("block root in state does not matc
 type WeakSubjectivityData struct {
 	BlockRoot [32]byte
 	StateRoot [32]byte
-	Epoch types.Epoch
+	Epoch     types.Epoch
 }
 type OriginData struct {
 	WeakSubjectivity *WeakSubjectivityData
-	StateBytes []byte
-	blockBytes []byte
+	StateBytes       []byte
+	blockBytes       []byte
 }
 
 // this method downloads the head state, which can be used to find the correct chain config
@@ -222,7 +222,7 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", blockRoot, realBlockRoot)
 	return &OriginData{
 		WeakSubjectivity: ws,
-		StateBytes: stateBytes,
-		blockBytes: blockBytes,
+		StateBytes:       stateBytes,
+		blockBytes:       blockBytes,
 	}, nil
 }
