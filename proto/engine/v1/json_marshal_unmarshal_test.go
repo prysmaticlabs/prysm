@@ -2,6 +2,7 @@ package enginev1_test
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -9,21 +10,15 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-type payloadAttributesJSON struct {
-	Timestamp             enginev1.Quantity `json:"timestamp"`
-	Random                enginev1.HexBytes `json:"random"`
-	SuggestedFeeRecipient enginev1.HexBytes `json:"suggestedFeeRecipient"`
-}
-
 func TestJsonMarshalUnmarshal(t *testing.T) {
 	foo := bytesutil.ToBytes32([]byte("foo"))
 	bar := bytesutil.PadTo([]byte("bar"), 20)
 	baz := bytesutil.PadTo([]byte("baz"), 256)
 	t.Run("payload attributes", func(t *testing.T) {
-		jsonPayload := map[string]interface{}{
-			"timestamp":             enginev1.Quantity(1),
-			"random":                enginev1.HexBytes(foo[:]),
-			"suggestedFeeRecipient": enginev1.HexBytes(bar),
+		jsonPayload := &enginev1.PayloadAttributes{
+			Timestamp:             1,
+			Random:                enginev1.HexBytes(foo[:]),
+			SuggestedFeeRecipient: enginev1.HexBytes(bar),
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
@@ -48,10 +43,10 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, "failed validation", payloadPb.ValidationError)
 	})
 	t.Run("forkchoice state", func(t *testing.T) {
-		jsonPayload := map[string]interface{}{
-			"headBlockHash":      enginev1.HexBytes(foo[:]),
-			"safeBlockHash":      enginev1.HexBytes(foo[:]),
-			"finalizedBlockHash": enginev1.HexBytes(foo[:]),
+		jsonPayload := &enginev1.ForkchoiceState{
+			HeadBlockHash:      enginev1.HexBytes(foo[:]),
+			SafeBlockHash:      enginev1.HexBytes(foo[:]),
+			FinalizedBlockHash: enginev1.HexBytes(foo[:]),
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
@@ -62,21 +57,21 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, foo[:], payloadPb.FinalizedBlockHash)
 	})
 	t.Run("execution payload", func(t *testing.T) {
-		jsonPayload := map[string]interface{}{
-			"parentHash":    foo[:],
-			"feeRecipient":  bar,
-			"stateRoot":     foo[:],
-			"receiptsRoot":  foo[:],
-			"logsBloom":     baz,
-			"random":        foo[:],
-			"blockNumber":   1,
-			"gasLimit":      1,
-			"gasUsed":       1,
-			"timestamp":     1,
-			"extraData":     foo[:],
-			"baseFeePerGas": foo[:],
-			"blockHash":     foo[:],
-			"transactions":  [][]byte{foo[:]},
+		jsonPayload := &enginev1.ExecutionPayload{
+			ParentHash:    foo[:],
+			FeeRecipient:  bar,
+			StateRoot:     foo[:],
+			ReceiptsRoot:  foo[:],
+			LogsBloom:     baz,
+			Random:        foo[:],
+			BlockNumber:   1,
+			GasLimit:      2,
+			GasUsed:       3,
+			Timestamp:     4,
+			ExtraData:     foo[:],
+			BaseFeePerGas: foo[:],
+			BlockHash:     foo[:],
+			Transactions:  [][]byte{foo[:]},
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
@@ -89,12 +84,72 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, baz, payloadPb.LogsBloom)
 		require.DeepEqual(t, foo[:], payloadPb.Random)
 		require.DeepEqual(t, uint64(1), payloadPb.BlockNumber)
-		require.DeepEqual(t, uint64(1), payloadPb.GasLimit)
-		require.DeepEqual(t, uint64(1), payloadPb.GasUsed)
-		require.DeepEqual(t, uint64(1), payloadPb.Timestamp)
+		require.DeepEqual(t, uint64(2), payloadPb.GasLimit)
+		require.DeepEqual(t, uint64(3), payloadPb.GasUsed)
+		require.DeepEqual(t, uint64(4), payloadPb.Timestamp)
 		require.DeepEqual(t, foo[:], payloadPb.ExtraData)
 		require.DeepEqual(t, foo[:], payloadPb.BaseFeePerGas)
 		require.DeepEqual(t, foo[:], payloadPb.BlockHash)
 		require.DeepEqual(t, [][]byte{foo[:]}, payloadPb.Transactions)
 	})
+}
+
+func TestHexBytes_MarshalUnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		b    enginev1.HexBytes
+	}{
+		{
+			name: "empty",
+			b:    []byte{},
+		},
+		{
+			name: "foo",
+			b:    []byte("foo"),
+		},
+		{
+			name: "bytes",
+			b:    []byte{1, 2, 3, 4},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.b.MarshalJSON()
+			require.NoError(t, err)
+			var dec enginev1.HexBytes
+			err = dec.UnmarshalJSON(got)
+			require.NoError(t, err)
+			require.DeepEqual(t, tt.b, dec)
+		})
+	}
+}
+
+func TestQuantity_MarshalUnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name string
+		b    enginev1.Quantity
+	}{
+		{
+			name: "zero",
+			b:    0,
+		},
+		{
+			name: "num",
+			b:    5,
+		},
+		{
+			name: "max",
+			b:    math.MaxUint64,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.b.MarshalJSON()
+			require.NoError(t, err)
+			var dec enginev1.Quantity
+			err = dec.UnmarshalJSON(got)
+			require.NoError(t, err)
+			require.DeepEqual(t, tt.b, dec)
+		})
+	}
 }

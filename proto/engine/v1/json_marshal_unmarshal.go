@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type HexBytes []byte
@@ -56,41 +55,45 @@ func (q *Quantity) UnmarshalJSON(enc []byte) error {
 }
 
 type executionPayloadJSON struct {
-	ParentHash    HexBytes `json:"parentHash"`
-	FeeRecipient  HexBytes `json:"feeRecipient"`
-	StateRoot     HexBytes `json:"stateRoot"`
-	ReceiptsRoot  HexBytes `json:"receiptsRoot"`
-	LogsBloom     HexBytes `json:"logsBloom"`
-	Random        HexBytes `json:"random"`
-	BlockNumber   Quantity `json:"blockNumber"`
-	GasLimit      Quantity `json:"gasLimit"`
-	GasUsed       Quantity `json:"gasUsed"`
-	Timestamp     Quantity `json:"timestamp"`
-	ExtraData     HexBytes `json:"extraData"`
-	BaseFeePerGas HexBytes `json:"baseFeePerGas"`
-	BlockHash     HexBytes `json:"blockHash"`
-	Transactions  [][]byte `json:"transactions"`
+	ParentHash    HexBytes   `json:"parentHash"`
+	FeeRecipient  HexBytes   `json:"feeRecipient"`
+	StateRoot     HexBytes   `json:"stateRoot"`
+	ReceiptsRoot  HexBytes   `json:"receiptsRoot"`
+	LogsBloom     HexBytes   `json:"logsBloom"`
+	Random        HexBytes   `json:"random"`
+	BlockNumber   Quantity   `json:"blockNumber"`
+	GasLimit      Quantity   `json:"gasLimit"`
+	GasUsed       Quantity   `json:"gasUsed"`
+	Timestamp     Quantity   `json:"timestamp"`
+	ExtraData     HexBytes   `json:"extraData"`
+	BaseFeePerGas HexBytes   `json:"baseFeePerGas"`
+	BlockHash     HexBytes   `json:"blockHash"`
+	Transactions  []HexBytes `json:"transactions"`
 }
 
 // MarshalJSON defines a custom json.Marshaler interface implementation
 // that uses protojson underneath the hood, as protojson will respect
 // proper struct tag naming conventions required for the JSON-RPC engine API to work.
 func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
+	transactions := make([]HexBytes, len(e.Transactions))
+	for i, tx := range e.Transactions {
+		transactions[i] = tx
+	}
 	return json.Marshal(executionPayloadJSON{
-		ParentHash:    HexBytes(e.ParentHash),
-		FeeRecipient:  HexBytes(e.FeeRecipient),
-		StateRoot:     HexBytes(e.StateRoot),
-		ReceiptsRoot:  HexBytes(e.ReceiptsRoot),
-		LogsBloom:     HexBytes(e.LogsBloom),
-		Random:        HexBytes(e.Random),
+		ParentHash:    e.ParentHash,
+		FeeRecipient:  e.FeeRecipient,
+		StateRoot:     e.StateRoot,
+		ReceiptsRoot:  e.ReceiptsRoot,
+		LogsBloom:     e.LogsBloom,
+		Random:        e.Random,
 		BlockNumber:   Quantity(e.BlockNumber),
 		GasLimit:      Quantity(e.GasLimit),
 		GasUsed:       Quantity(e.GasUsed),
 		Timestamp:     Quantity(e.Timestamp),
-		ExtraData:     HexBytes(e.ExtraData),
-		BaseFeePerGas: HexBytes(e.ExtraData),
-		BlockHash:     HexBytes(e.ExtraData),
-		Transactions:  e.Transactions,
+		ExtraData:     e.ExtraData,
+		BaseFeePerGas: e.ExtraData,
+		BlockHash:     e.ExtraData,
+		Transactions:  transactions,
 	})
 }
 
@@ -98,7 +101,30 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 // that uses protojson underneath the hood, as protojson will respect
 // proper struct tag naming conventions required for the JSON-RPC engine API to work.
 func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
-	return protojson.Unmarshal(enc, e)
+	dec := executionPayloadJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*e = ExecutionPayload{}
+	e.ParentHash = dec.ParentHash
+	e.FeeRecipient = dec.FeeRecipient
+	e.StateRoot = dec.StateRoot
+	e.ReceiptsRoot = dec.ReceiptsRoot
+	e.LogsBloom = dec.LogsBloom
+	e.Random = dec.Random
+	e.BlockNumber = uint64(dec.BlockNumber)
+	e.GasLimit = uint64(dec.GasLimit)
+	e.GasUsed = uint64(dec.GasUsed)
+	e.Timestamp = uint64(dec.Timestamp)
+	e.ExtraData = dec.ExtraData
+	e.BaseFeePerGas = dec.BaseFeePerGas
+	e.BlockHash = dec.BlockHash
+	transactions := make([][]byte, len(dec.Transactions))
+	for i, tx := range dec.Transactions {
+		transactions[i] = tx
+	}
+	e.Transactions = transactions
+	return nil
 }
 
 type payloadAttributesJSON struct {
