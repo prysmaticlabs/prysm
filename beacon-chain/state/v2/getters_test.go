@@ -32,7 +32,7 @@ func TestBeaconState_SlotDataRace(t *testing.T) {
 }
 
 func TestNilState_NoPanic(t *testing.T) {
-	var st state.BeaconStateAltair
+	var st *BeaconState
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Method panicked when it was not supposed to: %v\n%v\n", r, string(debug.Stack()))
