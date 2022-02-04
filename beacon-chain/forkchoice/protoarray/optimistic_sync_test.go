@@ -216,7 +216,7 @@ func TestOptimistic(t *testing.T) {
 // And every block in the Fork choice is optimistic. Synced_Tips contains a
 // single block that is outside of Fork choice
 //
-func TestUpdateSyncedTips(t *testing.T) {
+func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
@@ -321,7 +321,7 @@ func TestUpdateSyncedTips(t *testing.T) {
 		f.syncedTips.Lock()
 		f.syncedTips.validatedTips = tc.tips
 		f.syncedTips.Unlock()
-		err := f.UpdateSyncedTips(context.Background(), tc.root)
+		err := f.UpdateSyncedTipsWithValidRoot(context.Background(), tc.root)
 		if tc.wantedErr != nil {
 			require.ErrorIs(t, err, tc.wantedErr)
 		} else {
@@ -330,5 +330,123 @@ func TestUpdateSyncedTips(t *testing.T) {
 			require.DeepEqual(t, f.syncedTips.validatedTips, tc.newtips)
 			f.syncedTips.RUnlock()
 		}
+	}
+}
+
+// We test the algorithm to update a node from SYNCING to INVALID
+// We start with the same diagram as above:
+//
+//                         E(2) -- F(1)
+//                        /
+//             C(7) -- D(6)
+//            /           \
+//  A(10) -- B(9)          G(3) -- H(1) -- I(0)
+//            \               \
+//             J(1)             -- K(1) -- L(0)
+//
+// And every block in the Fork choice is optimistic. Synced_Tips contains a
+// single block that is outside of Fork choice. The numbers in parenthesis are
+// the weights of the nodes before removal
+//
+func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
+	tests := []struct {
+		root              [32]byte                // the root of the new INVALID block
+		tips              map[[32]byte]types.Slot // the old synced tips
+		wantedParentTip   bool
+		newBestChild      uint64
+		newBestDescendant uint64
+		newParentWeight   uint64
+	}{
+		{
+			[32]byte{'j'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+			},
+			false,
+			3,
+			4,
+			8,
+		},
+		{
+			[32]byte{'j'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+			},
+			true,
+			3,
+			4,
+			8,
+		},
+		{
+			[32]byte{'i'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+				[32]byte{'h'}: 105,
+			},
+			true,
+			NonExistentNode,
+			NonExistentNode,
+			1,
+		},
+		{
+			[32]byte{'i'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+			},
+			false,
+			NonExistentNode,
+			NonExistentNode,
+			1,
+		},
+	}
+	for _, tc := range tests {
+		ctx := context.Background()
+		f := setup(1, 1)
+
+		require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
+		weights := []uint64{10, 10, 9, 7, 1, 6, 2, 3, 1, 1, 1, 0, 0}
+		f.syncedTips.Lock()
+		f.syncedTips.validatedTips = tc.tips
+		f.syncedTips.Unlock()
+		f.store.nodesLock.Lock()
+		for i, node := range f.store.nodes {
+			node.weight = weights[i]
+		}
+		// Make j be the best child and descendant of b
+		nodeB := f.store.nodes[2]
+		nodeB.bestChild = 4
+		nodeB.bestDescendant = 4
+		idx := f.store.nodesIndices[tc.root]
+		node := f.store.nodes[idx]
+		parentIndex := node.parent
+		require.NotEqual(t, NonExistentNode, parentIndex)
+		parent := f.store.nodes[parentIndex]
+		f.store.nodesLock.Unlock()
+		err := f.UpdateSyncedTipsWithInvalidRoot(context.Background(), tc.root)
+		require.NoError(t, err)
+		f.syncedTips.RLock()
+		_, parentSyncedTip := f.syncedTips.validatedTips[parent.root]
+		f.syncedTips.RUnlock()
+		require.Equal(t, tc.wantedParentTip, parentSyncedTip)
+		require.Equal(t, tc.newBestChild, parent.bestChild)
+		require.Equal(t, tc.newBestDescendant, parent.bestDescendant)
+		require.Equal(t, tc.newParentWeight, parent.weight)
 	}
 }
