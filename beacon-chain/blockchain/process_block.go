@@ -447,7 +447,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
 		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()), bytesutil.ToBytes32(blk.Body().Graffiti()),
 		jCheckpoint.Epoch,
-		fCheckpoint.Epoch); err != nil {
+		fCheckpoint.Epoch, false); err != nil {
 		return errors.Wrap(err, "could not process block for proto array fork choice")
 	}
 	return nil

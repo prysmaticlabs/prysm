@@ -447,7 +447,8 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 		params.BeaconConfig().ZeroHash,
 		[32]byte{},
 		genesisCheckpoint.Epoch,
-		genesisCheckpoint.Epoch); err != nil {
+		genesisCheckpoint.Epoch,
+		false); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 

@@ -37,8 +37,8 @@ func TestService_TreeHandler(t *testing.T) {
 	}
 	s, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, [32]byte{'a'}, [32]byte{'g'}, [32]byte{'c'}, 0, 0))
-	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'c'}, 0, 0))
+	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, [32]byte{'a'}, [32]byte{'g'}, [32]byte{'c'}, 0, 0, false))
+	require.NoError(t, s.cfg.ForkChoiceStore.ProcessBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'c'}, 0, 0, false))
 	s.setHead([32]byte{'a'}, wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()), headState)
 
 	rr := httptest.NewRecorder()
