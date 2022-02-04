@@ -28,19 +28,9 @@ proto_library(
 ##############################################################################
 # Go
 ##############################################################################
-go_library(
-    name = "go_custom_types",
-    srcs = [
-	"custom_types.go",
-    ],
-    importpath = "github.com/prysmaticlabs/prysm/proto/engine/v1",
-    visibility = ["//visibility:public"],
-)
-
 ssz_gen_marshal(
     name = "ssz_generated_files",
     go_proto = ":go_proto",
-    includes = [":go_custom_types"],
     objs = [
         "ExecutionPayload",
     ],
@@ -70,7 +60,6 @@ go_library(
     srcs = [
         "json_marshal_unmarshal.go",
         ":ssz_generated_files",  # keep
-	"custom_types.go",
     ],
     embed = [
         ":go_proto",
