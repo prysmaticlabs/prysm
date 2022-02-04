@@ -67,7 +67,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 				if transitionError != nil {
 					break
 				}
-				beaconState, ok = processedState.(state.BeaconStateAltair)
+				beaconState, ok = processedState.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
