@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-type Bytes []byte
+type BytesHash []byte
 type Quantity uint64
 
-func (b Bytes) MarshalJSON() ([]byte, error) {
+func (b BytesHash) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("%#x", b)), nil
 }
 
-func (b Bytes) UnmarshalJSON(enc []byte) error {
+func (b BytesHash) UnmarshalJSON(enc []byte) error {
 	decoded, err := hex.DecodeString(strings.TrimPrefix(string(enc), "0x"))
 	if err != nil {
 		return err
