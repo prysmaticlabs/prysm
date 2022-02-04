@@ -91,7 +91,7 @@ message ListKeystoresResponse {
     bytes validating_pubkey = 1;
     string derivation_path = 2;
   }
-  repeated Keystore keystores = 1;
+  repeated Keystore data = 1;
 }
 
 message ImportKeystoresRequest {
