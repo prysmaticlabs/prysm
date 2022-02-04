@@ -32,6 +32,6 @@ func (q Quantity) UnmarshalJSON(enc []byte) error {
 	if err != nil {
 		return err
 	}
-	q = binary.LittleEndian.Uint64(decoded)
+	q = Quantity(binary.LittleEndian.Uint64(decoded))
 	return nil
 }
