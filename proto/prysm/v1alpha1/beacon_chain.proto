@@ -895,8 +895,3 @@ message IndividualVotesRespond {
 
     repeated IndividualVote individual_votes = 1;
 }
-
-message WeakSubjectivityCheckpointEpoch {
-    // The epoch of the weak subjectivity checkpoint.
-    uint64 epoch = 1;
-}

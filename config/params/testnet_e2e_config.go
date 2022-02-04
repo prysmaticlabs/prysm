@@ -40,5 +40,10 @@ func E2ETestConfig() *BeaconChainConfig {
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]
 
+	e2eConfig.GenesisForkVersion = []byte{0x00, 0x00, 0xFF, 0xFF}
+	e2eConfig.AltairForkVersion = []byte{0x1, 0x0, 0xFF, 0xFF}
+	e2eConfig.ShardingForkVersion = []byte{0x3, 0x0, 0xFF, 0xFF}
+	e2eConfig.MergeForkVersion = []byte{0x2, 0x0, 0xFF, 0xFF}
+
 	return e2eConfig
 }

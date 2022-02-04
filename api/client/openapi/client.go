@@ -25,7 +25,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 const (
-	GET_WEAK_SUBJECTIVITY_CHECKPOINT_EPOCH_PATH = "/eth/v1alpha1/beacon/weak_subjectivity_checkpoint_epoch"
 	GET_WEAK_SUBJECTIVITY_PATH = "/eth/v1/beacon/weak_subjectivity"
 	GET_SIGNED_BLOCK_PATH = "/eth/v2/beacon/blocks"
 	GET_STATE_PATH = "/eth/v2/debug/beacon/states"
@@ -98,33 +97,6 @@ func validHostname(h string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%s:%s", host, port), nil
-}
-
-type checkpointEpochResponse struct {
-	Epoch string
-}
-
-// GetWeakSubjectivityCheckpointEpoch retrieves the epoch for a finalized block within the weak subjectivity period.
-// The main use case for method is to find the slot that can be used to fetch a block within the subjectivity period
-// which can be used to sync (as an alternative to syncing from genesis).
-func (c *Client) GetWeakSubjectivityCheckpointEpoch() (uint64, error) {
-	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_CHECKPOINT_EPOCH_PATH)
-	r, err := c.c.Get(u.String())
-	defer func() {
-		err = r.Body.Close()
-	}()
-	if err != nil {
-		return 0, err
-	}
-	if r.StatusCode != http.StatusOK {
-		return 0, non200Err(r)
-	}
-	jsonr := &checkpointEpochResponse{}
-	err = json.NewDecoder(r.Body).Decode(jsonr)
-	if err != nil {
-		return 0, err
-	}
-	return strconv.ParseUint(jsonr.Epoch, 10, 64)
 }
 
 // GetBlockBySlot queries the beacon node API for the SignedBeaconBlockAltair for the given slot
@@ -374,17 +346,11 @@ func (c *Client) GetForkSchedule() (params.OrderedForkSchedule, error) {
 	return ofs, nil
 }
 
-type wscResponse struct {
-	BlockRoot string
-	StateRoot string
-	Epoch     string
-}
-
-// GetWeakSubjectivity calls an entirely different rpc method than GetWeakSubjectivityCheckpointEpoch
-// This endpoint is much slower, because it uses stategen to generate the BeaconState at the beginning of the
-// weak subjectivity epoch. This also results in a different set of state+block roots, because this endpoint currently
-// uses the state's latest_block_header for the block hash, while the checkpoint sync code assumes that the block
-// is from the first slot in the epoch and the state is from the subesequent slot.
+// GetWeakSubjectivity calls a proposed API endpoint that is unique to prysm
+// This api method does the following:
+// - computes weak subjectivity epoch
+// - finds the highest non-skipped block preceding the epoch
+// - returns the htr of the found block and returns this + the value of state_root from the block
 func (c *Client) GetWeakSubjectivity() (*WeakSubjectivityData, error) {
 	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_PATH)
 	r, err := c.c.Get(u.String())

@@ -192,8 +192,13 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		external = ipAddr
 	}
 	fVersion := params.BeaconConfig().GenesisForkVersion
-	if *forkVersion != "" {
-		fVersion, err = hex.DecodeString(*forkVersion)
+	fv := *forkVersion
+	if fv != "" {
+		fv := *forkVersion
+		if fv[0:2] == "0x" {
+			fv = fv[2:]
+		}
+		fVersion, err = hex.DecodeString(fv)
 		if err != nil {
 			return nil, errors.Wrap(err, "Could not retrieve fork version")
 		}

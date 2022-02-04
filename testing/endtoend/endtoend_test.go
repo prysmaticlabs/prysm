@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -78,6 +77,7 @@ func newTestRunner(t *testing.T, config *e2etypes.E2EConfig) *testRunner {
 
 // run executes configured E2E test.
 func (r *testRunner) run() {
+	params.OverrideBeaconConfig(params.E2ETestConfig())
 	t, config := r.t, r.config
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
@@ -334,31 +334,26 @@ func saveSSZBytes(filePath string, value saveable) (err error) {
 	return err
 }
 
-func saveBlock(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork, slot types.Slot, basePath string) (string, [32]byte, error) {
+func saveBlock(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork, root [32]byte, basePath string) (string, error) {
 	v1Client := service.NewBeaconChainClient(conn)
-	blockId := strconv.FormatUint(uint64(slot), 10)
-	bResp, err := v1Client.GetBlockSSZV2(ctx, &eth2.BlockRequestV2{BlockId: []byte(blockId)})
+	//blockId := fmt.Sprintf("%#x", root)
+	bResp, err := v1Client.GetBlockSSZV2(ctx, &eth2.BlockRequestV2{BlockId: root[:]})
 	if err != nil {
 		err = errors.Wrap(err, "saveBlock/GetBeaconBlock")
-		return "", [32]byte{}, err
+		return "", err
 	}
 	sb, err := sniff.BlockForConfigFork(bResp.GetData(), cf)
 	if err != nil {
 		err = errors.Wrap(err, "saveBlock/GetBeaconBlock")
-		return "", [32]byte{}, err
+		return "", err
 	}
 
-	root, err := sb.Block().HashTreeRoot()
-	if err != nil {
-		err = errors.Wrap(err, "saveBlock/HashTreeRoot")
-		return "", [32]byte{}, err
-	}
-	p := path.Join(basePath, fmt.Sprintf("block_%d_%x.ssz", slot, root))
+	p := path.Join(basePath, fmt.Sprintf("block_%d_%x.ssz", sb.Block().Slot(), root))
 	err = saveSSZBytes(p, sb)
 	if err != nil {
 		err = errors.Wrap(err, "saveBlock/saveSSZBytes")
 	}
-	return p, root, err
+	return p, err
 }
 
 func getConfigFork(ctx context.Context, conn *grpc.ClientConn, slot types.Slot) (*sniff.ConfigFork, error) {
@@ -382,33 +377,28 @@ func getConfigFork(ctx context.Context, conn *grpc.ClientConn, slot types.Slot) 
 }
 
 func saveState(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork, slot types.Slot, basePath string) (string, [32]byte, error) {
-	debugClient := eth.NewDebugClient(conn)
-	sResp, err := debugClient.GetBeaconState(ctx, &eth.BeaconStateRequest{
-		QueryFilter: &eth.BeaconStateRequest_Slot{
-			Slot: slot,
-		},
-	})
+	debugClient := service.NewBeaconDebugClient(conn)
+	stateId := []byte(fmt.Sprintf("%d", slot))
+	sResp, err := debugClient.GetBeaconStateSSZV2(ctx, &eth2.StateRequestV2{StateId: stateId})
 	if err != nil {
 		err = errors.Wrap(err, "saveState/GetBeaconState")
 		return "", [32]byte{}, err
 	}
-	value, err := sniff.BeaconStateForConfigFork(sResp.GetEncoded(), cf)
+	state, err := sniff.BeaconStateForConfigFork(sResp.Data, cf)
 	if err != nil {
-		err = errors.Wrap(err, "saveState/BeaconStateForConfigFork")
-		return "", [32]byte{}, err
+		return "", [32]byte{}, errors.Wrap(err, "saveState/BeaconStateForConfigFork")
+	}
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return "", [32]byte{}, errors.Wrap(err, "saveState/BeaconStateForConfigFork")
 	}
 
-	root, err := value.HashTreeRoot(ctx)
-	if err != nil {
-		err = errors.Wrap(err, "saveState/HashTreeRoot")
-		return "", [32]byte{}, err
-	}
-	p := path.Join(basePath, fmt.Sprintf("state_%d_%x.ssz", slot, root))
-	err = saveSSZBytes(p, value)
+	p := path.Join(basePath, fmt.Sprintf("state_%d_%x.ssz", state.Slot(), stateRoot))
+	err = saveSSZBytes(p, state)
 	if err != nil {
 		err = errors.Wrap(err, "saveState/saveSSZBytes")
 	}
-	return p, root, err
+	return p, stateRoot, err
 }
 
 type checkpoint struct {
@@ -456,13 +446,18 @@ func getHeadBlockRoot(ctx context.Context, conn *grpc.ClientConn) ([32]byte, err
 }
 
 func DownloadCheckpoint(ctx context.Context, conn *grpc.ClientConn) (*checkpoint, error) {
-	bcClient := eth.NewBeaconChainClient(conn)
-	resp, err := bcClient.GetWeakSubjectivityCheckpointEpoch(ctx, &emptypb.Empty{})
+	v1Client := service.NewBeaconChainClient(conn)
+	resp, err := v1Client.GetWeakSubjectivity(ctx, &emptypb.Empty{})
 	if err != nil {
 		err = errors.Wrap(err, "DownloadCheckpoint:GetWeakSubjectivityCheckpointEpoch")
 		return nil, err
 	}
-	cp := &checkpoint{epoch: types.Epoch(resp.Epoch)}
+	ws := resp.Data
+	cp := &checkpoint{
+		epoch: ws.WsCheckpoint.Epoch,
+		stateRoot: bytesutil.ToBytes32(ws.StateRoot),
+		blockRoot: bytesutil.ToBytes32(ws.WsCheckpoint.Root),
+	}
 
 	headRoot, err := getHeadBlockRoot(ctx, conn)
 	if err != nil {
@@ -472,29 +467,33 @@ func DownloadCheckpoint(ctx context.Context, conn *grpc.ClientConn) (*checkpoint
 	cp.headRoot = headRoot
 
 	// save the block at epoch start slot
-	epochStart, err := slots.EpochStart(cp.epoch)
+	wsSlot, err := slots.EpochStart(cp.epoch)
 	if err != nil {
 		err = errors.Wrap(err, "DownloadCheckpoint:EpochStart")
 		return nil, err
 	}
 
 	// fetch the state for the slot immediately following (and therefore integrating) the block
-	stateSlot := epochStart + 1
-	cf, err := getConfigFork(ctx, conn, stateSlot)
+	cf, err := getConfigFork(ctx, conn, wsSlot)
 	if err != nil {
 		err = errors.Wrap(err, "DownloadCheckpoint:getConfigFork")
 		return nil, err
 	}
 
-	cp.blockPath, cp.blockRoot, err = saveBlock(ctx, conn, cf, epochStart, e2e.TestParams.TestPath)
+	cp.blockPath, err = saveBlock(ctx, conn, cf, cp.blockRoot, e2e.TestParams.TestPath)
 	if err != nil {
 		err = errors.Wrap(err, "DownloadCheckpoint:saveBlock")
 		return nil, err
 	}
 
-	cp.statePath, cp.stateRoot, err = saveState(ctx, conn, cf, stateSlot, e2e.TestParams.TestPath)
+	var sr [32]byte
+	cp.statePath, sr, err = saveState(ctx, conn, cf, wsSlot, e2e.TestParams.TestPath)
 	if err != nil {
 		err = errors.Wrap(err, "DownloadCheckpoint:saveState")
+		return nil, err
+	}
+	if sr != cp.stateRoot {
+		err = fmt.Errorf("state htr (%#x) at slot %d != weak_subjectivity response (%#x)", cp.stateRoot, wsSlot, sr)
 		return nil, err
 	}
 
