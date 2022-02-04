@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -26,11 +25,10 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	st, ok := beaconSt.(*statev1.BeaconState)
-	if !ok {
-		return nil, status.Error(codes.Internal, "State type assertion failed")
+	if beaconSt.Version() != version.Phase0 {
+		return nil, status.Error(codes.Internal, "State has incorrect type")
 	}
-	protoSt, err := migration.BeaconStateToV1(st)
+	protoSt, err := migration.BeaconStateToV1(beaconSt)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 	}

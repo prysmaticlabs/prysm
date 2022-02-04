@@ -116,7 +116,6 @@ func TestBeaconState_MarshalSSZ_NilState(t *testing.T) {
 	s, ok := beaconState.(*BeaconState)
 	require.Equal(t, true, ok)
 	s.state = nil
-	s.state = nil
 	_, err = s.MarshalSSZ()
 	require.ErrorContains(t, "nil beacon state", err)
 }
