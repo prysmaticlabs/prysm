@@ -1,12 +1,31 @@
 package enginev1
 
-import "google.golang.org/protobuf/encoding/protojson"
+import (
+	"encoding/json"
+	"fmt"
+
+	"google.golang.org/protobuf/encoding/protojson"
+)
+
+type executionPayloadAlias struct {
+	*ExecutionPayload
+}
+
+func (e *executionPayloadAlias) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(e)
+}
 
 // MarshalJSON defines a custom json.Marshaler interface implementation
 // that uses protojson underneath the hood, as protojson will respect
 // proper struct tag naming conventions required for the JSON-RPC engine API to work.
 func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
-	return protojson.Marshal(e)
+	return json.Marshal(&struct {
+		LogsBloom string `json:"logsBloom"`
+		*executionPayloadAlias
+	}{
+		LogsBloom:             fmt.Sprintf("%#x", e.LogsBloom),
+		executionPayloadAlias: (*executionPayloadAlias)(&executionPayloadAlias{ExecutionPayload: e}),
+	})
 }
 
 // UnmarshalJSON defines a custom json.Unmarshaler interface implementation
