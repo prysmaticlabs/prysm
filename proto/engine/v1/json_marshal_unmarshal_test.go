@@ -9,15 +9,21 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+type payloadAttributesJSON struct {
+	Timestamp             enginev1.Quantity `json:"timestamp"`
+	Random                enginev1.HexBytes `json:"random"`
+	SuggestedFeeRecipient enginev1.HexBytes `json:"suggestedFeeRecipient"`
+}
+
 func TestJsonMarshalUnmarshal(t *testing.T) {
 	foo := bytesutil.ToBytes32([]byte("foo"))
 	bar := bytesutil.PadTo([]byte("bar"), 20)
 	baz := bytesutil.PadTo([]byte("baz"), 256)
 	t.Run("payload attributes", func(t *testing.T) {
 		jsonPayload := map[string]interface{}{
-			"timestamp":             1,
-			"random":                foo[:],
-			"suggestedFeeRecipient": bar,
+			"timestamp":             enginev1.Quantity(1),
+			"random":                enginev1.HexBytes(foo[:]),
+			"suggestedFeeRecipient": enginev1.HexBytes(bar),
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
@@ -28,10 +34,10 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, bar, payloadPb.SuggestedFeeRecipient)
 	})
 	t.Run("payload status", func(t *testing.T) {
-		jsonPayload := map[string]interface{}{
-			"status":          "INVALID",
-			"latestValidHash": foo[:],
-			"validationError": "failed validation",
+		jsonPayload := &enginev1.PayloadStatus{
+			Status:          enginev1.PayloadStatus_INVALID,
+			LatestValidHash: foo[:],
+			ValidationError: "failed validation",
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
@@ -43,9 +49,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	})
 	t.Run("forkchoice state", func(t *testing.T) {
 		jsonPayload := map[string]interface{}{
-			"headBlockHash":      foo[:],
-			"safeBlockHash":      foo[:],
-			"finalizedBlockHash": foo[:],
+			"headBlockHash":      enginev1.HexBytes(foo[:]),
+			"safeBlockHash":      enginev1.HexBytes(foo[:]),
+			"finalizedBlockHash": enginev1.HexBytes(foo[:]),
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)

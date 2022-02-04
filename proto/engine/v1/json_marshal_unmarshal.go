@@ -2,60 +2,95 @@ package enginev1
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-type executionPayloadAlias struct {
-	*ExecutionPayload
+type HexBytes []byte
+type Quantity uint64
+
+func (b HexBytes) MarshalJSON() ([]byte, error) {
+	return json.Marshal(hexutil.Encode(b))
 }
 
-func (e *executionPayloadAlias) MarshalJSON() ([]byte, error) {
-	return protojson.Marshal(e)
+func (b *HexBytes) UnmarshalJSON(enc []byte) error {
+	if len(enc) == 0 {
+		*b = make([]byte, 0)
+		return nil
+	}
+	var hexString string
+	if err := json.Unmarshal(enc, &hexString); err != nil {
+		return err
+	}
+	dst, err := hexutil.Decode(hexString)
+	if err != nil {
+		return err
+	}
+	*b = dst
+	return nil
+}
+
+func (q Quantity) MarshalJSON() ([]byte, error) {
+	enc := make([]byte, 8)
+	binary.BigEndian.PutUint64(enc, uint64(q))
+	return json.Marshal(hexutil.Encode(enc))
+}
+
+func (q *Quantity) UnmarshalJSON(enc []byte) error {
+	if len(enc) == 0 {
+		*q = 0
+		return nil
+	}
+	var hexString string
+	if err := json.Unmarshal(enc, &hexString); err != nil {
+		return err
+	}
+	dst, err := hexutil.Decode(hexString)
+	if err != nil {
+		return err
+	}
+	*q = Quantity(binary.BigEndian.Uint64(dst))
+	return nil
+}
+
+type executionPayloadJSON struct {
+	ParentHash    HexBytes `json:"parentHash"`
+	FeeRecipient  HexBytes `json:"feeRecipient"`
+	StateRoot     HexBytes `json:"stateRoot"`
+	ReceiptsRoot  HexBytes `json:"receiptsRoot"`
+	LogsBloom     HexBytes `json:"logsBloom"`
+	Random        HexBytes `json:"random"`
+	BlockNumber   Quantity `json:"blockNumber"`
+	GasLimit      Quantity `json:"gasLimit"`
+	GasUsed       Quantity `json:"gasUsed"`
+	Timestamp     Quantity `json:"timestamp"`
+	ExtraData     HexBytes `json:"extraData"`
+	BaseFeePerGas HexBytes `json:"baseFeePerGas"`
+	BlockHash     HexBytes `json:"blockHash"`
+	Transactions  [][]byte `json:"transactions"`
 }
 
 // MarshalJSON defines a custom json.Marshaler interface implementation
 // that uses protojson underneath the hood, as protojson will respect
 // proper struct tag naming conventions required for the JSON-RPC engine API to work.
 func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		ParentHash    hexBytes `json:"parentHash"`
-		FeeRecipient  hexBytes `json:"feeRecipient"`
-		StateRoot     hexBytes `json:"stateRoot"`
-		ReceiptsRoot  hexBytes `json:"receiptsRoot"`
-		LogsBloom     hexBytes `json:"logsBloom"`
-		Random        hexBytes `json:"random"`
-		BlockNumber   quantity `json:"blockNumber"`
-		GasLimit      quantity `json:"gasLimit"`
-		GasUsed       quantity `json:"gasUsed"`
-		Timestamp     quantity `json:"timestamp"`
-		ExtraData     hexBytes `json:"extraData"`
-		BaseFeePerGas hexBytes `json:"baseFeePerGas"`
-		BlockHash     hexBytes `json:"blockHash"`
-		Transactions  [][]byte `json:"transactions"`
-		*executionPayloadAlias
-	}{
-		ParentHash:    hexBytes(e.ParentHash),
-		FeeRecipient:  hexBytes(e.FeeRecipient),
-		StateRoot:     hexBytes(e.StateRoot),
-		ReceiptsRoot:  hexBytes(e.ReceiptsRoot),
-		LogsBloom:     hexBytes(e.LogsBloom),
-		Random:        hexBytes(e.Random),
-		BlockNumber:   quantity(e.BlockNumber),
-		GasLimit:      quantity(e.GasLimit),
-		GasUsed:       quantity(e.GasUsed),
-		Timestamp:     quantity(e.Timestamp),
-		ExtraData:     hexBytes(e.ExtraData),
-		BaseFeePerGas: hexBytes(e.ExtraData),
-		BlockHash:     hexBytes(e.ExtraData),
+	return json.Marshal(executionPayloadJSON{
+		ParentHash:    HexBytes(e.ParentHash),
+		FeeRecipient:  HexBytes(e.FeeRecipient),
+		StateRoot:     HexBytes(e.StateRoot),
+		ReceiptsRoot:  HexBytes(e.ReceiptsRoot),
+		LogsBloom:     HexBytes(e.LogsBloom),
+		Random:        HexBytes(e.Random),
+		BlockNumber:   Quantity(e.BlockNumber),
+		GasLimit:      Quantity(e.GasLimit),
+		GasUsed:       Quantity(e.GasUsed),
+		Timestamp:     Quantity(e.Timestamp),
+		ExtraData:     HexBytes(e.ExtraData),
+		BaseFeePerGas: HexBytes(e.ExtraData),
+		BlockHash:     HexBytes(e.ExtraData),
 		Transactions:  e.Transactions,
-		executionPayloadAlias: (*executionPayloadAlias)(&executionPayloadAlias{
-			ExecutionPayload: e,
-		}),
 	})
 }
 
@@ -66,119 +101,86 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	return protojson.Unmarshal(enc, e)
 }
 
-type payloadAttributesAlias struct {
-	*PayloadAttributes
-}
-
-func (e *payloadAttributesAlias) MarshalJSON() ([]byte, error) {
-	return protojson.Marshal(e)
+type payloadAttributesJSON struct {
+	Timestamp             Quantity `json:"timestamp"`
+	Random                HexBytes `json:"random"`
+	SuggestedFeeRecipient HexBytes `json:"suggestedFeeRecipient"`
 }
 
 // MarshalJSON --
 func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		Timestamp             quantity `json:"parentHash"`
-		Random                hexBytes `json:"random"`
-		SuggestedFeeRecipient hexBytes `json:"suggestedFeeRecipient"`
-		*payloadAttributesAlias
-	}{
-		Timestamp:             quantity(p.Timestamp),
-		Random:                hexBytes(p.Random),
-		SuggestedFeeRecipient: hexBytes(p.SuggestedFeeRecipient),
-		payloadAttributesAlias: (*payloadAttributesAlias)(&payloadAttributesAlias{
-			PayloadAttributes: p,
-		}),
+	return json.Marshal(payloadAttributesJSON{
+		Timestamp:             Quantity(p.Timestamp),
+		Random:                p.Random,
+		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
 	})
 }
 
 // UnmarshalJSON --
 func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
-	return protojson.Unmarshal(enc, p)
+	dec := payloadAttributesJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*p = PayloadAttributes{}
+	p.Timestamp = uint64(dec.Timestamp)
+	p.Random = dec.Random
+	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
+	return nil
 }
 
-type payloadStatusAlias struct {
-	*PayloadStatus
-}
-
-func (e *payloadStatusAlias) MarshalJSON() ([]byte, error) {
-	return protojson.Marshal(e)
+type payloadStatusJSON struct {
+	LatestValidHash HexBytes `json:"latestValidHash"`
+	Status          string   `json:"status"`
+	ValidationError string   `json:"validationError"`
 }
 
 // MarshalJSON --
 func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		LatestValidHash hexBytes `json:"latestValidHash"`
-		*payloadStatusAlias
-	}{
-		LatestValidHash: hexBytes(p.LatestValidHash),
-		payloadStatusAlias: (*payloadStatusAlias)(&payloadStatusAlias{
-			PayloadStatus: p,
-		}),
+	return json.Marshal(payloadStatusJSON{
+		LatestValidHash: p.LatestValidHash,
+		Status:          p.Status.String(),
+		ValidationError: p.ValidationError,
 	})
 }
 
 // UnmarshalJSON --
 func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
-	return protojson.Unmarshal(enc, p)
+	dec := payloadStatusJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*p = PayloadStatus{}
+	p.LatestValidHash = dec.LatestValidHash
+	p.Status = PayloadStatus_Status(PayloadStatus_Status_value[dec.Status])
+	p.ValidationError = dec.ValidationError
+	return nil
 }
 
-type forkchoiceStateAlias struct {
-	*ForkchoiceState
-}
-
-func (e *forkchoiceStateAlias) MarshalJSON() ([]byte, error) {
-	return protojson.Marshal(e)
+type forkchoiceStateJSON struct {
+	HeadBlockHash      HexBytes `json:"headBlockHash"`
+	SafeBlockHash      HexBytes `json:"safeBlockHash"`
+	FinalizedBlockHash HexBytes `json:"finalizedBlockHash"`
 }
 
 // MarshalJSON --
 func (f *ForkchoiceState) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		HeadBlockHash      hexBytes `json:"headBlockHash"`
-		SafeBlockHash      hexBytes `json:"safeBlockHash"`
-		FinalizedBlockHash hexBytes `json:"finalizedBlockHash"`
-		*forkchoiceStateAlias
-	}{
-		HeadBlockHash:      hexBytes(f.HeadBlockHash),
-		SafeBlockHash:      hexBytes(f.SafeBlockHash),
-		FinalizedBlockHash: hexBytes(f.FinalizedBlockHash),
-		forkchoiceStateAlias: (*forkchoiceStateAlias)(&forkchoiceStateAlias{
-			ForkchoiceState: f,
-		}),
+	return json.Marshal(forkchoiceStateJSON{
+		HeadBlockHash:      f.HeadBlockHash,
+		SafeBlockHash:      f.SafeBlockHash,
+		FinalizedBlockHash: f.FinalizedBlockHash,
 	})
 }
 
 // UnmarshalJSON --
 func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
-	return protojson.Unmarshal(enc, f)
-}
-
-type hexBytes []byte
-type quantity uint64
-
-func (b hexBytes) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("%#x", b)), nil
-}
-
-func (b hexBytes) UnmarshalJSON(enc []byte) error {
-	decoded, err := hex.DecodeString(strings.TrimPrefix(string(enc), "0x"))
-	if err != nil {
+	dec := forkchoiceStateJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
 	}
-	b = decoded
-	return nil
-}
-
-func (q quantity) MarshalJSON() ([]byte, error) {
-	enc := make([]byte, 8)
-	binary.BigEndian.PutUint64(enc, uint64(q))
-	return enc, nil
-}
-
-func (q quantity) UnmarshalJSON(enc []byte) error {
-	decoded, err := hex.DecodeString(strings.TrimPrefix(string(enc), "0x"))
-	if err != nil {
-		return err
-	}
-	q = quantity(binary.BigEndian.Uint64(decoded))
+	*f = ForkchoiceState{}
+	f.HeadBlockHash = dec.HeadBlockHash
+	f.SafeBlockHash = dec.SafeBlockHash
+	f.FinalizedBlockHash = dec.FinalizedBlockHash
 	return nil
 }
