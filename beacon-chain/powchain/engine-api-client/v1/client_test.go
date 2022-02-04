@@ -2,6 +2,10 @@ package v1
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/rpc"
@@ -44,7 +48,40 @@ func TestClient_IPC(t *testing.T) {
 }
 
 func TestClient_HTTP(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("Got a request: %+v\n", r)
+		defer r.Body.Close()
+		enc, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		fmt.Printf("%s", string(enc))
+		fmt.Fprintf(w, "hi")
+	}))
+	defer srv.Close()
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+	defer rpcClient.Close()
 
+	client := &Client{}
+	client.rpc = rpcClient
+	ctx := context.Background()
+	fix := fixtures()
+
+	t.Run("engine_forkchoiceUpdatedV1", func(t *testing.T) {
+		foo := bytesutil.ToBytes32([]byte("foo"))
+		want := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		resp, err := client.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{
+			HeadBlockHash:      foo[:],
+			SafeBlockHash:      foo[:],
+			FinalizedBlockHash: foo[:],
+		}, &pb.PayloadAttributes{
+			Timestamp:             1,
+			Random:                foo[:],
+			SuggestedFeeRecipient: foo[:],
+		})
+		require.NoError(t, err)
+		require.DeepEqual(t, want.Status, resp.Status)
+		require.DeepEqual(t, want.PayloadId, resp.PayloadId)
+	})
 }
 
 type customError struct {
@@ -138,6 +175,19 @@ func Test_handleRPCError(t *testing.T) {
 			require.ErrorContains(t, tt.expectedContains, got)
 		})
 	}
+}
+
+type httpServer struct{}
+
+func (h *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Got %+v\n", r)
+	w.Write([]byte("foo"))
+}
+
+func newTestHTTPServer(t *testing.T) *http.ServeMux {
+	srv := http.NewServeMux()
+	srv.Handle("/", &httpServer{})
+	return srv
 }
 
 func newTestIPCServer(t *testing.T) *rpc.Server {
