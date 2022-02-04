@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -18,7 +19,7 @@ import (
 )
 
 func TestSyncCommitteeIndices_CanGet(t *testing.T) {
-	getState := func(t *testing.T, count uint64) *stateAltair.BeaconState {
+	getState := func(t *testing.T, count uint64) state.BeaconStateAltair {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{
@@ -35,7 +36,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 	}
 
 	type args struct {
-		state *stateAltair.BeaconState
+		state state.BeaconStateAltair
 		epoch types.Epoch
 	}
 	tests := []struct {
@@ -93,7 +94,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 
 func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 	helpers.ClearCache()
-	getState := func(t *testing.T, count uint64) *stateAltair.BeaconState {
+	getState := func(t *testing.T, count uint64) state.BeaconStateAltair {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{
@@ -127,7 +128,7 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 }
 
 func TestSyncCommittee_CanGet(t *testing.T) {
-	getState := func(t *testing.T, count uint64) *stateAltair.BeaconState {
+	getState := func(t *testing.T, count uint64) state.BeaconStateAltair {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			blsKey, err := bls.RandKey()
@@ -147,7 +148,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 	}
 
 	type args struct {
-		state *stateAltair.BeaconState
+		state state.BeaconStateAltair
 		epoch types.Epoch
 	}
 	tests := []struct {
@@ -382,7 +383,7 @@ func Test_ValidateSyncMessageTime(t *testing.T) {
 	}
 }
 
-func getState(t *testing.T, count uint64) *stateAltair.BeaconState {
+func getState(t *testing.T, count uint64) state.BeaconStateAltair {
 	validators := make([]*ethpb.Validator, count)
 	for i := 0; i < len(validators); i++ {
 		blsKey, err := bls.RandKey()

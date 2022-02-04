@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -69,7 +69,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	}
 	switch beaconSt.Version() {
 	case version.Phase0:
-		st, ok := beaconSt.(*statev1.BeaconState)
+		st, ok := beaconSt.(state.BeaconState)
 		if !ok {
 			return nil, status.Error(codes.Internal, "State type assertion failed")
 		}
@@ -84,7 +84,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			},
 		}, nil
 	case version.Altair:
-		altairState, ok := beaconSt.(*statev2.BeaconState)
+		altairState, ok := beaconSt.(state.BeaconStateAltair)
 		if !ok {
 			return nil, status.Error(codes.Internal, "Altair state type assertion failed")
 		}

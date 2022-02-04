@@ -111,7 +111,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, altairState, wsb)
 				require.NoError(t, err)
-				altairState, ok = st.(*stateAltair.BeaconState)
+				altairState, ok = st.(state.BeaconStateAltair)
 				require.Equal(t, true, ok)
 			}
 
