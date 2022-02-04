@@ -8,7 +8,7 @@ import (
 )
 
 func Test_store_PrevJustifiedCheckpt(t *testing.T) {
-	s := &store{}
+	s := &Store{}
 	var cp *ethpb.Checkpoint
 	require.Equal(t, cp, s.PrevJustifiedCheckpt())
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
@@ -17,7 +17,7 @@ func Test_store_PrevJustifiedCheckpt(t *testing.T) {
 }
 
 func Test_store_BestJustifiedCheckpt(t *testing.T) {
-	s := &store{}
+	s := &Store{}
 	var cp *ethpb.Checkpoint
 	require.Equal(t, cp, s.BestJustifiedCheckpt())
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
@@ -26,7 +26,7 @@ func Test_store_BestJustifiedCheckpt(t *testing.T) {
 }
 
 func Test_store_JustifiedCheckpt(t *testing.T) {
-	s := &store{}
+	s := &Store{}
 	var cp *ethpb.Checkpoint
 	require.Equal(t, cp, s.JustifiedCheckpt())
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
@@ -35,7 +35,7 @@ func Test_store_JustifiedCheckpt(t *testing.T) {
 }
 
 func Test_store_FinalizedCheckpt(t *testing.T) {
-	s := &store{}
+	s := &Store{}
 	var cp *ethpb.Checkpoint
 	require.Equal(t, cp, s.FinalizedCheckpt())
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
@@ -44,7 +44,7 @@ func Test_store_FinalizedCheckpt(t *testing.T) {
 }
 
 func Test_store_PrevFinalizedCheckpt(t *testing.T) {
-	s := &store{}
+	s := &Store{}
 	var cp *ethpb.Checkpoint
 	require.Equal(t, cp, s.PrevFinalizedCheckpt())
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}

@@ -1,10 +1,10 @@
 // These are all non recursive rlocks. Testing to make sure there are no false positives
 package testdata
 
-func (resource *ProtectResource) NonNestedRLockWithDefer() string {
+func (resource *ProtectResource) NestedRLockWithDefer() string {
 	resource.RLock()
 	defer resource.RUnlock()
-	return resource.GetResource() // this is not a nested rlock because runlock is deferred
+	return resource.GetResource() // want `found recursive read lock call`
 }
 
 func (resource *NestedProtectResource) NonNestedRLockDifferentRLocks() {

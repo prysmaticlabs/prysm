@@ -11,7 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -83,7 +83,7 @@ func TestGetState(t *testing.T) {
 	})
 
 	t.Run("finalized", func(t *testing.T) {
-		stateGen := stategen.NewMockService()
+		stateGen := mockstategen.NewMockService()
 		stateGen.StatesByRoot[stateRoot] = newBeaconState
 
 		p := StateProvider{
@@ -103,7 +103,7 @@ func TestGetState(t *testing.T) {
 	})
 
 	t.Run("justified", func(t *testing.T) {
-		stateGen := stategen.NewMockService()
+		stateGen := mockstategen.NewMockService()
 		stateGen.StatesByRoot[stateRoot] = newBeaconState
 
 		p := StateProvider{
@@ -125,7 +125,7 @@ func TestGetState(t *testing.T) {
 	t.Run("hex_root", func(t *testing.T) {
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("0", 63) + "1")
 		require.NoError(t, err)
-		stateGen := stategen.NewMockService()
+		stateGen := mockstategen.NewMockService()
 		stateGen.StatesByRoot[bytesutil.ToBytes32(stateId)] = newBeaconState
 
 		p := StateProvider{
@@ -151,7 +151,7 @@ func TestGetState(t *testing.T) {
 	})
 
 	t.Run("slot", func(t *testing.T) {
-		stateGen := stategen.NewMockService()
+		stateGen := mockstategen.NewMockService()
 		stateGen.StatesBySlot[headSlot] = newBeaconState
 
 		p := StateProvider{

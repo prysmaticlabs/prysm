@@ -371,7 +371,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 }
 
 func TestBlocksFetcher_scheduleRequest(t *testing.T) {
-	blockBatchLimit := flags.Get().BlockBatchLimit
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{})
@@ -425,7 +425,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		})
 
 		cancel()
-		response := fetcher.handleRequest(ctx, 1, blockBatchLimit)
+		response := fetcher.handleRequest(ctx, 1, uint64(blockBatchLimit))
 		assert.ErrorContains(t, "context canceled", response.err)
 	})
 
@@ -440,7 +440,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		requestCtx, reqCancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer reqCancel()
 		go func() {
-			response := fetcher.handleRequest(requestCtx, 1 /* start */, blockBatchLimit /* count */)
+			response := fetcher.handleRequest(requestCtx, 1 /* start */, uint64(blockBatchLimit) /* count */)
 			select {
 			case <-ctx.Done():
 			case fetcher.fetchResponses <- response:
@@ -458,7 +458,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 				blocks = resp.blocks
 			}
 		}
-		if uint64(len(blocks)) != blockBatchLimit {
+		if uint64(len(blocks)) != uint64(blockBatchLimit) {
 			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchLimit, len(blocks))
 		}
 
@@ -509,11 +509,11 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 	req := &ethpb.BeaconBlocksByRangeRequest{
 		StartSlot: 1,
 		Step:      1,
-		Count:     blockBatchLimit,
+		Count:     uint64(blockBatchLimit),
 	}
 	blocks, err := fetcher.requestBlocks(ctx, req, peerIDs[0])
 	assert.NoError(t, err)
-	assert.Equal(t, blockBatchLimit, uint64(len(blocks)), "Incorrect number of blocks returned")
+	assert.Equal(t, uint64(blockBatchLimit), uint64(len(blocks)), "Incorrect number of blocks returned")
 
 	// Test context cancellation.
 	ctx, cancel = context.WithCancel(context.Background())

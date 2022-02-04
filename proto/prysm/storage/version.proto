@@ -20,5 +20,5 @@ enum Version {
   UNKNOWN = 0; // since enums should start with value 0 in proto3, we add this.
   PHASE0 = 1;
   ALTAIR = 2;
-  MERGE = 3;
+  BELLATRIX = 3;
 }

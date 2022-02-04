@@ -42,7 +42,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	if err := s.onAttestation(ctx, att); err != nil {
+	if err := s.OnAttestation(ctx, att); err != nil {
 		return errors.Wrap(err, "could not process attestation")
 	}
 
@@ -88,6 +88,9 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	}
 
 	f := s.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
@@ -136,6 +139,11 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-st.C():
+				if err := s.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+					log.WithError(err).Error("Could not process new slot")
+					return
+				}
+
 				// Continue when there's no fork choice attestation, there's nothing to process and update head.
 				// This covers the condition when the node is still initial syncing to the head of the chain.
 				if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
@@ -143,9 +151,14 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 				}
 				s.processAttestations(s.ctx)
 
-				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+				justified := s.store.JustifiedCheckpt()
+				if justified == nil {
+					log.WithError(errNilJustifiedInStore).Error("Could not get justified checkpoint")
+					continue
+				}
+				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(justified.Root))
 				if err != nil {
-					log.WithError(err).Errorf("Unable to get justified balances for root %v", s.justifiedCheckpt.Root)
+					log.WithError(err).Errorf("Unable to get justified balances for root %v", justified.Root)
 					continue
 				}
 				if err := s.updateHead(s.ctx, balances); err != nil {

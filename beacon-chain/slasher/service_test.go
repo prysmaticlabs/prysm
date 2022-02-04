@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockslasher "github.com/prysmaticlabs/prysm/beacon-chain/slasher/mock"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -21,7 +22,7 @@ import (
 )
 
 var _ = SlashingChecker(&Service{})
-var _ = SlashingChecker(&MockSlashingChecker{})
+var _ = SlashingChecker(&mockslasher.MockSlashingChecker{})
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)

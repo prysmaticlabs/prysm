@@ -10,7 +10,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	slashingsmock "github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings/mock"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -238,7 +238,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 					StateNotifier:           &mock.MockStateNotifier{},
 					HeadStateFetcher:        mockChain,
 					AttestationStateFetcher: mockChain,
-					SlashingPoolInserter:    &slashings.PoolMock{},
+					SlashingPoolInserter:    &slashingsmock.PoolMock{},
 				},
 				params:                         DefaultParams(),
 				attsQueue:                      newAttestationsQueue(),
@@ -297,7 +297,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 			StateNotifier:           &mock.MockStateNotifier{},
 			HeadStateFetcher:        mockChain,
 			AttestationStateFetcher: mockChain,
-			SlashingPoolInserter:    &slashings.PoolMock{},
+			SlashingPoolInserter:    &slashingsmock.PoolMock{},
 		},
 		params:                         slasherParams,
 		attsQueue:                      newAttestationsQueue(),
@@ -364,7 +364,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 			StateNotifier:           &mock.MockStateNotifier{},
 			HeadStateFetcher:        mockChain,
 			AttestationStateFetcher: mockChain,
-			SlashingPoolInserter:    &slashings.PoolMock{},
+			SlashingPoolInserter:    &slashingsmock.PoolMock{},
 		},
 		params:                         slasherParams,
 		attsQueue:                      newAttestationsQueue(),

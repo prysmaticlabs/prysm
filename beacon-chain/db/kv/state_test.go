@@ -795,7 +795,7 @@ func TestStateBellatrix_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
 	stateValidators := validators(10)
-	st, _ := util.DeterministicGenesisStateMerge(t, 20)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 20)
 	require.NoError(t, st.SetSlot(100))
 	require.NoError(t, st.SetValidators(stateValidators))
 
@@ -840,7 +840,7 @@ func TestBellatrixState_CanSaveRetrieve(t *testing.T) {
 
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
-	st, _ := util.DeterministicGenesisStateMerge(t, 1)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	require.NoError(t, st.SetSlot(100))
 
 	require.NoError(t, db.SaveState(context.Background(), st, r))
@@ -863,7 +863,7 @@ func TestBellatrixState_CanDelete(t *testing.T) {
 
 	require.Equal(t, false, db.HasState(context.Background(), r))
 
-	st, _ := util.DeterministicGenesisStateMerge(t, 1)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	require.NoError(t, st.SetSlot(100))
 
 	require.NoError(t, db.SaveState(context.Background(), st, r))
