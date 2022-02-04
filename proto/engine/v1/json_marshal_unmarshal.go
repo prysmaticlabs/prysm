@@ -7,7 +7,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
+// HexBytes implements a custom json.Marshaler/Unmarshaler for byte slices that encodes them as
+// hex strings per the Ethereum JSON-RPC specification.
 type HexBytes []byte
+
+// Quantity implements a custom json.Marshaler/Unmarshaler for uint64 that encodes them as
+// big-endian hex strings per the Ethereum JSON-RPC specification.
 type Quantity uint64
 
 func (b HexBytes) MarshalJSON() ([]byte, error) {
@@ -72,8 +77,7 @@ type executionPayloadJSON struct {
 }
 
 // MarshalJSON defines a custom json.Marshaler interface implementation
-// that uses protojson underneath the hood, as protojson will respect
-// proper struct tag naming conventions required for the JSON-RPC engine API to work.
+// that uses custom json.Marshalers for the HexBytes and Quantity types.
 func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	transactions := make([]HexBytes, len(e.Transactions))
 	for i, tx := range e.Transactions {
@@ -98,8 +102,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON defines a custom json.Unmarshaler interface implementation
-// that uses protojson underneath the hood, as protojson will respect
-// proper struct tag naming conventions required for the JSON-RPC engine API to work.
+// that uses custom json.Unmarshalers for the HexBytes and Quantity types.
 func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	dec := executionPayloadJSON{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
