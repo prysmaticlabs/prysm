@@ -69,11 +69,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	}
 	switch beaconSt.Version() {
 	case version.Phase0:
-		st, ok := beaconSt.(state.BeaconState)
-		if !ok {
-			return nil, status.Error(codes.Internal, "State type assertion failed")
-		}
-		protoSt, err := migration.BeaconStateToV1(st)
+		protoSt, err := migration.BeaconStateToV1(beaconSt)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}
