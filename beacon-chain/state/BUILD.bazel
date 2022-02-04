@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "altair.go",
+        "bellatrix.go",
         "error.go",
         "phase0.go",
         "prometheus.go",
