@@ -689,3 +689,17 @@ func (s *Store) viableForHead(node *Node) bool {
 
 	return justified && finalized
 }
+
+// Returns the list of leaves in the Fork Choice store.
+// These are all the nodes that have NonExistentNode as best child.
+// This internal method assumes that the caller holds a lock in s.nodesLock.
+func (s *Store) leaves() ([]uint64, error) {
+	var leaves []uint64
+	for i := uint64(0); i < uint64(len(s.nodes)); i++ {
+		node := s.nodes[i]
+		if node.bestChild == NonExistentNode {
+			leaves = append(leaves, i)
+		}
+	}
+	return leaves, nil
+}

@@ -406,7 +406,17 @@ func ReverseByteOrder(input []byte) []byte {
 	return b
 }
 
-// NonZeroRoot returns whether or not a root is of proper length and non-zero hash.
-func NonZeroRoot(root []byte) bool {
-	return len(root) == fieldparams.RootLength && string(make([]byte, fieldparams.RootLength)) != string(root)
+// ZeroRoot returns whether or not a root is of proper length and non-zero hash.
+func ZeroRoot(root []byte) bool {
+	return string(make([]byte, fieldparams.RootLength)) == string(root)
+}
+
+// IsRoot checks whether the byte array is a root.
+func IsRoot(root []byte) bool {
+	return len(root) == fieldparams.RootLength
+}
+
+// IsValidRoot checks whether the byte array is a valid root.
+func IsValidRoot(root []byte) bool {
+	return IsRoot(root) && !ZeroRoot(root)
 }
