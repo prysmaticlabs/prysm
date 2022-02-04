@@ -139,14 +139,6 @@
       "tools/analyzers/slicedirect/testdata/slice.go": "Analyzer testdata has to break rules"
     }
   },
-  "loopclosure": {
-    "only_files": {
-      "beacon-chain/.*": "",
-      "shared/.*": "",
-      "slasher/.*": "",
-      "validator/.*": ""
-    }
-  },
   "ineffassign": {
     "only_files": {
       "beacon-chain/.*": "",

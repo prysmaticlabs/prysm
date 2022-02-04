@@ -2,7 +2,6 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-
 	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -17,7 +16,6 @@ func V1Alpha1BeaconBlockAltairToV2(v1alpha1Block *ethpbalpha.BeaconBlockAltair) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
-
 	v2Block := &ethpbv2.BeaconBlockAltair{}
 	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
