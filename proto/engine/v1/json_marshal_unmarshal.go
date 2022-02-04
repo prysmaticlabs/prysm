@@ -23,10 +23,36 @@ func (e *executionPayloadAlias) MarshalJSON() ([]byte, error) {
 // proper struct tag naming conventions required for the JSON-RPC engine API to work.
 func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		LogsBloom []byte `json:"logsBloom"`
+		ParentHash    hexBytes `json:"parentHash"`
+		FeeRecipient  hexBytes `json:"feeRecipient"`
+		StateRoot     hexBytes `json:"stateRoot"`
+		ReceiptsRoot  hexBytes `json:"receiptsRoot"`
+		LogsBloom     hexBytes `json:"logsBloom"`
+		Random        hexBytes `json:"random"`
+		BlockNumber   quantity `json:"blockNumber"`
+		GasLimit      quantity `json:"gasLimit"`
+		GasUsed       quantity `json:"gasUsed"`
+		Timestamp     quantity `json:"timestamp"`
+		ExtraData     hexBytes `json:"extraData"`
+		BaseFeePerGas hexBytes `json:"baseFeePerGas"`
+		BlockHash     hexBytes `json:"blockHash"`
+		Transactions  [][]byte `json:"transactions"`
 		*executionPayloadAlias
 	}{
-		LogsBloom: hexBytes(e.LogsBloom),
+		ParentHash:    hexBytes(e.ParentHash),
+		FeeRecipient:  hexBytes(e.FeeRecipient),
+		StateRoot:     hexBytes(e.StateRoot),
+		ReceiptsRoot:  hexBytes(e.ReceiptsRoot),
+		LogsBloom:     hexBytes(e.LogsBloom),
+		Random:        hexBytes(e.Random),
+		BlockNumber:   quantity(e.BlockNumber),
+		GasLimit:      quantity(e.GasLimit),
+		GasUsed:       quantity(e.GasUsed),
+		Timestamp:     quantity(e.Timestamp),
+		ExtraData:     hexBytes(e.ExtraData),
+		BaseFeePerGas: hexBytes(e.ExtraData),
+		BlockHash:     hexBytes(e.ExtraData),
+		Transactions:  e.Transactions,
 		executionPayloadAlias: (*executionPayloadAlias)(&executionPayloadAlias{
 			ExecutionPayload: e,
 		}),
@@ -40,9 +66,29 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	return protojson.Unmarshal(enc, e)
 }
 
+type payloadAttributesAlias struct {
+	*PayloadAttributes
+}
+
+func (e *payloadAttributesAlias) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(e)
+}
+
 // MarshalJSON --
 func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
-	return protojson.Marshal(p)
+	return json.Marshal(&struct {
+		Timestamp             quantity `json:"parentHash"`
+		Random                hexBytes `json:"random"`
+		SuggestedFeeRecipient hexBytes `json:"suggestedFeeRecipient"`
+		*payloadAttributesAlias
+	}{
+		Timestamp:             quantity(p.Timestamp),
+		Random:                hexBytes(p.Random),
+		SuggestedFeeRecipient: hexBytes(p.SuggestedFeeRecipient),
+		payloadAttributesAlias: (*payloadAttributesAlias)(&payloadAttributesAlias{
+			PayloadAttributes: p,
+		}),
+	})
 }
 
 // UnmarshalJSON --
@@ -50,9 +96,25 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 	return protojson.Unmarshal(enc, p)
 }
 
+type payloadStatusAlias struct {
+	*PayloadStatus
+}
+
+func (e *payloadStatusAlias) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(e)
+}
+
 // MarshalJSON --
 func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
-	return protojson.Marshal(p)
+	return json.Marshal(&struct {
+		LatestValidHash hexBytes `json:"latestValidHash"`
+		*payloadStatusAlias
+	}{
+		LatestValidHash: hexBytes(p.LatestValidHash),
+		payloadStatusAlias: (*payloadStatusAlias)(&payloadStatusAlias{
+			PayloadStatus: p,
+		}),
+	})
 }
 
 // UnmarshalJSON --
@@ -60,9 +122,29 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 	return protojson.Unmarshal(enc, p)
 }
 
+type forkchoiceStateAlias struct {
+	*ForkchoiceState
+}
+
+func (e *forkchoiceStateAlias) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(e)
+}
+
 // MarshalJSON --
 func (f *ForkchoiceState) MarshalJSON() ([]byte, error) {
-	return protojson.Marshal(f)
+	return json.Marshal(&struct {
+		HeadBlockHash      hexBytes `json:"headBlockHash"`
+		SafeBlockHash      hexBytes `json:"safeBlockHash"`
+		FinalizedBlockHash hexBytes `json:"finalizedBlockHash"`
+		*forkchoiceStateAlias
+	}{
+		HeadBlockHash:      hexBytes(f.HeadBlockHash),
+		SafeBlockHash:      hexBytes(f.SafeBlockHash),
+		FinalizedBlockHash: hexBytes(f.FinalizedBlockHash),
+		forkchoiceStateAlias: (*forkchoiceStateAlias)(&forkchoiceStateAlias{
+			ForkchoiceState: f,
+		}),
+	})
 }
 
 // UnmarshalJSON --
