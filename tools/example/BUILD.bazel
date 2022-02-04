@@ -1,8 +1,0 @@
-load("@prysm//tools/go:def.bzl", "go_library")
-
-go_library(
-    name = "go_default_library",
-    srcs = ["main.go"],
-    importpath = "github.com/prysmaticlabs/prysm/tools/example",
-    visibility = ["//visibility:public"],
-)
