@@ -70,10 +70,10 @@ go_library(
     srcs = [
         "json_marshal_unmarshal.go",
         ":ssz_generated_files",  # keep
+	"custom_types.go",
     ],
     embed = [
         ":go_proto",
-	":go_custom_types",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/engine/v1",
     visibility = ["//visibility:public"],
