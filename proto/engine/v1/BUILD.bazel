@@ -59,6 +59,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "json_marshal_unmarshal.go",
+	"custom_types.go",
         ":ssz_generated_files",  # keep
     ],
     embed = [
