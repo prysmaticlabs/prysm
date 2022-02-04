@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -28,6 +27,8 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/sirupsen/logrus"
 )
+
+var ErrNilState = errors.New("nil state")
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
@@ -159,11 +160,7 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
 func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		newState, err := v1.InitializeFromProto(&ethpb.BeaconState{})
-		if err != nil {
-			return errors.Wrap(err, "could not initialize state")
-		}
-		s.State = newState
+		return ErrNilState
 	}
 	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
@@ -190,11 +187,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block.
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
 func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
-		newState, err := v1.InitializeFromProto(&ethpb.BeaconState{})
-		if err != nil {
-			return errors.Wrap(err, "could not initialize state")
-		}
-		s.State = newState
+		return ErrNilState
 	}
 	for _, block := range blks {
 		if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
@@ -223,11 +216,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.Signe
 // ReceiveBlock mocks ReceiveBlock method in chain service.
 func (s *ChainService) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		newState, err := v1.InitializeFromProto(&ethpb.BeaconState{})
-		if err != nil {
-			return errors.Wrap(err, "could not initialize state")
-		}
-		s.State = newState
+		return ErrNilState
 	}
 	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
