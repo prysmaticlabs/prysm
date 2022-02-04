@@ -50,6 +50,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		f.ProcessAttestation(ctx, []uint64{0}, newRoot, fEpoch)
@@ -74,6 +75,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		f.ProcessAttestation(ctx, []uint64{1}, newRoot, fEpoch)
@@ -100,6 +102,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		f.ProcessAttestation(ctx, []uint64{2}, newRoot, fEpoch)
@@ -126,6 +129,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		f.ProcessAttestation(ctx, []uint64{3}, newRoot, fEpoch)
@@ -193,6 +197,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
@@ -210,6 +215,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -259,6 +265,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -278,6 +285,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -334,6 +342,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -358,6 +367,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -382,6 +392,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 

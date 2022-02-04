@@ -109,11 +109,19 @@ func (f *ForkChoice) ProcessBlock(
 	slot types.Slot,
 	blockRoot, parentRoot, graffiti [32]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch,
+	optimistic bool,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
 	defer span.End()
 
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, graffiti, justifiedEpoch, finalizedEpoch)
+	err := f.store.insert(ctx, slot, blockRoot, parentRoot, graffiti, justifiedEpoch, finalizedEpoch)
+	if err != nil {
+		return err
+	}
+	if !optimistic {
+		return f.UpdateSyncedTipsWithValidRoot(ctx, blockRoot)
+	}
+	return nil
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input

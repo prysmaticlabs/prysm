@@ -26,7 +26,7 @@ type HeadRetriever interface {
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	ProcessBlock(context.Context, types.Slot, [32]byte, [32]byte, [32]byte, types.Epoch, types.Epoch) error
+	ProcessBlock(context.Context, types.Slot, [32]byte, [32]byte, [32]byte, types.Epoch, types.Epoch, bool) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
