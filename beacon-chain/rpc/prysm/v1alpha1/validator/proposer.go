@@ -40,12 +40,20 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: blk}}, nil
+	} else if slots.ToEpoch(req.Slot) < params.BeaconConfig().BellatrixForkEpoch {
+		blk, err := vs.getAltairBeaconBlock(ctx, req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
 	}
-	blk, err := vs.getAltairBeaconBlock(ctx, req)
+
+	blk, err := vs.getBellatrixBeaconBlock(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
 	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
+
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -74,6 +82,11 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		blk, err = wrapper.WrappedAltairSignedBeaconBlock(b.Altair)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "could not wrap altair beacon block")
+		}
+	case *ethpb.GenericSignedBeaconBlock_Bellatrix:
+		blk, err = wrapper.WrappedBellatrixSignedBeaconBlock(b.Bellatrix)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
 		}
 	default:
 		return nil, status.Error(codes.Internal, "block version not supported")
