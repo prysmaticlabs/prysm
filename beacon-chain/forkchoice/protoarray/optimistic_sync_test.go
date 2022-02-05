@@ -547,5 +547,3 @@ func TestFindSyncedTip(t *testing.T) {
 		require.Equal(t, tc.wanted, f.store.nodes[idx].root)
 	}
 }
-
-
