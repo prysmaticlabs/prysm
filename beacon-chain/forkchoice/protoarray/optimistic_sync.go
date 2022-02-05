@@ -107,17 +107,17 @@ func (s *Store) findSyncedTip(ctx context.Context, node *Node, syncedTips *optim
 	}
 }
 
-// UpdateSyncedTips updates the synced_tips map when the block with the given root becomes VALID.
-func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error {
+// UpdateSyncedTipsWithValidRoot updates the synced_tips map when the block with the given root becomes VALID
+func (f *ForkChoice) UpdateSyncedTipsWithValidRoot(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
-	// We can only update if given root is in fork choice
+	// We can only update if given root is in Fork Choice
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
 		return errInvalidNodeIndex
 	}
 
-	// We can only update if root is a leaf in fork choice
+	// We can only update if root is a leaf in Fork Choice
 	node := f.store.nodes[index]
 	if node.bestChild != NonExistentNode {
 		return errInvalidBestChildIndex
@@ -162,27 +162,20 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 
 	// Retrieve the list of leaves in the Fork Choice
 	// These are all the nodes that have NonExistentNode as best child.
-	var leaves []uint64
-	for i := uint64(0); i < uint64(len(f.store.nodes)); i++ {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		node = f.store.nodes[i]
-		if node.bestChild == NonExistentNode {
-			leaves = append(leaves, i)
-		}
+	leaves, err := f.store.leaves()
+	if err != nil {
+		return err
 	}
 
 	// For each leaf, recompute the new tip.
 	newTips := make(map[[32]byte]types.Slot)
 	for _, i := range leaves {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
 		node = f.store.nodes[i]
 		j := i
 		for {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			// Stop if we reached the previous tip
 			_, ok = f.syncedTips.validatedTips[node.root]
 			if ok {
@@ -209,5 +202,114 @@ func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error 
 	}
 
 	f.syncedTips.validatedTips = newTips
+	return nil
+}
+
+// UpdateSyncedTipsWithInvalidRoot updates the synced_tips map when the block with the given root becomes INVALID.
+func (f *ForkChoice) UpdateSyncedTipsWithInvalidRoot(ctx context.Context, root [32]byte) error {
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	idx, ok := f.store.nodesIndices[root]
+	if !ok {
+		return errInvalidNodeIndex
+	}
+	node := f.store.nodes[idx]
+	// We only support changing status for the tips in Fork Choice store.
+	if node.bestChild != NonExistentNode {
+		return errInvalidNodeIndex
+	}
+
+	parentIndex := node.parent
+	// This should not happen
+	if parentIndex == NonExistentNode {
+		return errInvalidNodeIndex
+	}
+	// Update the weights of the nodes subtracting the INVALID node's weight
+	weight := node.weight
+	node = f.store.nodes[parentIndex]
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		node.weight -= weight
+		if node.parent == NonExistentNode {
+			break
+		}
+		node = f.store.nodes[node.parent]
+	}
+	parent := copyNode(f.store.nodes[parentIndex])
+
+	// delete the invalid node, order is important
+	f.store.nodes = append(f.store.nodes[:idx], f.store.nodes[idx+1:]...)
+	delete(f.store.nodesIndices, root)
+	// Fix parent and best child for each node
+	for _, node := range f.store.nodes {
+		if node.parent == NonExistentNode {
+			node.parent = NonExistentNode
+		} else if node.parent > idx {
+			node.parent -= 1
+		}
+		if node.bestChild == NonExistentNode || node.bestChild == idx {
+			node.bestChild = NonExistentNode
+		} else if node.bestChild > idx {
+			node.bestChild -= 1
+		}
+		if node.bestDescendant == NonExistentNode || node.bestDescendant == idx {
+			node.bestDescendant = NonExistentNode
+		} else if node.bestDescendant > idx {
+			node.bestDescendant -= 1
+		}
+	}
+
+	// Update the parent's best child and best descendant if necessary.
+	if parent.bestChild == idx || parent.bestDescendant == idx {
+		for childIndex, child := range f.store.nodes {
+			if child.parent == parentIndex {
+				err := f.store.updateBestChildAndDescendant(
+					parentIndex, uint64(childIndex))
+				if err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+
+	// Return early if the parent is not a synced_tip.
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
+	parentRoot := parent.root
+	_, ok = f.syncedTips.validatedTips[parentRoot]
+	if !ok {
+		return nil
+	}
+
+	leaves, err := f.store.leaves()
+	if err != nil {
+		return err
+	}
+
+	for _, i := range leaves {
+		node = f.store.nodes[i]
+		for {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
+			// Return early if the parent is still a synced tip
+			if node.root == parentRoot {
+				return nil
+			}
+			_, ok = f.syncedTips.validatedTips[node.root]
+			if ok {
+				break
+			}
+			if node.parent == NonExistentNode {
+				break
+			}
+			node = f.store.nodes[node.parent]
+		}
+	}
+	delete(f.syncedTips.validatedTips, parentRoot)
 	return nil
 }
