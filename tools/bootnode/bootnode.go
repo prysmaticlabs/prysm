@@ -194,7 +194,6 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	fVersion := params.BeaconConfig().GenesisForkVersion
 	fv := *forkVersion
 	if fv != "" {
-		fv := *forkVersion
 		if fv[0:2] == "0x" {
 			fv = fv[2:]
 		}

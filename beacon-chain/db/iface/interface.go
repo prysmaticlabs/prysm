@@ -96,7 +96,7 @@ type HeadAccessDatabase interface {
 	EnsureEmbeddedGenesis(ctx context.Context) error
 
 	// initialization method needed for origin checkpoint sync
-	SaveOrigin(ctx context.Context, state io.Reader, block io.Reader) error
+	SaveOrigin(ctx context.Context, state []byte, block []byte) error
 }
 
 // SlasherDatabase interface for persisting data related to detecting slashable offenses on Ethereum.

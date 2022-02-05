@@ -3,9 +3,6 @@ package kv
 import (
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -17,15 +14,8 @@ import (
 // (ex: an open file) prepares the database so that the beacon node can begin
 // syncing, using the provided values as their point of origin. This is an alternative
 // to syncing from genesis, and should only be run on an empty database.
-func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Reader) error {
-	// unmarshal both block and state before trying to save anything
-	// so that we fail early if there is any issue with the ssz data
-	sb, err := ioutil.ReadAll(stateReader)
-	if err != nil {
-		return errors.Wrap(err, "could not read origin state bytes from reader")
-	}
-
-	cf, err := sniff.ConfigForkForState(sb)
+func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error {
+	cf, err := sniff.ConfigForkForState(serState)
 	if err != nil {
 		return errors.Wrap(err, "could not sniff config+fork for origin state bytes")
 	}
@@ -35,16 +25,12 @@ func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Read
 	}
 
 	log.Printf("detected supported config for state & block version detection, name=%s, fork=%s", cf.ConfigName.String(), cf.Fork)
-	state, err := sniff.BeaconStateForConfigFork(sb, cf)
+	state, err := sniff.BeaconStateForConfigFork(serState, cf)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize origin state w/ bytes + config+fork")
 	}
 
-	bb, err := ioutil.ReadAll(blockReader)
-	if err != nil {
-		return errors.Wrap(err, "could not read origin block bytes from reader")
-	}
-	wblk, err := sniff.BlockForConfigFork(bb, cf)
+	wblk, err := sniff.BlockForConfigFork(serBlock, cf)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize origin block w/ bytes + config+fork")
 	}

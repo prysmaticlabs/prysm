@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"io/ioutil"
+
 	//"os"
 
 	"github.com/pkg/errors"
@@ -94,11 +96,20 @@ func (dl *APIInitializer) Initialize(ctx context.Context, d db.Database) error {
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to retrieve state bytes for slot %d from api", sSlot))
 	}
+	serState, err := ioutil.ReadAll(stateReader)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed to read state bytes for slot %d from api", bSlot))
+	}
 
 	blockReader, err := dl.c.GetBlockBySlot(uint64(bSlot))
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to retrieve block bytes for slot %d from api", bSlot))
 	}
 
-	return d.SaveOrigin(ctx, stateReader, blockReader)
+	serBlock, err := ioutil.ReadAll(blockReader)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed to read block bytes for slot %d from api", bSlot))
+	}
+
+	return d.SaveOrigin(ctx, serState, serBlock)
 }

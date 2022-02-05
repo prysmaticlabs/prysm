@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"os"
 )
 
@@ -37,7 +38,7 @@ type FileInitializer struct {
 func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error {
 	blockFH, err := os.Open(fi.blockPath)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error reading block file %s for checkpoint sync initialization", fi.blockPath))
+		return errors.Wrap(err, fmt.Sprintf("error opening block file %s for checkpoint sync initialization", fi.blockPath))
 	}
 	defer func() {
 		err := blockFH.Close()
@@ -45,6 +46,10 @@ func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error 
 			log.Errorf("error while closing checkpoint block input stream: %s", err)
 		}
 	}()
+	serBlock, err := ioutil.ReadAll(blockFH)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error reading block file %s for checkpoint sync initialization", fi.blockPath))
+	}
 
 	stateFH, err := os.Open(fi.statePath)
 	if err != nil {
@@ -56,8 +61,12 @@ func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error 
 			log.Errorf("error while closing checkpoint state input stream: %s", err)
 		}
 	}()
+	serState, err := ioutil.ReadAll(stateFH)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error reading block file %s for checkpoint sync initialization", fi.statePath))
+	}
 
-	return d.SaveOrigin(ctx, blockFH, stateFH)
+	return d.SaveOrigin(ctx, serState, serBlock)
 }
 
 var _ Initializer = &FileInitializer{}

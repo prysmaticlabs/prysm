@@ -77,7 +77,6 @@ func newTestRunner(t *testing.T, config *e2etypes.E2EConfig) *testRunner {
 
 // run executes configured E2E test.
 func (r *testRunner) run() {
-	params.OverrideBeaconConfig(params.E2ETestConfig())
 	t, config := r.t, r.config
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
