@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -64,6 +65,9 @@ func IsExecutionBlock(blk block.BeaconBlock) (bool, error) {
 	body := blk.Body()
 	payload, err := body.ExecutionPayload()
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "ExecutionPayload is not supported in") {
+			return false, nil
+		}
 		return false, err
 	}
 	return !isEmptyPayload(payload), nil

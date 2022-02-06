@@ -63,6 +63,42 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "shallow block, Altair justified chkpt",
+			blk: func(tt *testing.T) block.BeaconBlock {
+				blk := util.NewBeaconBlockAltair()
+				blk.Block.Slot = 200
+				wr, err := wrapper.WrappedAltairBeaconBlock(blk.Block)
+				require.NoError(tt, err)
+				return wr
+			}(t),
+			justified: func(tt *testing.T) block.SignedBeaconBlock {
+				blk := util.NewBeaconBlockAltair()
+				blk.Block.Slot = 32
+				wr, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
+				require.NoError(tt, err)
+				return wr
+			}(t),
+			want: false,
+		},
+		{
+			name: "shallow block, Bellatrix justified chkpt without execution",
+			blk: func(tt *testing.T) block.BeaconBlock {
+				blk := util.NewBeaconBlockBellatrix()
+				blk.Block.Slot = 200
+				wr, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+				require.NoError(tt, err)
+				return wr
+			}(t),
+			justified: func(tt *testing.T) block.SignedBeaconBlock {
+				blk := util.NewBeaconBlockBellatrix()
+				blk.Block.Slot = 32
+				wr, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+				require.NoError(tt, err)
+				return wr
+			}(t),
+			want: false,
+		},
+		{
 			name: "shallow block, execution enabled justified chkpt",
 			blk: func(tt *testing.T) block.BeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
@@ -75,7 +111,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				blk.Block.Body.ExecutionPayload.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				blk.Block.Body.ExecutionPayload.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.FeeRecipientLength)
 				blk.Block.Body.ExecutionPayload.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
