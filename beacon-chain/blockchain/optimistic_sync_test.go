@@ -90,9 +90,6 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		payload, err := tt.justified.Block().Body().ExecutionPayload()
-		require.NoError(t, err)
-		require.Equal(t, 0, payload)
 		jroot, err := tt.justified.Block().HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, tt.justified))
