@@ -134,7 +134,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				Root:  jroot[:],
 				Epoch: slots.ToEpoch(tt.justified.Block().Slot()),
 			})
-		candidate, err := service.isOptimisticCandidateBlock(ctx, tt.blk)
+		candidate, err := service.optimisticCandidateBlock(ctx, tt.blk)
 		require.NoError(t, err)
 		require.Equal(t, tt.want, candidate, tt.name)
 	}
