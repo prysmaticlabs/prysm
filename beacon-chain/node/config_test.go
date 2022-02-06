@@ -37,6 +37,20 @@ func TestConfigureHistoricalSlasher(t *testing.T) {
 	)
 }
 
+func TestConfigureSafeSlotsToImportOptimistically(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.Int(flags.SafeSlotsToImportOptimistically.Name, 0, "")
+	require.NoError(t, set.Set(flags.SafeSlotsToImportOptimistically.Name, strconv.Itoa(128)))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	configureSafeSlotsToImportOptimistically(cliCtx)
+
+	assert.Equal(t, types.Slot(128), params.BeaconConfig().SafeSlotsToImportOptimistically)
+}
+
 func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 
@@ -76,21 +90,11 @@ func TestConfigureExecutionSetting(t *testing.T) {
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.Uint64(flags.TerminalTotalDifficultyOverride.Name, 0, "")
-	set.String(flags.TerminalBlockHashOverride.Name, "", "")
-	set.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name, 0, "")
 	set.String(flags.FeeRecipient.Name, "", "")
-	require.NoError(t, set.Set(flags.TerminalTotalDifficultyOverride.Name, strconv.Itoa(100)))
-	require.NoError(t, set.Set(flags.TerminalBlockHashOverride.Name, "0xA"))
-	require.NoError(t, set.Set(flags.TerminalBlockHashActivationEpochOverride.Name, strconv.Itoa(200)))
 	require.NoError(t, set.Set(flags.FeeRecipient.Name, "0xB"))
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	configureExecutionSetting(cliCtx)
-
-	assert.Equal(t, uint64(100), params.BeaconConfig().TerminalTotalDifficulty)
-	assert.Equal(t, common.HexToHash("0xA"), params.BeaconConfig().TerminalBlockHash)
-	assert.Equal(t, types.Epoch(200), params.BeaconConfig().TerminalBlockHashActivationEpoch)
 	assert.Equal(t, common.HexToAddress("0xB"), params.BeaconConfig().FeeRecipient)
 }
 

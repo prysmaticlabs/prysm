@@ -54,6 +54,7 @@ type HeadFetcher interface {
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
+	IsOptimistic(ctx context.Context) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
@@ -326,6 +327,13 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 		return [fieldparams.BLSPubkeyLength]byte{}, err
 	}
 	return v.PublicKey(), nil
+}
+
+// IsOptimistic returns true if the current head is optimistic.
+func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+	return s.cfg.ForkChoiceStore.Optimistic(ctx, s.head.root, s.head.slot)
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.
