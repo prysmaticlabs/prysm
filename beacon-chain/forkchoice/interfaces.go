@@ -60,5 +60,6 @@ type Getter interface {
 // SyncTipper returns sync tips related information.
 type SyncTipper interface {
 	SyncedTips() map[[32]byte]types.Slot
-	UpdateSyncedTips(ctx context.Context, root [32]byte) error
+	UpdateSyncedTipsWithValidRoot(ctx context.Context, root [32]byte) error
+	UpdateSyncedTipsWithInvalidRoot(ctx context.Context, root [32]byte) error
 }
