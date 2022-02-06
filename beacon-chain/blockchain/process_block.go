@@ -175,10 +175,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		log.WithError(err).Warn("Could not update head")
 	}
 
-	if err := s.saveSyncedTipsDB(ctx); err != nil {
-		return errors.Wrap(err, "could not save synced tips")
-	}
-
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
 		return err
 	}
@@ -333,9 +329,6 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	s.saveInitSyncBlock(blockRoot, signed)
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
-	}
-	if err := s.saveSyncedTipsDB(ctx); err != nil {
-		return errors.Wrap(err, "could not save synced tips")
 	}
 
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
@@ -514,7 +507,7 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 func (s *Service) saveSyncedTipsDB(ctx context.Context) error {
 	tips := s.cfg.ForkChoiceStore.SyncedTips()
 	if len(tips) == 0 {
-		return nil
+		return errors.New("no tips to save")
 	}
 	return s.cfg.BeaconDB.UpdateValidatedTips(ctx, tips)
 }
