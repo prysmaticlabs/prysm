@@ -1026,13 +1026,19 @@ func TestService_saveSyncedTipsDB(t *testing.T) {
 		require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), [32]byte{}, 0, 0))
 	}
 
-	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTips(ctx, r100))
-	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTips(ctx, r200))
-
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, r100))
 	require.NoError(t, service.saveSyncedTipsDB(ctx))
 	savedTips, err := service.cfg.BeaconDB.ValidatedTips(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(savedTips))
+	require.Equal(t, types.Slot(1), savedTips[r1])
 	require.Equal(t, types.Slot(100), savedTips[r100])
-	require.Equal(t, types.Slot(200), savedTips[r200])
+
+	// Delete invalid root
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTipsWithInvalidRoot(ctx, r200))
+	require.NoError(t, service.saveSyncedTipsDB(ctx))
+	savedTips, err = service.cfg.BeaconDB.ValidatedTips(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(savedTips))
+	require.Equal(t, types.Slot(100), savedTips[r100])
 }
