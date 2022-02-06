@@ -19,9 +19,10 @@ type ForkChoicer interface {
 	SyncTipper           // to update and retrieve validated sync tips.
 }
 
-// HeadRetriever retrieves head root of the current chain.
+// HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
 	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
+	Optimistic(ctx context.Context, root [32]byte, slot types.Slot) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
