@@ -54,6 +54,21 @@ func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error)
 	return !isEmptyPayload(payload), nil
 }
 
+// IsExecutionBlock returns whether the block has a non-empty
+// ExecutionPayload. The spec definition is:
+//
+// def is_execution_block(block: BeaconBlock) -> bool:
+//     return block.body.execution_payload != ExecutionPayload()
+//
+func IsExecutionBlock(blk block.BeaconBlock) (bool, error) {
+	body := blk.Body()
+	payload, err := body.ExecutionPayload()
+	if err != nil {
+		return false, err
+	}
+	return !isEmptyPayload(payload), nil
+}
+
 // ExecutionEnabled returns true if the beacon chain can begin executing.
 // Meaning the payload header is beacon state is non-empty or the payload in block body is non-empty.
 //
