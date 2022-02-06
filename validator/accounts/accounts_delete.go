@@ -27,6 +27,12 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
+	// TODO(#9883) - Remove this when we have a better way to handle this.
+	if w.KeymanagerKind() == keymanager.Remote || w.KeymanagerKind() == keymanager.Web3Signer {
+		return errors.New(
+			"remote and web3signer wallets cannot delete accounts locally. please delete the account on the remote signer node",
+		)
+	}
 	kManager, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return errors.Wrap(err, ErrCouldNotInitializeKeymanager)

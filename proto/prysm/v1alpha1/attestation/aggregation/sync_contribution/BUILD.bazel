@@ -22,7 +22,6 @@ go_test(
     srcs = ["naive_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//config/features:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation:go_default_library",
