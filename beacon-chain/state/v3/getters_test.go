@@ -83,7 +83,10 @@ func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 			return InitializeFromProto(&ethpb.BeaconStateBellatrix{CurrentJustifiedCheckpoint: cp})
 		},
 		func(i state.BeaconState) {
-			s := i.(*BeaconState)
+			s, ok := i.(*BeaconState)
+			if !ok {
+				panic("error in type assertion in test template")
+			}
 			s.state = nil
 		},
 	)
@@ -96,7 +99,10 @@ func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 			return InitializeFromProto(&ethpb.BeaconStateBellatrix{PreviousJustifiedCheckpoint: cp})
 		},
 		func(i state.BeaconState) {
-			s := i.(*BeaconState)
+			s, ok := i.(*BeaconState)
+			if !ok {
+				panic("error in type assertion in test template")
+			}
 			s.state = nil
 		},
 	)
@@ -109,7 +115,10 @@ func TestBeaconState_MarshalSSZ_NilState(t *testing.T) {
 			return InitializeFromProto(&ethpb.BeaconStateBellatrix{})
 		},
 		func(i state.BeaconState) {
-			s := i.(*BeaconState)
+			s, ok := i.(*BeaconState)
+			if !ok {
+				panic("error in type assertion in test template")
+			}
 			s.state = nil
 		},
 	)
