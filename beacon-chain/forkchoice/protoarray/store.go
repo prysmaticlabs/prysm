@@ -44,7 +44,12 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 func (f *ForkChoice) SyncedTips() map[[32]byte]types.Slot {
 	f.syncedTips.RLock()
 	defer f.syncedTips.RUnlock()
-	return f.syncedTips.validatedTips
+
+	m := make(map[[32]byte]types.Slot)
+	for k, v := range f.syncedTips.validatedTips {
+		m[k] = v
+	}
+	return m
 }
 
 // Head returns the head root from fork choice store.

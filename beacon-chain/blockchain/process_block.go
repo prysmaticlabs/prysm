@@ -514,7 +514,7 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 func (s *Service) saveSyncedTipsDB(ctx context.Context) error {
 	tips := s.cfg.ForkChoiceStore.SyncedTips()
 	if len(tips) == 0 {
-		return nil
+		return errors.New("no tips to save")
 	}
 	return s.cfg.BeaconDB.UpdateValidatedTips(ctx, tips)
 }
