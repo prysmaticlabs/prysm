@@ -408,9 +408,7 @@ func (s *Service) initializeBeaconChain(
 	log.Info("Initialized beacon chain genesis state")
 
 	// Clear out all pre-genesis data now that the state is initialized.
-	if err := s.cfg.ChainStartFetcher.ClearPreGenesisData(); err != nil {
-		return nil, errors.Wrap(err, "could not clear pre-genesis data")
-	}
+	s.cfg.ChainStartFetcher.ClearPreGenesisData()
 
 	// Update committee shuffled indices for genesis epoch.
 	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
