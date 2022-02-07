@@ -135,7 +135,7 @@ func (r *testRunner) run() {
 		return nil
 	})
 	// Beacon nodes.
-	beaconNodes := components.NewBeaconNodes(config.BeaconFlags, config.UsePprof)
+	beaconNodes := components.NewBeaconNodes(config.BeaconFlags, config)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode}); err != nil {
 			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
@@ -597,7 +597,7 @@ func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, ticking
 	flags := append(r.config.BeaconFlags, cp.flags()...)
 	usePprof := r.config.UsePprof
 	// zero-indexed, so next value would be len of list
-	cpsyncer := components.NewBeaconNode(i, enr, flags, usePprof)
+	cpsyncer := components.NewBeaconNode(i, enr, flags, usePprof, r.config.UseFixedPeerIDs)
 	r.group.Go(func() error {
 		return cpsyncer.Start(r.ctx)
 	})
@@ -635,7 +635,7 @@ func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, ticking
 
 // testBeaconChainSync creates another beacon node, and tests whether it can sync to head using previous nodes.
 func (r *testRunner) testBeaconChainSync(index int, conns []*grpc.ClientConn, tickingStartTime time.Time, enr string) error {
-	syncBeaconNode := components.NewBeaconNode(index, enr, r.config.BeaconFlags, r.config.UsePprof)
+	syncBeaconNode := components.NewBeaconNode(index, enr, r.config.BeaconFlags, r.config.UsePprof, r.config.UseFixedPeerIDs)
 	r.group.Go(func() error {
 		return syncBeaconNode.Start(r.ctx)
 	})

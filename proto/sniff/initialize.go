@@ -106,21 +106,21 @@ func BlockForConfigFork(b []byte, cf *ConfigFork) (block.SignedBeaconBlock, erro
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in BlockFromSSZReader")
 		}
-		return wrapper.WrappedPhase0SignedBeaconBlock(blk), nil
+		return wrapper.WrappedSignedBeaconBlock(blk)
 	case params.ForkAltair:
 		blk := &v1alpha1.SignedBeaconBlockAltair{}
 		err := blk.UnmarshalSSZ(b)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlockAltair in BlockFromSSZReader")
 		}
-		return wrapper.WrappedAltairSignedBeaconBlock(blk)
+		return wrapper.WrappedSignedBeaconBlock(blk)
 	case params.ForkMerge:
-		blk := &v1alpha1.SignedBeaconBlockMerge{}
+		blk := &v1alpha1.SignedBeaconBlockBellatrix{}
 		err := blk.UnmarshalSSZ(b)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlockMerge in BlockFromSSZReader")
 		}
-		return wrapper.WrappedMergeSignedBeaconBlock(blk)
+		return wrapper.WrappedSignedBeaconBlock(blk)
 	}
 	return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", cf.Fork.String(), slot)
 }

@@ -27,13 +27,12 @@ var _ e2etypes.BeaconNodeSet = (*BeaconNodeSet)(nil)
 
 // BeaconNodeSet represents set of beacon nodes.
 type BeaconNodeSet struct {
-	e2etypes.ComponentRunner
-	config  *e2etypes.E2EConfig
-	flags    []string
-	usePprof bool
-	enr     string
-	ids     []string
 	started  chan struct{}
+	config  *e2etypes.E2EConfig
+	enr     string
+	e2etypes.ComponentRunner
+	ids     []string
+	flags    []string
 }
 
 // SetENR assigns ENR to the set of beacon nodes.
@@ -42,11 +41,11 @@ func (s *BeaconNodeSet) SetENR(enr string) {
 }
 
 // NewBeaconNodes creates and returns a set of beacon nodes.
-func NewBeaconNodes(flags []string, usePprof bool) *BeaconNodeSet {
+func NewBeaconNodes(flags []string, config *e2etypes.E2EConfig) *BeaconNodeSet {
 	return &BeaconNodeSet{
 		flags:    flags,
-		usePprof: usePprof,
 		started:  make(chan struct{}, 1),
+		config: config,
 	}
 }
 
@@ -59,7 +58,7 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	// Create beacon nodes.
 	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		nodes[i] = NewBeaconNode(i, s.enr, s.flags, s.usePprof)
+		nodes[i] = NewBeaconNode(i, s.enr, s.flags, s.config)
 	}
 
 	// Wait for all nodes to finish their job (blocking).
@@ -85,22 +84,21 @@ func (s *BeaconNodeSet) Started() <-chan struct{} {
 type BeaconNode struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
+	index   int
 	flags    []string
 	started chan struct{}
-	index   int
 	enr     string
-	usePprof bool
 	peerID  string
 }
 
 // NewBeaconNode creates and returns a beacon node.
-func NewBeaconNode(index int, enr string, flags []string, usePprof bool) *BeaconNode {
+func NewBeaconNode(index int, enr string, flags []string, config *e2etypes.E2EConfig) *BeaconNode {
 	return &BeaconNode{
 		index:    index,
 		enr:      enr,
 		started:  make(chan struct{}, 1),
 		flags:    flags,
-		usePprof: usePprof,
+		config: config,
 	}
 }
 
@@ -141,7 +139,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		"--" + cmdshared.AcceptTosFlag.Name,
 		"--" + flags.EnableDebugRPCEndpoints.Name,
 	}
-	if node.usePprof {
+	if node.config.UsePprof {
 		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+e2e.PrysmPprofOffset))
 	}
 	args = append(args, features.E2EBeaconChainFlags...)
@@ -176,7 +174,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		return fmt.Errorf("could not find multiaddr for node %d, this means the node had issues starting: %w", index, err)
 	}
 
-	if config.UseFixedPeerIDs {
+	if node.config.UseFixedPeerIDs {
 		peerId, err := helpers.FindFollowingTextInFile(stdOutFile, "Running node with peer id of ")
 		if err != nil {
 			return fmt.Errorf("could not find peer id: %w", err)
