@@ -3,7 +3,6 @@ package v1
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -202,7 +201,7 @@ func (c *customError) ErrorCode() int {
 	return c.code
 }
 
-func (c *customError) Error() string {
+func (*customError) Error() string {
 	return "something went wrong"
 }
 
@@ -215,7 +214,7 @@ func (c *dataError) ErrorCode() int {
 	return c.code
 }
 
-func (c *dataError) Error() string {
+func (*dataError) Error() string {
 	return "something went wrong"
 }
 
@@ -287,19 +286,6 @@ func Test_handleRPCError(t *testing.T) {
 	}
 }
 
-type httpServer struct{}
-
-func (h *httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Got %+v\n", r)
-	w.Write([]byte("foo"))
-}
-
-func newTestHTTPServer(t *testing.T) *http.ServeMux {
-	srv := http.NewServeMux()
-	srv.Handle("/", &httpServer{})
-	return srv
-}
-
 func newTestIPCServer(t *testing.T) *rpc.Server {
 	server := rpc.NewServer()
 	err := server.RegisterName("engine", new(testEngineService))
@@ -345,40 +331,24 @@ func fixtures() map[string]interface{} {
 
 type testEngineService struct{}
 
-type echoArgs struct {
-	S string
-}
+func (*testEngineService) NoArgsRets() {}
 
-type echoResult struct {
-	String string
-	Int    int
-	Args   *echoArgs
-}
-
-type testError struct{}
-
-func (testError) Error() string          { return "testError" }
-func (testError) ErrorCode() int         { return 444 }
-func (testError) ErrorData() interface{} { return "testError data" }
-
-func (s *testEngineService) NoArgsRets() {}
-
-func (s *testEngineService) GetPayloadV1(
-	ctx context.Context, payloadId pb.HexBytes,
+func (*testEngineService) GetPayloadV1(
+	_ context.Context, _ pb.HexBytes,
 ) *pb.ExecutionPayload {
 	fix := fixtures()
 	return fix["ExecutionPayload"].(*pb.ExecutionPayload)
 }
 
-func (s *testEngineService) ForkchoiceUpdatedV1(
-	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
+func (*testEngineService) ForkchoiceUpdatedV1(
+	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
 ) *ForkchoiceUpdatedResponse {
 	fix := fixtures()
 	return fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 }
 
-func (s *testEngineService) NewPayloadV1(
-	ctx context.Context, payload *pb.ExecutionPayload,
+func (*testEngineService) NewPayloadV1(
+	_ context.Context, _ *pb.ExecutionPayload,
 ) *pb.PayloadStatus {
 	fix := fixtures()
 	return fix["PayloadStatus"].(*pb.PayloadStatus)
