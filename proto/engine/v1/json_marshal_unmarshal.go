@@ -95,8 +95,8 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		GasUsed:       Quantity(e.GasUsed),
 		Timestamp:     Quantity(e.Timestamp),
 		ExtraData:     e.ExtraData,
-		BaseFeePerGas: e.ExtraData,
-		BlockHash:     e.ExtraData,
+		BaseFeePerGas: e.BaseFeePerGas,
+		BlockHash:     e.BlockHash,
 		Transactions:  transactions,
 	})
 }
