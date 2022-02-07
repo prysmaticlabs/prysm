@@ -183,8 +183,8 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.16.4",
-    nogo = "@//:nogo",
+    go_version = "1.17.6",
+    #nogo = "@//:nogo",
 )
 
 http_archive(
