@@ -138,22 +138,24 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				if err != nil {
 					return errors.Wrap(err, "could not check if block is optimistic candidate")
 				}
-				if candidate {
-					break
+				if !candidate {
+					return errors.Wrap(err, "could not optimistically sync block")
 				}
-				return errors.Wrap(err, "could not optimistically sync block")
+				break
 			case nil:
 				fullyValidated = true
 			default:
 				return errors.Wrap(err, "could not execute payload")
 			}
-			mergeBlock, err := blocks.MergeTransitionBlock(postState, body)
-			if err != nil {
-				return errors.Wrap(err, "could not check if merge block is terminal")
-			}
-			if mergeBlock {
-				if err := s.validateTerminalBlock(signed); err != nil {
-					return err
+			if fullyValidated {
+				mergeBlock, err := blocks.MergeTransitionBlock(postState, body)
+				if err != nil {
+					return errors.Wrap(err, "could not check if merge block is terminal")
+				}
+				if mergeBlock {
+					if err := s.validateTerminalBlock(signed); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -423,52 +425,54 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 					if err != nil {
 						return nil, nil, nil, errors.Wrap(err, "could not check if block is optimistic candidate")
 					}
-					if candidate {
-						break
+					if !candidate {
+						return nil, nil, nil, errors.Wrap(err, "could not optimistically sync block")
 					}
-					return nil, nil, nil, errors.Wrap(err, "could not optimistically sync block")
+					break
 				case nil:
 					optimistic[i] = false
 				default:
 					return nil, nil, nil, errors.Wrap(err, "could not execute payload")
 				}
-				mergeBlock, err := blocks.MergeTransitionBlock(preState, b.Block().Body())
-				if err != nil {
-					return nil, nil, nil, errors.Wrap(err, "could not check if merge block is terminal")
-				}
-				if mergeBlock {
-					if err := s.validateTerminalBlock(b); err != nil {
-						return nil, nil, nil, err
+				if !optimistic[i] {
+					mergeBlock, err := blocks.MergeTransitionBlock(preState, b.Block().Body())
+					if err != nil {
+						return nil, nil, nil, errors.Wrap(err, "could not check if merge block is terminal")
 					}
-				}
-				headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
-				if err != nil {
-					return nil, nil, nil, err
-
-				}
-				// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
-				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(preState.FinalizedCheckpoint().Root))
-				if err != nil {
-					return nil, nil, nil, err
-
-				}
-				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-				if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
-					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+					if mergeBlock {
+						if err := s.validateTerminalBlock(b); err != nil {
+							return nil, nil, nil, err
+						}
+					}
+					headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
 					if err != nil {
 						return nil, nil, nil, err
 
 					}
-					finalizedBlockHash = finalizedPayload.BlockHash
-				}
+					// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
+					finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(preState.FinalizedCheckpoint().Root))
+					if err != nil {
+						return nil, nil, nil, err
 
-				f := catalyst.ForkchoiceStateV1{
-					HeadBlockHash:      common.BytesToHash(headPayload.BlockHash),
-					SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
-					FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
-				}
-				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f); err != nil {
-					return nil, nil, nil, err
+					}
+					finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
+					if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
+						finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+						if err != nil {
+							return nil, nil, nil, err
+
+						}
+						finalizedBlockHash = finalizedPayload.BlockHash
+					}
+
+					f := catalyst.ForkchoiceStateV1{
+						HeadBlockHash:      common.BytesToHash(headPayload.BlockHash),
+						SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
+						FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
+					}
+					if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f); err != nil {
+						return nil, nil, nil, err
+					}
 				}
 			}
 		}
