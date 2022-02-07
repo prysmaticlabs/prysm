@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
-	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit"
+	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -44,7 +44,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 		item, err := data.HashTreeRoot()
 		require.NoError(t, err)
 
-		localTrie.Insert(item[:], i)
+		assert.NoError(t, localTrie.Insert(item[:], i))
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		require.NoError(t, err)
 		assert.Equal(t, depRoot, localTrie.HashTreeRoot(), "Local deposit trie root and contract deposit trie root are not equal for index %d", i)
@@ -84,7 +84,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		item, err := data.HashTreeRoot()
 		require.NoError(t, err)
 
-		localTrie.Insert(item[:], i)
+		assert.NoError(t, localTrie.Insert(item[:], i))
 
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		require.NoError(t, err)

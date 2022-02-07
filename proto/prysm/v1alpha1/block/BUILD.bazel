@@ -9,6 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -22,7 +23,7 @@ go_test(
     srcs = ["block_utils_test.go"],
     deps = [
         ":go_default_library",
-        "//config/params:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",

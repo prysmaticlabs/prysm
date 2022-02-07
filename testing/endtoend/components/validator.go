@@ -3,6 +3,7 @@ package components
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -23,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -53,15 +55,16 @@ func NewValidatorNodeSet(config *e2etypes.E2EConfig) *ValidatorNodeSet {
 func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	beaconNodeNum := e2e.TestParams.BeaconNodeCount
+	prysmBeaconNodeNum := e2e.TestParams.BeaconNodeCount
+	beaconNodeNum := prysmBeaconNodeNum + e2e.TestParams.LighthouseBeaconNodeCount
 	if validatorNum%beaconNodeNum != 0 {
 		return errors.New("validator count is not easily divisible by beacon node count")
 	}
 	validatorsPerNode := validatorNum / beaconNodeNum
 
 	// Create validator nodes.
-	nodes := make([]e2etypes.ComponentRunner, beaconNodeNum)
-	for i := 0; i < beaconNodeNum; i++ {
+	nodes := make([]e2etypes.ComponentRunner, prysmBeaconNodeNum)
+	for i := 0; i < prysmBeaconNodeNum; i++ {
 		nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i)
 	}
 
@@ -133,8 +136,6 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
 		fmt.Sprintf("--%s=%s", flags.GraffitiFileFlag.Name, gFile),
-		fmt.Sprintf("--%s=%d", flags.InteropNumValidators.Name, validatorNum),
-		fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset),
 		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.ValidatorMetricsPort+index),
 		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.ValidatorGatewayPort+index),
 		fmt.Sprintf("--%s=localhost:%d", flags.BeaconRPCProviderFlag.Name, beaconRPCPort),
@@ -148,6 +149,25 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	if !v.config.UsePrysmShValidator {
 		args = append(args, features.E2EValidatorFlags...)
 	}
+	if v.config.UseWeb3RemoteSigner {
+		args = append(args, fmt.Sprintf("--%s=localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
+		// Write the pubkeys as comma seperated hex strings with 0x prefix.
+		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
+		_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
+		if err != nil {
+			return err
+		}
+		var hexPubs []string
+		for _, pub := range pubs {
+			hexPubs = append(hexPubs, "0x"+hex.EncodeToString(pub.Marshal()))
+		}
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexPubs, ",")))
+	} else {
+		// When not using remote key signer, use interop keys.
+		args = append(args,
+			fmt.Sprintf("--%s=%d", flags.InteropNumValidators.Name, validatorNum),
+			fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset))
+	}
 	args = append(args, config.ValidatorFlags...)
 
 	if v.config.UsePrysmShValidator {
@@ -155,7 +175,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		log.Warning("Using latest release validator via prysm.sh")
 	}
 
-	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
+	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 
 	// Write stdout and stderr to log files.
 	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("validator_%d_stdout.log", index)))

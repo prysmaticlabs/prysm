@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -34,6 +35,20 @@ func TestConfigureHistoricalSlasher(t *testing.T) {
 			params.BeaconConfig().SlotsPerArchivedPoint,
 			int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))),
 	)
+}
+
+func TestConfigureSafeSlotsToImportOptimistically(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.Int(flags.SafeSlotsToImportOptimistically.Name, 0, "")
+	require.NoError(t, set.Set(flags.SafeSlotsToImportOptimistically.Name, strconv.Itoa(128)))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	configureSafeSlotsToImportOptimistically(cliCtx)
+
+	assert.Equal(t, types.Slot(128), params.BeaconConfig().SafeSlotsToImportOptimistically)
 }
 
 func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
@@ -68,6 +83,19 @@ func TestConfigureProofOfWork(t *testing.T) {
 	assert.Equal(t, uint64(100), params.BeaconConfig().DepositChainID)
 	assert.Equal(t, uint64(200), params.BeaconConfig().DepositNetworkID)
 	assert.Equal(t, "deposit-contract", params.BeaconConfig().DepositContractAddress)
+}
+
+func TestConfigureExecutionSetting(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.FeeRecipient.Name, "", "")
+	require.NoError(t, set.Set(flags.FeeRecipient.Name, "0xB"))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	configureExecutionSetting(cliCtx)
+	assert.Equal(t, common.HexToAddress("0xB"), params.BeaconConfig().FeeRecipient)
 }
 
 func TestConfigureNetwork(t *testing.T) {

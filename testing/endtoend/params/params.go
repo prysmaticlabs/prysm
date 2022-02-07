@@ -15,17 +15,18 @@ import (
 
 // params struct defines the parameters needed for running E2E tests to properly handle test sharding.
 type params struct {
-	TestPath              string
-	LogPath               string
-	TestShardIndex        int
-	BeaconNodeCount       int
-	Eth1RPCPort           int
-	ContractAddress       common.Address
-	BootNodePort          int
-	BeaconNodeRPCPort     int
-	BeaconNodeMetricsPort int
-	ValidatorMetricsPort  int
-	ValidatorGatewayPort  int
+	TestPath                  string
+	LogPath                   string
+	TestShardIndex            int
+	BeaconNodeCount           int
+	LighthouseBeaconNodeCount int
+	Eth1RPCPort               int
+	ContractAddress           common.Address
+	BootNodePort              int
+	BeaconNodeRPCPort         int
+	BeaconNodeMetricsPort     int
+	ValidatorMetricsPort      int
+	ValidatorGatewayPort      int
 }
 
 // TestParams is the globally accessible var for getting config elements.
@@ -46,8 +47,27 @@ var ValidatorLogFileName = "vals-%d.log"
 // StandardBeaconCount is a global constant for the count of beacon nodes of standard E2E tests.
 var StandardBeaconCount = 2
 
+// StandardLighthouseNodeCount is a global constant for the count of lighthouse beacon nodes of standard E2E tests.
+var StandardLighthouseNodeCount = 2
+
 // DepositCount is the amount of deposits E2E makes on a separate validator client.
 var DepositCount = uint64(64)
+
+// Values that are used by both the beacon node and validator clients
+// to assign the relevant ports to.
+const (
+	BootnodeMetricsOffset = 20
+	ETH1WSOffset          = 1
+
+	PrysmBeaconUDPOffset     = 10
+	PrysmBeaconTCPOffset     = 20
+	PrysmBeaconGatewayOffset = 40
+	PrysmPprofOffset         = 50
+
+	LighthouseP2PPortOffset     = 200
+	LighthouseHTTPPortOffset    = 250
+	LighthouseMetricsPortOffset = 300
+)
 
 // Init initializes the E2E config, properly handling test sharding.
 func Init(beaconNodeCount int) error {
@@ -77,6 +97,39 @@ func Init(beaconNodeCount int) error {
 		BeaconNodeMetricsPort: 5100 + testIndex*100,
 		ValidatorMetricsPort:  6100 + testIndex*100,
 		ValidatorGatewayPort:  7150 + testIndex*100,
+	}
+	return nil
+}
+
+// InitMultiClient initializes the multiclient E2E config, properly handling test sharding.
+func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
+	testPath := bazel.TestTmpDir()
+	logPath, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
+	if !ok {
+		return errors.New("expected TEST_UNDECLARED_OUTPUTS_DIR to be defined")
+	}
+	testIndexStr, ok := os.LookupEnv("TEST_SHARD_INDEX")
+	if !ok {
+		testIndexStr = "0"
+	}
+	testIndex, err := strconv.Atoi(testIndexStr)
+	if err != nil {
+		return err
+	}
+	testPath = filepath.Join(testPath, fmt.Sprintf("shard-%d", testIndex))
+
+	TestParams = &params{
+		TestPath:                  testPath,
+		LogPath:                   logPath,
+		TestShardIndex:            testIndex,
+		BeaconNodeCount:           beaconNodeCount,
+		LighthouseBeaconNodeCount: lighthouseNodeCount,
+		Eth1RPCPort:               3100 + testIndex*100, // Multiplying 100 here so the test index doesn't conflict with the other node ports.
+		BootNodePort:              4100 + testIndex*100,
+		BeaconNodeRPCPort:         4150 + testIndex*100,
+		BeaconNodeMetricsPort:     5100 + testIndex*100,
+		ValidatorMetricsPort:      6100 + testIndex*100,
+		ValidatorGatewayPort:      7150 + testIndex*100,
 	}
 	return nil
 }

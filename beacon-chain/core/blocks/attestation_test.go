@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -112,7 +113,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 		AggregationBits: aggBits,
 	}
 
-	zeroSig := [96]byte{}
+	zeroSig := [fieldparams.BLSSignatureLength]byte{}
 	att.Signature = zeroSig[:]
 
 	err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -143,7 +144,7 @@ func TestVerifyAttestationNoVerifySignature_OK(t *testing.T) {
 		AggregationBits: aggBits,
 	}
 
-	zeroSig := [96]byte{}
+	zeroSig := [fieldparams.BLSSignatureLength]byte{}
 	att.Signature = zeroSig[:]
 
 	err := beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
@@ -171,7 +172,7 @@ func TestVerifyAttestationNoVerifySignature_BadAttIdx(t *testing.T) {
 		},
 		AggregationBits: aggBits,
 	}
-	zeroSig := [96]byte{}
+	zeroSig := [fieldparams.BLSSignatureLength]byte{}
 	att.Signature = zeroSig[:]
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 	ckp := beaconState.CurrentJustifiedCheckpoint()
@@ -215,7 +216,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		},
 	}
 
-	var sig [96]byte
+	var sig [fieldparams.BLSSignatureLength]byte
 	copy(sig[:], "signed")
 	att := util.HydrateAttestation(&ethpb.Attestation{
 		Signature: sig[:],
@@ -271,7 +272,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 				Source: &ethpb.Checkpoint{},
 			}),
 			AttestingIndices: []uint64{1},
-			Signature:        make([]byte, 96),
+			Signature:        make([]byte, fieldparams.BLSSignatureLength),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: util.HydrateAttestationData(&ethpb.AttestationData{
@@ -280,7 +281,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 				},
 			}),
 			AttestingIndices: []uint64{47, 99, 101},
-			Signature:        make([]byte, 96),
+			Signature:        make([]byte, fieldparams.BLSSignatureLength),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: util.HydrateAttestationData(&ethpb.AttestationData{
@@ -289,7 +290,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 				},
 			}),
 			AttestingIndices: []uint64{21, 72},
-			Signature:        make([]byte, 96),
+			Signature:        make([]byte, fieldparams.BLSSignatureLength),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: util.HydrateAttestationData(&ethpb.AttestationData{
@@ -298,7 +299,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 				},
 			}),
 			AttestingIndices: []uint64{100, 121, 122},
-			Signature:        make([]byte, 96),
+			Signature:        make([]byte, fieldparams.BLSSignatureLength),
 		}},
 	}
 
@@ -358,7 +359,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 	}
 
 	want := "nil or missing indexed attestation data"
-	_, err := blocks.AttestationSignatureSet(context.Background(), beaconState, atts)
+	_, err := blocks.AttestationSignatureBatch(context.Background(), beaconState, atts)
 	assert.ErrorContains(t, want, err)
 
 	atts = []*ethpb.Attestation{}
@@ -378,7 +379,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 	}
 
 	want = "expected non-empty attesting indices"
-	_, err = blocks.AttestationSignatureSet(context.Background(), beaconState, atts)
+	_, err = blocks.AttestationSignatureBatch(context.Background(), beaconState, atts)
 	assert.ErrorContains(t, want, err)
 }
 
@@ -502,7 +503,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	set, err := blocks.AttestationSignatureSet(ctx, st, []*ethpb.Attestation{att1, att2})
+	set, err := blocks.AttestationSignatureBatch(ctx, st, []*ethpb.Attestation{att1, att2})
 	require.NoError(t, err)
 	verified, err := set.Verify()
 	require.NoError(t, err)
@@ -566,6 +567,6 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()
 
-	_, err = blocks.AttestationSignatureSet(ctx, st, []*ethpb.Attestation{att1, att2})
+	_, err = blocks.AttestationSignatureBatch(ctx, st, []*ethpb.Attestation{att1, att2})
 	require.NoError(t, err)
 }

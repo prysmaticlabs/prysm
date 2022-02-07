@@ -4,6 +4,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -57,7 +58,7 @@ func (b *BeaconState) genesisValidatorRoot() []byte {
 		return params.BeaconConfig().ZeroHash[:]
 	}
 
-	root := make([]byte, 32)
+	root := make([]byte, fieldparams.RootLength)
 	copy(root, b.state.GenesisValidatorsRoot)
 	return root
 }
@@ -111,7 +112,7 @@ func (b *BeaconState) parentRoot() [32]byte {
 // Version of the beacon state. This method
 // is strictly meant to be used without a lock
 // internally.
-func (b *BeaconState) Version() int {
+func (_ *BeaconState) Version() int {
 	return version.Altair
 }
 

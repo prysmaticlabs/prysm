@@ -15,16 +15,20 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	wrapperv1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"google.golang.org/protobuf/proto"
 )
+
+func init() {
+	transition.SkipSlotCache.Disable()
+}
 
 type ForkConfig struct {
 	PostFork    string `json:"post_fork"`
 	ForkEpoch   int    `json:"fork_epoch"`
-	ForkBlock   int    `json:"fork_block"`
+	ForkBlock   *int   `json:"fork_block"`
 	BlocksCount int    `json:"blocks_count"`
 }
 
@@ -44,7 +48,8 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			preforkBlocks := make([]*ethpb.SignedBeaconBlock, 0)
 			postforkBlocks := make([]*ethpb.SignedBeaconBlockAltair, 0)
 			// Fork happens without any pre-fork blocks.
-			if config.ForkBlock == 0 {
+
+			if config.ForkBlock == nil {
 				for i := 0; i < config.BlocksCount; i++ {
 					fileName := fmt.Sprint("blocks_", i, ".ssz_snappy")
 					blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
@@ -57,7 +62,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				}
 				// Fork happens with pre-fork blocks.
 			} else {
-				for i := 0; i <= config.ForkBlock; i++ {
+				for i := 0; i <= *config.ForkBlock; i++ {
 					fileName := fmt.Sprint("blocks_", i, ".ssz_snappy")
 					blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
 					require.NoError(t, err)
@@ -67,7 +72,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 					require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 					preforkBlocks = append(preforkBlocks, block)
 				}
-				for i := config.ForkBlock + 1; i < config.BlocksCount; i++ {
+				for i := *config.ForkBlock + 1; i < config.BlocksCount; i++ {
 					fileName := fmt.Sprint("blocks_", i, ".ssz_snappy")
 					blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fileName)
 					require.NoError(t, err)
@@ -95,7 +100,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			ctx := context.Background()
 			var ok bool
 			for _, b := range preforkBlocks {
-				st, err := transition.ExecuteStateTransition(ctx, beaconState, wrapperv1.WrappedPhase0SignedBeaconBlock(b))
+				st, err := transition.ExecuteStateTransition(ctx, beaconState, wrapper.WrappedPhase0SignedBeaconBlock(b))
 				require.NoError(t, err)
 				beaconState, ok = st.(*v1.BeaconState)
 				require.Equal(t, true, ok)
@@ -119,7 +124,9 @@ func RunForkTransitionTest(t *testing.T, config string) {
 
 			pbState, err := stateAltair.ProtobufBeaconState(altairState.CloneInnerState())
 			require.NoError(t, err)
-			require.DeepSSZEqual(t, pbState, postBeaconState)
+			if !proto.Equal(pbState, postBeaconState) {
+				t.Fatal("Post state does not match expected")
+			}
 		})
 	}
 }

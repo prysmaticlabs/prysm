@@ -17,6 +17,7 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -26,19 +27,19 @@ import (
 func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints:   []string{endpoint},
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        beaconDB,
-		DepositCache:    depositCache,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -53,7 +54,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	require.NoError(t, err)
 	data := deposits[0].Data
 
-	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.Value = mock.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
@@ -62,7 +63,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.cfg.DepositContract,
+			web3Service.cfg.depositContractAddr,
 		},
 	}
 
@@ -91,18 +92,18 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints:   []string{endpoint},
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        beaconDB,
-		DepositCache:    depositCache,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -116,7 +117,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	require.NoError(t, err)
 	data := deposits[0].Data
 
-	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.Value = mock.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
 	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[0])
@@ -129,7 +130,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.cfg.DepositContract,
+			web3Service.cfg.depositContractAddr,
 		},
 	}
 
@@ -143,21 +144,21 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	err = web3Service.ProcessDepositLog(context.Background(), logs[1])
 	require.NoError(t, err)
 
-	pendingDeposits := web3Service.cfg.DepositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
+	pendingDeposits := web3Service.cfg.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
 	require.Equal(t, 2, len(pendingDeposits), "Unexpected number of deposits")
 
 	hook.Reset()
 }
 
 func TestUnpackDepositLogData_OK(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints:   []string{endpoint},
-		BeaconDB:        beaconDB,
-		DepositContract: testAcc.ContractAddr,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -171,7 +172,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	require.NoError(t, err)
 	data := deposits[0].Data
 
-	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.Value = mock.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
@@ -179,7 +180,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.cfg.DepositContract,
+			web3Service.cfg.depositContractAddr,
 		},
 	}
 
@@ -197,18 +198,18 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints:   []string{endpoint},
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        beaconDB,
-		DepositCache:    depositCache,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -228,14 +229,14 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	require.NoError(t, err)
 	data := deposits[0].Data
 
-	testAcc.TxOpts.Value = contracts.Amount32Eth()
+	testAcc.TxOpts.Value = mock.Amount32Eth()
 	testAcc.TxOpts.GasLimit = 1000000
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
-		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		testAcc.TxOpts.Value = mock.Amount32Eth()
 		_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[0])
 		require.NoError(t, err, "Could not deposit to deposit contract")
 
@@ -244,7 +245,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.cfg.DepositContract,
+			web3Service.cfg.depositContractAddr,
 		},
 	}
 
@@ -267,18 +268,18 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	cfg.GenesisDelay = 0
 	params.OverrideBeaconConfig(cfg)
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints:   []string{endpoint},
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        beaconDB,
-		DepositCache:    depositCache,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -301,7 +302,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
 		data := deposits[i].Data
-		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		testAcc.TxOpts.Value = mock.Amount32Eth()
 		testAcc.TxOpts.GasLimit = 1000000
 		_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, roots[i])
 		require.NoError(t, err, "Could not deposit to deposit contract")
@@ -311,7 +312,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			web3Service.cfg.DepositContract,
+			web3Service.cfg.depositContractAddr,
 		},
 	}
 
@@ -321,7 +322,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := web3Service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := web3Service.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
 	for _, log := range logs {
@@ -353,18 +354,18 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 
 func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints:   []string{endpoint},
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        kvStore,
-		DepositCache:    depositCache,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(kvStore),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -399,7 +400,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	// is 2**14
 	for i := 0; i < totalNumOfDeposits; i++ {
 		data := deposits[i].Data
-		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		testAcc.TxOpts.Value = mock.Amount32Eth()
 		testAcc.TxOpts.GasLimit = 1000000
 		_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[i])
 		require.NoError(t, err, "Could not deposit to deposit contract")
@@ -418,7 +419,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := web3Service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := web3Service.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
 	err = web3Service.processPastLogs(context.Background())
@@ -446,18 +447,18 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints:   []string{endpoint},
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        kvStore,
-		DepositCache:    depositCache,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(kvStore),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -491,7 +492,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	// is 2**14
 	for i := 0; i < totalNumOfDeposits; i++ {
 		data := deposits[i].Data
-		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		testAcc.TxOpts.Value = mock.Amount32Eth()
 		testAcc.TxOpts.GasLimit = 1000000
 		_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[i])
 		require.NoError(t, err, "Could not deposit to deposit contract")
@@ -522,7 +523,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := web3Service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := web3Service.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
 	err = web3Service.processPastLogs(context.Background())
@@ -549,7 +550,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 
 func TestCheckForChainstart_NoValidator(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
 	s := newPowchainService(t, testAcc, beaconDB)
@@ -557,16 +558,15 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Could not determine active validator count from pre genesis state")
 }
 
-func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {
+func newPowchainService(t *testing.T, eth1Backend *mock.TestAccount, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints:   []string{endpoint},
-		DepositContract: eth1Backend.ContractAddr,
-		BeaconDB:        beaconDB,
-		DepositCache:    depositCache,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDepositContractAddress(eth1Backend.ContractAddr),
+		WithDatabase(beaconDB),
+		WithDepositCache(depositCache),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(eth1Backend.ContractAddr, eth1Backend.Backend)

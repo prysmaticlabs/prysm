@@ -15,4 +15,4 @@ func (m *MockTicker) C() <-chan types.Slot {
 }
 
 // Done --
-func (m *MockTicker) Done() {}
+func (_ *MockTicker) Done() {}

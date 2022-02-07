@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/pagination"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -41,75 +42,20 @@ type blockContainer struct {
 func (bs *Server) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
-	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, cmd.Get().MaxRPCPageSize)
+	ctrs, numBlks, nextPageToken, err := bs.listBlocks(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	blkContainers, err := convertToProto(ctrs)
+	if err != nil {
+		return nil, err
 	}
 
-	switch q := req.QueryFilter.(type) {
-	case *ethpb.ListBlocksRequest_Epoch:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForEpoch(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		blkContainers, err := convertToProto(ctrs)
-		if err != nil {
-			return nil, err
-		}
-
-		return &ethpb.ListBlocksResponse{
-			BlockContainers: blkContainers,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-	case *ethpb.ListBlocksRequest_Root:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForRoot(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		blkContainers, err := convertToProto(ctrs)
-		if err != nil {
-			return nil, err
-		}
-
-		return &ethpb.ListBlocksResponse{
-			BlockContainers: blkContainers,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-
-	case *ethpb.ListBlocksRequest_Slot:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForSlot(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		blkContainers, err := convertToProto(ctrs)
-		if err != nil {
-			return nil, err
-		}
-
-		return &ethpb.ListBlocksResponse{
-			BlockContainers: blkContainers,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-	case *ethpb.ListBlocksRequest_Genesis:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForGenesis(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		blkContainers, err := convertToProto(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBlocksResponse{
-			BlockContainers: blkContainers,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-	}
-
-	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
+	return &ethpb.ListBlocksResponse{
+		BlockContainers: blkContainers,
+		TotalSize:       int32(numBlks),
+		NextPageToken:   nextPageToken,
+	}, nil
 }
 
 // ListBeaconBlocks retrieves blocks by root, slot, or epoch.
@@ -121,72 +67,39 @@ func (bs *Server) ListBlocks(
 func (bs *Server) ListBeaconBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBeaconBlocksResponse, error) {
+	ctrs, numBlks, nextPageToken, err := bs.listBlocks(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	altCtrs, err := convertFromV1Containers(ctrs)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpb.ListBeaconBlocksResponse{
+		BlockContainers: altCtrs,
+		TotalSize:       int32(numBlks),
+		NextPageToken:   nextPageToken,
+	}, nil
+}
+
+func (bs *Server) listBlocks(ctx context.Context, req *ethpb.ListBlocksRequest) ([]blockContainer, int, string, error) {
 	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForEpoch(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		altCtrs, err := convertFromV1Containers(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBeaconBlocksResponse{
-			BlockContainers: altCtrs,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
+		return bs.listBlocksForEpoch(ctx, req, q)
 	case *ethpb.ListBlocksRequest_Root:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForRoot(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		altCtrs, err := convertFromV1Containers(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBeaconBlocksResponse{
-			BlockContainers: altCtrs,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
-
+		return bs.listBlocksForRoot(ctx, req, q)
 	case *ethpb.ListBlocksRequest_Slot:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForSlot(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		altCtrs, err := convertFromV1Containers(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBeaconBlocksResponse{
-			BlockContainers: altCtrs,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
+		return bs.listBlocksForSlot(ctx, req, q)
 	case *ethpb.ListBlocksRequest_Genesis:
-		ctrs, numBlks, nextPageToken, err := bs.ListBlocksForGenesis(ctx, req, q)
-		if err != nil {
-			return nil, err
-		}
-		altCtrs, err := convertFromV1Containers(ctrs)
-		if err != nil {
-			return nil, err
-		}
-		return &ethpb.ListBeaconBlocksResponse{
-			BlockContainers: altCtrs,
-			TotalSize:       int32(numBlks),
-			NextPageToken:   nextPageToken,
-		}, nil
+		return bs.listBlocksForGenesis(ctx, req, q)
+	default:
+		return nil, 0, "", status.Errorf(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks. Criteria %T not supported", q)
 	}
-
-	return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching blocks")
 }
 
 func convertFromV1Containers(ctrs []blockContainer) ([]*ethpb.BeaconBlockContainer, error) {
@@ -224,8 +137,8 @@ func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanon
 	return ctr, nil
 }
 
-// ListBlocksForEpoch retrieves all blocks for the provided epoch.
-func (bs *Server) ListBlocksForEpoch(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Epoch) ([]blockContainer, int, string, error) {
+// listBlocksForEpoch retrieves all blocks for the provided epoch.
+func (bs *Server) listBlocksForEpoch(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Epoch) ([]blockContainer, int, string, error) {
 	blks, _, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not get blocks: %v", err)
@@ -262,15 +175,14 @@ func (bs *Server) ListBlocksForEpoch(ctx context.Context, req *ethpb.ListBlocksR
 	return containers, numBlks, nextPageToken, nil
 }
 
-// ListBlocksForRoot retrieves the block for the provided root.
-func (bs *Server) ListBlocksForRoot(ctx context.Context, _ *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Root) ([]blockContainer, int, string, error) {
+// listBlocksForRoot retrieves the block for the provided root.
+func (bs *Server) listBlocksForRoot(ctx context.Context, _ *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Root) ([]blockContainer, int, string, error) {
 	blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve block: %v", err)
 	}
 	if blk == nil || blk.IsNil() {
 		return []blockContainer{}, 0, strconv.Itoa(0), nil
-
 	}
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
@@ -287,8 +199,8 @@ func (bs *Server) ListBlocksForRoot(ctx context.Context, _ *ethpb.ListBlocksRequ
 	}}, 1, strconv.Itoa(0), nil
 }
 
-// ListBlocksForSlot retrieves all blocks for the provided slot.
-func (bs *Server) ListBlocksForSlot(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Slot) ([]blockContainer, int, string, error) {
+// listBlocksForSlot retrieves all blocks for the provided slot.
+func (bs *Server) listBlocksForSlot(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Slot) ([]blockContainer, int, string, error) {
 	hasBlocks, blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
@@ -324,14 +236,14 @@ func (bs *Server) ListBlocksForSlot(ctx context.Context, req *ethpb.ListBlocksRe
 	return containers, numBlks, nextPageToken, nil
 }
 
-// ListBlocksForGenesis retrieves the genesis block.
-func (bs *Server) ListBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksRequest, _ *ethpb.ListBlocksRequest_Genesis) ([]blockContainer, int, string, error) {
+// listBlocksForGenesis retrieves the genesis block.
+func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksRequest, _ *ethpb.ListBlocksRequest_Genesis) ([]blockContainer, int, string, error) {
 	genBlk, err := bs.BeaconDB.GenesisBlock(ctx)
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 	}
-	if genBlk == nil || genBlk.IsNil() {
-		return []blockContainer{}, 0, strconv.Itoa(0), status.Error(codes.Internal, "Could not find genesis block")
+	if err := helpers.BeaconBlockIsNil(genBlk); err != nil {
+		return []blockContainer{}, 0, strconv.Itoa(0), status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
 	}
 	root, err := genBlk.Block().HashTreeRoot()
 	if err != nil {
@@ -473,8 +385,8 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
-	if headBlock == nil || headBlock.IsNil() || headBlock.Block().IsNil() {
-		return nil, status.Error(codes.Internal, "Head block of chain was nil")
+	if err := helpers.BeaconBlockIsNil(headBlock); err != nil {
+		return nil, status.Errorf(codes.NotFound, "Head block of chain was nil: %v", err)
 	}
 	headBlockRoot, err := headBlock.Block().HashTreeRoot()
 	if err != nil {
@@ -496,7 +408,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get finalized block")
 		}
-		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get finalized block: %v", err)
 		}
 	}
@@ -507,7 +419,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get justified block")
 		}
-		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get justified block: %v", err)
 		}
 	}
@@ -518,22 +430,22 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get prev justified block")
 		}
-		if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get prev justified block: %v", err)
 		}
 	}
 
 	fSlot, err := slots.EpochStart(finalizedCheckpoint.Epoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get epoch start slot from finalized checkpoint epoch")
 	}
 	jSlot, err := slots.EpochStart(justifiedCheckpoint.Epoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get epoch start slot from justified checkpoint epoch")
 	}
 	pjSlot, err := slots.EpochStart(prevJustifiedCheckpoint.Epoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get epoch start slot from prev justified checkpoint epoch")
 	}
 	return &ethpb.ChainHead{
 		HeadSlot:                   headBlock.Block().Slot(),

@@ -9,6 +9,7 @@ go_library(
         "doc.go",
         "handler.go",
         "log.go",
+        "headers.go",
         ":site_data",  # keep
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/web",

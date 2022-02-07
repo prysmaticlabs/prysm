@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -55,7 +56,7 @@ type ChainService struct {
 	SyncCommitteeDomain         []byte
 	SyncSelectionProofDomain    []byte
 	SyncContributionProofDomain []byte
-	PublicKey                   [48]byte
+	PublicKey                   [fieldparams.BLSPubkeyLength]byte
 	SyncCommitteePubkeys        [][]byte
 	InitSyncBlockRoots          map[[32]byte]bool
 }
@@ -285,12 +286,12 @@ func (s *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 }
 
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
-func (s *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestation) error {
+func (_ *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestation) error {
 	return nil
 }
 
 // ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
-func (s *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
+func (_ *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
 	return nil
 }
 
@@ -369,7 +370,7 @@ func (s *ChainService) HasInitSyncBlock(rt [32]byte) bool {
 }
 
 // HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
-func (s *ChainService) HeadGenesisValidatorRoot() [32]byte {
+func (_ *ChainService) HeadGenesisValidatorRoot() [32]byte {
 	return [32]byte{}
 }
 
@@ -379,7 +380,7 @@ func (s *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error 
 }
 
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
-func (s *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
+func (_ *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
 	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {
 		return errors.New("LMD and FFG miss matched")
 	}
@@ -395,7 +396,7 @@ func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) e
 }
 
 // ChainHeads mocks ChainHeads and always return nil.
-func (s *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
+func (_ *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
 	return [][32]byte{
 			bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
 			bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
@@ -404,12 +405,12 @@ func (s *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
 }
 
 // HeadPublicKeyToValidatorIndex mocks HeadPublicKeyToValidatorIndex and always return 0 and true.
-func (s *ChainService) HeadPublicKeyToValidatorIndex(_ context.Context, _ [48]byte) (types.ValidatorIndex, bool) {
+func (_ *ChainService) HeadPublicKeyToValidatorIndex(_ [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
 	return 0, true
 }
 
 // HeadValidatorIndexToPublicKey mocks HeadValidatorIndexToPublicKey and always return empty and nil.
-func (s *ChainService) HeadValidatorIndexToPublicKey(_ context.Context, _ types.ValidatorIndex) ([48]byte, error) {
+func (s *ChainService) HeadValidatorIndexToPublicKey(_ context.Context, _ types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error) {
 	return s.PublicKey, nil
 }
 
@@ -436,4 +437,9 @@ func (s *ChainService) HeadSyncSelectionProofDomain(_ context.Context, _ types.S
 // HeadSyncContributionProofDomain mocks HeadSyncContributionProofDomain and always return empty nil.
 func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ types.Slot) ([]byte, error) {
 	return s.SyncContributionProofDomain, nil
+}
+
+// IsOptimistic mocks the same method in the chain service.
+func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
+	return false, nil
 }

@@ -2,10 +2,9 @@ package stateutil
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -59,7 +58,7 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 // a list of uint64 and mixed with registry limit.
 func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	balancesMarshaling := make([][]byte, 0)
+	balancesMarshaling := make([][]byte, 0, len(balances))
 	for i := 0; i < len(balances); i++ {
 		balanceBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(balanceBuf, balances[i])
@@ -69,7 +68,7 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
 	}
-	maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
+	maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
 	elemSize := uint64(8)
 	balLimit := (maxBalCap*elemSize + 31) / 32
 	if balLimit == 0 {
@@ -89,9 +88,9 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	return ssz.MixInLength(balancesRootsRoot, balancesLengthRoot), nil
 }
 
-// ValidatorEncKey returns the encoded key in bytes of input `validator`,
+// validatorEncKey returns the encoded key in bytes of input `validator`,
 // the returned key bytes can be used for caching purposes.
-func ValidatorEncKey(validator *ethpb.Validator) []byte {
+func validatorEncKey(validator *ethpb.Validator) []byte {
 	if validator == nil {
 		return nil
 	}
@@ -126,43 +125,4 @@ func ValidatorEncKey(validator *ethpb.Validator) []byte {
 	copy(enc[113:121], withdrawalBuf[:8])
 
 	return enc
-}
-
-// HandleValidatorSlice returns the validator indices in a slice of root format.
-func HandleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
-	length := len(indices)
-	if convertAll {
-		length = len(val)
-	}
-	roots := make([][32]byte, 0, length)
-	hasher := hash.CustomSHA256Hasher()
-	rootCreator := func(input *ethpb.Validator) error {
-		newRoot, err := ValidatorRootWithHasher(hasher, input)
-		if err != nil {
-			return err
-		}
-		roots = append(roots, newRoot)
-		return nil
-	}
-	if convertAll {
-		for i := range val {
-			err := rootCreator(val[i])
-			if err != nil {
-				return nil, err
-			}
-		}
-		return roots, nil
-	}
-	if len(val) > 0 {
-		for _, idx := range indices {
-			if idx > uint64(len(val))-1 {
-				return nil, fmt.Errorf("index %d greater than number of validators %d", idx, len(val))
-			}
-			err := rootCreator(val[idx])
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return roots, nil
 }

@@ -13,6 +13,7 @@ go_library(
         "fuzz_exports.go",  # keep
         "log.go",
         "metrics.go",
+        "options.go",
         "pending_attestations_queue.go",
         "pending_blocks_queue.go",
         "rate_limiter.go",
@@ -47,7 +48,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
+        "//testing:__subpackages__",
     ],
     deps = [
         "//async:go_default_library",
@@ -167,6 +168,7 @@ go_test(
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
+        "//beacon-chain/core/feed/operation:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
@@ -188,6 +190,7 @@ go_test(
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//cache/lru:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/rand:go_default_library",

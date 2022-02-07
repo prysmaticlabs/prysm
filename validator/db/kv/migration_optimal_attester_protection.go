@@ -5,6 +5,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/progress"
@@ -114,7 +115,7 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 // Migrate attester protection from the more optimal format to the old format in the DB.
 func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error {
 	// First we extract the public keys we are migrating down for.
-	pubKeys := make([][48]byte, 0)
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	err := s.view(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
 		if b := mb.Get(migrationOptimalAttesterProtectionKey); b == nil {

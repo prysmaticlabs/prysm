@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -22,12 +23,39 @@ import (
 
 const pubKeyErr = "could not convert bytes to public key"
 
+func TestDepositContractAddress_EmptyAddress(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.DepositContractAddress = ""
+	params.OverrideBeaconConfig(config)
+
+	_, err := DepositContractAddress()
+	assert.ErrorContains(t, "valid deposit contract is required", err)
+}
+
+func TestDepositContractAddress_NotHexAddress(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.DepositContractAddress = "abc?!"
+	params.OverrideBeaconConfig(config)
+
+	_, err := DepositContractAddress()
+	assert.ErrorContains(t, "invalid deposit contract address given", err)
+}
+
+func TestDepositContractAddress_OK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	addr, err := DepositContractAddress()
+	require.NoError(t, err)
+	assert.Equal(t, params.BeaconConfig().DepositContractAddress, addr)
+}
+
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []string{endpoint},
-		BeaconDB:      beaconDB,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDatabase(beaconDB),
+	)
 	require.NoError(t, err, "Unable to setup web3 ETH1.0 chain service")
 
 	web3Service = setDefaultMocks(web3Service)
@@ -48,10 +76,10 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []string{endpoint},
-		BeaconDB:      beaconDB,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDatabase(beaconDB),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
@@ -74,10 +102,10 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []string{endpoint},
-		BeaconDB:      beaconDB,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDatabase(beaconDB),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
@@ -110,16 +138,16 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []string{endpoint},
-		BeaconDB:      beaconDB,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDatabase(beaconDB),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
 	deposits, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	var fakeSig [96]byte
+	var fakeSig [fieldparams.BLSSignatureLength]byte
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = fakeSig[:]
 
@@ -145,10 +173,10 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []string{endpoint},
-		BeaconDB:      beaconDB,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDatabase(beaconDB),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 
@@ -177,10 +205,10 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []string{endpoint},
-		BeaconDB:      beaconDB,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDatabase(beaconDB),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 	require.NoError(t, web3Service.preGenesisState.SetValidators([]*ethpb.Validator{}))
@@ -189,7 +217,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		Data: &ethpb.Deposit_Data{
 			Amount:                params.BeaconConfig().EffectiveBalanceIncrement, // incomplete deposit
 			WithdrawalCredentials: bytesutil.PadTo([]byte("testing"), 32),
-			Signature:             bytesutil.PadTo([]byte("test"), 96),
+			Signature:             bytesutil.PadTo([]byte("test"), fieldparams.BLSSignatureLength),
 		},
 	}
 
@@ -220,7 +248,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	factor := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// deposit till 31e9
 	for i := 0; i < int(factor-1); i++ {
-		trie.Insert(dataRoot[:], i)
+		assert.NoError(t, trie.Insert(dataRoot[:], i))
 
 		trieRoot := trie.HashTreeRoot()
 		eth1Data.DepositRoot = trieRoot[:]
@@ -239,10 +267,10 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		HttpEndpoints: []string{endpoint},
-		BeaconDB:      beaconDB,
-	})
+	web3Service, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
+		WithDatabase(beaconDB),
+	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	web3Service = setDefaultMocks(web3Service)
 

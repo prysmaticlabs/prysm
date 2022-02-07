@@ -3,12 +3,11 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	bolt "go.etcd.io/bbolt"
@@ -84,14 +83,13 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		if signedBlock == nil || signedBlock.IsNil() || signedBlock.Block().IsNil() {
-			err := fmt.Errorf("missing block in database: block root=%#x", root)
+		if err := helpers.BeaconBlockIsNil(signedBlock); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}
 		block := signedBlock.Block()
 
-		container := &dbpb.FinalizedBlockRootContainer{
+		container := &ethpb.FinalizedBlockRootContainer{
 			ParentRoot: block.ParentRoot(),
 			ChildRoot:  previousRoot,
 		}
@@ -108,7 +106,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 
 		// Found parent, loop exit condition.
 		if parentBytes := bkt.Get(block.ParentRoot()); parentBytes != nil {
-			parent := &dbpb.FinalizedBlockRootContainer{}
+			parent := &ethpb.FinalizedBlockRootContainer{}
 			if err := decode(ctx, parentBytes, parent); err != nil {
 				tracing.AnnotateError(span, err)
 				return err
@@ -161,7 +159,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 // Note: beacon blocks from the latest finalized epoch return true, whether or not they are
 // considered canonical in the "head view" of the beacon node.
 func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
+	_, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
 	defer span.End()
 
 	var exists bool
@@ -196,7 +194,7 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (bl
 		if bytes.Equal(blkBytes, containerFinalizedButNotCanonical) {
 			return nil
 		}
-		ctr := &dbpb.FinalizedBlockRootContainer{}
+		ctr := &ethpb.FinalizedBlockRootContainer{}
 		if err := decode(ctx, blkBytes, ctr); err != nil {
 			tracing.AnnotateError(span, err)
 			return err

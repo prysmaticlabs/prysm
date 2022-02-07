@@ -24,7 +24,7 @@ import (
 // ListPoolAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block. Allows filtering by committee index or slot.
 func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpbv1.AttestationsPoolRequest) (*ethpbv1.AttestationsPoolResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolAttestations")
+	_, span := trace.StartSpan(ctx, "beacon.ListPoolAttestations")
 	defer span.End()
 
 	attestations := bs.AttestationsPool.AggregatedAttestations()
@@ -281,7 +281,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 	}
 
 	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, alphaExit)
-	if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+	if err := bs.Broadcaster.Broadcast(ctx, alphaExit); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
 	}
 

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -14,32 +15,36 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/gateway"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/runtime/prereqs"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
+	validatorMiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -62,6 +67,7 @@ type ValidatorClient struct {
 
 // NewValidatorClient creates a new instance of the Prysm validator client.
 func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
+	// TODO(#9883) - Maybe we can pass in a new validator client config instead of the cliCTX to abstract away the use of flags here .
 	if err := tracing2.Setup(
 		"validator", // service name
 		cliCtx.String(cmd.TracingProcessNameFlag.Name),
@@ -104,6 +110,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
+		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+			return nil, errors.New("web3signer cannot be used with --web")
+		}
 		log.Info("Enabling web portal to manage the validator client")
 		if err := validatorClient.initializeForWeb(cliCtx); err != nil {
 			return nil, err
@@ -172,36 +181,31 @@ func (c *ValidatorClient) Close() {
 }
 
 func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
-	var keyManager keymanager.IKeymanager
 	var err error
-	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
-		numValidatorKeys := cliCtx.Uint64(flags.InteropNumValidators.Name)
-		offset := cliCtx.Uint64(flags.InteropStartIndex.Name)
-		keyManager, err = imported.NewInteropKeymanager(cliCtx.Context, offset, numValidatorKeys)
-		if err != nil {
-			return errors.Wrap(err, "could not generate interop keys")
-		}
-	} else {
-		// Read the wallet from the specified path.
-		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-			return nil, wallet.ErrNoWalletFound
-		})
-		if err != nil {
-			return errors.Wrap(err, "could not open wallet")
-		}
-		c.wallet = w
-		log.WithFields(logrus.Fields{
-			"wallet":          w.AccountsDir(),
-			"keymanager-kind": w.KeymanagerKind().String(),
-		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
-		if err != nil {
-			return errors.Wrap(err, "could not read keymanager for wallet")
-		}
-	}
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if c.wallet != nil {
-		dataDir = c.wallet.AccountsDir()
+	if !cliCtx.IsSet(flags.InteropNumValidators.Name) {
+		// Custom Check For Web3Signer
+		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+			if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) && cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+				c.wallet = wallet.NewWalletForWeb3Signer()
+			} else {
+				return errors.New("--validators-external-signer-url and --validators-external-signer-public-keys must be used together")
+			}
+		} else {
+			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+				return nil, wallet.ErrNoWalletFound
+			})
+			if err != nil {
+				return errors.Wrap(err, "could not open wallet")
+			}
+			c.wallet = w
+			// TODO(#9883) - Remove this when we have a better way to handle this.
+			log.WithFields(logrus.Fields{
+				"wallet":          w.AccountsDir(),
+				"keymanager-kind": w.KeymanagerKind().String(),
+			}).Info("Opened validator wallet")
+			dataDir = c.wallet.AccountsDir()
+		}
 	}
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
@@ -249,11 +253,11 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if err := c.registerValidatorService(keyManager); err != nil {
+	if err := c.registerValidatorService(cliCtx); err != nil {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
-		if err := c.registerRPCService(cliCtx, keyManager); err != nil {
+		if err := c.registerRPCService(cliCtx); err != nil {
 			return err
 		}
 		if err := c.registerRPCGatewayService(cliCtx); err != nil {
@@ -264,7 +268,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
-	var keyManager keymanager.IKeymanager
 	var err error
 
 	// Read the wallet password file from the cli context.
@@ -279,17 +282,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	if w != nil {
-		c.wallet = w
-		log.WithFields(logrus.Fields{
-			"wallet":          w.AccountsDir(),
-			"keymanager-kind": w.KeymanagerKind().String(),
-		}).Info("Opened validator wallet")
-		keyManager, err = w.InitializeKeymanager(cliCtx.Context, accountsiface.InitKeymanagerConfig{ListenForChanges: true})
-		if err != nil {
-			return errors.Wrap(err, "could not read keymanager for wallet")
-		}
-	}
+	c.wallet = w
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if c.wallet != nil {
 		dataDir = c.wallet.AccountsDir()
@@ -333,10 +326,10 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 			return err
 		}
 	}
-	if err := c.registerValidatorService(keyManager); err != nil {
+	if err := c.registerValidatorService(cliCtx); err != nil {
 		return err
 	}
-	if err := c.registerRPCService(cliCtx, keyManager); err != nil {
+	if err := c.registerRPCService(cliCtx); err != nil {
 		return err
 	}
 	if err := c.registerRPCGatewayService(cliCtx); err != nil {
@@ -371,9 +364,7 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(service)
 }
 
-func (c *ValidatorClient) registerValidatorService(
-	keyManager keymanager.IKeymanager,
-) error {
+func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -383,6 +374,14 @@ func (c *ValidatorClient) registerValidatorService(
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+	var interopKeysConfig *local.InteropKeymanagerConfig
+	if c.cliCtx.IsSet(flags.InteropNumValidators.Name) {
+		interopKeysConfig = &local.InteropKeymanagerConfig{
+			Offset:           cliCtx.Uint64(flags.InteropStartIndex.Name),
+			NumValidatorKeys: cliCtx.Uint64(flags.InteropNumValidators.Name),
+		}
+	}
+
 	gStruct := &g.Graffiti{}
 	var err error
 	if c.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
@@ -393,10 +392,14 @@ func (c *ValidatorClient) registerValidatorService(
 		}
 	}
 
+	wsc, err := web3SignerConfig(c.cliCtx)
+	if err != nil {
+		return err
+	}
+
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
-		KeyManager:                 keyManager,
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
@@ -407,9 +410,12 @@ func (c *ValidatorClient) registerValidatorService(
 		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
 		ValDB:                      c.db,
 		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
+		InteropKeysConfig:          interopKeysConfig,
+		Wallet:                     c.wallet,
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
+		Web3SignerConfig:           wsc,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -418,7 +424,41 @@ func (c *ValidatorClient) registerValidatorService(
 	return c.services.RegisterService(v)
 }
 
-func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.IKeymanager) error {
+func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, error) {
+	var web3signerConfig *remote_web3signer.SetupConfig
+	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) && cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
+		publicKeysStr := cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name)
+		u, err := url.Parse(urlStr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "web3signer url %s is invalid", urlStr)
+		}
+		web3signerConfig = &remote_web3signer.SetupConfig{
+			BaseEndpoint:          u.String(),
+			GenesisValidatorsRoot: nil,
+		}
+		u, err = url.Parse(publicKeysStr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not parse %s as a URL for web3signer remote public keys", publicKeysStr)
+		}
+		if u != nil {
+			web3signerConfig.PublicKeysURL = publicKeysStr
+		} else {
+			var validatorKeys [][48]byte
+			for _, key := range strings.Split(publicKeysStr, ",") {
+				decodedKey, err := hexutil.Decode(key)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+				}
+				validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
+			}
+			web3signerConfig.ProvidedPublicKeys = validatorKeys
+		}
+	}
+	return web3signerConfig, nil
+}
+
+func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	var vs *client.ValidatorService
 	if err := c.services.FetchService(&vs); err != nil {
 		return err
@@ -448,7 +488,6 @@ func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context, km keymanager.
 		NodeGatewayEndpoint:      nodeGatewayEndpoint,
 		WalletDir:                walletDir,
 		Wallet:                   c.wallet,
-		Keymanager:               km,
 		ValidatorGatewayHost:     validatorGatewayHost,
 		ValidatorGatewayPort:     validatorGatewayPort,
 		ValidatorMonitoringHost:  validatorMonitoringHost,
@@ -483,15 +522,18 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		validatorpb.RegisterAuthHandler,
 		validatorpb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
+		validatorpb.RegisterHealthHandler,
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,
+		ethpbservice.RegisterKeyManagementHandler,
 	}
-	mux := gwruntime.NewServeMux(
+	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 			Marshaler: &gwruntime.JSONPb{
 				MarshalOptions: protojson.MarshalOptions{
 					EmitUnpopulated: true,
+					UseProtoNames:   true,
 				},
 				UnmarshalOptions: protojson.UnmarshalOptions{
 					DiscardUnknown: true,
@@ -502,28 +544,42 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 			"text/event-stream", &gwruntime.EventSourceJSONPb{},
 		),
 	)
-	muxHandler := func(h http.Handler, w http.ResponseWriter, req *http.Request) {
-		if strings.HasPrefix(req.URL.Path, "/api") {
-			http.StripPrefix("/api", h).ServeHTTP(w, req)
+	muxHandler := func(apiMware *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
+		// The validator gateway handler requires this special logic as it serves two kinds of APIs, namely
+		// the standard validator keymanager API under the /eth namespace, and the Prysm internal
+		// validator API under the /api namespace. Finally, it also serves requests to host the validator web UI.
+		if strings.HasPrefix(req.URL.Path, "/api/eth/") {
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			// If the prefix has /eth/, we handle it with the standard API gateway middleware.
+			apiMware.ServeHTTP(w, req)
+		} else if strings.HasPrefix(req.URL.Path, "/api") {
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			// Else, we handle with the Prysm API gateway without a middleware.
+			h(w, req)
 		} else {
+			// Finally, we handle with the web server.
 			web.Handler(w, req)
 		}
 	}
 
 	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
-		Patterns:      []string{"/accounts/", "/v2/"},
-		Mux:           mux,
+		Patterns:      []string{"/accounts/", "/v2/", "/internal/eth/v1/"},
+		Mux:           gwmux,
 	}
-
-	gw := gateway.New(
-		cliCtx.Context,
-		[]*gateway.PbMux{pbHandler},
-		muxHandler,
-		rpcAddr,
-		gatewayAddress,
-	).WithAllowedOrigins(allowedOrigins).WithMaxCallRecvMsgSize(maxCallSize)
-
+	opts := []gateway.Option{
+		gateway.WithRemoteAddr(rpcAddr),
+		gateway.WithGatewayAddr(gatewayAddress),
+		gateway.WithMaxCallRecvMsgSize(maxCallSize),
+		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
+		gateway.WithAllowedOrigins(allowedOrigins),
+		gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}),
+		gateway.WithMuxHandler(muxHandler),
+	}
+	gw, err := gateway.New(cliCtx.Context, opts...)
+	if err != nil {
+		return err
+	}
 	return c.services.RegisterService(gw)
 }
 

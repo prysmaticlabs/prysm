@@ -11,19 +11,18 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
@@ -53,6 +52,8 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			keymanagerKind = pb.KeymanagerKind_DERIVED
 		case keymanager.Remote:
 			keymanagerKind = pb.KeymanagerKind_REMOTE
+		case keymanager.Web3Signer:
+			keymanagerKind = pb.KeymanagerKind_WEB3SIGNER
 		}
 		return &pb.CreateWalletResponse{
 			Wallet: &pb.WalletResponse{
@@ -61,11 +62,14 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			},
 		}, nil
 	}
+	if err := prompt.ValidatePasswordInput(req.WalletPassword); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Password too weak: %v", err)
+	}
 	if req.Keymanager == pb.KeymanagerKind_IMPORTED {
 		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
 			WalletCfg: &wallet.Config{
 				WalletDir:      walletDir,
-				KeymanagerKind: keymanager.Imported,
+				KeymanagerKind: keymanager.Local,
 				WalletPassword: req.WalletPassword,
 			},
 			SkipMnemonicConfirm: true,
@@ -75,7 +79,7 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: req.WalletPassword,
 		}); err != nil {
 			return nil, err
@@ -114,7 +118,7 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 		return nil, status.Errorf(codes.FailedPrecondition, invalidWalletMsg)
 	}
 
-	if s.wallet == nil || s.keymanager == nil {
+	if s.wallet == nil || s.validatorService == nil {
 		// If no wallet is found, we simply return an empty response.
 		return &pb.WalletResponse{}, nil
 	}
@@ -122,11 +126,14 @@ func (s *Server) WalletConfig(_ context.Context, _ *empty.Empty) (*pb.WalletResp
 	switch s.wallet.KeymanagerKind() {
 	case keymanager.Derived:
 		keymanagerKind = pb.KeymanagerKind_DERIVED
-	case keymanager.Imported:
+	case keymanager.Local:
 		keymanagerKind = pb.KeymanagerKind_IMPORTED
 	case keymanager.Remote:
 		keymanagerKind = pb.KeymanagerKind_REMOTE
+	case keymanager.Web3Signer:
+		keymanagerKind = pb.KeymanagerKind_WEB3SIGNER
 	}
+
 	return &pb.WalletResponse{
 		WalletPath:     s.walletDir,
 		KeymanagerKind: keymanagerKind,
@@ -208,36 +215,63 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 	}, nil
 }
 
-// GenerateMnemonic creates a new, random bip39 mnemonic phrase.
-func (s *Server) GenerateMnemonic(_ context.Context, _ *empty.Empty) (*pb.GenerateMnemonicResponse, error) {
-	mnemonicRandomness := make([]byte, 32)
-	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
-		return nil, status.Errorf(
-			codes.FailedPrecondition,
-			"Could not initialize mnemonic source of randomness: %v",
-			err,
-		)
+// ValidateKeystores checks whether a set of EIP-2335 keystores in the request
+// can indeed be decrypted using a password in the request. If there is no issue,
+// we return an empty response with no error. If the password is incorrect for a single keystore,
+// we return an appropriate error.
+func (_ *Server) ValidateKeystores(
+	_ context.Context, req *pb.ValidateKeystoresRequest,
+) (*emptypb.Empty, error) {
+	if req.KeystoresPassword == "" {
+		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
 	}
-	mnemonic, err := bip39.NewMnemonic(mnemonicRandomness)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not generate wallet seed: %v", err)
+	// Needs to unmarshal the keystores from the requests.
+	if req.Keystores == nil || len(req.Keystores) < 1 {
+		return nil, status.Error(codes.InvalidArgument, "No keystores included in request")
 	}
-	return &pb.GenerateMnemonicResponse{
-		Mnemonic: mnemonic,
-	}, nil
+	decryptor := keystorev4.New()
+	for i := 0; i < len(req.Keystores); i++ {
+		encoded := req.Keystores[i]
+		keystore := &keymanager.Keystore{}
+		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
+		}
+		if _, err := decryptor.Decrypt(keystore.Crypto, req.KeystoresPassword); err != nil {
+			doesNotDecrypt := strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg)
+			if doesNotDecrypt {
+				return nil, status.Errorf(
+					codes.InvalidArgument,
+					"Password for keystore with public key %s is incorrect. "+
+						"Prysm web only supports importing batches of keystores with the same password for all of them",
+					keystore.Pubkey,
+				)
+			} else {
+				return nil, status.Errorf(codes.Internal, "Unexpected error decrypting keystore: %v", err)
+			}
+		}
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
-// ImportKeystores allows importing new keystores via RPC into the wallet
+// ImportAccounts allows importing new keystores via RPC into the wallet
 // which will be decrypted using the specified password .
-func (s *Server) ImportKeystores(
-	ctx context.Context, req *pb.ImportKeystoresRequest,
-) (*pb.ImportKeystoresResponse, error) {
+func (s *Server) ImportAccounts(
+	ctx context.Context, req *pb.ImportAccountsRequest,
+) (*pb.ImportAccountsResponse, error) {
 	if s.wallet == nil {
 		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
 	}
-	km, ok := s.keymanager.(*imported.Keymanager)
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "No validator service initialized")
+	}
+	ikm, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "No keymanager initialized")
+	}
+	km, ok := ikm.(keymanager.Importer)
 	if !ok {
-		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import more keystores")
+		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import keystores")
 	}
 	if req.KeystoresPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
@@ -262,15 +296,19 @@ func (s *Server) ImportKeystores(
 		importedPubKeys[i] = pubKey
 	}
 	// Import the uploaded accounts.
-	if err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
-		Keymanager:      km,
+	statuses, err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
+		Importer:        km,
 		Keystores:       keystores,
 		AccountPassword: req.KeystoresPassword,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
+	if len(statuses) == 0 {
+		return nil, status.Error(codes.Internal, "No statuses returned from import")
+	}
 	s.walletInitializedFeed.Send(s.wallet)
-	return &pb.ImportKeystoresResponse{
+	return &pb.ImportAccountsResponse{
 		ImportedPublicKeys: importedPubKeys,
 	}, nil
 }
@@ -307,22 +345,11 @@ func (s *Server) initializeWallet(ctx context.Context, cfg *wallet.Config) error
 	}
 
 	s.walletInitialized = true
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: true})
-	if err != nil {
-		return errors.Wrap(err, accounts.ErrCouldNotInitializeKeymanager)
-	}
-	s.keymanager = km
 	s.wallet = w
 	s.walletDir = cfg.WalletDir
 
-	// Only send over feed if we have validating keys.
-	validatingPublicKeys, err := km.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not check for validating public keys")
-	}
-	if len(validatingPublicKeys) > 0 {
-		s.walletInitializedFeed.Send(w)
-	}
+	s.walletInitializedFeed.Send(w)
+
 	return nil
 }
 

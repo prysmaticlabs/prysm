@@ -31,6 +31,10 @@ type POWChain struct {
 	Eth1Data          *ethpb.Eth1Data
 	GenesisEth1Block  *big.Int
 	GenesisState      state.BeaconState
+	CurrEndpoint      string
+	CurrError         error
+	Endpoints         []string
+	Errors            []error
 }
 
 // GenesisTime represents a static past date - JAN 01 2000.
@@ -55,7 +59,7 @@ func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 }
 
 // DepositTrie --
-func (m *POWChain) DepositTrie() *trie.SparseMerkleTrie {
+func (_ *POWChain) DepositTrie() *trie.SparseMerkleTrie {
 	return &trie.SparseMerkleTrie{}
 }
 
@@ -104,13 +108,13 @@ func (m *POWChain) BlockByTimestamp(_ context.Context, time uint64) (*types.Head
 }
 
 // DepositRoot --
-func (m *POWChain) DepositRoot() [32]byte {
+func (_ *POWChain) DepositRoot() [32]byte {
 	root := []byte("depositroot")
 	return bytesutil.ToBytes32(root)
 }
 
 // ChainStartDeposits --
-func (m *POWChain) ChainStartDeposits() []*ethpb.Deposit {
+func (_ *POWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
@@ -125,13 +129,29 @@ func (m *POWChain) PreGenesisState() state.BeaconState {
 }
 
 // ClearPreGenesisData --
-func (m *POWChain) ClearPreGenesisData() {
+func (_ *POWChain) ClearPreGenesisData() {
 	// no-op
 }
 
 // IsConnectedToETH1 --
-func (m *POWChain) IsConnectedToETH1() bool {
+func (_ *POWChain) IsConnectedToETH1() bool {
 	return true
+}
+
+func (m *POWChain) CurrentETH1Endpoint() string {
+	return m.CurrEndpoint
+}
+
+func (m *POWChain) CurrentETH1ConnectionError() error {
+	return m.CurrError
+}
+
+func (m *POWChain) ETH1Endpoints() []string {
+	return m.Endpoints
+}
+
+func (m *POWChain) ETH1ConnectionErrors() []error {
+	return m.Errors
 }
 
 // RPCClient defines the mock rpc client.

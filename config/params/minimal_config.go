@@ -82,20 +82,21 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
 
 	minimalConfig.DepositContractTreeDepth = 32
-	minimalConfig.FarFutureEpoch = 1<<64 - 1
-	minimalConfig.FarFutureSlot = 1<<64 - 1
+	minimalConfig.FarFutureEpoch = math.MaxUint64
+	minimalConfig.FarFutureSlot = math.MaxUint64
 
 	// New Altair params
 	minimalConfig.AltairForkVersion = []byte{1, 0, 0, 1} // Highest byte set to 0x01 to avoid collisions with mainnet versioning
 	minimalConfig.AltairForkEpoch = math.MaxUint64
-	minimalConfig.MergeForkVersion = []byte{2, 0, 0, 1}
-	minimalConfig.MergeForkEpoch = math.MaxUint64
+	minimalConfig.BellatrixForkVersion = []byte{2, 0, 0, 1}
+	minimalConfig.BellatrixForkEpoch = math.MaxUint64
 	minimalConfig.ShardingForkVersion = []byte{3, 0, 0, 1}
 	minimalConfig.ShardingForkEpoch = math.MaxUint64
 	// Manually set fork version schedule here.
 	minimalConfig.ForkVersionSchedule = map[[4]byte]types.Epoch{
 		{0, 0, 0, 1}: 0,
 		{1, 0, 0, 1}: math.MaxUint64,
+		{2, 0, 0, 1}: math.MaxUint64,
 	}
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4

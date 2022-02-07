@@ -14,7 +14,7 @@ import (
 func TestHeadSlot_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg: &Config{BeaconDB: beaconDB},
+		cfg: &config{BeaconDB: beaconDB},
 	}
 	go func() {
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))
@@ -25,7 +25,7 @@ func TestHeadSlot_DataRace(t *testing.T) {
 func TestHeadRoot_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:  &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg:  &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 		head: &head{root: [32]byte{'A'}},
 	}
 	go func() {
@@ -38,7 +38,7 @@ func TestHeadRoot_DataRace(t *testing.T) {
 func TestHeadBlock_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:  &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg:  &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 		head: &head{block: wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{})},
 	}
 	go func() {
@@ -51,7 +51,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 func TestHeadState_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg: &Config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 	}
 	go func() {
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))

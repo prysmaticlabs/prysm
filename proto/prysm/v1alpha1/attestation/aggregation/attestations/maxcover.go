@@ -13,63 +13,8 @@ import (
 // MaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
 // Aggregation occurs in many rounds, up until no more aggregation is possible (all attestations
 // are overlapping).
-func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
-	if len(atts) < 2 {
-		return atts, nil
-	}
-
-	aggregated := attList(make([]*ethpb.Attestation, 0, len(atts)))
-	unaggregated := attList(atts)
-
-	if err := unaggregated.validate(); err != nil {
-		return nil, err
-	}
-
-	// Aggregation over n/2 rounds is enough to find all aggregatable items (exits earlier if there
-	// are many items that can be aggregated).
-	for i := 0; i < len(atts)/2; i++ {
-		if len(unaggregated) < 2 {
-			break
-		}
-
-		// Find maximum non-overlapping coverage.
-		maxCover := NewMaxCover(unaggregated)
-		solution, err := maxCover.Cover(len(atts), false /* allowOverlaps */)
-		if err != nil {
-			return aggregated.merge(unaggregated), err
-		}
-
-		// Exit earlier, if possible cover does not allow aggregation (less than two items).
-		if len(solution.Keys) < 2 {
-			break
-		}
-
-		// Create aggregated attestation and update solution lists.
-		if has, err := aggregated.hasCoverage(solution.Coverage); err != nil {
-			return nil, err
-		} else if !has {
-			att, err := unaggregated.selectUsingKeys(solution.Keys).aggregate(solution.Coverage)
-			if err != nil {
-				return aggregated.merge(unaggregated), err
-			}
-			aggregated = append(aggregated, att)
-		}
-		unaggregated = unaggregated.selectComplementUsingKeys(solution.Keys)
-	}
-
-	filtered, err := unaggregated.filterContained()
-	if err != nil {
-		return nil, err
-	}
-	return aggregated.merge(filtered), nil
-}
-
-// optMaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
-// Aggregation occurs in many rounds, up until no more aggregation is possible (all attestations
-// are overlapping).
-// NB: this method will replace the MaxCoverAttestationAggregation() above (and will be renamed to it).
 // See https://hackmd.io/@farazdagi/in-place-attagg for design and rationale.
-func optMaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	if len(atts) < 2 {
 		return atts, nil
 	}

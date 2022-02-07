@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -22,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -52,8 +52,8 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
-		return nil, errors.New("nil block")
+	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+		return nil, err
 	}
 
 	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransition")
@@ -143,21 +143,34 @@ func ProcessSlotsUsingNextSlotCache(
 	if err != nil {
 		return nil, err
 	}
+	cachedStateExists := nextSlotState != nil && !nextSlotState.IsNil()
 	// If the next slot state is not nil (i.e. cache hit).
 	// We replace next slot state with parent state.
-	if nextSlotState != nil && !nextSlotState.IsNil() {
+	if cachedStateExists {
 		parentState = nextSlotState
 	}
 
+	// In the event our cached state has advanced our
+	// state to the desired slot, we exit early.
+	if cachedStateExists && parentState.Slot() == slot {
+		return parentState, nil
+	}
 	// Since next slot cache only advances state by 1 slot,
 	// we check if there's more slots that need to process.
-	if slot > parentState.Slot() {
-		parentState, err = ProcessSlots(ctx, parentState, slot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process slots")
-		}
+	parentState, err = ProcessSlots(ctx, parentState, slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process slots")
 	}
 	return parentState, nil
+}
+
+// ProcessSlotsIfPossible executes ProcessSlots on the input state when target slot is above the state's slot.
+// Otherwise, it returns the input state unchanged.
+func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, targetSlot types.Slot) (state.BeaconState, error) {
+	if targetSlot > state.Slot() {
+		return ProcessSlots(ctx, state, targetSlot)
+	}
+	return state, nil
 }
 
 // ProcessSlots process through skip slots and apply epoch transition when it's needed
@@ -215,10 +228,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		return nil, err
 	}
 	defer func() {
-		if err := SkipSlotCache.MarkNotInProgress(key); err != nil {
-			tracing.AnnotateError(span, err)
-			log.WithError(err).Error("Failed to mark skip slot no longer in progress")
-		}
+		SkipSlotCache.MarkNotInProgress(key)
 	}()
 
 	for state.Slot() < slot {
@@ -226,7 +236,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			tracing.AnnotateError(span, ctx.Err())
 			// Cache last best value.
 			if highestSlot < state.Slot() {
-				if err := SkipSlotCache.Put(ctx, key, state); err != nil {
+				if SkipSlotCache.Put(ctx, key, state); err != nil {
 					log.WithError(err).Error("Failed to put skip slot cache value")
 				}
 			}
@@ -237,7 +247,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
-		if CanProcessEpoch(state) {
+		if time.CanProcessEpoch(state) {
 			switch state.Version() {
 			case version.Phase0:
 				state, err = ProcessEpochPrecompute(ctx, state)
@@ -245,7 +255,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair:
+			case version.Altair, version.Bellatrix:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
@@ -260,8 +270,16 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
 
-		if CanUpgradeToAltair(state.Slot()) {
+		if time.CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if time.CanUpgradeToBellatrix(state.Slot()) {
+			state, err = execution.UpgradeToBellatrix(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err
@@ -270,27 +288,15 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	}
 
 	if highestSlot < state.Slot() {
-		if err := SkipSlotCache.Put(ctx, key, state); err != nil {
-			log.WithError(err).Error("Failed to put skip slot cache value")
-			tracing.AnnotateError(span, err)
-		}
+		SkipSlotCache.Put(ctx, key, state)
 	}
 
 	return state, nil
 }
 
-// CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.
-// Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
-func CanUpgradeToAltair(slot types.Slot) bool {
-	epochStart := slots.IsEpochStart(slot)
-	altairEpoch := slots.ToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
-	return epochStart && altairEpoch
-}
-
 // VerifyOperationLengths verifies that block operation lengths are valid.
 func VerifyOperationLengths(_ context.Context, state state.BeaconState, b block.SignedBeaconBlock) (state.BeaconState, error) {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	body := b.Block().Body()
@@ -341,15 +347,6 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b block.
 	}
 
 	return state, nil
-}
-
-// CanProcessEpoch checks the eligibility to process epoch.
-// The epoch can be processed at the end of the last slot of every epoch
-//
-// Spec pseudocode definition:
-//    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-func CanProcessEpoch(state state.ReadOnlyBeaconState) bool {
-	return (state.Slot()+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.

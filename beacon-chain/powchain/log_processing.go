@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,7 +30,7 @@ var (
 	depositEventSignature = hash.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
-const eth1DataSavingInterval = 100
+const eth1DataSavingInterval = 1000
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositlogRequestLimit = 10000
@@ -52,7 +52,7 @@ func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-			s.cfg.DepositContract,
+			s.cfg.depositContractAddr,
 		},
 		FromBlock: blkNum,
 		ToBlock:   blkNum,
@@ -138,7 +138,9 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	if s.depositTrie.NumOfItems() != int(index) {
 		return errors.Errorf("invalid deposit index received: wanted %d but got %d", s.depositTrie.NumOfItems(), index)
 	}
-	s.depositTrie.Insert(depositHash[:], int(index))
+	if err = s.depositTrie.Insert(depositHash[:], int(index)); err != nil {
+		return err
+	}
 
 	deposit := &ethpb.Deposit{
 		Data: depositData,
@@ -153,7 +155,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	err = s.cfg.DepositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
+	err = s.cfg.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
 	if err != nil {
 		return errors.Wrap(err, "unable to insert deposit into cache")
 	}
@@ -170,7 +172,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			validData = false
 		}
 	} else {
-		s.cfg.DepositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
+		s.cfg.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -229,7 +231,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
 	}).Info("Minimum number of validators reached for beacon-chain to start")
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+	s.cfg.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.ChainStarted,
 		Data: &statefeed.ChainStartedData{
 			StartTime: chainStartTime,
@@ -242,7 +244,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	}
 }
 
-func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
+func createGenesisTime(timeStamp uint64) uint64 {
 	// adds in the genesis delay to the eth1 block time
 	// on which it was triggered.
 	return timeStamp + params.BeaconConfig().GenesisDelay
@@ -286,7 +288,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		return err
 	}
 
-	batchSize := s.cfg.Eth1HeaderReqLimit
+	batchSize := s.cfg.eth1HeaderReqLimit
 	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
 
 	for currentBlockNum < latestFollowHeight {
@@ -299,7 +301,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		query := ethereum.FilterQuery{
 			Addresses: []common.Address{
-				s.cfg.DepositContract,
+				s.cfg.depositContractAddr,
 			},
 			FromBlock: big.NewInt(int64(start)),
 			ToBlock:   big.NewInt(int64(end)),
@@ -352,18 +354,18 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		currentBlockNum = end
 
-		if batchSize < s.cfg.Eth1HeaderReqLimit {
+		if batchSize < s.cfg.eth1HeaderReqLimit {
 			// update the batchSize with additive increase
 			batchSize += additiveFactor
-			if batchSize > s.cfg.Eth1HeaderReqLimit {
-				batchSize = s.cfg.Eth1HeaderReqLimit
+			if batchSize > s.cfg.eth1HeaderReqLimit {
+				batchSize = s.cfg.eth1HeaderReqLimit
 			}
 		}
 	}
 
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum
 
-	c, err := s.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	c, err := s.cfg.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return err
 	}
@@ -372,12 +374,24 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if fRoot == params.BeaconConfig().ZeroHash {
 		return nil
 	}
-	fState, err := s.cfg.StateGen.StateByRoot(ctx, fRoot)
-	if err != nil {
-		return err
+	fState := s.cfg.finalizedStateAtStartup
+	isNil := fState == nil || fState.IsNil()
+
+	// If processing past logs take a long time, we
+	// need to check if this is the correct finalized
+	// state we are referring to and whether our cached
+	// finalized state is referring to our current finalized checkpoint.
+	// The current code does ignore an edge case where the finalized
+	// block is in a different epoch from the checkpoint's epoch.
+	// This only happens in skipped slots, so pruning it is not an issue.
+	if isNil || slots.ToEpoch(fState.Slot()) != c.Epoch {
+		fState, err = s.cfg.stateGen.StateByRoot(ctx, fRoot)
+		if err != nil {
+			return err
+		}
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
-		s.cfg.DepositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
+		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
 	}
 	return nil
 }
@@ -472,7 +486,7 @@ func (s *Service) currentCountAndTime(ctx context.Context, blockTime uint64) (ui
 		log.WithError(err).Error("Could not determine active validator count from pre genesis state")
 		return 0, 0
 	}
-	return valCount, s.createGenesisTime(blockTime)
+	return valCount, createGenesisTime(blockTime)
 }
 
 func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
@@ -493,12 +507,12 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	eth1Data := &protodb.ETH1ChainData{
+	eth1Data := &ethpb.ETH1ChainData{
 		CurrentEth1Data:   s.latestEth1Data,
 		ChainstartData:    s.chainStartData,
 		BeaconState:       pbState, // I promise not to mutate it!
 		Trie:              s.depositTrie.ToProto(),
-		DepositContainers: s.cfg.DepositCache.AllDepositContainers(ctx),
+		DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 	}
-	return s.cfg.BeaconDB.SavePowchainData(ctx, eth1Data)
+	return s.cfg.beaconDB.SavePowchainData(ctx, eth1Data)
 }

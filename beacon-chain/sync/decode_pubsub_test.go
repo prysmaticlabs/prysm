@@ -77,7 +77,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{
-				cfg: &Config{P2P: p2ptesting.NewTestP2P(t), Chain: &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()}},
+				cfg: &config{p2p: p2ptesting.NewTestP2P(t), chain: &mock.ChainService{ValidatorsRoot: [32]byte{}, Genesis: time.Now()}},
 			}
 			if tt.topic != "" {
 				if tt.input == nil {
@@ -85,10 +85,12 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				} else if tt.input.Message == nil {
 					tt.input.Message = &pb.Message{}
 				}
-				tt.input.Message.Topic = &tt.topic
+				// reassign because tt is a loop variable
+				topic := tt.topic
+				tt.input.Message.Topic = &topic
 			}
 			got, err := s.decodePubsubMessage(tt.input)
-			if err != tt.wantErr && !strings.Contains(err.Error(), tt.wantErr.Error()) {
+			if err != nil && err != tt.wantErr && !strings.Contains(err.Error(), tt.wantErr.Error()) {
 				t.Errorf("decodePubsubMessage() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}

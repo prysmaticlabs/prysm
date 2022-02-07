@@ -123,13 +123,15 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
+	ctx := context.Background()
 
 	state, _ := util.DeterministicGenesisState(t, 100)
 	r := [32]byte{'a'}
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: r[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
-	require.NoError(t, service.cacheJustifiedStateBalances(context.Background(), r))
-	require.DeepEqual(t, service.getJustifiedBalances(), state.Balances(), "Incorrect justified balances")
+	balances, err := service.justifiedBalances.get(ctx, r)
+	require.NoError(t, err)
+	require.DeepEqual(t, balances, state.Balances(), "Incorrect justified balances")
 }
 
 func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
@@ -141,9 +143,9 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	service.finalizedCheckpt = &ethpb.Checkpoint{}
-	service.bestJustifiedCheckpt = &ethpb.Checkpoint{}
+	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{})
+	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
 
 	require.NoError(t, service.updateHead(context.Background(), []uint64{}))
 }
@@ -153,10 +155,10 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		bState, _ := util.DeterministicGenesisState(t, 10)
 		notifier := &mock.MockStateNotifier{RecordEvents: true}
 		srv := &Service{
-			cfg: &Config{
+			cfg: &config{
 				StateNotifier: notifier,
 			},
-			genesisRoot: [32]byte{1},
+			originBlockRoot: [32]byte{1},
 		}
 		newHeadStateRoot := [32]byte{2}
 		newHeadRoot := [32]byte{3}
@@ -172,8 +174,8 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 			Block:                     newHeadRoot[:],
 			State:                     newHeadStateRoot[:],
 			EpochTransition:           false,
-			PreviousDutyDependentRoot: srv.genesisRoot[:],
-			CurrentDutyDependentRoot:  srv.genesisRoot[:],
+			PreviousDutyDependentRoot: srv.originBlockRoot[:],
+			CurrentDutyDependentRoot:  srv.originBlockRoot[:],
 		}
 		require.DeepSSZEqual(t, wanted, eventHead)
 	})
@@ -182,10 +184,10 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		notifier := &mock.MockStateNotifier{RecordEvents: true}
 		genesisRoot := [32]byte{1}
 		srv := &Service{
-			cfg: &Config{
+			cfg: &config{
 				StateNotifier: notifier,
 			},
-			genesisRoot: genesisRoot,
+			originBlockRoot: genesisRoot,
 		}
 		epoch1Start, err := slots.EpochStart(1)
 		require.NoError(t, err)

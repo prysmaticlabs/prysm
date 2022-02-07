@@ -88,9 +88,8 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
-
-	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
-		return errors.New("nil block")
+	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+		return err
 	}
 	b := signed.Block()
 
@@ -101,6 +100,14 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
+		return err
+	}
+
+	// We add a proposer score boost to fork choice for the block root if applicable, right after
+	// running a successful state transition for the block.
+	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
+		ctx, signed.Block().Slot(), blockRoot, s.genesisTime,
+	); err != nil {
 		return err
 	}
 
@@ -136,24 +143,40 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Update justified check point.
-	currJustifiedEpoch := s.justifiedCheckpt.Epoch
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	currJustifiedEpoch := justified.Epoch
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
 	}
 
-	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
 	if newFinalized {
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
-		}
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+		s.store.SetPrevFinalizedCheckpt(finalized)
+		s.store.SetFinalizedCheckpt(postState.FinalizedCheckpoint())
+		s.store.SetPrevJustifiedCheckpt(justified)
+		s.store.SetJustifiedCheckpt(postState.CurrentJustifiedCheckpoint())
 	}
 
-	if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
+		return errors.Wrap(err, msg)
+	}
+	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
+	}
+
+	if err := s.saveSyncedTipsDB(ctx); err != nil {
+		return errors.Wrap(err, "could not save synced tips")
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
@@ -172,18 +195,16 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	})
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	if features.Get().EnableNextSlotStateCache {
-		go func() {
-			// Use a custom deadline here, since this method runs asynchronously.
-			// We ignore the parent method's context and instead create a new one
-			// with a custom deadline, therefore using the background context instead.
-			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-			defer cancel()
-			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-				log.WithError(err).Debug("could not update next slot state cache")
-			}
-		}()
-	}
+	go func() {
+		// Use a custom deadline here, since this method runs asynchronously.
+		// We ignore the parent method's context and instead create a new one
+		// with a custom deadline, therefore using the background context instead.
+		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+		defer cancel()
+		if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+			log.WithError(err).Debug("could not update next slot state cache")
+		}
+	}()
 
 	// Save justified check point to db.
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
@@ -237,8 +258,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	if len(blks) == 0 || len(blockRoots) == 0 {
 		return nil, nil, errors.New("no blocks provided")
 	}
-	if blks[0] == nil || blks[0].IsNil() || blks[0].Block().IsNil() {
-		return nil, nil, errors.New("nil block")
+	if err := helpers.BeaconBlockIsNil(blks[0]); err != nil {
+		return nil, nil, err
 	}
 	b := blks[0].Block()
 
@@ -256,12 +277,12 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
-	sigSet := &bls.SignatureSet{
+	sigSet := &bls.SignatureBatch{
 		Signatures: [][]byte{},
 		PublicKeys: []bls.PublicKey{},
 		Messages:   [][32]byte{},
 	}
-	var set *bls.SignatureSet
+	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
@@ -313,6 +334,10 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
+	if err := s.saveSyncedTipsDB(ctx); err != nil {
+		return errors.Wrap(err, "could not save synced tips")
+	}
+
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: signed.Block().Slot(),
 		Root: blockRoot[:],
@@ -328,19 +353,27 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		s.clearInitSyncBlocks()
 	}
 
-	if jCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	if jCheckpoint.Epoch > justified.Epoch {
 		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
 			return err
 		}
 	}
 
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if fCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+	if fCheckpoint.Epoch > finalized.Epoch {
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = fCheckpoint
+		s.store.SetPrevFinalizedCheckpt(finalized)
+		s.store.SetFinalizedCheckpt(fCheckpoint)
 	}
 	return nil
 }
@@ -475,4 +508,13 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 		}
 	}
 	return nil
+}
+
+// Saves synced and validated tips to DB.
+func (s *Service) saveSyncedTipsDB(ctx context.Context) error {
+	tips := s.cfg.ForkChoiceStore.SyncedTips()
+	if len(tips) == 0 {
+		return nil
+	}
+	return s.cfg.BeaconDB.UpdateValidatedTips(ctx, tips)
 }

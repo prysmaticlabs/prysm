@@ -124,7 +124,11 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, err
 	}
 	if s.Slot() < epochStartSlot {
-		s, err = transition.ProcessSlots(ctx, s, epochStartSlot)
+		headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+		}
+		s, err = transition.ProcessSlotsUsingNextSlotCache(ctx, s, headRoot, epochStartSlot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
@@ -183,7 +187,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		}
 
 		// Are the validators in current or next epoch sync committee.
-		if coreTime.AltairCompatible(s, req.Epoch) {
+		if ok && coreTime.AltairCompatible(s, req.Epoch) {
 			assignment.IsSyncCommittee, err = helpers.IsCurrentPeriodSyncCommittee(s, idx)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine current epoch sync committee: %v", err)

@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -14,11 +15,14 @@ type ForkChoicer interface {
 	AttestationProcessor // to track new attestation for fork choice.
 	Pruner               // to clean old data for fork choice.
 	Getter               // to retrieve fork choice information.
+	ProposerBooster      // ability to boost timely-proposed block roots.
+	SyncTipper           // to update and retrieve validated sync tips.
 }
 
-// HeadRetriever retrieves head root of the current chain.
+// HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
 	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
+	Optimistic(ctx context.Context, root [32]byte, slot types.Slot) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
@@ -36,6 +40,12 @@ type Pruner interface {
 	Prune(context.Context, [32]byte) error
 }
 
+// ProposerBooster is able to boost the proposer's root score during fork choice.
+type ProposerBooster interface {
+	BoostProposerRoot(ctx context.Context, blockSlot types.Slot, blockRoot [32]byte, genesisTime time.Time) error
+	ResetBoostedProposerRoot(ctx context.Context) error
+}
+
 // Getter returns fork choice related information.
 type Getter interface {
 	Nodes() []*protoarray.Node
@@ -45,4 +55,11 @@ type Getter interface {
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
 	IsCanonical(root [32]byte) bool
+}
+
+// SyncTipper returns sync tips related information.
+type SyncTipper interface {
+	SyncedTips() map[[32]byte]types.Slot
+	UpdateSyncedTipsWithValidRoot(ctx context.Context, root [32]byte) error
+	UpdateSyncedTipsWithInvalidRoot(ctx context.Context, root [32]byte) error
 }

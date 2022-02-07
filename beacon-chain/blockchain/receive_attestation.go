@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -41,7 +42,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	if err := s.onAttestation(ctx, att); err != nil {
+	if err := s.OnAttestation(ctx, att); err != nil {
 		return errors.Wrap(err, "could not process attestation")
 	}
 
@@ -87,6 +88,9 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	}
 
 	f := s.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
@@ -103,39 +107,66 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 }
 
 // This routine processes fork choice attestations from the pool to account for validator votes and fork choice.
-func (s *Service) processAttestationsRoutine(subscribedToStateEvents chan<- struct{}) {
+func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	subscribedToStateEvents <- struct{}{}
-	<-stateChannel
-	stateSub.Unsubscribe()
-
-	if s.genesisTime.IsZero() {
-		log.Warn("ProcessAttestations routine waiting for genesis time")
-		for s.genesisTime.IsZero() {
-			time.Sleep(1 * time.Second)
-		}
-		log.Warn("Genesis time received, now available to process attestations")
-	}
-
-	st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
-	for {
+	stateSub := stateFeed.Subscribe(stateChannel)
+	go func() {
 		select {
 		case <-s.ctx.Done():
+			stateSub.Unsubscribe()
 			return
-		case <-st.C():
-			// Continue when there's no fork choice attestation, there's nothing to process and update head.
-			// This covers the condition when the node is still initial syncing to the head of the chain.
-			if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
-				continue
+		case <-stateChannel:
+			stateSub.Unsubscribe()
+			break
+		}
+
+		if s.genesisTime.IsZero() {
+			log.Warn("ProcessAttestations routine waiting for genesis time")
+			for s.genesisTime.IsZero() {
+				if err := s.ctx.Err(); err != nil {
+					log.WithError(err).Error("Giving up waiting for genesis time")
+					return
+				}
+				time.Sleep(1 * time.Second)
 			}
-			s.processAttestations(s.ctx)
-			if err := s.updateHead(s.ctx, s.getJustifiedBalances()); err != nil {
-				log.Warnf("Resolving fork due to new attestation: %v", err)
+			log.Warn("Genesis time received, now available to process attestations")
+		}
+
+		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+		for {
+			select {
+			case <-s.ctx.Done():
+				return
+			case <-st.C():
+				if err := s.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+					log.WithError(err).Error("Could not process new slot")
+					return
+				}
+
+				// Continue when there's no fork choice attestation, there's nothing to process and update head.
+				// This covers the condition when the node is still initial syncing to the head of the chain.
+				if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
+					continue
+				}
+				s.processAttestations(s.ctx)
+
+				justified := s.store.JustifiedCheckpt()
+				if justified == nil {
+					log.WithError(errNilJustifiedInStore).Error("Could not get justified checkpoint")
+					continue
+				}
+				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(justified.Root))
+				if err != nil {
+					log.WithError(err).Errorf("Unable to get justified balances for root %v", justified.Root)
+					continue
+				}
+				if err := s.updateHead(s.ctx, balances); err != nil {
+					log.WithError(err).Warn("Resolving fork due to new attestation")
+				}
 			}
 		}
-	}
+	}()
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.

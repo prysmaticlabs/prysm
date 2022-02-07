@@ -24,7 +24,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	if err != nil {
 		return nil, errors.Wrapf(err, "extraction failed for topic: %s", topic)
 	}
-	topic = strings.TrimSuffix(topic, s.cfg.P2P.Encoding().ProtocolSuffix())
+	topic = strings.TrimSuffix(topic, s.cfg.p2p.Encoding().ProtocolSuffix())
 	topic, err = s.replaceForkDigest(topic)
 	if err != nil {
 		return nil, err
@@ -49,19 +49,19 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	}
 	// Handle different message types across forks.
 	if topic == p2p.BlockSubnetTopicFormat {
-		m, err = extractBlockDataType(fDigest[:], s.cfg.Chain)
+		m, err = extractBlockDataType(fDigest[:], s.cfg.chain)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if err := s.cfg.P2P.Encoding().DecodeGossip(msg.Data, m); err != nil {
+	if err := s.cfg.p2p.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
 // Replaces our fork digest with the formatter.
-func (s *Service) replaceForkDigest(topic string) (string, error) {
+func (_ *Service) replaceForkDigest(topic string) (string, error) {
 	subStrings := strings.Split(topic, "/")
 	if len(subStrings) != 4 {
 		return "", errInvalidTopic

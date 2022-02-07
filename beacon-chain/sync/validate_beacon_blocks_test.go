@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -60,7 +61,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	msg.Block.ParentRoot = bRoot[:]
 	msg.Block.Slot = 1
 	msg.Block.ProposerIndex = proposerIdx
-	msg.Signature = bytesutil.PadTo([]byte("fake"), 96)
+	msg.Signature = bytesutil.PadTo([]byte("fake"), fieldparams.BLSSignatureLength)
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
@@ -69,13 +70,13 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			Root:  make([]byte, 32),
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -109,12 +110,12 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -167,13 +168,13 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -231,13 +232,13 @@ func TestValidateBeaconBlockPubSub_IsInCache(t *testing.T) {
 		InitSyncBlockRoots: map[[32]byte]bool{bRoot: true},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -295,13 +296,13 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -361,13 +362,13 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -428,13 +429,13 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -478,12 +479,12 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: true},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: true},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 	}
 
@@ -534,13 +535,13 @@ func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
 			Root:  make([]byte, 32),
 		}}
 	r := &Service{
-		cfg: &Config{
-			P2P:           p,
-			DB:            db,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			p2p:           p,
+			beaconDB:      db,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		chainStarted:        abool.New(),
 		seenBlockCache:      lruwrpr.New(10),
@@ -586,12 +587,12 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
-		cfg: &Config{
-			P2P:           p,
-			DB:            db,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			p2p:           p,
+			beaconDB:      db,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 		chainStarted:        abool.New(),
 		seenBlockCache:      lruwrpr.New(10),
@@ -637,12 +638,12 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -692,12 +693,12 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -740,13 +741,13 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	}
 
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			Chain:         chain,
-			BlockNotifier: chain.BlockNotifier(),
-			AttPool:       attestations.NewPool(),
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			chain:         chain,
+			blockNotifier: chain.BlockNotifier(),
+			attPool:       attestations.NewPool(),
+			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -821,13 +822,13 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 		VerifyBlkDescendantErr: errors.New("not part of finalized chain"),
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -886,13 +887,13 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			Epoch: 0,
 		}}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -987,13 +988,13 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 		},
 	}
 	r := &Service{
-		cfg: &Config{
-			DB:            db,
-			P2P:           p,
-			InitialSync:   &mockSync.Sync{IsSyncing: false},
-			Chain:         chainService,
-			BlockNotifier: chainService.BlockNotifier(),
-			StateGen:      stateGen,
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -1044,4 +1045,158 @@ func TestService_isBlockQueueable(t *testing.T) {
 	receivedTime = currentTime.Add(-600 * time.Millisecond)
 	result = isBlockQueueable(genesisTime, blockSlot, receivedTime)
 	assert.Equal(t, true, result)
+}
+
+func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
+	parentBlock := util.NewBeaconBlockBellatrix()
+	signedParentBlock, err := wrapper.WrappedBellatrixSignedBeaconBlock(parentBlock)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	presentTime := time.Now().Unix()
+	require.NoError(t, beaconState.SetGenesisTime(uint64(presentTime)))
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
+	copied := beaconState.Copy()
+	require.NoError(t, copied.SetSlot(1))
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
+	require.NoError(t, err)
+
+	msg := util.NewBeaconBlockBellatrix()
+	msg.Block.ParentRoot = bRoot[:]
+	msg.Block.Slot = 1
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.Body.ExecutionPayload.Timestamp = uint64(presentTime) + params.BeaconConfig().SecondsPerSlot
+	msg.Block.Body.ExecutionPayload.GasUsed = 10
+	msg.Block.Body.ExecutionPayload.GasLimit = 11
+	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
+	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
+	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	stateGen := stategen.New(db)
+	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		}}
+	r := &Service{
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	genesisValidatorRoot := r.cfg.chain.GenesisValidatorRoot()
+	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
+	require.NoError(t, err)
+	topic = r.addDigestToTopic(topic, BellatrixDigest)
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+
+	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	require.NoError(t, err)
+	result := res == pubsub.ValidationAccept
+	require.Equal(t, true, result)
+}
+
+func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
+	parentBlock := util.NewBeaconBlockBellatrix()
+	signedParentBlock, err := wrapper.WrappedBellatrixSignedBeaconBlock(parentBlock)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
+	copied := beaconState.Copy()
+	require.NoError(t, copied.SetSlot(1))
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
+	require.NoError(t, err)
+
+	presentTime := time.Now().Unix()
+	msg := util.NewBeaconBlockBellatrix()
+	msg.Block.ParentRoot = bRoot[:]
+	msg.Block.Slot = 1
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.Body.ExecutionPayload.Timestamp = uint64(presentTime - 600) // add an invalid timestamp
+	msg.Block.Body.ExecutionPayload.GasUsed = 10
+	msg.Block.Body.ExecutionPayload.GasLimit = 11
+	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
+	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
+	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	stateGen := stategen.New(db)
+	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		}}
+	r := &Service{
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	genesisValidatorRoot := r.cfg.chain.GenesisValidatorRoot()
+	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorRoot[:])
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, BellatrixDigest)
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	require.NotNil(t, err)
+	result := res == pubsub.ValidationReject
+	assert.Equal(t, true, result)
+}
+
+func Test_validateBellatrixBeaconBlock(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateAltair(t, 1)
+	b := util.NewBeaconBlockBellatrix()
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.ErrorContains(t, "block and state are not the same version", validateBellatrixBeaconBlock(st, blk.Block()))
 }

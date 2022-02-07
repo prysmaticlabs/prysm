@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations/mock"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -26,8 +27,10 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -57,9 +60,14 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
+
+	// Deactivate last validator.
+	vals := bs.Validators()
+	vals[len(vals)-1].ExitEpoch = 0
+	require.NoError(t, bs.SetValidators(vals))
 
 	pubKeys := make([][]byte, len(deposits))
 	for i := 0; i < len(deposits); i++ {
@@ -86,13 +94,13 @@ func TestGetAttesterDuties(t *testing.T) {
 		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, types.CommitteeIndex(2), duty.CommitteeIndex)
-		assert.Equal(t, types.Slot(7), duty.Slot)
+		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
+		assert.Equal(t, types.Slot(0), duty.Slot)
 		assert.Equal(t, types.ValidatorIndex(0), duty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
-		assert.Equal(t, uint64(128), duty.CommitteeLength)
-		assert.Equal(t, uint64(4), duty.CommitteesAtSlot)
-		assert.Equal(t, types.CommitteeIndex(123), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, uint64(171), duty.CommitteeLength)
+		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
+		assert.Equal(t, types.CommitteeIndex(80), duty.ValidatorCommitteeIndex)
 	})
 
 	t.Run("Multiple validators", func(t *testing.T) {
@@ -115,13 +123,13 @@ func TestGetAttesterDuties(t *testing.T) {
 		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, types.CommitteeIndex(1), duty.CommitteeIndex)
-		assert.Equal(t, types.Slot(38), duty.Slot)
+		assert.Equal(t, types.CommitteeIndex(0), duty.CommitteeIndex)
+		assert.Equal(t, types.Slot(62), duty.Slot)
 		assert.Equal(t, types.ValidatorIndex(0), duty.ValidatorIndex)
 		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
-		assert.Equal(t, uint64(128), duty.CommitteeLength)
-		assert.Equal(t, uint64(4), duty.CommitteesAtSlot)
-		assert.Equal(t, types.CommitteeIndex(27), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, uint64(170), duty.CommitteeLength)
+		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
+		assert.Equal(t, types.CommitteeIndex(110), duty.ValidatorCommitteeIndex)
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
@@ -134,7 +142,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.NoError(t, bs.SetSlot(5))
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
-		roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+		roots := make([][]byte, fieldparams.BlockRootsLength)
 		roots[0] = genesisRoot[:]
 		require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -192,11 +200,24 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.NotNil(t, err)
 		assert.ErrorContains(t, "Invalid validator index", err)
 	})
+
+	t.Run("Inactive validator - no duties", func(t *testing.T) {
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: 0,
+			Index: []types.ValidatorIndex{types.ValidatorIndex(len(pubKeys) - 1)},
+		}
+		resp, err := vs.GetAttesterDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(resp.Data))
+	})
 }
 
 func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.GetAttesterDuties(context.Background(), &ethpbv1.AttesterDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
@@ -216,7 +237,7 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -251,8 +272,8 @@ func TestGetProposerDuties(t *testing.T) {
 			}
 		}
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, types.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
@@ -265,7 +286,7 @@ func TestGetProposerDuties(t *testing.T) {
 		require.NoError(t, bs.SetSlot(5))
 		genesisRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
-		roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+		roots := make([][]byte, fieldparams.BlockRootsLength)
 		roots[0] = genesisRoot[:]
 		require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -316,8 +337,11 @@ func TestGetProposerDuties(t *testing.T) {
 }
 
 func TestGetProposerDuties_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.GetProposerDuties(context.Background(), &ethpbv1.ProposerDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
@@ -325,24 +349,50 @@ func TestGetProposerDuties_SyncNotReady(t *testing.T) {
 
 func TestGetSyncCommitteeDuties(t *testing.T) {
 	ctx := context.Background()
-	numVals := uint64(10)
+	genesisTime := time.Now()
+	numVals := uint64(11)
 	st, _ := util.DeterministicGenesisStateAltair(t, numVals)
+	require.NoError(t, st.SetGenesisTime(uint64(genesisTime.Unix())))
 	vals := st.Validators()
-	committee := &ethpbalpha.SyncCommittee{}
-	for _, v := range vals {
-		committee.Pubkeys = append(committee.Pubkeys, v.PublicKey)
+	currCommittee := &ethpbalpha.SyncCommittee{}
+	for i := 0; i < 5; i++ {
+		currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
 	}
 	// add one public key twice - this is needed for one of the test cases
-	committee.Pubkeys = append(committee.Pubkeys, vals[0].PublicKey)
-	require.NoError(t, st.SetCurrentSyncCommittee(committee))
+	currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[0].PublicKey)
+	require.NoError(t, st.SetCurrentSyncCommittee(currCommittee))
+	nextCommittee := &ethpbalpha.SyncCommittee{}
+	for i := 5; i < 10; i++ {
+		nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
+	}
+	require.NoError(t, st.SetNextSyncCommittee(nextCommittee))
+
 	vs := &Server{
 		StateFetcher: &testutil.MockFetcher{BeaconState: st},
 		SyncChecker:  &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:  &mockChain.ChainService{Genesis: genesisTime},
 	}
 
 	t.Run("Single validator", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,
+			Index: []types.ValidatorIndex{1},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.DeepEqual(t, vals[1].PublicKey, duty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(1), duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		assert.Equal(t, uint64(1), duty.ValidatorSyncCommitteeIndices[0])
+	})
+
+	t.Run("Epoch not at period start", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 1,
 			Index: []types.ValidatorIndex{1},
 		}
 		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
@@ -367,6 +417,17 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		assert.Equal(t, 2, len(resp.Data))
 	})
 
+	t.Run("Validator without duty not returned", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 0,
+			Index: []types.ValidatorIndex{1, 10},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(resp.Data))
+		assert.Equal(t, types.ValidatorIndex(1), resp.Data[0].ValidatorIndex)
+	})
+
 	t.Run("Multiple indices for validator", func(t *testing.T) {
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,
@@ -376,7 +437,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.NoError(t, err)
 		duty := resp.Data[0]
 		require.Equal(t, 2, len(duty.ValidatorSyncCommitteeIndices))
-		assert.DeepEqual(t, []uint64{0, 10}, duty.ValidatorSyncCommitteeIndices)
+		assert.DeepEqual(t, []uint64{0, 5}, duty.ValidatorSyncCommitteeIndices)
 	})
 
 	t.Run("Validator index out of bound", func(t *testing.T) {
@@ -388,14 +449,105 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.NotNil(t, err)
 		assert.ErrorContains(t, "Invalid validator index", err)
 	})
+
+	t.Run("next sync committee period", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod,
+			Index: []types.ValidatorIndex{5},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.DeepEqual(t, vals[5].PublicKey, duty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(5), duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		assert.Equal(t, uint64(0), duty.ValidatorSyncCommitteeIndices[0])
+	})
+
+	t.Run("epoch too far in the future", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod * 2,
+			Index: []types.ValidatorIndex{5},
+		}
+		_, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Epoch is too far in the future", err)
+	})
+
+	t.Run("correct sync committee is fetched", func(t *testing.T) {
+		// in this test we swap validators in the current and next sync committee inside the new state
+
+		newSyncPeriodStartSlot := types.Slot(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * uint64(params.BeaconConfig().SlotsPerEpoch))
+		newSyncPeriodSt, _ := util.DeterministicGenesisStateAltair(t, numVals)
+		require.NoError(t, newSyncPeriodSt.SetSlot(newSyncPeriodStartSlot))
+		require.NoError(t, newSyncPeriodSt.SetGenesisTime(uint64(genesisTime.Unix())))
+		vals := newSyncPeriodSt.Validators()
+		currCommittee := &ethpbalpha.SyncCommittee{}
+		for i := 5; i < 10; i++ {
+			currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
+		}
+		require.NoError(t, newSyncPeriodSt.SetCurrentSyncCommittee(currCommittee))
+		nextCommittee := &ethpbalpha.SyncCommittee{}
+		for i := 0; i < 5; i++ {
+			nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
+		}
+		require.NoError(t, newSyncPeriodSt.SetNextSyncCommittee(nextCommittee))
+
+		stateFetchFn := func(slot types.Slot) beaconState.BeaconState {
+			if slot < newSyncPeriodStartSlot {
+				return st
+			} else {
+				return newSyncPeriodSt
+			}
+		}
+		vs := &Server{
+			StateFetcher: &testutil.MockFetcher{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
+			SyncChecker:  &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:  &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot},
+		}
+
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod,
+			Index: []types.ValidatorIndex{8},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.DeepEqual(t, vals[8].PublicKey, duty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(8), duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		assert.Equal(t, uint64(3), duty.ValidatorSyncCommitteeIndices[0])
+	})
 }
 
 func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
+}
+
+func TestSyncCommitteeDutiesLastValidEpoch(t *testing.T) {
+	t.Run("first epoch of current period", func(t *testing.T) {
+		assert.Equal(t, params.BeaconConfig().EpochsPerSyncCommitteePeriod*2-1, syncCommitteeDutiesLastValidEpoch(0))
+	})
+	t.Run("last epoch of current period", func(t *testing.T) {
+		assert.Equal(
+			t,
+			params.BeaconConfig().EpochsPerSyncCommitteePeriod*2-1,
+			syncCommitteeDutiesLastValidEpoch(params.BeaconConfig().EpochsPerSyncCommitteePeriod-1),
+		)
+	})
 }
 
 func TestProduceBlock(t *testing.T) {
@@ -803,7 +955,7 @@ func TestProduceAttestationData(t *testing.T) {
 func TestGetAggregateAttestation(t *testing.T) {
 	ctx := context.Background()
 	root1 := bytesutil.PadTo([]byte("root1"), 32)
-	sig1 := bytesutil.PadTo([]byte("sig1"), 96)
+	sig1 := bytesutil.PadTo([]byte("sig1"), fieldparams.BLSSignatureLength)
 	attSlot1 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -822,7 +974,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 		Signature: sig1,
 	}
 	root2_1 := bytesutil.PadTo([]byte("root2_1"), 32)
-	sig2_1 := bytesutil.PadTo([]byte("sig2_1"), 96)
+	sig2_1 := bytesutil.PadTo([]byte("sig2_1"), fieldparams.BLSSignatureLength)
 	attSlot2_1 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -841,7 +993,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 		Signature: sig2_1,
 	}
 	root2_2 := bytesutil.PadTo([]byte("root2_2"), 32)
-	sig2_2 := bytesutil.PadTo([]byte("sig2_2"), 96)
+	sig2_2 := bytesutil.PadTo([]byte("sig2_2"), fieldparams.BLSSignatureLength)
 	attSlot2_2 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1, 1, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -860,7 +1012,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 		Signature: sig2_2,
 	}
 	vs := &Server{
-		AttestationsPool: &attestations.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{attSlot1, attSlot2_1, attSlot2_2}},
+		AttestationsPool: &mock.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{attSlot1, attSlot2_1, attSlot2_2}},
 	}
 
 	t.Run("OK", func(t *testing.T) {
@@ -900,7 +1052,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *testing.T) {
 	ctx := context.Background()
 	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bytesutil.PadTo([]byte("sig"), 96)
+	sig := bytesutil.PadTo([]byte("sig"), fieldparams.BLSSignatureLength)
 	att1 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1},
 		Data: &ethpbalpha.AttestationData{
@@ -936,7 +1088,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 		Signature: sig,
 	}
 	vs := &Server{
-		AttestationsPool: &attestations.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{att1, att2}},
+		AttestationsPool: &mock.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{att1, att2}},
 	}
 
 	reqRoot, err := att1.Data.HashTreeRoot()
@@ -966,7 +1118,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -1002,7 +1154,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		require.NoError(t, err)
 		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
 		require.Equal(t, 1, len(subnets))
-		assert.Equal(t, uint64(5), subnets[0])
+		assert.Equal(t, uint64(4), subnets[0])
 	})
 
 	t.Run("Multiple subscriptions", func(t *testing.T) {
@@ -1086,8 +1238,11 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 }
 
 func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.SubmitBeaconCommitteeSubscription(context.Background(), &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
@@ -1104,7 +1259,7 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 	require.NoError(t, err, "Could not set up genesis state")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
 
@@ -1208,13 +1363,27 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 		assert.ErrorContains(t, "Epoch for subscription at index 0 is in the past", err)
 	})
 
+	t.Run("First epoch after the next sync committee is valid", func(t *testing.T) {
+		req := &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{
+			Data: []*ethpbv2.SyncCommitteeSubscription{
+				{
+					ValidatorIndex:       0,
+					SyncCommitteeIndices: []uint64{},
+					UntilEpoch:           2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod,
+				},
+			},
+		}
+		_, err = vs.SubmitSyncCommitteeSubscription(ctx, req)
+		require.NoError(t, err)
+	})
+
 	t.Run("Epoch too far in the future", func(t *testing.T) {
 		req := &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{
 			Data: []*ethpbv2.SyncCommitteeSubscription{
 				{
 					ValidatorIndex:       0,
 					SyncCommitteeIndices: []uint64{},
-					UntilEpoch:           params.BeaconConfig().EpochsPerSyncCommitteePeriod + 2,
+					UntilEpoch:           2*params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1,
 				},
 			},
 		}
@@ -1225,8 +1394,11 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 }
 
 func TestSubmitSyncCommitteeSubscription_SyncNotReady(t *testing.T) {
+	chainService := &mockChain.ChainService{}
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		HeadFetcher: chainService,
+		TimeFetcher: chainService,
 	}
 	_, err := vs.SubmitSyncCommitteeSubscription(context.Background(), &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
@@ -1239,8 +1411,8 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	c.MaximumGossipClockDisparity = time.Hour
 	params.OverrideBeaconNetworkConfig(c)
 	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bytesutil.PadTo([]byte("sig"), 96)
-	proof := bytesutil.PadTo([]byte("proof"), 96)
+	sig := bytesutil.PadTo([]byte("sig"), fieldparams.BLSSignatureLength)
+	proof := bytesutil.PadTo([]byte("proof"), fieldparams.BLSSignatureLength)
 	att := &ethpbv1.Attestation{
 		AggregationBits: []byte{0, 1},
 		Data: &ethpbv1.AttestationData{
@@ -1558,7 +1730,8 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 	aggBits := bitfield.NewBitvector128()
 	aggBits.SetBitAt(0, true)
 	v1Server := &v1alpha1validator.Server{
-		P2P: &p2pmock.MockBroadcaster{},
+		P2P:               &p2pmock.MockBroadcaster{},
+		OperationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 	}
 	server := &Server{
 		V1Alpha1Server: v1Server,

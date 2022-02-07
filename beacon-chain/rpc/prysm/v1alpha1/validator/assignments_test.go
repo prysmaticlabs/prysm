@@ -10,6 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -17,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -99,8 +101,7 @@ func TestGetDuties_OK(t *testing.T) {
 
 func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.UseMainnetConfig()
-	cfg := params.BeaconConfig().Copy()
+	cfg := params.MainnetConfig()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(cfg)
 
@@ -111,9 +112,9 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := util.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 	h := &ethpb.BeaconBlockHeader{
-		StateRoot:  bytesutil.PadTo([]byte{'a'}, 32),
-		ParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
-		BodyRoot:   bytesutil.PadTo([]byte{'c'}, 32),
+		StateRoot:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+		ParentRoot: bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		BodyRoot:   bytesutil.PadTo([]byte{'c'}, fieldparams.RootLength),
 	}
 	require.NoError(t, bs.SetLatestBlockHeader(h))
 	require.NoError(t, err, "Could not setup genesis bs")
@@ -132,7 +133,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)-1))
 	require.NoError(t, helpers.UpdateSyncCommitteeCache(bs))
 
-	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	pubkeysAs48ByteType := make([][fieldparams.BLSPubkeyLength]byte, len(pubKeys))
 	for i, pk := range pubKeys {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
@@ -199,6 +200,59 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	}
 }
 
+func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig()
+	cfg.AltairForkEpoch = types.Epoch(0)
+	params.OverrideBeaconConfig(cfg)
+
+	genesis := util.NewBeaconBlock()
+	deposits, _, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().SyncCommitteeSize)
+	require.NoError(t, err)
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
+	require.NoError(t, err)
+	bs, err := util.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	require.NoError(t, err)
+	h := &ethpb.BeaconBlockHeader{
+		StateRoot:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+		ParentRoot: bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		BodyRoot:   bytesutil.PadTo([]byte{'c'}, fieldparams.RootLength),
+	}
+	require.NoError(t, bs.SetLatestBlockHeader(h))
+	require.NoError(t, err, "Could not setup genesis bs")
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+
+	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)-1))
+	require.NoError(t, helpers.UpdateSyncCommitteeCache(bs))
+
+	slot := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * params.BeaconConfig().SecondsPerSlot
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Genesis: time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second),
+	}
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+
+	vs := &Server{
+		HeadFetcher:     chain,
+		TimeFetcher:     chain,
+		Eth1InfoFetcher: &mockPOW.POWChain{},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
+		DepositFetcher:  depositCache,
+	}
+
+	unknownPubkey := bytesutil.PadTo([]byte{'u'}, 48)
+	req := &ethpb.DutiesRequest{
+		PublicKeys: [][]byte{deposits[0].Data.PublicKey, unknownPubkey},
+	}
+	res, err := vs.GetDuties(context.Background(), req)
+	require.NoError(t, err)
+	assert.Equal(t, true, res.CurrentEpochDuties[0].IsSyncCommittee)
+	assert.Equal(t, true, res.NextEpochDuties[0].IsSyncCommittee)
+	assert.Equal(t, false, res.CurrentEpochDuties[1].IsSyncCommittee)
+	assert.Equal(t, false, res.NextEpochDuties[1].IsSyncCommittee)
+}
+
 func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
 	chain := &mockChain.ChainService{
 		Genesis: time.Now(),
@@ -228,7 +282,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	pubKeys := make([][48]byte, len(deposits))
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
@@ -266,7 +320,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	pubKeys := make([][48]byte, len(deposits))
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
@@ -333,7 +387,7 @@ func TestStreamDuties_OK(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
-	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	pubkeysAs48ByteType := make([][fieldparams.BLSPubkeyLength]byte, len(pubKeys))
 	for i, pk := range pubKeys {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
@@ -390,7 +444,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
-	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	pubkeysAs48ByteType := make([][fieldparams.BLSPubkeyLength]byte, len(pubKeys))
 	for i, pk := range pubKeys {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
@@ -488,7 +542,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(b, err, "Could not get signing root")
 
-	pubKeys := make([][48]byte, len(deposits))
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)

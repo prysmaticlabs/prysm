@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -18,7 +19,7 @@ func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
 	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
 	roots := make([][]byte, rootsLen)
 	for i := types.Slot(0); i < rootsLen; i++ {
-		roots[i] = make([]byte, 32)
+		roots[i] = make([]byte, fieldparams.RootLength)
 	}
 	for j := 0; j < len(roots); j++ {
 		// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
@@ -42,9 +43,9 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
 		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
 		Validators:                 make([]*ethpb.Validator, 0),
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: make([]byte, 32),
+			DepositRoot: make([]byte, fieldparams.RootLength),
 			BlockHash:   make([]byte, 32),
 		},
 		Fork: &ethpb.Fork{
@@ -54,11 +55,11 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (*v1.Beacon
 		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
 		HistoricalRoots:             make([][]byte, 0),
 		JustificationBits:           bitfield.Bitvector4{0x0},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
 		PreviousEpochAttestations:   make([]*ethpb.PendingAttestation, 0),
 		CurrentEpochAttestations:    make([]*ethpb.PendingAttestation, 0),
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
 
 	for _, opt := range options {

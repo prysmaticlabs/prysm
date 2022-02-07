@@ -5,9 +5,9 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -22,16 +22,16 @@ var (
 	committeeIndex   = types.CommitteeIndex(1)
 	depositCount     = uint64(2)
 	attestingIndices = []uint64{1, 2}
-	parentRoot       = bytesutil.PadTo([]byte("parentroot"), 32)
-	stateRoot        = bytesutil.PadTo([]byte("stateroot"), 32)
+	parentRoot       = bytesutil.PadTo([]byte("parentroot"), fieldparams.RootLength)
+	stateRoot        = bytesutil.PadTo([]byte("stateroot"), fieldparams.RootLength)
 	signature        = bytesutil.PadTo([]byte("signature"), 96)
 	randaoReveal     = bytesutil.PadTo([]byte("randaoreveal"), 96)
-	depositRoot      = bytesutil.PadTo([]byte("depositroot"), 32)
+	depositRoot      = bytesutil.PadTo([]byte("depositroot"), fieldparams.RootLength)
 	blockHash        = bytesutil.PadTo([]byte("blockhash"), 32)
-	beaconBlockRoot  = bytesutil.PadTo([]byte("beaconblockroot"), 32)
-	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), 32)
-	targetRoot       = bytesutil.PadTo([]byte("targetroot"), 32)
-	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), 32)
+	beaconBlockRoot  = bytesutil.PadTo([]byte("beaconblockroot"), fieldparams.RootLength)
+	sourceRoot       = bytesutil.PadTo([]byte("sourceroot"), fieldparams.RootLength)
+	targetRoot       = bytesutil.PadTo([]byte("targetroot"), fieldparams.RootLength)
+	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), fieldparams.RootLength)
 	selectionProof   = bytesutil.PadTo([]byte("selectionproof"), 96)
 	aggregationBits  = bitfield.Bitlist{0x01}
 )
@@ -118,35 +118,6 @@ func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
 	v1Root, err := v1Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Root, alphaRoot)
-}
-
-func Test_AltairToV1Alpha1SignedBlock(t *testing.T) {
-	v2Block := util.HydrateV2SignedBeaconBlock(&ethpbv2.SignedBeaconBlockAltair{})
-	v2Block.Message.Slot = slot
-	v2Block.Message.ProposerIndex = validatorIndex
-	v2Block.Message.ParentRoot = parentRoot
-	v2Block.Message.StateRoot = stateRoot
-	v2Block.Message.Body.RandaoReveal = randaoReveal
-	v2Block.Message.Body.Eth1Data = &ethpbv1.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
-	syncCommitteeBits := bitfield.NewBitvector512()
-	syncCommitteeBits.SetBitAt(100, true)
-	v2Block.Message.Body.SyncAggregate = &ethpbv1.SyncAggregate{
-		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: signature,
-	}
-	v2Block.Signature = signature
-
-	alphaBlock, err := AltairToV1Alpha1SignedBlock(v2Block)
-	require.NoError(t, err)
-	alphaRoot, err := alphaBlock.HashTreeRoot()
-	require.NoError(t, err)
-	v2Root, err := v2Block.HashTreeRoot()
-	require.NoError(t, err)
-	assert.DeepEqual(t, v2Root, alphaRoot)
 }
 
 func Test_V1ToV1Alpha1Block(t *testing.T) {
@@ -465,35 +436,6 @@ func Test_V1AttestationToV1Alpha1(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Root, v1Alpha1Root)
 }
-
-func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
-	alphaBlock := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
-	alphaBlock.Slot = slot
-	alphaBlock.ProposerIndex = validatorIndex
-	alphaBlock.ParentRoot = parentRoot
-	alphaBlock.StateRoot = stateRoot
-	alphaBlock.Body.RandaoReveal = randaoReveal
-	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
-	syncCommitteeBits := bitfield.NewBitvector512()
-	syncCommitteeBits.SetBitAt(100, true)
-	alphaBlock.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
-		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: signature,
-	}
-
-	v2Block, err := V1Alpha1BeaconBlockAltairToV2(alphaBlock)
-	require.NoError(t, err)
-	alphaRoot, err := alphaBlock.HashTreeRoot()
-	require.NoError(t, err)
-	v2Root, err := v2Block.HashTreeRoot()
-	require.NoError(t, err)
-	assert.DeepEqual(t, alphaRoot, v2Root)
-}
-
 func TestBeaconStateToV1(t *testing.T) {
 	source, err := util.NewBeaconState(util.FillRootsNaturalOpt, func(state *ethpbalpha.BeaconState) error {
 		state.GenesisTime = 1

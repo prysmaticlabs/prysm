@@ -63,16 +63,14 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 	assert.Equal(t, int(params.BeaconConfig().MinGenesisActiveValidatorCount)+100, int(vals), "mainnet genesis active count isn't accurate")
 }
 
-func TestLoggingParameters(t *testing.T) {
+func TestLoggingParameters(_ *testing.T) {
 	logGossipParameters("testing", nil)
 	logGossipParameters("testing", &pubsub.TopicScoreParams{})
 	// Test out actual gossip parameters.
 	logGossipParameters("testing", defaultBlockTopicParams())
-	p, err := defaultAggregateSubnetTopicParams(10000)
-	assert.NoError(t, err)
+	p := defaultAggregateSubnetTopicParams(10000)
 	logGossipParameters("testing", p)
-	p, err = defaultAggregateTopicParams(10000)
-	assert.NoError(t, err)
+	p = defaultAggregateTopicParams(10000)
 	logGossipParameters("testing", p)
 	logGossipParameters("testing", defaultAttesterSlashingTopicParams())
 	logGossipParameters("testing", defaultProposerSlashingTopicParams())

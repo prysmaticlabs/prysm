@@ -159,7 +159,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 	cliCtx := setupWalletCtx(t, &testWalletConfig{
 		// Wallet configuration flags.
 		walletDir:           walletDir,
-		keymanagerKind:      keymanager.Imported,
+		keymanagerKind:      keymanager.Local,
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 		// Flags required for ImportAccounts to work.
@@ -172,7 +172,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Imported,
+			KeymanagerKind: keymanager.Local,
 			WalletPassword: password,
 		},
 	})

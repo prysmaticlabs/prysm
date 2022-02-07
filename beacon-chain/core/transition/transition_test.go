@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -265,7 +266,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
@@ -370,9 +371,9 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		Slashings:                  slashing,
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, 32)},
+		FinalizedCheckpoint:        &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
 	s, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
@@ -380,38 +381,6 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	newState, err := transition.ProcessEpochPrecompute(context.Background(), s)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), newState.Slashings()[2], "Unexpected slashed balance")
-}
-
-func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
-	tests := []struct {
-		slot            types.Slot
-		canProcessEpoch bool
-	}{
-		{
-			slot:            1,
-			canProcessEpoch: false,
-		}, {
-			slot:            63,
-			canProcessEpoch: true,
-		},
-		{
-			slot:            64,
-			canProcessEpoch: false,
-		}, {
-			slot:            127,
-			canProcessEpoch: true,
-		}, {
-			slot:            1000000000,
-			canProcessEpoch: false,
-		},
-	}
-
-	for _, tt := range tests {
-		b := &ethpb.BeaconState{Slot: tt.slot}
-		s, err := v1.InitializeFromProto(b)
-		require.NoError(t, err)
-		assert.Equal(t, tt.canProcessEpoch, transition.CanProcessEpoch(s), "CanProcessEpoch(%d)", tt.slot)
-	}
 }
 
 func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
@@ -513,10 +482,10 @@ func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
 
 func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.AltairForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
-	defer params.UseMainnetConfig()
 
 	st, _ := util.DeterministicGenesisState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
@@ -548,10 +517,10 @@ func TestProcessSlots_ThroughAltairEpoch(t *testing.T) {
 
 func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.AltairForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
-	defer params.UseMainnetConfig()
 
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
@@ -582,6 +551,58 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
 }
 
+func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
+	transition.SkipSlotCache.Disable()
+	conf := params.BeaconConfig()
+	conf.BellatrixForkEpoch = 5
+	params.OverrideBeaconConfig(conf)
+	defer params.UseMainnetConfig()
+
+	st, _ := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))
+	require.Equal(t, version.Bellatrix, st.Version())
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	require.NoError(t, err)
+	require.Equal(t, version.Bellatrix, st.Version())
+
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
+
+	s, err := st.InactivityScores()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(s)))
+
+	p, err := st.PreviousEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	p, err = st.CurrentEpochParticipation()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MaxValidatorsPerCommittee, uint64(len(p)))
+
+	sc, err := st.CurrentSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+
+	sc, err = st.NextSyncCommittee()
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(sc.Pubkeys)))
+}
+
+func TestProcessSlots_ThroughBellatrixEpoch(t *testing.T) {
+	transition.SkipSlotCache.Disable()
+	params.SetupTestConfigCleanup(t)
+	conf := params.BeaconConfig()
+	conf.BellatrixForkEpoch = 5
+	params.OverrideBeaconConfig(conf)
+
+	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerEpoch*10)
+	require.NoError(t, err)
+	require.Equal(t, version.Bellatrix, st.Version())
+
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch*10, st.Slot())
+}
+
 func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, 1)
 	r := []byte{'a'}
@@ -590,36 +611,28 @@ func TestProcessSlotsUsingNextSlotCache(t *testing.T) {
 	require.Equal(t, types.Slot(5), s.Slot())
 }
 
-func TestCanUpgradeToAltair(t *testing.T) {
-	bc := params.BeaconConfig()
-	bc.AltairForkEpoch = 5
-	params.OverrideBeaconConfig(bc)
-	tests := []struct {
-		name string
-		slot types.Slot
-		want bool
-	}{
-		{
-			name: "not epoch start",
-			slot: 1,
-			want: false,
-		},
-		{
-			name: "not altair epoch",
-			slot: params.BeaconConfig().SlotsPerEpoch,
-			want: false,
-		},
-		{
-			name: "altair epoch",
-			slot: types.Slot(params.BeaconConfig().AltairForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := transition.CanUpgradeToAltair(tt.slot); got != tt.want {
-				t.Errorf("canUpgradeToAltair() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+func TestProcessSlotsConditionally(t *testing.T) {
+	ctx := context.Background()
+	s, _ := util.DeterministicGenesisState(t, 1)
+
+	t.Run("target slot below current slot", func(t *testing.T) {
+		require.NoError(t, s.SetSlot(5))
+		s, err := transition.ProcessSlotsIfPossible(ctx, s, 4)
+		require.NoError(t, err)
+		assert.Equal(t, types.Slot(5), s.Slot())
+	})
+
+	t.Run("target slot equal current slot", func(t *testing.T) {
+		require.NoError(t, s.SetSlot(5))
+		s, err := transition.ProcessSlotsIfPossible(ctx, s, 5)
+		require.NoError(t, err)
+		assert.Equal(t, types.Slot(5), s.Slot())
+	})
+
+	t.Run("target slot above current slot", func(t *testing.T) {
+		require.NoError(t, s.SetSlot(5))
+		s, err := transition.ProcessSlotsIfPossible(ctx, s, 6)
+		require.NoError(t, err)
+		assert.Equal(t, types.Slot(6), s.Slot())
+	})
 }

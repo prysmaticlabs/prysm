@@ -1,6 +1,7 @@
 package node
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -41,6 +42,14 @@ func configureHistoricalSlasher(cliCtx *cli.Context) {
 			c.SlotsPerArchivedPoint,
 			cmdConfig.MaxRPCPageSize,
 		)
+	}
+}
+
+func configureSafeSlotsToImportOptimistically(cliCtx *cli.Context) {
+	if cliCtx.IsSet(flags.SafeSlotsToImportOptimistically.Name) {
+		c := params.BeaconConfig()
+		c.SafeSlotsToImportOptimistically = types.Slot(cliCtx.Int(flags.SafeSlotsToImportOptimistically.Name))
+		params.OverrideBeaconConfig(c)
 	}
 }
 
@@ -93,5 +102,13 @@ func configureInteropConfig(cliCtx *cli.Context) {
 		bCfg := params.BeaconConfig()
 		bCfg.ConfigName = "interop"
 		params.OverrideBeaconConfig(bCfg)
+	}
+}
+
+func configureExecutionSetting(cliCtx *cli.Context) {
+	if cliCtx.IsSet(flags.FeeRecipient.Name) {
+		c := params.BeaconConfig()
+		c.FeeRecipient = common.HexToAddress(cliCtx.String(flags.FeeRecipient.Name))
+		params.OverrideBeaconConfig(c)
 	}
 }

@@ -14,6 +14,7 @@ import (
 type ApiProxyMiddleware struct {
 	GatewayAddress  string
 	EndpointCreator EndpointFactory
+	router          *mux.Router
 }
 
 // EndpointFactory is responsible for creating new instances of Endpoint values.
@@ -29,6 +30,8 @@ type Endpoint struct {
 	GetResponse        interface{}     // The struct corresponding to the JSON structure used in a GET response.
 	PostRequest        interface{}     // The struct corresponding to the JSON structure used in a POST request.
 	PostResponse       interface{}     // The struct corresponding to the JSON structure used in a POST response.
+	DeleteRequest      interface{}     // The struct corresponding to the JSON structure used in a DELETE request.
+	DeleteResponse     interface{}     // The struct corresponding to the JSON structure used in a DELETE response.
 	RequestURLLiterals []string        // Names of URL parameters that should not be base64-encoded.
 	RequestQueryParams []QueryParam    // Query parameters of the request.
 	Err                ErrorJson       // The struct corresponding to the error that should be returned in case of a request failure.
@@ -74,16 +77,23 @@ type fieldProcessor struct {
 // Run starts the proxy, registering all proxy endpoints.
 func (m *ApiProxyMiddleware) Run(gatewayRouter *mux.Router) {
 	for _, path := range m.EndpointCreator.Paths() {
-		m.handleApiPath(gatewayRouter, path, m.EndpointCreator)
+		gatewayRouter.HandleFunc(path, m.WithMiddleware(path))
 	}
+	m.router = gatewayRouter
 }
 
-func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path string, endpointFactory EndpointFactory) {
-	gatewayRouter.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
-		endpoint, err := endpointFactory.Create(path)
+// ServeHTTP for the proxy middleware.
+func (m *ApiProxyMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	m.router.ServeHTTP(w, req)
+}
+
+// WithMiddleware wraps the given endpoint handler with the middleware logic.
+func (m *ApiProxyMiddleware) WithMiddleware(path string) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		endpoint, err := m.EndpointCreator.Create(path)
 		if err != nil {
-			errJson := InternalServerErrorWithMessage(err, "could not create endpoint")
-			WriteError(w, errJson, nil)
+			log.WithError(err).Errorf("Could not create endpoint for path: %s", path)
+			return
 		}
 
 		for _, handler := range endpoint.CustomHandlers {
@@ -93,16 +103,14 @@ func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path strin
 		}
 
 		if req.Method == "POST" {
-			if errJson := deserializeRequestBodyIntoContainerWrapped(endpoint, req, w); errJson != nil {
+			if errJson := handlePostRequestForEndpoint(endpoint, w, req); errJson != nil {
 				WriteError(w, errJson, nil)
 				return
 			}
+		}
 
-			if errJson := ProcessRequestContainerFields(endpoint.PostRequest); errJson != nil {
-				WriteError(w, errJson, nil)
-				return
-			}
-			if errJson := SetRequestBodyToRequestContainer(endpoint.PostRequest, req); errJson != nil {
+		if req.Method == "DELETE" {
+			if errJson := handleDeleteRequestForEndpoint(endpoint, req); errJson != nil {
 				WriteError(w, errJson, nil)
 				return
 			}
@@ -125,18 +133,20 @@ func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path strin
 
 		var respJson []byte
 		if !GrpcResponseIsEmpty(grpcRespBody) {
-			if errJson := DeserializeGrpcResponseBodyIntoErrorJson(endpoint.Err, grpcRespBody); errJson != nil {
+			respHasError, errJson := HandleGrpcResponseError(endpoint.Err, grpcResp, grpcRespBody, w)
+			if errJson != nil {
 				WriteError(w, errJson, nil)
 				return
 			}
-			if endpoint.Err.Msg() != "" {
-				HandleGrpcResponseError(endpoint.Err, grpcResp, w)
+			if respHasError {
 				return
 			}
 
 			var resp interface{}
 			if req.Method == "GET" {
 				resp = endpoint.GetResponse
+			} else if req.Method == "DELETE" {
+				resp = endpoint.DeleteResponse
 			} else {
 				resp = endpoint.PostResponse
 			}
@@ -164,7 +174,27 @@ func (m *ApiProxyMiddleware) handleApiPath(gatewayRouter *mux.Router, path strin
 			WriteError(w, errJson, nil)
 			return
 		}
-	})
+	}
+}
+
+func handlePostRequestForEndpoint(endpoint *Endpoint, w http.ResponseWriter, req *http.Request) ErrorJson {
+	if errJson := deserializeRequestBodyIntoContainerWrapped(endpoint, req, w); errJson != nil {
+		return errJson
+	}
+	if errJson := ProcessRequestContainerFields(endpoint.PostRequest); errJson != nil {
+		return errJson
+	}
+	return SetRequestBodyToRequestContainer(endpoint.PostRequest, req)
+}
+
+func handleDeleteRequestForEndpoint(endpoint *Endpoint, req *http.Request) ErrorJson {
+	if errJson := DeserializeRequestBodyIntoContainer(req.Body, endpoint.DeleteRequest); errJson != nil {
+		return errJson
+	}
+	if errJson := ProcessRequestContainerFields(endpoint.DeleteRequest); errJson != nil {
+		return errJson
+	}
+	return SetRequestBodyToRequestContainer(endpoint.DeleteRequest, req)
 }
 
 func deserializeRequestBodyIntoContainerWrapped(endpoint *Endpoint, req *http.Request, w http.ResponseWriter) ErrorJson {

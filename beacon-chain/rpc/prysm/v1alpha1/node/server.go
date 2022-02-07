@@ -16,10 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -40,6 +40,7 @@ type Server struct {
 	PeerManager          p2p.PeerManager
 	GenesisTimeFetcher   blockchain.TimeFetcher
 	GenesisFetcher       blockchain.GenesisFetcher
+	POWChainInfoFetcher  powchain.ChainInfoFetcher
 	BeaconMonitoringHost string
 	BeaconMonitoringPort int
 }
@@ -76,7 +77,7 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesi
 }
 
 // GetVersion checks the version information of the beacon node.
-func (ns *Server) GetVersion(_ context.Context, _ *empty.Empty) (*ethpb.Version, error) {
+func (_ *Server) GetVersion(_ context.Context, _ *empty.Empty) (*ethpb.Version, error) {
 	return &ethpb.Version{
 		Version: version.Version(),
 	}, nil
@@ -220,8 +221,24 @@ func (ns *Server) ListPeers(ctx context.Context, _ *empty.Empty) (*ethpb.Peers, 
 	}, nil
 }
 
+// GetETH1ConnectionStatus gets data about the ETH1 endpoints.
+func (ns *Server) GetETH1ConnectionStatus(ctx context.Context, _ *empty.Empty) (*ethpb.ETH1ConnectionStatus, error) {
+	var errStrs []string
+	errs := ns.POWChainInfoFetcher.ETH1ConnectionErrors()
+	// Extract string version of the errors.
+	for _, err := range errs {
+		errStrs = append(errStrs, err.Error())
+	}
+	return &ethpb.ETH1ConnectionStatus{
+		CurrentAddress:         ns.POWChainInfoFetcher.CurrentETH1Endpoint(),
+		CurrentConnectionError: ns.POWChainInfoFetcher.CurrentETH1ConnectionError().Error(),
+		Addresses:              ns.POWChainInfoFetcher.ETH1Endpoints(),
+		ConnectionErrors:       errStrs,
+	}, nil
+}
+
 // StreamBeaconLogs from the beacon node via a gRPC server-side stream.
-func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream pb.Health_StreamBeaconLogsServer) error {
+func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream ethpb.Health_StreamBeaconLogsServer) error {
 	ch := make(chan []byte, ns.StreamLogsBufferSize)
 	sub := ns.LogsStreamer.LogsFeed().Subscribe(ch)
 	defer func() {
@@ -234,7 +251,7 @@ func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream pb.Health_StreamBeacon
 	for i, log := range recentLogs {
 		logStrings[i] = string(log)
 	}
-	if err := stream.Send(&pb.LogsResponse{
+	if err := stream.Send(&ethpb.LogsResponse{
 		Logs: logStrings,
 	}); err != nil {
 		return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
@@ -242,7 +259,7 @@ func (ns *Server) StreamBeaconLogs(_ *empty.Empty, stream pb.Health_StreamBeacon
 	for {
 		select {
 		case log := <-ch:
-			resp := &pb.LogsResponse{
+			resp := &ethpb.LogsResponse{
 				Logs: []string{string(log)},
 			}
 			if err := stream.Send(resp); err != nil {

@@ -39,6 +39,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",

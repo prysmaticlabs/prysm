@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/prompt"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // PerformExitCfg for account voluntary exits.
@@ -56,6 +58,20 @@ func ExitAccountsCli(cliCtx *cli.Context, r io.Reader) error {
 	validatorClient, nodeClient, err := prepareClients(cliCtx)
 	if err != nil {
 		return err
+	}
+	if nodeClient == nil {
+		return errors.New("could not prepare beacon node client")
+	}
+	syncStatus, err := (*nodeClient).GetSyncStatus(cliCtx.Context, &emptypb.Empty{})
+	if err != nil {
+		return err
+	}
+	if syncStatus == nil {
+		return errors.New("could not get sync status")
+	}
+
+	if (*syncStatus).Syncing {
+		return errors.New("could not perform exit: beacon node is syncing.")
 	}
 
 	cfg := PerformExitCfg{
@@ -112,14 +128,19 @@ func PerformVoluntaryExit(
 	return rawExitedKeys, formattedExitedKeys, nil
 }
 
-func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km keymanager.IKeymanager, err error) {
+func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte, km keymanager.IKeymanager, err error) {
 	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, wallet.ErrNoWalletFound
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not open wallet")
 	}
-
+	// TODO(#9883) - Remove this when we have a better way to handle this.
+	if w.KeymanagerKind() == keymanager.Web3Signer {
+		return nil, nil, errors.New(
+			"web3signer wallets cannot exit accounts through cli command yet. please perform this on the remote signer node",
+		)
+	}
 	km, err = w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, ErrCouldNotInitializeKeymanager)
@@ -138,7 +159,7 @@ func prepareWallet(cliCtx *cli.Context) (validatingPublicKeys [][48]byte, km key
 func interact(
 	cliCtx *cli.Context,
 	r io.Reader,
-	validatingPublicKeys [][48]byte,
+	validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte,
 ) (rawPubKeys [][]byte, formattedPubKeys []string, err error) {
 	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
 		// Allow the user to interactively select the accounts to exit or optionally
@@ -216,7 +237,7 @@ func interact(
 	return rawPubKeys, formattedPubKeys, nil
 }
 
-func prepareAllKeys(validatingKeys [][48]byte) (raw [][]byte, formatted []string) {
+func prepareAllKeys(validatingKeys [][fieldparams.BLSPubkeyLength]byte) (raw [][]byte, formatted []string) {
 	raw = make([][]byte, len(validatingKeys))
 	formatted = make([]string, len(validatingKeys))
 	for i, pk := range validatingKeys {

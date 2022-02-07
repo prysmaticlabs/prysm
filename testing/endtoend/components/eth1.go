@@ -20,7 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/config/params"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -67,12 +67,12 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s", eth1Path),
-		fmt.Sprintf("--rpcport=%d", e2e.TestParams.Eth1RPCPort),
-		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+1),
-		"--rpc",
-		"--rpcaddr=127.0.0.1",
-		"--rpccorsdomain=\"*\"",
-		"--rpcvhosts=\"*\"",
+		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort),
+		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+e2e.ETH1WSOffset),
+		"--http",
+		"--http.addr=127.0.0.1",
+		"--http.corsdomain=\"*\"",
+		"--http.vhosts=\"*\"",
 		"--rpc.allow-unprotected-txs",
 		"--ws",
 		"--ws.addr=127.0.0.1",
@@ -81,7 +81,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		"--dev.period=2",
 		"--ipcdisable",
 	}
-	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
+	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1.log")
 	if err != nil {
 		return err
@@ -104,12 +104,12 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	web3 := ethclient.NewClient(client)
 
 	// Access the dev account keystore to deploy the contract.
-	fileName, err := exec.Command("ls", path.Join(eth1Path, "keystore")).Output() /* #nosec G204 */
+	fileName, err := exec.Command("ls", path.Join(eth1Path, "keystore")).Output() // #nosec G204
 	if err != nil {
 		return err
 	}
 	keystorePath := path.Join(eth1Path, fmt.Sprintf("keystore/%s", strings.TrimSpace(string(fileName))))
-	jsonBytes, err := ioutil.ReadFile(keystorePath) // #nosec G304
+	jsonBytes, err := ioutil.ReadFile(keystorePath) // #nosec G304 -- ReadFile is safe
 	if err != nil {
 		return err
 	}

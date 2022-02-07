@@ -11,7 +11,7 @@
 # docker build -t gcr.io/prysmaticlabs/rbe-worker:latest .
 # gcloud docker -- push gcr.io/prysmaticlabs/rbe-worker:latest 
 
-FROM debian:buster-slim as build
+FROM debian:bullseye-slim as build
 
 # install gnu/gcc cross-build toolchain (gcc 8.3)
 ENV DOCKER_CLI_EXPERIMENTAL=enabled
@@ -31,7 +31,10 @@ RUN /tmp/install_clang_cross.sh
 
 # install osxcross
 ADD install_osxcross.sh /tmp/install_osxcross.sh
+ADD common_osxcross.sh /tmp/common_osxcross.sh
 RUN /tmp/install_osxcross.sh
+ADD link_osxcross.sh /tmp/link_osxcross.sh
+RUN /tmp/link_osxcross.sh
 
 # containerized development environment
 FROM build as devel

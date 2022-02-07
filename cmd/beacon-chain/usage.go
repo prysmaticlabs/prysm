@@ -73,6 +73,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.RestoreSourceFileFlag,
 			cmd.RestoreTargetDirFlag,
 			cmd.BoltMMapInitialSizeFlag,
+			cmd.ValidatorMonitorIndicesFlag,
 		},
 	},
 	{
@@ -122,6 +123,12 @@ var appHelpFlagGroups = []flagGroup{
 			flags.Eth1HeaderReqLimit,
 			flags.GenesisStatePath,
 			flags.MinPeersPerSubnet,
+		},
+	},
+	{
+		Name: "merge",
+		Flags: []cli.Flag{
+			flags.FeeRecipient,
 		},
 	},
 	{

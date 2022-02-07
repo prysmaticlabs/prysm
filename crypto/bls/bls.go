@@ -4,9 +4,6 @@
 package bls
 
 import (
-	"math/big"
-
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/crypto/bls/herumi"
@@ -22,20 +19,6 @@ func SecretKeyFromBytes(privKey []byte) (SecretKey, error) {
 	return blst.SecretKeyFromBytes(privKey)
 }
 
-// SecretKeyFromBigNum takes in a big number string and creates a BLS private key.
-func SecretKeyFromBigNum(s string) (SecretKey, error) {
-	num := new(big.Int)
-	num, ok := num.SetString(s, 10)
-	if !ok {
-		return nil, errors.New("could not set big int from string")
-	}
-	bts := num.Bytes()
-	if len(bts) != 32 {
-		return nil, errors.Errorf("provided big number string sets to a key unequal to 32 bytes: %d != 32", len(bts))
-	}
-	return SecretKeyFromBytes(bts)
-}
-
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
 func PublicKeyFromBytes(pubKey []byte) (PublicKey, error) {
 	return blst.PublicKeyFromBytes(pubKey)
@@ -44,6 +27,11 @@ func PublicKeyFromBytes(pubKey []byte) (PublicKey, error) {
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (Signature, error) {
 	return blst.SignatureFromBytes(sig)
+}
+
+// MultipleSignaturesFromBytes creates a slice of BLS signatures from a LittleEndian 2d-byte slice.
+func MultipleSignaturesFromBytes(sigs [][]byte) ([]Signature, error) {
+	return blst.MultipleSignaturesFromBytes(sigs)
 }
 
 // AggregatePublicKeys aggregates the provided raw public keys into a single key.

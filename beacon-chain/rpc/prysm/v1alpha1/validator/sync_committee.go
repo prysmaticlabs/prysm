@@ -6,6 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -63,7 +65,7 @@ func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitte
 func (vs *Server) GetSyncSubcommitteeIndex(
 	ctx context.Context, req *ethpb.SyncSubcommitteeIndexRequest,
 ) (*ethpb.SyncSubcommitteeIndexResponse, error) {
-	index, exists := vs.HeadFetcher.HeadPublicKeyToValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
+	index, exists := vs.HeadFetcher.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(req.PublicKey))
 	if !exists {
 		return nil, errors.New("public key does not exist in state")
 	}
@@ -120,6 +122,16 @@ func (vs *Server) SubmitSignedContributionAndProof(
 
 	// Wait for p2p broadcast to complete and return the first error (if any)
 	err := errs.Wait()
+
+	if err == nil {
+		vs.OperationNotifier.OperationFeed().Send(&feed.Event{
+			Type: opfeed.SyncCommitteeContributionReceived,
+			Data: &opfeed.SyncCommitteeContributionReceivedData{
+				Contribution: s,
+			},
+		})
+	}
+
 	return &emptypb.Empty{}, err
 }
 
@@ -133,7 +145,7 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 	blockRoot []byte,
 ) ([]byte, []byte, error) {
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-	sigs := make([]bls.Signature, 0, subCommitteeSize)
+	sigs := make([][]byte, 0, subCommitteeSize)
 	bits := ethpb.NewSyncCommitteeAggregationBits()
 	for _, msg := range msgs {
 		if bytes.Equal(blockRoot, msg.BlockRoot) {
@@ -144,13 +156,10 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 			for _, index := range headSyncCommitteeIndices {
 				i := uint64(index)
 				subnetIndex := i / subCommitteeSize
-				if subnetIndex == subnetId {
-					bits.SetBitAt(i%subCommitteeSize, true)
-					sig, err := bls.SignatureFromBytes(msg.Signature)
-					if err != nil {
-						return []byte{}, nil, errors.Wrapf(err, "Could not get bls signature from bytes")
-					}
-					sigs = append(sigs, sig)
+				indexMod := i % subCommitteeSize
+				if subnetIndex == subnetId && !bits.BitAt(indexMod) {
+					bits.SetBitAt(indexMod, true)
+					sigs = append(sigs, msg.Signature)
 				}
 			}
 		}
@@ -158,7 +167,11 @@ func (vs *Server) AggregatedSigAndAggregationBits(
 	aggregatedSig := make([]byte, 96)
 	aggregatedSig[0] = 0xC0
 	if len(sigs) != 0 {
-		aggregatedSig = bls.AggregateSignatures(sigs).Marshal()
+		uncompressedSigs, err := bls.MultipleSignaturesFromBytes(sigs)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not decompress signatures")
+		}
+		aggregatedSig = bls.AggregateSignatures(uncompressedSigs).Marshal()
 	}
 
 	return aggregatedSig, bits, nil

@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -79,9 +80,8 @@ func TestProposeExit_Notification(t *testing.T) {
 			if event.Type == opfeed.ExitReceived {
 				notificationFound = true
 				data, ok := event.Data.(*opfeed.ExitReceivedData)
-				assert.Equal(t, true, ok, "Entity is not of type *opfeed.ExitReceivedData")
-				assert.Equal(t, epoch, data.Exit.Exit.Epoch, "Unexpected state feed epoch")
-				assert.Equal(t, validatorIndex, data.Exit.Exit.ValidatorIndex, "Unexpected state feed validator index")
+				assert.Equal(t, true, ok, "Entity is of the wrong type")
+				assert.NotNil(t, data.Exit)
 			}
 		case <-opSub.Err():
 			t.Error("Subscription to state notifier failed")
@@ -137,7 +137,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 
 	_, err = server.ProposeExit(context.Background(), req)
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for no signature exists")
-	req.Signature = bytesutil.FromBytes48([48]byte{})
+	req.Signature = bytesutil.FromBytes48([fieldparams.BLSPubkeyLength]byte{})
 
 	_, err = server.ProposeExit(context.Background(), req)
 	require.ErrorContains(t, "invalid signature provided", err, "Expected error for invalid signature length")

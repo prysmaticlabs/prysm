@@ -130,6 +130,14 @@ var (
 		Name: "sync_head_state_hit",
 		Help: "The number of sync head state requests that are present in the cache.",
 	})
+	stateBalanceCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "state_balance_cache_hit",
+		Help: "Count the number of state balance cache hits.",
+	})
+	stateBalanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "state_balance_cache_miss",
+		Help: "Count the number of state balance cache hits.",
+	})
 )
 
 // reportSlotMetrics reports slot related metrics.
@@ -245,7 +253,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	case version.Altair:
+	case version.Altair, version.Bellatrix:
 		v, b, err = altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return err

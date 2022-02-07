@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -42,12 +43,18 @@ func InitializePrecomputeValidators(ctx context.Context, beaconState state.Beaco
 		// Set validator's active status for current epoch.
 		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			v.IsActiveCurrentEpoch = true
-			bal.ActiveCurrentEpoch += val.EffectiveBalance()
+			bal.ActiveCurrentEpoch, err = math.Add64(bal.ActiveCurrentEpoch, val.EffectiveBalance())
+			if err != nil {
+				return err
+			}
 		}
 		// Set validator's active status for preivous epoch.
 		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
 			v.IsActivePrevEpoch = true
-			bal.ActivePrevEpoch += val.EffectiveBalance()
+			bal.ActivePrevEpoch, err = math.Add64(bal.ActivePrevEpoch, val.EffectiveBalance())
+			if err != nil {
+				return err
+			}
 		}
 		vals[idx] = v
 		return nil
@@ -150,7 +157,19 @@ func ProcessEpochParticipation(
 	sourceIdx := cfg.TimelySourceFlagIndex
 	headIdx := cfg.TimelyHeadFlagIndex
 	for i, b := range cp {
-		if HasValidatorFlag(b, targetIdx) && vals[i].IsActiveCurrentEpoch {
+		has, err := HasValidatorFlag(b, sourceIdx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if has && vals[i].IsActiveCurrentEpoch {
+			vals[i].IsCurrentEpochAttester = true
+		}
+		has, err = HasValidatorFlag(b, targetIdx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if has && vals[i].IsActiveCurrentEpoch {
+			vals[i].IsCurrentEpochAttester = true
 			vals[i].IsCurrentEpochTargetAttester = true
 		}
 	}
@@ -159,17 +178,31 @@ func ProcessEpochParticipation(
 		return nil, nil, err
 	}
 	for i, b := range pp {
-		if HasValidatorFlag(b, sourceIdx) && vals[i].IsActivePrevEpoch {
-			vals[i].IsPrevEpochAttester = true
+		has, err := HasValidatorFlag(b, sourceIdx)
+		if err != nil {
+			return nil, nil, err
 		}
-		if HasValidatorFlag(b, targetIdx) && vals[i].IsActivePrevEpoch {
+		if has && vals[i].IsActivePrevEpoch {
+			vals[i].IsPrevEpochAttester = true
+			vals[i].IsPrevEpochSourceAttester = true
+		}
+		has, err = HasValidatorFlag(b, targetIdx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if has && vals[i].IsActivePrevEpoch {
+			vals[i].IsPrevEpochAttester = true
 			vals[i].IsPrevEpochTargetAttester = true
 		}
-		if HasValidatorFlag(b, headIdx) && vals[i].IsActivePrevEpoch {
+		has, err = HasValidatorFlag(b, headIdx)
+		if err != nil {
+			return nil, nil, err
+		}
+		if has && vals[i].IsActivePrevEpoch {
 			vals[i].IsPrevEpochHeadAttester = true
 		}
 	}
-	bal = precompute.UpdateBalance(vals, bal)
+	bal = precompute.UpdateBalance(vals, bal, beaconState.Version())
 	return vals, bal, nil
 }
 
@@ -221,7 +254,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 // AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func AttestationsDelta(beaconState state.BeaconStateAltair, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
+func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
 	numOfVals := beaconState.NumValidators()
 	rewards = make([]uint64, numOfVals)
 	penalties = make([]uint64, numOfVals)
@@ -233,7 +266,18 @@ func AttestationsDelta(beaconState state.BeaconStateAltair, bal *precompute.Bala
 	factor := cfg.BaseRewardFactor
 	baseRewardMultiplier := increment * factor / math.IntegerSquareRoot(bal.ActiveCurrentEpoch)
 	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
-	inactivityDenominator := cfg.InactivityScoreBias * cfg.InactivityPenaltyQuotientAltair
+
+	// Modified in Altair and Bellatrix.
+	var inactivityDenominator uint64
+	bias := cfg.InactivityScoreBias
+	switch beaconState.Version() {
+	case version.Altair:
+		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientAltair
+	case version.Bellatrix:
+		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientBellatrix
+	default:
+		return nil, nil, errors.Errorf("invalid state type version: %T", beaconState.Version())
+	}
 
 	for i, v := range vals {
 		rewards[i], penalties[i], err = attestationDelta(bal, v, baseRewardMultiplier, inactivityDenominator, leak)
@@ -268,7 +312,7 @@ func attestationDelta(
 	headWeight := cfg.TimelyHeadWeight
 	reward, penalty = uint64(0), uint64(0)
 	// Process source reward / penalty
-	if val.IsPrevEpochAttester && !val.IsSlashed {
+	if val.IsPrevEpochSourceAttester && !val.IsSlashed {
 		if !inactivityLeak {
 			n := baseReward * srcWeight * (bal.PrevEpochAttested / increment)
 			reward += n / (activeIncrement * weightDenominator)

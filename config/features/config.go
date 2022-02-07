@@ -50,7 +50,9 @@ type Flags struct {
 	EnableOptimizedBalanceUpdate        bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
+	EnableGetBlockOptimizations         bool // EnableGetBlockOptimizations optimizes some elements of the GetBlock() function.
 	EnableBatchVerification             bool // EnableBatchVerification enables batch signature verification on gossip messages.
+	EnableBalanceTrieComputation        bool // EnableBalanceTrieComputation enables our beacon state to use balance tries for hash tree root operations.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
@@ -60,7 +62,6 @@ type Flags struct {
 
 	// Cache toggles.
 	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	EnableNextSlotStateCache bool // EnableNextSlotStateCache enables next slot state cache to improve validator performance.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
@@ -77,8 +78,6 @@ type Flags struct {
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
-
-	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 }
 
 var featureConfig *Flags
@@ -156,11 +155,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
 	}
-	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
-	if ctx.Bool(forceOptMaxCoverAggregationStategy.Name) {
-		logEnabled(forceOptMaxCoverAggregationStategy)
-		cfg.AttestationAggregationStrategy = "opt_max_cover"
-	}
 	if ctx.Bool(enablePeerScorer.Name) {
 		logEnabled(enablePeerScorer)
 		cfg.EnablePeerScorer = true
@@ -175,11 +169,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)
 		cfg.DisableBroadcastSlashings = true
-	}
-	cfg.EnableNextSlotStateCache = true
-	if ctx.Bool(disableNextSlotStateCache.Name) {
-		logDisabled(disableNextSlotStateCache)
-		cfg.EnableNextSlotStateCache = false
 	}
 	if ctx.Bool(enableSlasherFlag.Name) {
 		log.WithField(enableSlasherFlag.Name, enableSlasherFlag.Usage).Warn(enabledFeatureFlag)
@@ -214,9 +203,20 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logDisabled(disableActiveBalanceCache)
 		cfg.EnableActiveBalanceCache = false
 	}
-	if ctx.Bool(enableBatchGossipVerification.Name) {
-		logEnabled(enableBatchGossipVerification)
-		cfg.EnableBatchVerification = true
+	cfg.EnableGetBlockOptimizations = true
+	if ctx.Bool(disableGetBlockOptimizations.Name) {
+		logDisabled(disableGetBlockOptimizations)
+		cfg.EnableGetBlockOptimizations = false
+	}
+	cfg.EnableBatchVerification = true
+	if ctx.Bool(disableBatchGossipVerification.Name) {
+		logDisabled(disableBatchGossipVerification)
+		cfg.EnableBatchVerification = false
+	}
+	cfg.EnableBalanceTrieComputation = true
+	if ctx.Bool(disableBalanceTrieComputation.Name) {
+		logDisabled(disableBalanceTrieComputation)
+		cfg.EnableBalanceTrieComputation = false
 	}
 	Init(cfg)
 }
@@ -228,8 +228,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	cfg := &Flags{}
 	configureTestnet(ctx, cfg)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.WithField(enableExternalSlasherProtectionFlag.Name, enableExternalSlasherProtectionFlag.Usage).Warn(enabledFeatureFlag)
-		cfg.RemoteSlasherProtection = true
+		log.Fatal(
+			"Remote slashing protection has currently been disabled in Prysm due to safety concerns. " +
+				"We appreciate your understanding in our desire to keep Prysm validators safe.",
+		)
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		logEnabled(writeWalletPasswordOnWebOnboarding)

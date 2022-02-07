@@ -1,4 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -19,4 +19,10 @@ go_library(
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
     ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["fork_test.go"],
+    embed = [":go_default_library"],
 )

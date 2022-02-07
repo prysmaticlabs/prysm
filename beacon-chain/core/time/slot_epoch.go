@@ -59,3 +59,22 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 	altairEpoch := slots.ToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
 	return epochStart && altairEpoch
 }
+
+// CanUpgradeToBellatrix returns true if the input `slot` can upgrade to Bellatrix fork.
+//
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == BELLATRIX_FORK_EPOCH
+func CanUpgradeToBellatrix(slot types.Slot) bool {
+	epochStart := slots.IsEpochStart(slot)
+	bellatrixEpoch := slots.ToEpoch(slot) == params.BeaconConfig().BellatrixForkEpoch
+	return epochStart && bellatrixEpoch
+}
+
+// CanProcessEpoch checks the eligibility to process epoch.
+// The epoch can be processed at the end of the last slot of every epoch.
+//
+// Spec pseudocode definition:
+//    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+func CanProcessEpoch(state state.ReadOnlyBeaconState) bool {
+	return (state.Slot()+1)%params.BeaconConfig().SlotsPerEpoch == 0
+}

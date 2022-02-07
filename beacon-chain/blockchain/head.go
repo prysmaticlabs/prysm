@@ -10,10 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -22,6 +22,21 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// UpdateHeadWithBalances updates the beacon state head after getting justified balanced from cache.
+func (s *Service) UpdateHeadWithBalances(ctx context.Context) error {
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
+		return errors.New("no justified checkpoint")
+	}
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
+		return errors.Wrap(err, msg)
+	}
+
+	return s.updateHead(ctx, balances)
+}
 
 // This defines the current chain service's view of head.
 type head struct {
@@ -37,24 +52,20 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateHead")
 	defer span.End()
 
-	// To get the proper head update, a node first checks its best justified
-	// can become justified. This is designed to prevent bounce attack and
-	// ensure head gets its best justified info.
-	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
-		s.justifiedCheckpt = s.bestJustifiedCheckpt
-		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-			return err
-		}
-	}
-
 	// Get head from the fork choice service.
-	f := s.finalizedCheckpt
-	j := s.justifiedCheckpt
-	// To get head before the first justified epoch, the fork choice will start with genesis root
+	f := s.store.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
+	j := s.store.JustifiedCheckpt()
+	if j == nil {
+		return errNilJustifiedInStore
+	}
+	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
 	headStartRoot := bytesutil.ToBytes32(j.Root)
 	if headStartRoot == params.BeaconConfig().ZeroHash {
-		headStartRoot = s.genesisRoot
+		headStartRoot = s.originBlockRoot
 	}
 
 	// In order to process head, fork choice store requires justified info.
@@ -107,8 +118,8 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err != nil {
 		return err
 	}
-	if newHeadBlock == nil || newHeadBlock.IsNil() || newHeadBlock.Block().IsNil() {
-		return errors.New("cannot save nil head block")
+	if err := helpers.BeaconBlockIsNil(newHeadBlock); err != nil {
+		return err
 	}
 
 	// Get the new head state from cached state or DB.
@@ -175,7 +186,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
 func (s *Service) saveHeadNoDB(ctx context.Context, b block.SignedBeaconBlock, r [32]byte, hs state.BeaconState) error {
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	cachedHeadRoot, err := s.HeadRoot(ctx)
@@ -248,7 +259,7 @@ func (s *Service) headBlock() block.SignedBeaconBlock {
 // It does a full copy on head state for immutability.
 // This is a lock free version.
 func (s *Service) headState(ctx context.Context) state.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "blockChain.headState")
+	_, span := trace.StartSpan(ctx, "blockChain.headState")
 	defer span.End()
 
 	return s.head.state.Copy()
@@ -267,61 +278,17 @@ func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOn
 	return s.head.state.ValidatorAtIndexReadOnly(index)
 }
 
+// This returns the validator index referenced by the provided pubkey in
+// the head state.
+// This is a lock free version.
+func (s *Service) headValidatorIndexAtPubkey(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+	return s.head.state.ValidatorIndexByPubkey(pubKey)
+}
+
 // Returns true if head state exists.
 // This is the lock free version.
 func (s *Service) hasHeadState() bool {
 	return s.head != nil && s.head.state != nil
-}
-
-// This caches justified state balances to be used for fork choice.
-func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot [32]byte) error {
-	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-		return err
-	}
-
-	s.clearInitSyncBlocks()
-
-	var justifiedState state.BeaconState
-	var err error
-	if justifiedRoot == s.genesisRoot {
-		justifiedState, err = s.cfg.BeaconDB.GenesisState(ctx)
-		if err != nil {
-			return err
-		}
-	} else {
-		justifiedState, err = s.cfg.StateGen.StateByRoot(ctx, justifiedRoot)
-		if err != nil {
-			return err
-		}
-	}
-	if justifiedState == nil || justifiedState.IsNil() {
-		return errors.New("justified state can't be nil")
-	}
-
-	epoch := time.CurrentEpoch(justifiedState)
-
-	justifiedBalances := make([]uint64, justifiedState.NumValidators())
-	if err := justifiedState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
-		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
-			justifiedBalances[idx] = val.EffectiveBalance()
-		} else {
-			justifiedBalances[idx] = 0
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	s.justifiedBalancesLock.Lock()
-	defer s.justifiedBalancesLock.Unlock()
-	s.justifiedBalances = justifiedBalances
-	return nil
-}
-
-func (s *Service) getJustifiedBalances() []uint64 {
-	s.justifiedBalancesLock.RLock()
-	defer s.justifiedBalancesLock.RUnlock()
-	return s.justifiedBalances
 }
 
 // Notifies a common event feed of a new chain head event. Called right after a new
@@ -332,8 +299,8 @@ func (s *Service) notifyNewHeadEvent(
 	newHeadStateRoot,
 	newHeadRoot []byte,
 ) error {
-	previousDutyDependentRoot := s.genesisRoot[:]
-	currentDutyDependentRoot := s.genesisRoot[:]
+	previousDutyDependentRoot := s.originBlockRoot[:]
+	currentDutyDependentRoot := s.originBlockRoot[:]
 
 	var previousDutyEpoch types.Epoch
 	currentDutyEpoch := slots.ToEpoch(newHeadSlot)

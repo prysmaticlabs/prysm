@@ -32,12 +32,12 @@ import (
 // - attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot).
 // - The signature of attestation is valid.
 func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
-	if pid == s.cfg.P2P.PeerID() {
+	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
 	// Attestation processing requires the target block to be present in the database, so we'll skip
 	// validating or processing attestations until fully synced.
-	if s.cfg.InitialSync.Syncing() {
+	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
 	ctx, span := trace.StartSpan(ctx, "sync.validateCommitteeIndexBeaconAttestation")
@@ -67,7 +67,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 	// of a received unaggregated attestation.
-	s.cfg.AttestationNotifier.OperationFeed().Send(&feed.Event{
+	s.cfg.attestationNotifier.OperationFeed().Send(&feed.Event{
 		Type: operation.UnaggregatedAttReceived,
 		Data: &operation.UnAggregatedAttReceivedData{
 			Attestation: att,
@@ -76,7 +76,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
 	// processing tolerance.
-	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.cfg.Chain.GenesisTime(),
+	if err := helpers.ValidateAttestationTime(att.Data.Slot, s.cfg.chain.GenesisTime(),
 		earlyAttestationProcessingTolerance); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
@@ -92,7 +92,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 			// Using a different context to prevent timeouts as this operation can be expensive
 			// and we want to avoid affecting the critical code path.
 			ctx := context.TODO()
-			preState, err := s.cfg.Chain.AttestationTargetState(ctx, att.Data.Target)
+			preState, err := s.cfg.chain.AttestationTargetState(ctx, att.Data.Target)
 			if err != nil {
 				log.WithError(err).Error("Could not retrieve pre state")
 				tracing.AnnotateError(span, err)
@@ -110,7 +110,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 				tracing.AnnotateError(span, err)
 				return
 			}
-			s.cfg.SlasherAttestationsFeed.Send(indexedAtt)
+			s.cfg.slasherAttestationsFeed.Send(indexedAtt)
 		}()
 	}
 
@@ -126,7 +126,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject, errors.New("attestation data references bad block root")
 	}
 
-	// Verify the block being voted and the processed state is in DB and the block has passed validation if it's in the DB.
+	// Verify the block being voted and the processed state is in beaconDB and the block has passed validation if it's in the beaconDB.
 	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
@@ -134,16 +134,16 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore, nil
 	}
 
-	if err := s.cfg.Chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
+	if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject, err
 	}
-	if err := s.cfg.Chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
+	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject, err
 	}
 
-	preState, err := s.cfg.Chain.AttestationTargetState(ctx, att.Data.Target)
+	preState, err := s.cfg.chain.AttestationTargetState(ctx, att.Data.Target)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
@@ -212,19 +212,19 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 	}
 
 	// Attestation must be unaggregated and the bit index must exist in the range of committee indices.
-	// Note: The Ethereum Beacon Chain spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
+	// Note: The Ethereum Beacon chain spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
 	// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
 	if a.AggregationBits.Count() != 1 || a.AggregationBits.BitIndices()[0] >= len(committee) {
 		return pubsub.ValidationReject, errors.New("attestation bitfield is invalid")
 	}
 
 	if features.Get().EnableBatchVerification {
-		set, err := blocks.AttestationSignatureSet(ctx, bs, []*eth.Attestation{a})
+		set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject, err
 		}
-		return s.validateWithBatchVerifier(ctx, "attestation", set), nil
+		return s.validateWithBatchVerifier(ctx, "attestation", set)
 	}
 	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
 		tracing.AnnotateError(span, err)
@@ -255,8 +255,8 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 // hasBlockAndState returns true if the beacon node knows about a block and associated state in the
 // database or cache.
 func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool {
-	hasStateSummary := s.cfg.DB.HasStateSummary(ctx, blockRoot)
-	hasState := hasStateSummary || s.cfg.DB.HasState(ctx, blockRoot)
-	hasBlock := s.cfg.Chain.HasInitSyncBlock(blockRoot) || s.cfg.DB.HasBlock(ctx, blockRoot)
+	hasStateSummary := s.cfg.beaconDB.HasStateSummary(ctx, blockRoot)
+	hasState := hasStateSummary || s.cfg.beaconDB.HasState(ctx, blockRoot)
+	hasBlock := s.cfg.chain.HasInitSyncBlock(blockRoot) || s.cfg.beaconDB.HasBlock(ctx, blockRoot)
 	return hasState && hasBlock
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	slashingprotectioncommands "github.com/prysmaticlabs/prysm/cmd/validator/slashing-protection"
 	walletcommands "github.com/prysmaticlabs/prysm/cmd/validator/wallet"
+	"github.com/prysmaticlabs/prysm/cmd/validator/web"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/logs"
@@ -63,9 +64,7 @@ var appFlags = []cli.Flag{
 	flags.GrpcHeadersFlag,
 	flags.GPRCGatewayCorsDomain,
 	flags.DisableAccountMetricsFlag,
-	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
-	cmd.DisableMonitoringFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
 	flags.WalletPasswordFileFlag,
@@ -73,6 +72,12 @@ var appFlags = []cli.Flag{
 	flags.EnableWebFlag,
 	flags.GraffitiFileFlag,
 	flags.EnableDutyCountDown,
+	// Consensys' Web3Signer flags
+	flags.Web3SignerURLFlag,
+	flags.Web3SignerPublicValidatorKeysFlag,
+	////////////////////
+	cmd.DisableMonitoringFlag,
+	cmd.MonitoringHostFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.EnableBackupWebhookFlag,
 	cmd.MinimalConfigFlag,
@@ -117,6 +122,7 @@ func main() {
 		accountcommands.Commands,
 		slashingprotectioncommands.Commands,
 		dbcommands.Commands,
+		web.Commands,
 	}
 
 	app.Flags = appFlags

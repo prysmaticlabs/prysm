@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -30,6 +31,7 @@ func TestGetSpec(t *testing.T) {
 	config.HysteresisQuotient = 9
 	config.HysteresisDownwardMultiplier = 10
 	config.HysteresisUpwardMultiplier = 11
+	config.SafeSlotsToImportOptimistically = 128
 	config.SafeSlotsToUpdateJustified = 12
 	config.Eth1FollowDistance = 13
 	config.TargetAggregatorsPerCommittee = 14
@@ -46,8 +48,8 @@ func TestGetSpec(t *testing.T) {
 	config.GenesisForkVersion = []byte("GenesisForkVersion")
 	config.AltairForkVersion = []byte("AltairForkVersion")
 	config.AltairForkEpoch = 100
-	config.MergeForkVersion = []byte("MergeForkVersion")
-	config.MergeForkEpoch = 101
+	config.BellatrixForkVersion = []byte("BellatrixForkVersion")
+	config.BellatrixForkEpoch = 101
 	config.ShardingForkVersion = []byte("ShardingForkVersion")
 	config.ShardingForkEpoch = 102
 	config.MinAnchorPowBlockDifficulty = 1000
@@ -96,6 +98,10 @@ func TestGetSpec(t *testing.T) {
 	config.ProportionalSlashingMultiplierAltair = 69
 	config.InactivityScoreRecoveryRate = 70
 	config.MinSyncCommitteeParticipants = 71
+	config.TerminalBlockHash = common.HexToHash("TerminalBlockHash")
+	config.TerminalBlockHashActivationEpoch = 72
+	config.TerminalTotalDifficulty = 73
+	config.FeeRecipient = common.HexToAddress("FeeRecipient")
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -125,7 +131,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 91, len(resp.Data))
+	assert.Equal(t, 100, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -186,9 +192,9 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("AltairForkVersion")), v)
 		case "ALTAIR_FORK_EPOCH":
 			assert.Equal(t, "100", v)
-		case "MERGE_FORK_VERSION":
-			assert.Equal(t, "0x"+hex.EncodeToString([]byte("MergeForkVersion")), v)
-		case "MERGE_FORK_EPOCH":
+		case "BELLATRIX_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("BellatrixForkVersion")), v)
+		case "BELLATRIX_FORK_EPOCH":
 			assert.Equal(t, "101", v)
 		case "SHARDING_FORK_VERSION":
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("ShardingForkVersion")), v)
@@ -318,6 +324,26 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x09000000", v)
 		case "TRANSITION_TOTAL_DIFFICULTY":
 			assert.Equal(t, "0", v)
+		case "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH":
+			assert.Equal(t, "72", v)
+		case "TERMINAL_BLOCK_HASH":
+			assert.Equal(t, common.HexToHash("TerminalBlockHash"), common.HexToHash(v))
+		case "TERMINAL_TOTAL_DIFFICULTY":
+			assert.Equal(t, "73", v)
+		case "FeeRecipient":
+			assert.Equal(t, common.HexToAddress("FeeRecipient"), v)
+		case "PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX":
+			assert.Equal(t, "3", v)
+		case "MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX":
+			assert.Equal(t, "32", v)
+		case "INACTIVITY_PENALTY_QUOTIENT_BELLATRIX":
+			assert.Equal(t, "16777216", v)
+		case "PROPOSER_SCORE_BOOST":
+			assert.Equal(t, "70", v)
+		case "INTERVALS_PER_SLOT":
+			assert.Equal(t, "3", v)
+		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
+			assert.Equal(t, "128", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
@@ -380,5 +406,5 @@ func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// Genesis and Altair.
-	assert.Equal(t, 2, len(resp.Data))
+	assert.Equal(t, 3, len(resp.Data))
 }

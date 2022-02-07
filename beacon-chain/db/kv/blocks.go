@@ -46,6 +46,28 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeac
 	return blk, err
 }
 
+// OriginBlockRoot returns the value written to the db in SaveOriginBlockRoot
+// This is the root of a finalized block within the weak subjectivity period
+// at the time the chain was started, used to initialize the database and chain
+// without syncing from genesis.
+func (s *Store) OriginBlockRoot(ctx context.Context) ([32]byte, error) {
+	_, span := trace.StartSpan(ctx, "BeaconDB.OriginBlockRoot")
+	defer span.End()
+
+	var root [32]byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		rootSlice := bkt.Get(originBlockRootKey)
+		if rootSlice == nil {
+			return ErrNotFoundOriginBlockRoot
+		}
+		copy(root[:], rootSlice)
+		return nil
+	})
+
+	return root, err
+}
+
 // HeadBlock returns the latest canonical block in the Ethereum Beacon Chain.
 func (s *Store) HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadBlock")
@@ -125,7 +147,7 @@ func (s *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 
 // HasBlock checks if a block by root exists in the db.
 func (s *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
+	_, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
 	defer span.End()
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return true
@@ -150,11 +172,7 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []bloc
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 
-		keys, err := blockRootsBySlot(ctx, tx, slot)
-		if err != nil {
-			return err
-		}
-
+		keys := blockRootsBySlot(ctx, tx, slot)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			blk, err := unmarshalBlock(ctx, encoded)
@@ -174,11 +192,7 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, []
 	defer span.End()
 	blockRoots := make([][32]byte, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
-		keys, err := blockRootsBySlot(ctx, tx, slot)
-		if err != nil {
-			return err
-		}
-
+		keys := blockRootsBySlot(ctx, tx, slot)
 		for i := 0; i < len(keys); i++ {
 			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}
@@ -188,58 +202,6 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, []
 		return false, nil, errors.Wrap(err, "could not retrieve block roots by slot")
 	}
 	return len(blockRoots) > 0, blockRoots, nil
-}
-
-// deleteBlock by block root.
-func (s *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlock")
-	defer span.End()
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		enc := bkt.Get(blockRoot[:])
-		if enc == nil {
-			return nil
-		}
-		blk, err := unmarshalBlock(ctx, enc)
-		if err != nil {
-			return err
-		}
-		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
-		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not delete root for DB indices")
-		}
-		s.blockCache.Del(string(blockRoot[:]))
-		return bkt.Delete(blockRoot[:])
-	})
-}
-
-// deleteBlocks by block roots.
-func (s *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlocks")
-	defer span.End()
-
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		for _, blockRoot := range blockRoots {
-			enc := bkt.Get(blockRoot[:])
-			if enc == nil {
-				return nil
-			}
-			blk, err := unmarshalBlock(ctx, enc)
-			if err != nil {
-				return err
-			}
-			indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
-			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-				return errors.Wrap(err, "could not delete root for DB indices")
-			}
-			s.blockCache.Del(string(blockRoot[:]))
-			if err := bkt.Delete(blockRoot[:]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
 }
 
 // SaveBlock to the db.
@@ -253,7 +215,6 @@ func (s *Store) SaveBlock(ctx context.Context, signed block.SignedBeaconBlock) e
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return nil
 	}
-
 	return s.SaveBlocks(ctx, []block.SignedBeaconBlock{signed})
 }
 
@@ -301,7 +262,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock
 
 // SaveHeadBlockRoot to the db.
 func (s *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		hasStateSummary := s.hasStateSummaryBytes(tx, blockRoot)
@@ -336,11 +297,24 @@ func (s *Store) GenesisBlock(ctx context.Context) (block.SignedBeaconBlock, erro
 
 // SaveGenesisBlockRoot to the db.
 func (s *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveGenesisBlockRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveGenesisBlockRoot")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(genesisBlockRootKey, blockRoot[:])
+	})
+}
+
+// SaveOriginBlockRoot is used to keep track of the block root used for origin sync.
+// This should be a finalized block from within the current weak subjectivity period.
+// This value is used by a running beacon chain node to locate the state at the beginning
+// of the chain history, in places where genesis would typically be used.
+func (s *Store) SaveOriginBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveOriginBlockRoot")
+	defer span.End()
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(blocksBucket)
+		return bucket.Put(originBlockRootKey, blockRoot[:])
 	})
 }
 
@@ -455,7 +429,7 @@ func blockRootsBySlotRange(
 	bkt *bolt.Bucket,
 	startSlotEncoded, endSlotEncoded, startEpochEncoded, endEpochEncoded, slotStepEncoded interface{},
 ) ([][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlotRange")
+	_, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlotRange")
 	defer span.End()
 
 	// Return nothing when all slot parameters are missing
@@ -519,8 +493,8 @@ func blockRootsBySlotRange(
 }
 
 // blockRootsBySlot retrieves the block roots by slot
-func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlot")
+func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) [][]byte {
+	_, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlot")
 	defer span.End()
 
 	roots := make([][]byte, 0)
@@ -533,14 +507,14 @@ func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][]by
 			roots = append(roots, v[i:i+32])
 		}
 	}
-	return roots, nil
+	return roots
 }
 
 // createBlockIndicesFromBlock takes in a beacon block and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createBlockIndicesFromBlock(ctx context.Context, block block.BeaconBlock) map[string][]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromBlock")
+	_, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromBlock")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
 	// Every index has a unique bucket for fast, binary-search
@@ -568,7 +542,7 @@ func createBlockIndicesFromBlock(ctx context.Context, block block.BeaconBlock) m
 // objects. If a certain filter criterion does not apply to
 // blocks, an appropriate error is returned.
 func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) (map[string][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromFilters")
+	_, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromFilters")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
 	for k, v := range f.Filters() {
@@ -609,6 +583,13 @@ func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, err
 			return nil, err
 		}
 		return wrapper.WrappedAltairSignedBeaconBlock(rawBlock)
+	case hasBellatrixKey(enc):
+		rawBlock := &ethpb.SignedBeaconBlockBellatrix{}
+		err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):])
+		if err != nil {
+			return nil, err
+		}
+		return wrapper.WrappedBellatrixSignedBeaconBlock(rawBlock)
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock := &ethpb.SignedBeaconBlock{}
@@ -627,6 +608,8 @@ func marshalBlock(_ context.Context, blk block.SignedBeaconBlock) ([]byte, error
 		return nil, err
 	}
 	switch blk.Version() {
+	case version.Bellatrix:
+		return snappy.Encode(nil, append(bellatrixKey, obj...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, obj...)), nil
 	case version.Phase0:

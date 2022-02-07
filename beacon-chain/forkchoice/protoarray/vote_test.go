@@ -12,6 +12,7 @@ import (
 func TestVotes_CanFindHead(t *testing.T) {
 	balances := []uint64{1, 1}
 	f := setup(1, 1)
+	syncedTips := &optimisticStore{}
 
 	// The head should always start at the finalized block.
 	r, err := f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
@@ -248,7 +249,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 
 	// Verify pruning below the prune threshold does not affect head.
 	f.store.pruneThreshold = 1000
-	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
+	require.NoError(t, f.store.prune(context.Background(), indexToHash(5), syncedTips))
 	assert.Equal(t, 11, len(f.store.nodes), "Incorrect nodes length after prune")
 
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
@@ -272,8 +273,8 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//         / \
 	//        9  10
 	f.store.pruneThreshold = 1
-	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
-	assert.Equal(t, 6, len(f.store.nodes), "Incorrect nodes length after prune")
+	require.NoError(t, f.store.prune(context.Background(), indexToHash(5), syncedTips))
+	assert.Equal(t, 5, len(f.store.nodes), "Incorrect nodes length after prune")
 
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
 	require.NoError(t, err)

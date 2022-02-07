@@ -3,6 +3,7 @@
 package flags
 
 import (
+	"encoding/hex"
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -109,11 +110,19 @@ var (
 		Name:  "head-sync",
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
 	}
+	// SafeSlotsToImportOptimistically specifies the number of slots that a
+	// node should wait before being able to optimistically sync blocks
+	// across the merge boundary
+	SafeSlotsToImportOptimistically = &cli.IntFlag{
+		Name:  "safe-slots-to-import-optimistically",
+		Usage: "The number of slots to wait before optimistically syncing a block without enabled execution.",
+		Value: 128,
+	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
-	// section of DB.
+	// section of beaconDB.
 	SlotsPerArchivedPoint = &cli.IntFlag{
 		Name:  "slots-per-archive-point",
-		Usage: "The slot durations of when an archived state gets saved in the DB.",
+		Usage: "The slot durations of when an archived state gets saved in the beaconDB.",
 		Value: 2048,
 	}
 	// DisableDiscv5 disables running discv5.
@@ -188,5 +197,11 @@ var (
 		Name:  "minimum-peers-per-subnet",
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
+	}
+	// FeeRecipient specifies the fee recipient for the transaction fees.
+	FeeRecipient = &cli.StringFlag{
+		Name:  "fee-recipient",
+		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state.",
+		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
 	}
 )

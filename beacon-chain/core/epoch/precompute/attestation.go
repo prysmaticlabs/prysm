@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -64,7 +65,7 @@ func ProcessAttestations(
 		vp = UpdateValidator(vp, v, indices, a, a.Data.Slot)
 	}
 
-	pBal = UpdateBalance(vp, pBal)
+	pBal = UpdateBalance(vp, pBal, state.Version())
 
 	return vp, pBal, nil
 }
@@ -170,7 +171,7 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *et
 }
 
 // UpdateBalance updates pre computed balance store.
-func UpdateBalance(vp []*Validator, bBal *Balance) *Balance {
+func UpdateBalance(vp []*Validator, bBal *Balance, stateVersion int) *Balance {
 	for _, v := range vp {
 		if !v.IsSlashed {
 			if v.IsCurrentEpochAttester {
@@ -179,7 +180,10 @@ func UpdateBalance(vp []*Validator, bBal *Balance) *Balance {
 			if v.IsCurrentEpochTargetAttester {
 				bBal.CurrentEpochTargetAttested += v.CurrentEpochEffectiveBalance
 			}
-			if v.IsPrevEpochAttester {
+			if stateVersion == version.Phase0 && v.IsPrevEpochAttester {
+				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
+			}
+			if (stateVersion == version.Altair || stateVersion == version.Bellatrix) && v.IsPrevEpochSourceAttester {
 				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsPrevEpochTargetAttester {

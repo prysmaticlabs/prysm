@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -24,7 +24,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	if req.Exit == nil {
 		return nil, status.Error(codes.InvalidArgument, "voluntary exit does not exist")
 	}
-	if req.Signature == nil || len(req.Signature) != params.BeaconConfig().BLSSignatureLength {
+	if req.Signature == nil || len(req.Signature) != fieldparams.BLSSignatureLength {
 		return nil, status.Error(codes.InvalidArgument, "invalid signature provided")
 	}
 
@@ -38,7 +38,6 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// Send the voluntary exit to the operation feed.
 	vs.OperationNotifier.OperationFeed().Send(&feed.Event{
 		Type: opfeed.ExitReceived,
 		Data: &opfeed.ExitReceivedData{

@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -34,11 +35,7 @@ var backOffPeriod = 10 * time.Second
 func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
-	if err := v.WaitForWalletInitialization(ctx); err != nil {
-		// log.Fatalf will prevent defer from being called
-		cleanup()
-		log.Fatalf("Wallet is not ready: %v", err)
-	}
+
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
@@ -62,6 +59,14 @@ func run(ctx context.Context, v iface.Validator) {
 		if err != nil {
 			log.Fatalf("Could not determine if beacon chain started: %v", err)
 		}
+
+		err = v.WaitForKeymanagerInitialization(ctx)
+		if err != nil {
+			// log.Fatalf will prevent defer from being called
+			cleanup()
+			log.Fatalf("Wallet is not ready: %v", err)
+		}
+
 		err = v.WaitForSync(ctx)
 		if isConnectionError(err) {
 			log.Warnf("Could not determine if beacon chain started: %v", err)
@@ -103,8 +108,12 @@ func run(ctx context.Context, v iface.Validator) {
 		handleAssignmentError(err, headSlot)
 	}
 
-	accountsChangedChan := make(chan [][48]byte, 1)
-	sub := v.GetKeymanager().SubscribeAccountChanges(accountsChangedChan)
+	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
+	km, err := v.Keymanager()
+	if err != nil {
+		log.Fatalf("Could not get keymanager: %v", err)
+	}
+	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -138,7 +147,7 @@ func run(ctx context.Context, v iface.Validator) {
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
-			remoteKm, ok := v.GetKeymanager().(remote.RemoteKeymanager)
+			remoteKm, ok := km.(remote.RemoteKeymanager)
 			if ok {
 				_, err := remoteKm.ReloadPublicKeys(ctx)
 				if err != nil {
@@ -185,7 +194,7 @@ func run(ctx context.Context, v iface.Validator) {
 			for pubKey, roles := range allRoles {
 				wg.Add(len(roles))
 				for _, role := range roles {
-					go func(role iface.ValidatorRole, pubKey [48]byte) {
+					go func(role iface.ValidatorRole, pubKey [fieldparams.BLSPubkeyLength]byte) {
 						defer wg.Done()
 						switch role {
 						case iface.RoleAttester:

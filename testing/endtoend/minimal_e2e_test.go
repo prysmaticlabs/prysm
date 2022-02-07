@@ -14,16 +14,35 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+type testArgs struct {
+	usePrysmSh          bool
+	useWeb3RemoteSigner bool
+}
+
 func TestEndToEnd_MinimalConfig(t *testing.T) {
-	e2eMinimal(t, false /*usePrysmSh*/)
+	e2eMinimal(t, &testArgs{
+		usePrysmSh:          false,
+		useWeb3RemoteSigner: false,
+	})
+}
+
+func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
+	t.Skip("TODO(9994): Complete web3signer client implementation, currently blocked by https://github.com/ConsenSys/web3signer/issues/494")
+	e2eMinimal(t, &testArgs{
+		usePrysmSh:          false,
+		useWeb3RemoteSigner: true,
+	})
 }
 
 // Run minimal e2e config with the current release validator against latest beacon node.
 func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
-	e2eMinimal(t, true /*usePrysmSh*/)
+	e2eMinimal(t, &testArgs{
+		usePrysmSh:          true,
+		useWeb3RemoteSigner: false,
+	})
 }
 
-func e2eMinimal(t *testing.T, usePrysmSh bool) {
+func e2eMinimal(t *testing.T, args *testArgs) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
@@ -35,7 +54,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
-	if usePrysmSh {
+	if args.usePrysmSh {
 		// If using prysm.sh, run for only 6 epochs.
 		// TODO(#9166): remove this block once v2 changes are live.
 		epochsToRun = helpers.AltairE2EForkEpoch - 1
@@ -63,12 +82,7 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
-	}
-	// TODO(#9166): remove this block once v2 changes are live.
-	if !usePrysmSh {
-		evals = append(evals, ev.ValidatorSyncParticipation)
-	} else {
-		t.Log("Warning: Skipping v2 specific evaluators for prior release")
+		ev.ValidatorSyncParticipation,
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -81,8 +95,9 @@ func e2eMinimal(t *testing.T, usePrysmSh bool) {
 		EpochsToRun:         uint64(epochsToRun),
 		TestSync:            true,
 		TestDeposits:        true,
-		UsePrysmShValidator: usePrysmSh,
+		UsePrysmShValidator: args.usePrysmSh,
 		UsePprof:            !longRunning,
+		UseWeb3RemoteSigner: args.useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 	}

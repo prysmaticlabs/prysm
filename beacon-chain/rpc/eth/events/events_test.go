@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/async/event"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -185,6 +186,49 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			feed: srv.OperationNotifier.OperationFeed(),
 		})
 	})
+	t.Run(SyncCommitteeContributionTopic, func(t *testing.T) {
+		ctx := context.Background()
+		srv, ctrl, mockStream := setupServer(ctx, t)
+		defer ctrl.Finish()
+
+		wantedContributionV1alpha1 := &eth.SignedContributionAndProof{
+			Message: &eth.ContributionAndProof{
+				AggregatorIndex: 1,
+				Contribution: &eth.SyncCommitteeContribution{
+					Slot:              1,
+					BlockRoot:         []byte("root"),
+					SubcommitteeIndex: 1,
+					AggregationBits:   bitfield.NewBitvector128(),
+					Signature:         []byte("sig"),
+				},
+				SelectionProof: []byte("proof"),
+			},
+			Signature: []byte("sig"),
+		}
+		wantedContribution := migration.V1Alpha1SignedContributionAndProofToV2(wantedContributionV1alpha1)
+		genericResponse, err := anypb.New(wantedContribution)
+		require.NoError(t, err)
+
+		wantedMessage := &gateway.EventSource{
+			Event: SyncCommitteeContributionTopic,
+			Data:  genericResponse,
+		}
+
+		assertFeedSendAndReceive(ctx, &assertFeedArgs{
+			t:             t,
+			srv:           srv,
+			topics:        []string{SyncCommitteeContributionTopic},
+			stream:        mockStream,
+			shouldReceive: wantedMessage,
+			itemToSend: &feed.Event{
+				Type: operation.SyncCommitteeContributionReceived,
+				Data: &operation.SyncCommitteeContributionReceivedData{
+					Contribution: wantedContributionV1alpha1,
+				},
+			},
+			feed: srv.OperationNotifier.OperationFeed(),
+		})
+	})
 }
 
 func TestStreamEvents_StateEvents(t *testing.T) {
@@ -284,6 +328,65 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			},
 			feed: srv.StateNotifier.StateFeed(),
 		})
+	})
+}
+
+func TestStreamEvents_CommaSeparatedTopics(t *testing.T) {
+	ctx := context.Background()
+	srv, ctrl, mockStream := setupServer(ctx, t)
+	defer ctrl.Finish()
+
+	wantedHead := &ethpb.EventHead{
+		Slot:                      8,
+		Block:                     make([]byte, 32),
+		State:                     make([]byte, 32),
+		EpochTransition:           true,
+		PreviousDutyDependentRoot: make([]byte, 32),
+		CurrentDutyDependentRoot:  make([]byte, 32),
+	}
+	headGenericResponse, err := anypb.New(wantedHead)
+	require.NoError(t, err)
+	wantedHeadMessage := &gateway.EventSource{
+		Event: HeadTopic,
+		Data:  headGenericResponse,
+	}
+
+	assertFeedSendAndReceive(ctx, &assertFeedArgs{
+		t:             t,
+		srv:           srv,
+		topics:        []string{HeadTopic + "," + FinalizedCheckpointTopic},
+		stream:        mockStream,
+		shouldReceive: wantedHeadMessage,
+		itemToSend: &feed.Event{
+			Type: statefeed.NewHead,
+			Data: wantedHead,
+		},
+		feed: srv.StateNotifier.StateFeed(),
+	})
+
+	wantedCheckpoint := &ethpb.EventFinalizedCheckpoint{
+		Block: make([]byte, 32),
+		State: make([]byte, 32),
+		Epoch: 8,
+	}
+	checkpointGenericResponse, err := anypb.New(wantedCheckpoint)
+	require.NoError(t, err)
+	wantedCheckpointMessage := &gateway.EventSource{
+		Event: FinalizedCheckpointTopic,
+		Data:  checkpointGenericResponse,
+	}
+
+	assertFeedSendAndReceive(ctx, &assertFeedArgs{
+		t:             t,
+		srv:           srv,
+		topics:        []string{HeadTopic + "," + FinalizedCheckpointTopic},
+		stream:        mockStream,
+		shouldReceive: wantedCheckpointMessage,
+		itemToSend: &feed.Event{
+			Type: statefeed.FinalizedCheckpoint,
+			Data: wantedCheckpoint,
+		},
+		feed: srv.StateNotifier.StateFeed(),
 	})
 }
 

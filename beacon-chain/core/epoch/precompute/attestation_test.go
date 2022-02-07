@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -65,7 +66,31 @@ func TestUpdateBalance(t *testing.T) {
 		PrevEpochTargetAttested:    100 * params.BeaconConfig().EffectiveBalanceIncrement,
 		PrevEpochHeadAttested:      200 * params.BeaconConfig().EffectiveBalanceIncrement,
 	}
-	pBal := precompute.UpdateBalance(vp, &precompute.Balance{})
+	pBal := precompute.UpdateBalance(vp, &precompute.Balance{}, version.Phase0)
+	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
+}
+
+func TestUpdateBalanceBellatrixVersion(t *testing.T) {
+	vp := []*precompute.Validator{
+		{IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochTargetAttester: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+	}
+	wantedPBal := &precompute.Balance{
+		ActiveCurrentEpoch:         params.BeaconConfig().EffectiveBalanceIncrement,
+		ActivePrevEpoch:            params.BeaconConfig().EffectiveBalanceIncrement,
+		CurrentEpochAttested:       200 * params.BeaconConfig().EffectiveBalanceIncrement,
+		CurrentEpochTargetAttested: 200 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochAttested:          params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochTargetAttested:    100 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochHeadAttested:      200 * params.BeaconConfig().EffectiveBalanceIncrement,
+	}
+	pBal := precompute.UpdateBalance(vp, &precompute.Balance{}, version.Bellatrix)
 	assert.DeepEqual(t, wantedPBal, pBal, "Incorrect balance calculations")
 }
 
@@ -146,8 +171,8 @@ func TestAttestedCurrentEpoch(t *testing.T) {
 }
 
 func TestProcessAttestations(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	validators := uint64(128)
 	beaconState, _ := util.DeterministicGenesisState(t, validators)

@@ -15,8 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -112,7 +113,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	genesisValidatorsRoot, err := v1.ValidatorRegistryRoot(preState.Validators())
+	genesisValidatorsRoot, err := stateutil.ValidatorRegistryRoot(preState.Validators())
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
@@ -180,7 +181,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	bodyRoot, err := (&ethpb.BeaconBlockBodyAltair{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: make([]byte, 32),
+			DepositRoot: make([]byte, fieldparams.RootLength),
 			BlockHash:   make([]byte, 32),
 		},
 		Graffiti: make([]byte, 32),
@@ -246,12 +247,12 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 	return &ethpb.SignedBeaconBlockAltair{
 		Block: &ethpb.BeaconBlockAltair{
-			ParentRoot: make([]byte, 32),
-			StateRoot:  make([]byte, 32),
+			ParentRoot: make([]byte, fieldparams.RootLength),
+			StateRoot:  make([]byte, fieldparams.RootLength),
 			Body: &ethpb.BeaconBlockBodyAltair{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot: make([]byte, 32),
+					DepositRoot: make([]byte, fieldparams.RootLength),
 					BlockHash:   make([]byte, 32),
 				},
 				Graffiti:          make([]byte, 32),

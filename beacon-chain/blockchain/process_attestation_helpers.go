@@ -42,11 +42,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if err != nil {
 		return nil, err
 	}
-	if epochStartSlot > baseState.Slot() {
-		baseState, err = transition.ProcessSlots(ctx, baseState, epochStartSlot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
-		}
+	baseState, err = transition.ProcessSlotsIfPossible(ctx, baseState, epochStartSlot)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not process slots up to epoch %d", c.Epoch)
 	}
 
 	// Sharing the same state across caches is perfectly fine here, the fetching
@@ -61,7 +59,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
-func (s *Service) verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
+func verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
 	currentSlot := types.Slot((nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := slots.ToEpoch(currentSlot)
 	var prevEpoch types.Epoch
@@ -87,7 +85,7 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	if (b == nil || b.IsNil()) && s.hasInitSyncBlock(r) {
 		b = s.getInitSyncBlock(r)
 	}
-	if err := helpers.VerifyNilBeaconBlock(b); err != nil {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	if b.Block().Slot() > data.Slot {

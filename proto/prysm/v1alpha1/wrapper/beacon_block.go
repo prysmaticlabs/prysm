@@ -3,6 +3,7 @@ package wrapper
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -13,7 +14,26 @@ var (
 	_ = block.SignedBeaconBlock(&altairSignedBeaconBlock{})
 	_ = block.BeaconBlock(&altairBeaconBlock{})
 	_ = block.BeaconBlockBody(&altairBeaconBlockBody{})
+
+	// ErrUnsupportedSignedBeaconBlock is returned when the struct type is not a supported signed
+	// beacon block type.
+	ErrUnsupportedSignedBeaconBlock = errors.New("unsupported signed beacon block")
 )
+
+// WrappedSignedBeaconBlock will wrap a signed beacon block to conform to the
+// signed beacon block interface.
+func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
+	switch b := i.(type) {
+	case *eth.SignedBeaconBlock:
+		return WrappedPhase0SignedBeaconBlock(b), nil
+	case *eth.SignedBeaconBlockAltair:
+		return WrappedAltairSignedBeaconBlock(b)
+	case *eth.SignedBeaconBlockBellatrix:
+		return WrappedBellatrixSignedBeaconBlock(b)
+	default:
+		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", i)
+	}
+}
 
 // Phase0SignedBeaconBlock is a convenience wrapper around a phase 0 beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon
@@ -24,6 +44,7 @@ type Phase0SignedBeaconBlock struct {
 
 // WrappedPhase0SignedBeaconBlock is constructor which wraps a protobuf phase 0 block
 // with the block wrapper.
+// Deprecated: use WrappedSignedBeaconBlock instead.
 func WrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) block.SignedBeaconBlock {
 	return Phase0SignedBeaconBlock{b: b}
 }
@@ -84,13 +105,18 @@ func (w Phase0SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 	return w.b, nil
 }
 
-// PbAltairBlock returns the underlying protobuf object.
-func (w Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
+// PbAltairBlock is a stub.
+func (_ Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, errors.New("unsupported altair block")
 }
 
+// PbBellatrixBlock is a stub.
+func (_ Phase0SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+	return nil, errors.New("unsupported bellatrix block")
+}
+
 // Version of the underlying protobuf object.
-func (w Phase0SignedBeaconBlock) Version() int {
+func (_ Phase0SignedBeaconBlock) Version() int {
 	return version.Phase0
 }
 
@@ -188,7 +214,7 @@ func (w Phase0BeaconBlock) Proto() proto.Message {
 }
 
 // Version of the underlying protobuf object.
-func (w Phase0BeaconBlock) Version() int {
+func (_ Phase0BeaconBlock) Version() int {
 	return version.Phase0
 }
 
@@ -244,7 +270,7 @@ func (w Phase0BeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
 }
 
 // SyncAggregate returns the sync aggregate in the block.
-func (w Phase0BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
+func (_ Phase0BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 	return nil, errors.New("Sync aggregate is not supported in phase 0 block")
 }
 
@@ -264,6 +290,11 @@ func (w Phase0BeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
 
+// ExecutionPayload is a stub.
+func (_ Phase0BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+	return nil, errors.New("ExecutionPayload is not supported in phase 0 block body")
+}
+
 var (
 	// ErrUnsupportedPhase0Block is returned when accessing a phase0 block from an altair wrapped
 	// block.
@@ -281,6 +312,7 @@ type altairSignedBeaconBlock struct {
 
 // WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
+// Deprecated: use WrappedSignedBeaconBlock instead.
 func WrappedAltairSignedBeaconBlock(b *eth.SignedBeaconBlockAltair) (block.SignedBeaconBlock, error) {
 	w := altairSignedBeaconBlock{b: b}
 	if w.IsNil() {
@@ -346,12 +378,17 @@ func (w altairSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, 
 }
 
 // PbPhase0Block is a stub.
-func (w altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
+func (_ altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedPhase0Block
 }
 
+// PbBellatrixBlock is a stub.
+func (_ altairSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+	return nil, errors.New("unsupported bellatrix block")
+}
+
 // Version of the underlying protobuf object.
-func (w altairSignedBeaconBlock) Version() int {
+func (_ altairSignedBeaconBlock) Version() int {
 	return version.Altair
 }
 
@@ -453,7 +490,7 @@ func (w altairBeaconBlock) Proto() proto.Message {
 }
 
 // Version of the underlying protobuf object.
-func (w altairBeaconBlock) Version() int {
+func (_ altairBeaconBlock) Version() int {
 	return version.Altair
 }
 
@@ -531,4 +568,276 @@ func (w altairBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 // body.
 func (w altairBeaconBlockBody) Proto() proto.Message {
 	return w.b
+}
+
+// ExecutionPayload is a stub.
+func (_ altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+	return nil, errors.New("ExecutionPayload is not supported in altair block body")
+}
+
+// bellatrixSignedBeaconBlock is a convenience wrapper around a Bellatrix beacon block
+// object. This wrapper allows us to conform to a common interface so that beacon
+// blocks for future forks can also be applied across prysm without issues.
+type bellatrixSignedBeaconBlock struct {
+	b *eth.SignedBeaconBlockBellatrix
+}
+
+// WrappedBellatrixSignedBeaconBlock is constructor which wraps a protobuf Bellatrix block with the block wrapper.
+// Deprecated: use WrappedSignedBeaconBlock instead.
+func WrappedBellatrixSignedBeaconBlock(b *eth.SignedBeaconBlockBellatrix) (block.SignedBeaconBlock, error) {
+	w := bellatrixSignedBeaconBlock{b: b}
+	if w.IsNil() {
+		return nil, ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// Signature returns the respective block signature.
+func (w bellatrixSignedBeaconBlock) Signature() []byte {
+	return w.b.Signature
+}
+
+// Block returns the underlying beacon block object.
+func (w bellatrixSignedBeaconBlock) Block() block.BeaconBlock {
+	return bellatrixBeaconBlock{b: w.b.Block}
+}
+
+// IsNil checks if the underlying beacon block is nil.
+func (w bellatrixSignedBeaconBlock) IsNil() bool {
+	return w.b == nil || w.b.Block == nil
+}
+
+// Copy performs a deep copy of the signed beacon block object.
+func (w bellatrixSignedBeaconBlock) Copy() block.SignedBeaconBlock {
+	return bellatrixSignedBeaconBlock{b: eth.CopySignedBeaconBlockBellatrix(w.b)}
+}
+
+// MarshalSSZ marshals the signed beacon block to its relevant ssz form.
+func (w bellatrixSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
+	return w.b.MarshalSSZ()
+}
+
+// MarshalSSZTo marshals the signed beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w bellatrixSignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized signed block
+func (w bellatrixSignedBeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the signed beacon block from its relevant ssz
+// form.
+func (w bellatrixSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
+}
+
+// Proto returns the block in its underlying protobuf interface.
+func (w bellatrixSignedBeaconBlock) Proto() proto.Message {
+	return w.b
+}
+
+// PbBellatrixBlock returns the underlying protobuf object.
+func (w bellatrixSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+	return w.b, nil
+}
+
+// PbPhase0Block is a stub.
+func (_ bellatrixSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
+	return nil, ErrUnsupportedPhase0Block
+}
+
+// PbAltairBlock returns the underlying protobuf object.
+func (_ bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
+	return nil, errors.New("unsupported altair block")
+}
+
+// Version of the underlying protobuf object.
+func (_ bellatrixSignedBeaconBlock) Version() int {
+	return version.Bellatrix
+}
+
+func (w bellatrixSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
+	root, err := w.b.Block.Body.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not hash block")
+	}
+
+	return &eth.SignedBeaconBlockHeader{
+		Header: &eth.BeaconBlockHeader{
+			Slot:          w.b.Block.Slot,
+			ProposerIndex: w.b.Block.ProposerIndex,
+			ParentRoot:    w.b.Block.ParentRoot,
+			StateRoot:     w.b.Block.StateRoot,
+			BodyRoot:      root[:],
+		},
+		Signature: w.Signature(),
+	}, nil
+}
+
+// bellatrixBeaconBlock is the wrapper for the actual block.
+type bellatrixBeaconBlock struct {
+	b *eth.BeaconBlockBellatrix
+}
+
+// WrappedBellatrixBeaconBlock is constructor which wraps a protobuf Bellatrix object
+// with the block wrapper.
+func WrappedBellatrixBeaconBlock(b *eth.BeaconBlockBellatrix) (block.BeaconBlock, error) {
+	w := bellatrixBeaconBlock{b: b}
+	if w.IsNil() {
+		return nil, ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// Slot returns the respective slot of the block.
+func (w bellatrixBeaconBlock) Slot() types.Slot {
+	return w.b.Slot
+}
+
+// ProposerIndex returns proposer index of the beacon block.
+func (w bellatrixBeaconBlock) ProposerIndex() types.ValidatorIndex {
+	return w.b.ProposerIndex
+}
+
+// ParentRoot returns the parent root of beacon block.
+func (w bellatrixBeaconBlock) ParentRoot() []byte {
+	return w.b.ParentRoot
+}
+
+// StateRoot returns the state root of the beacon block.
+func (w bellatrixBeaconBlock) StateRoot() []byte {
+	return w.b.StateRoot
+}
+
+// Body returns the underlying block body.
+func (w bellatrixBeaconBlock) Body() block.BeaconBlockBody {
+	return bellatrixBeaconBlockBody{b: w.b.Body}
+}
+
+// IsNil checks if the beacon block is nil.
+func (w bellatrixBeaconBlock) IsNil() bool {
+	return w.b == nil
+}
+
+// HashTreeRoot returns the ssz root of the block.
+func (w bellatrixBeaconBlock) HashTreeRoot() ([32]byte, error) {
+	return w.b.HashTreeRoot()
+}
+
+// MarshalSSZ marshals the block into its respective
+// ssz form.
+func (w bellatrixBeaconBlock) MarshalSSZ() ([]byte, error) {
+	return w.b.MarshalSSZ()
+}
+
+// MarshalSSZTo marshals the beacon block to its relevant ssz
+// form to the provided byte buffer.
+func (w bellatrixBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return w.b.MarshalSSZTo(dst)
+}
+
+// SizeSSZ returns the size of serialized block.
+func (w bellatrixBeaconBlock) SizeSSZ() int {
+	return w.b.SizeSSZ()
+}
+
+// UnmarshalSSZ unmarshalls the beacon block from its relevant ssz
+// form.
+func (w bellatrixBeaconBlock) UnmarshalSSZ(buf []byte) error {
+	return w.b.UnmarshalSSZ(buf)
+}
+
+// Proto returns the underlying block object in its
+// proto form.
+func (w bellatrixBeaconBlock) Proto() proto.Message {
+	return w.b
+}
+
+// Version of the underlying protobuf object.
+func (_ bellatrixBeaconBlock) Version() int {
+	return version.Bellatrix
+}
+
+// bellatrixBeaconBlockBody is a wrapper of a beacon block body.
+type bellatrixBeaconBlockBody struct {
+	b *eth.BeaconBlockBodyBellatrix
+}
+
+// WrappedBellatrixBeaconBlockBody is constructor which wraps a protobuf bellatrix object
+// with the block wrapper.
+func WrappedBellatrixBeaconBlockBody(b *eth.BeaconBlockBodyBellatrix) (block.BeaconBlockBody, error) {
+	w := bellatrixBeaconBlockBody{b: b}
+	if w.IsNil() {
+		return nil, ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// RandaoReveal returns the randao reveal from the block body.
+func (w bellatrixBeaconBlockBody) RandaoReveal() []byte {
+	return w.b.RandaoReveal
+}
+
+// Eth1Data returns the eth1 data in the block.
+func (w bellatrixBeaconBlockBody) Eth1Data() *eth.Eth1Data {
+	return w.b.Eth1Data
+}
+
+// Graffiti returns the graffiti in the block.
+func (w bellatrixBeaconBlockBody) Graffiti() []byte {
+	return w.b.Graffiti
+}
+
+// ProposerSlashings returns the proposer slashings in the block.
+func (w bellatrixBeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
+	return w.b.ProposerSlashings
+}
+
+// AttesterSlashings returns the attester slashings in the block.
+func (w bellatrixBeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
+	return w.b.AttesterSlashings
+}
+
+// Attestations returns the stored attestations in the block.
+func (w bellatrixBeaconBlockBody) Attestations() []*eth.Attestation {
+	return w.b.Attestations
+}
+
+// Deposits returns the stored deposits in the block.
+func (w bellatrixBeaconBlockBody) Deposits() []*eth.Deposit {
+	return w.b.Deposits
+}
+
+// VoluntaryExits returns the voluntary exits in the block.
+func (w bellatrixBeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
+	return w.b.VoluntaryExits
+}
+
+// SyncAggregate returns the sync aggregate in the block.
+func (w bellatrixBeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
+	return w.b.SyncAggregate, nil
+}
+
+// IsNil checks if the block body is nil.
+func (w bellatrixBeaconBlockBody) IsNil() bool {
+	return w.b == nil
+}
+
+// HashTreeRoot returns the ssz root of the block body.
+func (w bellatrixBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
+	return w.b.HashTreeRoot()
+}
+
+// Proto returns the underlying proto form of the block
+// body.
+func (w bellatrixBeaconBlockBody) Proto() proto.Message {
+	return w.b
+}
+
+// ExecutionPayload returns the Execution payload of the block body.
+func (w bellatrixBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+	return w.b.ExecutionPayload, nil
 }
