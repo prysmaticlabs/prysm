@@ -29,11 +29,11 @@ func TestListKeystores_JSONisEqual(t *testing.T) {
 		},
 	}
 
-	resp, err := areJsonPropertyNamesEqual(middlewareResponse, protoResponse)
+	listResp, err := areJsonPropertyNamesEqual(middlewareResponse, protoResponse)
 	require.NoError(t, err)
-	require.Equal(t, resp, true)
+	require.Equal(t, listResp, true)
 
-	resp, err = areJsonPropertyNamesEqual(middlewareResponse.Keystores[0], protoResponse.Data[0])
+	resp, err := areJsonPropertyNamesEqual(middlewareResponse.Keystores[0], protoResponse.Data[0])
 	require.NoError(t, err)
 	require.Equal(t, resp, true)
 }
@@ -47,9 +47,9 @@ func TestImportKeystores_JSONisEqual(t *testing.T) {
 		SlashingProtection: "a",
 	}
 
-	resp, err := areJsonPropertyNamesEqual(importKeystoresRequest, protoImportRequest)
+	requestResp, err := areJsonPropertyNamesEqual(importKeystoresRequest, protoImportRequest)
 	require.NoError(t, err)
-	require.Equal(t, resp, true)
+	require.Equal(t, requestResp, true)
 
 	importKeystoresResponse := &importKeystoresResponseJson{
 		Statuses: []*statusJson{
@@ -69,11 +69,11 @@ func TestImportKeystores_JSONisEqual(t *testing.T) {
 		},
 	}
 
-	resp, err = areJsonPropertyNamesEqual(importKeystoresResponse, protoImportKeystoresResponse)
+	ImportResp, err := areJsonPropertyNamesEqual(importKeystoresResponse, protoImportKeystoresResponse)
 	require.NoError(t, err)
-	require.Equal(t, resp, true)
+	require.Equal(t, ImportResp, true)
 
-	resp, err = areJsonPropertyNamesEqual(importKeystoresResponse.Statuses[0], protoImportKeystoresResponse.Data[0])
+	resp, err := areJsonPropertyNamesEqual(importKeystoresResponse.Statuses[0], protoImportKeystoresResponse.Data[0])
 	require.NoError(t, err)
 	require.Equal(t, resp, true)
 }
@@ -85,9 +85,9 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 		Pubkeys: [][]byte{[]byte{}},
 	}
 
-	resp, err := areJsonPropertyNamesEqual(deleteKeystoresRequest, protoDeleteRequest)
+	requestResp, err := areJsonPropertyNamesEqual(deleteKeystoresRequest, protoDeleteRequest)
 	require.NoError(t, err)
-	require.Equal(t, resp, true)
+	require.Equal(t, requestResp, true)
 
 	deleteKeystoresResponse := &deleteKeystoresResponseJson{
 		Statuses: []*statusJson{
@@ -108,18 +108,18 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 		SlashingProtection: "a",
 	}
 
-	resp, err = areJsonPropertyNamesEqual(deleteKeystoresResponse, protoDeleteResponse)
+	deleteResp, err := areJsonPropertyNamesEqual(deleteKeystoresResponse, protoDeleteResponse)
 	require.NoError(t, err)
-	require.Equal(t, resp, true)
+	require.Equal(t, deleteResp, true)
 
-	resp, err = areJsonPropertyNamesEqual(deleteKeystoresResponse.Statuses[0], protoDeleteResponse.Data[0])
+	resp, err := areJsonPropertyNamesEqual(deleteKeystoresResponse.Statuses[0], protoDeleteResponse.Data[0])
 	require.NoError(t, err)
 	require.Equal(t, resp, true)
 
 }
 
 // note: this does not do a deep comparison of the structs
-func areJsonPropertyNamesEqual(internal interface{}, proto interface{}) (bool, error) {
+func areJsonPropertyNamesEqual(internal, proto interface{}) (bool, error) {
 	internalJSON, err := json.Marshal(internal)
 	if err != nil {
 		return false, err
@@ -143,7 +143,7 @@ func areJsonPropertyNamesEqual(internal interface{}, proto interface{}) (bool, e
 
 	internalKeys := make([]string, 0, len(internalRaw))
 	protoKeys := make([]string, 0, len(protoRaw))
-	for key, _ := range internalRaw {
+	for key := range internalRaw {
 		internalKeys = append(internalKeys, key)
 		if _, ok := protoRaw[key]; !ok {
 			fmt.Printf("key: %s not found\n", key)
