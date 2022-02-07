@@ -110,6 +110,14 @@ var (
 		Name:  "head-sync",
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
 	}
+	// SafeSlotsToImportOptimistically specifies the number of slots that a
+	// node should wait before being able to optimistically sync blocks
+	// across the merge boundary
+	SafeSlotsToImportOptimistically = &cli.IntFlag{
+		Name:  "safe-slots-to-import-optimistically",
+		Usage: "The number of slots to wait before optimistically syncing a block without enabled execution.",
+		Value: 128,
+	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.
 	SlotsPerArchivedPoint = &cli.IntFlag{
