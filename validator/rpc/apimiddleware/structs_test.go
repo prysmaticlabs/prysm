@@ -11,7 +11,7 @@ import (
 )
 
 func TestListKeystores_JSONisEqual(t *testing.T) {
-	middlewareResponse := listKeystoresResponseJson{
+	middlewareResponse := &listKeystoresResponseJson{
 		Keystores: []*keystoreJson{
 			&keystoreJson{
 				ValidatingPubkey: "0x0",
@@ -20,7 +20,7 @@ func TestListKeystores_JSONisEqual(t *testing.T) {
 		},
 	}
 
-	protoResponse := service.ListKeystoresResponse{
+	protoResponse := &service.ListKeystoresResponse{
 		Data: []*service.ListKeystoresResponse_Keystore{
 			&service.ListKeystoresResponse_Keystore{
 				ValidatingPubkey: make([]byte, fieldparams.BLSPubkeyLength),
@@ -41,7 +41,7 @@ func TestListKeystores_JSONisEqual(t *testing.T) {
 func TestImportKeystores_JSONisEqual(t *testing.T) {
 	importKeystoresRequest := &importKeystoresRequestJson{}
 
-	protoImportRequest := service.ImportKeystoresRequest{
+	protoImportRequest := &service.ImportKeystoresRequest{
 		Keystores:          []string{""},
 		Passwords:          []string{""},
 		SlashingProtection: "a",
@@ -60,7 +60,7 @@ func TestImportKeystores_JSONisEqual(t *testing.T) {
 		},
 	}
 
-	protoImportKeystoresResponse := service.ImportKeystoresResponse{
+	protoImportKeystoresResponse := &service.ImportKeystoresResponse{
 		Data: []*service.ImportedKeystoreStatus{
 			&service.ImportedKeystoreStatus{
 				Status:  service.ImportedKeystoreStatus_ERROR,
@@ -81,7 +81,7 @@ func TestImportKeystores_JSONisEqual(t *testing.T) {
 func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 	deleteKeystoresRequest := &deleteKeystoresRequestJson{}
 
-	protoDeleteRequest := service.DeleteKeystoresRequest{
+	protoDeleteRequest := &service.DeleteKeystoresRequest{
 		Pubkeys: [][]byte{[]byte{}},
 	}
 
@@ -98,7 +98,7 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 		},
 		SlashingProtection: "a",
 	}
-	protoDeleteResponse := service.DeleteKeystoresResponse{
+	protoDeleteResponse := &service.DeleteKeystoresResponse{
 		Data: []*service.DeletedKeystoreStatus{
 			&service.DeletedKeystoreStatus{
 				Status:  service.DeletedKeystoreStatus_ERROR,
