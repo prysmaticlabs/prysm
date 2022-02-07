@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -106,6 +107,18 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
+	if preState.Version() == version.Bellatrix {
+		mergeTransitionBlk, err := blocks.MergeTransitionBlock(preState, signed.Block().Body())
+		if err != nil {
+			return errors.Wrap(err, "could not check if merge block is terminal")
+		}
+		if mergeTransitionBlk {
+			if err := s.validateTerminalBlock(signed); err != nil {
+				return err
+			}
+		}
+	}
+
 	body := signed.Block().Body()
 	// TODO_MERGE: Break `ExecuteStateTransition` into per_slot and block processing so we can call `ExecutePayload` in the middle.
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
@@ -128,16 +141,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
 			if err != nil {
 				return errors.Wrap(err, "could not execute payload")
-			}
-
-			mergeBlock, err := blocks.MergeTransitionBlock(postState, body)
-			if err != nil {
-				return errors.Wrap(err, "could not check if merge block is terminal")
-			}
-			if mergeBlock {
-				if err := s.validateTerminalBlock(signed); err != nil {
-					return err
-				}
 			}
 		}
 	}
@@ -368,6 +371,17 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
+		if preState.Version() == version.Bellatrix {
+			mergeTransitionBlk, err := blocks.MergeTransitionBlock(preState, b.Block().Body())
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not check if merge block is terminal")
+			}
+			if mergeTransitionBlk {
+				if err := s.validateTerminalBlock(b); err != nil {
+					return nil, nil, err
+				}
+			}
+		}
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, err
@@ -386,16 +400,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 				_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
 				if err != nil {
 					return nil, nil, errors.Wrap(err, "could not execute payload")
-				}
-
-				mergeBlock, err := blocks.MergeTransitionBlock(preState, b.Block().Body())
-				if err != nil {
-					return nil, nil, errors.Wrap(err, "could not check if merge block is terminal")
-				}
-				if mergeBlock {
-					if err := s.validateTerminalBlock(b); err != nil {
-						return nil, nil, err
-					}
 				}
 				headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
 				if err != nil {
@@ -708,6 +712,16 @@ func (s *Service) validateTerminalBlock(b block.SignedBeaconBlock) error {
 	if !validTerminalPowBlock(transitionBlkTTD, transitionParentBlkTTD) {
 		return errors.New("invalid difficulty for terminal block")
 	}
+
+	log.WithFields(logrus.Fields{
+		"slot":                                 b.Block().Slot(),
+		"transitionBlockHash":                  common.BytesToHash(payload.ParentHash).String(),
+		"transitionBlockParentHash":            common.HexToHash(transitionBlk.ParentHash).String(),
+		"terminalTotalDifficulty":              uint256.NewInt(params.BeaconConfig().TerminalTotalDifficulty).Uint64(),
+		"transitionBlockTotalDifficulty":       transitionBlkTTD.Uint64(),
+		"transitionBlockParentTotalDifficulty": transitionParentBlkTTD.Uint64(),
+	}).Info("Verified terminal block")
+
 	return nil
 }
 
