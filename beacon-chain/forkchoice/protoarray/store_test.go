@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -361,16 +362,39 @@ func TestStore_Prune_LessThanThreshold(t *testing.T) {
 	numOfNodes := 100
 	indices := make(map[[32]byte]uint64)
 	nodes := make([]*Node, 0)
-	for i := 0; i < numOfNodes; i++ {
+	indices[indexToHash(uint64(0))] = uint64(0)
+	nodes = append(nodes, &Node{
+		slot:           types.Slot(0),
+		root:           indexToHash(uint64(0)),
+		bestDescendant: uint64(numOfNodes - 1),
+		bestChild:      uint64(1),
+		parent:         NonExistentNode,
+	})
+	for i := 1; i < numOfNodes-1; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{slot: types.Slot(i)})
+		nodes = append(nodes, &Node{
+			slot:           types.Slot(i),
+			root:           indexToHash(uint64(i)),
+			bestDescendant: uint64(numOfNodes - 1),
+			bestChild:      uint64(i + 1),
+			parent:         uint64(i) - 1,
+		})
 	}
+	indices[indexToHash(uint64(numOfNodes-1))] = uint64(numOfNodes - 1)
+	nodes = append(nodes, &Node{
+		slot:           types.Slot(numOfNodes - 1),
+		root:           indexToHash(uint64(numOfNodes - 1)),
+		bestDescendant: NonExistentNode,
+		bestChild:      NonExistentNode,
+		parent:         uint64(numOfNodes - 2),
+	})
 
 	s := &Store{nodes: nodes, nodesIndices: indices, pruneThreshold: 100}
+	syncedTips := &optimisticStore{}
 
 	// Finalized root is at index 99 so everything before 99 should be pruned,
 	// but PruneThreshold is at 100 so nothing will be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	require.NoError(t, s.prune(context.Background(), indexToHash(99), syncedTips))
 	assert.Equal(t, 100, len(s.nodes), "Incorrect nodes count")
 	assert.Equal(t, 100, len(s.nodesIndices), "Incorrect node indices count")
 }
@@ -380,16 +404,37 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	numOfNodes := 100
 	indices := make(map[[32]byte]uint64)
 	nodes := make([]*Node, 0)
-	for i := 0; i < numOfNodes; i++ {
+	indices[indexToHash(uint64(0))] = uint64(0)
+	nodes = append(nodes, &Node{
+		slot:           types.Slot(0),
+		root:           indexToHash(uint64(0)),
+		bestDescendant: uint64(numOfNodes - 1),
+		bestChild:      uint64(1),
+		parent:         NonExistentNode,
+	})
+	for i := 1; i < numOfNodes-1; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{slot: types.Slot(i), root: indexToHash(uint64(i)),
-			bestDescendant: NonExistentNode, bestChild: NonExistentNode})
+		nodes = append(nodes, &Node{
+			slot:           types.Slot(i),
+			root:           indexToHash(uint64(i)),
+			bestDescendant: uint64(numOfNodes - 1),
+			bestChild:      uint64(i + 1),
+			parent:         uint64(i) - 1,
+		})
 	}
-
+	nodes = append(nodes, &Node{
+		slot:           types.Slot(numOfNodes - 1),
+		root:           indexToHash(uint64(numOfNodes - 1)),
+		bestDescendant: NonExistentNode,
+		bestChild:      NonExistentNode,
+		parent:         uint64(numOfNodes - 2),
+	})
+	indices[indexToHash(uint64(numOfNodes-1))] = uint64(numOfNodes - 1)
 	s := &Store{nodes: nodes, nodesIndices: indices}
+	syncedTips := &optimisticStore{}
 
 	// Finalized root is at index 99 so everything before 99 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	require.NoError(t, s.prune(context.Background(), indexToHash(99), syncedTips))
 	assert.Equal(t, 1, len(s.nodes), "Incorrect nodes count")
 	assert.Equal(t, 1, len(s.nodesIndices), "Incorrect node indices count")
 }
@@ -425,14 +470,15 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	})
 
 	s := &Store{nodes: nodes, nodesIndices: indices}
+	syncedTips := &optimisticStore{}
 
 	// Finalized root is at index 11 so everything before 11 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(10)))
+	require.NoError(t, s.prune(context.Background(), indexToHash(10), syncedTips))
 	assert.Equal(t, 90, len(s.nodes), "Incorrect nodes count")
 	assert.Equal(t, 90, len(s.nodesIndices), "Incorrect node indices count")
 
 	// One more time.
-	require.NoError(t, s.prune(context.Background(), indexToHash(20)))
+	require.NoError(t, s.prune(context.Background(), indexToHash(20), syncedTips))
 	assert.Equal(t, 80, len(s.nodes), "Incorrect nodes count")
 	assert.Equal(t, 80, len(s.nodesIndices), "Incorrect node indices count")
 }
@@ -468,6 +514,7 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 			bestDescendant: NonExistentNode,
 		},
 	}
+	syncedTips := &optimisticStore{}
 	s := &Store{
 		pruneThreshold: 0,
 		nodes:          nodes,
@@ -477,8 +524,54 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 			indexToHash(uint64(2)): 2,
 		},
 	}
-	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
+	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1)), syncedTips))
 	require.Equal(t, len(s.nodes), 1)
+}
+
+// This test starts with the following branching diagram
+/// We start with the following diagram
+//
+//                E -- F
+//               /
+//         C -- D
+//        /      \
+//  A -- B        G -- H -- I
+//        \        \
+//         J        -- K -- L
+//
+//
+// Synced tips are B, D and E. And we finalize F. All that is left in fork
+// choice is F, and the only synced tip left is E which is now away from Fork
+// Choice.
+func TestStore_PruneSyncedTips(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
+	syncedTips := &optimisticStore{
+		validatedTips: map[[32]byte]types.Slot{
+			[32]byte{'b'}: 101,
+			[32]byte{'d'}: 103,
+			[32]byte{'e'}: 104,
+		},
+	}
+	f.syncedTips = syncedTips
+	f.store.pruneThreshold = 0
+	require.NoError(t, f.Prune(ctx, [32]byte{'f'}))
+	require.Equal(t, 1, len(f.syncedTips.validatedTips))
+	_, ok := f.syncedTips.validatedTips[[32]byte{'e'}]
+	require.Equal(t, true, ok)
 }
 
 func TestStore_LeadsToViableHead(t *testing.T) {
