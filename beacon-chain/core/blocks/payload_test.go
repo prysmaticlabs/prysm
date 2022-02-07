@@ -160,7 +160,7 @@ func Test_MergeComplete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.payload))
-			got, err := blocks.MergeComplete(st)
+			got, err := blocks.MergeTransitionComplete(st)
 			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("mergeComplete() got = %v, want %v", got, tt.want)
@@ -341,11 +341,45 @@ func Test_MergeBlock(t *testing.T) {
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
-			got, err := blocks.IsMergeBlock(st, body)
+			got, err := blocks.MergeTransitionBlock(st, body)
 			require.NoError(t, err)
 			if got != tt.want {
-				t.Errorf("IsMergeBlock() got = %v, want %v", got, tt.want)
+				t.Errorf("MergeTransitionBlock() got = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func Test_IsExecutionBlock(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload *enginev1.ExecutionPayload
+		want    bool
+	}{
+		{
+			name:    "empty payload",
+			payload: emptyPayload(),
+			want:    false,
+		},
+		{
+			name: "non-empty payload",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blk := util.NewBeaconBlockBellatrix()
+			blk.Block.Body.ExecutionPayload = tt.payload
+			wrappedBlock, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+			require.NoError(t, err)
+			got, err := blocks.ExecutionBlock(wrappedBlock.Body())
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -617,7 +651,7 @@ func BenchmarkBellatrixComplete(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := blocks.MergeComplete(st)
+		_, err := blocks.MergeTransitionComplete(st)
 		require.NoError(b, err)
 	}
 }
