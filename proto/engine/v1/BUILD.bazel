@@ -70,6 +70,7 @@ go_library(
         "//proto/eth/ext:go_default_library",
         "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
         "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
         "@go_googleapis//google/api:annotations_go_proto",
         "@org_golang_google_protobuf//encoding/protojson:go_default_library",
@@ -88,5 +89,6 @@ go_test(
         ":go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//testing/require:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
     ],
 )
