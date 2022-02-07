@@ -14,8 +14,8 @@ import (
 )
 
 var errNoExecutionEngineConnection = errors.New("can't connect to execution engine")
-var errInvalidPayload = errors.New("invalid payload")
-var errSyncing = errors.New("syncing")
+var ErrInvalidPayload = errors.New("invalid payload")
+var ErrSyncing = errors.New("syncing")
 
 // ExecutionEngineCaller defines methods that wraps around execution engine API calls to enable other prysm services to interact with.
 type ExecutionEngineCaller interface {
@@ -207,10 +207,10 @@ func (s *Service) ExecutePayload(ctx context.Context, data *catalyst.ExecutableD
 	}
 
 	if respond.Result.Status == catalyst.INVALID.Status {
-		return common.FromHex(respond.Result.LatestValidHash), errInvalidPayload
+		return common.FromHex(respond.Result.LatestValidHash), ErrInvalidPayload
 	}
 	if respond.Result.Status == catalyst.SYNCING.Status {
-		return common.FromHex(respond.Result.LatestValidHash), errSyncing
+		return common.FromHex(respond.Result.LatestValidHash), ErrSyncing
 	}
 
 	return common.FromHex(respond.Result.LatestValidHash), nil
@@ -257,7 +257,7 @@ func (s *Service) NotifyForkChoiceValidated(ctx context.Context, forkchoiceState
 		return fmt.Errorf("could not call engine_forkchoiceUpdatedV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
 	}
 	if respond.Result.Status == catalyst.SYNCING.Status {
-		return errSyncing
+		return ErrSyncing
 	}
 
 	return nil
@@ -305,7 +305,7 @@ func (s *Service) PreparePayload(ctx context.Context, forkchoiceState catalyst.F
 		return "", fmt.Errorf("could not call engine_forkchoiceUpdatedV1, code: %d, message: %s", respond.Error.Code, respond.Error.Message)
 	}
 	if respond.Result.Status == catalyst.SYNCING.Status {
-		return "", errSyncing
+		return "", ErrSyncing
 	}
 
 	return respond.Result.PayloadID, nil
