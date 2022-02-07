@@ -141,8 +141,8 @@ func (_ *Service) PreGenesisState() (state.BeaconState, error) {
 }
 
 // ClearPreGenesisData --
-func (_ *Service) ClearPreGenesisData() error {
-	return nil
+func (_ *Service) ClearPreGenesisData() {
+	// no-op
 }
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.

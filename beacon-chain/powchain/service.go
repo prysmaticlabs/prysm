@@ -81,7 +81,7 @@ type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
 	PreGenesisState() (state.BeaconState, error)
-	ClearPreGenesisData() error
+	ClearPreGenesisData()
 }
 
 // ChainInfoFetcher retrieves information about eth1 metadata at the Ethereum consensus genesis time.
@@ -269,14 +269,9 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 }
 
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
-func (s *Service) ClearPreGenesisData() error {
+func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	newState, err := v1.InitializeFromProto(&ethpb.BeaconState{})
-	if err != nil {
-		return errors.Wrap(err, "could not initialize state")
-	}
-	s.preGenesisState = newState
-	return nil
+	s.preGenesisState = &v1.BeaconState{}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
