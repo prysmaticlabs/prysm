@@ -5,33 +5,29 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestJsonMarshalUnmarshal(t *testing.T) {
-	foo := bytesutil.ToBytes32([]byte("foo"))
-	bar := bytesutil.PadTo([]byte("bar"), 20)
-	baz := bytesutil.PadTo([]byte("baz"), 256)
 	t.Run("payload attributes", func(t *testing.T) {
 		jsonPayload := &enginev1.PayloadAttributes{
 			Timestamp:             1,
-			Random:                enginev1.HexBytes(foo[:]),
-			SuggestedFeeRecipient: enginev1.HexBytes(bar),
+			Random:                []byte("random"),
+			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
 		payloadPb := &enginev1.PayloadAttributes{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, uint64(1), payloadPb.Timestamp)
-		require.DeepEqual(t, foo[:], payloadPb.Random)
-		require.DeepEqual(t, bar, payloadPb.SuggestedFeeRecipient)
+		require.DeepEqual(t, []byte("random"), payloadPb.Random)
+		require.DeepEqual(t, []byte("suggestedFeeRecipient"), payloadPb.SuggestedFeeRecipient)
 	})
 	t.Run("payload status", func(t *testing.T) {
 		jsonPayload := &enginev1.PayloadStatus{
 			Status:          enginev1.PayloadStatus_INVALID,
-			LatestValidHash: foo[:],
+			LatestValidHash: []byte("latestValidHash"),
 			ValidationError: "failed validation",
 		}
 		enc, err := json.Marshal(jsonPayload)
@@ -39,58 +35,58 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		payloadPb := &enginev1.PayloadStatus{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, "INVALID", payloadPb.Status.String())
-		require.DeepEqual(t, foo[:], payloadPb.LatestValidHash)
+		require.DeepEqual(t, []byte("latestValidHash"), payloadPb.LatestValidHash)
 		require.DeepEqual(t, "failed validation", payloadPb.ValidationError)
 	})
 	t.Run("forkchoice state", func(t *testing.T) {
 		jsonPayload := &enginev1.ForkchoiceState{
-			HeadBlockHash:      enginev1.HexBytes(foo[:]),
-			SafeBlockHash:      enginev1.HexBytes(foo[:]),
-			FinalizedBlockHash: enginev1.HexBytes(foo[:]),
+			HeadBlockHash:      []byte("head"),
+			SafeBlockHash:      []byte("safe"),
+			FinalizedBlockHash: []byte("finalized"),
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
 		payloadPb := &enginev1.ForkchoiceState{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
-		require.DeepEqual(t, foo[:], payloadPb.HeadBlockHash)
-		require.DeepEqual(t, foo[:], payloadPb.SafeBlockHash)
-		require.DeepEqual(t, foo[:], payloadPb.FinalizedBlockHash)
+		require.DeepEqual(t, []byte("head"), payloadPb.HeadBlockHash)
+		require.DeepEqual(t, []byte("safe"), payloadPb.SafeBlockHash)
+		require.DeepEqual(t, []byte("finalized"), payloadPb.FinalizedBlockHash)
 	})
 	t.Run("execution payload", func(t *testing.T) {
 		jsonPayload := &enginev1.ExecutionPayload{
-			ParentHash:    foo[:],
-			FeeRecipient:  bar,
-			StateRoot:     foo[:],
-			ReceiptsRoot:  foo[:],
-			LogsBloom:     baz,
-			Random:        foo[:],
+			ParentHash:    []byte("parent"),
+			FeeRecipient:  []byte("feeRecipient"),
+			StateRoot:     []byte("stateRoot"),
+			ReceiptsRoot:  []byte("receiptsRoot"),
+			LogsBloom:     []byte("logsBloom"),
+			Random:        []byte("random"),
 			BlockNumber:   1,
 			GasLimit:      2,
 			GasUsed:       3,
 			Timestamp:     4,
-			ExtraData:     foo[:],
-			BaseFeePerGas: foo[:],
-			BlockHash:     foo[:],
-			Transactions:  [][]byte{foo[:]},
+			ExtraData:     []byte("extraData"),
+			BaseFeePerGas: []byte("baseFeePerGas"),
+			BlockHash:     []byte("blockHash"),
+			Transactions:  [][]byte{[]byte("hi")},
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
 		payloadPb := &enginev1.ExecutionPayload{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
-		require.DeepEqual(t, foo[:], payloadPb.ParentHash)
-		require.DeepEqual(t, bar, payloadPb.FeeRecipient)
-		require.DeepEqual(t, foo[:], payloadPb.StateRoot)
-		require.DeepEqual(t, foo[:], payloadPb.ReceiptsRoot)
-		require.DeepEqual(t, baz, payloadPb.LogsBloom)
-		require.DeepEqual(t, foo[:], payloadPb.Random)
+		require.DeepEqual(t, []byte("parent"), payloadPb.ParentHash)
+		require.DeepEqual(t, []byte("feeRecipient"), payloadPb.FeeRecipient)
+		require.DeepEqual(t, []byte("stateRoot"), payloadPb.StateRoot)
+		require.DeepEqual(t, []byte("receiptsRoot"), payloadPb.ReceiptsRoot)
+		require.DeepEqual(t, []byte("logsBloom"), payloadPb.LogsBloom)
+		require.DeepEqual(t, []byte("random"), payloadPb.Random)
 		require.DeepEqual(t, uint64(1), payloadPb.BlockNumber)
 		require.DeepEqual(t, uint64(2), payloadPb.GasLimit)
 		require.DeepEqual(t, uint64(3), payloadPb.GasUsed)
 		require.DeepEqual(t, uint64(4), payloadPb.Timestamp)
-		require.DeepEqual(t, foo[:], payloadPb.ExtraData)
-		require.DeepEqual(t, foo[:], payloadPb.BaseFeePerGas)
-		require.DeepEqual(t, foo[:], payloadPb.BlockHash)
-		require.DeepEqual(t, [][]byte{foo[:]}, payloadPb.Transactions)
+		require.DeepEqual(t, []byte("extraData"), payloadPb.ExtraData)
+		require.DeepEqual(t, []byte("baseFeePerGas"), payloadPb.BaseFeePerGas)
+		require.DeepEqual(t, []byte("blockHash"), payloadPb.BlockHash)
+		require.DeepEqual(t, [][]byte{[]byte("hi")}, payloadPb.Transactions)
 	})
 }
 
