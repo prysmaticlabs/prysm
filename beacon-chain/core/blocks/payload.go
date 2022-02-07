@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -16,13 +17,13 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// MergeComplete returns true if the transition to Bellatrix has completed.
+// MergeTransitionComplete returns true if the transition to Bellatrix has completed.
 // Meaning the payload header in beacon state is not `ExecutionPayloadHeader()` (i.e. not empty).
 //
 // Spec code:
-// def is_merge_complete(state: BeaconState) -> bool:
+// def is_merge_transition_complete(state: BeaconState) -> bool:
 //    return state.latest_execution_payload_header != ExecutionPayloadHeader()
-func MergeComplete(st state.BeaconState) (bool, error) {
+func MergeTransitionComplete(st state.BeaconState) (bool, error) {
 	h, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return false, err
@@ -31,15 +32,15 @@ func MergeComplete(st state.BeaconState) (bool, error) {
 	return !isEmptyHeader(h), nil
 }
 
-// IsMergeBlock returns true if the input block is the terminal merge block.
+// MergeTransitionBlock returns true if the input block is the terminal merge block.
 // Meaning the header in beacon state is  `ExecutionPayloadHeader()` (i.e. empty).
 // And the input block has a non-empty header.
 //
 // Spec code:
-// def is_merge_block(state: BeaconState, body: BeaconBlockBody) -> bool:
-//    return not is_merge_complete(state) and body.execution_payload != ExecutionPayload()
-func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
-	mergeComplete, err := MergeComplete(st)
+// def is_merge_transition_block(state: BeaconState, body: BeaconBlockBody) -> bool:
+//    return not is_merge_transition_complete(state) and body.execution_payload != ExecutionPayload()
+func MergeTransitionBlock(st state.BeaconState, body block.BeaconBlockBody) (bool, error) {
+	mergeComplete, err := MergeTransitionComplete(st)
 	if err != nil {
 		return false, err
 	}
@@ -47,8 +48,20 @@ func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error)
 		return false, err
 	}
 
-	payload, err := blk.ExecutionPayload()
+	return ExecutionBlock(body)
+}
+
+// ExecutionBlock returns whether the block has a non-empty ExecutionPayload.
+//
+// Spec code:
+// def is_execution_block(block: BeaconBlock) -> bool:
+//     return block.body.execution_payload != ExecutionPayload()
+func ExecutionBlock(body block.BeaconBlockBody) (bool, error) {
+	payload, err := body.ExecutionPayload()
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "ExecutionPayload is not supported in") {
+			return false, nil
+		}
 		return false, err
 	}
 	return !isEmptyPayload(payload), nil
@@ -60,15 +73,15 @@ func IsMergeBlock(st state.BeaconState, blk block.BeaconBlockBody) (bool, error)
 // Spec code:
 // def is_execution_enabled(state: BeaconState, body: BeaconBlockBody) -> bool:
 //    return is_merge_block(state, body) or is_merge_complete(state)
-func ExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, error) {
-	mergeBlock, err := IsMergeBlock(st, blk)
+func ExecutionEnabled(st state.BeaconState, body block.BeaconBlockBody) (bool, error) {
+	mergeBlock, err := MergeTransitionBlock(st, body)
 	if err != nil {
 		return false, err
 	}
 	if mergeBlock {
 		return true, nil
 	}
-	return MergeComplete(st)
+	return MergeTransitionComplete(st)
 }
 
 // ValidatePayloadWhenMergeCompletes validates if payload is valid versus input beacon state.
@@ -79,7 +92,7 @@ func ExecutionEnabled(st state.BeaconState, blk block.BeaconBlockBody) (bool, er
 //    if is_merge_complete(state):
 //        assert payload.parent_hash == state.latest_execution_payload_header.block_hash
 func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload *enginev1.ExecutionPayload) error {
-	complete, err := MergeComplete(st)
+	complete, err := MergeTransitionComplete(st)
 	if err != nil {
 		return err
 	}

@@ -130,7 +130,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				return errors.Wrap(err, "could not execute payload")
 			}
 
-			mergeBlock, err := blocks.IsMergeBlock(postState, body)
+			mergeBlock, err := blocks.MergeTransitionBlock(postState, body)
 			if err != nil {
 				return errors.Wrap(err, "could not check if merge block is terminal")
 			}
@@ -213,6 +213,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
+	if err := s.saveSyncedTipsDB(ctx); err != nil {
+		return err
+	}
 
 	// Notify execution layer with fork choice head update if this is post merge block.
 	if postState.Version() == version.Bellatrix {
@@ -255,6 +258,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				}
 			}()
 		}
+
+		return errors.Wrap(err, "could not save synced tips")
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
@@ -383,7 +388,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 					return nil, nil, errors.Wrap(err, "could not execute payload")
 				}
 
-				mergeBlock, err := blocks.IsMergeBlock(preState, b.Block().Body())
+				mergeBlock, err := blocks.MergeTransitionBlock(preState, b.Block().Body())
 				if err != nil {
 					return nil, nil, errors.Wrap(err, "could not check if merge block is terminal")
 				}
@@ -470,6 +475,10 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
+	if err := s.saveSyncedTipsDB(ctx); err != nil {
+		return errors.Wrap(err, "could not save synced tips")
+	}
+
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: signed.Block().Slot(),
 		Root: blockRoot[:],
@@ -724,4 +733,13 @@ func executionPayloadToExecutableData(payload *enginev1.ExecutionPayload) *catal
 		BaseFeePerGas: baseFeePerGas,
 		Transactions:  payload.Transactions,
 	}
+}
+
+// Saves synced and validated tips to DB.
+func (s *Service) saveSyncedTipsDB(ctx context.Context) error {
+	tips := s.cfg.ForkChoiceStore.SyncedTips()
+	if len(tips) == 0 {
+		return nil
+	}
+	return s.cfg.BeaconDB.UpdateValidatedTips(ctx, tips)
 }

@@ -114,6 +114,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	flags.ConfigureGlobalFlags(cliCtx)
 	configureChainConfig(cliCtx)
 	configureHistoricalSlasher(cliCtx)
+	configureSafeSlotsToImportOptimistically(cliCtx)
 	configureSlotsPerArchivedPoint(cliCtx)
 	configureEth1Config(cliCtx)
 	configureNetwork(cliCtx)

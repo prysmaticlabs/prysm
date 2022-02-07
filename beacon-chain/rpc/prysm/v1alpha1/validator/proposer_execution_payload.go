@@ -67,7 +67,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 
 	var parentHash []byte
 	var hasTerminalBlock bool
-	complete, err := blocks.MergeComplete(st)
+	complete, err := blocks.MergeTransitionComplete(st)
 	if err != nil {
 		return nil, err
 	}
