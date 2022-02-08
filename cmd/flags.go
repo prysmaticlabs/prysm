@@ -23,7 +23,7 @@ var (
 	}
 	// RPCMaxPageSizeFlag defines the maximum numbers per page returned in RPC responses from this
 	// beacon node (default: 500).
-	RPCMaxPageSizeFlag = &cli.IntFlag{
+	RPCMaxPageSizeFlag = &cli.Uint64Flag{
 		Name:  "rpc-max-page-size",
 		Usage: "Max number of items returned per page in RPC responses for paginated endpoints.",
 	}
