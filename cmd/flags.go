@@ -114,7 +114,7 @@ var (
 		Value: 12000,
 	}
 	// P2PTCPPort defines the port to be used by libp2p.
-	P2PTCPPort = &cli.IntFlag{
+	P2PTCPPort = &cli.Uint64Flag{
 		Name:  "p2p-tcp-port",
 		Usage: "The port used by libp2p.",
 		Value: 13000,
