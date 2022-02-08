@@ -69,7 +69,7 @@ var (
 	MemProfileRateFlag = &cli.Uint64Flag{
 		Name:  "memprofilerate",
 		Usage: "Turn on memory profiling with the given rate",
-		Value: runtime.MemProfileRate,
+		Value: uint64(runtime.MemProfileRate),
 	}
 	// MutexProfileFractionFlag to specify the mutex profiling rate.
 	MutexProfileFractionFlag = &cli.IntFlag{
