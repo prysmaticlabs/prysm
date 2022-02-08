@@ -22,6 +22,12 @@ func (km *Keymanager) ImportKeystores(
 	keystores []*keymanager.Keystore,
 	passwords []string,
 ) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+	if len(passwords) == 0 {
+		return nil, ErrNoPasswords
+	}
+	if len(passwords) != len(keystores) {
+		return nil, ErrMismatchedNumPasswords
+	}
 	decryptor := keystorev4.New()
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
 	keys := map[string]string{}
