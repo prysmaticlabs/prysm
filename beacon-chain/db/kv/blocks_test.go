@@ -190,17 +190,15 @@ func TestStore_DeleteBlock(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, b)
 	require.NoError(t, db.DeleteBlock(ctx, root2))
+	st, err = db.State(ctx, root2)
+	require.NoError(t, err)
+	require.Equal(t, st, nil)
 
 	b, err = db.Block(ctx, root2)
 	require.NoError(t, err)
 	require.Equal(t, b, nil)
-	defer func() {
-		if rec := recover(); rec == nil {
-			t.Errorf("delete finalized did not panic")
-		}
-	}()
 
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), errFinalizedInvalid)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), errDeleteFinalized)
 
 }
 
