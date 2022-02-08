@@ -244,7 +244,7 @@ var (
 		Value: DefaultDataDir(),
 	}
 	// BoltMMapInitialSizeFlag specifies the initial size in bytes of boltdb's mmap syscall.
-	BoltMMapInitialSizeFlag = &cli.IntFlag{
+	BoltMMapInitialSizeFlag = &cli.Uint64Flag{
 		Name:  "bolt-mmap-initial-size",
 		Usage: "Specifies the size in bytes of bolt db's mmap syscall allocation",
 		Value: 536870912, // 512 Mb as a default value.
