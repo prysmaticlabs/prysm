@@ -187,16 +187,8 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
 	s.cfg.ForkChoiceStore = store
 
-	// Initialize synced tips
-	tips, err := s.cfg.BeaconDB.ValidatedTips(s.ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get synced tips")
-	}
-	if len(tips) == 0 {
-		tips[originRoot] = saved.Slot()
-	}
-	if err := s.cfg.ForkChoiceStore.SetSyncedTips(tips); err != nil {
-		return errors.Wrap(err, "could not set synced tips")
+	if err := s.loadSyncedTips(originRoot, saved.Slot()); err != nil {
+		return err
 	}
 
 	ss, err := slots.EpochStart(finalized.Epoch)
