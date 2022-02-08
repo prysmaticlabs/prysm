@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -48,7 +49,9 @@ func TestClient_IPC(t *testing.T) {
 	t.Run(NewPayloadMethod, func(t *testing.T) {
 		want, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
-		resp, err := client.NewPayload(ctx, &pb.ExecutionPayload{})
+		req, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+		resp, err := client.NewPayload(ctx, req)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -86,7 +89,7 @@ func TestClient_HTTP(t *testing.T) {
 			require.NoError(t, err)
 			jsonRequestString := string(enc)
 
-			reqArg, err := json.Marshal(pb.HexBytes(payloadId[:]))
+			reqArg, err := json.Marshal(pb.PayloadIDBytes(payloadId))
 			require.NoError(t, err)
 
 			fmt.Println(jsonRequestString)
@@ -476,7 +479,7 @@ func (*testEngineService) BlockByNumber(
 }
 
 func (*testEngineService) GetPayloadV1(
-	_ context.Context, _ pb.HexBytes,
+	_ context.Context, _ enginev1.PayloadIDBytes,
 ) *pb.ExecutionPayload {
 	fix := fixtures()
 	item, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
