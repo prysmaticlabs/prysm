@@ -116,7 +116,7 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 		ExtraData:        e.ExtraData,
 		MixHash:          e.MixHash,
 		Nonce:            e.Nonce,
-		Size:             Quantity(e.Size),
+		Size:             e.Size,
 		BaseFeePerGas:    e.BaseFeePerGas,
 		Transactions:     transactions,
 		Uncles:           uncles,
@@ -148,7 +148,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	e.ExtraData = dec.ExtraData
 	e.MixHash = dec.MixHash
 	e.Nonce = dec.Nonce
-	e.Size = uint64(dec.Size)
+	e.Size = dec.Size
 	e.BaseFeePerGas = dec.BaseFeePerGas
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
