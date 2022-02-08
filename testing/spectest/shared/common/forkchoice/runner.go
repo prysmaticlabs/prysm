@@ -37,6 +37,9 @@ func Run(t *testing.T, config string, fork int) {
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
+				if folder.Name() != "all_valid" {
+					t.Skip("Skipping")
+				}
 				ctx := context.Background()
 				preStepsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 				require.NoError(t, err)
@@ -113,6 +116,17 @@ func Run(t *testing.T, config string, fork int) {
 						att := &ethpb.Attestation{}
 						require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
 						require.NoError(t, service.OnAttestation(ctx, att))
+					}
+					if step.PowBlock != nil {
+						powBlockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.PowBlock, ".ssz_snappy"))
+						require.NoError(t, err)
+						p, err := snappy.Decode(nil /* dst */, powBlockFile)
+						require.NoError(t, err)
+						pb := &ethpb.PowBlock{}
+						require.NoError(t, pb.UnmarshalSSZ(p), "Failed to unmarshal")
+						t.Log(pb.ParentHash)
+						t.Log(pb.BlockHash)
+						t.Log(pb.TotalDifficulty)
 					}
 					if step.Check != nil {
 						require.NoError(t, service.UpdateHeadWithBalances(ctx))

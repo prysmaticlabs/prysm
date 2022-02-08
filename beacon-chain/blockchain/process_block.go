@@ -697,9 +697,15 @@ func (s *Service) validateTerminalBlock(b block.SignedBeaconBlock) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get transition block")
 	}
+	if transitionBlk == nil {
+		return errors.New("transition block is nil")
+	}
 	parentTransitionBlk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(transitionBlk.ParentHash))
 	if err != nil {
 		return errors.Wrap(err, "could not get transition parent block")
+	}
+	if parentTransitionBlk == nil {
+		return errors.New("transition parent block is nil")
 	}
 	transitionBlkTTD, err := uint256.FromHex(transitionBlk.TotalDifficulty)
 	if err != nil {

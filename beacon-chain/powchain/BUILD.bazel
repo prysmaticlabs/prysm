@@ -19,6 +19,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//cmd/beacon-chain:__subpackages__",
         "//contracts:__subpackages__",
+        "//testing/spectest:__subpackages__",
     ],
     deps = [
         "//beacon-chain/cache/depositcache:go_default_library",

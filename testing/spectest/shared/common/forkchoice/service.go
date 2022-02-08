@@ -41,7 +41,9 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
+	m := &ExecutionEngineMock{}
 	opts := append([]blockchain.Option{},
+		blockchain.WithExecutionEngineCaller(m),
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
