@@ -357,10 +357,7 @@ func (s *Service) startFromPOWChain() error {
 // onPowchainStart initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
-	preGenesisState, err := s.cfg.ChainStartFetcher.PreGenesisState()
-	if err != nil {
-		log.Fatalf("Could not get pre-genesis state")
-	}
+	preGenesisState := s.cfg.ChainStartFetcher.PreGenesisState()
 	initializedState, err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.cfg.ChainStartFetcher.ChainStartEth1Data())
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)

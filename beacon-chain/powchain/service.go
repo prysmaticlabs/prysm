@@ -80,7 +80,7 @@ var (
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
-	PreGenesisState() (state.BeaconState, error)
+	PreGenesisState() state.BeaconState
 	ClearPreGenesisData()
 }
 
@@ -281,8 +281,8 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns a state that contains
 // pre-chainstart deposits.
-func (s *Service) PreGenesisState() (state.BeaconState, error) {
-	return s.preGenesisState, nil
+func (s *Service) PreGenesisState() state.BeaconState {
+	return s.preGenesisState
 }
 
 // Status is service health checks. Return nil or error.

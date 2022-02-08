@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -132,12 +131,12 @@ func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState returns an empty beacon state.
-func (_ *Service) PreGenesisState() (state.BeaconState, error) {
+func (_ *Service) PreGenesisState() state.BeaconState {
 	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize state")
+		panic("could not initialize state")
 	}
-	return s, nil
+	return s
 }
 
 // ClearPreGenesisData --
