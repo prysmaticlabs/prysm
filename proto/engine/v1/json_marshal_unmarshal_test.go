@@ -90,7 +90,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	})
 	t.Run("execution block", func(t *testing.T) {
 		jsonPayload := &enginev1.ExecutionBlock{
-			Number:           100,
+			Number:           []byte("100"),
 			Hash:             []byte("hash"),
 			ParentHash:       []byte("parent"),
 			Sha3Uncles:       []byte("sha3Uncles"),
@@ -99,12 +99,12 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			TransactionsRoot: []byte("txRoot"),
 			ReceiptsRoot:     []byte("receiptsRoot"),
 			LogsBloom:        []byte("logsBloom"),
-			Difficulty:       1,
-			TotalDifficulty:  2,
+			Difficulty:       []byte("1"),
+			TotalDifficulty:  []byte("2"),
 			GasLimit:         3,
 			GasUsed:          4,
 			Timestamp:        5,
-			BaseFeePerGas:    []byte("1"),
+			BaseFeePerGas:    []byte("6"),
 			ExtraData:        []byte("extraData"),
 			MixHash:          []byte("mixHash"),
 			Nonce:            []byte("nonce"),
@@ -115,7 +115,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.NoError(t, err)
 		payloadPb := &enginev1.ExecutionBlock{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
-		require.DeepEqual(t, uint64(100), payloadPb.Number)
+		require.DeepEqual(t, []byte("100"), payloadPb.Number)
 		require.DeepEqual(t, []byte("hash"), payloadPb.Hash)
 		require.DeepEqual(t, []byte("parent"), payloadPb.ParentHash)
 		require.DeepEqual(t, []byte("sha3Uncles"), payloadPb.Sha3Uncles)
@@ -124,12 +124,12 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, []byte("txRoot"), payloadPb.TransactionsRoot)
 		require.DeepEqual(t, []byte("receiptsRoot"), payloadPb.ReceiptsRoot)
 		require.DeepEqual(t, []byte("logsBloom"), payloadPb.LogsBloom)
-		require.DeepEqual(t, uint64(1), payloadPb.Difficulty)
-		require.DeepEqual(t, uint64(2), payloadPb.TotalDifficulty)
+		require.DeepEqual(t, []byte("1"), payloadPb.Difficulty)
+		require.DeepEqual(t, []byte("2"), payloadPb.TotalDifficulty)
 		require.DeepEqual(t, uint64(3), payloadPb.GasLimit)
 		require.DeepEqual(t, uint64(4), payloadPb.GasUsed)
 		require.DeepEqual(t, uint64(5), payloadPb.Timestamp)
-		require.DeepEqual(t, []byte("1"), payloadPb.BaseFeePerGas)
+		require.DeepEqual(t, []byte("6"), payloadPb.BaseFeePerGas)
 		require.DeepEqual(t, []byte("extraData"), payloadPb.ExtraData)
 		require.DeepEqual(t, []byte("mixHash"), payloadPb.MixHash)
 		require.DeepEqual(t, []byte("nonce"), payloadPb.Nonce)

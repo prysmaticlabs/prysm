@@ -64,7 +64,7 @@ func (q *Quantity) UnmarshalJSON(enc []byte) error {
 }
 
 type executionBlockJSON struct {
-	Number           Quantity   `json:"number"`
+	Number           HexBytes   `json:"number"`
 	Hash             HexBytes   `json:"hash"`
 	ParentHash       HexBytes   `json:"parentHash"`
 	Sha3Uncles       HexBytes   `json:"sha3Uncles"`
@@ -73,8 +73,8 @@ type executionBlockJSON struct {
 	TransactionsRoot HexBytes   `json:"transactionsRoot"`
 	ReceiptsRoot     HexBytes   `json:"receiptsRoot"`
 	LogsBloom        HexBytes   `json:"logsBloom"`
-	Difficulty       Quantity   `json:"difficulty"`
-	TotalDifficulty  Quantity   `json:"totalDifficulty"`
+	Difficulty       HexBytes   `json:"difficulty"`
+	TotalDifficulty  HexBytes   `json:"totalDifficulty"`
 	GasLimit         Quantity   `json:"gasLimit"`
 	GasUsed          Quantity   `json:"gasUsed"`
 	Timestamp        Quantity   `json:"timestamp"`
@@ -98,7 +98,7 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 		uncles[i] = ucl
 	}
 	return json.Marshal(executionBlockJSON{
-		Number:           Quantity(e.Number),
+		Number:           e.Number,
 		Hash:             e.Hash,
 		ParentHash:       e.ParentHash,
 		Sha3Uncles:       e.Sha3Uncles,
@@ -107,8 +107,8 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 		TransactionsRoot: e.TransactionsRoot,
 		ReceiptsRoot:     e.ReceiptsRoot,
 		LogsBloom:        e.LogsBloom,
-		Difficulty:       Quantity(e.Difficulty),
-		TotalDifficulty:  Quantity(e.TotalDifficulty),
+		Difficulty:       e.Difficulty,
+		TotalDifficulty:  e.TotalDifficulty,
 		GasLimit:         Quantity(e.GasLimit),
 		GasUsed:          Quantity(e.GasUsed),
 		Timestamp:        Quantity(e.Timestamp),
@@ -129,7 +129,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*e = ExecutionBlock{}
-	e.Number = uint64(dec.Number)
+	e.Number = dec.Number
 	e.Hash = dec.Hash
 	e.ParentHash = dec.ParentHash
 	e.Sha3Uncles = dec.Sha3Uncles
@@ -138,8 +138,8 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	e.TransactionsRoot = dec.TransactionsRoot
 	e.ReceiptsRoot = dec.ReceiptsRoot
 	e.LogsBloom = dec.LogsBloom
-	e.Difficulty = uint64(dec.Difficulty)
-	e.TotalDifficulty = uint64(dec.TotalDifficulty)
+	e.Difficulty = dec.Difficulty
+	e.TotalDifficulty = dec.TotalDifficulty
 	e.GasLimit = uint64(dec.GasLimit)
 	e.GasUsed = uint64(dec.GasUsed)
 	e.Timestamp = uint64(dec.Timestamp)
