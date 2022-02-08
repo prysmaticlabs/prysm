@@ -21,8 +21,10 @@ func TestBeaconState_RotateAttestations(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, st.RotateAttestations())
-	require.Equal(t, 0, len(st.currentEpochAttestations()))
-	require.Equal(t, types.Slot(456), st.previousEpochAttestations()[0].Data.Slot)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
+	require.Equal(t, 0, len(s.currentEpochAttestations()))
+	require.Equal(t, types.Slot(456), s.previousEpochAttestations()[0].Data.Slot)
 }
 
 func TestAppendBeyondIndicesLimit(t *testing.T) {
@@ -40,7 +42,7 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	for i := 0; i < len(mockrandaoMixes); i++ {
 		mockrandaoMixes[i] = zeroHash[:]
 	}
-	st, err := InitializeFromProto(&ethpb.BeaconState{
+	newState, err := InitializeFromProto(&ethpb.BeaconState{
 		Slot:                      1,
 		CurrentEpochAttestations:  []*ethpb.PendingAttestation{{Data: &ethpb.AttestationData{Slot: 456}}},
 		PreviousEpochAttestations: []*ethpb.PendingAttestation{{Data: &ethpb.AttestationData{Slot: 123}}},
@@ -51,8 +53,10 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 		RandaoMixes:               mockrandaoMixes,
 	})
 	require.NoError(t, err)
-	_, err = st.HashTreeRoot(context.Background())
+	_, err = newState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
+	st, ok := newState.(*BeaconState)
+	require.Equal(t, true, ok)
 	for i := stateTypes.FieldIndex(0); i < stateTypes.FieldIndex(params.BeaconConfig().BeaconStateFieldCount); i++ {
 		st.dirtyFields[i] = true
 	}

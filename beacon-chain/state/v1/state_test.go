@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestValidatorMap_DistinctCopy(t *testing.T) {
@@ -63,10 +64,12 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
+	newState, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		Validators: vals,
 	})
 	assert.NoError(t, err)
+	st, ok := newState.(*BeaconState)
+	require.Equal(t, true, ok)
 
 	wg := new(sync.WaitGroup)
 
@@ -144,7 +147,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	for i := 0; i < len(mockrandaoMixes); i++ {
 		mockrandaoMixes[i] = zeroHash[:]
 	}
-	st, err := InitializeFromProto(&ethpb.BeaconState{
+	newState, err := InitializeFromProto(&ethpb.BeaconState{
 		Slot:                  1,
 		GenesisValidatorsRoot: make([]byte, 32),
 		Fork: &ethpb.Fork{
@@ -173,6 +176,8 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 	})
 	assert.NoError(t, err)
+	st, ok := newState.(*BeaconState)
+	require.Equal(t, true, ok)
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
 
