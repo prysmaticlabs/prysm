@@ -2,8 +2,7 @@ package kv
 
 import "errors"
 
-// ErrFinalizedInvalid is raised when a block with an INVALID payload is
-// finalized
+// errDeleteFinalized is raised when we attempt to delete a finalized block/state
 var errDeleteFinalized = errors.New("cannot delete finalized block or state")
 
 // ErrNotFound can be used directly, or as a wrapped DBError, whenever a db method needs to

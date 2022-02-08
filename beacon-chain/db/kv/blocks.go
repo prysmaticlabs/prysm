@@ -206,7 +206,7 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, []
 
 // DeleteBlock from the db
 // This deletes the root entry from all buckets in the blocks DB
-// If the block is finalized this function panics
+// If the block is finalized this function returns an error
 func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
 	defer span.End()
