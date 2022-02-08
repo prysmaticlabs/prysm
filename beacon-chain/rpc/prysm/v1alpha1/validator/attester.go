@@ -46,7 +46,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
 		}
-		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve blocks. Head root: %#x", root)
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve attestations. Head root: %#x", root)
 	}
 
 	if err := helpers.ValidateAttestationTime(req.Slot, vs.TimeFetcher.GenesisTime(),
