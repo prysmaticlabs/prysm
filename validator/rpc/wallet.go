@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -303,6 +304,11 @@ func (s *Server) ImportAccounts(
 	})
 	if err != nil {
 		return nil, err
+	}
+	for _, stat := range statuses {
+		if stat.Status == ethpbservice.ImportedKeystoreStatus_ERROR {
+			return nil, status.Error(codes.FailedPrecondition, stat.Message)
+		}
 	}
 	if len(statuses) == 0 {
 		return nil, status.Error(codes.Internal, "No statuses returned from import")
