@@ -39,7 +39,7 @@ message ExecutionBlock {
 	uint64 gas_limit            = 12;
 	uint64 gas_used             = 13;
 	bytes  base_fee_per_gas     = 14;
-	uint64 size                 = 15;
+	bytes size                  = 15;
 	uint64 timestamp            = 16;
 	bytes extra_data            = 17;
 	bytes mix_hash              = 18;
