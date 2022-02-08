@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -20,6 +21,10 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
+	// ExecutionBlockByHashMethod request string for JSON-RPC.
+	ExecutionBlockByHashMethod = "eth_blockByHash"
+	// LatestExecutionBlockMethod request string for JSON-RPC.
+	LatestExecutionBlockMethod = "eth_blockByNumber"
 	// DefaultTimeout for HTTP.
 	DefaultTimeout = time.Second * 5
 )
@@ -87,6 +92,22 @@ func (c *Client) ForkchoiceUpdated(
 func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
 	result := &pb.ExecutionPayload{}
 	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.HexBytes(payloadId[:]))
+	return result, handleRPCError(err)
+}
+
+// LatestExecutionBlock fetches the latest execution engine block by calling
+// eth_blockByNumber via JSON-RPC.
+func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error) {
+	result := &pb.ExecutionBlock{}
+	err := c.rpc.CallContext(ctx, result, LatestExecutionBlockMethod)
+	return result, handleRPCError(err)
+}
+
+// ExecutionBlockByHash fetches an execution engine block by hash by calling
+// eth_blockByHash via JSON-RPC.
+func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+	result := &pb.ExecutionBlock{}
+	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash)
 	return result, handleRPCError(err)
 }
 
