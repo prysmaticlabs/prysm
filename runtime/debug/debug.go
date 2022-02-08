@@ -54,7 +54,7 @@ var (
 		Usage: "Enable the pprof HTTP server",
 	}
 	// PProfPortFlag to specify HTTP server listening port.
-	PProfPortFlag = &cli.IntFlag{
+	PProfPortFlag = &cli.Uint64Flag{
 		Name:  "pprofport",
 		Usage: "pprof HTTP server listening port",
 		Value: 6060,
@@ -66,7 +66,7 @@ var (
 		Value: "127.0.0.1",
 	}
 	// MemProfileRateFlag to specify the mem profiling rate.
-	MemProfileRateFlag = &cli.IntFlag{
+	MemProfileRateFlag = &cli.Uint64Flag{
 		Name:  "memprofilerate",
 		Usage: "Turn on memory profiling with the given rate",
 		Value: runtime.MemProfileRate,
