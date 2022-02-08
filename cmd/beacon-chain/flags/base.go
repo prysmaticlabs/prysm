@@ -74,7 +74,7 @@ var (
 		Value: "127.0.0.1",
 	}
 	// GRPCGatewayPort specifies a gRPC gateway port for Prysm.
-	GRPCGatewayPort = &cli.IntFlag{
+	GRPCGatewayPort = &cli.Uint64Flag{
 		Name:  "grpc-gateway-port",
 		Usage: "The port on which the gateway server runs on",
 		Value: 3500,
@@ -88,19 +88,19 @@ var (
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
-	MinSyncPeers = &cli.IntFlag{
+	MinSyncPeers = &cli.Uint64Flag{
 		Name:  "min-sync-peers",
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
 	}
 	// ContractDeploymentBlock is the block in which the eth1 deposit contract was deployed.
-	ContractDeploymentBlock = &cli.IntFlag{
+	ContractDeploymentBlock = &cli.Uint64Flag{
 		Name:  "contract-deployment-block",
 		Usage: "The eth1 block in which the deposit contract was deployed.",
 		Value: 11184524,
 	}
 	// SetGCPercent is the percentage of current live allocations at which the garbage collector is to run.
-	SetGCPercent = &cli.IntFlag{
+	SetGCPercent = &cli.Uint64Flag{
 		Name:  "gc-percent",
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
@@ -113,14 +113,14 @@ var (
 	// SafeSlotsToImportOptimistically specifies the number of slots that a
 	// node should wait before being able to optimistically sync blocks
 	// across the merge boundary
-	SafeSlotsToImportOptimistically = &cli.IntFlag{
+	SafeSlotsToImportOptimistically = &cli.Uint64Flag{
 		Name:  "safe-slots-to-import-optimistically",
 		Usage: "The number of slots to wait before optimistically syncing a block without enabled execution.",
 		Value: 128,
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.
-	SlotsPerArchivedPoint = &cli.IntFlag{
+	SlotsPerArchivedPoint = &cli.Uint64Flag{
 		Name:  "slots-per-archive-point",
 		Usage: "The slot durations of when an archived state gets saved in the beaconDB.",
 		Value: 2048,
