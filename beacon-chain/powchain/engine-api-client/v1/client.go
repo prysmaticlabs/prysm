@@ -32,8 +32,8 @@ const (
 // ForkchoiceUpdatedResponse is the response kind received by the
 // engine_forkchoiceUpdatedV1 endpoint.
 type ForkchoiceUpdatedResponse struct {
-	Status    *pb.PayloadStatus `json:"status"`
-	PayloadId pb.HexBytes       `json:"payloadId"`
+	Status    *pb.PayloadStatus  `json:"status"`
+	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
 // Client defines a new engine API client for the Prysm consensus node
@@ -91,7 +91,7 @@ func (c *Client) ForkchoiceUpdated(
 // GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
 func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
 	result := &pb.ExecutionPayload{}
-	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.HexBytes(payloadId[:]))
+	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
 }
 

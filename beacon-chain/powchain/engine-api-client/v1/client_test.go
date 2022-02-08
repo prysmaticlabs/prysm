@@ -89,6 +89,8 @@ func TestClient_HTTP(t *testing.T) {
 			reqArg, err := json.Marshal(pb.HexBytes(payloadId[:]))
 			require.NoError(t, err)
 
+			fmt.Println(jsonRequestString)
+
 			// We expect the JSON string RPC request contains the right arguments.
 			require.Equal(t, true, strings.Contains(
 				jsonRequestString, string(reqArg),
@@ -434,9 +436,10 @@ func fixtures() map[string]interface{} {
 		LatestValidHash: foo[:],
 		ValidationError: "",
 	}
+	id := pb.PayloadIDBytes([8]byte{1, 0, 0, 0, 0, 0, 0, 0})
 	forkChoiceResp := &ForkchoiceUpdatedResponse{
 		Status:    status,
-		PayloadId: bytesutil.PadTo([]byte{1}, 8),
+		PayloadId: &id,
 	}
 	return map[string]interface{}{
 		"ExecutionBlock":            executionBlock,
