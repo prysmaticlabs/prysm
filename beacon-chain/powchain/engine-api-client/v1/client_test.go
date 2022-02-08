@@ -27,21 +27,24 @@ func TestClient_IPC(t *testing.T) {
 	fix := fixtures()
 
 	t.Run("engine_getPayloadV1", func(t *testing.T) {
-		want := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
 		resp, err := client.GetPayload(ctx, payloadId)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
 	t.Run("engine_forkchoiceUpdatedV1", func(t *testing.T) {
-		want := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		require.Equal(t, true, ok)
 		resp, err := client.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, &pb.PayloadAttributes{})
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status, resp.Status)
 		require.DeepEqual(t, want.PayloadId, resp.PayloadId)
 	})
 	t.Run("engine_newPayloadV1", func(t *testing.T) {
-		want := fix["PayloadStatus"].(*pb.PayloadStatus)
+		want, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
 		resp, err := client.NewPayload(ctx, &pb.ExecutionPayload{})
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
@@ -54,7 +57,8 @@ func TestClient_HTTP(t *testing.T) {
 
 	t.Run("engine_getPayloadV1", func(t *testing.T) {
 		payloadId := [8]byte{1}
-		want := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			defer func() {
@@ -104,7 +108,8 @@ func TestClient_HTTP(t *testing.T) {
 			Random:                []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
-		want := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		require.Equal(t, true, ok)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -151,8 +156,10 @@ func TestClient_HTTP(t *testing.T) {
 		require.DeepEqual(t, want.PayloadId, resp.PayloadId)
 	})
 	t.Run("engine_newPayloadV1", func(t *testing.T) {
-		execPayload := fix["ExecutionPayload"].(*pb.ExecutionPayload)
-		want := fix["PayloadStatus"].(*pb.PayloadStatus)
+		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+		want, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			defer func() {
@@ -337,19 +344,31 @@ func (*testEngineService) GetPayloadV1(
 	_ context.Context, _ pb.HexBytes,
 ) *pb.ExecutionPayload {
 	fix := fixtures()
-	return fix["ExecutionPayload"].(*pb.ExecutionPayload)
+	item, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+	if !ok {
+		panic("not found")
+	}
+	return item
 }
 
 func (*testEngineService) ForkchoiceUpdatedV1(
 	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
 ) *ForkchoiceUpdatedResponse {
 	fix := fixtures()
-	return fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+	item, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+	if !ok {
+		panic("not found")
+	}
+	return item
 }
 
 func (*testEngineService) NewPayloadV1(
 	_ context.Context, _ *pb.ExecutionPayload,
 ) *pb.PayloadStatus {
 	fix := fixtures()
-	return fix["PayloadStatus"].(*pb.PayloadStatus)
+	item, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
+	if !ok {
+		panic("not found")
+	}
+	return item
 }
