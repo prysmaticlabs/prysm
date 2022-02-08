@@ -35,7 +35,7 @@ var (
 		Value: "127.0.0.1",
 	}
 	// RPCPort defines a beacon node RPC port to open.
-	RPCPort = &cli.IntFlag{
+	RPCPort = &cli.Uint64Flag{
 		Name:  "rpc-port",
 		Usage: "RPC port exposed by a beacon node",
 		Value: 4000,
