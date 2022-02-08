@@ -108,7 +108,7 @@ var (
 		Value: "",
 	}
 	// P2PUDPPort defines the port to be used by discv5.
-	P2PUDPPort = &cli.IntFlag{
+	P2PUDPPort = &cli.Uint64Flag{
 		Name:  "p2p-udp-port",
 		Usage: "The port used by discv5.",
 		Value: 12000,
