@@ -125,6 +125,7 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 			params.LoadChainConfigFile(fp)
 		}
 		minimalConfigFile := configFilePath(t, "minimal")
+		params.LoadChainConfigFile(minimalConfigFile)
 		fields := fieldsFromYamls(t, append(minimalPresetsFiles, minimalConfigFile))
 		assertVals("minimal", fields, params.MinimalSpecConfig(), params.BeaconConfig())
 	})
