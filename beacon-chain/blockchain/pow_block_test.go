@@ -61,7 +61,7 @@ func Test_validTerminalPowBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := params.BeaconConfig()
-			cfg.TerminalTotalDifficulty = tt.ttd
+			cfg.TerminalTotalDifficulty = uint256.NewInt(tt.ttd)
 			params.OverrideBeaconConfig(cfg)
 			if got := validTerminalPowBlock(tt.currentDifficulty, tt.parentDifficulty); got != tt.want {
 				t.Errorf("validTerminalPowBlock() = %v, want %v", got, tt.want)

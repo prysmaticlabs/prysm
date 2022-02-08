@@ -3,12 +3,14 @@ package forkchoice
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"path"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
+	"github.com/holiman/uint256"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -37,9 +39,6 @@ func Run(t *testing.T, config string, fork int) {
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
-				if folder.Name() != "all_valid" {
-					t.Skip("Skipping")
-				}
 				ctx := context.Background()
 				preStepsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 				require.NoError(t, err)
@@ -55,6 +54,15 @@ func Run(t *testing.T, config string, fork int) {
 				require.NoError(t, err)
 				blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 				require.NoError(t, err)
+
+				cfg := params.BeaconConfig()
+				b, _ := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129638912", 10)
+				ttd, of := uint256.FromBig(b)
+				if of {
+					t.Fatal("Could not set big int")
+				}
+				cfg.TerminalTotalDifficulty = ttd
+				params.OverrideBeaconConfig(cfg)
 
 				var beaconState state.BeaconState
 				var beaconBlock block.SignedBeaconBlock
@@ -72,7 +80,10 @@ func Run(t *testing.T, config string, fork int) {
 					t.Fatalf("unknown fork version: %v", fork)
 				}
 
-				service := startChainService(t, beaconState, beaconBlock)
+				execMock := &ExecutionEngineMock{
+					powBlocks: make(map[[32]byte]*ethpb.PowBlock),
+				}
+				service := startChainService(t, beaconState, beaconBlock, execMock)
 				var lastTick int64
 				for _, step := range steps {
 					if step.Tick != nil {
@@ -124,9 +135,10 @@ func Run(t *testing.T, config string, fork int) {
 						require.NoError(t, err)
 						pb := &ethpb.PowBlock{}
 						require.NoError(t, pb.UnmarshalSSZ(p), "Failed to unmarshal")
-						t.Log(pb.ParentHash)
-						t.Log(pb.BlockHash)
-						t.Log(pb.TotalDifficulty)
+						execMock.powBlocks[bytesutil.ToBytes32(pb.BlockHash)] = pb
+						tdInBigEndian := bytesutil.ReverseByteOrder(pb.TotalDifficulty)
+						tdBigint := new(big.Int)
+						tdBigint.SetBytes(tdInBigEndian)
 					}
 					if step.Check != nil {
 						require.NoError(t, service.UpdateHeadWithBalances(ctx))

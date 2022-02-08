@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func startChainService(t *testing.T, st state.BeaconState, block block.SignedBeaconBlock) *blockchain.Service {
+func startChainService(t *testing.T, st state.BeaconState, block block.SignedBeaconBlock, engineMock *ExecutionEngineMock) *blockchain.Service {
 	db := testDB.SetupDB(t)
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlock(ctx, block))
@@ -41,9 +41,8 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	m := &ExecutionEngineMock{}
 	opts := append([]blockchain.Option{},
-		blockchain.WithExecutionEngineCaller(m),
+		blockchain.WithExecutionEngineCaller(engineMock),
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),

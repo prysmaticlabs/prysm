@@ -715,6 +715,7 @@ func (s *Service) validateTerminalBlock(b block.SignedBeaconBlock) error {
 	if err != nil {
 		return err
 	}
+
 	if !validTerminalPowBlock(transitionBlkTTD, transitionParentBlkTTD) {
 		return errors.New("invalid difficulty for terminal block")
 	}
@@ -723,9 +724,9 @@ func (s *Service) validateTerminalBlock(b block.SignedBeaconBlock) error {
 		"slot":                                 b.Block().Slot(),
 		"transitionBlockHash":                  common.BytesToHash(payload.ParentHash).String(),
 		"transitionBlockParentHash":            common.HexToHash(transitionBlk.ParentHash).String(),
-		"terminalTotalDifficulty":              uint256.NewInt(params.BeaconConfig().TerminalTotalDifficulty).Uint64(),
-		"transitionBlockTotalDifficulty":       transitionBlkTTD.Uint64(),
-		"transitionBlockParentTotalDifficulty": transitionParentBlkTTD.Uint64(),
+		"terminalTotalDifficulty":              params.BeaconConfig().TerminalTotalDifficulty,
+		"transitionBlockTotalDifficulty":       transitionBlkTTD,
+		"transitionBlockParentTotalDifficulty": transitionParentBlkTTD,
 	}).Info("Verified terminal block")
 
 	return nil

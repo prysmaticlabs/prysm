@@ -3,7 +3,6 @@ package validator
 import (
 	"context"
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/eth/catalyst"
@@ -218,9 +217,7 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 		return nil, false, nil
 	}
 
-	terminalTotalDifficulty := new(big.Int)
-	terminalTotalDifficulty.SetUint64(params.BeaconConfig().TerminalTotalDifficulty)
-
+	terminalTotalDifficulty := params.BeaconConfig().TerminalTotalDifficulty.ToBig()
 	currentTotalDifficulty := common.HexToHash(blk.TotalDifficulty).Big()
 	parentTotalDifficulty := common.HexToHash(parentBlk.TotalDifficulty).Big()
 	blkNumber := blk.Number
