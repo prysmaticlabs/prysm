@@ -2,8 +2,11 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -30,4 +33,44 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 		return false, err
 	}
 	return blocks.ExecutionBlock(jBlock.Block().Body())
+}
+
+// removeInvalidChain removes all the ancestors of the given INVALID block
+// from DB and ForkChoice until we reach a known VALID block.
+// Warning: this method does not remove the given block itself which is
+// assumed not to be stored in ForkChoice nor in the DB
+func (s *Service) removeInvalidChain(ctx context.Context, b block.BeaconBlock) error {
+
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+		parent, err := s.cfg.BeaconDB.Block(s.ctx, parentRoot)
+		if err != nil {
+			return err
+		}
+		payload, err := parent.Block().Body().ExecutionPayload()
+		if err != nil {
+			return err
+		}
+		_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
+		if err != powchain.ErrInvalidPayload {
+			return nil
+		}
+		err = s.cfg.ForkChoiceStore.UpdateSyncedTipsWithInvalidRoot(ctx, parentRoot)
+		if err != nil {
+			return err
+		}
+		err = s.cfg.BeaconDB.DeleteBlock(ctx, parentRoot)
+		if err != nil {
+			if err == kv.ErrDeleteFinalized {
+				panic(err)
+			}
+			return err
+		}
+		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(parentRoot[:]))).Info(
+			"Removed block with invalid execution payload")
+		b = parent.Block()
+	}
 }

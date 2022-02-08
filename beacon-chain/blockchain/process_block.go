@@ -133,8 +133,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
 			switch err {
 			case powchain.ErrInvalidPayload:
-				// TODO_MERGE walk up the parent chain removing
-				// invalid blocks
+				s.removeInvalidChain(ctx, b)
 				return errors.Wrap(err, "could not sync block with invalid execution payload")
 			case powchain.ErrSyncing:
 				candidate, err := s.optimisticCandidateBlock(ctx, b)
