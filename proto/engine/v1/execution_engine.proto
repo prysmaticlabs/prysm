@@ -38,7 +38,7 @@ message ExecutionBlock {
 	uint64 total_difficulty		= 11;
 	uint64 gas_limit            = 12;
 	uint64 gas_used             = 13;
-	uint64 base_fee_per_gas		= 14;
+	bytes  base_fee_per_gas		= 14;
 	uint64 size					= 15;
 	uint64 timestamp            = 16;
 	bytes extra_data            = 17;
