@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -72,7 +73,7 @@ func TestClient_HTTP(t *testing.T) {
 	ctx := context.Background()
 	fix := fixtures()
 
-	t.Run("engine_getPayloadV1", func(t *testing.T) {
+	t.Run(GetPayloadMethod, func(t *testing.T) {
 		payloadId := [8]byte{1}
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
@@ -114,7 +115,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
-	t.Run("engine_forkchoiceUpdatedV1", func(t *testing.T) {
+	t.Run(ForkchoiceUpdatedMethod, func(t *testing.T) {
 		forkChoiceState := &pb.ForkchoiceState{
 			HeadBlockHash:      []byte("head"),
 			SafeBlockHash:      []byte("safe"),
@@ -172,7 +173,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.DeepEqual(t, want.Status, resp.Status)
 		require.DeepEqual(t, want.PayloadId, resp.PayloadId)
 	})
-	t.Run("engine_newPayloadV1", func(t *testing.T) {
+	t.Run(NewPayloadMethod, func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		want, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
@@ -212,6 +213,74 @@ func TestClient_HTTP(t *testing.T) {
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.NewPayload(ctx, execPayload)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
+	t.Run(LatestExecutionBlockMethod, func(t *testing.T) {
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
+		require.Equal(t, true, ok)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  want,
+			}
+			err := json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		client := &Client{}
+		client.rpc = rpcClient
+
+		// We call the RPC method via HTTP and expect a proper result.
+		resp, err := client.LatestExecutionBlock(ctx)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
+	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
+		arg := common.BytesToHash([]byte("foo"))
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
+		require.Equal(t, true, ok)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			enc, err := ioutil.ReadAll(r.Body)
+			require.NoError(t, err)
+			jsonRequestString := string(enc)
+			// We expect the JSON string RPC request contains the right arguments.
+			require.Equal(t, true, strings.Contains(
+				jsonRequestString, fmt.Sprintf("%#x", arg),
+			))
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  want,
+			}
+			err = json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		client := &Client{}
+		client.rpc = rpcClient
+
+		// We call the RPC method via HTTP and expect a proper result.
+		resp, err := client.ExecutionBlockByHash(ctx, arg)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
