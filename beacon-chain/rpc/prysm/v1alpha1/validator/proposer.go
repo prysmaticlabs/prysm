@@ -48,6 +48,18 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
 	}
 
+	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if optimistic {
+		root, err := vs.HeadFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
+		}
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve blocks. Head root: %#x", root)
+	}
+
 	blk, err := vs.getBellatrixBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)

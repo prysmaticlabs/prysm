@@ -26,6 +26,13 @@ func (vs *Server) GetSyncMessageBlockRoot(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
 	}
+	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if optimistic {
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve blocks. Head root: %#x", r)
+	}
 
 	return &ethpb.SyncMessageBlockRootResponse{
 		Root: r,
