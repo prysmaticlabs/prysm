@@ -77,7 +77,7 @@ var (
 		Usage: "Turn on mutex profiling with the given rate",
 	}
 	// BlockProfileRateFlag to specify the block profiling rate.
-	BlockProfileRateFlag = &cli.IntFlag{
+	BlockProfileRateFlag = &cli.Uint64Flag{
 		Name:  "blockprofilerate",
 		Usage: "Turn on block profiling with the given rate",
 	}
