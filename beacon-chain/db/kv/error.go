@@ -4,7 +4,7 @@ import "errors"
 
 // ErrFinalizedInvalid is raised when a block with an INVALID payload is
 // finalized
-var errFinalizedInvalid = errors.New("finalized block with invalid execution payload")
+var errDeleteFinalized = errors.New("cannot delete finalized block or state")
 
 // ErrNotFound can be used directly, or as a wrapped DBError, whenever a db method needs to
 // indicate that a value couldn't be found.
