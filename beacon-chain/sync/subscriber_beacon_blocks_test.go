@@ -66,7 +66,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 					return b
 				}(),
 			},
-			wantedErr: "nil inner state",
+			wantedErr: chainMock.ErrNilState.Error(),
 			check: func(t *testing.T, s *Service) {
 				if s.cfg.attPool.AggregatedAttestationCount() == 0 {
 					t.Error("Expected at least 1 aggregated attestation in the pool")

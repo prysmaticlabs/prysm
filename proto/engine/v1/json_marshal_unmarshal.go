@@ -15,10 +15,12 @@ type HexBytes []byte
 // big-endian hex strings per the Ethereum JSON-RPC specification.
 type Quantity uint64
 
+// MarshalJSON --
 func (b HexBytes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hexutil.Encode(b))
 }
 
+// UnmarshalJSON --
 func (b *HexBytes) UnmarshalJSON(enc []byte) error {
 	if len(enc) == 0 {
 		*b = make([]byte, 0)
@@ -36,12 +38,14 @@ func (b *HexBytes) UnmarshalJSON(enc []byte) error {
 	return nil
 }
 
+// MarshalJSON --
 func (q Quantity) MarshalJSON() ([]byte, error) {
 	enc := make([]byte, 8)
 	binary.BigEndian.PutUint64(enc, uint64(q))
 	return json.Marshal(hexutil.Encode(enc))
 }
 
+// UnmarshalJSON --
 func (q *Quantity) UnmarshalJSON(enc []byte) error {
 	if len(enc) == 0 {
 		*q = 0
@@ -56,6 +60,106 @@ func (q *Quantity) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*q = Quantity(binary.BigEndian.Uint64(dst))
+	return nil
+}
+
+type executionBlockJSON struct {
+	Number           HexBytes   `json:"number"`
+	Hash             HexBytes   `json:"hash"`
+	ParentHash       HexBytes   `json:"parentHash"`
+	Sha3Uncles       HexBytes   `json:"sha3Uncles"`
+	Miner            HexBytes   `json:"miner"`
+	StateRoot        HexBytes   `json:"stateRoot"`
+	TransactionsRoot HexBytes   `json:"transactionsRoot"`
+	ReceiptsRoot     HexBytes   `json:"receiptsRoot"`
+	LogsBloom        HexBytes   `json:"logsBloom"`
+	Difficulty       HexBytes   `json:"difficulty"`
+	TotalDifficulty  HexBytes   `json:"totalDifficulty"`
+	GasLimit         Quantity   `json:"gasLimit"`
+	GasUsed          Quantity   `json:"gasUsed"`
+	Timestamp        Quantity   `json:"timestamp"`
+	BaseFeePerGas    HexBytes   `json:"baseFeePerGas"`
+	ExtraData        HexBytes   `json:"extraData"`
+	MixHash          HexBytes   `json:"mixHash"`
+	Nonce            HexBytes   `json:"nonce"`
+	Size             HexBytes   `json:"size"`
+	Transactions     []HexBytes `json:"transactions"`
+	Uncles           []HexBytes `json:"uncles"`
+}
+
+// MarshalJSON defines a custom json.Marshaler interface implementation
+// that uses custom json.Marshalers for the HexBytes and Quantity types.
+func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
+	transactions := make([]HexBytes, len(e.Transactions))
+	for i, tx := range e.Transactions {
+		transactions[i] = tx
+	}
+	uncles := make([]HexBytes, len(e.Uncles))
+	for i, ucl := range e.Uncles {
+		uncles[i] = ucl
+	}
+	return json.Marshal(executionBlockJSON{
+		Number:           e.Number,
+		Hash:             e.Hash,
+		ParentHash:       e.ParentHash,
+		Sha3Uncles:       e.Sha3Uncles,
+		Miner:            e.Miner,
+		StateRoot:        e.StateRoot,
+		TransactionsRoot: e.TransactionsRoot,
+		ReceiptsRoot:     e.ReceiptsRoot,
+		LogsBloom:        e.LogsBloom,
+		Difficulty:       e.Difficulty,
+		TotalDifficulty:  e.TotalDifficulty,
+		GasLimit:         Quantity(e.GasLimit),
+		GasUsed:          Quantity(e.GasUsed),
+		Timestamp:        Quantity(e.Timestamp),
+		ExtraData:        e.ExtraData,
+		MixHash:          e.MixHash,
+		Nonce:            e.Nonce,
+		Size:             e.Size,
+		BaseFeePerGas:    e.BaseFeePerGas,
+		Transactions:     transactions,
+		Uncles:           uncles,
+	})
+}
+
+// UnmarshalJSON defines a custom json.Unmarshaler interface implementation
+// that uses custom json.Unmarshalers for the HexBytes and Quantity types.
+func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
+	dec := executionBlockJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*e = ExecutionBlock{}
+	e.Number = dec.Number
+	e.Hash = dec.Hash
+	e.ParentHash = dec.ParentHash
+	e.Sha3Uncles = dec.Sha3Uncles
+	e.Miner = dec.Miner
+	e.StateRoot = dec.StateRoot
+	e.TransactionsRoot = dec.TransactionsRoot
+	e.ReceiptsRoot = dec.ReceiptsRoot
+	e.LogsBloom = dec.LogsBloom
+	e.Difficulty = dec.Difficulty
+	e.TotalDifficulty = dec.TotalDifficulty
+	e.GasLimit = uint64(dec.GasLimit)
+	e.GasUsed = uint64(dec.GasUsed)
+	e.Timestamp = uint64(dec.Timestamp)
+	e.ExtraData = dec.ExtraData
+	e.MixHash = dec.MixHash
+	e.Nonce = dec.Nonce
+	e.Size = dec.Size
+	e.BaseFeePerGas = dec.BaseFeePerGas
+	transactions := make([][]byte, len(dec.Transactions))
+	for i, tx := range dec.Transactions {
+		transactions[i] = tx
+	}
+	e.Transactions = transactions
+	uncles := make([][]byte, len(dec.Uncles))
+	for i, ucl := range dec.Uncles {
+		uncles[i] = ucl
+	}
+	e.Uncles = uncles
 	return nil
 }
 
@@ -76,8 +180,7 @@ type executionPayloadJSON struct {
 	Transactions  []HexBytes `json:"transactions"`
 }
 
-// MarshalJSON defines a custom json.Marshaler interface implementation
-// that uses custom json.Marshalers for the HexBytes and Quantity types.
+// MarshalJSON --
 func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	transactions := make([]HexBytes, len(e.Transactions))
 	for i, tx := range e.Transactions {
@@ -101,8 +204,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// UnmarshalJSON defines a custom json.Unmarshaler interface implementation
-// that uses custom json.Unmarshalers for the HexBytes and Quantity types.
+// UnmarshalJSON --
 func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	dec := executionPayloadJSON{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
