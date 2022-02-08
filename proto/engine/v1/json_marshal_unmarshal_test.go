@@ -144,7 +144,7 @@ func TestPayloadIDBytes_MarshalUnmarshalJSON(t *testing.T) {
 	item := [8]byte{1, 0, 0, 0, 0, 0, 0, 0}
 	enc, err := json.Marshal(enginev1.PayloadIDBytes(item))
 	require.NoError(t, err)
-
+	require.DeepEqual(t, "\"0x0100000000000000\"", string(enc))
 	res := &enginev1.PayloadIDBytes{}
 	err = res.UnmarshalJSON(enc)
 	require.NoError(t, err)
