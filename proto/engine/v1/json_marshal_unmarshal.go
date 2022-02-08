@@ -82,7 +82,7 @@ type executionBlockJSON struct {
 	ExtraData        HexBytes   `json:"extraData"`
 	MixHash          HexBytes   `json:"mixHash"`
 	Nonce            HexBytes   `json:"nonce"`
-	Size             Quantity   `json:"size"`
+	Size             HexBytes   `json:"size"`
 	Transactions     []HexBytes `json:"transactions"`
 	Uncles           []HexBytes `json:"uncles"`
 }
