@@ -105,6 +105,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			GasUsed:          4,
 			Timestamp:        5,
 			BaseFeePerGas:    []byte("6"),
+			Size:             7,
 			ExtraData:        []byte("extraData"),
 			MixHash:          []byte("mixHash"),
 			Nonce:            []byte("nonce"),
@@ -130,6 +131,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, uint64(4), payloadPb.GasUsed)
 		require.DeepEqual(t, uint64(5), payloadPb.Timestamp)
 		require.DeepEqual(t, []byte("6"), payloadPb.BaseFeePerGas)
+		require.DeepEqual(t, uint64(7), payloadPb.Size)
 		require.DeepEqual(t, []byte("extraData"), payloadPb.ExtraData)
 		require.DeepEqual(t, []byte("mixHash"), payloadPb.MixHash)
 		require.DeepEqual(t, []byte("nonce"), payloadPb.Nonce)

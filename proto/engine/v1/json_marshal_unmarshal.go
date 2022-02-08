@@ -82,6 +82,7 @@ type executionBlockJSON struct {
 	ExtraData        HexBytes   `json:"extraData"`
 	MixHash          HexBytes   `json:"mixHash"`
 	Nonce            HexBytes   `json:"nonce"`
+	Size             Quantity   `json:"size"`
 	Transactions     []HexBytes `json:"transactions"`
 	Uncles           []HexBytes `json:"uncles"`
 }
@@ -115,6 +116,7 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 		ExtraData:        e.ExtraData,
 		MixHash:          e.MixHash,
 		Nonce:            e.Nonce,
+		Size:             Quantity(e.Size),
 		BaseFeePerGas:    e.BaseFeePerGas,
 		Transactions:     transactions,
 		Uncles:           uncles,
@@ -146,6 +148,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	e.ExtraData = dec.ExtraData
 	e.MixHash = dec.MixHash
 	e.Nonce = dec.Nonce
+	e.Size = uint64(dec.Size)
 	e.BaseFeePerGas = dec.BaseFeePerGas
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
