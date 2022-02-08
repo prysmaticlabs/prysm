@@ -41,9 +41,9 @@ type executionBlockJSON struct {
 	LogsBloom        hexutil.Bytes   `json:"logsBloom"`
 	Difficulty       *big.Int        `json:"difficulty"`
 	TotalDifficulty  *big.Int        `json:"totalDifficulty"`
-	GasLimit         *big.Int        `json:"gasLimit"`
-	GasUsed          *big.Int        `json:"gasUsed"`
-	Timestamp        *big.Int        `json:"timestamp"`
+	GasLimit         hexutil.Uint64  `json:"gasLimit"`
+	GasUsed          hexutil.Uint64  `json:"gasUsed"`
+	Timestamp        hexutil.Uint64  `json:"timestamp"`
 	BaseFeePerGas    *big.Int        `json:"baseFeePerGas"`
 	ExtraData        hexutil.Bytes   `json:"extraData"`
 	MixHash          hexutil.Bytes   `json:"mixHash"`
@@ -76,18 +76,6 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	gasLim, err := hexutil.DecodeBig(fmt.Sprintf("%#x", e.GasLimit))
-	if err != nil {
-		return nil, err
-	}
-	gasUsed, err := hexutil.DecodeBig(fmt.Sprintf("%#x", e.GasUsed))
-	if err != nil {
-		return nil, err
-	}
-	timestamp, err := hexutil.DecodeBig(fmt.Sprintf("%#x", e.Timestamp))
-	if err != nil {
-		return nil, err
-	}
 	size, err := hexutil.DecodeBig(fmt.Sprintf("%#x", e.Size))
 	if err != nil {
 		return nil, err
@@ -108,9 +96,9 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 		LogsBloom:        e.LogsBloom,
 		Difficulty:       diff,
 		TotalDifficulty:  totalDiff,
-		GasLimit:         gasLim,
-		GasUsed:          gasUsed,
-		Timestamp:        timestamp,
+		GasLimit:         hexutil.Uint64(e.GasLimit),
+		GasUsed:          hexutil.Uint64(e.GasUsed),
+		Timestamp:        hexutil.Uint64(e.Timestamp),
 		ExtraData:        e.ExtraData,
 		MixHash:          e.MixHash,
 		Nonce:            e.Nonce,
@@ -140,9 +128,9 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	e.LogsBloom = dec.LogsBloom
 	e.Difficulty = dec.Difficulty.Bytes()
 	e.TotalDifficulty = dec.TotalDifficulty.Bytes()
-	e.GasLimit = dec.GasLimit.Uint64()
-	e.GasUsed = dec.GasUsed.Uint64()
-	e.Timestamp = dec.Timestamp.Uint64()
+	e.GasLimit = uint64(dec.GasLimit)
+	e.GasUsed = uint64(dec.GasUsed)
+	e.Timestamp = uint64(dec.Timestamp)
 	e.ExtraData = dec.ExtraData
 	e.MixHash = dec.MixHash
 	e.Nonce = dec.Nonce
@@ -173,7 +161,7 @@ type executionPayloadJSON struct {
 	GasUsed       hexutil.Uint64  `json:"gasUsed"`
 	Timestamp     hexutil.Uint64  `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
-	BaseFeePerGas *big.Int        `json:"baseFeePerGas"`
+	BaseFeePerGas hexutil.Big     `json:"baseFeePerGas"`
 	BlockHash     hexutil.Bytes   `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 }
@@ -184,8 +172,8 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	for i, tx := range e.Transactions {
 		transactions[i] = tx
 	}
-	baseFee, err := hexutil.DecodeBig(fmt.Sprintf("%#x", e.BaseFeePerGas))
-	if err != nil {
+	var b hexutil.Big
+	if err := b.UnmarshalText(e.BaseFeePerGas); err != nil {
 		return nil, err
 	}
 	return json.Marshal(executionPayloadJSON{
@@ -200,7 +188,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		GasUsed:       hexutil.Uint64(e.GasUsed),
 		Timestamp:     hexutil.Uint64(e.Timestamp),
 		ExtraData:     e.ExtraData,
-		BaseFeePerGas: baseFee,
+		BaseFeePerGas: b,
 		BlockHash:     e.BlockHash,
 		Transactions:  transactions,
 	})
@@ -210,6 +198,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	dec := executionPayloadJSON{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
+		fmt.Println("got weird err")
 		return err
 	}
 	*e = ExecutionPayload{}
@@ -224,7 +213,11 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	e.GasUsed = uint64(dec.GasUsed)
 	e.Timestamp = uint64(dec.Timestamp)
 	e.ExtraData = dec.ExtraData
-	e.BaseFeePerGas = dec.BaseFeePerGas.Bytes()
+	baseFee, err := dec.BaseFeePerGas.MarshalText()
+	if err != nil {
+		return err
+	}
+	e.BaseFeePerGas = baseFee
 	e.BlockHash = dec.BlockHash
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
