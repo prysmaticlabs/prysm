@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -26,7 +28,7 @@ func TestClient_IPC(t *testing.T) {
 	ctx := context.Background()
 	fix := fixtures()
 
-	t.Run("engine_getPayloadV1", func(t *testing.T) {
+	t.Run(GetPayloadMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
@@ -34,7 +36,7 @@ func TestClient_IPC(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
-	t.Run("engine_forkchoiceUpdatedV1", func(t *testing.T) {
+	t.Run(ForkchoiceUpdatedMethod, func(t *testing.T) {
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
 		resp, err := client.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, &pb.PayloadAttributes{})
@@ -42,10 +44,25 @@ func TestClient_IPC(t *testing.T) {
 		require.DeepEqual(t, want.Status, resp.Status)
 		require.DeepEqual(t, want.PayloadId, resp.PayloadId)
 	})
-	t.Run("engine_newPayloadV1", func(t *testing.T) {
+	t.Run(NewPayloadMethod, func(t *testing.T) {
 		want, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
 		resp, err := client.NewPayload(ctx, &pb.ExecutionPayload{})
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
+	t.Run(LatestExecutionBlockMethod, func(t *testing.T) {
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
+		require.Equal(t, true, ok)
+		resp, err := client.LatestExecutionBlock(ctx)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
+	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
+		require.Equal(t, true, ok)
+		arg := common.BytesToHash([]byte("foo"))
+		resp, err := client.ExecutionBlockByHash(ctx, arg)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -297,6 +314,8 @@ func newTestIPCServer(t *testing.T) *rpc.Server {
 	server := rpc.NewServer()
 	err := server.RegisterName("engine", new(testEngineService))
 	require.NoError(t, err)
+	err = server.RegisterName("eth", new(testEngineService))
+	require.NoError(t, err)
 	return server
 }
 
@@ -320,6 +339,27 @@ func fixtures() map[string]interface{} {
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 	}
+	executionBlock := &pb.ExecutionBlock{
+		Number:           []byte("100"),
+		Hash:             []byte("hash"),
+		ParentHash:       []byte("parentHash"),
+		Sha3Uncles:       []byte("sha3Uncles"),
+		Miner:            []byte("miner"),
+		StateRoot:        []byte("sha3Uncles"),
+		TransactionsRoot: []byte("transactionsRoot"),
+		ReceiptsRoot:     []byte("receiptsRoot"),
+		LogsBloom:        []byte("logsBloom"),
+		Difficulty:       []byte("1"),
+		TotalDifficulty:  []byte("2"),
+		GasLimit:         3,
+		GasUsed:          4,
+		Timestamp:        5,
+		Size:             []byte("6"),
+		ExtraData:        []byte("extraData"),
+		BaseFeePerGas:    []byte("baseFeePerGas"),
+		Transactions:     [][]byte{foo[:]},
+		Uncles:           [][]byte{foo[:]},
+	}
 	status := &pb.PayloadStatus{
 		Status:          pb.PayloadStatus_ACCEPTED,
 		LatestValidHash: foo[:],
@@ -330,6 +370,7 @@ func fixtures() map[string]interface{} {
 		PayloadId: bytesutil.PadTo([]byte{1}, 8),
 	}
 	return map[string]interface{}{
+		"ExecutionBlock":            executionBlock,
 		"ExecutionPayload":          executionPayloadFixture,
 		"PayloadStatus":             status,
 		"ForkchoiceUpdatedResponse": forkChoiceResp,
@@ -339,6 +380,28 @@ func fixtures() map[string]interface{} {
 type testEngineService struct{}
 
 func (*testEngineService) NoArgsRets() {}
+
+func (*testEngineService) BlockByHash(
+	_ context.Context, _ common.Hash,
+) *pb.ExecutionBlock {
+	fix := fixtures()
+	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
+	if !ok {
+		panic("not found")
+	}
+	return item
+}
+
+func (*testEngineService) BlockByNumber(
+	_ context.Context, _ *big.Int,
+) *pb.ExecutionBlock {
+	fix := fixtures()
+	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
+	if !ok {
+		panic("not found")
+	}
+	return item
+}
 
 func (*testEngineService) GetPayloadV1(
 	_ context.Context, _ pb.HexBytes,
