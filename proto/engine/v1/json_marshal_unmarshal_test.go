@@ -140,6 +140,17 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	})
 }
 
+func TestPayloadIDBytes_MarshalUnmarshalJSON(t *testing.T) {
+	item := [8]byte{1, 0, 0, 0, 0, 0, 0, 0}
+	enc, err := json.Marshal(enginev1.PayloadIDBytes(item))
+	require.NoError(t, err)
+
+	res := &enginev1.PayloadIDBytes{}
+	err = res.UnmarshalJSON(enc)
+	require.NoError(t, err)
+	require.Equal(t, true, item == *res)
+}
+
 func TestHexBytes_MarshalUnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name string

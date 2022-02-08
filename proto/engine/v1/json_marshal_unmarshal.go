@@ -7,6 +7,27 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
+// PayloadIDBytes defines a custom type for Payload IDs used by the engine API
+// client with proper JSON Marshal and Unmarshal methods to hex.
+type PayloadIDBytes [8]byte
+
+// MarshalJSON --
+func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
+	return json.Marshal(HexBytes(b[:]))
+}
+
+// UnmarshalJSON --
+func (b *PayloadIDBytes) UnmarshalJSON(enc []byte) error {
+	hexBytes := HexBytes(make([]byte, 0))
+	if err := json.Unmarshal(enc, &hexBytes); err != nil {
+		return err
+	}
+	res := [8]byte{}
+	copy(res[:], hexBytes)
+	*b = res
+	return nil
+}
+
 // HexBytes implements a custom json.Marshaler/Unmarshaler for byte slices that encodes them as
 // hex strings per the Ethereum JSON-RPC specification.
 type HexBytes []byte
