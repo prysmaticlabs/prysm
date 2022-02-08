@@ -6,6 +6,7 @@ go_library(
         "backup.go",
         "delete.go",
         "doc.go",
+        "errors.go",
         "import.go",
         "keymanager.go",
         "log.go",
