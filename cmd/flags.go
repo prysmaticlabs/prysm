@@ -188,7 +188,7 @@ var (
 		Value: "text",
 	}
 	// MaxGoroutines specifies the maximum amount of goroutines tolerated, before a status check fails.
-	MaxGoroutines = &cli.IntFlag{
+	MaxGoroutines = &cli.Uint64Flag{
 		Name:  "max-goroutines",
 		Usage: "Specifies the upper limit of goroutines running before a status check fails",
 		Value: 5000,
