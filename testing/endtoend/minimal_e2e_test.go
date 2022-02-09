@@ -68,6 +68,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ev.ValidatorsAreActive,
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
+		ev.PeersCheck,
 		ev.ProcessesDepositsInBlocks,
 		ev.VerifyBlockGraffiti,
 		ev.ActivatesDepositedValidators,

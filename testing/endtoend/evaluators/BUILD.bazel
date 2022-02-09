@@ -12,6 +12,7 @@ go_library(
         "metrics.go",
         "node.go",
         "operations.go",
+        "peers.go",
         "slashing.go",
         "validator.go",
     ],
