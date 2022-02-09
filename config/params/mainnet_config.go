@@ -2,20 +2,11 @@ package params
 
 import (
 	"math"
-	"math/big"
 	"time"
 
-	"github.com/holiman/uint256"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
-
-var terminalTotalDifficulty *uint256.Int
-
-func init() {
-	i, _ := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129638912", 10)
-	terminalTotalDifficulty, _ = uint256.FromBig(i)
-}
 
 // MainnetConfig returns the configuration to be used in the main network.
 func MainnetConfig() *BeaconChainConfig {
