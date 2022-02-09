@@ -18,8 +18,8 @@ is updated.
 
 #### Authentication
 
-Our keymanager API requires a valid bearer token to run the key manager. you can retrieve this bearer token from the url
-displayed when running `validator --web`
+Our keymanager API requires a valid bearer token to run the keymanager. 
+You can retrieve this bearer token from the URL displayed when running `validator --web`
 i.e. `http://127.0.0.1:7500/initialize?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.BEuFWr-FpKIlJEIjgmujTQJlJF2aJRaUfFiuTBYVL3k`
 The token can be copied and pasted into the authorization tab of each Postman request to authenticate.
 
