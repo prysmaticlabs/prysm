@@ -60,6 +60,7 @@ type ChainService struct {
 	PublicKey                   [fieldparams.BLSPubkeyLength]byte
 	SyncCommitteePubkeys        [][]byte
 	InitSyncBlockRoots          map[[32]byte]bool
+	Optimistic                  bool
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -442,5 +443,5 @@ func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ type
 
 // IsOptimistic mocks the same method in the chain service.
 func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
-	return false, nil
+	return s.Optimistic, nil
 }

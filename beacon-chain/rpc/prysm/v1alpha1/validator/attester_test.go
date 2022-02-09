@@ -169,6 +169,14 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 	assert.ErrorContains(t, "Syncing to latest head", err)
 }
 
+func TestGetAttestationData_Optimistic(t *testing.T) {
+	as := &Server{
+		SyncChecker: &mockSync.Sync{IsSyncing: true},
+	}
+	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
+	assert.ErrorContains(t, "Syncing to latest head", err)
+}
+
 func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	// Scenario:
 	//

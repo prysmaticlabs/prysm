@@ -22,16 +22,15 @@ import (
 func (vs *Server) GetSyncMessageBlockRoot(
 	ctx context.Context, _ *emptypb.Empty,
 ) (*ethpb.SyncMessageBlockRootResponse, error) {
+	// An optimistic validator MUST NOT participate in sync committees
+	// (i.e., sign across the DOMAIN_SYNC_COMMITTEE, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF or DOMAIN_CONTRIBUTION_AND_PROOF domains).
+	if err := vs.optimisticStatus(ctx); err != nil {
+		return nil, err
+	}
+
 	r, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
-	}
-	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
-	}
-	if optimistic {
-		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve sync committee contributions. Head root: %#x", r)
 	}
 
 	return &ethpb.SyncMessageBlockRootResponse{
@@ -88,6 +87,12 @@ func (vs *Server) GetSyncSubcommitteeIndex(
 func (vs *Server) GetSyncCommitteeContribution(
 	ctx context.Context, req *ethpb.SyncCommitteeContributionRequest,
 ) (*ethpb.SyncCommitteeContribution, error) {
+	// An optimistic validator MUST NOT participate in sync committees
+	// (i.e., sign across the DOMAIN_SYNC_COMMITTEE, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF or DOMAIN_CONTRIBUTION_AND_PROOF domains).
+	if err := vs.optimisticStatus(ctx); err != nil {
+		return nil, err
+	}
+
 	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
