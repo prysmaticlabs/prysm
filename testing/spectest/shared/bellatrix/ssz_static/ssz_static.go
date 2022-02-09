@@ -114,8 +114,7 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		t.Skip("not a beacon node type, this is a light node type")
 		return nil, nil
 	case "PowBlock":
-		t.Skip("not a beacon node type")
-		return nil, nil
+		obj = &ethpb.PowBlock{}
 	default:
 		return nil, errors.New("type not found")
 	}
