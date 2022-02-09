@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -90,7 +89,6 @@ func TestClient_HTTP(t *testing.T) {
 
 			reqArg, err := json.Marshal(pb.PayloadIDBytes(payloadId))
 			require.NoError(t, err)
-
 
 			// We expect the JSON string RPC request contains the right arguments.
 			require.Equal(t, true, strings.Contains(
@@ -466,7 +464,7 @@ func (*testEngineService) BlockByHash(
 }
 
 func (*testEngineService) BlockByNumber(
-	_ context.Context, _ *big.Int,
+	_ context.Context, _ string, _ bool,
 ) *pb.ExecutionBlock {
 	fix := fixtures()
 	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)

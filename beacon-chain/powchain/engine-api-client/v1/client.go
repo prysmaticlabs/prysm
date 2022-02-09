@@ -99,7 +99,13 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 // eth_blockByNumber via JSON-RPC.
 func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error) {
 	result := &pb.ExecutionBlock{}
-	err := c.rpc.CallContext(ctx, result, LatestExecutionBlockMethod)
+	err := c.rpc.CallContext(
+		ctx,
+		result,
+		LatestExecutionBlockMethod,
+		"latest",
+		false, /* no full transaction objects */
+	)
 	return result, handleRPCError(err)
 }
 
