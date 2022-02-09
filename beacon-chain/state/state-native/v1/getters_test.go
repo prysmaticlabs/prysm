@@ -145,8 +145,10 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := InitializeFromProto(&ethpb.BeaconState{})
 			require.NoError(t, err)
+			st, ok := s.(*BeaconState)
+			require.Equal(t, true, ok)
 			nKey := keyCreator([]byte{'A'})
-			tt.modifyFunc(s, nKey)
+			tt.modifyFunc(st, nKey)
 			idx, ok := s.ValidatorIndexByPubkey(nKey)
 			assert.Equal(t, tt.exists, ok)
 			assert.Equal(t, tt.expectedIdx, idx)
