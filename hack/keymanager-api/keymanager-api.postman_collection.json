@@ -9,7 +9,14 @@
 			"name": "/eth/v1/keystores",
 			"request": {
 				"auth": {
-					"type": "bearer"
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.PkLPEA0OSzhONboQXe6J1kiEUZ5t2JpwGjiNTklV9uk",
+							"type": "string"
+						}
+					]
 				},
 				"method": "GET",
 				"header": [
@@ -20,7 +27,11 @@
 					}
 				],
 				"url": {
-					"raw": "/eth/v1/keystores",
+					"raw": "localhost:7500/eth/v1/keystores",
+					"host": [
+						"localhost"
+					],
+					"port": "7500",
 					"path": [
 						"eth",
 						"v1",
@@ -38,7 +49,7 @@
 					"bearer": [
 						{
 							"key": "token",
-							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.BEuFWr-FpKIlJEIjgmujTQJlJF2aJRaUfFiuTBYVL3k",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.PkLPEA0OSzhONboQXe6J1kiEUZ5t2JpwGjiNTklV9uk",
 							"type": "string"
 						}
 					]
@@ -53,7 +64,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"keystores\":[\n        \"\"\n    ],\n    \"passwords\":[\n        \"\"\n    ],\n    \"slashing_protection\":null\n}"
+					"raw": "{\n    \"keystores\":[\n        \"543534534543543543534\"\n    ],\n    \"passwords\":[\n        \"hrtyt564634534\"\n    ],\n    \"slashing_protection\":null\n}"
 				},
 				"url": {
 					"raw": "localhost:7500/eth/v1/keystores",
@@ -78,7 +89,7 @@
 					"bearer": [
 						{
 							"key": "token",
-							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.BEuFWr-FpKIlJEIjgmujTQJlJF2aJRaUfFiuTBYVL3k",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.PkLPEA0OSzhONboQXe6J1kiEUZ5t2JpwGjiNTklV9uk",
 							"type": "string"
 						}
 					]
@@ -91,6 +102,10 @@
 						"type": "default"
 					}
 				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pubkeys\": [\n    \"0x8d65ffe7b65ee8e7c3e14a474a360f16722920ef8c0ef1da6f942fd6ddc3628c1edda7f57cf28d7ddc7fc9cb9745df60\"\n  ]\n}"
+				},
 				"url": {
 					"raw": "localhost:7500/eth/v1/keystores",
 					"host": [
