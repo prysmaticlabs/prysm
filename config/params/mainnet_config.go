@@ -258,5 +258,5 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Bellatrix
 	TerminalBlockHashActivationEpoch: 18446744073709551615,
 	TerminalBlockHash:                [32]byte{},
-	TerminalTotalDifficulty:          []byte{},
+	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
 }

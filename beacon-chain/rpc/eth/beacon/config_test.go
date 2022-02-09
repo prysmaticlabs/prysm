@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/holiman/uint256"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -101,7 +100,7 @@ func TestGetSpec(t *testing.T) {
 	config.MinSyncCommitteeParticipants = 71
 	config.TerminalBlockHash = common.HexToHash("TerminalBlockHash")
 	config.TerminalBlockHashActivationEpoch = 72
-	config.TerminalTotalDifficulty = uint256.NewInt(73)
+	config.TerminalTotalDifficulty = string(73)
 	config.FeeRecipient = common.HexToAddress("FeeRecipient")
 
 	var dbp [4]byte
