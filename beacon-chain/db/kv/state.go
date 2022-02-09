@@ -3,11 +3,13 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/dberr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -44,6 +46,19 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconStat
 	}
 
 	return s.unmarshalState(ctx, enc, valEntries)
+}
+
+// StateOrError is just like State(), except it only returns a non-error response
+// if the requested state is found in the database.
+func (s *Store) StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+	st, err := s.State(ctx, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if st == nil || st.IsNil() {
+		return nil, errors.Wrap(dberr.ErrStateNotFound, fmt.Sprintf("no state with blockroot=%#x", blockRoot))
+	}
+	return st, nil
 }
 
 // GenesisState returns the genesis state in beacon chain.

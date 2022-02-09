@@ -1,0 +1,9 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["errors.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/dberr",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_pkg_errors//:go_default_library"],
+)

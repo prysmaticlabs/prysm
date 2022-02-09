@@ -2,6 +2,10 @@ package util
 
 import (
 	"fmt"
+	"testing"
+
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/testing/require"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -36,8 +40,26 @@ func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
 	return nil
 }
 
+func WithStateSlot(slot types.Slot) NewBeaconStateOption {
+	return func(st *ethpb.BeaconState) error {
+		st.Slot = slot
+		return nil
+	}
+}
+
+func WithLatestHeaderFromBlock(t *testing.T, b block.SignedBeaconBlock) NewBeaconStateOption {
+	return func(st *ethpb.BeaconState) error {
+		sh, err := b.Header()
+		require.NoError(t, err)
+		st.LatestBlockHeader = sh.Header
+		return nil
+	}
+}
+
+type NewBeaconStateOption func(state *ethpb.BeaconState) error
+
 // NewBeaconState creates a beacon state with minimum marshalable fields.
-func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (state.BeaconState, error) {
+func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) {
 	seed := &ethpb.BeaconState{
 		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
 		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),

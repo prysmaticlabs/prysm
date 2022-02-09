@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"encoding/binary"
+	"math"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -48,6 +50,8 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
+	bs.ReplayerBuilder = mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState))
+
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
 	require.NoError(t, err)
 	attesterSeed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
@@ -67,6 +71,12 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	if !proto.Equal(res, wanted) {
 		t.Errorf("Expected %v, received %v", wanted, res)
 	}
+}
+
+func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
+	cc := &mockstategen.MockCanonicalChecker{Is: true, Err: nil}
+	cs := &mockstategen.MockCurrentSlotter{Slot: math.MaxUint64 - 1}
+	s.ReplayerBuilder = stategen.NewCanonicalBuilder(h, cc, cs)
 }
 
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
@@ -104,6 +114,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 		GenesisTimeFetcher: m,
 		StateGen:           stategen.New(db),
 	}
+	addDefaultReplayerBuilder(bs, db)
 
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 1)
 	require.NoError(t, err)

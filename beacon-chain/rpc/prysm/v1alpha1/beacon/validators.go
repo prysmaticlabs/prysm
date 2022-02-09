@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 
@@ -64,9 +65,9 @@ func (bs *Server) ListValidatorBalances(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	requestedState, err := bs.ReplayerBuilder.ForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", startSlot, err))
 	}
 
 	vals := requestedState.Validators()
@@ -219,7 +220,10 @@ func (bs *Server) ListValidators(
 		if err != nil {
 			return nil, err
 		}
-		reqState, err = bs.StateGen.StateBySlot(ctx, s)
+		reqState, err = bs.ReplayerBuilder.ForSlot(s).ReplayBlocks(ctx)
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", s, err))
+		}
 	} else {
 		reqState, err = bs.HeadFetcher.HeadState(ctx)
 	}
@@ -411,9 +415,9 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, s)
+	requestedState, err := bs.ReplayerBuilder.ForSlot(s).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", s, err))
 	}
 
 	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, requestedState, coreTime.CurrentEpoch(requestedState))
@@ -515,9 +519,10 @@ func (bs *Server) GetValidatorParticipation(
 		}
 		startSlot = types.Slot(i)
 	}
-	beaconState, err := bs.StateGen.StateBySlot(ctx, startSlot)
+
+	beaconState, err := bs.ReplayerBuilder.ForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", startSlot, err))
 	}
 	var v []*precompute.Validator
 	var b *precompute.Balance
@@ -834,9 +839,9 @@ func (bs *Server) GetIndividualVotes(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, s)
+	st, err := bs.ReplayerBuilder.ForSlot(s).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", req.Epoch, err)
+		return nil, status.Errorf(codes.Internal, "failed to replay blocks for state at epoch %d: %v", req.Epoch, err)
 	}
 	// Track filtered validators to prevent duplication in the response.
 	filtered := map[types.ValidatorIndex]bool{}
@@ -844,7 +849,7 @@ func (bs *Server) GetIndividualVotes(
 	votes := make([]*ethpb.IndividualVotesRespond_IndividualVote, 0, len(req.Indices)+len(req.PublicKeys))
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, ok := requestedState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if !ok {
 			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{PublicKey: pubKey, ValidatorIndex: types.ValidatorIndex(^uint64(0))})
 			continue
@@ -864,27 +869,27 @@ func (bs *Server) GetIndividualVotes(
 
 	var v []*precompute.Validator
 	var bal *precompute.Balance
-	switch requestedState.Version() {
+	switch st.Version() {
 	case version.Phase0:
-		v, bal, err = precompute.New(ctx, requestedState)
+		v, bal, err = precompute.New(ctx, st)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
 		}
-		v, _, err = precompute.ProcessAttestations(ctx, requestedState, v, bal)
+		v, _, err = precompute.ProcessAttestations(ctx, st, v, bal)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
 	case version.Altair:
-		v, bal, err = altair.InitializePrecomputeValidators(ctx, requestedState)
+		v, bal, err = altair.InitializePrecomputeValidators(ctx, st)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
 		}
-		v, _, err = altair.ProcessEpochParticipation(ctx, requestedState, bal, v)
+		v, _, err = altair.ProcessEpochParticipation(ctx, st, bal, v)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
 	default:
-		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", requestedState.Version())
+		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", st.Version())
 	}
 
 	for _, index := range filteredIndices {
@@ -892,7 +897,7 @@ func (bs *Server) GetIndividualVotes(
 			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
 			continue
 		}
-		val, err := requestedState.ValidatorAtIndexReadOnly(index)
+		val, err := st.ValidatorAtIndexReadOnly(index)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve validator: %v", err)
 

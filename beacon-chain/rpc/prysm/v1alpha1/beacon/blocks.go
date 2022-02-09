@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -478,10 +479,12 @@ func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity slot")
 	}
 
-	wsState, err := bs.StateGen.StateBySlot(ctx, wsSlot)
+	wsState, err := bs.ReplayerBuilder.ForSlot(wsSlot).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state")
+		msg := fmt.Sprintf("error replaying blocks for state at slot %d: %v", wsSlot, err)
+		return nil, status.Error(codes.Internal, msg)
 	}
+
 	stateRoot, err := wsState.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state root")

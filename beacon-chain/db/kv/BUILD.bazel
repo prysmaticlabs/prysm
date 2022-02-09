@@ -38,6 +38,7 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/db/iface:go_default_library",
+        "//beacon-chain/dberr:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/genesis:go_default_library",
         "//beacon-chain/state/v1:go_default_library",

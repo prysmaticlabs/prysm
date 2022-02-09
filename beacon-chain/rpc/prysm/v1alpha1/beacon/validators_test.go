@@ -115,6 +115,8 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
+	bs.ReplayerBuilder = mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState))
+
 	wanted := &ethpb.ValidatorBalances{
 		Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
 		TotalSize:     int32(0),
@@ -172,6 +174,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
+		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
 	}
 	res, err := bs.ListValidatorBalances(
 		ctx,
@@ -200,6 +203,7 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
+		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 200, len(headState.Balances()))
@@ -248,6 +252,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
+		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	tests := []struct {
@@ -331,6 +336,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
+		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	tests := []struct {
@@ -398,6 +404,7 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
+		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	req := &ethpb.ListValidatorBalancesRequest{Indices: []types.ValidatorIndex{types.ValidatorIndex(1)}, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}
@@ -660,6 +667,7 @@ func TestServer_ListValidatorBalances_UnknownValidatorInResponse(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
+		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	nonExistentPubKey := [32]byte{8}
@@ -1031,9 +1039,11 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, st.SetSlot(20*params.BeaconConfig().SlotsPerEpoch))
+	slot := 20 * params.BeaconConfig().SlotsPerEpoch
+	require.NoError(t, st.SetSlot(slot))
 	require.NoError(t, st.SetValidators(validators))
 	b := util.NewBeaconBlock()
+	b.Block.Slot = slot
 	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1048,8 +1058,8 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 			// We are in epoch 30
 			Genesis: time.Now().Add(time.Duration(-1*int64(30*secondsPerEpoch)) * time.Second),
 		},
-		StateGen: stategen.New(beaconDB),
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	req := &ethpb.ListValidatorsRequest{
 		QueryFilter: &ethpb.ListValidatorsRequest_Genesis{
@@ -1270,8 +1280,8 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(beaconDB),
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
 		QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Genesis{Genesis: true},
 	})
@@ -1489,43 +1499,6 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 	assert.ErrorContains(t, wanted, err)
 }
 
-func TestServer_GetValidatorParticipation_UnknownState(t *testing.T) {
-	beaconDB := dbTest.SetupDB(t)
-
-	ctx := context.Background()
-	headState, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, headState.SetSlot(0))
-	epoch := types.Epoch(50)
-	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))
-	mockStateGen := &mockstategen.MockStateManager{
-		StatesBySlot: map[types.Slot]state.BeaconState{
-			0: (*v1.BeaconState)(nil),
-		},
-	}
-	bs := &Server{
-		BeaconDB: beaconDB,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: time.Now().Add(time.Duration(-1*int64(slots)) * time.Second),
-		},
-		StateGen: mockStateGen,
-	}
-
-	wanted := "Could not set up pre compute instance: failed to initialize precompute: nil inner state"
-	_, err = bs.GetValidatorParticipation(
-		ctx,
-		&ethpb.GetValidatorParticipationRequest{
-			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-				Epoch: 1,
-			},
-		},
-	)
-	assert.ErrorContains(t, wanted, err)
-}
-
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	helpers.ClearCache()
 	beaconDB := dbTest.SetupDB(t)
@@ -1584,6 +1557,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 		},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
 	require.NoError(t, err)
@@ -1663,6 +1637,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 		},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
 	require.NoError(t, err)
@@ -1729,6 +1704,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 		},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
 	require.NoError(t, err)
@@ -2070,6 +2046,7 @@ func BenchmarkListValidatorBalances(b *testing.B) {
 			State: headState,
 		},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	req := &ethpb.ListValidatorBalancesRequest{PageSize: 100}
 	b.StartTimer()
@@ -2134,6 +2111,7 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 		StateGen:           gen,
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	// Test non exist public key.
 	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
@@ -2230,6 +2208,7 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 		StateGen:           gen,
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
 		Indices: []types.ValidatorIndex{0, 1},
@@ -2293,6 +2272,7 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 		StateGen:           gen,
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
 		Indices: []types.ValidatorIndex{0, 1},
@@ -2378,6 +2358,7 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 		StateGen:           gen,
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
 		Indices: []types.ValidatorIndex{0, 1},
@@ -2523,6 +2504,7 @@ func TestServer_isSlotCanonical(t *testing.T) {
 			CanonicalRoots: cRoots,
 		},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	for i := range roots {
 		slot := types.Slot(i + 1)
@@ -2564,6 +2546,7 @@ func TestServer_isSlotCanonical_MultipleBlocks(t *testing.T) {
 			CanonicalRoots: cRoots,
 		},
 	}
+	addDefaultReplayerBuilder(bs, beaconDB)
 
 	for i := range roots {
 		slot := types.Slot(i + 1)
