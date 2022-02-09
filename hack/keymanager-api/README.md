@@ -8,8 +8,8 @@ You can use Postman to test the API. https://www.postman.com/
 
 ### Postman collection
 
-In this package you will find the postman collection for the API for the keymanager-api. you can import this collection
-in your own postman instance to test the API.
+In this package you will find the Postman collection for the keymanager API. 
+You can import this collection in your own Postman instance to test the API.
 
 #### Updating the collection
 
