@@ -84,7 +84,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500",
+		Value: "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000",
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
@@ -109,6 +109,14 @@ var (
 	HeadSync = &cli.BoolFlag{
 		Name:  "head-sync",
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
+	}
+	// SafeSlotsToImportOptimistically specifies the number of slots that a
+	// node should wait before being able to optimistically sync blocks
+	// across the merge boundary
+	SafeSlotsToImportOptimistically = &cli.IntFlag{
+		Name:  "safe-slots-to-import-optimistically",
+		Usage: "The number of slots to wait before optimistically syncing a block without enabled execution.",
+		Value: 128,
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.

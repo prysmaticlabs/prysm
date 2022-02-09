@@ -37,6 +37,20 @@ func TestConfigureHistoricalSlasher(t *testing.T) {
 	)
 }
 
+func TestConfigureSafeSlotsToImportOptimistically(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.Int(flags.SafeSlotsToImportOptimistically.Name, 0, "")
+	require.NoError(t, set.Set(flags.SafeSlotsToImportOptimistically.Name, strconv.Itoa(128)))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	configureSafeSlotsToImportOptimistically(cliCtx)
+
+	assert.Equal(t, types.Slot(128), params.BeaconConfig().SafeSlotsToImportOptimistically)
+}
+
 func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 

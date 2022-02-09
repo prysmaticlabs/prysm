@@ -45,6 +45,14 @@ func configureHistoricalSlasher(cliCtx *cli.Context) {
 	}
 }
 
+func configureSafeSlotsToImportOptimistically(cliCtx *cli.Context) {
+	if cliCtx.IsSet(flags.SafeSlotsToImportOptimistically.Name) {
+		c := params.BeaconConfig()
+		c.SafeSlotsToImportOptimistically = types.Slot(cliCtx.Int(flags.SafeSlotsToImportOptimistically.Name))
+		params.OverrideBeaconConfig(c)
+	}
+}
+
 func configureSlotsPerArchivedPoint(cliCtx *cli.Context) {
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig()
