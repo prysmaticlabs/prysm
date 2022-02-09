@@ -38,7 +38,7 @@ func KintsugiTestnetConfig() *BeaconChainConfig {
 	cfg.AltairForkEpoch = 10
 	cfg.BellatrixForkVersion = []byte{0x62, 0x00, 0x00, 0x71}
 	cfg.BellatrixForkEpoch = 20
-	cfg.TerminalTotalDifficulty = 5000000000
+	cfg.TerminalTotalDifficulty = "5000000000"
 	cfg.TerminalBlockHash = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000")
 	cfg.TerminalBlockHashActivationEpoch = 18446744073709551615
 	cfg.ShardingForkVersion = []byte{0x03, 0x00, 0x00, 0x00}

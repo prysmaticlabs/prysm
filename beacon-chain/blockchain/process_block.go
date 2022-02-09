@@ -448,35 +448,40 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 							return nil, nil, nil, err
 						}
 					}
-					headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
+				}
+
+				headPayload, err := b.Block().Body().ExecutionPayload()
+				if err != nil {
+					return nil, nil, nil, err
+
+				}
+				// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
+				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(preState.FinalizedCheckpoint().Root))
+				if err != nil {
+					return nil, nil, nil, err
+
+				}
+				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
+				if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
+					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 					if err != nil {
 						return nil, nil, nil, err
 
 					}
-					// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
-					finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(preState.FinalizedCheckpoint().Root))
-					if err != nil {
-						return nil, nil, nil, err
+					finalizedBlockHash = finalizedPayload.BlockHash
+				}
 
-					}
-					finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-					if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
-						finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
-						if err != nil {
-							return nil, nil, nil, err
-
-						}
-						finalizedBlockHash = finalizedPayload.BlockHash
-					}
-
-					f := catalyst.ForkchoiceStateV1{
-						HeadBlockHash:      common.BytesToHash(headPayload.BlockHash),
-						SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
-						FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
-					}
-					if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f); err != nil {
-						return nil, nil, nil, err
-					}
+				f := catalyst.ForkchoiceStateV1{
+					HeadBlockHash:      common.BytesToHash(headPayload.BlockHash),
+					SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
+					FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
+				}
+				err = s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f)
+				switch err {
+				case nil, powchain.ErrSyncing:
+					break
+				default:
+					return nil, nil, nil, err
 				}
 			}
 		}
@@ -753,7 +758,11 @@ func (s *Service) validateTerminalBlock(b block.SignedBeaconBlock) error {
 	if err != nil {
 		return err
 	}
-	if !validTerminalPowBlock(transitionBlkTTD, transitionParentBlkTTD) {
+	validated, err := validTerminalPowBlock(transitionBlkTTD, transitionParentBlkTTD)
+	if err != nil {
+		return err
+	}
+	if !validated {
 		return errors.New("invalid difficulty for terminal block")
 	}
 
@@ -761,9 +770,9 @@ func (s *Service) validateTerminalBlock(b block.SignedBeaconBlock) error {
 		"slot":                                 b.Block().Slot(),
 		"transitionBlockHash":                  common.BytesToHash(payload.ParentHash).String(),
 		"transitionBlockParentHash":            common.HexToHash(transitionBlk.ParentHash).String(),
-		"terminalTotalDifficulty":              uint256.NewInt(params.BeaconConfig().TerminalTotalDifficulty).Uint64(),
-		"transitionBlockTotalDifficulty":       transitionBlkTTD.Uint64(),
-		"transitionBlockParentTotalDifficulty": transitionParentBlkTTD.Uint64(),
+		"terminalTotalDifficulty":              params.BeaconConfig().TerminalTotalDifficulty,
+		"transitionBlockTotalDifficulty":       transitionBlkTTD,
+		"transitionBlockParentTotalDifficulty": transitionParentBlkTTD,
 	}).Info("Verified terminal block")
 
 	return nil
