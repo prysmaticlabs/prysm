@@ -86,7 +86,11 @@ func (k Kind) String() string {
 	case Derived:
 		return "derived"
 	case Local:
-		return "local"
+		// TODO(#10181) need a safe way to migrate away from using direct.
+		// function is used for directory creation, dangerous to change which may result in multiple directories.
+		// multiple directories will cause the isValid function to fail in wallet.go
+		// and may result in using a unintended wallet.
+		return "direct"
 	case Remote:
 		return "remote"
 	case Web3Signer:
