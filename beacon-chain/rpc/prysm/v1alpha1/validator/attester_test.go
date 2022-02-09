@@ -26,6 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -171,10 +173,14 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 
 func TestGetAttestationData_Optimistic(t *testing.T) {
 	as := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		SyncChecker: &mockSync.Sync{},
+		HeadFetcher: &mock.ChainService{Optimistic: true},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
-	assert.ErrorContains(t, "Syncing to latest head", err)
+	s, ok := status.FromError(err)
+	require.Equal(t, true, ok)
+	require.DeepEqual(t, codes.Unavailable, s.Code())
+	require.ErrorContains(t, " The node is currently optimistic and cannot serve validators", err)
 }
 
 func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
