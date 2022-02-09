@@ -2,11 +2,18 @@ package params
 
 import (
 	"math"
+	"math/big"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
+
+var terminalTotalDifficulty *big.Int
+func init() {
+	terminalTotalDifficulty, _  = new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129638912", 10)
+}
+
 
 // MainnetConfig returns the configuration to be used in the main network.
 func MainnetConfig() *BeaconChainConfig {
@@ -247,5 +254,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinSyncCommitteeParticipants: 1,
 
 	// Bellatrix
-	TerminalBlockHashActivationEpoch: math.MaxUint64,
+	TerminalBlockHashActivationEpoch: 18446744073709551615,
+	TerminalBlockHash: [32]byte{},
+	TerminalTotalDifficulty: terminalTotalDifficulty,
 }
