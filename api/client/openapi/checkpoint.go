@@ -6,7 +6,9 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/sniff"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
@@ -20,10 +22,14 @@ type WeakSubjectivityData struct {
 	StateRoot [32]byte
 	Epoch     types.Epoch
 }
+
 type OriginData struct {
 	WeakSubjectivity *WeakSubjectivityData
-	StateBytes       []byte
-	blockBytes       []byte
+	StateBytes []byte
+	BlockBytes []byte
+	State state.BeaconState
+	Block block.SignedBeaconBlock
+	ConfigFork *sniff.ConfigFork
 }
 
 // this method downloads the head state, which can be used to find the correct chain config
@@ -135,8 +141,11 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 			StateRoot: stateRoot,
 			Epoch:     epoch,
 		},
+		State: state,
 		StateBytes: stateBytes,
-		blockBytes: blockBytes,
+		Block: block,
+		BlockBytes: blockBytes,
+		ConfigFork: cf,
 	}, nil
 }
 
@@ -222,7 +231,10 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", blockRoot, realBlockRoot)
 	return &OriginData{
 		WeakSubjectivity: ws,
-		StateBytes:       stateBytes,
-		blockBytes:       blockBytes,
+		State: state,
+		Block: block,
+		StateBytes: stateBytes,
+		BlockBytes: blockBytes,
+		ConfigFork: cf,
 	}, nil
 }

@@ -3,10 +3,6 @@ package checkpoint
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/time/slots"
-	"io"
 	"os"
 	"time"
 
@@ -61,6 +57,40 @@ func cliActionSave(_ *cli.Context) error {
 }
 
 func saveCheckpoint(client *openapi.Client) error {
+	ctx := context.Background()
+
+	od, err := openapi.DownloadOriginData(ctx, client)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	blockPath := fname("block", od.ConfigFork, od.Block.Block().Slot(), od.WeakSubjectivity.BlockRoot)
+	log.Printf("saving ssz-encoded block to to %s", blockPath)
+	err = os.WriteFile(blockPath, od.BlockBytes, 0600)
+	if err != nil {
+		return err
+	}
+
+	stateRoot, err := od.State.HashTreeRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Could not compute HTR of state downloaded from remote beacon node")
+	}
+	statePath := fname("state", od.ConfigFork, od.State.Slot(), stateRoot)
+	log.Printf("saving ssz-encoded state to to %s", statePath)
+	err = os.WriteFile(statePath, od.StateBytes, 0600)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fname(prefix string, cf *sniff.ConfigFork, slot types.Slot, root [32]byte) string {
+	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, cf.ConfigName.String(), cf.Fork.String(), slot, root)
+}
+
+/*
+func _saveCheckpoint(client *openapi.Client) error {
 	ctx := context.Background()
 
 	headReader, err := client.GetStateById(openapi.StateIdHead)
@@ -193,7 +223,5 @@ func saveCheckpoint(client *openapi.Client) error {
 	fmt.Printf("--checkpoint-block=%s --checkpoint-state=%s\n", blockPath, statePath)
 	return nil
 }
+*/
 
-func fname(prefix string, cf *sniff.ConfigFork, slot types.Slot, root [32]byte) string {
-	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, cf.ConfigName.String(), cf.Fork.String(), slot, root)
-}
