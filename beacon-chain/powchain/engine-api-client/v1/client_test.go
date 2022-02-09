@@ -91,7 +91,6 @@ func TestClient_HTTP(t *testing.T) {
 			reqArg, err := json.Marshal(pb.PayloadIDBytes(payloadId))
 			require.NoError(t, err)
 
-			fmt.Println(jsonRequestString)
 
 			// We expect the JSON string RPC request contains the right arguments.
 			require.Equal(t, true, strings.Contains(
