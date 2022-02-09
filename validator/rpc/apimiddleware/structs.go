@@ -1,7 +1,7 @@
 package apimiddleware
 
 type listKeystoresResponseJson struct {
-	Keystores []*keystoreJson `json:"keystores"`
+	Keystores []*keystoreJson `json:"data"`
 }
 
 type keystoreJson struct {
@@ -16,11 +16,11 @@ type importKeystoresRequestJson struct {
 }
 
 type importKeystoresResponseJson struct {
-	Statuses []*statusJson `json:"statuses"`
+	Statuses []*statusJson `json:"data"`
 }
 
 type deleteKeystoresRequestJson struct {
-	PublicKeys []string `json:"public_keys" hex:"true"`
+	PublicKeys []string `json:"pubkeys" hex:"true"`
 }
 
 type statusJson struct {
@@ -29,6 +29,6 @@ type statusJson struct {
 }
 
 type deleteKeystoresResponseJson struct {
-	Statuses           []*statusJson `json:"statuses"`
+	Statuses           []*statusJson `json:"data"`
 	SlashingProtection string        `json:"slashing_protection"`
 }
