@@ -204,6 +204,34 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, []
 	return len(blockRoots) > 0, blockRoots, nil
 }
 
+// DeleteBlock from the db
+// This deletes the root entry from all buckets in the blocks DB
+// If the block is finalized this function returns an error
+func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
+	defer span.End()
+
+	if err := s.DeleteState(ctx, root); err != nil {
+		return errDeleteFinalized
+	}
+
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
+		if b := bkt.Get(root[:]); b != nil {
+			return errDeleteFinalized
+		}
+
+		if err := tx.Bucket(blocksBucket).Delete(root[:]); err != nil {
+			return err
+		}
+		if err := tx.Bucket(blockParentRootIndicesBucket).Delete(root[:]); err != nil {
+			return err
+		}
+		s.blockCache.Del(string(root[:]))
+		return nil
+	})
+}
+
 // SaveBlock to the db.
 func (s *Store) SaveBlock(ctx context.Context, signed block.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
