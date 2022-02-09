@@ -1,0 +1,125 @@
+{
+	"info": {
+		"_postman_id": "631cafa7-0561-47b5-9084-3d2adec3f2de",
+		"name": "keymanager-api",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "/eth/v1/keystores",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.PkLPEA0OSzhONboQXe6J1kiEUZ5t2JpwGjiNTklV9uk",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "default"
+					}
+				],
+				"url": {
+					"raw": "localhost:7500/eth/v1/keystores",
+					"host": [
+						"localhost"
+					],
+					"port": "7500",
+					"path": [
+						"eth",
+						"v1",
+						"keystores"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/eth/v1/keystores",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.PkLPEA0OSzhONboQXe6J1kiEUZ5t2JpwGjiNTklV9uk",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"keystores\":[\n        \"543534534543543543534\"\n    ],\n    \"passwords\":[\n        \"hrtyt564634534\"\n    ],\n    \"slashing_protection\":null\n}"
+				},
+				"url": {
+					"raw": "localhost:7500/eth/v1/keystores",
+					"host": [
+						"localhost"
+					],
+					"port": "7500",
+					"path": [
+						"eth",
+						"v1",
+						"keystores"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/eth/v1/keystores",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.PkLPEA0OSzhONboQXe6J1kiEUZ5t2JpwGjiNTklV9uk",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pubkeys\": [\n    \"0x8d65ffe7b65ee8e7c3e14a474a360f16722920ef8c0ef1da6f942fd6ddc3628c1edda7f57cf28d7ddc7fc9cb9745df60\"\n  ]\n}"
+				},
+				"url": {
+					"raw": "localhost:7500/eth/v1/keystores",
+					"host": [
+						"localhost"
+					],
+					"port": "7500",
+					"path": [
+						"eth",
+						"v1",
+						"keystores"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
