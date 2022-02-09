@@ -31,7 +31,7 @@ func (vs *Server) GetSyncMessageBlockRoot(
 		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
 	}
 	if optimistic {
-		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve blocks. Head root: %#x", r)
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve sync committee contributions. Head root: %#x", r)
 	}
 
 	return &ethpb.SyncMessageBlockRootResponse{
