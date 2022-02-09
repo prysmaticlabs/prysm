@@ -251,3 +251,15 @@ message ExecutionPayloadHeader {
   bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"];
   bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
 }
+
+// PowBlock is a definition from Bellatrix fork choice spec to represent a block with total difficulty in the PoW chain.
+// Spec:
+// class PowBlock(Container):
+//    block_hash: Hash32
+//    parent_hash: Hash32
+//    total_difficulty: uint256
+message PowBlock {
+  bytes block_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+  bytes parent_hash = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+  bytes total_difficulty = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+}
