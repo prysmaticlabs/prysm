@@ -468,7 +468,7 @@ func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 	validatorMonitoringHost := cliCtx.String(cmd.MonitoringHostFlag.Name)
 	validatorMonitoringPort := cliCtx.Int(flags.MonitoringPortFlag.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
-	rpcPort := cliCtx.Int(flags.RPCPort.Name)
+	rpcPort := cliCtx.Uint64(flags.RPCPort.Name)
 	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
 	beaconClientEndpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
@@ -512,7 +512,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	}
 	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
-	rpcPort := cliCtx.Int(flags.RPCPort.Name)
+	rpcPort := cliCtx.Uint64(flags.RPCPort.Name)
 	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 	var allowedOrigins []string

@@ -56,7 +56,7 @@ var (
 		Value: "127.0.0.1",
 	}
 	// RPCPort defines a validator client RPC port to open.
-	RPCPort = &cli.IntFlag{
+	RPCPort = &cli.Uint64Flag{
 		Name:  "rpc-port",
 		Usage: "RPC port exposed by a validator client",
 		Value: 7000,
