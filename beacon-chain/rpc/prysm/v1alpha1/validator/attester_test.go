@@ -331,6 +331,7 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		HeadFetcher: &mock.ChainService{},
 		TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 
