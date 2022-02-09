@@ -100,7 +100,7 @@ func TestGetSpec(t *testing.T) {
 	config.MinSyncCommitteeParticipants = 71
 	config.TerminalBlockHash = common.HexToHash("TerminalBlockHash")
 	config.TerminalBlockHashActivationEpoch = 72
-	config.TerminalTotalDifficulty = 73
+	config.TerminalTotalDifficulty = "73"
 	config.FeeRecipient = common.HexToAddress("FeeRecipient")
 
 	var dbp [4]byte
