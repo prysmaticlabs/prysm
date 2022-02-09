@@ -88,7 +88,7 @@ var (
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
-	MinSyncPeers = &cli.Uint64Flag{
+	MinSyncPeers = &cli.IntFlag{
 		Name:  "min-sync-peers",
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
