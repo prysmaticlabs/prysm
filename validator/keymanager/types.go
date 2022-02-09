@@ -3,6 +3,7 @@ package keymanager
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -85,7 +86,7 @@ func (k Kind) String() string {
 	case Derived:
 		return "derived"
 	case Local:
-		return "direct"
+		return "local"
 	case Remote:
 		return "remote"
 	case Web3Signer:
@@ -97,10 +98,10 @@ func (k Kind) String() string {
 
 // ParseKind from a raw string, returning a keymanager kind.
 func ParseKind(k string) (Kind, error) {
-	switch k {
+	switch strings.ToLower(k) {
 	case "derived":
 		return Derived, nil
-	case "direct":
+	case "direct", "imported", "local":
 		return Local, nil
 	case "remote":
 		return Remote, nil
