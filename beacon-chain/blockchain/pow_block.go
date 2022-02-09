@@ -21,7 +21,7 @@ func validTerminalPowBlock(currentDifficulty *uint256.Int, parentDifficulty *uin
 	}
 	ttd, of := uint256.FromBig(b)
 	if of {
-		return false, errors.New("overflow terminal totoal difficulty")
+		return false, errors.New("overflow terminal total difficulty")
 	}
 	totalDifficultyReached := currentDifficulty.Cmp(ttd) >= 0
 	parentTotalDifficultyValid := ttd.Cmp(parentDifficulty) > 0
