@@ -13,7 +13,7 @@ in your own postman instance to test the API.
 
 #### Updating the collection
 
-the collection will need to be exported and overwritten to update the collection. A PR should be created once the file
+The collection will need to be exported and overwritten to update the collection. A PR should be created once the file
 is updated.
 
 #### Authentication
