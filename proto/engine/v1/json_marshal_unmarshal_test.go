@@ -2,7 +2,7 @@ package enginev1_test
 
 import (
 	"encoding/json"
-	"math"
+	"math/big"
 	"testing"
 
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -53,6 +53,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, []byte("finalized"), payloadPb.FinalizedBlockHash)
 	})
 	t.Run("execution payload", func(t *testing.T) {
+		baseFeePerGas := big.NewInt(6)
 		jsonPayload := &enginev1.ExecutionPayload{
 			ParentHash:    []byte("parent"),
 			FeeRecipient:  []byte("feeRecipient"),
@@ -65,7 +66,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			GasUsed:       3,
 			Timestamp:     4,
 			ExtraData:     []byte("extraData"),
-			BaseFeePerGas: []byte("baseFeePerGas"),
+			BaseFeePerGas: baseFeePerGas.Bytes(),
 			BlockHash:     []byte("blockHash"),
 			Transactions:  [][]byte{[]byte("hi")},
 		}
@@ -84,7 +85,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, uint64(3), payloadPb.GasUsed)
 		require.DeepEqual(t, uint64(4), payloadPb.Timestamp)
 		require.DeepEqual(t, []byte("extraData"), payloadPb.ExtraData)
-		require.DeepEqual(t, []byte("baseFeePerGas"), payloadPb.BaseFeePerGas)
+		require.DeepEqual(t, baseFeePerGas.Bytes(), payloadPb.BaseFeePerGas)
 		require.DeepEqual(t, []byte("blockHash"), payloadPb.BlockHash)
 		require.DeepEqual(t, [][]byte{[]byte("hi")}, payloadPb.Transactions)
 	})
@@ -140,62 +141,13 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	})
 }
 
-func TestHexBytes_MarshalUnmarshalJSON(t *testing.T) {
-	tests := []struct {
-		name string
-		b    enginev1.HexBytes
-	}{
-		{
-			name: "empty",
-			b:    []byte{},
-		},
-		{
-			name: "foo",
-			b:    []byte("foo"),
-		},
-		{
-			name: "bytes",
-			b:    []byte{1, 2, 3, 4},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.b.MarshalJSON()
-			require.NoError(t, err)
-			var dec enginev1.HexBytes
-			err = dec.UnmarshalJSON(got)
-			require.NoError(t, err)
-			require.DeepEqual(t, tt.b, dec)
-		})
-	}
-}
-
-func TestQuantity_MarshalUnmarshalJSON(t *testing.T) {
-	tests := []struct {
-		name string
-		b    enginev1.Quantity
-	}{
-		{
-			name: "zero",
-			b:    0,
-		},
-		{
-			name: "num",
-			b:    5,
-		},
-		{
-			name: "max",
-			b:    math.MaxUint64,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.b.MarshalJSON()
-			require.NoError(t, err)
-			var dec enginev1.Quantity
-			err = dec.UnmarshalJSON(got)
-			require.NoError(t, err)
-			require.DeepEqual(t, tt.b, dec)
-		})
-	}
+func TestPayloadIDBytes_MarshalUnmarshalJSON(t *testing.T) {
+	item := [8]byte{1, 0, 0, 0, 0, 0, 0, 0}
+	enc, err := json.Marshal(enginev1.PayloadIDBytes(item))
+	require.NoError(t, err)
+	require.DeepEqual(t, "\"0x0100000000000000\"", string(enc))
+	res := &enginev1.PayloadIDBytes{}
+	err = res.UnmarshalJSON(enc)
+	require.NoError(t, err)
+	require.Equal(t, true, item == *res)
 }
