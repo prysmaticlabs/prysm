@@ -329,7 +329,7 @@ func TestGetSpec(t *testing.T) {
 		case "TERMINAL_BLOCK_HASH":
 			assert.Equal(t, common.HexToHash("TerminalBlockHash"), common.HexToHash(v))
 		case "TERMINAL_TOTAL_DIFFICULTY":
-			assert.Equal(t, "73", v)
+			assert.Equal(t, "I", v)
 		case "FeeRecipient":
 			assert.Equal(t, common.HexToAddress("FeeRecipient"), v)
 		case "PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX":
