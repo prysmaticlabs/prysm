@@ -133,6 +133,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
+		"--" + flags.EnableDebugRPCEndpoints.Name,
 	}
 	if config.UsePprof {
 		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.BeaconNodeRPCPort+index+e2e.PrysmPprofOffset))
