@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -393,6 +394,7 @@ func fixtures() map[string]interface{} {
 	foo := bytesutil.ToBytes32([]byte("foo"))
 	bar := bytesutil.PadTo([]byte("bar"), 20)
 	baz := bytesutil.PadTo([]byte("baz"), 256)
+	baseFeePerGas := big.NewInt(6)
 	executionPayloadFixture := &pb.ExecutionPayload{
 		ParentHash:    foo[:],
 		FeeRecipient:  bar,
@@ -405,7 +407,7 @@ func fixtures() map[string]interface{} {
 		GasUsed:       1,
 		Timestamp:     1,
 		ExtraData:     foo[:],
-		BaseFeePerGas: foo[:],
+		BaseFeePerGas: baseFeePerGas.Bytes(),
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 	}

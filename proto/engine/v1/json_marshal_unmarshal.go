@@ -161,7 +161,7 @@ type executionPayloadJSON struct {
 	GasUsed       hexutil.Uint64  `json:"gasUsed"`
 	Timestamp     hexutil.Uint64  `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
-	BaseFeePerGas hexutil.Big     `json:"baseFeePerGas"`
+	BaseFeePerGas string          `json:"baseFeePerGas"`
 	BlockHash     hexutil.Bytes   `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 }
@@ -172,10 +172,8 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	for i, tx := range e.Transactions {
 		transactions[i] = tx
 	}
-	var b hexutil.Big
-	if err := b.UnmarshalText(e.BaseFeePerGas); err != nil {
-		return nil, err
-	}
+	baseFee := new(big.Int).SetBytes(e.BaseFeePerGas)
+	baseFeeHex := hexutil.EncodeBig(baseFee)
 	return json.Marshal(executionPayloadJSON{
 		ParentHash:    e.ParentHash,
 		FeeRecipient:  e.FeeRecipient,
@@ -188,7 +186,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		GasUsed:       hexutil.Uint64(e.GasUsed),
 		Timestamp:     hexutil.Uint64(e.Timestamp),
 		ExtraData:     e.ExtraData,
-		BaseFeePerGas: b,
+		BaseFeePerGas: baseFeeHex,
 		BlockHash:     e.BlockHash,
 		Transactions:  transactions,
 	})
@@ -213,11 +211,11 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	e.GasUsed = uint64(dec.GasUsed)
 	e.Timestamp = uint64(dec.Timestamp)
 	e.ExtraData = dec.ExtraData
-	baseFee, err := dec.BaseFeePerGas.MarshalText()
+	baseFee, err := hexutil.DecodeBig(dec.BaseFeePerGas)
 	if err != nil {
 		return err
 	}
-	e.BaseFeePerGas = baseFee
+	e.BaseFeePerGas = baseFee.Bytes()
 	e.BlockHash = dec.BlockHash
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {

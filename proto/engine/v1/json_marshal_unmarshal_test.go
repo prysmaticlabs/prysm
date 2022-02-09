@@ -2,6 +2,7 @@ package enginev1_test
 
 import (
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -52,6 +53,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, []byte("finalized"), payloadPb.FinalizedBlockHash)
 	})
 	t.Run("execution payload", func(t *testing.T) {
+		baseFeePerGas := big.NewInt(6)
 		jsonPayload := &enginev1.ExecutionPayload{
 			ParentHash:    []byte("parent"),
 			FeeRecipient:  []byte("feeRecipient"),
@@ -64,7 +66,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			GasUsed:       3,
 			Timestamp:     4,
 			ExtraData:     []byte("extraData"),
-			BaseFeePerGas: []byte("baseFeePerGas"),
+			BaseFeePerGas: baseFeePerGas.Bytes(),
 			BlockHash:     []byte("blockHash"),
 			Transactions:  [][]byte{[]byte("hi")},
 		}
@@ -83,7 +85,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, uint64(3), payloadPb.GasUsed)
 		require.DeepEqual(t, uint64(4), payloadPb.Timestamp)
 		require.DeepEqual(t, []byte("extraData"), payloadPb.ExtraData)
-		require.DeepEqual(t, []byte("baseFeePerGas"), payloadPb.BaseFeePerGas)
+		require.DeepEqual(t, baseFeePerGas.Bytes(), payloadPb.BaseFeePerGas)
 		require.DeepEqual(t, []byte("blockHash"), payloadPb.BlockHash)
 		require.DeepEqual(t, [][]byte{[]byte("hi")}, payloadPb.Transactions)
 	})
