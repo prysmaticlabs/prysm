@@ -32,6 +32,7 @@ var ErrNilState = errors.New("nil state")
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
+	Optimistic                  bool
 	State                       state.BeaconState
 	Root                        []byte
 	Block                       block.SignedBeaconBlock
@@ -60,7 +61,6 @@ type ChainService struct {
 	PublicKey                   [fieldparams.BLSPubkeyLength]byte
 	SyncCommitteePubkeys        [][]byte
 	InitSyncBlockRoots          map[[32]byte]bool
-	Optimistic                  bool
 }
 
 // StateNotifier mocks the same method in the chain service.
