@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/holiman/uint256"
@@ -72,4 +73,21 @@ func Test_validTerminalPowBlock(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_validTerminalPowBlockSpecConfig(t *testing.T) {
+	cfg := params.BeaconConfig()
+	cfg.TerminalTotalDifficulty = "115792089237316195423570985008687907853269984665640564039457584007913129638912"
+	params.OverrideBeaconConfig(cfg)
+
+	i, _ := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129638912", 10)
+	current, of := uint256.FromBig(i)
+	require.Equal(t, of, false)
+	i, _ = new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129638911", 10)
+	parent, of := uint256.FromBig(i)
+	require.Equal(t, of, false)
+
+	got, err := validTerminalPowBlock(current, parent)
+	require.NoError(t, err)
+	require.Equal(t, true, got)
 }
