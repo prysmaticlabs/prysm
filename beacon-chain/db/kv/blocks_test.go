@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -161,6 +162,44 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 			assert.Equal(t, 1, len(requested), "Unexpected number of blocks received, only expected two")
 		})
 	}
+}
+
+func TestStore_DeleteBlock(t *testing.T) {
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
+	db := setupDB(t)
+	ctx := context.Background()
+
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
+	blks := makeBlocks(t, 0, slotsPerEpoch*4, genesisBlockRoot)
+	require.NoError(t, db.SaveBlocks(ctx, blks))
+
+	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Epoch: 1,
+		Root:  root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+
+	root2, err := blks[4*slotsPerEpoch-2].Block().HashTreeRoot()
+	require.NoError(t, err)
+	b, err := db.Block(ctx, root2)
+	require.NoError(t, err)
+	require.NotNil(t, b)
+	require.NoError(t, db.DeleteBlock(ctx, root2))
+	st, err = db.State(ctx, root2)
+	require.NoError(t, err)
+	require.Equal(t, st, nil)
+
+	b, err = db.Block(ctx, root2)
+	require.NoError(t, err)
+	require.Equal(t, b, nil)
+
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), errDeleteFinalized)
+
 }
 
 func TestStore_GenesisBlock(t *testing.T) {
