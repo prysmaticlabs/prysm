@@ -38,13 +38,13 @@ type Node struct {
 	slot           types.Slot                   // slot of the block converted to the node.
 	root           [fieldparams.RootLength]byte // root of the block converted to the node.
 	parent         *Node                        // parent index of this node.
+	children       []*Node                      // the list of direct children of this Node
 	justifiedEpoch types.Epoch                  // justifiedEpoch of this node.
 	finalizedEpoch types.Epoch                  // finalizedEpoch of this node.
-	weight         uint64                       // weight of this node.
-	children       []*Node                      // the list of direct children of this Node
+	balance        uint64                       // the balance that voted for this node directly
+	weight         uint64                       // weight of this node: the total balance including children
 	bestChild      *Node                        // bestChild node of this node.
 	bestDescendant *Node                        // bestDescendant node of this node.
-	graffiti       [fieldparams.RootLength]byte // graffiti of the block node.
 }
 
 // optimisticStore defines a structure that tracks the tips of the fully

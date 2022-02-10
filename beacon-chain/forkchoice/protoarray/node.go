@@ -48,3 +48,20 @@ func (n *Node) BestDescendant() uint64 {
 func (n *Node) Graffiti() [32]byte {
 	return n.graffiti
 }
+
+// updateWeight updates the weight of this node and all of its children
+func (n *Node) updateWeight(delta int) {
+	if delta < 0 {
+		d := uint64(-delta)
+		if n.weight < d {
+			n.weight = 0
+		} else {
+			n.weight -= d
+		}
+	} else {
+		n.weight += uint64(delta)
+	}
+	if n.parent != nil {
+		n.parent.updateWeight(delta)
+	}
+}

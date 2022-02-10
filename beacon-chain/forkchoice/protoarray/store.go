@@ -227,6 +227,59 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	return f.store.nodes[i].root[:], nil
 }
 
+// updateVotes updates the votes received by each block taking into account the
+// validators latest votes.
+func (f *ForkChoice) updateVotes(newBalances []uint64) error {
+	for index, vote := range f.votes {
+		// Skip if validator has never voted for current root and next root (ie. if the
+		// votes are zero hash aka genesis block), there's nothing to compute.
+		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
+			continue
+		}
+
+		oldBalance := uint64(0)
+		newBalance := uint64(0)
+		// If the validator index did not exist in `f.balances` or
+		// `newBalances` list above, the balance is just 0.
+		if index < len(f.balances) {
+			oldBalance = f.balances[index]
+		}
+		if index < len(newBalances) {
+			newBalance = newBalances[index]
+		}
+
+		// Perform delta only if the validator's balance or vote has changed.
+		if vote.currentRoot != vote.nextRoot || oldBalance != newBalance {
+			// Ignore the vote if the root is not in fork choice
+			// store, that means we have not seen the block before.
+			nextNode, ok := f.store.nodeByRoot[vote.nextRoot]
+			if ok {
+				// Protection against nil node
+				if nextNode == nil {
+					return errNilNode
+				}
+				nextNode.balance += newBalance
+			}
+
+			currentNode, ok := f.store.nodeByRoot[vote.currentRoot]
+			if ok {
+				// Protection against nil node
+				if currentNode == nil {
+					return errNilNode
+				}
+				if currentNode.balance < oldBalance {
+					return errInvalidBalance
+				}
+				currentNode.balance -= oldBalance
+			}
+		}
+
+		// Rotate the validator vote.
+		vote.currentRoot = vote.nextRoot
+	}
+	return nil
+}
+
 // PruneThreshold of fork choice store.
 func (s *Store) PruneThreshold() uint64 {
 	return s.pruneThreshold
@@ -397,6 +450,113 @@ func (s *Store) insert(ctx context.Context,
 	return nil
 }
 
+// applyWeightChanges recomputes the weight, best child and best descendant of
+// the node passed as an argument and all of its descendants, using the current
+// balance stored in each node. 
+func (s *Store) applyWeightChanges(ctx context.Context, node *Node) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	if node == nil {
+		return errNilNode
+	}
+
+	// update the children
+	childrensWeight := uint64(0)
+	for child := range node.children {
+		if err := applyWeightChanges(ctx, child); err != nil {
+			return err
+		}
+		childrensWeight += child.weight
+	}
+	node.weight = node.balance + childrensWeight
+}
+
+fun 
+	// Update the justified / finalized epochs in store if necessary.
+	if s.justifiedEpoch != justifiedEpoch || s.finalizedEpoch != finalizedEpoch {
+		s.justifiedEpoch = justifiedEpoch
+		s.finalizedEpoch = finalizedEpoch
+	}
+
+	// Proposer score defaults to 0.
+	proposerScore := uint64(0)
+
+	// Iterate backwards through all index to node in store.
+	var err error
+	for i := len(s.nodes) - 1; i >= 0; i-- {
+		n := s.nodes[i]
+
+		// There is no need to adjust the balances or manage parent of the zero hash, it
+		// is an alias to the genesis block.
+		if n.root == params.BeaconConfig().ZeroHash {
+			continue
+		}
+
+		nodeDelta := delta[i]
+
+		// If we have a node where the proposer boost was previously applied,
+		// we then decrease the delta by the required score amount.
+		s.proposerBoostLock.Lock()
+		if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash && s.previousProposerBoostRoot == n.root {
+			nodeDelta -= int(s.previousProposerBoostScore)
+		}
+
+		if s.proposerBoostRoot != params.BeaconConfig().ZeroHash && s.proposerBoostRoot == n.root {
+			proposerScore, err = computeProposerBoostScore(newBalances)
+			if err != nil {
+				s.proposerBoostLock.Unlock()
+				return err
+			}
+			nodeDelta = nodeDelta + int(proposerScore)
+		}
+		s.proposerBoostLock.Unlock()
+
+		// A node's weight can not be negative but the delta can be negative.
+		if nodeDelta < 0 {
+			d := uint64(-nodeDelta)
+			if n.weight < d {
+				n.weight = 0
+			} else {
+				n.weight -= d
+			}
+		} else {
+			n.weight += uint64(nodeDelta)
+		}
+
+		// Update parent's best child and descendent if the node has a known parent.
+		if n.parent != NonExistentNode {
+			// Protection against node parent index out of bound. This should not happen.
+			if int(n.parent) >= len(delta) {
+				return errInvalidParentDelta
+			}
+			// Back propagate the nodes delta to its parent.
+			delta[n.parent] += nodeDelta
+		}
+	}
+
+	// Set the previous boosted root and score.
+	s.proposerBoostLock.Lock()
+	s.previousProposerBoostRoot = s.proposerBoostRoot
+	s.previousProposerBoostScore = proposerScore
+	s.proposerBoostLock.Unlock()
+
+	for i := len(s.nodes) - 1; i >= 0; i-- {
+		n := s.nodes[i]
+		if n.parent != NonExistentNode {
+			if int(n.parent) >= len(delta) {
+				return errInvalidParentDelta
+			}
+			if err := s.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes delta to its parents delta. After scoring changes,
@@ -451,21 +611,15 @@ func (s *Store) applyWeightChanges(
 		}
 		s.proposerBoostLock.Unlock()
 
+		// A node's weight can not be negative but the delta can be negative.
 		if nodeDelta < 0 {
-			// A node's weight can not be negative but the delta can be negative.
-			if int(n.weight)+nodeDelta < 0 {
+			d := uint64(-nodeDelta)
+			if n.weight < d {
 				n.weight = 0
 			} else {
-				// Absolute value of node delta.
-				d := nodeDelta
-				if nodeDelta < 0 {
-					d *= -1
-				}
-				// Subtract node's weight.
-				n.weight -= uint64(d)
+				n.weight -= d
 			}
 		} else {
-			// Add node's weight.
 			n.weight += uint64(nodeDelta)
 		}
 
