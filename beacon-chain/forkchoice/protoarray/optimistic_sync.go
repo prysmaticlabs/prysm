@@ -135,7 +135,8 @@ func (f *ForkChoice) UpdateSyncedTipsWithValidRoot(ctx context.Context, root [32
 
 	// Cache root and slot to validated tips
 	newTips := make(map[[32]byte]types.Slot)
-	newTips[root] = node.slot
+	newValidSlot := node.slot
+	newTips[root] = newValidSlot
 
 	// Compute the full valid path from the given node to its previous synced tip
 	// This path will now consist of fully validated blocks. Notice that
@@ -205,6 +206,8 @@ func (f *ForkChoice) UpdateSyncedTipsWithValidRoot(ctx context.Context, root [32
 	}
 
 	f.syncedTips.validatedTips = newTips
+	lastSyncedTipSlot.Set(float64(newValidSlot))
+	syncedTipsCount.Set(float64(len(newTips)))
 	return nil
 }
 
@@ -314,5 +317,6 @@ func (f *ForkChoice) UpdateSyncedTipsWithInvalidRoot(ctx context.Context, root [
 		}
 	}
 	delete(f.syncedTips.validatedTips, parentRoot)
+	syncedTipsCount.Set(float64(len(f.syncedTips.validatedTips)))
 	return nil
 }
