@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 )
 
-// ForkChoicer represents the full fork choice interface composed of all of the sub-interfaces.
+// ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
 type ForkChoicer interface {
 	HeadRetriever        // to compute head.
 	BlockProcessor       // to track new block for fork choice.

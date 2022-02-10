@@ -134,7 +134,7 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 	indices := make(map[[32]byte]uint64)
 	indices[r] = 0
 
-	// Since the justified node's best descendent is at index 1 and it's root is `best`,
+	// Since the justified node's best descendant is at index 1, and it's root is `best`,
 	// the head should be `best`.
 	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: 1}, {root: best}}, canonicalNodes: make(map[[32]byte]bool)}
 	h, err := s.head(context.Background(), r)
@@ -265,7 +265,7 @@ func TestStore_UpdateBestChildAndDescendant_UpdateDescendant(t *testing.T) {
 
 func TestStore_UpdateBestChildAndDescendant_ChangeChildByViability(t *testing.T) {
 	// Make parent's best child not equal to child index, child leads to viable index and
-	// parents best child doesnt lead to viable index.
+	// parents best child doesn't lead to viable index.
 	s := &Store{
 		justifiedEpoch: 1,
 		finalizedEpoch: 1,

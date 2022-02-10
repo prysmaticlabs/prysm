@@ -295,7 +295,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 
 	justifiedNode := s.nodes[justifiedIndex]
 	bestDescendantIndex := justifiedNode.bestDescendant
-	// If the justified node doesn't have a best descendent,
+	// If the justified node doesn't have a best descendant,
 	// the best node is itself.
 	if bestDescendantIndex == NonExistentNode {
 		bestDescendantIndex = justifiedIndex
@@ -378,7 +378,7 @@ func (s *Store) insert(ctx context.Context,
 
 	index := uint64(len(s.nodes))
 	parentIndex, ok := s.nodesIndices[parent]
-	// Mark genesis block's parent as non existent.
+	// Mark genesis block's parent as non-existent.
 	if !ok {
 		parentIndex = NonExistentNode
 	}
@@ -398,7 +398,7 @@ func (s *Store) insert(ctx context.Context,
 	s.nodesIndices[root] = index
 	s.nodes = append(s.nodes, n)
 
-	// Update parent with the best child and descendent only if it's available.
+	// Update parent with the best child and descendant only if it's available.
 	if n.parent != NonExistentNode {
 		if err := s.updateBestChildAndDescendant(parentIndex, index); err != nil {
 			return err
@@ -414,8 +414,8 @@ func (s *Store) insert(ctx context.Context,
 
 // applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
 // and its best child. For each node, it updates the weight with input delta and
-// back propagate the nodes delta to its parents delta. After scoring changes,
-// the best child is then updated along with best descendant.
+// back propagate the nodes' delta to its parents' delta. After scoring changes,
+// the best child is then updated along with the best descendant.
 func (s *Store) applyWeightChanges(
 	ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, newBalances []uint64, delta []int,
 ) error {
@@ -480,13 +480,13 @@ func (s *Store) applyWeightChanges(
 
 		s.nodes[i] = n
 
-		// Update parent's best child and descendent if the node has a known parent.
+		// Update parent's best child and descendant if the node has a known parent.
 		if n.parent != NonExistentNode {
 			// Protection against node parent index out of bound. This should not happen.
 			if int(n.parent) >= len(delta) {
 				return errInvalidParentDelta
 			}
-			// Back propagate the nodes delta to its parent.
+			// Back propagate the nodes' delta to its parent.
 			delta[n.parent] += nodeDelta
 		}
 	}
@@ -512,14 +512,14 @@ func (s *Store) applyWeightChanges(
 	return nil
 }
 
-// updateBestChildAndDescendant updates parent node's best child and descendent.
+// updateBestChildAndDescendant updates parent node's best child and descendant.
 // It looks at input parent node and input child node and potentially modifies parent's best
-// child and best descendent indices.
+// child and best descendant indices.
 // There are four outcomes:
-// 1.)  The child is already the best child but it's now invalid due to a FFG change and should be removed.
+// 1.)  The child is already the best child, but it's now invalid due to a FFG change and should be removed.
 // 2.)  The child is already the best child and the parent is updated with the new best descendant.
 // 3.)  The child is not the best child but becomes the best child.
-// 4.)  The child is not the best child and does not become best child.
+// 4.)  The child is not the best child and does not become the best child.
 func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) error {
 
 	// Protection against parent index out of bound, this should not happen.
@@ -554,12 +554,12 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 
 	if parent.bestChild != NonExistentNode {
 		if parent.bestChild == childIndex && !childLeadsToViableHead {
-			// If the child is already the best child of the parent but it's not viable for head,
+			// If the child is already the best child of the parent, but it's not viable for head,
 			// we should remove it. (Outcome 1)
 			newParentChild = changeToNone
 		} else if parent.bestChild == childIndex {
-			// If the child is already the best child of the parent, set it again to ensure best
-			// descendent of the parent is updated. (Outcome 2)
+			// If the child is already the best child of the parent, set it again to ensure the best
+			// descendant of the parent is updated. (Outcome 2)
 			newParentChild = changeToChild
 		} else {
 			// Protection against parent's best child going out of bound.
@@ -574,7 +574,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 			}
 
 			if childLeadsToViableHead && !bestChildLeadsToViableHead {
-				// The child leads to a viable head, but the current parent's best child doesnt.
+				// The child leads to a viable head, but the current parent's best child doesn't.
 				newParentChild = changeToChild
 			} else if !childLeadsToViableHead && bestChildLeadsToViableHead {
 				// The child doesn't lead to a viable head, the current parent's best child does.
@@ -598,10 +598,10 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 		}
 	} else {
 		if childLeadsToViableHead {
-			// If parent doesn't have a best child and the child is viable.
+			// If parent doesn't have the best child and the child is viable.
 			newParentChild = changeToChild
 		} else {
-			// If parent doesn't have a best child and the child is not viable.
+			// If parent doesn't have the best child and the child is not viable.
 			newParentChild = noChange
 		}
 	}
@@ -672,7 +672,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 	}
 	s.nodesIndices[finalizedRoot] = uint64(0)
 
-	// Recompute best child and descendant for each canonical nodes.
+	// Recompute the best child and descendant for each canonical nodes.
 	for _, node := range canonicalNodes {
 		if node.bestChild != NonExistentNode {
 			node.bestChild = canonicalNodesMap[node.bestChild]
@@ -688,27 +688,27 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 	return nil
 }
 
-// leadsToViableHead returns true if the node or the best descendent of the node is viable for head.
+// leadsToViableHead returns true if the node or the best descendant of the node is viable for head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
 func (s *Store) leadsToViableHead(node *Node) (bool, error) {
-	var bestDescendentViable bool
-	bestDescendentIndex := node.bestDescendant
+	var bestDescendantViable bool
+	bestDescendantIndex := node.bestDescendant
 
 	// If the best descendant is not part of the leaves.
-	if bestDescendentIndex != NonExistentNode {
-		// Protection against out of bound, best descendent index can not be
+	if bestDescendantIndex != NonExistentNode {
+		// Protection against out of bound, the best descendant index can not be
 		// exceeds length of nodes list.
-		if bestDescendentIndex >= uint64(len(s.nodes)) {
+		if bestDescendantIndex >= uint64(len(s.nodes)) {
 			return false, errInvalidBestDescendantIndex
 		}
 
-		bestDescendentNode := s.nodes[bestDescendentIndex]
-		bestDescendentViable = s.viableForHead(bestDescendentNode)
+		bestDescendantNode := s.nodes[bestDescendantIndex]
+		bestDescendantViable = s.viableForHead(bestDescendantNode)
 	}
 
-	// The node is viable as long as the best descendent is viable.
-	return bestDescendentViable || s.viableForHead(node), nil
+	// The node is viable as long as the best descendant is viable.
+	return bestDescendantViable || s.viableForHead(node), nil
 }
 
 // viableForHead returns true if the node is viable to head.
