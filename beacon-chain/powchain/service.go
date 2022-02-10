@@ -211,7 +211,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 
-	if err := s.initializeEngineAPIClient(); err != nil {
+	if err := s.initializeEngineAPIClient(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to initialize engine API client")
 	}
 
