@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -129,6 +131,43 @@ func TestImport_DuplicateKeys(t *testing.T) {
 
 	// There should only be 1 account as the duplicate keystore was ignored
 	assert.Equal(t, 1, len(keys))
+}
+
+func TestImportAccounts_NoPassword(t *testing.T) {
+	local.ResetCaches()
+	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
+	keysDir := filepath.Join(t.TempDir(), "keysDir")
+	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
+
+	cliCtx := setupWalletCtx(t, &testWalletConfig{
+		walletDir:           walletDir,
+		passwordsDir:        passwordsDir,
+		keysDir:             keysDir,
+		keymanagerKind:      keymanager.Local,
+		walletPasswordFile:  passwordFilePath,
+		accountPasswordFile: passwordFilePath,
+	})
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+		WalletCfg: &wallet.Config{
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanager.Local,
+			WalletPassword: password,
+		},
+	})
+	require.NoError(t, err)
+	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
+	require.NoError(t, err)
+	importer, ok := km.(keymanager.Importer)
+	require.Equal(t, true, ok)
+	resp, err := ImportAccounts(context.Background(), &ImportAccountsConfig{
+		Keystores:       []*keymanager.Keystore{&keymanager.Keystore{}},
+		Importer:        importer,
+		AccountPassword: "",
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(resp))
+	require.Equal(t, resp[0].Status, ethpbservice.ImportedKeystoreStatus_ERROR)
+
 }
 
 func TestImport_Noninteractive_RandomName(t *testing.T) {

@@ -4,8 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -26,11 +25,10 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	st, ok := beaconSt.(*statev1.BeaconState)
-	if !ok {
-		return nil, status.Error(codes.Internal, "State type assertion failed")
+	if beaconSt.Version() != version.Phase0 {
+		return nil, status.Error(codes.Internal, "State has incorrect type")
 	}
-	protoSt, err := migration.BeaconStateToV1(st)
+	protoSt, err := migration.BeaconStateToV1(beaconSt)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 	}
@@ -69,11 +67,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	}
 	switch beaconSt.Version() {
 	case version.Phase0:
-		st, ok := beaconSt.(*statev1.BeaconState)
-		if !ok {
-			return nil, status.Error(codes.Internal, "State type assertion failed")
-		}
-		protoSt, err := migration.BeaconStateToV1(st)
+		protoSt, err := migration.BeaconStateToV1(beaconSt)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}
@@ -84,7 +78,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			},
 		}, nil
 	case version.Altair:
-		altairState, ok := beaconSt.(*statev2.BeaconState)
+		altairState, ok := beaconSt.(state.BeaconStateAltair)
 		if !ok {
 			return nil, status.Error(codes.Internal, "Altair state type assertion failed")
 		}
