@@ -139,7 +139,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	log.WithField("elapsed", time.Since(start)).Info("Created block cache")
 
 	start = time.Now()
-	log.Infof("Creating validator cache..")
+	log.Infof("Creating validator cache...")
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: NumOfValidatorEntries, // number of entries in cache (2 Million).
 		MaxCost:     ValidatorEntryMaxCost, // maximum size of the cache (64Mb)
