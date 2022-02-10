@@ -50,7 +50,7 @@ var (
 	)
 	lastSyncedTipSlot = promauto.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "proto_array_last_synced_tip",
+			Name: "proto_array_last_synced_tip_slot",
 			Help: "The slot of the last fully validated block added to the proto array.",
 		},
 	)
