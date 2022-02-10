@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -20,6 +21,10 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
+	// ExecutionBlockByHashMethod request string for JSON-RPC.
+	ExecutionBlockByHashMethod = "eth_blockByHash"
+	// LatestExecutionBlockMethod request string for JSON-RPC.
+	LatestExecutionBlockMethod = "eth_blockByNumber"
 	// DefaultTimeout for HTTP.
 	DefaultTimeout = time.Second * 5
 )
@@ -27,8 +32,8 @@ const (
 // ForkchoiceUpdatedResponse is the response kind received by the
 // engine_forkchoiceUpdatedV1 endpoint.
 type ForkchoiceUpdatedResponse struct {
-	Status    *pb.PayloadStatus `json:"status"`
-	PayloadId [8]byte           `json:"payloadId"`
+	Status    *pb.PayloadStatus  `json:"status"`
+	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
 // Client defines a new engine API client for the Prysm consensus node
@@ -67,19 +72,81 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 	return c, nil
 }
 
-// NewPayload --
-func (*Client) NewPayload(_ context.Context, _ *pb.ExecutionPayload) (*pb.PayloadStatus, error) {
-	return nil, errors.New("unimplemented")
+// NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
+func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (*pb.PayloadStatus, error) {
+	result := &pb.PayloadStatus{}
+	err := c.rpc.CallContext(ctx, result, NewPayloadMethod, payload)
+	return result, handleRPCError(err)
 }
 
-// ForkchoiceUpdated --
-func (*Client) ForkchoiceUpdated(
-	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
+// ForkchoiceUpdated calls the engine_forkchoiceUpdatedV1 method via JSON-RPC.
+func (c *Client) ForkchoiceUpdated(
+	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 ) (*ForkchoiceUpdatedResponse, error) {
-	return nil, errors.New("unimplemented")
+	result := &ForkchoiceUpdatedResponse{}
+	err := c.rpc.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
+	return result, handleRPCError(err)
 }
 
-// GetPayload --
-func (*Client) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
-	return nil, errors.New("unimplemented")
+// GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
+func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
+	result := &pb.ExecutionPayload{}
+	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
+	return result, handleRPCError(err)
+}
+
+// LatestExecutionBlock fetches the latest execution engine block by calling
+// eth_blockByNumber via JSON-RPC.
+func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error) {
+	result := &pb.ExecutionBlock{}
+	err := c.rpc.CallContext(
+		ctx,
+		result,
+		LatestExecutionBlockMethod,
+		"latest",
+		false, /* no full transaction objects */
+	)
+	return result, handleRPCError(err)
+}
+
+// ExecutionBlockByHash fetches an execution engine block by hash by calling
+// eth_blockByHash via JSON-RPC.
+func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+	result := &pb.ExecutionBlock{}
+	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash)
+	return result, handleRPCError(err)
+}
+
+// Handles errors received from the RPC server according to the specification.
+func handleRPCError(err error) error {
+	if err == nil {
+		return nil
+	}
+	e, ok := err.(rpc.Error)
+	if !ok {
+		return errors.Wrap(err, "got an unexpected error")
+	}
+	switch e.ErrorCode() {
+	case -32700:
+		return ErrParse
+	case -32600:
+		return ErrInvalidRequest
+	case -32601:
+		return ErrMethodNotFound
+	case -32602:
+		return ErrInvalidParams
+	case -32603:
+		return ErrInternal
+	case -32001:
+		return ErrUnknownPayload
+	case -32000:
+		// Only -32000 status codes are data errors in the RPC specification.
+		errWithData, ok := err.(rpc.DataError)
+		if !ok {
+			return errors.Wrap(err, "got an unexpected error")
+		}
+		return errors.Wrapf(ErrServer, "%v", errWithData.ErrorData())
+	default:
+		return err
+	}
 }
