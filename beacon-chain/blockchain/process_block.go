@@ -407,7 +407,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 			return nil, nil, nil, err
 		}
 
-		optimistic[i] = true
+		// Non merge blocks are never optimistic
+		optimistic[i] = false
 		if preState.Version() == version.Bellatrix {
 			executionEnabled, err := blocks.ExecutionEnabled(preState, b.Block().Body())
 			if err != nil {
@@ -432,9 +433,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 					if !candidate {
 						return nil, nil, nil, errors.Wrap(err, "could not optimistically sync block")
 					}
+					optimistic[i] = true
 					break
 				case nil:
-					optimistic[i] = false
+					break
 				default:
 					return nil, nil, nil, errors.Wrap(err, "could not execute payload")
 				}
@@ -477,10 +479,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 					FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
 				}
 				err = s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f)
-				switch err {
-				case nil, powchain.ErrSyncing:
-					break
-				default:
+				if err != nil && err != powchain.ErrSyncing {
 					return nil, nil, nil, err
 				}
 			}
