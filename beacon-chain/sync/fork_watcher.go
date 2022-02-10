@@ -107,7 +107,7 @@ func (s *Service) deregisterFromPastFork(currEpoch types.Epoch) error {
 		}
 		prevFork, err := forks.Fork(epochBeforeFork)
 		if err != nil {
-			return errors.Wrap(err, "Failed to determine previous epoch fork data")
+			return errors.Wrap(err, "failed to determine previous epoch fork data")
 		}
 
 		switch prevFork.Epoch {
