@@ -600,6 +600,20 @@ func TestStore_LeadsToViableHead(t *testing.T) {
 	}
 }
 
+func TestStore_SetSyncedTips(t *testing.T) {
+	f := setup(1, 1)
+	tips := make(map[[32]byte]types.Slot)
+	require.ErrorIs(t, errInvalidSyncedTips, f.SetSyncedTips(tips))
+	tips[bytesutil.ToBytes32([]byte{'a'})] = 1
+	require.NoError(t, f.SetSyncedTips(tips))
+	f.syncedTips.RLock()
+	defer f.syncedTips.RUnlock()
+	require.Equal(t, 1, len(f.syncedTips.validatedTips))
+	slot, ok := f.syncedTips.validatedTips[bytesutil.ToBytes32([]byte{'a'})]
+	require.Equal(t, true, ok)
+	require.Equal(t, types.Slot(1), slot)
+}
+
 func TestStore_ViableForHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
