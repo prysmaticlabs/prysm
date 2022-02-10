@@ -23,7 +23,7 @@ func TestPowchainCmd(t *testing.T) {
 	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
 
-	endpoints := parseHttpEndpoints(ctx)
+	endpoints := parsePowchainEndpoints(ctx)
 	assert.DeepEqual(t, []string{"primary", "fallback1", "fallback2"}, endpoints)
 }
 
@@ -35,6 +35,6 @@ func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
 	fallback := cli.StringSlice{}
 	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
-	parseHttpEndpoints(ctx)
+	parsePowchainEndpoints(ctx)
 	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
 }

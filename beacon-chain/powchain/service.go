@@ -27,6 +27,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -133,6 +134,7 @@ type config struct {
 	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	httpEndpoints           []network.Endpoint
+	executionEndpoint       string
 	currHttpEndpoint        network.Endpoint
 	finalizedStateAtStartup state.BeaconState
 }
@@ -153,6 +155,7 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
+	engineAPIClient         *engine.Client
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -206,6 +209,10 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		if err := opt(s); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := s.initializeEngineAPIClient(ctx); err != nil {
+		return nil, errors.Wrap(err, "unable to initialize engine API client")
 	}
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
@@ -296,6 +303,12 @@ func (s *Service) Status() error {
 		return s.runError
 	}
 	return nil
+}
+
+// EngineAPIClient returns the associated engine API client to interact
+// with an execution node via JSON-RPC.
+func (s *Service) EngineAPIClient() *engine.Client {
+	return s.engineAPIClient
 }
 
 func (s *Service) updateBeaconNodeStats() {
@@ -1077,6 +1090,19 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		}
 		return s.cfg.beaconDB.SavePowchainData(ctx, eth1Data)
 	}
+	return nil
+}
+
+// Initializes a connection to the engine API if an execution provider endpoint is set.
+func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
+	if s.cfg.executionEndpoint == "" {
+		return nil
+	}
+	client, err := engine.New(ctx, s.cfg.executionEndpoint)
+	if err != nil {
+		return err
+	}
+	s.engineAPIClient = client
 	return nil
 }
 
