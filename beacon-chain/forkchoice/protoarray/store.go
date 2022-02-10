@@ -684,7 +684,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 
 	s.nodes = canonicalNodes
 	prunedCount.Inc()
-
+	syncedTipsCount.Set(float64(len(syncedTips.validatedTips)))
 	return nil
 }
 
