@@ -36,6 +36,18 @@ type ForkchoiceUpdatedResponse struct {
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
+// EngineCaller defines a client that can interact with an Ethereum
+// execution node's engine service via JSON-RPC.
+type EngineCaller interface {
+	NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (*pb.PayloadStatus, error)
+	ForkchoiceUpdated(
+		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
+	) (*ForkchoiceUpdatedResponse, error)
+	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
+	LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error)
+	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
+}
+
 // Client defines a new engine API client for the Prysm consensus node
 // to interact with an Ethereum execution node.
 type Client struct {
