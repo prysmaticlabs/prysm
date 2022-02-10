@@ -451,21 +451,15 @@ func (s *Store) applyWeightChanges(
 		}
 		s.proposerBoostLock.Unlock()
 
+		// A node's weight can not be negative but the delta can be negative.
 		if nodeDelta < 0 {
-			// A node's weight can not be negative but the delta can be negative.
-			if int(n.weight)+nodeDelta < 0 {
+			d := uint64(-nodeDelta)
+			if n.weight < d {
 				n.weight = 0
 			} else {
-				// Absolute value of node delta.
-				d := nodeDelta
-				if nodeDelta < 0 {
-					d *= -1
-				}
-				// Subtract node's weight.
-				n.weight -= uint64(d)
+				n.weight -= d
 			}
 		} else {
-			// Add node's weight.
 			n.weight += uint64(nodeDelta)
 		}
 
