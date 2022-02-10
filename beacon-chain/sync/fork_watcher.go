@@ -49,7 +49,8 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 	// will subscribe the new topics in advance.
 	if isNextForkEpoch {
 		nextEpoch := currEpoch + 1
-		if nextEpoch == params.BeaconConfig().AltairForkEpoch {
+		switch nextEpoch {
+		case params.BeaconConfig().AltairForkEpoch:
 			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
 			if err != nil {
 				return errors.Wrap(err, "Could not retrieve fork digest")
@@ -59,6 +60,15 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 			}
 			s.registerSubscribers(nextEpoch, digest)
 			s.registerRPCHandlersAltair()
+		case params.BeaconConfig().BellatrixForkEpoch:
+			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve fork digest")
+			}
+			if s.subHandler.digestExists(digest) {
+				return nil
+			}
+			s.registerSubscribers(nextEpoch, digest)
 		}
 	}
 	return nil
@@ -95,7 +105,15 @@ func (s *Service) deregisterFromPastFork(currEpoch types.Epoch) error {
 		if !s.subHandler.digestExists(prevDigest) {
 			return nil
 		}
-		s.unregisterPhase0Handlers()
+		prevFork, err := forks.Fork(epochBeforeFork)
+		if err != nil {
+			return errors.Wrap(err, "failed to determine previous epoch fork data")
+		}
+
+		switch prevFork.Epoch {
+		case params.BeaconConfig().GenesisEpoch:
+			s.unregisterPhase0Handlers()
+		}
 		// Run through all our current active topics and see
 		// if there are any subscriptions to be removed.
 		for _, t := range s.subHandler.allTopics() {
