@@ -45,11 +45,13 @@ func (f *ForkChoice) SetSyncedTips(tips map[[32]byte]types.Slot) error {
 	if len(tips) == 0 {
 		return errInvalidSyncedTips
 	}
+	newTips := make(map[[32]byte]types.Slot, len(tips))
+	for k, v := range tips {
+		newTips[k] = v
+	}
 	f.syncedTips.Lock()
 	defer f.syncedTips.Unlock()
-	for k, v := range tips {
-		f.syncedTips.validatedTips[k] = v
-	}
+	f.syncedTips.validatedTips = newTips
 	return nil
 }
 
@@ -464,21 +466,15 @@ func (s *Store) applyWeightChanges(
 		}
 		s.proposerBoostLock.Unlock()
 
+		// A node's weight can not be negative but the delta can be negative.
 		if nodeDelta < 0 {
-			// A node's weight can not be negative but the delta can be negative.
-			if int(n.weight)+nodeDelta < 0 {
+			d := uint64(-nodeDelta)
+			if n.weight < d {
 				n.weight = 0
 			} else {
-				// Absolute value of node delta.
-				d := nodeDelta
-				if nodeDelta < 0 {
-					d *= -1
-				}
-				// Subtract node's weight.
-				n.weight -= uint64(d)
+				n.weight -= d
 			}
 		} else {
-			// Add node's weight.
 			n.weight += uint64(nodeDelta)
 		}
 
@@ -688,7 +684,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 
 	s.nodes = canonicalNodes
 	prunedCount.Inc()
-
+	syncedTipsCount.Set(float64(len(syncedTips.validatedTips)))
 	return nil
 }
 
