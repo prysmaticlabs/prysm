@@ -17,7 +17,7 @@ var (
 		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
 		Value: "",
 	}
-	// ExecutionProvider provides an HTTP access endpoint to an ETH execution node.
+	// ExecutionProvider provides an HTTP or IPC access endpoint to an ETH execution node.
 	ExecutionProviderFlag = &cli.StringFlag{
 		Name:  "execution-provider",
 		Usage: "An http endpoint for an Ethereum execution node",
