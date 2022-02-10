@@ -35,6 +35,8 @@ const (
 	boltAllocSize = 8 * 1024 * 1024
 	// The size of hash length in bytes
 	hashLength = 32
+
+	delayTime = time.Second * 5
 )
 
 var (
@@ -105,7 +107,8 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		}
 	}
 	datafile := KVStoreDatafilePath(dirPath)
-	dbLogChan := logWhileFuncRun("opening bolt db...", "opening in progress...", 5*time.Second)
+	start := time.Now()
+	log.Infof("Opening Bolt DB at %s", datafile)
 	boltDB, err := bolt.Open(
 		datafile,
 		params.BeaconIoConfig().ReadWritePermissions,
@@ -115,38 +118,40 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		},
 	)
 	if err != nil {
-		dbLogChan <- "failed to open bolt db"
+		log.WithField("elapsed", time.Since(start)).Error("Failed to open Bolt DB")
 		if errors.Is(err, bolt.ErrTimeout) {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
 		}
 		return nil, err
 	}
-	dbLogChan <- "opened bolt db"
+	log.WithField("elapsed", time.Since(start)).Info("Opened Bolt DB")
 
 	boltDB.AllocSize = boltAllocSize
-	blockCacheLogChan := logWhileFuncRun("creating block cache..", "creating block cache...", 5*time.Second)
+	start = time.Now()
+	log.Infof("Creating block cache...")
 	blockCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,           // number of keys to track frequency of (1000).
 		MaxCost:     BlockCacheSize, // maximum cost of cache (1000 Blocks).
 		BufferItems: 64,             // number of keys per Get buffer.
 	})
 	if err != nil {
-		blockCacheLogChan <- "failed to create block cache"
+		log.WithField("elapsed", time.Since(start)).Error("Failed to create block cache")
 		return nil, err
 	}
-	blockCacheLogChan <- "created block cache"
+	log.WithField("elapsed", time.Since(start)).Info("Created block cache")
 
-	validatorCacheLogChan := logWhileFuncRun("creating validator cache..", "creating validator cache...", 5*time.Second)
+	start = time.Now()
+	log.Infof("Creating validator cache..")
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: NumOfValidatorEntries, // number of entries in cache (2 Million).
 		MaxCost:     ValidatorEntryMaxCost, // maximum size of the cache (64Mb)
 		BufferItems: 64,                    // number of keys per Get buffer.
 	})
 	if err != nil {
-		validatorCacheLogChan <- "failed to create validator cache"
+		log.WithField("elapsed", time.Since(start)).Error("Failed to to create validator cache")
 		return nil, err
 	}
-	validatorCacheLogChan <- "created validator cache"
+	log.WithField("elapsed", time.Since(start)).Info("Created validator cache")
 
 	kv := &Store{
 		db:                  boltDB,
@@ -156,7 +161,8 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 		stateSummaryCache:   newStateSummaryCache(),
 		ctx:                 ctx,
 	}
-	updateDBChan := logWhileFuncRun("updating db and creating buckets..", "updating db...", 5*time.Second)
+	start = time.Now()
+	log.Infof("Updating DB and creating buckets...")
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
 			tx,
@@ -189,10 +195,10 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			migrationsBucket,
 		)
 	}); err != nil {
-		updateDBChan <- "failed to update db and create buckets"
+		log.WithField("elapsed", time.Since(start)).Error("Failed to update db and create buckets")
 		return nil, err
 	}
-	updateDBChan <- "updated db and created buckets"
+	log.WithField("elapsed", time.Since(start)).Info("Updated db and created buckets")
 
 	err = prometheus.Register(createBoltCollector(kv.db))
 
