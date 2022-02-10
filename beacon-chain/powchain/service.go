@@ -788,7 +788,7 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
-			if !features.Get().KintsugiTestnet {
+			if !features.Get().KilnTestnet {
 				if err := s.processPastLogs(ctx); err != nil {
 					log.Errorf("Unable to process past logs %v", err)
 					s.retryETH1Node(err)
@@ -804,7 +804,7 @@ func (s *Service) initPOWService() {
 			}
 			// Handle edge case with embedded genesis state by fetching genesis header to determine
 			// its height.
-			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 && !features.Get().KintsugiTestnet {
+			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 && !features.Get().KilnTestnet {
 				genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, common.BytesToHash(s.chainStartData.Eth1Data.BlockHash))
 				if err != nil {
 					log.Errorf("Unable to retrieve genesis ETH1.0 chain header: %v", err)
