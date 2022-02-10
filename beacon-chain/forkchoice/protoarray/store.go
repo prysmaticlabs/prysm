@@ -26,8 +26,8 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 		finalizedEpoch:    finalizedEpoch,
 		finalizedRoot:     finalizedRoot,
 		proposerBoostRoot: [32]byte{},
-		nodes:             make([]*Node, 0),
-		nodesIndices:      make(map[[32]byte]uint64),
+		treeRoot:          &Node{},
+		nodeByRoot:        make(map[[fieldparams.RootLength]byte]*Node),
 		canonicalNodes:    make(map[[32]byte]bool),
 		pruneThreshold:    defaultPruneThreshold,
 	}
@@ -468,8 +468,6 @@ func (s *Store) applyWeightChanges(
 			// Add node's weight.
 			n.weight += uint64(nodeDelta)
 		}
-
-		s.nodes[i] = n
 
 		// Update parent's best child and descendent if the node has a known parent.
 		if n.parent != NonExistentNode {

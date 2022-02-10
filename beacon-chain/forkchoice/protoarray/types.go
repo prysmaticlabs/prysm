@@ -18,16 +18,16 @@ type ForkChoice struct {
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 type Store struct {
-	pruneThreshold             uint64                                  // do not prune tree unless threshold is reached.
-	justifiedEpoch             types.Epoch                             // latest justified epoch in store.
-	finalizedEpoch             types.Epoch                             // latest finalized epoch in store.
-	finalizedRoot              [fieldparams.RootLength]byte            // latest finalized root in store.
-	proposerBoostRoot          [fieldparams.RootLength]byte            // latest block root that was boosted after being received in a timely manner.
-	previousProposerBoostRoot  [fieldparams.RootLength]byte            // previous block root that was boosted after being received in a timely manner.
-	previousProposerBoostScore uint64                                  // previous proposer boosted root score.
-	nodes                      []*Node                                 // list of block nodes, each node is a representation of one block.
-	nodesIndices               map[[fieldparams.RootLength]byte]uint64 // the root of block node and the nodes index in the list.
-	canonicalNodes             map[[fieldparams.RootLength]byte]bool   // the canonical block nodes.
+	pruneThreshold             uint64                                 // do not prune tree unless threshold is reached.
+	justifiedEpoch             types.Epoch                            // latest justified epoch in store.
+	finalizedEpoch             types.Epoch                            // latest finalized epoch in store.
+	finalizedRoot              [fieldparams.RootLength]byte           // latest finalized root in store.
+	proposerBoostRoot          [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
+	previousProposerBoostRoot  [fieldparams.RootLength]byte           // previous block root that was boosted after being received in a timely manner.
+	previousProposerBoostScore uint64                                 // previous proposer boosted root score.
+	treeRoot                   *Node                                  // the root node of the store tree.
+	nodeByRoot                 map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
+	canonicalNodes             map[[fieldparams.RootLength]byte]bool  // the canonical block nodes.
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 }
@@ -37,12 +37,13 @@ type Store struct {
 type Node struct {
 	slot           types.Slot                   // slot of the block converted to the node.
 	root           [fieldparams.RootLength]byte // root of the block converted to the node.
-	parent         uint64                       // parent index of this node.
+	parent         *Node                        // parent index of this node.
 	justifiedEpoch types.Epoch                  // justifiedEpoch of this node.
 	finalizedEpoch types.Epoch                  // finalizedEpoch of this node.
 	weight         uint64                       // weight of this node.
-	bestChild      uint64                       // bestChild index of this node.
-	bestDescendant uint64                       // bestDescendant of this node.
+	children       []*Node                      // the list of direct children of this Node
+	bestChild      *Node                        // bestChild node of this node.
+	bestDescendant *Node                        // bestDescendant node of this node.
 	graffiti       [fieldparams.RootLength]byte // graffiti of the block node.
 }
 
@@ -59,6 +60,3 @@ type Vote struct {
 	nextRoot    [fieldparams.RootLength]byte // next voting root.
 	nextEpoch   types.Epoch                  // epoch of next voting period.
 }
-
-// NonExistentNode defines an unknown node which is used for the array based stateful DAG.
-const NonExistentNode = ^uint64(0)
