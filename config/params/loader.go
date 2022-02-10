@@ -173,7 +173,7 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 	lines = append(lines, fmt.Sprintf("ALTAIR_FORK_VERSION: %#x", cfg.AltairForkVersion))
 	lines = append(lines, fmt.Sprintf("INACTIVITY_SCORE_BIAS: %d", cfg.InactivityScoreBias))
 	lines = append(lines, fmt.Sprintf("INACTIVITY_SCORE_RECOVERY_RATE: %d", cfg.InactivityScoreRecoveryRate))
-	lines = append(lines, fmt.Sprintf("TERMINAL_TOTAL_DIFFICULTY: %d", cfg.TerminalTotalDifficulty))
+	lines = append(lines, fmt.Sprintf("TERMINAL_TOTAL_DIFFICULTY: %s", cfg.TerminalTotalDifficulty))
 	lines = append(lines, fmt.Sprintf("TERMINAL_BLOCK_HASH: %#x", cfg.TerminalBlockHash))
 	lines = append(lines, fmt.Sprintf("TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: %d", cfg.TerminalBlockHashActivationEpoch))
 

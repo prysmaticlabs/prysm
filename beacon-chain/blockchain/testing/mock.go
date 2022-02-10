@@ -444,3 +444,8 @@ func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ type
 func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 	return false, nil
 }
+
+// IsOptimisticForRoot mocks the same method in the chain service.
+func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte, _ types.Slot) (bool, error) {
+	return false, nil
+}
