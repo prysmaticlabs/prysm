@@ -144,6 +144,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				if !candidate {
 					return errors.Wrap(err, "could not optimistically sync block")
 				}
+				log.WithFields(logrus.Fields{
+					"slot":        b.Slot(),
+					"root":        fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:])),
+					"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+				}).Info("Block is optimistic candidate")
 				break
 			case nil:
 				fullyValidated = true
@@ -285,7 +290,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 					SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
 					FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
 				}
-				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f); err != nil {
+				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f); err != nil && err != powchain.ErrSyncing {
 					log.WithError(err)
 					return
 				}
@@ -433,6 +438,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 					if !candidate {
 						return nil, nil, nil, errors.Wrap(err, "could not optimistically sync block")
 					}
+					log.WithFields(logrus.Fields{
+						"slot":        b.Block().Slot(),
+						"root":        fmt.Sprintf("%#x", bytesutil.Trunc(blockRoots[i][:])),
+						"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+					}).Info("Block is optimistic candidate")
 					optimistic[i] = true
 					break
 				case nil:
