@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -172,28 +171,6 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 		return s.findLessTargetEth1Block(ctx, big.NewInt(int64(estimatedBlk)), time)
 	}
 	return s.findMoreTargetEth1Block(ctx, big.NewInt(int64(estimatedBlk)), time)
-}
-
-// BlockByHash returns the pow block by hash.
-func (s *Service) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByHash")
-	defer span.End()
-
-	if s.eth1DataFetcher == nil {
-		return nil, errors.New("nil eth1DataFetcher")
-	}
-	return s.eth1DataFetcher.BlockByHash(ctx, hash)
-}
-
-// BlockByNumber returns the pow block by number.
-func (s *Service) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByNumber")
-	defer span.End()
-
-	if s.eth1DataFetcher == nil {
-		return nil, errors.New("nil eth1DataFetcher")
-	}
-	return s.eth1DataFetcher.BlockByNumber(ctx, number)
 }
 
 // Performs a search to find a target eth1 block which is earlier than or equal to the
