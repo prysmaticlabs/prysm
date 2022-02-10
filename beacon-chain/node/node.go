@@ -540,7 +540,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithDatabase(b.db),
 		blockchain.WithDepositCache(b.depositCache),
 		blockchain.WithChainStartFetcher(web3Service),
-		blockchain.WithExecutionEngineCaller(web3Service),
+		blockchain.WithExecutionEngineCaller(web3Service.EngineAPIClient()),
 		blockchain.WithAttestationPool(b.attestationPool),
 		blockchain.WithExitPool(b.exitPool),
 		blockchain.WithSlashingPool(b.slashingsPool),
@@ -767,7 +767,7 @@ func (b *BeaconNode) registerRPCService() error {
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
-		ExecutionEngineCaller:   web3Service,
+		ExecutionEngineCaller:   web3Service.EngineAPIClient(),
 	})
 
 	return b.services.RegisterService(rpcService)

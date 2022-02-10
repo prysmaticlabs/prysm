@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/eth/catalyst"
+	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -121,45 +121,23 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 		finalizedBlockHash = finalizedPayload.BlockHash
 	}
 
-	f := catalyst.ForkchoiceStateV1{
-		HeadBlockHash:      common.BytesToHash(parentHash),
-		SafeBlockHash:      common.BytesToHash(parentHash),
-		FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
+	f := &enginev1.ForkchoiceState{
+		HeadBlockHash:      parentHash,
+		SafeBlockHash:      parentHash,
+		FinalizedBlockHash: finalizedBlockHash,
 	}
-	p := catalyst.PayloadAttributesV1{
+	p := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
-		Random:                common.BytesToHash(random),
-		SuggestedFeeRecipient: params.BeaconConfig().FeeRecipient,
+		Random:                random,
+		SuggestedFeeRecipient: params.BeaconConfig().FeeRecipient.Bytes(),
 	}
-	id, err := vs.ExecutionEngineCaller.PreparePayload(ctx, f, p)
+	res, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
-	data, err := vs.ExecutionEngineCaller.GetPayload(ctx, id)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get payload")
-	}
-
-	return executableDataToExecutionPayload(data), nil
-}
-
-func executableDataToExecutionPayload(ed *catalyst.ExecutableDataV1) *enginev1.ExecutionPayload {
-	return &enginev1.ExecutionPayload{
-		ParentHash:    bytesutil.PadTo(ed.ParentHash.Bytes(), 32),
-		FeeRecipient:  bytesutil.PadTo(ed.FeeRecipient.Bytes(), 20),
-		StateRoot:     bytesutil.PadTo(ed.StateRoot.Bytes(), 32),
-		ReceiptsRoot:  bytesutil.PadTo(ed.ReceiptsRoot.Bytes(), 32),
-		LogsBloom:     bytesutil.PadTo(ed.LogsBloom, 256),
-		Random:        bytesutil.PadTo(ed.Random.Bytes(), 32),
-		BlockNumber:   ed.Number,
-		GasLimit:      ed.GasLimit,
-		GasUsed:       ed.GasUsed,
-		Timestamp:     ed.Timestamp,
-		ExtraData:     ed.ExtraData,
-		BaseFeePerGas: bytesutil.PadTo(ed.BaseFeePerGas.Bytes(), 32),
-		BlockHash:     bytesutil.PadTo(ed.BlockHash.Bytes(), 32),
-		Transactions:  ed.Transactions,
-	}
+	var id [8]byte
+	copy(id[:], res.PayloadId[:])
+	return vs.ExecutionEngineCaller.GetPayload(ctx, id)
 }
 
 // This returns the valid terminal block hash with an existence bool value.
@@ -206,11 +184,12 @@ func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 //
 //    return None
 func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) ([]byte, bool, error) {
-	blk, err := vs.ExecutionEngineCaller.LatestExecutionBlock()
+	blk, err := vs.ExecutionEngineCaller.LatestExecutionBlock(ctx)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "could not get latest execution block")
 	}
-	parentBlk, err := vs.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(blk.ParentHash))
+	parentHash := common.BytesToHash(blk.ParentHash)
+	parentBlk, err := vs.ExecutionEngineCaller.ExecutionBlockByHash(ctx, parentHash)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "could not get parent execution block")
 	}
@@ -218,11 +197,18 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 		return nil, false, nil
 	}
 
-	terminalTotalDifficulty := new(big.Int)
-	terminalTotalDifficulty.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	ttd := new(big.Int)
+	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	terminalTotalDifficulty, of := uint256.FromBig(ttd)
+	if of {
+		return nil, false, errors.New("could not convert terminal total difficulty to uint256")
+	}
 
-	currentTotalDifficulty := common.HexToHash(blk.TotalDifficulty).Big()
-	parentTotalDifficulty := common.HexToHash(parentBlk.TotalDifficulty).Big()
+	currentTotalDifficulty := new(uint256.Int)
+	currentTotalDifficulty.SetBytes(bytesutil.ReverseByteOrder(blk.TotalDifficulty))
+
+	parentTotalDifficulty := new(uint256.Int)
+	parentTotalDifficulty.SetBytes(bytesutil.ReverseByteOrder(parentBlk.TotalDifficulty))
 	blkNumber := blk.Number
 	// TODO_MERGE: This can theoretically loop indefinitely. More discussion: https://github.com/ethereum/consensus-specs/issues/2636
 	logged := false
@@ -235,17 +221,17 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 				"currentTotalDifficulty":  currentTotalDifficulty,
 				"parentTotalDifficulty":   parentTotalDifficulty,
 				"terminalTotalDifficulty": terminalTotalDifficulty,
-				"terminalBlockHash":       fmt.Sprintf("%#x", common.HexToHash(blk.Hash)),
+				"terminalBlockHash":       fmt.Sprintf("%#x", common.BytesToHash(blk.Hash)),
 				"terminalBlockNumber":     blkNumber,
 			}).Info("'Terminal difficulty reached")
-			return common.HexToHash(blk.Hash).Bytes(), true, err
+			return common.BytesToHash(blk.Hash).Bytes(), true, err
 		} else {
 			if !logged {
 				log.WithFields(logrus.Fields{
 					"currentTotalDifficulty":  currentTotalDifficulty,
 					"parentTotalDifficulty":   parentTotalDifficulty,
 					"terminalTotalDifficulty": terminalTotalDifficulty,
-					"terminalBlockHash":       fmt.Sprintf("%#x", common.HexToHash(blk.Hash)),
+					"terminalBlockHash":       fmt.Sprintf("%#x", common.BytesToHash(blk.Hash)),
 					"terminalBlockNumber":     blkNumber,
 				}).Info("Terminal difficulty NOT reached")
 				logged = true
@@ -255,15 +241,15 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 			blkNumber = blk.Number
 			// TODO_MERGE: Add pow block cache to avoid requesting seen block.
 
-			parentBlk, err = vs.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(blk.ParentHash))
+			parentBlk, err = vs.ExecutionEngineCaller.ExecutionBlockByHash(ctx, common.BytesToHash(blk.ParentHash))
 			if err != nil {
 				return nil, false, err
 			}
 			if parentBlk == nil {
 				return nil, false, nil
 			}
-			currentTotalDifficulty = common.HexToHash(blk.TotalDifficulty).Big()
-			parentTotalDifficulty = common.HexToHash(parentBlk.TotalDifficulty).Big()
+			currentTotalDifficulty.SetBytes(bytesutil.ReverseByteOrder(blk.TotalDifficulty))
+			parentTotalDifficulty.SetBytes(bytesutil.ReverseByteOrder(parentBlk.TotalDifficulty))
 		}
 	}
 }
