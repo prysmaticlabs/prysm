@@ -216,7 +216,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	log.Debugln("Registering GROC Gateway Service")
+	log.Debugln("Registering GRPC Gateway Service")
 	if err := beacon.registerGRPCGateway(); err != nil {
 		return nil, err
 	}
