@@ -35,8 +35,6 @@ const (
 	boltAllocSize = 8 * 1024 * 1024
 	// The size of hash length in bytes
 	hashLength = 32
-
-	delayTime = time.Second * 5
 )
 
 var (
