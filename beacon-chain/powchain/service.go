@@ -798,13 +798,20 @@ func (s *Service) initPOWService() {
 			// Handle edge case with embedded genesis state by fetching genesis header to determine
 			// its height.
 			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 {
-				genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, common.BytesToHash(s.chainStartData.Eth1Data.BlockHash))
-				if err != nil {
-					log.Errorf("Unable to retrieve genesis ETH1.0 chain header: %v", err)
-					s.retryETH1Node(err)
-					continue
+				genHash := common.BytesToHash(s.chainStartData.Eth1Data.BlockHash)
+				genBlock := s.chainStartData.GenesisBlock
+				// In the event our provided chainstart data references a non-existent blockhash
+				// we assume the genesis block to be 0.
+				if genHash != [32]byte{} {
+					genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, genHash)
+					if err != nil {
+						log.Errorf("Unable to retrieve genesis ETH1.0 chain header: %v", err)
+						s.retryETH1Node(err)
+						continue
+					}
+					genBlock = genHeader.Number.Uint64()
 				}
-				s.chainStartData.GenesisBlock = genHeader.Number.Uint64()
+				s.chainStartData.GenesisBlock = genBlock
 				if err := s.savePowchainData(ctx); err != nil {
 					log.Errorf("Unable to save powchain data: %v", err)
 				}
