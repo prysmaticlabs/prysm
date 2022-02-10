@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
@@ -58,16 +57,6 @@ func (_ *FaultyMockPOWChain) BlockByTimestamp(_ context.Context, _ uint64) (*typ
 // DepositRoot --
 func (_ *FaultyMockPOWChain) DepositRoot() [32]byte {
 	return [32]byte{}
-}
-
-// BlockByHash is a stub for `FaultyMockPOWChain`.
-func (m *FaultyMockPOWChain) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	panic("not implemented")
-}
-
-// BlockByNumber is a stub for `FaultyMockPOWChain`.
-func (m *FaultyMockPOWChain) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	panic("not implemented")
 }
 
 // DepositTrie --

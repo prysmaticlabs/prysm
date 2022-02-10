@@ -40,7 +40,6 @@ func logStateTransitionData(b block.BeaconBlock) {
 			log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
 		}
 	}
-	// TODO_MERGE: Add payload logging here
 	log.Info("Finished applying state transition")
 }
 

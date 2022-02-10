@@ -1186,7 +1186,6 @@ def prysm_deps():
         sum = "h1:yAGX7huGHXlcLOEtBnF4w7FQwA26wojNCwOYAEhLjQM=",
         version = "v0.0.4",
     )
-
     go_repository(
         name = "com_github_golangci_lint_1",
         importpath = "github.com/golangci/lint-1",
@@ -2355,7 +2354,6 @@ def prysm_deps():
         sum = "h1:3l11YT8tm9MnwGFQ4kETwkzpAwY2Jt9lCrumCUW4+z4=",
         version = "v0.7.0",
     )
-
     go_repository(
         name = "com_github_marten_seemann_qpack",
         importpath = "github.com/marten-seemann/qpack",
