@@ -187,9 +187,7 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
 	s.cfg.ForkChoiceStore = store
 
-	if err := s.loadSyncedTips(originRoot, saved.Slot()); err != nil {
-		return err
-	}
+	s.loadSyncedTips(originRoot, saved.Slot())
 
 	ss, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
