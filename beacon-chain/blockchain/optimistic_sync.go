@@ -43,7 +43,7 @@ func (s *Service) loadSyncedTips(root [32]byte, slot types.Slot) error {
 	if err != nil || len(tips) == 0 {
 		tips[root] = slot
 		if err != nil {
-			log.WithError(err).Warn("could not read synced tips from DB, using finalized checkpoint as synced tip")
+			log.WithError(err).Warn("Could not read synced tips from DB, using finalized checkpoint as synced tip")
 		}
 	}
 	if err := s.cfg.ForkChoiceStore.SetSyncedTips(tips); err != nil {
