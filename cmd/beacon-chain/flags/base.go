@@ -23,6 +23,13 @@ var (
 		Usage: "An http endpoint for an Ethereum execution node",
 		Value: "",
 	}
+	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded, 256 bit JWT secret
+	// which will be used to authenticate with Ethereum execution nodes via an HTTP connection.
+	ExecutionJWTSecretFlag = &cli.StringFlag{
+		Name:  "jwt-secret",
+		Usage: "File path to a 256 bit, hex-encoded JWT secret used for authenticating with Ethereum execution nodes via HTTP",
+		Value: "",
+	}
 	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
 	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
 		Name:  "fallback-web3provider",

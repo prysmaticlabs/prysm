@@ -1,8 +1,11 @@
 package powchaincmd
 
 import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -13,6 +16,10 @@ var log = logrus.WithField("prefix", "cmd-powchain")
 func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	endpoints := parsePowchainEndpoints(c)
 	executionEndpoint := parseExecutionEndpoint(c)
+	jwtSecret, err := parseJWTSecret(c)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read JWT secret file for authenticating execution API")
+	}
 	opts := []powchain.Option{
 		powchain.WithHttpEndpoints(endpoints),
 		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
@@ -20,7 +27,22 @@ func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	if executionEndpoint != "" {
 		opts = append(opts, powchain.WithExecutionEndpoint(executionEndpoint))
 	}
+	if len(jwtSecret) > 0 {
+		opts = append(opts, powchain.WithExecutionClientJWTSecret(jwtSecret))
+	}
 	return opts, nil
+}
+
+func parseJWTSecret(c *cli.Context) ([]byte, error) {
+	jwtSecretFile := c.String(flags.ExecutionJWTSecretFlag.Name)
+	if jwtSecretFile == "" {
+		return nil, nil
+	}
+	enc, err := file.ReadFileAsBytes(jwtSecretFile)
+	if err != nil {
+		return nil, err
+	}
+	return hexutil.Decode(string(enc))
 }
 
 func parsePowchainEndpoints(c *cli.Context) []string {
