@@ -160,7 +160,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// (A: 54) -> (B: 44) -> (C: 24)
 		//				    \_->(D: 10)
 		//
-		// So B has its own weight, 10, and the sum of both C and D that's why we see weight 54 in the
+		// So B has its own weight, 10, and the sum of both C and D. That's why we see weight 54 in the
 		// middle instead of the normal progression of (44 -> 34 -> 24).
 		require.Equal(t, f.store.nodes[1].weight, uint64(54))
 		require.Equal(t, f.store.nodes[2].weight, uint64(44))
