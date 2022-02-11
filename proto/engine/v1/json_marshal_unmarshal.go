@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
@@ -200,12 +201,12 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*e = ExecutionPayload{}
-	e.ParentHash = dec.ParentHash
-	e.FeeRecipient = dec.FeeRecipient
-	e.StateRoot = dec.StateRoot
-	e.ReceiptsRoot = dec.ReceiptsRoot
-	e.LogsBloom = dec.LogsBloom
-	e.Random = dec.Random
+	e.ParentHash = bytesutil.PadTo(dec.ParentHash, 32)
+	e.FeeRecipient = bytesutil.PadTo(dec.FeeRecipient, 20)
+	e.StateRoot = bytesutil.PadTo(dec.StateRoot, 32)
+	e.ReceiptsRoot = bytesutil.PadTo(dec.ReceiptsRoot, 32)
+	e.LogsBloom = bytesutil.PadTo(dec.LogsBloom, 256)
+	e.Random = bytesutil.PadTo(dec.Random, 32)
 	e.BlockNumber = uint64(dec.BlockNumber)
 	e.GasLimit = uint64(dec.GasLimit)
 	e.GasUsed = uint64(dec.GasUsed)
@@ -215,8 +216,8 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	if err != nil {
 		return err
 	}
-	e.BaseFeePerGas = baseFee.Bytes()
-	e.BlockHash = dec.BlockHash
+	e.BaseFeePerGas = bytesutil.PadTo(baseFee.Bytes(), 32)
+	e.BlockHash = bytesutil.PadTo(dec.BlockHash, 32)
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
 		transactions[i] = tx
