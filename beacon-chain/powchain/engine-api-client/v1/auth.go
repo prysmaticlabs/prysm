@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/pkg/errors"
 )
 
 // Implements the http.RoundTripper interface to add JWT authentication
@@ -20,11 +21,10 @@ type jwtTransport struct {
 func (t *jwtTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"iat": time.Now().Unix(), // Issued at.
-		// TODO: Add client version claims (optional).
 	})
 	tokenString, err := token.SignedString(t.jwtSecret)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not produce signed JWT token")
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", tokenString))
 	fmt.Printf("%+v\n", req)
