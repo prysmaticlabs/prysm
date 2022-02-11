@@ -1102,7 +1102,7 @@ func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
 	opts := []engine.Option{
 		engine.WithJWTSecret(s.cfg.executionEndpointJWTSecret),
 	}
-	client, err := engine.New(ctx, s.cfg.executionEndpoint, opts)
+	client, err := engine.New(ctx, s.cfg.executionEndpoint, opts...)
 	if err != nil {
 		return err
 	}

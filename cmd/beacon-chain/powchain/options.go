@@ -1,7 +1,10 @@
 package powchaincmd
 
 import (
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"encoding/hex"
+	"fmt"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -42,7 +45,17 @@ func parseJWTSecret(c *cli.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return hexutil.Decode(string(enc))
+	if len(enc) == 0 {
+		return nil, fmt.Errorf("provided JWT secret in file %s cannot be empty", jwtSecretFile)
+	}
+	secret, err := hex.DecodeString(strings.TrimPrefix(string(enc), "0x"))
+	if err != nil {
+		return nil, err
+	}
+	if len(secret) != 32 {
+		return nil, errors.New("provided JWT secret should be a hex string of 32 bytes")
+	}
+	return secret, nil
 }
 
 func parsePowchainEndpoints(c *cli.Context) []string {
