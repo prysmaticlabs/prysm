@@ -106,6 +106,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GRPCGatewayPort,
 			flags.GPRCGatewayCorsDomain,
 			flags.HTTPWeb3ProviderFlag,
+			flags.ExecutionProviderFlag,
 			flags.FallbackWeb3ProviderFlag,
 			flags.SetGCPercent,
 			flags.HeadSync,

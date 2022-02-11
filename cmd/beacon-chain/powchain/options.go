@@ -11,15 +11,19 @@ var log = logrus.WithField("prefix", "cmd-powchain")
 
 // FlagOptions for powchain service flag configurations.
 func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
-	endpoints := parseHttpEndpoints(c)
+	endpoints := parsePowchainEndpoints(c)
+	executionEndpoint := parseExecutionEndpoint(c)
 	opts := []powchain.Option{
 		powchain.WithHttpEndpoints(endpoints),
 		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
 	}
+	if executionEndpoint != "" {
+		opts = append(opts, powchain.WithExecutionEndpoint(executionEndpoint))
+	}
 	return opts, nil
 }
 
-func parseHttpEndpoints(c *cli.Context) []string {
+func parsePowchainEndpoints(c *cli.Context) []string {
 	if c.String(flags.HTTPWeb3ProviderFlag.Name) == "" && len(c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)) == 0 {
 		log.Error(
 			"No ETH1 node specified to run with the beacon node. " +
@@ -36,4 +40,8 @@ func parseHttpEndpoints(c *cli.Context) []string {
 	endpoints := []string{c.String(flags.HTTPWeb3ProviderFlag.Name)}
 	endpoints = append(endpoints, c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 	return endpoints
+}
+
+func parseExecutionEndpoint(c *cli.Context) string {
+	return c.String(flags.ExecutionProviderFlag.Name)
 }
