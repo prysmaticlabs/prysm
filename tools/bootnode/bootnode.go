@@ -52,7 +52,7 @@ var (
 	metricsPort           = flag.Int("metrics-port", 5000, "Port to listen for connections")
 	externalIP            = flag.String("external-ip", "", "External IP for the bootnode")
 	forkVersion           = flag.String("fork-version", "", "Fork Version that the bootnode uses")
-	genesisValidatorsRoot = flag.String("genesis-root", "", "Genesis Validator Root the beacon node uses")
+	genesisValidatorsRoot = flag.String("genesis-root", "", "Genesis Validators Root the beacon node uses")
 	seedNode              = flag.String("seed-node", "", "External node to connect to")
 	log                   = logrus.WithField("prefix", "bootnode")
 	discv5PeersCount      = promauto.NewGauge(prometheus.GaugeOpts{
@@ -205,7 +205,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	if *genesisValidatorsRoot != "" {
 		retRoot, err := hex.DecodeString(*genesisValidatorsRoot)
 		if err != nil {
-			return nil, errors.Wrap(err, "Could not retrieve genesis validator root")
+			return nil, errors.Wrap(err, "Could not retrieve genesis validators root")
 		}
 		if len(retRoot) != 32 {
 			return nil, errors.Errorf("Invalid root size, expected 32 but got %d", len(retRoot))

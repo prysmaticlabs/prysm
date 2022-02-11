@@ -214,7 +214,7 @@ func (s *Service) HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, er
 	return helpers.Seed(s.headState(ctx), epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
-// HeadGenesisValidatorsRoot returns genesis validator root of the head state.
+// HeadGenesisValidatorsRoot returns genesis validators root of the head state.
 func (s *Service) HeadGenesisValidatorsRoot() [32]byte {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()

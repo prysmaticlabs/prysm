@@ -188,12 +188,12 @@ func TestCurrentFork_NilHeadSTate(t *testing.T) {
 func TestGenesisValidatorsRoot_CanRetrieve(t *testing.T) {
 	// Should not panic if head state is nil.
 	c := &Service{}
-	assert.Equal(t, [32]byte{}, c.GenesisValidatorsRoot(), "Did not get correct genesis validator root")
+	assert.Equal(t, [32]byte{}, c.GenesisValidatorsRoot(), "Did not get correct genesis validators root")
 
 	s, err := v1.InitializeFromProto(&ethpb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
 	require.NoError(t, err)
 	c.head = &head{state: s}
-	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorsRoot(), "Did not get correct genesis validator root")
+	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorsRoot(), "Did not get correct genesis validators root")
 }
 
 func TestHeadETH1Data_Nil(t *testing.T) {

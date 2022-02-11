@@ -219,7 +219,7 @@ func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 	return r, nil
 }
 
-// ComputeForkDigest returns the fork for the current version and genesis validator root
+// ComputeForkDigest returns the fork for the current version and genesis validators root
 //
 // Spec pseudocode definition:
 //	def compute_fork_digest(current_version: Version, genesis_validators_root: Root) -> ForkDigest:

@@ -57,7 +57,7 @@ func (b *BeaconState) SetGenesisValidatorsRoot(val []byte) error {
 	defer b.lock.Unlock()
 
 	if len(val) != fieldparams.RootLength {
-		return errors.New("incorrect validator root length")
+		return errors.New("incorrect validators root length")
 	}
 	b.genesisValidatorsRoot = bytesutil.ToBytes32(val)
 	b.markFieldAsDirty(genesisValidatorsRoot)

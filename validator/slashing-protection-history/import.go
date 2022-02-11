@@ -157,16 +157,16 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 	}
 	dbGvr, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not retrieve genesis validator root to db")
+		return errors.Wrap(err, "could not retrieve genesis validators root to db")
 	}
 	if dbGvr == nil {
 		if err = validatorDB.SaveGenesisValidatorsRoot(ctx, gvr[:]); err != nil {
-			return errors.Wrap(err, "could not save genesis validator root to db")
+			return errors.Wrap(err, "could not save genesis validators root to db")
 		}
 		return nil
 	}
 	if !bytes.Equal(dbGvr, gvr[:]) {
-		return errors.New("genesis validator root doesnt match the one that is stored in slashing protection db. " +
+		return errors.New("genesis validators root doesnt match the one that is stored in slashing protection db. " +
 			"Please make sure you import the protection data that is relevant to the chain you are on")
 	}
 	return nil

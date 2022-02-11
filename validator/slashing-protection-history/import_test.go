@@ -281,7 +281,7 @@ func Test_validateMetadataGenesisValidatorsRoot(t *testing.T) {
 			require.NoError(t, validatorDB.SaveGenesisValidatorsRoot(ctx, tt.dbGenesisValidatorsRoot))
 			err := validateMetadata(ctx, validatorDB, tt.interchangeJSON)
 			if tt.wantErr {
-				require.ErrorContains(t, "genesis validator root doesnt match the one that is stored", err)
+				require.ErrorContains(t, "genesis validators root doesnt match the one that is stored", err)
 			} else {
 				require.NoError(t, err)
 			}
