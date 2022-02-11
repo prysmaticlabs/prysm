@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -737,89 +736,6 @@ func TestEnsureRootNotZeroHashes(t *testing.T) {
 	assert.Equal(t, root, r, "Did not get wanted justified root")
 }
 
-func TestFinalizedImpliesNewJustified(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-	}
-	ctx := context.Background()
-	type args struct {
-		cachedCheckPoint        *ethpb.Checkpoint
-		stateCheckPoint         *ethpb.Checkpoint
-		diffFinalizedCheckPoint bool
-	}
-	tests := []struct {
-		name string
-		args args
-		want *ethpb.Checkpoint
-	}{
-		{
-			name: "Same justified, do nothing",
-			args: args{
-				cachedCheckPoint: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-				stateCheckPoint:  &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-			},
-			want: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-		},
-		{
-			name: "Different justified, higher epoch, cache new justified",
-			args: args{
-				cachedCheckPoint: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-				stateCheckPoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'b'}},
-			},
-			want: &ethpb.Checkpoint{Epoch: 2, Root: []byte{'b'}},
-		},
-		{
-			name: "finalized has different justified, cache new justified",
-			args: args{
-				cachedCheckPoint:        &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
-				stateCheckPoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'b'}},
-				diffFinalizedCheckPoint: true,
-			},
-			want: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'b'}},
-		},
-	}
-	for _, test := range tests {
-		beaconState, err := util.NewBeaconState()
-		require.NoError(t, err)
-		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(test.args.stateCheckPoint))
-		service, err := NewService(ctx, opts...)
-		require.NoError(t, err)
-		service.store.SetJustifiedCheckpt(test.args.cachedCheckPoint)
-		require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bytesutil.PadTo(test.want.Root, 32)}))
-		genesisState, err := util.NewBeaconState()
-		require.NoError(t, err)
-		require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, genesisState, bytesutil.ToBytes32(test.want.Root)))
-
-		if test.args.diffFinalizedCheckPoint {
-			b1 := util.NewBeaconBlock()
-			b1.Block.Slot = 1
-			b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
-			r1, err := b1.Block.HashTreeRoot()
-			require.NoError(t, err)
-			b100 := util.NewBeaconBlock()
-			b100.Block.Slot = 100
-			b100.Block.ParentRoot = r1[:]
-			r100, err := b100.Block.HashTreeRoot()
-			require.NoError(t, err)
-			for _, b := range []*ethpb.SignedBeaconBlock{b1, b100} {
-				beaconBlock := util.NewBeaconBlock()
-				beaconBlock.Block.Slot = b.Block.Slot
-				beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-				require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)))
-			}
-			service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: []byte{'c'}, Epoch: 1})
-			service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r100[:], Epoch: service.store.JustifiedCheckpt().Epoch})
-		}
-
-		require.NoError(t, service.finalizedImpliesNewJustified(ctx, beaconState))
-		assert.Equal(t, true, attestation.CheckPointIsEqual(test.want, service.store.JustifiedCheckpt()), "Did not get wanted check point")
-	}
-}
-
 func TestVerifyBlkDescendant(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
@@ -1079,4 +995,50 @@ func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
 	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
+}
+
+func TestService_saveSyncedTipsDB(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	r1, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b100 := util.NewBeaconBlock()
+	b100.Block.Slot = 100
+	b100.Block.ParentRoot = r1[:]
+	r100, err := b100.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b200 := util.NewBeaconBlock()
+	b200.Block.Slot = 200
+	b200.Block.ParentRoot = r1[:]
+	r200, err := b200.Block.HashTreeRoot()
+	require.NoError(t, err)
+	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
+		beaconBlock := util.NewBeaconBlock()
+		beaconBlock.Block.Slot = b.Block.Slot
+		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), [32]byte{}, 0, 0))
+	}
+
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, r100))
+	require.NoError(t, service.saveSyncedTipsDB(ctx))
+	savedTips, err := service.cfg.BeaconDB.ValidatedTips(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(savedTips))
+	require.Equal(t, types.Slot(1), savedTips[r1])
+	require.Equal(t, types.Slot(100), savedTips[r100])
+
+	// Delete invalid root
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTipsWithInvalidRoot(ctx, r200))
+	require.NoError(t, service.saveSyncedTipsDB(ctx))
+	savedTips, err = service.cfg.BeaconDB.ValidatedTips(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(savedTips))
+	require.Equal(t, types.Slot(100), savedTips[r100])
 }

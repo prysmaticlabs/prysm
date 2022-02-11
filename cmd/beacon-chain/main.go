@@ -33,6 +33,7 @@ import (
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.HTTPWeb3ProviderFlag,
+	flags.ExecutionProviderFlag,
 	flags.FallbackWeb3ProviderFlag,
 	flags.RPCHost,
 	flags.RPCPort,
@@ -65,9 +66,6 @@ var appFlags = []cli.Flag{
 	flags.Eth1HeaderReqLimit,
 	flags.GenesisStatePath,
 	flags.MinPeersPerSubnet,
-	flags.TerminalTotalDifficultyOverride,
-	flags.TerminalBlockHashOverride,
-	flags.TerminalBlockHashActivationEpochOverride,
 	flags.FeeRecipient,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,

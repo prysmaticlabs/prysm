@@ -56,23 +56,25 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	})
 	require.NoError(t, err)
 	_, err = st.HashTreeRoot(context.Background())
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
 	require.NoError(t, err)
 	for i := stateTypes.FieldIndex(0); i < stateTypes.FieldIndex(params.BeaconConfig().BeaconStateBellatrixFieldCount); i++ {
-		st.dirtyFields[i] = true
+		s.dirtyFields[i] = true
 	}
 	_, err = st.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	for i := 0; i < 10; i++ {
 		assert.NoError(t, st.AppendValidator(&ethpb.Validator{}))
 	}
-	assert.Equal(t, false, st.rebuildTrie[validators])
-	assert.NotEqual(t, len(st.dirtyIndices[validators]), 0)
+	assert.Equal(t, false, s.rebuildTrie[validators])
+	assert.NotEqual(t, len(s.dirtyIndices[validators]), 0)
 
 	for i := 0; i < indicesLimit; i++ {
 		assert.NoError(t, st.AppendValidator(&ethpb.Validator{}))
 	}
-	assert.Equal(t, true, st.rebuildTrie[validators])
-	assert.Equal(t, len(st.dirtyIndices[validators]), 0)
+	assert.Equal(t, true, s.rebuildTrie[validators])
+	assert.Equal(t, len(s.dirtyIndices[validators]), 0)
 }
 
 func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
@@ -178,8 +180,10 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	}
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
-	newRt := bytesutil.ToBytes32(st.merkleLayers[0][balances])
-	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.state.Balances)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
+	newRt := bytesutil.ToBytes32(s.merkleLayers[0][balances])
+	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(s.state.Balances)
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
 }

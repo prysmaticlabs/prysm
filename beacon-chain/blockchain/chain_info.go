@@ -54,6 +54,8 @@ type HeadFetcher interface {
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
+	IsOptimistic(ctx context.Context) (bool, error)
+	IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
@@ -100,6 +102,17 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from chain store.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 	cp := s.store.PrevJustifiedCheckpt()
+	if cp == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	}
+
+	return ethpb.CopyCheckpoint(cp)
+}
+
+// BestJustifiedCheckpt returns the best justified checkpoint from store.
+func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.store.BestJustifiedCheckpt()
+	// If there is no best justified checkpoint, return the checkpoint with root as zeros to be used for genesis cases.
 	if cp == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
@@ -315,4 +328,22 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 		return [fieldparams.BLSPubkeyLength]byte{}, err
 	}
 	return v.PublicKey(), nil
+}
+
+// IsOptimistic returns true if the current head is optimistic.
+func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+	return s.cfg.ForkChoiceStore.Optimistic(ctx, s.head.root, s.head.slot)
+}
+
+// IsOptimisticForRoot takes the root and slot as aguments instead of the current head
+// and returns true if it is optimistic.
+func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error) {
+	return s.cfg.ForkChoiceStore.Optimistic(ctx, root, slot)
+}
+
+// SetGenesisTime sets the genesis time of beacon chain.
+func (s *Service) SetGenesisTime(t time.Time) {
+	s.genesisTime = t
 }

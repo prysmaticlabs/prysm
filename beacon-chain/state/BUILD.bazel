@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "altair.go",
+        "bellatrix.go",
         "error.go",
         "phase0.go",
         "prometheus.go",
@@ -12,6 +13,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//contracts/deposit:__subpackages__",
+        "//proto/migration:__pkg__",
         "//proto/prysm/v1alpha1:__subpackages__",
         "//proto/testing:__subpackages__",
         "//slasher/rpc:__subpackages__",

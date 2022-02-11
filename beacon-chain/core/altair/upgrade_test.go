@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
@@ -20,12 +19,10 @@ import (
 func TestTranslateParticipation(t *testing.T) {
 	ctx := context.Background()
 	s, _ := util.DeterministicGenesisStateAltair(t, 64)
-	st, ok := s.(*stateAltair.BeaconState)
-	require.Equal(t, true, ok)
-	require.NoError(t, st.SetSlot(st.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
+	require.NoError(t, s.SetSlot(s.Slot()+params.BeaconConfig().MinAttestationInclusionDelay))
 
 	var err error
-	newState, err := altair.TranslateParticipation(ctx, st, nil)
+	newState, err := altair.TranslateParticipation(ctx, s, nil)
 	require.NoError(t, err)
 	participation, err := newState.PreviousEpochParticipation()
 	require.NoError(t, err)
@@ -56,7 +53,7 @@ func TestTranslateParticipation(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepNotSSZEqual(t, make([]byte, 64), participation)
 
-	committee, err := helpers.BeaconCommitteeFromState(ctx, st, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(ctx, s, pendingAtts[0].Data.Slot, pendingAtts[0].Data.CommitteeIndex)
 	require.NoError(t, err)
 	indices, err := attestation.AttestingIndices(pendingAtts[0].AggregationBits, committee)
 	require.NoError(t, err)

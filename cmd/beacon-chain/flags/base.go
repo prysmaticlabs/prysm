@@ -17,6 +17,12 @@ var (
 		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
 		Value: "",
 	}
+	// ExecutionProvider provides an HTTP or IPC access endpoint to an ETH execution node.
+	ExecutionProviderFlag = &cli.StringFlag{
+		Name:  "execution-provider",
+		Usage: "An http endpoint for an Ethereum execution node",
+		Value: "",
+	}
 	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
 	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
 		Name:  "fallback-web3provider",
@@ -84,11 +90,11 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500",
+		Value: "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000",
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
-	MinSyncPeers = &cli.Uint64Flag{
+	MinSyncPeers = &cli.IntFlag{
 		Name:  "min-sync-peers",
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
@@ -110,6 +116,14 @@ var (
 		Name:  "head-sync",
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
 	}
+	// SafeSlotsToImportOptimistically specifies the number of slots that a
+	// node should wait before being able to optimistically sync blocks
+	// across the merge boundary
+	SafeSlotsToImportOptimistically = &cli.IntFlag{
+		Name:  "safe-slots-to-import-optimistically",
+		Usage: "The number of slots to wait before optimistically syncing a block without enabled execution.",
+		Value: 128,
+	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.
 	SlotsPerArchivedPoint = &cli.IntFlag{
@@ -123,13 +137,13 @@ var (
 		Usage: "Does not run the discoveryV5 dht.",
 	}
 	// BlockBatchLimit specifies the requested block batch size.
-	BlockBatchLimit = &cli.Uint64Flag{
+	BlockBatchLimit = &cli.IntFlag{
 		Name:  "block-batch-limit",
 		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
 		Value: 64,
 	}
 	// BlockBatchLimitBurstFactor specifies the factor by which block batch size may increase.
-	BlockBatchLimitBurstFactor = &cli.Uint64Flag{
+	BlockBatchLimitBurstFactor = &cli.IntFlag{
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 10,
@@ -189,27 +203,6 @@ var (
 		Name:  "minimum-peers-per-subnet",
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
-	}
-	// TerminalTotalDifficultyOverride specifies the total difficulty to manual overrides the `TERMINAL_TOTAL_DIFFICULTY` parameter.
-	TerminalTotalDifficultyOverride = &cli.Uint64Flag{
-		Name: "terminal-total-difficulty-override",
-		Usage: "Sets the total difficulty to manual overrides the default TERMINAL_TOTAL_DIFFICULTY value. " +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal difficulty. " +
-			"Incorrect usage will result in your node experience consensus failure.",
-	}
-	// TerminalBlockHashOverride specifies the terminal block hash to manual overrides the `TERMINAL_BLOCK_HASH` parameter.
-	TerminalBlockHashOverride = &cli.StringFlag{
-		Name: "terminal-block-hash-override",
-		Usage: "Sets the block hash to manual overrides the default TERMINAL_BLOCK_HASH value. " +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash. " +
-			"Incorrect usage will result in your node experience consensus failure.",
-	}
-	// TerminalBlockHashActivationEpochOverride specifies the terminal block hash epoch to manual overrides the `TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH` parameter.
-	TerminalBlockHashActivationEpochOverride = &cli.Uint64Flag{
-		Name: "terminal-block-hash-epoch-override",
-		Usage: "Sets the block hash epoch to manual overrides the default TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH value. " +
-			"WARNING: This flag should be used only if you have a clear understanding that community has decided to override the terminal block hash activation epoch. " +
-			"Incorrect usage will result in your node experience consensus failure.",
 	}
 	// FeeRecipient specifies the fee recipient for the transaction fees.
 	FeeRecipient = &cli.StringFlag{

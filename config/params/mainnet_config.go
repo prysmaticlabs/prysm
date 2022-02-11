@@ -114,6 +114,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
 
+	// Fork choice algorithm constants.
+	ProposerScoreBoost: 70,
+	IntervalsPerSlot:   3,
+
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.
 	DepositNetworkID:       1, // Network ID of eth1 mainnet.
@@ -192,14 +196,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisForkVersion:          []byte{0, 0, 0, 0},
-	AltairForkVersion:           []byte{1, 0, 0, 0},
-	AltairForkEpoch:             mainnetAltairForkEpoch,
-	BellatrixForkVersion:        []byte{2, 0, 0, 0},
-	BellatrixForkEpoch:          math.MaxUint64,
-	ShardingForkVersion:         []byte{3, 0, 0, 0},
-	ShardingForkEpoch:           math.MaxUint64,
-	MinAnchorPowBlockDifficulty: 4294967296,
+	GenesisForkVersion:   []byte{0, 0, 0, 0},
+	AltairForkVersion:    []byte{1, 0, 0, 0},
+	AltairForkEpoch:      mainnetAltairForkEpoch,
+	BellatrixForkVersion: []byte{2, 0, 0, 0},
+	BellatrixForkEpoch:   math.MaxUint64,
+	ShardingForkVersion:  []byte{3, 0, 0, 0},
+	ShardingForkEpoch:    math.MaxUint64,
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
 		{1, 0, 0, 0}: mainnetAltairForkEpoch,
@@ -243,5 +246,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinSyncCommitteeParticipants: 1,
 
 	// Bellatrix
-	TerminalBlockHashActivationEpoch: math.MaxUint64,
+	TerminalBlockHashActivationEpoch: 18446744073709551615,
+	TerminalBlockHash:                [32]byte{},
+	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
 }
