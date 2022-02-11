@@ -265,7 +265,7 @@ func TestStore_UpdateBestChildAndDescendant_UpdateDescendant(t *testing.T) {
 
 func TestStore_UpdateBestChildAndDescendant_ChangeChildByViability(t *testing.T) {
 	// Make parent's best child not equal to child index, child leads to viable index and
-	// parents best child doesn't lead to viable index.
+	// parent's best child doesn't lead to viable index.
 	s := &Store{
 		justifiedEpoch: 1,
 		finalizedEpoch: 1,
