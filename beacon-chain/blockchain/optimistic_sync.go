@@ -40,11 +40,11 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 func (s *Service) loadSyncedTips(root [32]byte, slot types.Slot) error {
 	// Initialize synced tips
 	tips, err := s.cfg.BeaconDB.ValidatedTips(s.ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get synced tips")
-	}
-	if len(tips) == 0 {
+	if err != nil || len(tips) == 0 {
 		tips[root] = slot
+		if err != nil {
+			log.WithError(err).Warn("Could not read synced tips from DB, using finalized checkpoint as synced tip")
+		}
 	}
 	if err := s.cfg.ForkChoiceStore.SetSyncedTips(tips); err != nil {
 		return errors.Wrap(err, "could not set synced tips")
