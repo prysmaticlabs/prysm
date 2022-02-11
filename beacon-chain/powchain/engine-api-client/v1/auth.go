@@ -11,7 +11,8 @@ import (
 
 // Implements the http.RoundTripper interface to add JWT authentication
 // support to an HTTP client used for interacting with an execution node.
-// See the specification for more details on the supported JWT claims.
+// See the specification for more details on the supported JWT claims:
+// https://github.com/ethereum/execution-apis.
 type jwtTransport struct {
 	underlyingTransport http.RoundTripper
 	jwtSecret           []byte

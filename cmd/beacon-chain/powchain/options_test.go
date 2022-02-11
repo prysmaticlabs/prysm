@@ -33,27 +33,6 @@ func TestPowchainCmd(t *testing.T) {
 }
 
 func Test_parseJWTSecret(t *testing.T) {
-	//func parseJWTSecret(c *cli.Context) ([]byte, error) {
-	//jwtSecretFile := c.String(flags.ExecutionJWTSecretFlag.Name)
-	//if jwtSecretFile == "" {
-	//return nil, nil
-	//}
-	//enc, err := file.ReadFileAsBytes(jwtSecretFile)
-	//if err != nil {
-	//return nil, err
-	//}
-	//if len(enc) == 0 {
-	//return nil, fmt.Errorf("provided JWT secret in file %s cannot be empty", jwtSecretFile)
-	//}
-	//secret, err := hexutil.Decode(string(enc))
-	//if err != nil {
-	//return nil, err
-	//}
-	//if len(enc) != 32 {
-	//return nil, errors.New("provided JWT secret should be a hex string of 32 bytes")
-	//}
-	//return secret, nil
-	//}
 	t.Run("no flag value specified leads to nil secret", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
