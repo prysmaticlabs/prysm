@@ -175,7 +175,7 @@ get_prysm_version
 
 color "37" "Latest Prysm version is $prysm_version."
 
-if [ ${USE_PRYSM_MODERN:=false} = "true" ]; then
+if [ "${USE_PRYSM_MODERN:=false}" = "true" ]; then
 	BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}-modern"
 else
 	BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}"
@@ -186,7 +186,7 @@ CLIENT_STATS_REAL="${wrapper_dir}/client-stats-${prysm_version}-${system}-${arch
 if [[ $1 == beacon-chain ]]; then
     if [[ ! -x $BEACON_CHAIN_REAL ]]; then
         color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
-	if [ ${USE_PRYSM_MODERN} = "true" ]; then
+	if [ "${USE_PRYSM_MODERN}" = "true" ]; then
 		file=beacon-chain-${prysm_version}-${system}-${arch}-modern
 	else
 		file=beacon-chain-${prysm_version}-${system}-${arch}
