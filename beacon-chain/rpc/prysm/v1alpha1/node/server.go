@@ -68,7 +68,7 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesi
 		gt = timestamppb.New(genesisTime)
 	}
 
-	genValRoot := ns.GenesisFetcher.GenesisValidatorRoot()
+	genValRoot := ns.GenesisFetcher.GenesisValidatorsRoot()
 	return &ethpb.Genesis{
 		GenesisTime:            gt,
 		DepositContractAddress: contractAddr,

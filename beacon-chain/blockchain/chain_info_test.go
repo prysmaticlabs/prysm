@@ -185,15 +185,15 @@ func TestCurrentFork_NilHeadSTate(t *testing.T) {
 	}
 }
 
-func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
+func TestGenesisValidatorsRoot_CanRetrieve(t *testing.T) {
 	// Should not panic if head state is nil.
 	c := &Service{}
-	assert.Equal(t, [32]byte{}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
+	assert.Equal(t, [32]byte{}, c.GenesisValidatorsRoot(), "Did not get correct genesis validator root")
 
 	s, err := v1.InitializeFromProto(&ethpb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
 	require.NoError(t, err)
 	c.head = &head{state: s}
-	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
+	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorsRoot(), "Did not get correct genesis validator root")
 }
 
 func TestHeadETH1Data_Nil(t *testing.T) {
@@ -265,17 +265,17 @@ func TestService_HeadSeed(t *testing.T) {
 	require.DeepEqual(t, seed, root)
 }
 
-func TestService_HeadGenesisValidatorRoot(t *testing.T) {
+func TestService_HeadGenesisValidatorsRoot(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, 1)
 	c := &Service{}
 
 	c.head = &head{}
-	root := c.HeadGenesisValidatorRoot()
+	root := c.HeadGenesisValidatorsRoot()
 	require.Equal(t, [32]byte{}, root)
 
 	c.head = &head{state: s}
-	root = c.HeadGenesisValidatorRoot()
-	require.DeepEqual(t, root[:], s.GenesisValidatorRoot())
+	root = c.HeadGenesisValidatorsRoot()
+	require.DeepEqual(t, root[:], s.GenesisValidatorsRoot())
 }
 
 func TestService_ProtoArrayStore(t *testing.T) {

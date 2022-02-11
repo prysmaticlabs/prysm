@@ -454,8 +454,8 @@ func TestSignAttestation(t *testing.T) {
 		CurrentVersion:  []byte{'d', 'e', 'f', 'f'},
 		Epoch:           0,
 	}
-	genesisValidatorRoot := [32]byte{0x01, 0x02}
-	attesterDomain, err := signing.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorRoot[:])
+	genesisValidatorsRoot := [32]byte{0x01, 0x02}
+	attesterDomain, err := signing.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorsRoot[:])
 	require.NoError(t, err)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).

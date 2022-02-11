@@ -311,7 +311,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.genesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return b.genesisValidatorsRoot, nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.slot)), nil
