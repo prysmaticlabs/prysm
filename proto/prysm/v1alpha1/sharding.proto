@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package ethereum.eth.v1alpha1;
 
+import "proto/eth/ext/options.proto";
+
 option csharp_namespace = "Ethereum.Eth.V1";
 option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
@@ -46,12 +48,3 @@ message SignedShardSample {
     uint64 builder = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
     bytes signature = 7 [(ethereum.eth.ext.ssz_size) = "96"];
 }
-
-// class SignedShardSample(Container):
-//    slot: Slot
-//    row: uint64
-//    column: uint64
-//    data: Vector[BLSFieldElement, FIELD_ELEMENTS_PER_SAMPLE]
-//    proof: KZGCommitment
-//    builder: ValidatorIndex
-//    signature: BLSSignature

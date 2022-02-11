@@ -16,6 +16,7 @@ syntax = "proto3";
 package ethereum.eth.v1alpha1;
 
 import "proto/eth/ext/options.proto";
+import "proto/prysm/v1alpha1/sharding.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/engine/v1/execution_engine.proto";
 
@@ -357,4 +358,42 @@ message BeaconBlockBodyBellatrix {
 
     // Execution payload from the execution chain. New in Bellatrix network upgrade.
     ethereum.engine.v1.ExecutionPayload execution_payload = 10;
+}
+
+message SignedBeaconBlockDankSharding {
+    BeaconBlockBellatrix block = 1;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BeaconBlockDankSharding {
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+    BeaconBlockBodyDankSharding body = 5;
+}
+
+message BeaconBlockBodyDankSharding {
+    bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
+    Eth1Data eth1_data = 2;
+    bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
+    repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "2"];
+    repeated Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "128"];
+    repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
+    repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
+    SyncAggregate sync_aggregate = 9;
+    PayloadData payload_data = 10;
+}
+
+message IntermediateBlockData {
+    ethereum.engine.v1.ExecutionPayload execution_payload = 1;
+    v1alpha1.ShardedCommitmentsContainer sharded_commitments_container = 2;
+}
+
+message PayloadData {
+    oneof payload_data_one_of {
+        v1alpha1.IntermediateBlockBid block_bid = 1;
+        IntermediateBlockData block_data = 2;
+    }
 }

@@ -196,6 +196,7 @@ ssz_proto_files(
         "beacon_block.proto",
         "beacon_state.proto",
         "sync_committee.proto",
+        "sharding.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
