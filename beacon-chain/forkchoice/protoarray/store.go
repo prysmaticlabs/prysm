@@ -478,8 +478,6 @@ func (s *Store) applyWeightChanges(
 			n.weight += uint64(nodeDelta)
 		}
 
-		s.nodes[i] = n
-
 		// Update parent's best child and descendant if the node has a known parent.
 		if n.parent != NonExistentNode {
 			// Protection against node parent index out of bound. This should not happen.
