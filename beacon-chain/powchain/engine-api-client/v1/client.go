@@ -23,8 +23,8 @@ const (
 	GetPayloadMethod = "engine_getPayloadV1"
 	// ExecutionBlockByHashMethod request string for JSON-RPC.
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
-	// ExecutionBlockNyNumberMethod request string for JSON-RPC.
-	ExecutionBlockNyNumberMethod = "eth_getBlockByNumber"
+	// ExecutionBlockByNumberMethod request string for JSON-RPC.
+	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
 	// DefaultTimeout for HTTP.
 	DefaultTimeout = time.Second * 5
 )
@@ -114,7 +114,7 @@ func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, 
 	err := c.rpc.CallContext(
 		ctx,
 		result,
-		ExecutionBlockNyNumberMethod,
+		ExecutionBlockByNumberMethod,
 		"latest",
 		false, /* no full transaction objects */
 	)
