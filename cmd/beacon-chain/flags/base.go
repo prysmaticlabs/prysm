@@ -23,11 +23,12 @@ var (
 		Usage: "An http endpoint for an Ethereum execution node",
 		Value: "",
 	}
-	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded, 256 bit JWT secret
-	// which will be used to authenticate with Ethereum execution nodes via an HTTP connection.
+	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
+	// used to authenticate with an execution node via HTTP. This is required if using an HTTP connection, otherwise all requests
+	// to execution nodes for consensus-related calls will fail. This is not required if using an IPC connection.
 	ExecutionJWTSecretFlag = &cli.StringFlag{
 		Name:  "jwt-secret",
-		Usage: "File path to a 256 bit, hex-encoded JWT secret used for authenticating with Ethereum execution nodes via HTTP",
+		Usage: "REQUIRED if connecting to an execution node via HTTP. Provides a path to a file containing a hex-encoded string representing a 32 byte secret used for authentication with an execution node via HTTP. If this is not set, all requests to execution nodes via HTTP for consensus-related calls will fail, which will prevent your validators from performing their duties. This is not required if using an IPC connection.",
 		Value: "",
 	}
 	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
