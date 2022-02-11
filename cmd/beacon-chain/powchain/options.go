@@ -19,7 +19,7 @@ var log = logrus.WithField("prefix", "cmd-powchain")
 func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	endpoints := parsePowchainEndpoints(c)
 	executionEndpoint := parseExecutionEndpoint(c)
-	jwtSecret, err := parseJWTSecret(c)
+	jwtSecret, err := parseJWTSecretFromFile(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read JWT secret file for authenticating execution API")
 	}
@@ -36,7 +36,15 @@ func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	return opts, nil
 }
 
-func parseJWTSecret(c *cli.Context) ([]byte, error) {
+// Parses a JWT secret from a file path. This secret is required when connecting to execution nodes
+// over HTTP, and must be the same one used in Prysm and the execution node server Prysm is connecting to.
+// The engine API specification here https://github.com/ethereum/execution-apis/blob/main/src/engine/authentication.md
+// Explains how we should validate this secret and the format of the file a user can specify.
+//
+// The secret must be stored as a hex-encoded string within a file in the filesystem.
+// If the --jwt-secret flag is provided to Prysm, but the file cannot be read, or does not contain a hex-encoded
+// key of at least 256 bits, the client should treat this as an error and abort the startup.
+func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 	jwtSecretFile := c.String(flags.ExecutionJWTSecretFlag.Name)
 	if jwtSecretFile == "" {
 		return nil, nil
@@ -52,8 +60,8 @@ func parseJWTSecret(c *cli.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(secret) != 32 {
-		return nil, errors.New("provided JWT secret should be a hex string of 32 bytes")
+	if len(secret) < 32 {
+		return nil, errors.New("provided JWT secret should be a hex string of at least 32 bytes")
 	}
 	return secret, nil
 }

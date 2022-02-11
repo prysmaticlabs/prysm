@@ -32,13 +32,13 @@ func TestPowchainCmd(t *testing.T) {
 	assert.DeepEqual(t, []string{"primary", "fallback1", "fallback2"}, endpoints)
 }
 
-func Test_parseJWTSecret(t *testing.T) {
+func Test_parseJWTSecretFromFile(t *testing.T) {
 	t.Run("no flag value specified leads to nil secret", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
 		set.String(flags.ExecutionJWTSecretFlag.Name, "", "")
 		ctx := cli.NewContext(&app, set, nil)
-		secret, err := parseJWTSecret(ctx)
+		secret, err := parseJWTSecretFromFile(ctx)
 		require.NoError(t, err)
 		require.Equal(t, true, secret == nil)
 	})
@@ -47,7 +47,7 @@ func Test_parseJWTSecret(t *testing.T) {
 		set := flag.NewFlagSet("test", 0)
 		set.String(flags.ExecutionJWTSecretFlag.Name, "/tmp/askdjkajsd", "")
 		ctx := cli.NewContext(&app, set, nil)
-		_, err := parseJWTSecret(ctx)
+		_, err := parseJWTSecretFromFile(ctx)
 		require.ErrorContains(t, "no such file", err)
 	})
 	t.Run("empty string in file", func(t *testing.T) {
@@ -62,14 +62,14 @@ func Test_parseJWTSecret(t *testing.T) {
 		})
 		set.String(flags.ExecutionJWTSecretFlag.Name, fullPath, "")
 		ctx := cli.NewContext(&app, set, nil)
-		_, err := parseJWTSecret(ctx)
+		_, err := parseJWTSecretFromFile(ctx)
 		require.ErrorContains(t, "cannot be empty", err)
 	})
-	t.Run("not 32 bytes", func(t *testing.T) {
+	t.Run("less than 32 bytes", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
 		fullPath := filepath.Join(os.TempDir(), "foohex")
-		secret := bytesutil.PadTo([]byte("foo"), 64)
+		secret := bytesutil.PadTo([]byte("foo"), 31)
 		hexData := fmt.Sprintf("%#x", secret)
 		require.NoError(t, file.WriteFile(fullPath, []byte(hexData)))
 		t.Cleanup(func() {
@@ -79,8 +79,8 @@ func Test_parseJWTSecret(t *testing.T) {
 		})
 		set.String(flags.ExecutionJWTSecretFlag.Name, fullPath, "")
 		ctx := cli.NewContext(&app, set, nil)
-		_, err := parseJWTSecret(ctx)
-		require.ErrorContains(t, "should be a hex string of 32 bytes", err)
+		_, err := parseJWTSecretFromFile(ctx)
+		require.ErrorContains(t, "should be a hex string of at least 32 bytes", err)
 	})
 	t.Run("bad data", func(t *testing.T) {
 		app := cli.App{}
@@ -95,7 +95,7 @@ func Test_parseJWTSecret(t *testing.T) {
 		})
 		set.String(flags.ExecutionJWTSecretFlag.Name, fullPath, "")
 		ctx := cli.NewContext(&app, set, nil)
-		_, err := parseJWTSecret(ctx)
+		_, err := parseJWTSecretFromFile(ctx)
 		require.ErrorContains(t, "invalid byte", err)
 	})
 	t.Run("correct format", func(t *testing.T) {
@@ -112,7 +112,7 @@ func Test_parseJWTSecret(t *testing.T) {
 		})
 		set.String(flags.ExecutionJWTSecretFlag.Name, fullPath, "")
 		ctx := cli.NewContext(&app, set, nil)
-		got, err := parseJWTSecret(ctx)
+		got, err := parseJWTSecretFromFile(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, secret[:], got)
 	})
