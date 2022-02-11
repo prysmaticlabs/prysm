@@ -42,7 +42,7 @@ require (
 	github.com/libp2p/go-libp2p-core v0.13.0
 	github.com/libp2p/go-libp2p-noise v0.3.0
 	github.com/libp2p/go-libp2p-peerstore v0.6.0
-	github.com/libp2p/go-libp2p-pubsub v0.6.1
+	github.com/libp2p/go-libp2p-pubsub v0.6.2-0.20220208072054-aeb30a2ac18e
 	github.com/libp2p/go-libp2p-swarm v0.9.0
 	github.com/libp2p/go-tcp-transport v0.4.0
 	github.com/logrusorgru/aurora v2.0.3+incompatible
@@ -104,6 +104,7 @@ require (
 	github.com/go-logr/logr v0.2.1 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-playground/validator/v10 v10.10.0
+	github.com/holiman/uint256 v1.2.0
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect

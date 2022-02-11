@@ -79,8 +79,6 @@ type Flags struct {
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
 
-	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
-
 	EnableUseNativeState bool // EnableUseNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 }
 
@@ -158,11 +156,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
-	}
-	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
-	if ctx.Bool(forceOptMaxCoverAggregationStategy.Name) {
-		logEnabled(forceOptMaxCoverAggregationStategy)
-		cfg.AttestationAggregationStrategy = "opt_max_cover"
 	}
 	if ctx.Bool(enablePeerScorer.Name) {
 		logEnabled(enablePeerScorer)

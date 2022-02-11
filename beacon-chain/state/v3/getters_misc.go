@@ -1,8 +1,6 @@
 package v3
 
 import (
-	"time"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -60,52 +58,6 @@ func (b *BeaconState) genesisValidatorRoot() []byte {
 	root := make([]byte, 32)
 	copy(root, b.state.GenesisValidatorsRoot)
 	return root
-}
-
-// GenesisUnixTime returns the genesis time as time.Time.
-func (b *BeaconState) GenesisUnixTime() time.Time {
-	if !b.hasInnerState() {
-		return time.Unix(0, 0)
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	return b.genesisUnixTime()
-}
-
-// genesisUnixTime returns the genesis time as time.Time.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisUnixTime() time.Time {
-	if !b.hasInnerState() {
-		return time.Unix(0, 0)
-	}
-
-	return time.Unix(int64(b.state.GenesisTime), 0)
-}
-
-// ParentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.
-func (b *BeaconState) ParentRoot() [32]byte {
-	if !b.hasInnerState() {
-		return [32]byte{}
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	return b.parentRoot()
-}
-
-// parentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.
-// This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) parentRoot() [32]byte {
-	if !b.hasInnerState() {
-		return [32]byte{}
-	}
-
-	parentRoot := [32]byte{}
-	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
-	return parentRoot
 }
 
 // Version of the beacon state. This method

@@ -91,25 +91,25 @@ message ListKeystoresResponse {
     bytes validating_pubkey = 1;
     string derivation_path = 2;
   }
-  repeated Keystore keystores = 1;
+  repeated Keystore data = 1;
 }
 
 message ImportKeystoresRequest {
   repeated string keystores = 1;
-  repeated string passwords  = 2;
+  repeated string passwords = 2;
   string slashing_protection = 3;
 }
 
 message ImportKeystoresResponse {
-  repeated ImportedKeystoreStatus statuses = 1;
+  repeated ImportedKeystoreStatus data = 1;
 }
 
 message DeleteKeystoresRequest {
-  repeated bytes public_keys = 1;
+  repeated bytes pubkeys = 1;
 }
 
 message DeleteKeystoresResponse {
-  repeated DeletedKeystoreStatus statuses = 1;
+  repeated DeletedKeystoreStatus data = 1;
   string slashing_protection = 2;
 }
 

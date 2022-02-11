@@ -40,15 +40,6 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
-	attestationAggregationStrategy = &cli.StringFlag{
-		Name:  "attestation-aggregation-strategy",
-		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover, opt_max_cover.",
-		Value: "opt_max_cover",
-	}
-	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
-		Name:  "attestation-aggregation-force-opt-maxcover",
-		Usage: "When enabled, forces --attestation-aggregation-strategy=opt_max_cover setting.",
-	}
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
 		Usage: "Enable experimental P2P peer scorer",
@@ -147,8 +138,7 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableLargerGossipHistory,
-	forceOptMaxCoverAggregationStategy,
+	enablePeerScorer,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -175,7 +165,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
-	attestationAggregationStrategy,
 	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
@@ -183,7 +172,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
-	forceOptMaxCoverAggregationStategy,
 	enableSlasherFlag,
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
@@ -198,7 +186,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
-	"--attestation-aggregation-strategy=opt_max_cover",
 	"--dev",
 	"--use-check-point-cache",
 	"--enable-active-balance-cache",

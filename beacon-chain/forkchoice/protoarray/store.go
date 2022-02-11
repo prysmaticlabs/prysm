@@ -40,6 +40,33 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 	return &ForkChoice{store: s, balances: b, votes: v, syncedTips: st}
 }
 
+// SetSyncedTips sets the synced and validated tips from the passed map
+func (f *ForkChoice) SetSyncedTips(tips map[[32]byte]types.Slot) error {
+	if len(tips) == 0 {
+		return errInvalidSyncedTips
+	}
+	newTips := make(map[[32]byte]types.Slot, len(tips))
+	for k, v := range tips {
+		newTips[k] = v
+	}
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
+	f.syncedTips.validatedTips = newTips
+	return nil
+}
+
+// SyncedTips returns the synced and validated tips from the fork choice store.
+func (f *ForkChoice) SyncedTips() map[[32]byte]types.Slot {
+	f.syncedTips.RLock()
+	defer f.syncedTips.RUnlock()
+
+	m := make(map[[32]byte]types.Slot)
+	for k, v := range f.syncedTips.validatedTips {
+		m[k] = v
+	}
+	return m
+}
+
 // Head returns the head root from fork choice store.
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
 func (f *ForkChoice) Head(
@@ -119,7 +146,7 @@ func (f *ForkChoice) ProcessBlock(
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
 // root is different than the current store finalized root, and the number of the store has met prune threshold.
 func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
-	return f.store.prune(ctx, finalizedRoot)
+	return f.store.prune(ctx, finalizedRoot, f.syncedTips)
 }
 
 // Nodes returns the copied list of block nodes in the fork choice store.
@@ -439,25 +466,17 @@ func (s *Store) applyWeightChanges(
 		}
 		s.proposerBoostLock.Unlock()
 
+		// A node's weight can not be negative but the delta can be negative.
 		if nodeDelta < 0 {
-			// A node's weight can not be negative but the delta can be negative.
-			if int(n.weight)+nodeDelta < 0 {
+			d := uint64(-nodeDelta)
+			if n.weight < d {
 				n.weight = 0
 			} else {
-				// Absolute value of node delta.
-				d := nodeDelta
-				if nodeDelta < 0 {
-					d *= -1
-				}
-				// Subtract node's weight.
-				n.weight -= uint64(d)
+				n.weight -= d
 			}
 		} else {
-			// Add node's weight.
 			n.weight += uint64(nodeDelta)
 		}
-
-		s.nodes[i] = n
 
 		// Update parent's best child and descendent if the node has a known parent.
 		if n.parent != NonExistentNode {
@@ -596,7 +615,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 // prune prunes the store with the new finalized root. The tree is only
 // pruned if the input finalized root are different than the one in stored and
 // the number of the nodes in store has met prune threshold.
-func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
+func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *optimisticStore) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
 	defer span.End()
 
@@ -618,12 +637,20 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 
 	// Traverse through the node list starting from the finalized node at index 0.
 	// Nodes that are not branching off from the finalized node will be removed.
+	syncedTips.Lock()
+	defer syncedTips.Unlock()
+
 	canonicalNodesMap := make(map[uint64]uint64, uint64(len(s.nodes))-finalizedIndex)
 	canonicalNodes := make([]*Node, 1, uint64(len(s.nodes))-finalizedIndex)
 	finalizedNode := s.nodes[finalizedIndex]
+	finalizedTipIndex, err := s.findSyncedTip(ctx, finalizedNode, syncedTips)
+	if err != nil {
+		return err
+	}
 	finalizedNode.parent = NonExistentNode
 	canonicalNodes[0] = finalizedNode
 	canonicalNodesMap[finalizedIndex] = uint64(0)
+
 	for idx := uint64(0); idx < uint64(len(s.nodes)); idx++ {
 		node := copyNode(s.nodes[idx])
 		parentIdx, ok := canonicalNodesMap[node.parent]
@@ -633,8 +660,12 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 			node.parent = parentIdx
 			canonicalNodes = append(canonicalNodes, node)
 		} else {
-			// Remove node that is not part of finalized branch.
+			// Remove node and synced tip that is not part of finalized branch.
 			delete(s.nodesIndices, node.root)
+			_, ok := syncedTips.validatedTips[node.root]
+			if ok && idx != finalizedTipIndex {
+				delete(syncedTips.validatedTips, node.root)
+			}
 		}
 	}
 	s.nodesIndices[finalizedRoot] = uint64(0)
@@ -651,7 +682,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 
 	s.nodes = canonicalNodes
 	prunedCount.Inc()
-
+	syncedTipsCount.Set(float64(len(syncedTips.validatedTips)))
 	return nil
 }
 
@@ -688,4 +719,18 @@ func (s *Store) viableForHead(node *Node) bool {
 	finalized := s.finalizedEpoch == node.finalizedEpoch || s.finalizedEpoch == 0
 
 	return justified && finalized
+}
+
+// Returns the list of leaves in the Fork Choice store.
+// These are all the nodes that have NonExistentNode as best child.
+// This internal method assumes that the caller holds a lock in s.nodesLock.
+func (s *Store) leaves() ([]uint64, error) {
+	var leaves []uint64
+	for i := uint64(0); i < uint64(len(s.nodes)); i++ {
+		node := s.nodes[i]
+		if node.bestChild == NonExistentNode {
+			leaves = append(leaves, i)
+		}
+	}
+	return leaves, nil
 }
