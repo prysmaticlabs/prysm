@@ -596,10 +596,10 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 		}
 	} else {
 		if childLeadsToViableHead {
-			// If parent doesn't have the best child and the child is viable.
+			// If parent doesn't have a best child and the child is viable.
 			newParentChild = changeToChild
 		} else {
-			// If parent doesn't have the best child and the child is not viable.
+			// If parent doesn't have a best child and the child is not viable.
 			newParentChild = noChange
 		}
 	}
