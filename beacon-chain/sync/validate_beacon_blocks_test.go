@@ -1194,9 +1194,32 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 }
 
 func Test_validateBellatrixBeaconBlock(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	stateGen := stategen.New(db)
+	presentTime := time.Now().Unix()
+	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		}}
+	r := &Service{
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
+
 	st, _ := util.DeterministicGenesisStateAltair(t, 1)
 	b := util.NewBeaconBlockBellatrix()
 	blk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.ErrorContains(t, "block and state are not the same version", validateBellatrixBeaconBlock(st, blk.Block()))
+	require.ErrorContains(t, "block and state are not the same version", r.validateBellatrixBeaconBlock(ctx,st, blk.Block()))
 }
