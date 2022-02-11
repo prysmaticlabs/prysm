@@ -132,7 +132,7 @@ var (
 	}
 	enableUseNativeState = &cli.BoolFlag{
 		Name:  "enable-use-native-state",
-		Usage: "Enables representing the beacon state as a pure Go struct",
+		Usage: "Enables representing the beacon state as a pure Go struct.",
 	}
 )
 
@@ -182,6 +182,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableActiveBalanceCache,
 	disableBatchGossipVerification,
 	disableBalanceTrieComputation,
+	enableUseNativeState,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

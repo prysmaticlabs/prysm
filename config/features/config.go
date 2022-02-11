@@ -75,11 +75,11 @@ type Flags struct {
 	CorrectlyInsertOrphanedAtts bool
 	CorrectlyPruneCanonicalAtts bool
 
+	EnableUseNativeState bool // EnableUseNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
-
-	EnableUseNativeState bool // EnableUseNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 }
 
 var featureConfig *Flags
@@ -222,7 +222,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	}
 	cfg.EnableUseNativeState = false
 	if ctx.Bool(enableUseNativeState.Name) {
-		logDisabled(enableUseNativeState)
+		logEnabled(enableUseNativeState)
 		cfg.EnableUseNativeState = true
 	}
 	Init(cfg)

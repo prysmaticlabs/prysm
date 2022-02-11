@@ -30,8 +30,10 @@ import (
 	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	nativev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
@@ -278,7 +280,11 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &v1.BeaconState{}
+	if features.Get().EnableUseNativeState {
+		s.preGenesisState = &nativev1.BeaconState{}
+	} else {
+		s.preGenesisState = &v1.BeaconState{}
+	}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
