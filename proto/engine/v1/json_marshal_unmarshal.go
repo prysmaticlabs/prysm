@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -201,12 +202,12 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*e = ExecutionPayload{}
-	e.ParentHash = bytesutil.PadTo(dec.ParentHash, 32)
-	e.FeeRecipient = bytesutil.PadTo(dec.FeeRecipient, 20)
-	e.StateRoot = bytesutil.PadTo(dec.StateRoot, 32)
-	e.ReceiptsRoot = bytesutil.PadTo(dec.ReceiptsRoot, 32)
-	e.LogsBloom = bytesutil.PadTo(dec.LogsBloom, 256)
-	e.Random = bytesutil.PadTo(dec.Random, 32)
+	e.ParentHash = bytesutil.PadTo(dec.ParentHash, fieldparams.RootLength)
+	e.FeeRecipient = bytesutil.PadTo(dec.FeeRecipient, fieldparams.FeeRecipientLength)
+	e.StateRoot = bytesutil.PadTo(dec.StateRoot, fieldparams.RootLength)
+	e.ReceiptsRoot = bytesutil.PadTo(dec.ReceiptsRoot, fieldparams.RootLength)
+	e.LogsBloom = bytesutil.PadTo(dec.LogsBloom, fieldparams.LogsBloomLength)
+	e.Random = bytesutil.PadTo(dec.Random, fieldparams.RootLength)
 	e.BlockNumber = uint64(dec.BlockNumber)
 	e.GasLimit = uint64(dec.GasLimit)
 	e.GasUsed = uint64(dec.GasUsed)
@@ -216,8 +217,8 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	if err != nil {
 		return err
 	}
-	e.BaseFeePerGas = bytesutil.PadTo(baseFee.Bytes(), 32)
-	e.BlockHash = bytesutil.PadTo(dec.BlockHash, 32)
+	e.BaseFeePerGas = bytesutil.PadTo(baseFee.Bytes(), fieldparams.RootLength)
+	e.BlockHash = bytesutil.PadTo(dec.BlockHash, fieldparams.RootLength)
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
 		transactions[i] = tx
