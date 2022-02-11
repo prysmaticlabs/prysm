@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+option csharp_namespace = "Ethereum.Eth.V1";
+option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
+option java_multiple_files = true;
+option java_outer_classname = "ShardingProto";
+option java_package = "org.ethereum.eth.v1alpha1";
+option php_namespace = "Ethereum\\Eth\\v1alpha1";
+
+message IntermediateBlockBid {
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    bytes parent_block_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes execution_payload_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes sharded_data_commitment_root = 4 [(ethereum.eth.ext.ssz_size) = "32"]; // Root of the sharded data (only data, not beacon/intermediate block commitments)
+    uint64 sharded_data_commitment_count = 5; // Count of sharded data commitments
+    uint64 bid = 6; // Block builder bid paid to proposer
+    uint64 validator_index = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"]; // Validator index for this bid
+
+    // Block builder signature. Fees and data gas base fees will be charged to this address.
+    bool signature_y_parity = 8;
+    bytes signature_r = 9 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes signature_s = 10 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message IntermediateBlockBidWithRecipientAddress {
+    IntermediateBlockBid intermediate_block_bid = 1;
+    bytes recipient_address = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+}
+
+message ShardedCommitmentsContainer {
+    repeated bytes sharded_commitments = 1  [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "8192"];
+    bytes degree_proof = 2 [(ethereum.eth.ext.ssz_size) = "48"]; // Aggregate degree proof for all sharded_commitments
+    repeated uint64 included_block_sizes = 3; // The sizes of the blocks encoded in the commitments
+    uint64 included_sharded_data_commitments = 4; // Number of commitments that are for sharded data
+    bytes block_verification_kzg_proof = 5 [(ethereum.eth.ext.ssz_size) = "48"]; // Random evaluation of beacon blocks + execution payload
+}
+
+message SignedShardSample {
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    uint64 row = 2;
+    uint64 column = 3;
+    repeated bytes data = 4 [(ethereum.eth.ext.ssz_size) = "16,32"];
+    bytes proof = 5 [(ethereum.eth.ext.ssz_size) = "48"];
+    uint64 builder = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    bytes signature = 7 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+// class SignedShardSample(Container):
+//    slot: Slot
+//    row: uint64
+//    column: uint64
+//    data: Vector[BLSFieldElement, FIELD_ELEMENTS_PER_SAMPLE]
+//    proof: KZGCommitment
+//    builder: ValidatorIndex
+//    signature: BLSSignature
