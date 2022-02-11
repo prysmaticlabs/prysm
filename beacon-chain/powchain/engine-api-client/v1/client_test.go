@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -409,7 +410,7 @@ func fixtures() map[string]interface{} {
 		GasUsed:       1,
 		Timestamp:     1,
 		ExtraData:     foo[:],
-		BaseFeePerGas: baseFeePerGas.Bytes(),
+		BaseFeePerGas: bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength),
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 	}
