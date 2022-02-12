@@ -111,9 +111,7 @@ message ProtoArrayForkChoiceResponse {
     // Latest finalized epoch in proto array store.
     uint64 finalized_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // The list of the proto array nodes in store.
-    repeated ProtoArrayNode proto_array_nodes = 4;
-    // Root to indices mapping of the proto array nodes in store.
-    map<string, uint64> indices = 5;
+    ProtoArrayNode tree_root = 4;
 }
 
 message ProtoArrayNode {
@@ -122,17 +120,21 @@ message ProtoArrayNode {
     // Root of the proto array node.
     bytes root = 2;
     // Parent of the proto array node.
-    uint64 parent = 3;
+    ProtoArrayNode parent = 3;
+    // children of this node
+    repeated ProtoArrayNode children = 4; 
     // Justified epoch of the current proto array node.
-    uint64 justified_epoch = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 justified_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
     // finalized epoch of the current proto array node.
-    uint64 finalized_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 finalized_epoch = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    // Current balance of the current proto array node.
+    uint64 balance = 7;
     // Current weight of the current proto array node.
-    uint64 weight = 6;
-    // Best child of the current proto array node.
-    uint64 best_child = 7;
+    uint64 weight = 8;
     // Best descendant of the proto array node.
-    uint64 best_descendant = 8;
+    ProtoArrayNode best_descendant = 9;
+    // optimistic sync status of the node
+    bool optimistic = 10;
 }
 
 message DebugPeerResponses {

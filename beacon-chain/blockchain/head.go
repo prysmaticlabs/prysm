@@ -78,7 +78,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 			return err
 		}
 		s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
-		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
+		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j, false); err != nil {
 			return err
 		}
 	}

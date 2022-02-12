@@ -287,23 +287,7 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
-	nodes := s.ProtoArrayStore().Nodes()
-
-	// Deliberate choice to not preallocate space for below.
-	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
-	headsRoots := make([][32]byte, 0)
-	headsSlots := make([]types.Slot, 0)
-
-	nonExistentNode := ^uint64(0)
-	for _, node := range nodes {
-		// Possible heads have no children.
-		if node.BestDescendant() == nonExistentNode && node.BestChild() == nonExistentNode {
-			headsRoots = append(headsRoots, node.Root())
-			headsSlots = append(headsSlots, node.Slot())
-		}
-	}
-
-	return headsRoots, headsSlots
+	return s.cfg.ForkChoiceStore.Heads()
 }
 
 // HeadPublicKeyToValidatorIndex returns the validator index of the `pubkey` in current head state.
@@ -334,13 +318,13 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
-	return s.cfg.ForkChoiceStore.Optimistic(ctx, s.head.root, s.head.slot)
+	return s.cfg.ForkChoiceStore.IsOptimistic(s.head.root)
 }
 
 // IsOptimisticForRoot takes the root and slot as aguments instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error) {
-	return s.cfg.ForkChoiceStore.Optimistic(ctx, root, slot)
+	return s.cfg.ForkChoiceStore.IsOptimistic(root)
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.

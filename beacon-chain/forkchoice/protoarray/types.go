@@ -9,19 +9,18 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	store      *Store
-	votes      []Vote // tracks individual validator's last vote.
-	votesLock  sync.RWMutex
-	balances   []uint64 // tracks individual validator's last justified balances.
-	syncedTips *optimisticStore
+	store     *Store
+	votes     []Vote // tracks individual validator's last vote.
+	votesLock sync.RWMutex
+	balances  []uint64 // tracks individual validator's last justified balances.
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 type Store struct {
-	pruneThreshold             uint64                                 // do not prune tree unless threshold is reached.
 	justifiedEpoch             types.Epoch                            // latest justified epoch in store.
 	finalizedEpoch             types.Epoch                            // latest finalized epoch in store.
 	finalizedRoot              [fieldparams.RootLength]byte           // latest finalized root in store.
+	pruneThreshold             uint64                                 // do not prune tree unless threshold is reached.
 	proposerBoostRoot          [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot  [fieldparams.RootLength]byte           // previous block root that was boosted after being received in a timely manner.
 	previousProposerBoostScore uint64                                 // previous proposer boosted root score.
@@ -43,15 +42,8 @@ type Node struct {
 	finalizedEpoch types.Epoch                  // finalizedEpoch of this node.
 	balance        uint64                       // the balance that voted for this node directly
 	weight         uint64                       // weight of this node: the total balance including children
-	bestChild      *Node                        // bestChild node of this node.
 	bestDescendant *Node                        // bestDescendant node of this node.
-}
-
-// optimisticStore defines a structure that tracks the tips of the fully
-// validated blocks tree.
-type optimisticStore struct {
-	validatedTips map[[32]byte]types.Slot
-	sync.RWMutex
+	optimistic     bool                         // whether the block has been fully validated or not
 }
 
 // Vote defines an individual validator's vote.

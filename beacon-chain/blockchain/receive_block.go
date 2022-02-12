@@ -86,7 +86,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 
 	for i, b := range blocks {
 		blockCopy := b.Copy()
-		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i], false); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}
