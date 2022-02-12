@@ -262,3 +262,11 @@ func (s *Store) heads() ([][32]byte, []types.Slot) {
 	}
 	return roots, slots
 }
+
+
+//TreeRoot returns the current root Node of the Store
+func (s *Store) TreeRoot() *Node {
+	s.nodesLock.RLock()
+	defer s.nodesLock.RUnlock()
+	return s.treeRoot
+}

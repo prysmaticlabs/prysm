@@ -13,6 +13,16 @@ func (n *Node) Slot() types.Slot {
 	return n.slot
 }
 
+// Balance returns the current balance of the Node
+func (n *Node) Balance() uint64 {
+	return n.balance
+}
+
+// Optimistic returns the optimistic status of the node
+func (n *Node) Optimistic() bool {
+	return n.optimistic
+}
+
 // Root of the fork choice node.
 func (n *Node) Root() [32]byte {
 	return n.root
@@ -36,6 +46,11 @@ func (n *Node) FinalizedEpoch() types.Epoch {
 // Weight of the fork choice node.
 func (n *Node) Weight() uint64 {
 	return n.weight
+}
+
+// Children returns the children of this node
+func (n *Node) Children() []*Node {
+	return n.children
 }
 
 // depth returns the length of the path to the root of Fork Choice

@@ -16,6 +16,7 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
+        "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
