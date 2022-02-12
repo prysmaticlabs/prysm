@@ -287,11 +287,11 @@ func TestService_ProtoArrayStore(t *testing.T) {
 func TestService_ChainHeads(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, [32]byte{}, 0, 0))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, 0, 0, false))
 
 	roots, slots := c.ChainHeads()
 	require.DeepEqual(t, [][32]byte{{'c'}, {'d'}, {'e'}}, roots)
@@ -359,8 +359,8 @@ func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
 func TestService_IsOptimistic(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
 
 	opt, err := c.IsOptimistic(ctx)
 	require.NoError(t, err)
@@ -370,8 +370,8 @@ func TestService_IsOptimistic(t *testing.T) {
 func TestService_IsOptimisticForRoot(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
 
 	opt, err := c.IsOptimisticForRoot(ctx, [32]byte{'a'}, 100)
 	require.NoError(t, err)

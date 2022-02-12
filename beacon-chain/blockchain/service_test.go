@@ -459,7 +459,7 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState))
+	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState, false))
 
 	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
@@ -527,7 +527,7 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	beaconState, err := v1.InitializeFromProto(bs)
 	require.NoError(b, err)
-	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState))
+	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState, false))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -183,18 +183,8 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 }
 
 func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
+	ctx := context.Background()
 	f := New(0, 0, params.BeaconConfig().ZeroHash)
-	f.store.nodesIndices[params.BeaconConfig().ZeroHash] = 0
-	f.store.nodes = append(f.store.nodes, &Node{
-		slot:           0,
-		root:           params.BeaconConfig().ZeroHash,
-		parent:         NonExistentNode,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		bestChild:      NonExistentNode,
-		bestDescendant: NonExistentNode,
-		weight:         0,
-	})
-
+	f.ProcessBlock(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, 0, 0, false)
 	return f
 }

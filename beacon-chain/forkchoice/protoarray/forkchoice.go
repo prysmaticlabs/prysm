@@ -30,6 +30,11 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 	return &ForkChoice{store: s, balances: b, votes: v}
 }
 
+// NodeNumber returns the current number of nodes in the Store
+func (f *ForkChoice) NodeNumber() int {
+	return len(f.store.nodeByRoot)
+}
+
 // Head returns the head root from fork choice store.
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
 func (f *ForkChoice) Head(

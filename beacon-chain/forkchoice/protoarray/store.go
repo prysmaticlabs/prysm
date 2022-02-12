@@ -47,6 +47,11 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	return nil
 }
 
+// NodeNumber returns the current number of nodes in the Store
+func (s *Store) NodeNumber() int {
+	return len(s.nodeByRoot)
+}
+
 // JustifiedEpoch of fork choice store.
 func (s *Store) JustifiedEpoch() types.Epoch {
 	return s.justifiedEpoch
@@ -262,7 +267,6 @@ func (s *Store) heads() ([][32]byte, []types.Slot) {
 	}
 	return roots, slots
 }
-
 
 //TreeRoot returns the current root Node of the Store
 func (s *Store) TreeRoot() *Node {

@@ -382,7 +382,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	require.NoError(t, err)
 
 	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
-	assert.Equal(t, 5, len(service.cfg.ForkChoiceStore.Nodes()), "Miss match nodes")
+	assert.Equal(t, 5, service.cfg.ForkChoiceStore.NodeNumber(), "Miss match nodes")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[4])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[6])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[8])), "Didn't save node")
@@ -423,7 +423,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
-	assert.Equal(t, 5, len(service.cfg.ForkChoiceStore.Nodes()), "Miss match nodes")
+	assert.Equal(t, 5, service.cfg.ForkChoiceStore.NodeNumber(), "Miss match nodes")
 	// Ensure all roots and their respective blocks exist.
 	wantedRoots := [][]byte{roots[0], roots[3], roots[4], roots[6], roots[8]}
 	for i, rt := range wantedRoots {
@@ -479,7 +479,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	require.NoError(t, err)
 
 	// There should be 2 nodes, block 65 and block 64.
-	assert.Equal(t, 2, len(service.cfg.ForkChoiceStore.Nodes()), "Miss match nodes")
+	assert.Equal(t, 2, service.cfg.ForkChoiceStore.NodeNumber(), "Miss match nodes")
 
 	// Block with slot 63 should be in fork choice because it's less than finalized epoch 1.
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(r63), "Didn't save node")
@@ -668,7 +668,7 @@ func TestAncestor_CanUseForkchoice(t *testing.T) {
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), [32]byte{}, 0, 0)) // Saves blocks to fork choice store.
+		require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), 0, 0, false)) // Saves blocks to fork choice store.
 	}
 
 	r, err := service.ancestor(context.Background(), r200[:], 150)
@@ -713,7 +713,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock))) // Saves blocks to DB.
 	}
 
-	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), 200, r200, r200, [32]byte{}, 0, 0))
+	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), 200, r200, r200, 0, 0, false))
 
 	r, err := service.ancestor(context.Background(), r200[:], 150)
 	require.NoError(t, err)
@@ -995,50 +995,4 @@ func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
 	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
-}
-
-func TestService_saveSyncedTipsDB(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	service := setupBeaconChain(t, beaconDB)
-
-	b1 := util.NewBeaconBlock()
-	b1.Block.Slot = 1
-	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	r1, err := b1.Block.HashTreeRoot()
-	require.NoError(t, err)
-	b100 := util.NewBeaconBlock()
-	b100.Block.Slot = 100
-	b100.Block.ParentRoot = r1[:]
-	r100, err := b100.Block.HashTreeRoot()
-	require.NoError(t, err)
-	b200 := util.NewBeaconBlock()
-	b200.Block.Slot = 200
-	b200.Block.ParentRoot = r1[:]
-	r200, err := b200.Block.HashTreeRoot()
-	require.NoError(t, err)
-	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
-		beaconBlock := util.NewBeaconBlock()
-		beaconBlock.Block.Slot = b.Block.Slot
-		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		r, err := b.Block.HashTreeRoot()
-		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), [32]byte{}, 0, 0))
-	}
-
-	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, r100))
-	require.NoError(t, service.saveSyncedTipsDB(ctx))
-	savedTips, err := service.cfg.BeaconDB.ValidatedTips(ctx)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(savedTips))
-	require.Equal(t, types.Slot(1), savedTips[r1])
-	require.Equal(t, types.Slot(100), savedTips[r100])
-
-	// Delete invalid root
-	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTipsWithInvalidRoot(ctx, r200))
-	require.NoError(t, service.saveSyncedTipsDB(ctx))
-	savedTips, err = service.cfg.BeaconDB.ValidatedTips(ctx)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(savedTips))
-	require.Equal(t, types.Slot(100), savedTips[r100])
 }
