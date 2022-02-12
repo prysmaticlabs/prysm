@@ -19,6 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+var _ = EngineCaller(&Client{})
+
 func TestClient_IPC(t *testing.T) {
 	server := newTestIPCServer(t)
 	defer server.Stop()
@@ -54,7 +56,7 @@ func TestClient_IPC(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
-	t.Run(LatestExecutionBlockMethod, func(t *testing.T) {
+	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		resp, err := client.LatestExecutionBlock(ctx)
@@ -218,7 +220,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
-	t.Run(LatestExecutionBlockMethod, func(t *testing.T) {
+	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -454,7 +456,7 @@ type testEngineService struct{}
 
 func (*testEngineService) NoArgsRets() {}
 
-func (*testEngineService) BlockByHash(
+func (*testEngineService) GetBlockByHash(
 	_ context.Context, _ common.Hash,
 ) *pb.ExecutionBlock {
 	fix := fixtures()
@@ -465,7 +467,7 @@ func (*testEngineService) BlockByHash(
 	return item
 }
 
-func (*testEngineService) BlockByNumber(
+func (*testEngineService) GetBlockByNumber(
 	_ context.Context, _ string, _ bool,
 ) *pb.ExecutionBlock {
 	fix := fixtures()
