@@ -14,8 +14,8 @@ func (b *BeaconState) GenesisTime() uint64 {
 	return b.genesisTime
 }
 
-// GenesisValidatorRoot of the beacon state.
-func (b *BeaconState) GenesisValidatorRoot() []byte {
+// GenesisValidatorsRoot of the beacon state.
+func (b *BeaconState) GenesisValidatorsRoot() []byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 

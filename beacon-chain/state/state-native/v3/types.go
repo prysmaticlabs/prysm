@@ -22,7 +22,7 @@ func init() {
 // Field Aliases for values from the types package.
 const (
 	genesisTime                    = types.GenesisTime
-	genesisValidatorRoot           = types.GenesisValidatorRoot
+	genesisValidatorsRoot          = types.GenesisValidatorsRoot
 	slot                           = types.Slot
 	fork                           = types.Fork
 	latestBlockHeader              = types.LatestBlockHeader

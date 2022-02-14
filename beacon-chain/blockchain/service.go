@@ -217,7 +217,7 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             s.genesisTime,
-			GenesisValidatorsRoot: saved.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
 		},
 	})
 
@@ -379,7 +379,7 @@ func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             genesisTime,
-			GenesisValidatorsRoot: initializedState.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: initializedState.GenesisValidatorsRoot(),
 		},
 	})
 }

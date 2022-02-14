@@ -84,7 +84,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 			currEpoch: 4,
 			wantErr:   false,
 			postSvcCheck: func(t *testing.T, s *Service) {
-				genRoot := s.cfg.chain.GenesisValidatorRoot()
+				genRoot := s.cfg.chain.GenesisValidatorsRoot()
 				digest, err := forks.ForkDigestFromEpoch(5, genRoot[:])
 				assert.NoError(t, err)
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
@@ -128,7 +128,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 			currEpoch: 4,
 			wantErr:   false,
 			postSvcCheck: func(t *testing.T, s *Service) {
-				genRoot := s.cfg.chain.GenesisValidatorRoot()
+				genRoot := s.cfg.chain.GenesisValidatorsRoot()
 				digest, err := forks.ForkDigestFromEpoch(5, genRoot[:])
 				assert.NoError(t, err)
 				assert.Equal(t, true, s.subHandler.digestExists(digest))
@@ -232,7 +232,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 				chainService.Genesis = prevGenesis
 				r.registerRPCHandlersAltair()
 
-				genRoot := r.cfg.chain.GenesisValidatorRoot()
+				genRoot := r.cfg.chain.GenesisValidatorsRoot()
 				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
 				assert.NoError(t, err)
 				r.registerSubscribers(0, digest)
@@ -248,7 +248,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 			currEpoch: 4,
 			wantErr:   false,
 			postSvcCheck: func(t *testing.T, s *Service) {
-				genRoot := s.cfg.chain.GenesisValidatorRoot()
+				genRoot := s.cfg.chain.GenesisValidatorsRoot()
 				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
 				assert.NoError(t, err)
 				assert.Equal(t, false, s.subHandler.digestExists(digest))
@@ -299,7 +299,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 					chainStarted: abool.New(),
 					subHandler:   newSubTopicHandler(),
 				}
-				genRoot := r.cfg.chain.GenesisValidatorRoot()
+				genRoot := r.cfg.chain.GenesisValidatorsRoot()
 				digest, err := forks.ForkDigestFromEpoch(1, genRoot[:])
 				assert.NoError(t, err)
 				r.registerSubscribers(1, digest)
@@ -315,7 +315,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 			currEpoch: 4,
 			wantErr:   false,
 			postSvcCheck: func(t *testing.T, s *Service) {
-				genRoot := s.cfg.chain.GenesisValidatorRoot()
+				genRoot := s.cfg.chain.GenesisValidatorsRoot()
 				digest, err := forks.ForkDigestFromEpoch(1, genRoot[:])
 				assert.NoError(t, err)
 				assert.Equal(t, false, s.subHandler.digestExists(digest))
