@@ -720,7 +720,7 @@ func TestStore_UpdateCanonicalNodes_WholeList(t *testing.T) {
 	f.store.nodesIndices[[32]byte{'c'}] = 2
 	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
 	require.Equal(t, len(f.store.nodes), len(f.store.canonicalNodes))
-	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
+	require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
 	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
 	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
 	require.DeepEqual(t, f.Node([32]byte{'c'}), f.store.nodes[2])
@@ -759,4 +759,32 @@ func TestStore_UpdateCanonicalNodes_ContextCancelled(t *testing.T) {
 	f.store.nodesIndices[[32]byte{'c'}] = 2
 	cancel()
 	require.ErrorContains(t, "context canceled", f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
+}
+
+func TestStore_UpdateCanonicalNodes_RemoveOldCanonical(t *testing.T) {
+	ctx := context.Background()
+	f := &ForkChoice{store: &Store{}}
+	f.store.canonicalNodes = map[[32]byte]bool{}
+	f.store.nodesIndices = map[[32]byte]uint64{
+		[32]byte{'a'}: 0,
+		[32]byte{'b'}: 1,
+		[32]byte{'c'}: 2,
+		[32]byte{'d'}: 3,
+	}
+
+	f.store.nodes = []*Node{
+		{slot: 1, root: [32]byte{'a'}, parent: NonExistentNode},
+		{slot: 2, root: [32]byte{'b'}, parent: 0},
+		{slot: 3, root: [32]byte{'c'}, parent: 1},
+		{slot: 4, root: [32]byte{'d'}, parent: 1},
+	}
+	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
+	require.Equal(t, 3, len(f.store.canonicalNodes))
+	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'d'}))
+	require.Equal(t, 3, len(f.store.canonicalNodes))
+	require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
+	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
+	require.Equal(t, true, f.IsCanonical([32]byte{'d'}))
+	_, ok := f.store.canonicalNodes[[32]byte{'c'}]
+	require.Equal(t, false, ok)
 }

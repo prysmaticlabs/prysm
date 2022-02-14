@@ -339,6 +339,16 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 	n := s.nodes[i]
 	p := n.parent
 
+	// Every node after the parent and before the new canonical node cannot
+	// be cannonical
+	if p == NonExistentNode {
+		return nil
+	}
+	for j := p + 1; j < i; j++ {
+		nonCanonicalNode := s.nodes[j]
+		delete(s.canonicalNodes, nonCanonicalNode.root)
+	}
+
 	for p != NonExistentNode {
 		if ctx.Err() != nil {
 			return ctx.Err()
