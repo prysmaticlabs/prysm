@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
@@ -118,8 +119,10 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	}
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
-	newRt := bytesutil.ToBytes32(st.merkleLayers[0][balances])
-	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.balances)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
+	newRt := bytesutil.ToBytes32(s.merkleLayers[0][balances])
+	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.Balances())
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
 }

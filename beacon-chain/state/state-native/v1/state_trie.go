@@ -25,13 +25,13 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconState) (*BeaconState, error) {
+func InitializeFromProto(st *ethpb.BeaconState) (state.BeaconState, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf fields
 // and sets them as fields of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
