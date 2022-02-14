@@ -32,6 +32,14 @@ func WithHttpEndpoints(endpointStrings []string) Option {
 	}
 }
 
+// WithExecutionEndpoint for the execution node JSON-RPC endpoint.
+func WithExecutionEndpoint(endpoint string) Option {
+	return func(s *Service) error {
+		s.cfg.executionEndpoint = endpoint
+		return nil
+	}
+}
+
 // WithDepositContractAddress for the deposit contract.
 func WithDepositContractAddress(addr common.Address) Option {
 	return func(s *Service) error {
