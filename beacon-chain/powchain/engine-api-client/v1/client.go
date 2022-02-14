@@ -125,7 +125,7 @@ func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, 
 // eth_blockByHash via JSON-RPC.
 func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
 	result := &pb.ExecutionBlock{}
-	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash)
+	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
 }
 

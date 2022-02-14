@@ -297,7 +297,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(3))
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
-	require.NoError(t, st.SetGenesisValidatorRoot(genesisValidatorsRoot[:]))
+	require.NoError(t, st.SetGenesisValidatorsRoot(genesisValidatorsRoot[:]))
 
 	chainService := &mockChain.ChainService{State: st, ValidatorsRoot: genesisValidatorsRoot}
 	Server := &Server{
@@ -323,7 +323,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 }
 
 func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
-	genesisValidatorRoot := params.BeaconConfig().ZeroHash
+	genesisValidatorsRoot := params.BeaconConfig().ZeroHash
 
 	// Set head state to nil
 	chainService := &mockChain.ChainService{State: nil}
@@ -353,7 +353,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             time.Unix(0, 0),
-			GenesisValidatorsRoot: genesisValidatorRoot[:],
+			GenesisValidatorsRoot: genesisValidatorsRoot[:],
 		},
 	})
 	util.WaitTimeout(wg, time.Second)
