@@ -19,6 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+var _ = EngineCaller(&Client{})
+
 func TestClient_IPC(t *testing.T) {
 	server := newTestIPCServer(t)
 	defer server.Stop()
