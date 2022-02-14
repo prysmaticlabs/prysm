@@ -332,38 +332,39 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 	defer span.End()
 
 	// Set the input node to canonical.
-	s.canonicalNodes[root] = true
-
-	// Get the input's parent node index.
 	i := s.nodesIndices[root]
-	n := s.nodes[i]
-	p := n.parent
-
-	// Every node after the parent and before the new canonical node cannot
-	// be cannonical
-	if p == NonExistentNode {
-		return nil
-	}
-	for j := p + 1; j < i; j++ {
-		nonCanonicalNode := s.nodes[j]
-		delete(s.canonicalNodes, nonCanonicalNode.root)
-	}
-
-	for p != NonExistentNode {
+	var newCanonicalRoots [][32]byte
+	var n *Node
+	for i != NonExistentNode {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 
 		// Get the parent node, if the node is already in canonical mapping,
 		// we can be sure rest of the ancestors are canonical. Exit early.
-		n = s.nodes[p]
+		n = s.nodes[i]
 		if s.canonicalNodes[n.root] {
 			break
 		}
 
 		// Set parent node to canonical. Repeat until parent node index is undefined.
-		s.canonicalNodes[n.root] = true
-		p = n.parent
+		newCanonicalRoots = append(newCanonicalRoots, n.root)
+		i = n.parent
+	}
+
+	// i is either NonExistentNode or has the index of the last canonical
+	// node before the last head update.
+	if i == NonExistentNode {
+		s.canonicalNodes = make(map[[fieldparams.RootLength]byte]bool)
+	} else {
+		for j := i + 1; j < uint64(len(s.nodes)); j++ {
+			nonCanonicalNode := s.nodes[j]
+			delete(s.canonicalNodes, nonCanonicalNode.root)
+		}
+	}
+
+	for _, canonicalRoot := range newCanonicalRoots {
+		s.canonicalNodes[canonicalRoot] = true
 	}
 
 	return nil
