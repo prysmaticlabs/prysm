@@ -39,7 +39,7 @@ func (s *Service) forkWatcher() {
 // Checks if there is a fork in the next epoch and if there is
 // it registers the appropriate gossip and rpc topics.
 func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	isNextForkEpoch, err := forks.IsForkNextEpoch(s.cfg.chain.GenesisTime(), genRoot[:])
 	if err != nil {
 		return errors.Wrap(err, "Could not retrieve next fork epoch")
@@ -77,7 +77,7 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 // Checks if there was a fork in the previous epoch, and if there
 // was then we deregister the topics from that particular fork.
 func (s *Service) deregisterFromPastFork(currEpoch types.Epoch) error {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	// This method takes care of the de-registration of
 	// old gossip pubsub handlers. Once we are at the epoch
 	// after the fork, we de-register from all the outdated topics.

@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v3"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -24,12 +25,19 @@ import (
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (state.BeaconStateBellatrix, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProto(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
+	}
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconStateBellatrix, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoUnsafe(st)
+	}
+
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -113,7 +121,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint(),
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint(),
 			FinalizedCheckpoint:          b.finalizedCheckpoint(),
-			GenesisValidatorsRoot:        b.genesisValidatorRoot(),
+			GenesisValidatorsRoot:        b.genesisValidatorsRoot(),
 			CurrentSyncCommittee:         b.currentSyncCommittee(),
 			NextSyncCommittee:            b.nextSyncCommittee(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader(),
@@ -271,7 +279,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.state.GenesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.state.Slot)), nil

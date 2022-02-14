@@ -77,7 +77,7 @@ func TestUpgradeToAltair(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, preForkState.GenesisTime(), aState.GenesisTime())
-	require.DeepSSZEqual(t, preForkState.GenesisValidatorRoot(), aState.GenesisValidatorRoot())
+	require.DeepSSZEqual(t, preForkState.GenesisValidatorsRoot(), aState.GenesisValidatorsRoot())
 	require.Equal(t, preForkState.Slot(), aState.Slot())
 	require.DeepSSZEqual(t, preForkState.LatestBlockHeader(), aState.LatestBlockHeader())
 	require.DeepSSZEqual(t, preForkState.BlockRoots(), aState.BlockRoots())
