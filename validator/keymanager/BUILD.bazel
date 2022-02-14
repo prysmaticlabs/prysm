@@ -27,6 +27,8 @@ go_test(
     srcs = ["types_test.go"],
     deps = [
         ":go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/local:go_default_library",
         "//validator/keymanager/remote:go_default_library",
