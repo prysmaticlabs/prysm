@@ -280,7 +280,7 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	if features.Get().EnableUseNativeState {
+	if features.Get().EnableNativeState {
 		s.preGenesisState = &nativev1.BeaconState{}
 	} else {
 		s.preGenesisState = &v1.BeaconState{}

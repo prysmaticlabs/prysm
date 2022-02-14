@@ -27,7 +27,7 @@ import (
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, error) {
-	if features.Get().EnableUseNativeState {
+	if features.Get().EnableNativeState {
 		return statenative.InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
 	}
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
@@ -37,7 +37,7 @@ func InitializeFromProto(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, 
 // is an io.Reader. This allows client code to remain agnostic about whether the data comes
 // from the network or a file without needing to read the entire state into mem as a large byte slice.
 func InitializeFromSSZReader(r io.Reader) (state.BeaconStateAltair, error) {
-	if features.Get().EnableUseNativeState {
+	if features.Get().EnableNativeState {
 		return statenative.InitializeFromSSZReader(r)
 	}
 	b, err := ioutil.ReadAll(r)
@@ -50,7 +50,7 @@ func InitializeFromSSZReader(r io.Reader) (state.BeaconStateAltair, error) {
 // InitializeFromSSZBytes is a convenience method to obtain a BeaconState by unmarshaling
 // a slice of bytes containing the ssz-serialized representation of the state.
 func InitializeFromSSZBytes(marshaled []byte) (state.BeaconStateAltair, error) {
-	if features.Get().EnableUseNativeState {
+	if features.Get().EnableNativeState {
 		return statenative.InitializeFromSSZBytes(marshaled)
 	}
 	st := &ethpb.BeaconStateAltair{}
@@ -63,7 +63,7 @@ func InitializeFromSSZBytes(marshaled []byte) (state.BeaconStateAltair, error) {
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, error) {
-	if features.Get().EnableUseNativeState {
+	if features.Get().EnableNativeState {
 		return statenative.InitializeFromProtoUnsafe(st)
 	}
 
