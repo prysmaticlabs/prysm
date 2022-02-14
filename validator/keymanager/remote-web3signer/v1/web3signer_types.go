@@ -304,7 +304,7 @@ type ContributionAndProof struct {
 // SyncCommitteeContribution a sub property of AggregatorSelectionSignRequest.
 type SyncCommitteeContribution struct {
 	Slot              string `json:"slot"`               /* uint64 */
-	BeaconBlockRoot   string `json:"block_root"`         /* Hash32 */ // Prysm uses BlockRoot instead of BeaconBlockRoot
+	BeaconBlockRoot   string `json:"beacon_block_root"`  /* Hash32 */ // Prysm uses BlockRoot instead of BeaconBlockRoot
 	SubcommitteeIndex string `json:"subcommittee_index"` /* uint64 */
 	AggregationBits   string `json:"aggregation_bits"`   /* SSZ hexadecimal string */
 	Signature         string `json:"signature"`          /* 96 byte hexadecimal string */
