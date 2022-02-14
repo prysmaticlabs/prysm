@@ -7,6 +7,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -100,12 +101,14 @@ func ProcessBlockHeaderNoVerify(
 	if beaconState.Slot() != slot {
 		return nil, fmt.Errorf("state slot: %d is different than block slot: %d", beaconState.Slot(), slot)
 	}
-	idx, err := helpers.BeaconProposerIndex(ctx, beaconState)
-	if err != nil {
-		return nil, err
-	}
-	if proposerIndex != idx {
-		return nil, fmt.Errorf("proposer index: %d is different than calculated: %d", proposerIndex, idx)
+	if !time.IsIntermediateBlockSlot(slot) {
+		idx, err := helpers.BeaconProposerIndex(ctx, beaconState)
+		if err != nil {
+			return nil, err
+		}
+		if proposerIndex != idx {
+			return nil, fmt.Errorf("proposer index: %d is different than calculated: %d", proposerIndex, idx)
+		}
 	}
 	parentHeader := beaconState.LatestBlockHeader()
 	if parentHeader.Slot >= slot {
@@ -122,12 +125,12 @@ func ProcessBlockHeaderNoVerify(
 			parentRoot, parentHeaderRoot[:])
 	}
 
-	proposer, err := beaconState.ValidatorAtIndexReadOnly(idx)
+	proposer, err := beaconState.ValidatorAtIndexReadOnly(proposerIndex)
 	if err != nil {
 		return nil, err
 	}
 	if proposer.Slashed() {
-		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
+		return nil, fmt.Errorf("proposer at index %d was previously slashed", proposerIndex)
 	}
 
 	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{

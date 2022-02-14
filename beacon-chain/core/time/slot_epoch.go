@@ -78,3 +78,8 @@ func CanUpgradeToBellatrix(slot types.Slot) bool {
 func CanProcessEpoch(state state.ReadOnlyBeaconState) bool {
 	return (state.Slot()+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
+
+// IsIntermediateBlockSlot returns true of input slot is an intermediate block slot.
+func IsIntermediateBlockSlot(s types.Slot) bool {
+	return s%2 == 1
+}
