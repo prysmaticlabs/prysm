@@ -358,8 +358,7 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 		s.canonicalNodes = make(map[[fieldparams.RootLength]byte]bool)
 	} else {
 		for j := i + 1; j < uint64(len(s.nodes)); j++ {
-			nonCanonicalNode := s.nodes[j]
-			delete(s.canonicalNodes, nonCanonicalNode.root)
+			delete(s.canonicalNodes, s.nodes[j].root)
 		}
 	}
 
