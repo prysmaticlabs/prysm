@@ -114,7 +114,7 @@ func (s *Simulator) aggregateSigForAttestation(
 		beaconState.Fork(),
 		att.Data.Target.Epoch,
 		params.BeaconConfig().DomainBeaconAttester,
-		beaconState.GenesisValidatorRoot(),
+		beaconState.GenesisValidatorsRoot(),
 	)
 	if err != nil {
 		return nil, err

@@ -48,13 +48,13 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 	return nil
 }
 
-// SetGenesisValidatorRoot for the beacon state.
-func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
+// SetGenesisValidatorsRoot for the beacon state.
+func (b *BeaconState) SetGenesisValidatorsRoot(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.state.GenesisValidatorsRoot = val
-	b.markFieldAsDirty(genesisValidatorRoot)
+	b.markFieldAsDirty(genesisValidatorsRoot)
 	return nil
 }
 

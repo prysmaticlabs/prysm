@@ -121,7 +121,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint(),
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint(),
 			FinalizedCheckpoint:          b.finalizedCheckpoint(),
-			GenesisValidatorsRoot:        b.genesisValidatorRoot(),
+			GenesisValidatorsRoot:        b.genesisValidatorsRoot(),
 			CurrentSyncCommittee:         b.currentSyncCommittee(),
 			NextSyncCommittee:            b.nextSyncCommittee(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader(),
@@ -279,7 +279,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.state.GenesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.state.Slot)), nil

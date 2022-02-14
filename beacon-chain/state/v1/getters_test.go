@@ -26,8 +26,8 @@ func TestNilState_NoPanic(t *testing.T) {
 	}()
 	// retrieve elements from nil state
 	_ = st.GenesisTime()
-	_ = st.GenesisValidatorRoot()
-	_ = st.GenesisValidatorRoot()
+	_ = st.GenesisValidatorsRoot()
+	_ = st.GenesisValidatorsRoot()
 	_ = st.Slot()
 	_ = st.Fork()
 	_ = st.LatestBlockHeader()
