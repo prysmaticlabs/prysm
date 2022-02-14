@@ -6,7 +6,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -40,447 +39,159 @@ func TestStore_FinalizedEpoch(t *testing.T) {
 	}
 }
 
-func TestStore_Nodes(t *testing.T) {
-	nodes := []*Node{
-		{slot: 100},
-		{slot: 101},
-	}
-	s := &Store{
-		nodes: nodes,
-	}
-	require.DeepEqual(t, nodes, s.Nodes())
+func TestStore_NodeNumber(t *testing.T) {
+	f := setup(0, 0)
+	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.Equal(t, 2, f.store.NodeNumber())
 }
 
-func TestStore_NodesIndices(t *testing.T) {
-	nodeIndices := map[[32]byte]uint64{
-		{'a'}: 1,
-		{'b'}: 2,
+func TestStore_NodeByRoot(t *testing.T) {
+	f := setup(0, 0)
+	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.ProcessBlock(context.Background(), 2, indexToHash(2), indexToHash(1), 0, 0, false))
+	node0 := f.store.treeRoot
+	node1 := node0.children[0]
+	node2 := node1.children[0]
+
+	expectedRoots := map[[32]byte]*Node{
+		params.BeaconConfig().ZeroHash: node0,
+		indexToHash(1):                 node1,
+		indexToHash(2):                 node2,
 	}
-	s := &Store{
-		nodesIndices: nodeIndices,
+
+	require.Equal(t, 3, f.store.NodeNumber())
+	for root, node := range f.store.nodeByRoot {
+		v, ok := expectedRoots[root]
+		require.Equal(t, ok, true)
+		require.Equal(t, v, node)
 	}
-	require.DeepEqual(t, nodeIndices, s.NodesIndices())
 }
 
 func TestForkChoice_HasNode(t *testing.T) {
-	nodeIndices := map[[32]byte]uint64{
-		{'a'}: 1,
-		{'b'}: 2,
-	}
-	s := &Store{
-		nodesIndices: nodeIndices,
-	}
-	f := &ForkChoice{store: s}
-	require.Equal(t, true, f.HasNode([32]byte{'a'}))
-}
-
-func TestForkChoice_Store(t *testing.T) {
-	nodeIndices := map[[32]byte]uint64{
-		{'a'}: 1,
-		{'b'}: 2,
-	}
-	s := &Store{
-		nodesIndices: nodeIndices,
-	}
-	f := &ForkChoice{store: s}
-	require.DeepEqual(t, s, f.Store())
-}
-
-func TestForkChoice_Nodes(t *testing.T) {
-	nodes := []*Node{
-		{slot: 100},
-		{slot: 101},
-	}
-	s := &Store{
-		nodes: nodes,
-	}
-	f := &ForkChoice{store: s}
-	require.DeepEqual(t, s.nodes, f.Nodes())
+	f := setup(0, 0)
+	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.Equal(t, true, f.HasNode(indexToHash(1)))
 }
 
 func TestStore_Head_UnknownJustifiedRoot(t *testing.T) {
-	s := &Store{nodesIndices: make(map[[32]byte]uint64)}
+	f := setup(0, 0)
 
-	_, err := s.head(context.Background(), [32]byte{})
+	_, err := f.store.head(context.Background(), [32]byte{'a'})
 	assert.ErrorContains(t, errUnknownJustifiedRoot.Error(), err)
 }
 
-func TestStore_Head_UnknownJustifiedIndex(t *testing.T) {
-	r := [32]byte{'A'}
-	indices := make(map[[32]byte]uint64)
-	indices[r] = 1
-	s := &Store{nodesIndices: indices}
-
-	_, err := s.head(context.Background(), r)
-	assert.ErrorContains(t, errInvalidJustifiedIndex.Error(), err)
-}
-
 func TestStore_Head_Itself(t *testing.T) {
-	r := [32]byte{'A'}
-	indices := make(map[[32]byte]uint64)
-	indices[r] = 0
+	f := setup(0, 0)
+	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
 
 	// Since the justified node does not have a best descendant so the best node
 	// is itself.
-	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: NonExistentNode}}, canonicalNodes: make(map[[32]byte]bool)}
-	h, err := s.head(context.Background(), r)
+	h, err := f.store.head(context.Background(), indexToHash(1))
 	require.NoError(t, err)
-	assert.Equal(t, r, h)
+	assert.Equal(t, indexToHash(1), h)
 }
 
 func TestStore_Head_BestDescendant(t *testing.T) {
-	r := [32]byte{'A'}
-	best := [32]byte{'B'}
-	indices := make(map[[32]byte]uint64)
-	indices[r] = 0
-
-	// Since the justified node's best descendent is at index 1 and it's root is `best`,
-	// the head should be `best`.
-	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: 1}, {root: best}}, canonicalNodes: make(map[[32]byte]bool)}
-	h, err := s.head(context.Background(), r)
+	f := setup(0, 0)
+	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.ProcessBlock(context.Background(), 2, indexToHash(2), indexToHash(1), 0, 0, false))
+	require.NoError(t, f.ProcessBlock(context.Background(), 3, indexToHash(3), indexToHash(2), 0, 0, false))
+	require.NoError(t, f.ProcessBlock(context.Background(), 4, indexToHash(4), indexToHash(1), 0, 0, false))
+	h, err := f.store.head(context.Background(), indexToHash(1))
 	require.NoError(t, err)
-	assert.Equal(t, best, h)
+	require.Equal(t, h, indexToHash(3))
 }
 
 func TestStore_Head_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	r := [32]byte{'A'}
-	best := [32]byte{'B'}
-	indices := make(map[[32]byte]uint64)
-	indices[r] = 0
-	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: 1}, {root: best}}, canonicalNodes: make(map[[32]byte]bool)}
+	f := setup(0, 0)
+	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
 	cancel()
-	_, err := s.head(ctx, r)
+	_, err := f.store.head(ctx, indexToHash(1))
 	require.ErrorContains(t, "context canceled", err)
 }
 
-func TestStore_Insert_UnknownParent(t *testing.T) {
+func TestStore_Insert(t *testing.T) {
 	// The new node does not have a parent.
-	s := &Store{nodesIndices: make(map[[32]byte]uint64)}
-	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, [32]byte{}, 1, 1))
-	assert.Equal(t, 1, len(s.nodes), "Did not insert block")
-	assert.Equal(t, 1, len(s.nodesIndices), "Did not insert block")
-	assert.Equal(t, NonExistentNode, s.nodes[0].parent, "Incorrect parent")
-	assert.Equal(t, types.Epoch(1), s.nodes[0].justifiedEpoch, "Incorrect justification")
-	assert.Equal(t, types.Epoch(1), s.nodes[0].finalizedEpoch, "Incorrect finalization")
-	assert.Equal(t, [32]byte{'A'}, s.nodes[0].root, "Incorrect root")
+	treeRoot := &Node{slot: 0, root: indexToHash(0)}
+	nodeByRoot := map[[32]byte]*Node{indexToHash(0): treeRoot}
+	s := &Store{nodeByRoot: nodeByRoot, treeRoot: treeRoot}
+	require.NoError(t, s.insert(context.Background(), 100, indexToHash(100), indexToHash(1), 1, 1, false))
+	assert.Equal(t, 2, len(s.nodeByRoot), "Did not insert block")
+	assert.Equal(t, nil, treeRoot.parent, "Incorrect parent")
+	assert.Equal(t, 1, len(treeRoot.children), "Incorrect children number")
+	child := treeRoot.children[0]
+	assert.Equal(t, types.Epoch(1), child.justifiedEpoch, "Incorrect justification")
+	assert.Equal(t, types.Epoch(1), child.finalizedEpoch, "Incorrect finalization")
+	assert.Equal(t, indexToHash(1), child.root, "Incorrect root")
 }
 
-func TestStore_Insert_KnownParent(t *testing.T) {
-	// Similar to UnknownParent test, but this time the new node has a valid parent already in store.
-	// The new node builds on top of the parent.
-	s := &Store{nodesIndices: make(map[[32]byte]uint64)}
-	s.nodes = []*Node{{}}
-	p := [32]byte{'B'}
-	s.nodesIndices[p] = 0
-	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, p, [32]byte{}, 1, 1))
-	assert.Equal(t, 2, len(s.nodes), "Did not insert block")
-	assert.Equal(t, 2, len(s.nodesIndices), "Did not insert block")
-	assert.Equal(t, uint64(0), s.nodes[1].parent, "Incorrect parent")
-	assert.Equal(t, types.Epoch(1), s.nodes[1].justifiedEpoch, "Incorrect justification")
-	assert.Equal(t, types.Epoch(1), s.nodes[1].finalizedEpoch, "Incorrect finalization")
-	assert.Equal(t, [32]byte{'A'}, s.nodes[1].root, "Incorrect root")
-}
+func TestStore_updateCheckpoints(t *testing.T) {
+	f := setup(0, 0)
+	s := f.store
 
-func TestStore_ApplyScoreChanges_InvalidDeltaLength(t *testing.T) {
-	s := &Store{}
-
-	// This will fail because node indices has length of 0, and delta list has a length of 1.
-	err := s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{1})
-	assert.ErrorContains(t, errInvalidDeltaLength.Error(), err)
-}
-
-func TestStore_ApplyScoreChanges_UpdateEpochs(t *testing.T) {
-	s := &Store{}
-
-	// The justified and finalized epochs in Store should be updated to 1 and 1 given the following input.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 1, 1, []uint64{}, []int{}))
+	s.updateCheckpoints(1, 1)
 	assert.Equal(t, types.Epoch(1), s.justifiedEpoch, "Did not update justified epoch")
 	assert.Equal(t, types.Epoch(1), s.finalizedEpoch, "Did not update finalized epoch")
 }
 
-func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {
-	// Construct 3 nodes with weight 100 on each node. The 3 nodes linked to each other.
-	s := &Store{nodes: []*Node{
-		{root: [32]byte{'A'}, weight: 100},
-		{root: [32]byte{'A'}, weight: 100},
-		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
-
-	// Each node gets one unique vote. The weight should look like 103 <- 102 <- 101 because
-	// they get propagated back.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{1, 1, 1}))
-	assert.Equal(t, uint64(103), s.nodes[0].weight)
-	assert.Equal(t, uint64(102), s.nodes[1].weight)
-	assert.Equal(t, uint64(101), s.nodes[2].weight)
-}
-
-func TestStore_ApplyScoreChanges_UpdateWeightsNegativeDelta(t *testing.T) {
-	// Construct 3 nodes with weight 100 on each node. The 3 nodes linked to each other.
-	s := &Store{nodes: []*Node{
-		{root: [32]byte{'A'}, weight: 100},
-		{root: [32]byte{'A'}, weight: 100},
-		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
-
-	// Each node gets one unique vote which contributes to negative delta.
-	// The weight should look like 97 <- 98 <- 99 because they get propagated back.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{-1, -1, -1}))
-	assert.Equal(t, uint64(97), s.nodes[0].weight)
-	assert.Equal(t, uint64(98), s.nodes[1].weight)
-	assert.Equal(t, uint64(99), s.nodes[2].weight)
-}
-
-func TestStore_ApplyScoreChanges_UpdateWeightsMixedDelta(t *testing.T) {
-	// Construct 3 nodes with weight 100 on each node. The 3 nodes linked to each other.
-	s := &Store{nodes: []*Node{
-		{root: [32]byte{'A'}, weight: 100},
-		{root: [32]byte{'A'}, weight: 100},
-		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
-
-	// Each node gets one mixed vote. The weight should look like 100 <- 200 <- 250.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{-100, -50, 150}))
-	assert.Equal(t, uint64(100), s.nodes[0].weight)
-	assert.Equal(t, uint64(200), s.nodes[1].weight)
-	assert.Equal(t, uint64(250), s.nodes[2].weight)
-}
-
-func TestStore_UpdateBestChildAndDescendant_RemoveChild(t *testing.T) {
-	// Make parent's best child equal's to input child index and child is not viable.
-	s := &Store{nodes: []*Node{{bestChild: 1}, {}}, justifiedEpoch: 1, finalizedEpoch: 1}
-	require.NoError(t, s.updateBestChildAndDescendant(0, 1))
-
-	// Verify parent's best child and best descendant are `none`.
-	assert.Equal(t, NonExistentNode, s.nodes[0].bestChild, "Did not get correct best child index")
-	assert.Equal(t, NonExistentNode, s.nodes[0].bestDescendant, "Did not get correct best descendant index")
-}
-
-func TestStore_UpdateBestChildAndDescendant_UpdateDescendant(t *testing.T) {
-	// Make parent's best child equal to child index and child is viable.
-	s := &Store{nodes: []*Node{{bestChild: 1}, {bestDescendant: NonExistentNode}}}
-	require.NoError(t, s.updateBestChildAndDescendant(0, 1))
-
-	// Verify parent's best child is the same and best descendant is not set to child index.
-	assert.Equal(t, uint64(1), s.nodes[0].bestChild, "Did not get correct best child index")
-	assert.Equal(t, uint64(1), s.nodes[0].bestDescendant, "Did not get correct best descendant index")
-}
-
-func TestStore_UpdateBestChildAndDescendant_ChangeChildByViability(t *testing.T) {
-	// Make parent's best child not equal to child index, child leads to viable index and
-	// parents best child doesnt lead to viable index.
-	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
-		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode},
-			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
-	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
-
-	// Verify parent's best child and best descendant are set to child index.
-	assert.Equal(t, uint64(2), s.nodes[0].bestChild, "Did not get correct best child index")
-	assert.Equal(t, uint64(2), s.nodes[0].bestDescendant, "Did not get correct best descendant index")
-}
-
-func TestStore_UpdateBestChildAndDescendant_ChangeChildByWeight(t *testing.T) {
-	// Make parent's best child not equal to child index, child leads to viable index and
-	// parents best child leads to viable index but child has more weight than parent's best child.
-	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
-		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1, weight: 1}}}
-	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
-
-	// Verify parent's best child and best descendant are set to child index.
-	assert.Equal(t, uint64(2), s.nodes[0].bestChild, "Did not get correct best child index")
-	assert.Equal(t, uint64(2), s.nodes[0].bestDescendant, "Did not get correct best descendant index")
-}
-
-func TestStore_UpdateBestChildAndDescendant_ChangeChildAtLeaf(t *testing.T) {
-	// Make parent's best child to none and input child leads to viable index.
-	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
-		nodes: []*Node{{bestChild: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
-	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
-
-	// Verify parent's best child and best descendant are set to child index.
-	assert.Equal(t, uint64(2), s.nodes[0].bestChild, "Did not get correct best child index")
-	assert.Equal(t, uint64(2), s.nodes[0].bestDescendant, "Did not get correct best descendant index")
-}
-
-func TestStore_UpdateBestChildAndDescendant_NoChangeByViability(t *testing.T) {
-	// Make parent's best child not equal to child index, child leads to not viable index and
-	// parents best child leads to viable index.
-	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
-		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode}}}
-	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
-
-	// Verify parent's best child and best descendant are not changed.
-	assert.Equal(t, uint64(1), s.nodes[0].bestChild, "Did not get correct best child index")
-	assert.Equal(t, uint64(0), s.nodes[0].bestDescendant, "Did not get correct best descendant index")
-}
-
-func TestStore_UpdateBestChildAndDescendant_NoChangeByWeight(t *testing.T) {
-	// Make parent's best child not equal to child index, child leads to viable index and
-	// parents best child leads to viable index but parent's best child has more weight.
-	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
-		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1, weight: 1},
-			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
-	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
-
-	// Verify parent's best child and best descendant are not changed.
-	assert.Equal(t, uint64(1), s.nodes[0].bestChild, "Did not get correct best child index")
-	assert.Equal(t, uint64(0), s.nodes[0].bestDescendant, "Did not get correct best descendant index")
-}
-
-func TestStore_UpdateBestChildAndDescendant_NoChangeAtLeaf(t *testing.T) {
-	// Make parent's best child to none and input child does not lead to viable index.
-	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
-		nodes: []*Node{{bestChild: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
-			{bestDescendant: NonExistentNode}}}
-	require.NoError(t, s.updateBestChildAndDescendant(0, 2))
-
-	// Verify parent's best child and best descendant are not changed.
-	assert.Equal(t, NonExistentNode, s.nodes[0].bestChild, "Did not get correct best child index")
-	assert.Equal(t, uint64(0), s.nodes[0].bestDescendant, "Did not get correct best descendant index")
-}
-
 func TestStore_Prune_LessThanThreshold(t *testing.T) {
 	// Define 100 nodes in store.
-	numOfNodes := 100
-	indices := make(map[[32]byte]uint64)
-	nodes := make([]*Node, 0)
-	indices[indexToHash(uint64(0))] = uint64(0)
-	nodes = append(nodes, &Node{
-		slot:           types.Slot(0),
-		root:           indexToHash(uint64(0)),
-		bestDescendant: uint64(numOfNodes - 1),
-		bestChild:      uint64(1),
-		parent:         NonExistentNode,
-	})
-	for i := 1; i < numOfNodes-1; i++ {
-		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{
-			slot:           types.Slot(i),
-			root:           indexToHash(uint64(i)),
-			bestDescendant: uint64(numOfNodes - 1),
-			bestChild:      uint64(i + 1),
-			parent:         uint64(i) - 1,
-		})
+	numOfNodes := uint64(100)
+	f := setup(0, 0)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	for i := uint64(2); i < numOfNodes; i++ {
+		require.NoError(t, f.ProcessBlock(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), 0, 0, false))
 	}
-	indices[indexToHash(uint64(numOfNodes-1))] = uint64(numOfNodes - 1)
-	nodes = append(nodes, &Node{
-		slot:           types.Slot(numOfNodes - 1),
-		root:           indexToHash(uint64(numOfNodes - 1)),
-		bestDescendant: NonExistentNode,
-		bestChild:      NonExistentNode,
-		parent:         uint64(numOfNodes - 2),
-	})
 
-	s := &Store{nodes: nodes, nodesIndices: indices, pruneThreshold: 100}
-	syncedTips := &optimisticStore{}
+	s := f.store
+	s.pruneThreshold = 100
 
-	// Finalized root is at index 99 so everything before 99 should be pruned,
+	// Finalized root has depth 99 so everything before it should be pruned,
 	// but PruneThreshold is at 100 so nothing will be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99), syncedTips))
-	assert.Equal(t, 100, len(s.nodes), "Incorrect nodes count")
-	assert.Equal(t, 100, len(s.nodesIndices), "Incorrect node indices count")
+	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	assert.Equal(t, 100, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
 func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	// Define 100 nodes in store.
-	numOfNodes := 100
-	indices := make(map[[32]byte]uint64)
-	nodes := make([]*Node, 0)
-	indices[indexToHash(uint64(0))] = uint64(0)
-	nodes = append(nodes, &Node{
-		slot:           types.Slot(0),
-		root:           indexToHash(uint64(0)),
-		bestDescendant: uint64(numOfNodes - 1),
-		bestChild:      uint64(1),
-		parent:         NonExistentNode,
-	})
-	for i := 1; i < numOfNodes-1; i++ {
-		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{
-			slot:           types.Slot(i),
-			root:           indexToHash(uint64(i)),
-			bestDescendant: uint64(numOfNodes - 1),
-			bestChild:      uint64(i + 1),
-			parent:         uint64(i) - 1,
-		})
+	numOfNodes := uint64(100)
+	f := setup(0, 0)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	for i := uint64(2); i < numOfNodes; i++ {
+		require.NoError(t, f.ProcessBlock(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), 0, 0, false))
 	}
-	nodes = append(nodes, &Node{
-		slot:           types.Slot(numOfNodes - 1),
-		root:           indexToHash(uint64(numOfNodes - 1)),
-		bestDescendant: NonExistentNode,
-		bestChild:      NonExistentNode,
-		parent:         uint64(numOfNodes - 2),
-	})
-	indices[indexToHash(uint64(numOfNodes-1))] = uint64(numOfNodes - 1)
-	s := &Store{nodes: nodes, nodesIndices: indices}
-	syncedTips := &optimisticStore{}
+
+	s := f.store
+	s.pruneThreshold = 0
 
 	// Finalized root is at index 99 so everything before 99 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99), syncedTips))
-	assert.Equal(t, 1, len(s.nodes), "Incorrect nodes count")
-	assert.Equal(t, 1, len(s.nodesIndices), "Incorrect node indices count")
+	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	assert.Equal(t, 1, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
 func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	// Define 100 nodes in store.
-	numOfNodes := 100
-	indices := make(map[[32]byte]uint64)
-	nodes := make([]*Node, 0)
-	nodes = append(nodes, &Node{
-		slot:           types.Slot(0),
-		root:           indexToHash(uint64(0)),
-		bestDescendant: uint64(numOfNodes - 1),
-		bestChild:      uint64(1),
-		parent:         NonExistentNode,
-	})
-	for i := 1; i < numOfNodes-1; i++ {
-		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{
-			slot:           types.Slot(i),
-			root:           indexToHash(uint64(i)),
-			bestDescendant: uint64(numOfNodes - 1),
-			bestChild:      uint64(i + 1),
-			parent:         uint64(i) - 1,
-		})
+	numOfNodes := uint64(100)
+	f := setup(0, 0)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	for i := uint64(2); i < numOfNodes; i++ {
+		require.NoError(t, f.ProcessBlock(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), 0, 0, false))
 	}
-	nodes = append(nodes, &Node{
-		slot:           types.Slot(numOfNodes - 1),
-		root:           indexToHash(uint64(numOfNodes - 1)),
-		bestDescendant: NonExistentNode,
-		bestChild:      NonExistentNode,
-		parent:         uint64(numOfNodes - 2),
-	})
 
-	s := &Store{nodes: nodes, nodesIndices: indices}
-	syncedTips := &optimisticStore{}
+	s := f.store
+	s.pruneThreshold = 0
 
 	// Finalized root is at index 11 so everything before 11 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(10), syncedTips))
-	assert.Equal(t, 90, len(s.nodes), "Incorrect nodes count")
-	assert.Equal(t, 90, len(s.nodesIndices), "Incorrect node indices count")
+	require.NoError(t, s.prune(context.Background(), indexToHash(10)))
+	assert.Equal(t, 90, len(s.nodeByRoot), "Incorrect nodes count")
 
 	// One more time.
-	require.NoError(t, s.prune(context.Background(), indexToHash(20), syncedTips))
-	assert.Equal(t, 80, len(s.nodes), "Incorrect nodes count")
-	assert.Equal(t, 80, len(s.nodesIndices), "Incorrect node indices count")
+	require.NoError(t, s.prune(context.Background(), indexToHash(20)))
+	assert.Equal(t, 80, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
 // This unit tests starts with a simple branch like this
@@ -491,41 +202,14 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 //
 // And we finalize 1. As a result only 1 should survive
 func TestStore_Prune_NoDanglingBranch(t *testing.T) {
-	nodes := []*Node{
-		{
-			slot:           100,
-			bestChild:      1,
-			bestDescendant: 1,
-			root:           indexToHash(uint64(0)),
-			parent:         NonExistentNode,
-		},
-		{
-			slot:           101,
-			root:           indexToHash(uint64(1)),
-			bestChild:      NonExistentNode,
-			bestDescendant: NonExistentNode,
-			parent:         0,
-		},
-		{
-			slot:           101,
-			root:           indexToHash(uint64(2)),
-			parent:         0,
-			bestChild:      NonExistentNode,
-			bestDescendant: NonExistentNode,
-		},
-	}
-	syncedTips := &optimisticStore{}
-	s := &Store{
-		pruneThreshold: 0,
-		nodes:          nodes,
-		nodesIndices: map[[32]byte]uint64{
-			indexToHash(uint64(0)): 0,
-			indexToHash(uint64(1)): 1,
-			indexToHash(uint64(2)): 2,
-		},
-	}
-	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1)), syncedTips))
-	require.Equal(t, len(s.nodes), 1)
+	f := setup(0, 0)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0, false))
+
+	s := f.store
+	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
+	require.Equal(t, len(s.nodeByRoot), 1)
 }
 
 // This test starts with the following branching diagram
@@ -540,177 +224,96 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 //         J        -- K -- L
 //
 //
-// Synced tips are B, D and E. And we finalize F. All that is left in fork
-// choice is F, and the only synced tip left is E which is now away from Fork
-// Choice.
-func TestStore_PruneSyncedTips(t *testing.T) {
+func TestStore_Heads(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
-	syncedTips := &optimisticStore{
-		validatedTips: map[[32]byte]types.Slot{
-			[32]byte{'b'}: 101,
-			[32]byte{'d'}: 103,
-			[32]byte{'e'}: 104,
-		},
-	}
-	f.syncedTips = syncedTips
-	f.store.pruneThreshold = 0
-	require.NoError(t, f.Prune(ctx, [32]byte{'f'}))
-	require.Equal(t, 1, len(f.syncedTips.validatedTips))
-	_, ok := f.syncedTips.validatedTips[[32]byte{'e'}]
-	require.Equal(t, true, ok)
+	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1, true))
+	expectedRoots := [][32]byte{[32]byte{'f'}, [32]byte{'i'}, [32]byte{'l'}, [32]byte{'j'}}
+	expectedSlots := []types.Slot{105, 106, 106, 102}
+	roots, slots := f.store.heads()
+	require.DeepEqual(t, expectedRoots, roots)
+	require.DeepEqual(t, expectedSlots, slots)
 }
 
-func TestStore_LeadsToViableHead(t *testing.T) {
-	tests := []struct {
-		n              *Node
-		justifiedEpoch types.Epoch
-		finalizedEpoch types.Epoch
-		want           bool
-	}{
-		{&Node{}, 0, 0, true},
-		{&Node{}, 1, 0, false},
-		{&Node{}, 0, 1, false},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, 1, true},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, 2, false},
-		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, true},
-	}
-	for _, tc := range tests {
-		s := &Store{
-			justifiedEpoch: tc.justifiedEpoch,
-			finalizedEpoch: tc.finalizedEpoch,
-			nodes:          []*Node{tc.n},
-		}
-		got, err := s.leadsToViableHead(tc.n)
-		require.NoError(t, err)
-		assert.Equal(t, tc.want, got)
-	}
-}
+func TestStore_PruneMapsCanonicalNodes(t *testing.T) {
+	f := setup(0, 0)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0, false))
 
-func TestStore_ViableForHead(t *testing.T) {
-	tests := []struct {
-		n              *Node
-		justifiedEpoch types.Epoch
-		finalizedEpoch types.Epoch
-		want           bool
-	}{
-		{&Node{}, 0, 0, true},
-		{&Node{}, 1, 0, false},
-		{&Node{}, 0, 1, false},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, 1, true},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, 2, false},
-		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, true},
-	}
-	for _, tc := range tests {
-		s := &Store{
-			justifiedEpoch: tc.justifiedEpoch,
-			finalizedEpoch: tc.finalizedEpoch,
-		}
-		assert.Equal(t, tc.want, s.viableForHead(tc.n))
-	}
+	s := f.store
+	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
+	require.Equal(t, len(s.nodeByRoot), 1)
+
 }
 
 func TestStore_HasParent(t *testing.T) {
-	tests := []struct {
-		m    map[[32]byte]uint64
-		n    []*Node
-		r    [32]byte
-		want bool
-	}{
-		{r: [32]byte{'a'}, want: false},
-		{m: map[[32]byte]uint64{{'a'}: 0}, r: [32]byte{'a'}, want: false},
-		{m: map[[32]byte]uint64{{'a'}: 0}, r: [32]byte{'a'},
-			n: []*Node{{parent: NonExistentNode}}, want: false},
-		{m: map[[32]byte]uint64{{'a'}: 0},
-			n: []*Node{{parent: 0}}, r: [32]byte{'a'},
-			want: true},
-	}
-	for _, tc := range tests {
-		f := &ForkChoice{store: &Store{
-			nodesIndices: tc.m,
-			nodes:        tc.n,
-		}}
-		assert.Equal(t, tc.want, f.HasParent(tc.r))
-	}
+	f := setup(1, 1)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(2), 1, 1, false))
+	require.Equal(t, false, f.HasParent(params.BeaconConfig().ZeroHash))
+	require.Equal(t, true, f.HasParent(indexToHash(1)))
+	require.Equal(t, true, f.HasParent(indexToHash(2)))
+	require.Equal(t, true, f.HasParent(indexToHash(3)))
+	require.Equal(t, false, f.HasParent(indexToHash(4)))
 }
 
 func TestStore_AncestorRoot(t *testing.T) {
+	f := setup(1, 1)
 	ctx := context.Background()
-	f := &ForkChoice{store: &Store{}}
-	f.store.nodesIndices = map[[32]byte]uint64{}
-	_, err := f.AncestorRoot(ctx, [32]byte{'a'}, 0)
-	assert.ErrorContains(t, "node does not exist", err)
-	f.store.nodesIndices[[32]byte{'a'}] = 0
-	_, err = f.AncestorRoot(ctx, [32]byte{'a'}, 0)
-	assert.ErrorContains(t, "node index out of range", err)
-	f.store.nodesIndices[[32]byte{'b'}] = 1
-	f.store.nodesIndices[[32]byte{'c'}] = 2
-	f.store.nodes = []*Node{
-		{slot: 1, root: [32]byte{'a'}, parent: NonExistentNode},
-		{slot: 2, root: [32]byte{'b'}, parent: 0},
-		{slot: 3, root: [32]byte{'c'}, parent: 1},
-	}
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(3), indexToHash(2), 1, 1, false))
 
-	r, err := f.AncestorRoot(ctx, [32]byte{'c'}, 1)
+	_, err := f.AncestorRoot(ctx, indexToHash(3), 6)
+	assert.ErrorContains(t, errNilNode.Error(), err)
+	_, err = f.AncestorRoot(ctx, indexToHash(3), 4)
+	assert.ErrorContains(t, errNilNode.Error(), err)
+	root, err := f.AncestorRoot(ctx, indexToHash(3), 5)
 	require.NoError(t, err)
-	assert.Equal(t, bytesutil.ToBytes32(r), [32]byte{'a'})
-	r, err = f.AncestorRoot(ctx, [32]byte{'c'}, 2)
+	require.Equal(t, indexToHash(3), root)
+	root, err = f.AncestorRoot(ctx, indexToHash(3), 1)
 	require.NoError(t, err)
-	assert.Equal(t, bytesutil.ToBytes32(r), [32]byte{'b'})
-}
-
-func TestStore_AncestorRootOutOfBound(t *testing.T) {
-	ctx := context.Background()
-	f := &ForkChoice{store: &Store{}}
-	f.store.nodesIndices = map[[32]byte]uint64{}
-	_, err := f.AncestorRoot(ctx, [32]byte{'a'}, 0)
-	assert.ErrorContains(t, "node does not exist", err)
-	f.store.nodesIndices[[32]byte{'a'}] = 0
-	_, err = f.AncestorRoot(ctx, [32]byte{'a'}, 0)
-	assert.ErrorContains(t, "node index out of range", err)
-	f.store.nodesIndices[[32]byte{'b'}] = 1
-	f.store.nodesIndices[[32]byte{'c'}] = 2
-	f.store.nodes = []*Node{
-		{slot: 1, root: [32]byte{'a'}, parent: NonExistentNode},
-		{slot: 2, root: [32]byte{'b'}, parent: 100}, // Out of bound parent.
-		{slot: 3, root: [32]byte{'c'}, parent: 1},
-	}
-
-	_, err = f.AncestorRoot(ctx, [32]byte{'c'}, 1)
-	require.ErrorContains(t, "node index out of range", err)
+	require.Equal(t, indexToHash(1), root)
 }
 
 func TestStore_UpdateCanonicalNodes_WholeList(t *testing.T) {
+	f := setup(1, 1)
 	ctx := context.Background()
-	f := &ForkChoice{store: &Store{}}
-	f.store.canonicalNodes = map[[32]byte]bool{}
-	f.store.nodesIndices = map[[32]byte]uint64{}
-	f.store.nodes = []*Node{
-		{slot: 1, root: [32]byte{'a'}, parent: NonExistentNode},
-		{slot: 2, root: [32]byte{'b'}, parent: 0},
-		{slot: 3, root: [32]byte{'c'}, parent: 1},
-	}
-	f.store.nodesIndices[[32]byte{'c'}] = 2
-	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
-	require.Equal(t, len(f.store.nodes), len(f.store.canonicalNodes))
-	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
-	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
-	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
-	require.DeepEqual(t, f.Node([32]byte{'c'}), f.store.nodes[2])
-	require.Equal(t, f.Node([32]byte{'d'}), (*Node)(nil))
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(2), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(1), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(4), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 6, indexToHash(6), indexToHash(5), 1, 1, false))
+
+	require.Equal(t, 5, len(f.store.canonicalNodes))
+	require.NotNil(t, f.store.canonicalNodes[params.BeaconConfig().ZeroHash])
+	require.NotNil(t, f.store.canonicalNodes[indexToHash(1)])
+	require.NotNil(t, f.store.canonicalNodes[indexToHash(4)])
+	require.NotNil(t, f.store.canonicalNodes[indexToHash(5)])
+	require.NotNil(t, f.store.canonicalNodes[indexToHash(6)])
+
+	f.store.updateCanonicalNodes(ctx, f.store.nodeByRoot[indexToHash(3)])
+	require.Equal(t, 3, len(f.store.canonicalNodes))
+	require.NotNil(t, f.store.canonicalNodes[params.BeaconConfig().ZeroHash])
+	require.NotNil(t, f.store.canonicalNodes[indexToHash(2)])
+	require.NotNil(t, f.store.canonicalNodes[indexToHash(3)])
+
 }
 
 func TestStore_UpdateCanonicalNodes_ParentAlreadyIn(t *testing.T) {

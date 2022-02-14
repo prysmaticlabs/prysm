@@ -173,6 +173,11 @@ func (s *Store) insert(ctx context.Context,
 		}
 	}
 
+	// Set the node as root if the store was empty
+	if s.treeRoot == nil {
+		s.treeRoot = n
+	}
+
 	// Update metrics.
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodeByRoot)))

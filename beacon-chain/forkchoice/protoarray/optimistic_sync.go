@@ -7,6 +7,9 @@ import (
 // pruneInvalid removes the node with the given root and all of its children
 // from the Fork Choice Store.
 func (s *Store) pruneInvalid(ctx context.Context, root [32]byte) error {
+	s.nodesLock.Lock()
+	defer s.nodesLock.Unlock()
+
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
 		return errNilNode

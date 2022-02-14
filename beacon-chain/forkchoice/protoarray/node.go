@@ -56,15 +56,14 @@ func (n *Node) Children() []*Node {
 // depth returns the length of the path to the root of Fork Choice
 func (n *Node) depth() uint64 {
 	ret := uint64(0)
-	for node := n; node != nil; node = node.parent {
+	for node := n.parent; node != nil; node = node.parent {
 		ret += 1
 	}
 	return ret
 }
 
-// applyWeightChanges recomputes the weight, best child and best descendant of
-// the node passed as an argument and all of its descendants, using the current
-// balance stored in each node.
+// applyWeightChanges recomputes the weight of the node passed as an argument and all of its descendants,
+// using the current balance stored in each node.
 func (n *Node) applyWeightChanges(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
