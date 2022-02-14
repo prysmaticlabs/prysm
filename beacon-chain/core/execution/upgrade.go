@@ -38,7 +38,7 @@ func UpgradeToBellatrix(ctx context.Context, state state.BeaconState) (state.Bea
 
 	s := &ethpb.BeaconStateBellatrix{
 		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
+		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,

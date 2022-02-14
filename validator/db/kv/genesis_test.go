@@ -37,7 +37,7 @@ func TestStore_GenesisValidatorsRoot_ReadAndWrite(t *testing.T) {
 			require.DeepEqual(t, tt.want, got)
 			err = db.SaveGenesisValidatorsRoot(ctx, tt.write)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GenesisValidatorRoot() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GenesisValidatorsRoot() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -409,28 +410,37 @@ func fixtures() map[string]interface{} {
 		GasUsed:       1,
 		Timestamp:     1,
 		ExtraData:     foo[:],
-		BaseFeePerGas: baseFeePerGas.Bytes(),
+		BaseFeePerGas: bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength),
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 	}
+	number := bytesutil.PadTo([]byte("100"), fieldparams.RootLength)
+	hash := bytesutil.PadTo([]byte("hash"), fieldparams.RootLength)
+	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
+	sha3Uncles := bytesutil.PadTo([]byte("sha3Uncles"), fieldparams.RootLength)
+	miner := bytesutil.PadTo([]byte("miner"), fieldparams.FeeRecipientLength)
+	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
+	transactionsRoot := bytesutil.PadTo([]byte("transactionsRoot"), fieldparams.RootLength)
+	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
+	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 	executionBlock := &pb.ExecutionBlock{
-		Number:           []byte("100"),
-		Hash:             []byte("hash"),
-		ParentHash:       []byte("parentHash"),
-		Sha3Uncles:       []byte("sha3Uncles"),
-		Miner:            []byte("miner"),
-		StateRoot:        []byte("sha3Uncles"),
-		TransactionsRoot: []byte("transactionsRoot"),
-		ReceiptsRoot:     []byte("receiptsRoot"),
-		LogsBloom:        []byte("logsBloom"),
-		Difficulty:       []byte("1"),
-		TotalDifficulty:  []byte("2"),
+		Number:           number,
+		Hash:             hash,
+		ParentHash:       parent,
+		Sha3Uncles:       sha3Uncles,
+		Miner:            miner,
+		StateRoot:        stateRoot,
+		TransactionsRoot: transactionsRoot,
+		ReceiptsRoot:     receiptsRoot,
+		LogsBloom:        logsBloom,
+		Difficulty:       bytesutil.PadTo([]byte("1"), fieldparams.RootLength),
+		TotalDifficulty:  bytesutil.PadTo([]byte("2"), fieldparams.RootLength),
 		GasLimit:         3,
 		GasUsed:          4,
 		Timestamp:        5,
-		Size:             []byte("6"),
-		ExtraData:        []byte("extraData"),
-		BaseFeePerGas:    []byte("baseFeePerGas"),
+		Size:             bytesutil.PadTo([]byte("6"), fieldparams.RootLength),
+		ExtraData:        bytesutil.PadTo([]byte("extraData"), fieldparams.RootLength),
+		BaseFeePerGas:    bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
 		Transactions:     [][]byte{foo[:]},
 		Uncles:           [][]byte{foo[:]},
 	}
@@ -457,7 +467,7 @@ type testEngineService struct{}
 func (*testEngineService) NoArgsRets() {}
 
 func (*testEngineService) GetBlockByHash(
-	_ context.Context, _ common.Hash,
+	_ context.Context, _ common.Hash, _ bool,
 ) *pb.ExecutionBlock {
 	fix := fixtures()
 	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)

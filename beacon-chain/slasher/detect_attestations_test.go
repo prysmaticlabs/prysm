@@ -215,7 +215,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				beaconState.Fork(),
 				0,
 				params.BeaconConfig().DomainBeaconAttester,
-				beaconState.GenesisValidatorRoot(),
+				beaconState.GenesisValidatorsRoot(),
 			)
 			require.NoError(t, err)
 

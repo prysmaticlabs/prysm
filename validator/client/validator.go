@@ -251,7 +251,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		}
 		if len(curGenValRoot) == 0 {
 			if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
-				return errors.Wrap(err, "could not save genesis validator root")
+				return errors.Wrap(err, "could not save genesis validators root")
 			}
 		} else {
 			if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {
