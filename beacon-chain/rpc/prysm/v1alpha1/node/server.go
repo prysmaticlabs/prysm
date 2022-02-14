@@ -227,7 +227,11 @@ func (ns *Server) GetETH1ConnectionStatus(ctx context.Context, _ *empty.Empty) (
 	errs := ns.POWChainInfoFetcher.ETH1ConnectionErrors()
 	// Extract string version of the errors.
 	for _, err := range errs {
-		errStrs = append(errStrs, err.Error())
+		if err == nil {
+			errStrs = append(errStrs, "")
+		} else {
+			errStrs = append(errStrs, err.Error())
+		}
 	}
 	return &ethpb.ETH1ConnectionStatus{
 		CurrentAddress:         ns.POWChainInfoFetcher.CurrentETH1Endpoint(),
