@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -24,12 +25,19 @@ import (
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconState) (state.BeaconState, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
+	}
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoUnsafe(st)
+	}
+
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
