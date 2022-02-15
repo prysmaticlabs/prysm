@@ -15,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -34,8 +33,6 @@ const (
 	// DefaultTimeout for HTTP.
 	DefaultTimeout = time.Second * 5
 )
-
-var log = logrus.WithField("prefix", "engine-api-client")
 
 // ForkchoiceUpdatedResponse is the response kind received by the
 // engine_forkchoiceUpdatedV1 endpoint.
