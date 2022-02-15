@@ -6,12 +6,13 @@ package v1
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"math/big"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -143,18 +144,19 @@ func (c *Client) ExchangeTransitionConfiguration(
 	if !bytes.Equal(cfgTerminalHash, result.TerminalBlockHash) {
 		return nil, errors.Wrapf(
 			ErrMismatchTerminalBlockHash,
-			"got terminal block hash from execution node %#x, wanted %#x",
+			"got %#x from execution node, wanted %#x",
 			result.TerminalBlockHash,
 			cfgTerminalHash,
 		)
 	}
 	ttdCfg := params.BeaconConfig().TerminalTotalDifficulty
-	ttdHex := hex.EncodeToString(result.TerminalTotalDifficulty)
-	if ttdHex != ttdCfg {
+	diff := new(big.Int).SetBytes(result.TerminalTotalDifficulty)
+	diffHex := strings.TrimPrefix(hexutil.EncodeBig(diff), "0x")
+	if ttdCfg != diffHex {
 		return nil, errors.Wrapf(
 			ErrMismatchTerminalTotalDiff,
-			"got terminal block hash from execution node %s, wanted %s",
-			ttdHex,
+			"got %s from execution node, wanted %s",
+			diffHex,
 			ttdCfg,
 		)
 	}

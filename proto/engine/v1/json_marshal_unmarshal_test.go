@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -64,11 +63,12 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	})
 	t.Run("transition configuration", func(t *testing.T) {
 		blockHash := []byte("head")
-		tddNum, err := hexutil.DecodeBig("0x" + params.BeaconConfig().TerminalTotalDifficulty)
-		require.NoError(t, err)
+		b, ok := new(big.Int).SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+		require.Equal(t, true, ok)
+
 		jsonPayload := &enginev1.TransitionConfiguration{
 			TerminalBlockHash:       blockHash,
-			TerminalTotalDifficulty: tddNum.Bytes(),
+			TerminalTotalDifficulty: b.Bytes(),
 			TerminalBlockNumber:     big.NewInt(0).Bytes(),
 		}
 		enc, err := json.Marshal(jsonPayload)
@@ -76,8 +76,8 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		payloadPb := &enginev1.TransitionConfiguration{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, blockHash, payloadPb.TerminalBlockHash)
-		require.DeepEqual(t, big.NewInt(0).Bytes(), payloadPb.TerminalTotalDifficulty)
-		require.DeepEqual(t, tddNum.Bytes(), payloadPb.TerminalBlockNumber)
+		require.DeepEqual(t, b.Bytes(), payloadPb.TerminalTotalDifficulty)
+		require.DeepEqual(t, big.NewInt(0).Bytes(), payloadPb.TerminalBlockNumber)
 	})
 	t.Run("execution payload", func(t *testing.T) {
 		baseFeePerGas := big.NewInt(6)

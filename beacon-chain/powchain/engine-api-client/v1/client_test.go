@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -54,6 +55,22 @@ func TestClient_IPC(t *testing.T) {
 		req, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		resp, err := client.NewPayload(ctx, req)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
+	t.Run(NewPayloadMethod, func(t *testing.T) {
+		want, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		req, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+		resp, err := client.NewPayload(ctx, req)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
+	t.Run(ExchangeTransitionConfigurationMethod, func(t *testing.T) {
+		want, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
+		require.Equal(t, true, ok)
+		resp, err := client.ExchangeTransitionConfiguration(ctx, want)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -454,11 +471,21 @@ func fixtures() map[string]interface{} {
 		Status:    status,
 		PayloadId: &id,
 	}
+	ttd, ok := new(big.Int).SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	if !ok {
+		panic("could not parse terminal total difficulty")
+	}
+	transitionCfg := &pb.TransitionConfiguration{
+		TerminalBlockHash:       params.BeaconConfig().TerminalBlockHash[:],
+		TerminalTotalDifficulty: ttd.Bytes(),
+		TerminalBlockNumber:     big.NewInt(0).Bytes(),
+	}
 	return map[string]interface{}{
 		"ExecutionBlock":            executionBlock,
 		"ExecutionPayload":          executionPayloadFixture,
 		"PayloadStatus":             status,
 		"ForkchoiceUpdatedResponse": forkChoiceResp,
+		"TransitionConfiguration":   transitionCfg,
 	}
 }
 
@@ -493,6 +520,17 @@ func (*testEngineService) GetPayloadV1(
 ) *pb.ExecutionPayload {
 	fix := fixtures()
 	item, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+	if !ok {
+		panic("not found")
+	}
+	return item
+}
+
+func (*testEngineService) ExchangeTransitionConfigurationV1(
+	_ context.Context, _ *pb.TransitionConfiguration,
+) *pb.TransitionConfiguration {
+	fix := fixtures()
+	item, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
 	if !ok {
 		panic("not found")
 	}
