@@ -25,11 +25,11 @@ func TestService_newSlot(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	require.NoError(t, fcs.ProcessBlock(ctx, 0, [32]byte{}, [32]byte{}, [32]byte{}, 0, 0))        // genesis
-	require.NoError(t, fcs.ProcessBlock(ctx, 32, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))    // finalized
-	require.NoError(t, fcs.ProcessBlock(ctx, 64, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0)) // justified
-	require.NoError(t, fcs.ProcessBlock(ctx, 96, [32]byte{'c'}, [32]byte{'a'}, [32]byte{}, 0, 0)) // best justified
-	require.NoError(t, fcs.ProcessBlock(ctx, 97, [32]byte{'d'}, [32]byte{}, [32]byte{}, 0, 0))    // bad
+	require.NoError(t, fcs.ProcessBlock(ctx, 0, [32]byte{}, [32]byte{}, 0, 0, true))        // genesis
+	require.NoError(t, fcs.ProcessBlock(ctx, 32, [32]byte{'a'}, [32]byte{}, 0, 0, true))    // finalized
+	require.NoError(t, fcs.ProcessBlock(ctx, 64, [32]byte{'b'}, [32]byte{'a'}, 0, 0, true)) // justified
+	require.NoError(t, fcs.ProcessBlock(ctx, 96, [32]byte{'c'}, [32]byte{'a'}, 0, 0, true)) // best justified
+	require.NoError(t, fcs.ProcessBlock(ctx, 97, [32]byte{'d'}, [32]byte{}, 0, 0, true))    // bad
 
 	type args struct {
 		slot          types.Slot
