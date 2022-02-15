@@ -277,10 +277,9 @@ type payloadStatusJSON struct {
 
 // MarshalJSON --
 func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
-	var hash hexutil.Bytes
-	hash = p.LatestValidHash
+	hash := p.LatestValidHash
 	return json.Marshal(payloadStatusJSON{
-		LatestValidHash: &hash,
+		LatestValidHash: (*hexutil.Bytes)(&hash),
 		Status:          p.Status.String(),
 		ValidationError: &p.ValidationError,
 	})
