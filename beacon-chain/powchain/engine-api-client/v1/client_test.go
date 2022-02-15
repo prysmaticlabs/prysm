@@ -467,7 +467,7 @@ type testEngineService struct{}
 func (*testEngineService) NoArgsRets() {}
 
 func (*testEngineService) GetBlockByHash(
-	_ context.Context, _ common.Hash,
+	_ context.Context, _ common.Hash, _ bool,
 ) *pb.ExecutionBlock {
 	fix := fixtures()
 	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)

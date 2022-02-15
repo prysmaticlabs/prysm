@@ -56,7 +56,7 @@ func TestGetGenesis(t *testing.T) {
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 
-	t.Run("No genesis validator root", func(t *testing.T) {
+	t.Run("No genesis validators root", func(t *testing.T) {
 		chainService := &chainMock.ChainService{
 			Genesis:        genesis,
 			ValidatorsRoot: [32]byte{},

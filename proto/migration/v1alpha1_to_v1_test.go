@@ -439,7 +439,7 @@ func Test_V1AttestationToV1Alpha1(t *testing.T) {
 func TestBeaconStateToV1(t *testing.T) {
 	source, err := util.NewBeaconState(util.FillRootsNaturalOpt, func(state *ethpbalpha.BeaconState) error {
 		state.GenesisTime = 1
-		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorroot"), 32)
+		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorsroot"), 32)
 		state.Slot = 2
 		state.Fork = &ethpbalpha.Fork{
 			PreviousVersion: bytesutil.PadTo([]byte("123"), 4),
@@ -537,7 +537,7 @@ func TestBeaconStateToV1(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, uint64(1), result.GenesisTime)
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("genesisvalidatorroot"), 32), result.GenesisValidatorsRoot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("genesisvalidatorsroot"), 32), result.GenesisValidatorsRoot)
 	assert.Equal(t, types.Slot(2), result.Slot)
 	resultFork := result.Fork
 	require.NotNil(t, resultFork)

@@ -31,9 +31,3 @@ func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 		},
 	)
 }
-
-func TestBeaconState_ValidatorByPubkey(t *testing.T) {
-	testtmpl.VerifyBeaconState_ValidatorByPubkey(t, func() (state.BeaconState, error) {
-		return InitializeFromProto(&ethpb.BeaconStateBellatrix{})
-	})
-}
