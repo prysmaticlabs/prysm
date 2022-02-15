@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -106,6 +107,56 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 	require.Equal(t, false, f.IsCanonical([32]byte{'4'}))
 	require.Equal(t, false, f.IsCanonical([32]byte{'5'}))
 	require.Equal(t, false, f.IsCanonical([32]byte{'6'}))
+}
+
+func TestForkChoice_AncestorRoot(t *testing.T) {
+	f := setup(1, 1)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(3), indexToHash(2), 1, 1, false))
+	f.store.treeRoot = f.store.nodeByRoot[indexToHash(1)]
+	f.store.treeRoot.parent = nil
+
+	r, err := f.AncestorRoot(ctx, indexToHash(3), 6)
+	assert.NoError(t, err)
+	assert.Equal(t, bytesutil.ToBytes32(r), indexToHash(3))
+
+	_, err = f.AncestorRoot(ctx, indexToHash(3), 0)
+	assert.ErrorContains(t, errNilNode.Error(), err)
+
+	root, err := f.AncestorRoot(ctx, indexToHash(3), 5)
+	require.NoError(t, err)
+	hash3 := indexToHash(3)
+	require.DeepEqual(t, hash3[:], root)
+	root, err = f.AncestorRoot(ctx, indexToHash(3), 1)
+	require.NoError(t, err)
+	hash1 := indexToHash(1)
+	require.DeepEqual(t, hash1[:], root)
+}
+
+func TestForkChoice_AncestorEqualSlot(t *testing.T) {
+	f := setup(1, 1)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'1'}, params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'3'}, [32]byte{'1'}, 1, 1, false))
+
+	r, err := f.AncestorRoot(ctx, [32]byte{'3'}, 100)
+	require.NoError(t, err)
+	root := bytesutil.ToBytes32(r)
+	require.Equal(t, root, [32]byte{'1'})
+}
+
+func TestForkChoice_AncestorLowerSlot(t *testing.T) {
+	f := setup(1, 1)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'1'}, params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 200, [32]byte{'3'}, [32]byte{'1'}, 1, 1, false))
+
+	r, err := f.AncestorRoot(ctx, [32]byte{'3'}, 150)
+	require.NoError(t, err)
+	root := bytesutil.ToBytes32(r)
+	require.Equal(t, root, [32]byte{'1'})
 }
 
 func indexToHash(i uint64) [32]byte {

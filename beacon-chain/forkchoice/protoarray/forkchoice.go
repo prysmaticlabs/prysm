@@ -199,16 +199,19 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 		return nil, errNilNode
 	}
 
-	for n := node; n != nil && n.slot >= slot; n = n.parent {
+	n := node
+	for n != nil && n.slot > slot {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		if n.slot == slot {
-			return n.root[:], nil
-		}
+		n = n.parent
 	}
 
-	return nil, errNilNode
+	if n == nil {
+		return nil, errNilNode
+	}
+
+	return n.root[:], nil
 }
 
 // updateBalances updates the balances that directly voted for each block  taking into account the

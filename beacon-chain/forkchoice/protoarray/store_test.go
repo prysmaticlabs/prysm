@@ -242,10 +242,10 @@ func TestStore_Heads(t *testing.T) {
 	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1, true))
 	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1, true))
 	expectedMap := map[[32]byte]types.Slot{
-		[32]byte{'f'}: 105, 
+		[32]byte{'f'}: 105,
 		[32]byte{'i'}: 106,
-		[32]byte{'l'}:106,
-		[32]byte{'j'}:102, 
+		[32]byte{'l'}: 106,
+		[32]byte{'j'}: 102,
 	}
 	roots, slots := f.store.heads()
 	for i, r := range roots {
@@ -279,25 +279,4 @@ func TestStore_HasParent(t *testing.T) {
 	require.Equal(t, true, f.HasParent(indexToHash(2)))
 	require.Equal(t, true, f.HasParent(indexToHash(3)))
 	require.Equal(t, false, f.HasParent(indexToHash(4)))
-}
-
-func TestStore_AncestorRoot(t *testing.T) {
-	f := setup(1, 1)
-	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(3), indexToHash(2), 1, 1, false))
-
-	_, err := f.AncestorRoot(ctx, indexToHash(3), 6)
-	assert.ErrorContains(t, errNilNode.Error(), err)
-	_, err = f.AncestorRoot(ctx, indexToHash(3), 4)
-	assert.ErrorContains(t, errNilNode.Error(), err)
-	root, err := f.AncestorRoot(ctx, indexToHash(3), 5)
-	require.NoError(t, err)
-	hash3 := indexToHash(3)
-	require.DeepEqual(t, hash3[:], root)
-	root, err = f.AncestorRoot(ctx, indexToHash(3), 1)
-	require.NoError(t, err)
-	hash1 := indexToHash(1)
-	require.DeepEqual(t, hash1[:], root)
 }

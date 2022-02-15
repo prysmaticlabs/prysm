@@ -364,14 +364,14 @@ func TestService_IsOptimistic(t *testing.T) {
 
 	opt, err := c.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, true, opt)
+	require.Equal(t, false, opt)
 }
 
 func TestService_IsOptimisticForRoot(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, true))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, true))
 
 	opt, err := c.IsOptimisticForRoot(ctx, [32]byte{'a'}, 100)
 	require.NoError(t, err)
