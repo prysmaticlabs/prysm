@@ -284,7 +284,7 @@ func TestClient_HTTP(t *testing.T) {
 			jsonRequestString := string(enc)
 			// We expect the JSON string RPC request contains the right arguments.
 			require.Equal(t, true, strings.Contains(
-				jsonRequestString, fmt.Sprintf("%s", encodedReq),
+				jsonRequestString, string(encodedReq),
 			))
 			resp := map[string]interface{}{
 				"jsonrpc": "2.0",
