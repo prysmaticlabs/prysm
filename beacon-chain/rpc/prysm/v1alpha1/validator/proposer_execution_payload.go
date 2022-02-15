@@ -134,6 +134,16 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
+	if res == nil || res.PayloadId == nil {
+		return nil, errors.New("forkchoice returned nil")
+	}
+
+
+	log.WithFields(logrus.Fields{
+		"id": fmt.Sprintf("%#x", res.PayloadId),
+		"slot": slot,
+		"hash": fmt.Sprintf("%#x", parentHash),
+	}).Info("Received payload ID")
 	var id [8]byte
 	copy(id[:], res.PayloadId[:])
 	return vs.ExecutionEngineCaller.GetPayload(ctx, id)
@@ -204,7 +214,6 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 		currentTotalDifficulty := new(uint256.Int)
 		currentTotalDifficulty.SetBytes(bytesutil.ReverseByteOrder(blk.TotalDifficulty))
 		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
-
 		parentHash := bytesutil.ToBytes32(blk.ParentHash)
 		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil

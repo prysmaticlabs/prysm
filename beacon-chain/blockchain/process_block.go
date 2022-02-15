@@ -116,7 +116,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	fullyValidated := false
-	if postState.Version() == version.Bellatrix {
+	if copiedPreState.Version() == version.Bellatrix || postState.Version() == version.Bellatrix {
 		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
 		if err != nil {
 			return errors.Wrap(err, "could not check if execution is enabled")
@@ -131,6 +131,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			if err != nil {
 				return err
 			}
+			fmt.Println(fmt.Sprintf("%#x", payload.BlockHash), status.Status, fmt.Sprintf("%#x", status.LatestValidHash))
 			switch status.Status {
 			case enginev1.PayloadStatus_INVALID, enginev1.PayloadStatus_INVALID_BLOCK_HASH, enginev1.PayloadStatus_INVALID_TERMINAL_BLOCK:
 				// TODO_MERGE walk up the parent chain removing
@@ -154,7 +155,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			default:
 				return errors.New("unknown payload status")
 			}
-			if fullyValidated {
+			if copiedPreState.Version() == version.Bellatrix && fullyValidated {
 				mergeBlock, err := blocks.MergeTransitionBlock(copiedPreState, body)
 				if err != nil {
 					return errors.Wrap(err, "could not check if merge block is terminal")

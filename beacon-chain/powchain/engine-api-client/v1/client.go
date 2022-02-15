@@ -32,7 +32,7 @@ const (
 // ForkchoiceUpdatedResponse is the response kind received by the
 // engine_forkchoiceUpdatedV1 endpoint.
 type ForkchoiceUpdatedResponse struct {
-	Status    *pb.PayloadStatus  `json:"status"`
+	Status    *pb.PayloadStatus  `json:"payloadStatus"`
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
