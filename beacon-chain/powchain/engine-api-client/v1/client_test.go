@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"google.golang.org/protobuf/proto"
 )
 
 var _ = EngineCaller(&Client{})
@@ -268,6 +269,45 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
+	t.Run(ExchangeTransitionConfigurationMethod, func(t *testing.T) {
+		want, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
+		require.Equal(t, true, ok)
+		encodedReq, err := json.Marshal(want)
+		require.NoError(t, err)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			enc, err := ioutil.ReadAll(r.Body)
+			require.NoError(t, err)
+			jsonRequestString := string(enc)
+			// We expect the JSON string RPC request contains the right arguments.
+			require.Equal(t, true, strings.Contains(
+				jsonRequestString, fmt.Sprintf("%s", encodedReq),
+			))
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  want,
+			}
+			err = json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		client := &Client{}
+		client.rpc = rpcClient
+
+		// We call the RPC method via HTTP and expect a proper result.
+		resp, err := client.ExchangeTransitionConfiguration(ctx, want)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
 	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
 		arg := common.BytesToHash([]byte("foo"))
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
@@ -305,6 +345,78 @@ func TestClient_HTTP(t *testing.T) {
 		resp, err := client.ExecutionBlockByHash(ctx, arg)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
+	})
+}
+
+func TestExchangeTransitionConfiguration(t *testing.T) {
+	fix := fixtures()
+	ctx := context.Background()
+	t.Run("wrong terminal block hash", func(t *testing.T) {
+		request, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
+		require.Equal(t, true, ok)
+		resp, ok := proto.Clone(request).(*pb.TransitionConfiguration)
+		require.Equal(t, true, ok)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+
+			// Change the terminal block hash.
+			h := common.BytesToHash([]byte("foo"))
+			resp.TerminalBlockHash = h[:]
+			respJSON := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  resp,
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		client := &Client{}
+		client.rpc = rpcClient
+
+		_, err = client.ExchangeTransitionConfiguration(ctx, request)
+		require.Equal(t, true, errors.Is(err, ErrMismatchTerminalBlockHash))
+	})
+	t.Run("wrong terminal total difficulty", func(t *testing.T) {
+		request, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
+		require.Equal(t, true, ok)
+		resp, ok := proto.Clone(request).(*pb.TransitionConfiguration)
+		require.Equal(t, true, ok)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+
+			// Change the terminal block hash.
+			resp.TerminalTotalDifficulty = "bar"
+			respJSON := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  resp,
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		client := &Client{}
+		client.rpc = rpcClient
+
+		_, err = client.ExchangeTransitionConfiguration(ctx, request)
+		require.Equal(t, true, errors.Is(err, ErrMismatchTerminalTotalDiff))
 	})
 }
 
@@ -471,13 +583,9 @@ func fixtures() map[string]interface{} {
 		Status:    status,
 		PayloadId: &id,
 	}
-	ttd, ok := new(big.Int).SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
-	if !ok {
-		panic("could not parse terminal total difficulty")
-	}
 	transitionCfg := &pb.TransitionConfiguration{
 		TerminalBlockHash:       params.BeaconConfig().TerminalBlockHash[:],
-		TerminalTotalDifficulty: ttd.Bytes(),
+		TerminalTotalDifficulty: params.BeaconConfig().TerminalTotalDifficulty,
 		TerminalBlockNumber:     big.NewInt(0).Bytes(),
 	}
 	return map[string]interface{}{

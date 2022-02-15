@@ -8,11 +8,9 @@ import (
 	"context"
 	"math/big"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -150,13 +148,11 @@ func (c *Client) ExchangeTransitionConfiguration(
 		)
 	}
 	ttdCfg := params.BeaconConfig().TerminalTotalDifficulty
-	diff := new(big.Int).SetBytes(result.TerminalTotalDifficulty)
-	diffHex := strings.TrimPrefix(hexutil.EncodeBig(diff), "0x")
-	if ttdCfg != diffHex {
+	if ttdCfg != result.TerminalTotalDifficulty {
 		return nil, errors.Wrapf(
 			ErrMismatchTerminalTotalDiff,
 			"got %s from execution node, wanted %s",
-			diffHex,
+			result.TerminalTotalDifficulty,
 			ttdCfg,
 		)
 	}

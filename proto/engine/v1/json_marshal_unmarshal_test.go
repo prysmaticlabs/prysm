@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/holiman/uint256"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -63,15 +62,10 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, finalized, payloadPb.FinalizedBlockHash)
 	})
 	t.Run("transition configuration", func(t *testing.T) {
-		b, ok := new(big.Int).SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
-		require.Equal(t, true, ok)
-		diff, overflow := uint256.FromBig(b)
-		require.Equal(t, false, overflow)
-		diffBytes := diff.Bytes32()
 		blockHash := []byte("head")
 		jsonPayload := &enginev1.TransitionConfiguration{
 			TerminalBlockHash:       blockHash,
-			TerminalTotalDifficulty: diffBytes[:],
+			TerminalTotalDifficulty: params.BeaconConfig().TerminalTotalDifficulty,
 			TerminalBlockNumber:     big.NewInt(0).Bytes(),
 		}
 		enc, err := json.Marshal(jsonPayload)
@@ -80,11 +74,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, blockHash, payloadPb.TerminalBlockHash)
 
-		got := new(big.Int).SetBytes(payloadPb.TerminalTotalDifficulty)
-		gotDiff, ok := uint256.FromBig(got)
-		require.Equal(t, true, ok)
-
-		require.Equal(t, true, gotDiff.Cmp(diff) == 0)
+		require.DeepEqual(t, params.BeaconConfig().TerminalTotalDifficulty, payloadPb.TerminalTotalDifficulty)
 		require.DeepEqual(t, big.NewInt(0).Bytes(), payloadPb.TerminalBlockNumber)
 	})
 	t.Run("execution payload", func(t *testing.T) {
