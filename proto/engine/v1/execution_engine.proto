@@ -65,6 +65,12 @@ message ExecutionPayload {
 	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 }
 
+message TransitionConfiguration {
+	bytes terminal_total_difficulty = 1;
+	bytes terminal_block_hash       = 2;
+	bytes terminal_block_number     = 3;
+}
+
 message PayloadAttributes {
 	uint64 timestamp              = 1;
 	bytes random                  = 2 [(ethereum.eth.ext.ssz_size) = "32"];
