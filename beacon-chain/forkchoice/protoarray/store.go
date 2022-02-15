@@ -103,32 +103,10 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 		headChangesCount.Inc()
 		headSlotNumber.Set(float64(bestDescendant.slot))
 		lastHeadRoot = bestDescendant.root
-	}
-
-	// Update canonical mapping given the head root.
-	if err := s.updateCanonicalNodes(ctx, bestDescendant); err != nil {
-		return [32]byte{}, err
+		s.headNode = bestDescendant
 	}
 
 	return bestDescendant.root, nil
-}
-
-// updateCanonicalNodes updates the canonical nodes mapping given the input block root.
-func (s *Store) updateCanonicalNodes(ctx context.Context, head *Node) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.updateCanonicalNodes")
-	defer span.End()
-
-	newCanonicalMap := make(map[[fieldparams.RootLength]byte]bool)
-	for node := head; node != nil; node = node.parent {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
-		// Set the input node to canonical.
-		newCanonicalMap[node.root] = true
-	}
-	s.canonicalNodes = newCanonicalMap
-	return nil
 }
 
 // insert registers a new block node to the fork choice store's node list.
@@ -162,7 +140,7 @@ func (s *Store) insert(ctx context.Context,
 	s.nodeByRoot[root] = n
 	if parent != nil {
 		parent.children = append(parent.children, n)
-		if err := parent.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
+		if err := s.treeRoot.updateBestDescendant(ctx, s.justifiedEpoch, s.finalizedEpoch); err != nil {
 			return err
 		}
 	}
@@ -176,6 +154,7 @@ func (s *Store) insert(ctx context.Context,
 	// Set the node as root if the store was empty
 	if s.treeRoot == nil {
 		s.treeRoot = n
+		s.headNode = n
 	}
 
 	// Update metrics.
@@ -206,7 +185,7 @@ func (s *Store) leaves() []*Node {
 	return leaves
 }
 
-// pruneMaps prunes the maps `nodeByRoot` and `canonicalNodes`
+// pruneMaps prunes the `nodeByRoot` map
 // starting from `node` down to the finalized Node or to a leaf of the Fork
 // choice store. This method assumes a lock on nodesLock.
 func (s *Store) pruneMaps(ctx context.Context, node, finalizedNode *Node) error {
@@ -223,7 +202,6 @@ func (s *Store) pruneMaps(ctx context.Context, node, finalizedNode *Node) error 
 	}
 
 	delete(s.nodeByRoot, node.root)
-	delete(s.canonicalNodes, node.root)
 	return nil
 }
 
@@ -247,7 +225,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 		return nil
 	}
 
-	// Prune nodeByRoot and canonicalNodes starting from root
+	// Prune nodeByRoot starting from root
 	if err := s.pruneMaps(ctx, s.treeRoot, finalizedNode); err != nil {
 		return err
 	}

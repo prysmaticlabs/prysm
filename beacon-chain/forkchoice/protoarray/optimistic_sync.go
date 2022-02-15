@@ -49,6 +49,5 @@ func (s *Store) removeSubtree(ctx context.Context, node *Node) error {
 	}
 
 	delete(s.nodeByRoot, node.root)
-	delete(s.canonicalNodes, node.root)
 	return nil
 }

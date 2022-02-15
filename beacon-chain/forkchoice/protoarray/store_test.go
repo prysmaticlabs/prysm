@@ -95,19 +95,19 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 	f := setup(0, 0)
 	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
 	require.NoError(t, f.ProcessBlock(context.Background(), 2, indexToHash(2), indexToHash(1), 0, 0, false))
-	require.NoError(t, f.ProcessBlock(context.Background(), 3, indexToHash(3), indexToHash(2), 0, 0, false))
-	require.NoError(t, f.ProcessBlock(context.Background(), 4, indexToHash(4), indexToHash(1), 0, 0, false))
+	require.NoError(t, f.ProcessBlock(context.Background(), 3, indexToHash(3), indexToHash(1), 0, 0, false))
+	require.NoError(t, f.ProcessBlock(context.Background(), 4, indexToHash(4), indexToHash(2), 0, 0, false))
 	h, err := f.store.head(context.Background(), indexToHash(1))
 	require.NoError(t, err)
-	require.Equal(t, h, indexToHash(3))
+	require.Equal(t, h, indexToHash(4))
 }
 
-func TestStore_Head_ContextCancelled(t *testing.T) {
+func TestStore_UpdateBestDescendant_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	f := setup(0, 0)
-	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
 	cancel()
-	_, err := f.store.head(ctx, indexToHash(1))
+	err := f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 0, 0, false)
 	require.ErrorContains(t, "context canceled", err)
 }
 
@@ -116,14 +116,14 @@ func TestStore_Insert(t *testing.T) {
 	treeRoot := &Node{slot: 0, root: indexToHash(0)}
 	nodeByRoot := map[[32]byte]*Node{indexToHash(0): treeRoot}
 	s := &Store{nodeByRoot: nodeByRoot, treeRoot: treeRoot}
-	require.NoError(t, s.insert(context.Background(), 100, indexToHash(100), indexToHash(1), 1, 1, false))
+	require.NoError(t, s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), 1, 1, false))
 	assert.Equal(t, 2, len(s.nodeByRoot), "Did not insert block")
-	assert.Equal(t, nil, treeRoot.parent, "Incorrect parent")
+	assert.Equal(t, (*Node)(nil), treeRoot.parent, "Incorrect parent")
 	assert.Equal(t, 1, len(treeRoot.children), "Incorrect children number")
 	child := treeRoot.children[0]
 	assert.Equal(t, types.Epoch(1), child.justifiedEpoch, "Incorrect justification")
 	assert.Equal(t, types.Epoch(1), child.finalizedEpoch, "Incorrect finalization")
-	assert.Equal(t, indexToHash(1), child.root, "Incorrect root")
+	assert.Equal(t, indexToHash(100), child.root, "Incorrect root")
 }
 
 func TestStore_updateCheckpoints(t *testing.T) {
@@ -206,9 +206,10 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
 	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0, false))
+	f.store.pruneThreshold = 0
 
 	s := f.store
-	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
+	require.NoError(t, s.prune(context.Background(), indexToHash(1)))
 	require.Equal(t, len(s.nodeByRoot), 1)
 }
 
@@ -240,20 +241,28 @@ func TestStore_Heads(t *testing.T) {
 	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1, true))
 	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1, true))
 	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1, true))
-	expectedRoots := [][32]byte{[32]byte{'f'}, [32]byte{'i'}, [32]byte{'l'}, [32]byte{'j'}}
-	expectedSlots := []types.Slot{105, 106, 106, 102}
+	expectedMap := map[[32]byte]types.Slot{
+		[32]byte{'f'}: 105, 
+		[32]byte{'i'}: 106,
+		[32]byte{'l'}:106,
+		[32]byte{'j'}:102, 
+	}
 	roots, slots := f.store.heads()
-	require.DeepEqual(t, expectedRoots, roots)
-	require.DeepEqual(t, expectedSlots, slots)
+	for i, r := range roots {
+		expectedSlot, ok := expectedMap[r]
+		require.Equal(t, true, ok)
+		require.Equal(t, slots[i], expectedSlot)
+	}
 }
 
-func TestStore_PruneMapsCanonicalNodes(t *testing.T) {
+func TestStore_PruneMapsNodes(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
 	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
 	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0, false))
 
 	s := f.store
+	s.pruneThreshold = 0
 	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
 	require.Equal(t, len(s.nodeByRoot), 1)
 
@@ -285,67 +294,10 @@ func TestStore_AncestorRoot(t *testing.T) {
 	assert.ErrorContains(t, errNilNode.Error(), err)
 	root, err := f.AncestorRoot(ctx, indexToHash(3), 5)
 	require.NoError(t, err)
-	require.Equal(t, indexToHash(3), root)
+	hash3 := indexToHash(3)
+	require.DeepEqual(t, hash3[:], root)
 	root, err = f.AncestorRoot(ctx, indexToHash(3), 1)
 	require.NoError(t, err)
-	require.Equal(t, indexToHash(1), root)
-}
-
-func TestStore_UpdateCanonicalNodes_WholeList(t *testing.T) {
-	f := setup(1, 1)
-	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(2), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(1), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(4), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 6, indexToHash(6), indexToHash(5), 1, 1, false))
-
-	require.Equal(t, 5, len(f.store.canonicalNodes))
-	require.NotNil(t, f.store.canonicalNodes[params.BeaconConfig().ZeroHash])
-	require.NotNil(t, f.store.canonicalNodes[indexToHash(1)])
-	require.NotNil(t, f.store.canonicalNodes[indexToHash(4)])
-	require.NotNil(t, f.store.canonicalNodes[indexToHash(5)])
-	require.NotNil(t, f.store.canonicalNodes[indexToHash(6)])
-
-	f.store.updateCanonicalNodes(ctx, f.store.nodeByRoot[indexToHash(3)])
-	require.Equal(t, 3, len(f.store.canonicalNodes))
-	require.NotNil(t, f.store.canonicalNodes[params.BeaconConfig().ZeroHash])
-	require.NotNil(t, f.store.canonicalNodes[indexToHash(2)])
-	require.NotNil(t, f.store.canonicalNodes[indexToHash(3)])
-
-}
-
-func TestStore_UpdateCanonicalNodes_ParentAlreadyIn(t *testing.T) {
-	ctx := context.Background()
-	f := &ForkChoice{store: &Store{}}
-	f.store.canonicalNodes = map[[32]byte]bool{}
-	f.store.nodesIndices = map[[32]byte]uint64{}
-	f.store.nodes = []*Node{
-		{},
-		{slot: 2, root: [32]byte{'b'}, parent: 0},
-		{slot: 3, root: [32]byte{'c'}, parent: 1},
-	}
-	f.store.nodesIndices[[32]byte{'c'}] = 2
-	f.store.canonicalNodes[[32]byte{'b'}] = true
-	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
-	require.Equal(t, len(f.store.nodes)-1, len(f.store.canonicalNodes))
-
-	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
-	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
-}
-
-func TestStore_UpdateCanonicalNodes_ContextCancelled(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	f := &ForkChoice{store: &Store{}}
-	f.store.canonicalNodes = map[[32]byte]bool{}
-	f.store.nodesIndices = map[[32]byte]uint64{}
-	f.store.nodes = []*Node{
-		{slot: 1, root: [32]byte{'a'}, parent: NonExistentNode},
-		{slot: 2, root: [32]byte{'b'}, parent: 0},
-		{slot: 3, root: [32]byte{'c'}, parent: 1},
-	}
-	f.store.nodesIndices[[32]byte{'c'}] = 2
-	cancel()
-	require.ErrorContains(t, "context canceled", f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
+	hash1 := indexToHash(1)
+	require.DeepEqual(t, hash1[:], root)
 }

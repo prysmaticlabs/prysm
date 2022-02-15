@@ -184,7 +184,10 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 
 func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	ctx := context.Background()
-	f := New(0, 0, params.BeaconConfig().ZeroHash)
-	f.ProcessBlock(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, 0, 0, false)
+	f := New(justifiedEpoch, finalizedEpoch, params.BeaconConfig().ZeroHash)
+	err := f.ProcessBlock(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, 0, 0, false)
+	if err != nil {
+		return nil
+	}
 	return f
 }

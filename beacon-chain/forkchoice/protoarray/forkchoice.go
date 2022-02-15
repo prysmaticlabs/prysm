@@ -21,7 +21,6 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 		finalizedRoot:     finalizedRoot,
 		proposerBoostRoot: [32]byte{},
 		nodeByRoot:        make(map[[fieldparams.RootLength]byte]*Node),
-		canonicalNodes:    make(map[[32]byte]bool),
 		pruneThreshold:    defaultPruneThreshold,
 	}
 
@@ -152,7 +151,19 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
-	return f.store.canonicalNodes[root]
+	node, ok := f.store.nodeByRoot[root]
+	if !ok {
+		return false
+	}
+
+	if node.bestDescendant == nil {
+		if f.store.headNode.bestDescendant == nil {
+			return node == f.store.headNode
+		}
+		return node == f.store.headNode.bestDescendant
+	}
+
+	return node.bestDescendant == f.store.headNode.bestDescendant
 }
 
 // IsOptimistic returns true if the given root has been optimistically synced.
@@ -248,6 +259,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 		// Rotate the validator vote.
 		vote.currentRoot = vote.nextRoot
 	}
+	f.balances = newBalances
 	return nil
 }
 

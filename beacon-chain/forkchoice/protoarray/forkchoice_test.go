@@ -44,6 +44,7 @@ func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
 	s.nodeByRoot[indexToHash(2)].balance = 100
 	s.nodeByRoot[indexToHash(3)].balance = 100
 
+	f.balances = []uint64{100, 100, 100}
 	f.votes = []Vote{
 		{indexToHash(1), indexToHash(1), 0},
 		{indexToHash(2), indexToHash(2), 0},
@@ -54,6 +55,48 @@ func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
 	assert.Equal(t, uint64(10), s.nodeByRoot[indexToHash(1)].balance)
 	assert.Equal(t, uint64(20), s.nodeByRoot[indexToHash(2)].balance)
 	assert.Equal(t, uint64(30), s.nodeByRoot[indexToHash(3)].balance)
+}
+
+func TestForkChoice_IsCanonical(t *testing.T) {
+	f := setup(1, 1)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(1), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(2), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(4), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 6, indexToHash(6), indexToHash(5), 1, 1, false))
+
+	require.Equal(t, true, f.IsCanonical(params.BeaconConfig().ZeroHash))
+	require.Equal(t, false, f.IsCanonical(indexToHash(1)))
+	require.Equal(t, true, f.IsCanonical(indexToHash(2)))
+	require.Equal(t, false, f.IsCanonical(indexToHash(3)))
+	require.Equal(t, true, f.IsCanonical(indexToHash(4)))
+	require.Equal(t, true, f.IsCanonical(indexToHash(5)))
+	require.Equal(t, true, f.IsCanonical(indexToHash(6)))
+}
+
+func TestForkChoice_IsCanonicalReorg(t *testing.T) {
+	f := setup(1, 1)
+	ctx := context.Background()
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(1), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(2), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(4), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 6, indexToHash(6), indexToHash(5), 1, 1, false))
+
+	f.store.nodeByRoot[indexToHash(3)].weight = 10
+	require.NoError(t, f.store.treeRoot.updateBestDescendant(ctx, 1, 1))
+	_, err := f.store.head(ctx, indexToHash(1))
+	require.NoError(t, err)
+	require.Equal(t, true, f.IsCanonical(params.BeaconConfig().ZeroHash))
+	require.Equal(t, true, f.IsCanonical(indexToHash(1)))
+	require.Equal(t, false, f.IsCanonical(indexToHash(2)))
+	require.Equal(t, true, f.IsCanonical(indexToHash(3)))
+	require.Equal(t, false, f.IsCanonical(indexToHash(4)))
+	require.Equal(t, false, f.IsCanonical(indexToHash(5)))
+	require.Equal(t, false, f.IsCanonical(indexToHash(6)))
 }
 
 func indexToHash(i uint64) [32]byte {

@@ -68,9 +68,6 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	if n.root == params.BeaconConfig().ZeroHash {
-		return nil
-	}
 	// update the children
 	childrensWeight := uint64(0)
 	for _, child := range n.children {
@@ -78,6 +75,9 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 			return err
 		}
 		childrensWeight += child.weight
+	}
+	if n.root == params.BeaconConfig().ZeroHash {
+		return nil
 	}
 	n.weight = n.balance + childrensWeight
 	return nil

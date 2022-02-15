@@ -34,7 +34,8 @@ func TestNode_Getters(t *testing.T) {
 	require.Equal(t, jEpoch, n.JustifiedEpoch())
 	require.Equal(t, fEpoch, n.FinalizedEpoch())
 	require.Equal(t, weight, n.Weight())
-	require.Equal(t, nil, n.BestDescendant())
+	descendantNil := n.bestDescendant == nil
+	require.Equal(t, true, descendantNil)
 }
 
 func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
@@ -85,12 +86,13 @@ func TestNode_UpdateBestDescendant_NonViableChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
 	// Input child is not viable.
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 2, 3, false))
 
 	// Verify parent's best child and best descendant are `none`.
 	s := f.store
 	assert.Equal(t, 1, len(s.treeRoot.children))
-	assert.Equal(t, nil, s.treeRoot.bestDescendant)
+	nilBestDescendant := s.treeRoot.bestDescendant == nil
+	assert.Equal(t, true, nilBestDescendant)
 }
 
 func TestNode_UpdateBestDescendant_ViableChild(t *testing.T) {
@@ -145,8 +147,8 @@ func TestNode_TestDepth(t *testing.T) {
 	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), params.BeaconConfig().ZeroHash, 1, 1, false))
 
 	s := f.store
-	require.Equal(t, s.nodeByRoot[indexToHash(2)].depth(), 2)
-	require.Equal(t, s.nodeByRoot[indexToHash(3)].depth(), 1)
+	require.Equal(t, s.nodeByRoot[indexToHash(2)].depth(), uint64(2))
+	require.Equal(t, s.nodeByRoot[indexToHash(3)].depth(), uint64(1))
 }
 
 func TestNode_ViableForHead(t *testing.T) {
