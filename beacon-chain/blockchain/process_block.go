@@ -116,7 +116,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	fullyValidated := false
-	if postState.Version() == version.Bellatrix {
+	if copiedPreState.Version() == version.Bellatrix || postState.Version() == version.Bellatrix {
 		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
 		if err != nil {
 			return errors.Wrap(err, "could not check if execution is enabled")
@@ -154,7 +154,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			default:
 				return errors.New("unknown payload status")
 			}
-			if fullyValidated {
+			if copiedPreState.Version() == version.Bellatrix && fullyValidated {
 				mergeBlock, err := blocks.MergeTransitionBlock(copiedPreState, body)
 				if err != nil {
 					return errors.Wrap(err, "could not check if merge block is terminal")
