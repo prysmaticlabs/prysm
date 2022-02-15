@@ -271,8 +271,8 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 
 type payloadStatusJSON struct {
 	LatestValidHash *hexutil.Bytes `json:"latestValidHash"`
-	Status          string        `json:"status"`
-	ValidationError string        `json:"validationError"`
+	Status          string         `json:"status"`
+	ValidationError string         `json:"validationError"`
 }
 
 // MarshalJSON --

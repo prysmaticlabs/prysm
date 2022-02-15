@@ -23,10 +23,10 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	}
 
 	log.WithFields(logrus.Fields{
-		"hash": fmt.Sprintf("%#x", payload.BlockHash),
+		"hash":       fmt.Sprintf("%#x", payload.BlockHash),
 		"parentHash": fmt.Sprintf("%#x", payload.ParentHash),
-		"number": payload.BlockNumber,
-		"txCount": len(payload.Transactions),
+		"number":     payload.BlockNumber,
+		"txCount":    len(payload.Transactions),
 	}).Info("Received payload")
 
 	blk := &ethpb.BeaconBlockBellatrix{

@@ -134,13 +134,17 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
+	log.WithFields(logrus.Fields{
+		"status:": res.Status.Status,
+		"hash:":   fmt.Sprintf("%#x", f.HeadBlockHash),
+	}).Info("Successfully called forkchoiceUpdated with attribute")
+
 	if res == nil || res.PayloadId == nil {
 		return nil, errors.New("forkchoice returned nil")
 	}
 
-
 	log.WithFields(logrus.Fields{
-		"id": fmt.Sprintf("%#x", res.PayloadId),
+		"id":   fmt.Sprintf("%#x", &res.PayloadId),
 		"slot": slot,
 		"hash": fmt.Sprintf("%#x", parentHash),
 	}).Info("Received payload ID")
@@ -206,8 +210,8 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	}
 	log.WithFields(logrus.Fields{
 		"number": blk.Number,
-		"hash": fmt.Sprintf("%#x", blk.Hash),
-		"td": blk.TotalDifficulty,
+		"hash":   fmt.Sprintf("%#x", blk.Hash),
+		"td":     blk.TotalDifficulty,
 	}).Info("Retrieving latest execution block")
 
 	for {
@@ -224,8 +228,8 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 		}
 		log.WithFields(logrus.Fields{
 			"number": parentBlk.Number,
-			"hash": fmt.Sprintf("%#x", parentBlk.Hash),
-			"td": parentBlk.TotalDifficulty,
+			"hash":   fmt.Sprintf("%#x", parentBlk.Hash),
+			"td":     parentBlk.TotalDifficulty,
 		}).Info("Retrieving parent execution block")
 
 		if blockReachedTTD {
@@ -234,11 +238,11 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 			if !parentReachedTTD {
 				log.WithFields(logrus.Fields{
-					"number": blk.Number,
-					"hash": fmt.Sprintf("%#x", blk.Hash),
-					"td": blk.TotalDifficulty,
+					"number":   blk.Number,
+					"hash":     fmt.Sprintf("%#x", blk.Hash),
+					"td":       blk.TotalDifficulty,
 					"parentTd": parentBlk.TotalDifficulty,
-					"ttd": terminalTotalDifficulty,
+					"ttd":      terminalTotalDifficulty,
 				}).Info("Retrieved terminal block hash")
 				return blk.Hash, true, nil
 			}

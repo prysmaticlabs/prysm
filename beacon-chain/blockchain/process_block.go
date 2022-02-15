@@ -131,6 +131,12 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			if err != nil {
 				return err
 			}
+			log.WithFields(logrus.Fields{
+				"status:":    status.Status,
+				"hash:":      fmt.Sprintf("%#x", payload.BlockHash),
+				"parentHash": fmt.Sprintf("%#x", payload.ParentHash),
+			}).Info("Successfully called newPayload")
+
 			switch status.Status {
 			case enginev1.PayloadStatus_INVALID, enginev1.PayloadStatus_INVALID_BLOCK_HASH, enginev1.PayloadStatus_INVALID_TERMINAL_BLOCK:
 				// TODO_MERGE walk up the parent chain removing
@@ -181,7 +187,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// update forkchoice synced tips if the block is not optimistic
-	if fullyValidated {
+	if postState.Version() == version.Bellatrix || fullyValidated {
 		root, err := b.HashTreeRoot()
 		if err != nil {
 			return err
@@ -288,6 +294,12 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			if err != nil {
 				return err
 			}
+
+			log.WithFields(logrus.Fields{
+				"status:": resp.Status.Status,
+				"hash:":   fmt.Sprintf("%#x", headPayload.BlockHash),
+			}).Info("Successfully called forkchoiceUpdated")
+
 			switch resp.Status.Status {
 			case enginev1.PayloadStatus_INVALID, enginev1.PayloadStatus_INVALID_BLOCK_HASH, enginev1.PayloadStatus_INVALID_TERMINAL_BLOCK:
 				return fmt.Errorf("could not prcess execution payload with status : %v", resp.Status.Status)
