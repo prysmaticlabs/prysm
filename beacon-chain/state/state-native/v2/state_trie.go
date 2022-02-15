@@ -9,8 +9,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -26,14 +26,14 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
+func InitializeFromProto(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
 }
 
 // InitializeFromSSZReader can be used when the source for a serialized BeaconState object
 // is an io.Reader. This allows client code to remain agnostic about whether the data comes
 // from the network or a file without needing to read the entire state into mem as a large byte slice.
-func InitializeFromSSZReader(r io.Reader) (*BeaconState, error) {
+func InitializeFromSSZReader(r io.Reader) (state.BeaconStateAltair, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -339,7 +339,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.genesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return b.genesisValidatorsRoot, nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.slot)), nil

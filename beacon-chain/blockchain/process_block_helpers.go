@@ -113,7 +113,7 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 	}
 
 	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
-		err := fmt.Errorf("block %#x is not a descendent of the current finalized block slot %d, %#x != %#x",
+		err := fmt.Errorf("block %#x is not a descendant of the current finalized block slot %d, %#x != %#x",
 			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		tracing.AnnotateError(span, err)

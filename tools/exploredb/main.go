@@ -326,7 +326,7 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("value                         : compressed size = %s", humanize.Bytes(mst.valueSize))
 		t := time.Unix(int64(st.GenesisTime()), 0)
 		log.Infof("genesis_time                  : %s", t.Format(time.UnixDate))
-		log.Infof("genesis_validators_root       : %s", hexutils.BytesToHex(st.GenesisValidatorRoot()))
+		log.Infof("genesis_validators_root       : %s", hexutils.BytesToHex(st.GenesisValidatorsRoot()))
 		log.Infof("slot                          : %d", st.Slot())
 		log.Infof("fork                          : previous_version = %b,  current_version = %b", st.Fork().PreviousVersion, st.Fork().CurrentVersion)
 		log.Infof("latest_block_header           : sizeSSZ = %s", humanize.Bytes(uint64(st.LatestBlockHeader().SizeSSZ())))

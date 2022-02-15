@@ -381,12 +381,12 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 		// - this evaluator is not executed for epoch 0 so we have to calculate the first slot differently
 		// - for some reason the vote for the first slot in epoch 1 is 0x000... so we skip this slot
 		var isFirstSlotInVotingPeriod bool
-		if chainHead.HeadEpoch == 1 && slot%params.E2ETestConfig().SlotsPerEpoch == 0 {
+		if chainHead.HeadEpoch == 1 && slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 			continue
 		}
 		// We skipped the first slot so we treat the second slot as the starting slot of epoch 1.
 		if chainHead.HeadEpoch == 1 {
-			isFirstSlotInVotingPeriod = slot%params.E2ETestConfig().SlotsPerEpoch == 1
+			isFirstSlotInVotingPeriod = slot%params.BeaconConfig().SlotsPerEpoch == 1
 		} else {
 			isFirstSlotInVotingPeriod = slot%slotsPerVotingPeriod == 0
 		}

@@ -27,10 +27,13 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	nativev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
@@ -133,6 +136,7 @@ type config struct {
 	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	httpEndpoints           []network.Endpoint
+	executionEndpoint       string
 	currHttpEndpoint        network.Endpoint
 	finalizedStateAtStartup state.BeaconState
 }
@@ -153,6 +157,7 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
+	engineAPIClient         *engine.Client
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -206,6 +211,10 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		if err := opt(s); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := s.initializeEngineAPIClient(ctx); err != nil {
+		return nil, errors.Wrap(err, "unable to initialize engine API client")
 	}
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
@@ -271,7 +280,11 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &v1.BeaconState{}
+	if features.Get().EnableNativeState {
+		s.preGenesisState = &nativev1.BeaconState{}
+	} else {
+		s.preGenesisState = &v1.BeaconState{}
+	}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -296,6 +309,12 @@ func (s *Service) Status() error {
 		return s.runError
 	}
 	return nil
+}
+
+// EngineAPIClient returns the associated engine API client to interact
+// with an execution node via JSON-RPC.
+func (s *Service) EngineAPIClient() *engine.Client {
+	return s.engineAPIClient
 }
 
 func (s *Service) updateBeaconNodeStats() {
@@ -798,13 +817,20 @@ func (s *Service) initPOWService() {
 			// Handle edge case with embedded genesis state by fetching genesis header to determine
 			// its height.
 			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 {
-				genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, common.BytesToHash(s.chainStartData.Eth1Data.BlockHash))
-				if err != nil {
-					log.Errorf("Unable to retrieve genesis ETH1.0 chain header: %v", err)
-					s.retryETH1Node(err)
-					continue
+				genHash := common.BytesToHash(s.chainStartData.Eth1Data.BlockHash)
+				genBlock := s.chainStartData.GenesisBlock
+				// In the event our provided chainstart data references a non-existent blockhash
+				// we assume the genesis block to be 0.
+				if genHash != [32]byte{} {
+					genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, genHash)
+					if err != nil {
+						log.Errorf("Unable to retrieve genesis ETH1.0 chain header: %v", err)
+						s.retryETH1Node(err)
+						continue
+					}
+					genBlock = genHeader.Number.Uint64()
 				}
-				s.chainStartData.GenesisBlock = genHeader.Number.Uint64()
+				s.chainStartData.GenesisBlock = genBlock
 				if err := s.savePowchainData(ctx); err != nil {
 					log.Errorf("Unable to save powchain data: %v", err)
 				}
@@ -1070,6 +1096,19 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		}
 		return s.cfg.beaconDB.SavePowchainData(ctx, eth1Data)
 	}
+	return nil
+}
+
+// Initializes a connection to the engine API if an execution provider endpoint is set.
+func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
+	if s.cfg.executionEndpoint == "" {
+		return nil
+	}
+	client, err := engine.New(ctx, s.cfg.executionEndpoint)
+	if err != nil {
+		return err
+	}
+	s.engineAPIClient = client
 	return nil
 }
 

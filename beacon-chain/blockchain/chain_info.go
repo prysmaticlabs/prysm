@@ -36,7 +36,7 @@ type TimeFetcher interface {
 
 // GenesisFetcher retrieves the Ethereum consensus data related to its genesis.
 type GenesisFetcher interface {
-	GenesisValidatorRoot() [32]byte
+	GenesisValidatorsRoot() [32]byte
 }
 
 // HeadFetcher defines a common interface for methods in blockchain service which
@@ -48,12 +48,14 @@ type HeadFetcher interface {
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
 	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
-	HeadGenesisValidatorRoot() [32]byte
+	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
+	IsOptimistic(ctx context.Context) (bool, error)
+	IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
@@ -212,8 +214,8 @@ func (s *Service) HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, er
 	return helpers.Seed(s.headState(ctx), epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
-// HeadGenesisValidatorRoot returns genesis validator root of the head state.
-func (s *Service) HeadGenesisValidatorRoot() [32]byte {
+// HeadGenesisValidatorsRoot returns genesis validators root of the head state.
+func (s *Service) HeadGenesisValidatorsRoot() [32]byte {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
@@ -221,7 +223,7 @@ func (s *Service) HeadGenesisValidatorRoot() [32]byte {
 		return [32]byte{}
 	}
 
-	return s.headGenesisValidatorRoot()
+	return s.headGenesisValidatorsRoot()
 }
 
 // HeadETH1Data returns the eth1data of the current head state.
@@ -245,16 +247,16 @@ func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
 }
 
-// GenesisValidatorRoot returns the genesis validator
+// GenesisValidatorsRoot returns the genesis validator
 // root of the chain.
-func (s *Service) GenesisValidatorRoot() [32]byte {
+func (s *Service) GenesisValidatorsRoot() [32]byte {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
 	if !s.hasHeadState() {
 		return [32]byte{}
 	}
-	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorsRoot())
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
@@ -326,6 +328,19 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 		return [fieldparams.BLSPubkeyLength]byte{}, err
 	}
 	return v.PublicKey(), nil
+}
+
+// IsOptimistic returns true if the current head is optimistic.
+func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+	return s.cfg.ForkChoiceStore.Optimistic(ctx, s.head.root, s.head.slot)
+}
+
+// IsOptimisticForRoot takes the root and slot as aguments instead of the current head
+// and returns true if it is optimistic.
+func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error) {
+	return s.cfg.ForkChoiceStore.Optimistic(ctx, root, slot)
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.

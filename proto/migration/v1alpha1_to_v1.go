@@ -2,7 +2,7 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -352,7 +352,7 @@ func SignedBeaconBlock(block block.SignedBeaconBlock) (*ethpbv1.SignedBeaconBloc
 	return v1Block, nil
 }
 
-func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
+func BeaconStateToV1(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 	sourceFork := state.Fork()
 	sourceLatestBlockHeader := state.LatestBlockHeader()
 	sourceEth1Data := state.Eth1Data()
@@ -438,7 +438,7 @@ func BeaconStateToV1(state *statev1.BeaconState) (*ethpbv1.BeaconState, error) {
 
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(state.GenesisValidatorRoot()),
+		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(state.GenesisValidatorsRoot()),
 		Slot:                  state.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),

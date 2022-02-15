@@ -24,11 +24,35 @@ option java_outer_classname = "ExecutionEngineProto";
 option java_package = "org.ethereum.engine.v1";
 option php_namespace = "Ethereum\\Engine\\v1";
 
+message ExecutionBlock {
+	bytes number                = 1;
+	bytes hash                  = 2;
+	bytes parent_hash           = 3;
+	bytes sha3_uncles           = 4;
+	bytes miner                 = 5;
+	bytes state_root            = 6;
+	bytes transactions_root     = 7;
+	bytes receipts_root         = 8;
+	bytes logs_bloom            = 9;
+	bytes difficulty            = 10;
+	bytes total_difficulty      = 11;
+	uint64 gas_limit            = 12;
+	uint64 gas_used             = 13;
+	bytes  base_fee_per_gas     = 14;
+	bytes size                  = 15;
+	uint64 timestamp            = 16;
+	bytes extra_data            = 17;
+	bytes mix_hash              = 18;
+	bytes nonce                 = 19;
+	repeated bytes transactions = 20;
+	repeated bytes uncles       = 21;
+}
+
 message ExecutionPayload {
 	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
 	bytes state_root            = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes recipients_root       = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes receipts_root         = 4 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes logs_bloom            = 5 [(ethereum.eth.ext.ssz_size) = "256"];
 	bytes random                = 6 [(ethereum.eth.ext.ssz_size) = "32"];
 	uint64 block_number         = 7;

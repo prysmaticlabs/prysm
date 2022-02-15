@@ -115,7 +115,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			})
 		}
 
-		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Imported)
+		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Local)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +124,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			WalletDir:      cfg.WalletCfg.WalletDir,
 			WalletPassword: cfg.WalletCfg.WalletPassword,
 		})
-		if err = createImportedKeymanagerWallet(cliCtx.Context, w); err != nil {
+		if err = createLocalKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
@@ -239,6 +239,19 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 // ImportAccounts can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet.
 func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+	if cfg.AccountPassword == "" {
+		statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(cfg.Keystores))
+		for i, keystore := range cfg.Keystores {
+			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
+				Status: ethpbservice.ImportedKeystoreStatus_ERROR,
+				Message: fmt.Sprintf(
+					"account password is required to import keystore %s",
+					keystore.Pubkey,
+				),
+			}
+		}
+		return statuses, nil
+	}
 	passwords := make([]string, len(cfg.Keystores))
 	for i := 0; i < len(cfg.Keystores); i++ {
 		passwords[i] = cfg.AccountPassword

@@ -114,6 +114,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	flags.ConfigureGlobalFlags(cliCtx)
 	configureChainConfig(cliCtx)
 	configureHistoricalSlasher(cliCtx)
+	configureSafeSlotsToImportOptimistically(cliCtx)
 	configureSlotsPerArchivedPoint(cliCtx)
 	configureEth1Config(cliCtx)
 	configureNetwork(cliCtx)
@@ -153,65 +154,80 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Debugln("Starting DB")
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
 	}
-
+	log.Debugln("Starting Slashing DB")
 	if err := beacon.startSlasherDB(cliCtx); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Starting State Gen")
 	if err := beacon.startStateGen(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering P2P Service")
 	if err := beacon.registerP2P(cliCtx); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering POW Chain Service")
 	if err := beacon.registerPOWChainService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Attestation Pool Service")
 	if err := beacon.registerAttestationPool(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Determinstic Genesis Service")
 	if err := beacon.registerDeterminsticGenesisService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Starting Fork Choice")
 	beacon.startForkChoice()
 
+	log.Debugln("Registering Blockchain Service")
 	if err := beacon.registerBlockchainService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Intial Sync Service")
 	if err := beacon.registerInitialSyncService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Sync Service")
 	if err := beacon.registerSyncService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Slasher Service")
 	if err := beacon.registerSlasherService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering RPC Service")
 	if err := beacon.registerRPCService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering GRPC Gateway Service")
 	if err := beacon.registerGRPCGateway(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Validator Monitoring Service")
 	if err := beacon.registerValidatorMonitorService(); err != nil {
 		return nil, err
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		log.Debugln("Registering Prometheus Service")
 		if err := beacon.registerPrometheusService(cliCtx); err != nil {
 			return nil, err
 		}

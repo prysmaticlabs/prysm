@@ -47,7 +47,7 @@ type Keymanager struct {
 
 // NewKeymanager instantiates a new web3signer key manager.
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
-	if cfg.BaseEndpoint == "" || !bytesutil.NonZeroRoot(cfg.GenesisValidatorsRoot) {
+	if cfg.BaseEndpoint == "" || !bytesutil.IsValidRoot(cfg.GenesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
 	}
 	if cfg.PublicKeysURL != "" && len(cfg.ProvidedPublicKeys) != 0 {
@@ -77,6 +77,7 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldpa
 	if km.publicKeysURL != "" && len(km.providedPublicKeys) == 0 {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
 		if err != nil {
+			erroredResponsesTotal.Inc()
 			return nil, err
 		}
 		km.providedPublicKeys = providedPublicKeys
@@ -88,8 +89,12 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldpa
 func (km *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
 	signRequest, err := getSignRequestJson(ctx, km.validator, request, km.genesisValidatorsRoot)
 	if err != nil {
+		erroredResponsesTotal.Inc()
 		return nil, err
 	}
+
+	signRequestsTotal.Inc()
+
 	return km.client.Sign(ctx, hexutil.Encode(request.PublicKey), signRequest)
 }
 
@@ -98,7 +103,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}
-	if !bytesutil.NonZeroRoot(genesisValidatorsRoot) {
+	if !bytesutil.IsValidRoot(genesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid genesis validators root length, genesis root: %v", genesisValidatorsRoot)
 	}
 	switch request.Object.(type) {
@@ -110,6 +115,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, bockSignRequest); err != nil {
 			return nil, err
 		}
+		blockSignRequestsTotal.Inc()
 		return json.Marshal(bockSignRequest)
 	case *validatorpb.SignRequest_AttestationData:
 		attestationSignRequest, err := v1.GetAttestationSignRequest(request, genesisValidatorsRoot)
@@ -119,6 +125,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, attestationSignRequest); err != nil {
 			return nil, err
 		}
+		attestationSignRequestsTotal.Inc()
 		return json.Marshal(attestationSignRequest)
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
 		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
@@ -128,6 +135,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, aggregateAndProofSignRequest); err != nil {
 			return nil, err
 		}
+		aggregateAndProofSignRequestsTotal.Inc()
 		return json.Marshal(aggregateAndProofSignRequest)
 	case *validatorpb.SignRequest_Slot:
 		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
@@ -137,6 +145,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, aggregationSlotSignRequest); err != nil {
 			return nil, err
 		}
+		aggregationSlotSignRequestsTotal.Inc()
 		return json.Marshal(aggregationSlotSignRequest)
 	case *validatorpb.SignRequest_BlockV2:
 		blocv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, genesisValidatorsRoot)
@@ -146,6 +155,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, blocv2AltairSignRequest); err != nil {
 			return nil, err
 		}
+		blockV2SignRequestsTotal.Inc()
 		return json.Marshal(blocv2AltairSignRequest)
 	// TODO(#10053): Need to add support for merge blocks.
 
@@ -168,6 +178,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, randaoRevealSignRequest); err != nil {
 			return nil, err
 		}
+		randaoRevealSignRequestsTotal.Inc()
 		return json.Marshal(randaoRevealSignRequest)
 	case *validatorpb.SignRequest_Exit:
 		voluntaryExitRequest, err := v1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
@@ -177,6 +188,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, voluntaryExitRequest); err != nil {
 			return nil, err
 		}
+		voluntaryExitSignRequestsTotal.Inc()
 		return json.Marshal(voluntaryExitRequest)
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
 		syncCommitteeMessageRequest, err := v1.GetSyncCommitteeMessageSignRequest(request, genesisValidatorsRoot)
@@ -186,6 +198,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, syncCommitteeMessageRequest); err != nil {
 			return nil, err
 		}
+		syncCommitteeMessageSignRequestsTotal.Inc()
 		return json.Marshal(syncCommitteeMessageRequest)
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
 		syncCommitteeSelectionProofRequest, err := v1.GetSyncCommitteeSelectionProofSignRequest(request, genesisValidatorsRoot)
@@ -195,6 +208,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, syncCommitteeSelectionProofRequest); err != nil {
 			return nil, err
 		}
+		syncCommitteeSelectionProofSignRequestsTotal.Inc()
 		return json.Marshal(syncCommitteeSelectionProofRequest)
 	case *validatorpb.SignRequest_ContributionAndProof:
 		contributionAndProofRequest, err := v1.GetSyncCommitteeContributionAndProofSignRequest(request, genesisValidatorsRoot)
@@ -204,6 +218,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, contributionAndProofRequest); err != nil {
 			return nil, err
 		}
+		syncCommitteeContributionAndProofSignRequestsTotal.Inc()
 		return json.Marshal(contributionAndProofRequest)
 	default:
 		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)

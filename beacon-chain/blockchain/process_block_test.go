@@ -100,7 +100,7 @@ func TestStore_OnBlock(t *testing.T) {
 				return b
 			}(),
 			s:             st.Copy(),
-			wantErrString: "is not a descendent of the current finalized block",
+			wantErrString: "is not a descendant of the current finalized block",
 		},
 		{
 			name: "same slot as finalized block",
@@ -789,7 +789,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r1,
 				parentRoot:    r,
 			},
-			wantedErr: "is not a descendent of the current finalized block slot",
+			wantedErr: "is not a descendant of the current finalized block slot",
 		},
 		{
 			name: "is descendant",
@@ -995,4 +995,50 @@ func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
 	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
+}
+
+func TestService_saveSyncedTipsDB(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	r1, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b100 := util.NewBeaconBlock()
+	b100.Block.Slot = 100
+	b100.Block.ParentRoot = r1[:]
+	r100, err := b100.Block.HashTreeRoot()
+	require.NoError(t, err)
+	b200 := util.NewBeaconBlock()
+	b200.Block.Slot = 200
+	b200.Block.ParentRoot = r1[:]
+	r200, err := b200.Block.HashTreeRoot()
+	require.NoError(t, err)
+	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
+		beaconBlock := util.NewBeaconBlock()
+		beaconBlock.Block.Slot = b.Block.Slot
+		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), [32]byte{}, 0, 0))
+	}
+
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, r100))
+	require.NoError(t, service.saveSyncedTipsDB(ctx))
+	savedTips, err := service.cfg.BeaconDB.ValidatedTips(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(savedTips))
+	require.Equal(t, types.Slot(1), savedTips[r1])
+	require.Equal(t, types.Slot(100), savedTips[r100])
+
+	// Delete invalid root
+	require.NoError(t, service.cfg.ForkChoiceStore.UpdateSyncedTipsWithInvalidRoot(ctx, r200))
+	require.NoError(t, service.saveSyncedTipsDB(ctx))
+	savedTips, err = service.cfg.BeaconDB.ValidatedTips(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(savedTips))
+	require.Equal(t, types.Slot(100), savedTips[r100])
 }

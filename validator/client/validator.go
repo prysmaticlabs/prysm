@@ -36,7 +36,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -77,7 +77,7 @@ type validator struct {
 	highestValidSlot                   types.Slot
 	genesisTime                        uint64
 	blockFeed                          *event.Feed
-	interopKeysConfig                  *imported.InteropKeymanagerConfig
+	interopKeysConfig                  *local.InteropKeymanagerConfig
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
 	node                               ethpb.NodeClient
@@ -90,6 +90,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
+	walletIntializedChannel            chan *wallet.Wallet
 }
 
 type validatorStatus struct {
@@ -109,16 +110,17 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to retrieve valid genesis validators root while initializing key manager")
 	}
+
 	if v.useWeb && v.wallet == nil {
 		// if wallet is not set, wait for it to be set through the UI
-		km, err := waitForWebWalletInitialization(ctx, v.walletInitializedFeed)
+		km, err := waitForWebWalletInitialization(ctx, v.walletInitializedFeed, v.walletIntializedChannel)
 		if err != nil {
 			return err
 		}
 		v.keyManager = km
 	} else {
 		if v.interopKeysConfig != nil {
-			keyManager, err := imported.NewInteropKeymanager(ctx, v.interopKeysConfig.Offset, v.interopKeysConfig.NumValidatorKeys)
+			keyManager, err := local.NewInteropKeymanager(ctx, v.interopKeysConfig.Offset, v.interopKeysConfig.NumValidatorKeys)
 			if err != nil {
 				return errors.Wrap(err, "could not generate interop keys for key manager")
 			}
@@ -141,8 +143,11 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 }
 
 // subscribe to channel for when the wallet is initialized
-func waitForWebWalletInitialization(ctx context.Context, walletInitializedEvent *event.Feed) (keymanager.IKeymanager, error) {
-	walletChan := make(chan *wallet.Wallet)
+func waitForWebWalletInitialization(
+	ctx context.Context,
+	walletInitializedEvent *event.Feed,
+	walletChan chan *wallet.Wallet,
+) (keymanager.IKeymanager, error) {
 	sub := walletInitializedEvent.Subscribe(walletChan)
 	defer sub.Unsubscribe()
 	for {
@@ -185,7 +190,7 @@ func recheckKeys(ctx context.Context, valDB vdb.Database, keyManager keymanager.
 // to accounts changes in the keymanager, then updates those keys'
 // buckets in bolt DB if a bucket for a key does not exist.
 func recheckValidatingKeysBucket(ctx context.Context, valDB vdb.Database, km keymanager.IKeymanager) {
-	importedKeymanager, ok := km.(*imported.Keymanager)
+	importedKeymanager, ok := km.(*local.Keymanager)
 	if !ok {
 		return
 	}
@@ -246,7 +251,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		}
 		if len(curGenValRoot) == 0 {
 			if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
-				return errors.Wrap(err, "could not save genesis validator root")
+				return errors.Wrap(err, "could not save genesis validators root")
 			}
 		} else {
 			if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {

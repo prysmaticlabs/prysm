@@ -61,7 +61,7 @@ func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byt
 		return []byte{}, nil
 	case p2p.SchemaVersionV2:
 		currFork := chain.CurrentFork()
-		genRoot := chain.GenesisValidatorRoot()
+		genRoot := chain.GenesisValidatorsRoot()
 		digest, err := signing.ComputeForkDigest(currFork.CurrentVersion, genRoot[:])
 		if err != nil {
 			return nil, err
