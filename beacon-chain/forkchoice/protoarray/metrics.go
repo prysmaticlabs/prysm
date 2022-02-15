@@ -48,4 +48,10 @@ var (
 			Help: "The number of times pruning happened.",
 		},
 	)
+	optimisticCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "proto_array_optimistic_count",
+			Help: "The number of blocks that have been optimistically synced.",
+		},
+	)
 )

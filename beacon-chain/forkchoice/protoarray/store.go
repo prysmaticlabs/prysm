@@ -146,6 +146,8 @@ func (s *Store) insert(ctx context.Context,
 		if err := n.setFullyValidated(ctx); err != nil {
 			return err
 		}
+	} else {
+		optimisticCount.Inc()
 	}
 
 	// Set the node as root if the store was empty
