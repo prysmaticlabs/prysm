@@ -1913,8 +1913,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_klauspost_cpuid_v2",
         importpath = "github.com/klauspost/cpuid/v2",
-        sum = "h1:fv5GKR+e2UgD+gcxQECVT5rBwAmlFLl2mkKm7WK3ODY=",
-        version = "v2.0.10",
+        sum = "h1:lgaqFMSdTdQYdZ04uHyN2d/eKdOMyi2YLSvlQIBFYa4=",
+        version = "v2.0.9",
     )
     go_repository(
         name = "com_github_klauspost_crc32",
@@ -2986,8 +2986,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_gohashtree",
         importpath = "github.com/prysmaticlabs/gohashtree",
-        sum = "h1:xevaZI6+poje0uHdHW2x9CSafwqqMFrjMAspPwu+7MI=",
-        version = "v0.0.0-20220125083128-bdbc56923258",
+        sum = "h1:qVXMFNUGWbPpP7986YPsmL84A54oY7b/N+SOIBS3i5w=",
+        version = "v0.0.0-20220208111633-0606f58df32f",
     )
 
     go_repository(
