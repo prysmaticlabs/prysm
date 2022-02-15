@@ -268,17 +268,18 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 }
 
 type payloadStatusJSON struct {
-	LatestValidHash hexutil.Bytes `json:"latestValidHash"`
-	Status          string        `json:"status"`
-	ValidationError string        `json:"validationError"`
+	LatestValidHash *hexutil.Bytes `json:"latestValidHash"`
+	Status          string         `json:"status"`
+	ValidationError *string        `json:"validationError"`
 }
 
 // MarshalJSON --
 func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
+	hash := p.LatestValidHash
 	return json.Marshal(payloadStatusJSON{
-		LatestValidHash: p.LatestValidHash,
+		LatestValidHash: (*hexutil.Bytes)(&hash),
 		Status:          p.Status.String(),
-		ValidationError: p.ValidationError,
+		ValidationError: &p.ValidationError,
 	})
 }
 
@@ -289,9 +290,9 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*p = PayloadStatus{}
-	p.LatestValidHash = dec.LatestValidHash
+	p.LatestValidHash = *dec.LatestValidHash
 	p.Status = PayloadStatus_Status(PayloadStatus_Status_value[dec.Status])
-	p.ValidationError = dec.ValidationError
+	p.ValidationError = *dec.ValidationError
 	return nil
 }
 
