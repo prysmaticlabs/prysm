@@ -76,12 +76,13 @@ message PayloadStatus {
 	bytes latest_valid_hash = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 	string validation_error = 3;
 	enum Status {
-		VALID                   = 0;
-		INVALID                 = 1;
-		SYNCING                 = 2;
-		ACCEPTED                = 3;
-		INVALID_BLOCK_HASH      = 4;
-		INVALID_TERMINAL_BLOCK  = 5;
+		UNKNOWN = 0;
+		VALID                   = 1;
+		INVALID                 = 2;
+		SYNCING                 = 3;
+		ACCEPTED                = 4;
+		INVALID_BLOCK_HASH      = 5;
+		INVALID_TERMINAL_BLOCK  = 6;
 	}
 }
 
