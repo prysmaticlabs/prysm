@@ -12,7 +12,9 @@ import (
 )
 
 func TestServer_GetForkChoice(t *testing.T) {
-	store := &protoarray.Store{}
+	f := protoarray.New(0, 0, [32]byte{})
+	require.NoError(t, f.ProcessBlock(context.Background(), 0, [32]byte{}, [32]byte{}, 0, 0, false))
+	store := f.Store()
 	bs := &Server{HeadFetcher: &mock.ChainService{ForkChoiceStore: store}}
 	res, err := bs.GetProtoArrayForkChoice(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
