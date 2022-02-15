@@ -4,14 +4,19 @@
 package v1
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
+	"math/big"
 	"net/url"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -21,6 +26,8 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
+	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
+	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
 	// ExecutionBlockByHashMethod request string for JSON-RPC.
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
@@ -28,6 +35,8 @@ const (
 	// DefaultTimeout for HTTP.
 	DefaultTimeout = time.Second * 5
 )
+
+var log = logrus.WithField("prefix", "engine-api-client")
 
 // ForkchoiceUpdatedResponse is the response kind received by the
 // engine_forkchoiceUpdatedV1 endpoint.
@@ -44,6 +53,9 @@ type EngineCaller interface {
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*ForkchoiceUpdatedResponse, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
+	ExchangeTransitionConfiguration(
+		ctx context.Context, cfg *pb.TransitionConfiguration,
+	) (*pb.TransitionConfiguration, error)
 	LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error)
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
 }
@@ -105,6 +117,48 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 	result := &pb.ExecutionPayload{}
 	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
+}
+
+// ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
+func (c *Client) ExchangeTransitionConfiguration(
+	ctx context.Context, cfg *pb.TransitionConfiguration,
+) (*pb.TransitionConfiguration, error) {
+	num := new(big.Int).SetBytes(cfg.TerminalBlockNumber)
+	// Terminal block number should be set to 0. Otherwise, we will set it to 0
+	// for the caller and log a warning.
+	zeroBigNum := big.NewInt(0)
+	if num.Cmp(zeroBigNum) != 0 {
+		log.Warn(
+			"Expected terminal block number in request to be 0, forcefully setting value to 0 in request",
+		)
+		cfg.TerminalBlockNumber = zeroBigNum.Bytes()
+	}
+	result := &pb.TransitionConfiguration{}
+	if err := c.rpc.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
+		return nil, handleRPCError(err)
+	}
+	// We surface an error to the user if local configuration settings mismatch
+	// according to the response from the execution node.
+	cfgTerminalHash := params.BeaconConfig().TerminalBlockHash[:]
+	if !bytes.Equal(cfgTerminalHash, result.TerminalBlockHash) {
+		return nil, errors.Wrapf(
+			ErrMismatchTerminalBlockHash,
+			"got terminal block hash from execution node %#x, wanted %#x",
+			result.TerminalBlockHash,
+			cfgTerminalHash,
+		)
+	}
+	ttdCfg := params.BeaconConfig().TerminalTotalDifficulty
+	ttdHex := hex.EncodeToString(result.TerminalTotalDifficulty)
+	if ttdHex != ttdCfg {
+		return nil, errors.Wrapf(
+			ErrMismatchTerminalTotalDiff,
+			"got terminal block hash from execution node %s, wanted %s",
+			ttdHex,
+			ttdCfg,
+		)
+	}
+	return result, nil
 }
 
 // LatestExecutionBlock fetches the latest execution engine block by calling

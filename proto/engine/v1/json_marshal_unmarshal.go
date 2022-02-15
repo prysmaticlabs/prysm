@@ -2,7 +2,6 @@ package enginev1
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -212,7 +211,6 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	dec := executionPayloadJSON{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
-		fmt.Println("got weird err")
 		return err
 	}
 	*e = ExecutionPayload{}
