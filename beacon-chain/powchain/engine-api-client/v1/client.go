@@ -122,16 +122,9 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 func (c *Client) ExchangeTransitionConfiguration(
 	ctx context.Context, cfg *pb.TransitionConfiguration,
 ) (*pb.TransitionConfiguration, error) {
-	num := new(big.Int).SetBytes(cfg.TerminalBlockNumber)
-	// Terminal block number should be set to 0. Otherwise, we will set it to 0
-	// for the caller and log a warning.
+	// Terminal block number should be set to 0
 	zeroBigNum := big.NewInt(0)
-	if num.Cmp(zeroBigNum) != 0 {
-		log.Warn(
-			"Expected terminal block number in request to be 0, forcefully setting value to 0 in request",
-		)
-		cfg.TerminalBlockNumber = zeroBigNum.Bytes()
-	}
+	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
 	result := &pb.TransitionConfiguration{}
 	if err := c.rpc.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
 		return nil, handleRPCError(err)
