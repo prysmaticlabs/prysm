@@ -131,7 +131,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			if err != nil {
 				return err
 			}
-			fmt.Println(fmt.Sprintf("%#x", payload.BlockHash), status.Status, fmt.Sprintf("%#x", status.LatestValidHash))
 			switch status.Status {
 			case enginev1.PayloadStatus_INVALID, enginev1.PayloadStatus_INVALID_BLOCK_HASH, enginev1.PayloadStatus_INVALID_TERMINAL_BLOCK:
 				// TODO_MERGE walk up the parent chain removing
