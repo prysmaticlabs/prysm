@@ -66,9 +66,9 @@ message ExecutionPayload {
 }
 
 message TransitionConfiguration {
-	bytes terminal_total_difficulty = 1;
-	bytes terminal_block_hash       = 2;
-	bytes terminal_block_number     = 3;
+	string terminal_total_difficulty = 1;
+	bytes terminal_block_hash        = 2;
+	bytes terminal_block_number      = 3;
 }
 
 message PayloadAttributes {

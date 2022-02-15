@@ -2,10 +2,14 @@ package enginev1
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/holiman/uint256"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -305,10 +309,17 @@ type transitionConfigurationJSON struct {
 func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
 	num := new(big.Int).SetBytes(t.TerminalBlockNumber)
 	numHex := hexutil.EncodeBig(num)
-	diff := new(big.Int).SetBytes(t.TerminalTotalDifficulty)
-	diffHex := hexutil.EncodeBig(diff)
+	diff, ok := new(big.Int).SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	if !ok {
+		return nil, nil
+	}
+	diffItem, overflows := uint256.FromBig(diff)
+	if overflows {
+		return nil, errors.New("terminal total difficulty should not overflow")
+	}
+	fmt.Printf("Got %s", diffItem.String())
 	return json.Marshal(transitionConfigurationJSON{
-		TerminalTotalDifficulty: diffHex,
+		TerminalTotalDifficulty: diffItem.String(),
 		TerminalBlockHash:       t.TerminalBlockHash,
 		TerminalBlockNumber:     numHex,
 	})
@@ -321,6 +332,7 @@ func (t *TransitionConfiguration) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*t = TransitionConfiguration{}
+	fmt.Printf("Got %s\n", dec.TerminalTotalDifficulty)
 	num, err := hexutil.DecodeBig(dec.TerminalBlockNumber)
 	if err != nil {
 		return err
