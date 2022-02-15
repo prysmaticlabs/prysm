@@ -30,10 +30,11 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	})
 	t.Run("payload status", func(t *testing.T) {
 		hash := bytesutil.PadTo([]byte("hash"), fieldparams.RootLength)
+		errString := "failed validation"
 		jsonPayload := &enginev1.PayloadStatus{
 			Status:          enginev1.PayloadStatus_INVALID,
 			LatestValidHash: hash,
-			ValidationError: "failed validation",
+			ValidationError: errString,
 		}
 		enc, err := json.Marshal(jsonPayload)
 		require.NoError(t, err)
