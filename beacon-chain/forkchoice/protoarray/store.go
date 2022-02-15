@@ -171,19 +171,6 @@ func (s *Store) updateCheckpoints(justifiedEpoch, finalizedEpoch types.Epoch) {
 	}
 }
 
-// Returns the list of leaves in the Fork Choice store.
-// These are all the nodes that have no children
-// This internal method assumes that the caller holds a lock in s.nodesLock.
-func (s *Store) leaves() []*Node {
-	var leaves []*Node
-	for _, node := range s.nodeByRoot {
-		if len(node.children) == 0 {
-			leaves = append(leaves, node)
-		}
-	}
-	return leaves
-}
-
 // pruneMaps prunes the `nodeByRoot` map
 // starting from `node` down to the finalized Node or to a leaf of the Fork
 // choice store. This method assumes a lock on nodesLock.

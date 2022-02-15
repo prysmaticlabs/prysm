@@ -54,8 +54,8 @@ type HeadFetcher interface {
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
-	IsOptimistic(ctx context.Context) (bool, error)
-	IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error)
+	IsOptimistic() (bool, error)
+	IsOptimisticForRoot(root [32]byte) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
@@ -315,7 +315,7 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 }
 
 // IsOptimistic returns true if the current head is optimistic.
-func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
+func (s *Service) IsOptimistic() (bool, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 	return s.cfg.ForkChoiceStore.IsOptimistic(s.head.root)
@@ -323,7 +323,7 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 
 // IsOptimisticForRoot takes the root and slot as aguments instead of the current head
 // and returns true if it is optimistic.
-func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error) {
+func (s *Service) IsOptimisticForRoot(root [32]byte) (bool, error) {
 	return s.cfg.ForkChoiceStore.IsOptimistic(root)
 }
 

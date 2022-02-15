@@ -362,7 +362,7 @@ func TestService_IsOptimistic(t *testing.T) {
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
 
-	opt, err := c.IsOptimistic(ctx)
+	opt, err := c.IsOptimistic()
 	require.NoError(t, err)
 	require.Equal(t, false, opt)
 }
@@ -373,7 +373,7 @@ func TestService_IsOptimisticForRoot(t *testing.T) {
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, true))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, true))
 
-	opt, err := c.IsOptimisticForRoot(ctx, [32]byte{'a'}, 100)
+	opt, err := c.IsOptimisticForRoot([32]byte{'a'})
 	require.NoError(t, err)
 	require.Equal(t, true, opt)
 }
