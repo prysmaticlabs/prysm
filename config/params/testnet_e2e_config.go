@@ -1,6 +1,9 @@
 package params
 
-const altairE2EForkEpoch = 6
+const (
+	altairE2EForkEpoch    = 6
+	bellatrixE2EForkEpoch = 8
+)
 
 // UseE2EConfig for beacon chain services.
 func UseE2EConfig() {
@@ -42,8 +45,12 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
-	// Altair Fork Parameters.
+	// Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+
+	// Merge Fork Parameters.
+	//e2eConfig.BellatrixForkVersion = MergeE2EForkEpoch  // TODO_MERGE: Add a proper merge fork version when e2e is ready for it.
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]
