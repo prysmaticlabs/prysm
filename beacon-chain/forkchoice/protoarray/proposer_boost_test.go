@@ -88,8 +88,8 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         2
 		//         |
 		//         3 <- HEAD
-		slot = types.Slot(2)
-		newRoot = indexToHash(2)
+		slot = types.Slot(3)
+		newRoot = indexToHash(3)
 		require.NoError(t,
 			f.ProcessBlock(
 				ctx,
@@ -136,7 +136,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		assert.Equal(t, newRoot, headRoot, "Incorrect head for justified epoch at slot 3")
 
 		// Check the ancestor scores from the store.
-		require.Equal(t, 4, len(f.store.nodeByRoot))
+		require.Equal(t, 5, len(f.store.nodeByRoot))
 
 		// Expect nodes to have a boosted, back-propagated score.
 		// Ancestors have the added weights of their children. Genesis is a special exception at 0 weight,
@@ -157,15 +157,15 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// In this case, we have a small fork:
 		//
 		// (A: 54) -> (B: 44) -> (C: 24)
-		//				    \_->(D: 10)
+		//                   \_->(D: 10)
 		//
 		// So B has its own weight, 10, and the sum of of both C and D thats why we see weight 54 in the
 		// middle instead of the normal progression of (44 -> 34 -> 24).
-		node1 := f.store.treeRoot.children[0]
+		node1 := f.store.nodeByRoot[indexToHash(1)]
 		require.Equal(t, node1.weight, uint64(54))
-		node2 := node1.children[0]
+		node2 := f.store.nodeByRoot[indexToHash(2)]
 		require.Equal(t, node2.weight, uint64(44))
-		node3 := node2.children[0]
+		node3 := f.store.nodeByRoot[indexToHash(4)]
 		require.Equal(t, node3.weight, uint64(24))
 	})
 	t.Run("vanilla ex ante attack", func(t *testing.T) {

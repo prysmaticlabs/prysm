@@ -79,24 +79,33 @@ func TestForkChoice_IsCanonical(t *testing.T) {
 func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(1), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(2), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(4), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 6, indexToHash(6), indexToHash(5), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 1, [32]byte{'1'}, params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, [32]byte{'2'}, params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 3, [32]byte{'3'}, [32]byte{'1'}, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 4, [32]byte{'4'}, [32]byte{'2'}, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 5, [32]byte{'5'}, [32]byte{'4'}, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 6, [32]byte{'6'}, [32]byte{'5'}, 1, 1, false))
 
-	f.store.nodeByRoot[indexToHash(3)].weight = 10
+	f.store.nodeByRoot[[32]byte{'3'}].balance = 10
+	require.NoError(t, f.store.treeRoot.applyWeightChanges(ctx))
+	require.Equal(t, uint64(10), f.store.nodeByRoot[[32]byte{'1'}].weight)
+	require.Equal(t, uint64(0), f.store.nodeByRoot[[32]byte{'2'}].weight)
+
 	require.NoError(t, f.store.treeRoot.updateBestDescendant(ctx, 1, 1))
-	_, err := f.store.head(ctx, indexToHash(1))
+	require.DeepEqual(t, [32]byte{'3'}, f.store.treeRoot.bestDescendant.root)
+
+	h, err := f.store.head(ctx, [32]byte{'1'})
 	require.NoError(t, err)
+	require.DeepEqual(t, [32]byte{'3'}, h)
+	require.DeepEqual(t, h, f.store.headNode.root)
+
 	require.Equal(t, true, f.IsCanonical(params.BeaconConfig().ZeroHash))
-	require.Equal(t, true, f.IsCanonical(indexToHash(1)))
-	require.Equal(t, false, f.IsCanonical(indexToHash(2)))
-	require.Equal(t, true, f.IsCanonical(indexToHash(3)))
-	require.Equal(t, false, f.IsCanonical(indexToHash(4)))
-	require.Equal(t, false, f.IsCanonical(indexToHash(5)))
-	require.Equal(t, false, f.IsCanonical(indexToHash(6)))
+	require.Equal(t, true, f.IsCanonical([32]byte{'1'}))
+	require.Equal(t, false, f.IsCanonical([32]byte{'2'}))
+	require.Equal(t, true, f.IsCanonical([32]byte{'3'}))
+	require.Equal(t, false, f.IsCanonical([32]byte{'4'}))
+	require.Equal(t, false, f.IsCanonical([32]byte{'5'}))
+	require.Equal(t, false, f.IsCanonical([32]byte{'6'}))
 }
 
 func indexToHash(i uint64) [32]byte {

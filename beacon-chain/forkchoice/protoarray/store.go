@@ -17,8 +17,6 @@ const defaultPruneThreshold = 256
 // applyProposerBoostScore applies the current proposer boost scores to the
 // relevant nodes
 func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
-	proposerScore := uint64(0)
-
 	s.proposerBoostLock.Lock()
 	defer s.proposerBoostLock.Unlock()
 
@@ -40,10 +38,9 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 			return err
 		}
 		currentNode.balance += proposerScore
+		s.previousProposerBoostRoot = s.proposerBoostRoot
+		s.previousProposerBoostScore = proposerScore
 	}
-
-	s.previousProposerBoostRoot = s.proposerBoostRoot
-	s.previousProposerBoostScore = proposerScore
 	return nil
 }
 

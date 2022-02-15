@@ -185,7 +185,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	ctx := context.Background()
 	f := New(justifiedEpoch, finalizedEpoch, params.BeaconConfig().ZeroHash)
-	err := f.ProcessBlock(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, 0, 0, false)
+	err := f.ProcessBlock(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, justifiedEpoch, finalizedEpoch, false)
 	if err != nil {
 		return nil
 	}
