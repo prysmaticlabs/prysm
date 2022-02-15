@@ -19,9 +19,6 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 	if err != nil {
 		return [32]byte{}, err
 	}
-	root := hash.Hash(append(fieldRoots[0][:], fieldRoots[1][:]...))
-	fieldRoots = fieldRoots[1:]
-	fieldRoots[0] = root
 	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
