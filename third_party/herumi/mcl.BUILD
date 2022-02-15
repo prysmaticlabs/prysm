@@ -18,7 +18,7 @@ cc_library(
             "src/asm/x86-64mac.s",
         ],
         "@io_bazel_rules_go//go/platform:darwin_arm64": [
-            "src/asm/aarch64.s",
+            "@prysm//third_party/herumi:mcl_darwin_arm64_base64.o",
         ],
         "@io_bazel_rules_go//go/platform:linux_amd64": [
             "src/asm/x86-64.s",
