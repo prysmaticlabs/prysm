@@ -329,8 +329,8 @@ func (s *ChainService) GenesisTime() time.Time {
 	return s.Genesis
 }
 
-// GenesisValidatorRoot mocks the same method in the chain service.
-func (s *ChainService) GenesisValidatorRoot() [32]byte {
+// GenesisValidatorsRoot mocks the same method in the chain service.
+func (s *ChainService) GenesisValidatorsRoot() [32]byte {
 	return s.ValidatorsRoot
 }
 
@@ -370,8 +370,8 @@ func (s *ChainService) HasInitSyncBlock(rt [32]byte) bool {
 	return s.InitSyncBlockRoots[rt]
 }
 
-// HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
-func (_ *ChainService) HeadGenesisValidatorRoot() [32]byte {
+// HeadGenesisValidatorsRoot mocks HeadGenesisValidatorsRoot method in chain service.
+func (_ *ChainService) HeadGenesisValidatorsRoot() [32]byte {
 	return [32]byte{}
 }
 

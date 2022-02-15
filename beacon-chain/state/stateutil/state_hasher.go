@@ -67,7 +67,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 	genesisRoot := ssz.Uint64Root(state.GenesisTime)
 	fieldRoots[0] = genesisRoot[:]
 
-	// Genesis validator root.
+	// Genesis validators root.
 	r := [32]byte{}
 	copy(r[:], state.GenesisValidatorsRoot)
 	fieldRoots[1] = r[:]
@@ -215,7 +215,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	genesisRoot := ssz.Uint64Root(state.GenesisTime)
 	fieldRoots[0] = genesisRoot[:]
 
-	// Genesis validator root.
+	// Genesis validators root.
 	r := [32]byte{}
 	copy(r[:], state.GenesisValidatorsRoot)
 	fieldRoots[1] = r[:]
@@ -385,7 +385,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherBellatrix(ctx context.Conte
 	genesisRoot := ssz.Uint64Root(state.GenesisTime)
 	fieldRoots[0] = genesisRoot[:]
 
-	// Genesis validator root.
+	// Genesis validators root.
 	r := [32]byte{}
 	copy(r[:], state.GenesisValidatorsRoot)
 	fieldRoots[1] = r[:]

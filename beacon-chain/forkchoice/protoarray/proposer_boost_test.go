@@ -142,7 +142,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// Ancestors have the added weights of their children. Genesis is a special exception at 0 weight,
 		require.Equal(t, f.store.treeRoot.weight, uint64(0))
 
-		// Otherwise assuming a block, A, that is not-genesis:
+		// Otherwise, assuming a block, A, that is not-genesis:
 		//
 		// A -> B -> C
 		//
@@ -156,10 +156,10 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//
 		// In this case, we have a small fork:
 		//
-		// (A: 54) -> (B: 44) -> (C: 24)
-		//                   \_->(D: 10)
+		// (A: 54) -> (B: 44) -> (C: 34)
+		//                   \_->(D: 24)
 		//
-		// So B has its own weight, 10, and the sum of of both C and D thats why we see weight 54 in the
+		// So B has its own weight, 10, and the sum of both C and D. That's why we see weight 54 in the
 		// middle instead of the normal progression of (44 -> 34 -> 24).
 		node1 := f.store.nodeByRoot[indexToHash(1)]
 		require.Equal(t, node1.weight, uint64(54))

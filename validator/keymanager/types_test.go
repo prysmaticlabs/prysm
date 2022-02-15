@@ -1,6 +1,12 @@
 package keymanager_test
 
 import (
+	"encoding/json"
+	"strings"
+	"testing"
+
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
@@ -20,3 +26,11 @@ var (
 	_ = keymanager.Deleter(&local.Keymanager{})
 	_ = keymanager.Deleter(&derived.Keymanager{})
 )
+
+func TestKeystoreContainsPath(t *testing.T) {
+	keystore := keymanager.Keystore{}
+	encoded, err := json.Marshal(keystore)
+
+	require.NoError(t, err, "Unexpected error marshalling keystore")
+	assert.Equal(t, true, strings.Contains(string(encoded), "path"))
+}

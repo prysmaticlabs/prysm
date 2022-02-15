@@ -253,7 +253,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorsRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	require.NoError(t, err)

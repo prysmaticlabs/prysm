@@ -265,10 +265,10 @@ func (s *Service) headState(ctx context.Context) state.BeaconState {
 	return s.head.state.Copy()
 }
 
-// This returns the genesis validator root of the head state.
+// This returns the genesis validators root of the head state.
 // This is a lock free version.
-func (s *Service) headGenesisValidatorRoot() [32]byte {
-	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+func (s *Service) headGenesisValidatorsRoot() [32]byte {
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorsRoot())
 }
 
 // This returns the validator referenced by the provided index in

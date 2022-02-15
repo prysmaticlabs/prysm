@@ -100,7 +100,7 @@ func TestStore_OnBlock(t *testing.T) {
 				return b
 			}(),
 			s:             st.Copy(),
-			wantErrString: "is not a descendent of the current finalized block",
+			wantErrString: "is not a descendant of the current finalized block",
 		},
 		{
 			name: "same slot as finalized block",
@@ -789,7 +789,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r1,
 				parentRoot:    r,
 			},
-			wantedErr: "is not a descendent of the current finalized block slot",
+			wantedErr: "is not a descendant of the current finalized block slot",
 		},
 		{
 			name: "is descendant",
