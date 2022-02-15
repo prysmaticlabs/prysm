@@ -27,6 +27,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -580,6 +582,18 @@ func TestActivationStatus_OK(t *testing.T) {
 	if response[3].Index != 2 {
 		t.Errorf("Validator with pubkey %#x is expected to have index %d, received %d", response[3].PublicKey, 2, response[3].Index)
 	}
+}
+
+func TestOptimisticStatus(t *testing.T) {
+	server := &Server{HeadFetcher: &mockChain.ChainService{}}
+	err := server.optimisticStatus(context.Background())
+	require.NoError(t, err)
+	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: true}}
+	err = server.optimisticStatus(context.Background())
+	s, ok := status.FromError(err)
+	require.Equal(t, true, ok)
+	require.DeepEqual(t, codes.Unavailable, s.Code())
+	require.ErrorContains(t, " The node is currently optimistic and cannot serve validators", err)
 }
 
 func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {

@@ -18,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -29,6 +31,17 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 	res, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.DeepEqual(t, r, res.Root)
+}
+
+func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
+	server := &Server{
+		HeadFetcher: &mock.ChainService{Optimistic: true},
+	}
+	_, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
+	s, ok := status.FromError(err)
+	require.Equal(t, true, ok)
+	require.DeepEqual(t, codes.Unavailable, s.Code())
+	require.ErrorContains(t, " The node is currently optimistic and cannot serve validators", err)
 }
 
 func TestSubmitSyncMessage_OK(t *testing.T) {
