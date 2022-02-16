@@ -217,6 +217,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		return nil, errors.Wrap(err, "unable to initialize engine API client")
 	}
 
+	// Check transition configuration for the engine API client in the background.
+	go s.checkTransitionConfiguration(ctx)
+
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
 	}
