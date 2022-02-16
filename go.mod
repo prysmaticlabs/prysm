@@ -99,7 +99,6 @@ require (
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/go-logr/logr v0.2.1 // indirect
@@ -114,7 +113,7 @@ require (
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/MariusVanDerWijden/go-ethereum v0.0.0-20220110084428-63a89820ca97
+replace github.com/ethereum/go-ethereum => github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20220214112821-d40107742729
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 

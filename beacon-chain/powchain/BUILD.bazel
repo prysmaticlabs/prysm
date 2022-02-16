@@ -30,6 +30,7 @@ go_library(
         "//beacon-chain/powchain/engine-api-client/v1:go_default_library",
         "//beacon-chain/powchain/types:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/state-native/v1:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//config/features:go_default_library",

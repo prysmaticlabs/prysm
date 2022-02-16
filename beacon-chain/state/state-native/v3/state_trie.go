@@ -25,13 +25,13 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
+func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (state.BeaconStateBellatrix, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf fields
 // and sets them as fields of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconStateBellatrix, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -315,7 +315,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.genesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return b.genesisValidatorsRoot, nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.slot)), nil

@@ -22,9 +22,9 @@ const (
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
 	// ExecutionBlockByHashMethod request string for JSON-RPC.
-	ExecutionBlockByHashMethod = "eth_blockByHash"
-	// LatestExecutionBlockMethod request string for JSON-RPC.
-	LatestExecutionBlockMethod = "eth_blockByNumber"
+	ExecutionBlockByHashMethod = "eth_getBlockByHash"
+	// ExecutionBlockByNumberMethod request string for JSON-RPC.
+	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
 	// DefaultTimeout for HTTP.
 	DefaultTimeout = time.Second * 5
 )
@@ -32,7 +32,7 @@ const (
 // ForkchoiceUpdatedResponse is the response kind received by the
 // engine_forkchoiceUpdatedV1 endpoint.
 type ForkchoiceUpdatedResponse struct {
-	Status    *pb.PayloadStatus  `json:"status"`
+	Status    *pb.PayloadStatus  `json:"payloadStatus"`
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
@@ -114,7 +114,7 @@ func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, 
 	err := c.rpc.CallContext(
 		ctx,
 		result,
-		LatestExecutionBlockMethod,
+		ExecutionBlockByNumberMethod,
 		"latest",
 		false, /* no full transaction objects */
 	)
@@ -125,7 +125,7 @@ func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, 
 // eth_blockByHash via JSON-RPC.
 func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
 	result := &pb.ExecutionBlock{}
-	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash)
+	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
 }
 

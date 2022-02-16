@@ -131,8 +131,8 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
-	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
+	headGenesisValidatorsRoot := vs.HeadFetcher.HeadGenesisValidatorsRoot()
+	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		res := &ethpb.ChainStartResponse{
 			Started:               true,
 			GenesisTime:           head.GenesisTime(),
-			GenesisValidatorsRoot: head.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: head.GenesisValidatorsRoot(),
 		}
 		return stream.Send(res)
 	}

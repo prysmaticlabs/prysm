@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/sirupsen/logrus"
 )
 
 func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, error) {
@@ -20,6 +21,13 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	if err != nil {
 		return nil, err
 	}
+
+	log.WithFields(logrus.Fields{
+		"hash":       fmt.Sprintf("%#x", payload.BlockHash),
+		"parentHash": fmt.Sprintf("%#x", payload.ParentHash),
+		"number":     payload.BlockNumber,
+		"txCount":    len(payload.Transactions),
+	}).Info("Received payload")
 
 	blk := &ethpb.BeaconBlockBellatrix{
 		Slot:          altairBlk.Slot,

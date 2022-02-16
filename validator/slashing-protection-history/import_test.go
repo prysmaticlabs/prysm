@@ -173,11 +173,11 @@ func Test_validateMetadata(t *testing.T) {
 	goodStr := make([]byte, hex.EncodedLen(len(goodRoot)))
 	hex.Encode(goodStr, goodRoot[:])
 	tests := []struct {
-		name                   string
-		interchangeJSON        *format.EIPSlashingProtectionFormat
-		dbGenesisValidatorRoot []byte
-		wantErr                bool
-		wantFatal              string
+		name                    string
+		interchangeJSON         *format.EIPSlashingProtectionFormat
+		dbGenesisValidatorsRoot []byte
+		wantErr                 bool
+		wantFatal               string
 	}{
 		{
 			name: "Incorrect version for EIP format should fail",
@@ -231,7 +231,7 @@ func Test_validateMetadata(t *testing.T) {
 	}
 }
 
-func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
+func Test_validateMetadataGenesisValidatorsRoot(t *testing.T) {
 	goodRoot := [32]byte{1}
 	goodStr := make([]byte, hex.EncodedLen(len(goodRoot)))
 	hex.Encode(goodStr, goodRoot[:])
@@ -240,10 +240,10 @@ func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
 	hex.Encode(secondStr, secondRoot[:])
 
 	tests := []struct {
-		name                   string
-		interchangeJSON        *format.EIPSlashingProtectionFormat
-		dbGenesisValidatorRoot []byte
-		wantErr                bool
+		name                    string
+		interchangeJSON         *format.EIPSlashingProtectionFormat
+		dbGenesisValidatorsRoot []byte
+		wantErr                 bool
 	}{
 		{
 			name: "Same genesis roots should not fail",
@@ -256,8 +256,8 @@ func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
 					GenesisValidatorsRoot:    string(goodStr),
 				},
 			},
-			dbGenesisValidatorRoot: goodRoot[:],
-			wantErr:                false,
+			dbGenesisValidatorsRoot: goodRoot[:],
+			wantErr:                 false,
 		},
 		{
 			name: "Different genesis roots should not fail",
@@ -270,18 +270,18 @@ func Test_validateMetadataGenesisValidatorRoot(t *testing.T) {
 					GenesisValidatorsRoot:    string(secondStr),
 				},
 			},
-			dbGenesisValidatorRoot: goodRoot[:],
-			wantErr:                true,
+			dbGenesisValidatorsRoot: goodRoot[:],
+			wantErr:                 true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validatorDB := dbtest.SetupDB(t, nil)
 			ctx := context.Background()
-			require.NoError(t, validatorDB.SaveGenesisValidatorsRoot(ctx, tt.dbGenesisValidatorRoot))
+			require.NoError(t, validatorDB.SaveGenesisValidatorsRoot(ctx, tt.dbGenesisValidatorsRoot))
 			err := validateMetadata(ctx, validatorDB, tt.interchangeJSON)
 			if tt.wantErr {
-				require.ErrorContains(t, "genesis validator root doesnt match the one that is stored", err)
+				require.ErrorContains(t, "genesis validators root doesnt match the one that is stored", err)
 			} else {
 				require.NoError(t, err)
 			}
