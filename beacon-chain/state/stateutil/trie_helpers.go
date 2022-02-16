@@ -292,12 +292,12 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 	//    [E]       [F]   -> This layer has length 2.
 	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
 	i := 1
+	chunkBuffer := bytes.NewBuffer([]byte{})
+	chunkBuffer.Grow(64)
 	for len(hashLayer) > 1 && i < len(layers) {
 		if !math.IsPowerOf2(uint64(len(hashLayer))) {
 			return nil, nil, errors.Errorf("hash layer is a non power of 2: %d", len(hashLayer))
 		}
-		chunkBuffer := bytes.NewBuffer([]byte{})
-		chunkBuffer.Grow(64)
 		if features.Get().EnableVectorizedHTR {
 			hashLayer = htr.VectorizedSha256(hashLayer)
 		} else {
