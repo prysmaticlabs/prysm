@@ -90,43 +90,6 @@ func TestInitializeFromProto(t *testing.T) {
 	}
 }
 
-func BenchmarkBeaconState(b *testing.B) {
-	rawObj, err := file2.ReadFileAsBytes("/home/nishant/prysm_state.ssz")
-	require.NoError(b, err)
-	pbState := &ethpb.BeaconStateAltair{}
-	assert.NoError(b, pbState.UnmarshalSSZ(rawObj))
-	file, err := os.OpenFile("/home/nishant/bench.pprof", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, params.BeaconIoConfig().ReadWritePermissions) // #nosec G304
-	require.NoError(b, err)
-	assert.NoError(b, pprof.StartCPUProfile(file))
-	b.N = 50
-	for i := 0; i < b.N; i++ {
-		Set = true
-		st, err := InitializeFromProtoUnsafe(pbState)
-		require.NoError(b, err)
-		Set = false
-		_, err = st.HashTreeRoot(context.Background())
-		assert.NoError(b, err)
-	}
-	pprof.StopCPUProfile()
-}
-
-func BenchmarkBeaconState2(b *testing.B) {
-	rawObj, err := file2.ReadFileAsBytes("/home/nishant/prysm_state.ssz")
-	require.NoError(b, err)
-	pbState := &ethpb.BeaconStateAltair{}
-	assert.NoError(b, pbState.UnmarshalSSZ(rawObj))
-	file, err := os.OpenFile("/home/nishant/bench2.pprof", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, params.BeaconIoConfig().ReadWritePermissions) // #nosec G304
-	require.NoError(b, err)
-	assert.NoError(b, pprof.StartCPUProfile(file))
-	b.ResetTimer()
-	b.N = 50
-	for i := 0; i < b.N; i++ {
-		_, err := pbState.HashTreeRoot()
-		require.NoError(b, err)
-	}
-	pprof.StopCPUProfile()
-}
-
 func TestBeaconState_NoDeadlock(t *testing.T) {
 	count := uint64(100)
 	vals := make([]*ethpb.Validator, 0, count)
