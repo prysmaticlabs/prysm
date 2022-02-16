@@ -3,12 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["hashtree.go"],
-    cgo = True,
     importpath = "github.com/prysmaticlabs/prysm/crypto/hash/htr",
     visibility = ["//visibility:public"],
-    deps = [
-        "//container/trie:go_default_library",
-        "//math:go_default_library",
-        "@com_github_prysmaticlabs_gohashtree//:go_default_library",
-    ],
+    deps = ["@com_github_prysmaticlabs_gohashtree//:go_default_library"],
 )
