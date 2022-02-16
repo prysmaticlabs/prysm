@@ -184,7 +184,7 @@ go_rules_dependencies()
 
 go_register_toolchains(
     go_version = "1.17.6",
-    #nogo = "@//:nogo",
+    nogo = "@//:nogo",
 )
 
 http_archive(
