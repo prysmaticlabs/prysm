@@ -157,7 +157,7 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
-	engineAPIClient         *engine.Client
+	engineAPIClient         engine.Caller
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -313,7 +313,7 @@ func (s *Service) Status() error {
 
 // EngineAPIClient returns the associated engine API client to interact
 // with an execution node via JSON-RPC.
-func (s *Service) EngineAPIClient() *engine.Client {
+func (s *Service) EngineAPIClient() engine.Caller {
 	return s.engineAPIClient
 }
 

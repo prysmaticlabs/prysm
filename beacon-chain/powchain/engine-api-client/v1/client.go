@@ -41,9 +41,9 @@ type ForkchoiceUpdatedResponse struct {
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
-// EngineCaller defines a client that can interact with an Ethereum
+// Caller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
-type EngineCaller interface {
+type Caller interface {
 	NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (*pb.PayloadStatus, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
@@ -51,7 +51,7 @@ type EngineCaller interface {
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
-	) (*pb.TransitionConfiguration, error)
+	) error
 	LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error)
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
 }

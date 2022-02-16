@@ -11,12 +11,11 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
-const (
+var (
 	checkTransitionPollingInterval = time.Minute
+	configMismatchLog              = "Configuration mismatch between your execution client and Prysm. Node is shutting down as it" +
+		" will not be able to complete the proof-of-stake transition"
 )
-
-var configMismatchLog = "Configuration mismatch between your execution client and Prysm. Node is shutting down as it" +
-	" will not be able to complete the proof-of-stake transition"
 
 // Checks the transition configuration between Prysm and the connected execution node to ensure
 // there are no differences. If there are any discrepancies, Prysm must halt its beacon node as
