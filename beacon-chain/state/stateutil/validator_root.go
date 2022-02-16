@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
@@ -55,8 +56,17 @@ func ValidatorFieldRoots(hasher ssz.HashFn, validator *ethpb.Validator) ([][32]b
 		if err != nil {
 			return [][32]byte{}, err
 		}
-		returnedRoot := htr.VectorizedSha256(pubKeyChunks)
-		fieldRoots = [][32]byte{returnedRoot[0], withdrawCreds, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
+		var pubKeyRoot [32]byte
+		if features.Get().EnableVectorizedHTR {
+			returnedRoots := htr.VectorizedSha256(pubKeyChunks)
+			pubKeyRoot = returnedRoots[0]
+		} else {
+			pubKeyRoot, err = ssz.BitwiseMerkleizeArrays(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
+			if err != nil {
+				return [][32]byte{}, err
+			}
+		}
+		fieldRoots = [][32]byte{pubKeyRoot, withdrawCreds, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
 			activationBuf, exitBuf, withdrawalBuf}
 	}
 	return fieldRoots, nil

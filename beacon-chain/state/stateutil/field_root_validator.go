@@ -24,28 +24,19 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 }
 
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
-	hashKeyElements := make([]byte, len(validators)*32)
-	roots := make([][32]byte, 0, len(validators)*8)
-	emptyKey := hash.FastSum256(hashKeyElements)
 	hasher := hash.CustomSHA256Hasher()
-	bytesProcessed := 0
-	for i := 0; i < len(validators); i++ {
-		fRoots, err := ValidatorFieldRoots(hasher, validators[i])
+
+	var err error
+	var roots [][32]byte
+	if features.Get().EnableVectorizedHTR {
+		roots, err = h.optimizedValidatorRoots(validators)
 		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
+			return [32]byte{}, err
 		}
-		roots = append(roots, fRoots...)
-		bytesProcessed += 32
-	}
-
-	for i := 0; i < 3; i++ {
-		roots = htr.VectorizedSha256(roots)
-	}
-
-	hashKey := hash.FastSum256(hashKeyElements)
-	if hashKey != emptyKey && h.rootsCache != nil {
-		if found, ok := h.rootsCache.Get(string(hashKey[:])); found != nil && ok {
-			return found.([32]byte), nil
+	} else {
+		roots, err = h.validatorRoots(hasher, validators)
+		if err != nil {
+			return [32]byte{}, err
 		}
 	}
 
@@ -61,10 +52,39 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	var validatorsRootsBufRoot [32]byte
 	copy(validatorsRootsBufRoot[:], validatorsRootsBuf.Bytes())
 	res := ssz.MixInLength(validatorsRootsRoot, validatorsRootsBufRoot[:])
-	if hashKey != emptyKey && h.rootsCache != nil {
-		h.rootsCache.Set(string(hashKey[:]), res, 32)
-	}
 	return res, nil
+}
+
+func (h *stateRootHasher) validatorRoots(hasher func([]byte) [32]byte, validators []*ethpb.Validator) ([][32]byte, error) {
+	roots := make([][32]byte, len(validators))
+	for i := 0; i < len(validators); i++ {
+		val, err := h.validatorRoot(hasher, validators[i])
+		if err != nil {
+			return [][32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
+		}
+		roots[i] = val
+	}
+	return roots, nil
+}
+
+func (h *stateRootHasher) optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
+	roots := make([][32]byte, 0, len(validators)*8)
+	hasher := hash.CustomSHA256Hasher()
+	for i := 0; i < len(validators); i++ {
+		fRoots, err := ValidatorFieldRoots(hasher, validators[i])
+		if err != nil {
+			return [][32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
+		}
+		roots = append(roots, fRoots...)
+	}
+
+	// A validator's tree can represented with a depth of 3. As log2(8) = 3
+	// Using this property we can lay out all the individual fields of a
+	// validator and hash them in single level using our vectorized routine.
+	for i := 0; i < 3; i++ {
+		roots = htr.VectorizedSha256(roots)
+	}
+	return roots, nil
 }
 
 func (h *stateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {

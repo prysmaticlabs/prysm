@@ -12,6 +12,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/encoding/ssz",
     visibility = ["//visibility:public"],
     deps = [
+        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//container/trie:go_default_library",
         "//crypto/hash:go_default_library",
