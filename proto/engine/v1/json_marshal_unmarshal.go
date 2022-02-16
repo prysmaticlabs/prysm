@@ -290,9 +290,13 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*p = PayloadStatus{}
-	p.LatestValidHash = *dec.LatestValidHash
+	if dec.LatestValidHash != nil {
+		p.LatestValidHash = *dec.LatestValidHash
+	}
 	p.Status = PayloadStatus_Status(PayloadStatus_Status_value[dec.Status])
-	p.ValidationError = *dec.ValidationError
+	if dec.ValidationError != nil {
+		p.ValidationError = *dec.ValidationError
+	}
 	return nil
 }
 
