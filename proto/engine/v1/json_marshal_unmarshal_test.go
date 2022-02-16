@@ -79,6 +79,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	})
 	t.Run("execution payload", func(t *testing.T) {
 		baseFeePerGas := big.NewInt(6)
+		baseFeePerGasBytes := bytesutil.ReverseByteOrder(baseFeePerGas.Bytes())
 		parentHash := bytesutil.PadTo([]byte("parent"), fieldparams.RootLength)
 		feeRecipient := bytesutil.PadTo([]byte("feeRecipient"), fieldparams.FeeRecipientLength)
 		stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
@@ -99,7 +100,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			GasUsed:       3,
 			Timestamp:     4,
 			ExtraData:     extra,
-			BaseFeePerGas: baseFeePerGas.Bytes(),
+			BaseFeePerGas: baseFeePerGasBytes,
 			BlockHash:     hash,
 			Transactions:  [][]byte{[]byte("hi")},
 		}
