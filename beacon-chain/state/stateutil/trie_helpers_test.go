@@ -5,6 +5,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -28,12 +29,18 @@ func TestReturnTrieLayer_OK(t *testing.T) {
 	newRoot := *layers[len(layers)-1][0]
 	assert.Equal(t, root, newRoot)
 
-	layers = stateutil.ReturnTrieLayerVectorize(roots, uint64(len(roots)))
+	flags := &features.Flags{}
+	flags.EnableVectorizedHTR = true
+	reset := features.InitWithReset(flags)
+	defer reset()
+
+	layers, err = stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
+	assert.NoError(t, err)
 	lastRoot := *layers[len(layers)-1][0]
 	assert.Equal(t, root, lastRoot)
 }
 
-func BenchmarkReturnTrieLayer(b *testing.B) {
+func BenchmarkReturnTrieLayer_NormalAlgorithm(b *testing.B) {
 	newState, _ := util.DeterministicGenesisState(b, 32)
 	root, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
 	require.NoError(b, err)
@@ -42,17 +49,36 @@ func BenchmarkReturnTrieLayer(b *testing.B) {
 	for _, rt := range blockRts {
 		roots = append(roots, bytesutil.ToBytes32(rt))
 	}
-	b.Run("Normal Algorithm", func(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
 		layers, err := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
 		assert.NoError(b, err)
 		newRoot := *layers[len(layers)-1][0]
 		assert.Equal(b, root, newRoot)
-	})
-	b.Run("Vectorized Algorithm", func(b *testing.B) {
-		layers := stateutil.ReturnTrieLayerVectorize(roots, uint64(len(roots)))
-		lastRoot := *layers[len(layers)-1][0]
-		assert.Equal(b, root, lastRoot)
-	})
+	}
+}
+
+func BenchmarkReturnTrieLayer_VectorizedAlgorithm(b *testing.B) {
+	flags := &features.Flags{}
+	flags.EnableVectorizedHTR = true
+	reset := features.InitWithReset(flags)
+	defer reset()
+
+	newState, _ := util.DeterministicGenesisState(b, 32)
+	root, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	require.NoError(b, err)
+	blockRts := newState.BlockRoots()
+	roots := make([][32]byte, 0, len(blockRts))
+	for _, rt := range blockRts {
+		roots = append(roots, bytesutil.ToBytes32(rt))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		layers, err := stateutil.ReturnTrieLayer(roots, uint64(len(roots)))
+		assert.NoError(b, err)
+		newRoot := *layers[len(layers)-1][0]
+		assert.Equal(b, root, newRoot)
+	}
 }
 
 func TestReturnTrieLayerVariable_OK(t *testing.T) {
@@ -73,7 +99,12 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, root, newRoot)
 
-	layers = stateutil.ReturnTrieLayerVariableVectorize(roots, params.BeaconConfig().ValidatorRegistryLimit)
+	flags := &features.Flags{}
+	flags.EnableVectorizedHTR = true
+	reset := features.InitWithReset(flags)
+	defer reset()
+
+	layers = stateutil.ReturnTrieLayerVariable(roots, params.BeaconConfig().ValidatorRegistryLimit)
 	lastRoot := *layers[len(layers)-1][0]
 	lastRoot, err = stateutil.AddInMixin(lastRoot, uint64(len(validators)))
 	require.NoError(t, err)
@@ -81,7 +112,7 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 
 }
 
-func BenchmarkReturnTrieLayerVariable(b *testing.B) {
+func BenchmarkReturnTrieLayerVariable_NormalAlgorithm(b *testing.B) {
 	newState, _ := util.DeterministicGenesisState(b, 16000)
 	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(b, err)
@@ -93,20 +124,41 @@ func BenchmarkReturnTrieLayerVariable(b *testing.B) {
 		require.NoError(b, err)
 		roots = append(roots, rt)
 	}
-	b.Run("Normal Algorithm", func(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
 		layers := stateutil.ReturnTrieLayerVariable(roots, params.BeaconConfig().ValidatorRegistryLimit)
 		newRoot := *layers[len(layers)-1][0]
 		newRoot, err = stateutil.AddInMixin(newRoot, uint64(len(validators)))
 		require.NoError(b, err)
 		assert.Equal(b, root, newRoot)
-	})
-	b.Run("Vectorized Algorithm", func(b *testing.B) {
-		layers := stateutil.ReturnTrieLayerVariableVectorize(roots, params.BeaconConfig().ValidatorRegistryLimit)
-		lastRoot := *layers[len(layers)-1][0]
-		lastRoot, err = stateutil.AddInMixin(lastRoot, uint64(len(validators)))
+	}
+}
+
+func BenchmarkReturnTrieLayerVariable_VectorizedAlgorithm(b *testing.B) {
+	flags := &features.Flags{}
+	flags.EnableVectorizedHTR = true
+	reset := features.InitWithReset(flags)
+	defer reset()
+
+	newState, _ := util.DeterministicGenesisState(b, 16000)
+	root, err := stateutil.ValidatorRegistryRoot(newState.Validators())
+	require.NoError(b, err)
+	hasher := hash.CustomSHA256Hasher()
+	validators := newState.Validators()
+	roots := make([][32]byte, 0, len(validators))
+	for _, val := range validators {
+		rt, err := stateutil.ValidatorRootWithHasher(hasher, val)
 		require.NoError(b, err)
-		assert.Equal(b, root, lastRoot)
-	})
+		roots = append(roots, rt)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		layers := stateutil.ReturnTrieLayerVariable(roots, params.BeaconConfig().ValidatorRegistryLimit)
+		newRoot := *layers[len(layers)-1][0]
+		newRoot, err = stateutil.AddInMixin(newRoot, uint64(len(validators)))
+		require.NoError(b, err)
+		assert.Equal(b, root, newRoot)
+	}
 }
 
 func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
