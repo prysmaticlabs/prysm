@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "block_cache.go",
         "block_reader.go",
+        "check_transition_config.go",
         "deposit.go",
         "log.go",
         "log_processing.go",
@@ -44,6 +45,7 @@ go_library(
         "//monitoring/tracing:go_default_library",
         "//network:go_default_library",
         "//network/authorization:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//time:go_default_library",
         "//time/slots:go_default_library",
@@ -69,6 +71,7 @@ go_test(
     srcs = [
         "block_cache_test.go",
         "block_reader_test.go",
+        "check_transition_config_test.go",
         "deposit_test.go",
         "init_test.go",
         "log_processing_test.go",
@@ -87,6 +90,7 @@ go_test(
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
+        "//beacon-chain/powchain/engine-api-client/v1/mocks:go_default_library",
         "//beacon-chain/powchain/testing:go_default_library",
         "//beacon-chain/powchain/types:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
