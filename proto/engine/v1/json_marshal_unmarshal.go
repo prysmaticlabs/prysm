@@ -330,40 +330,6 @@ func (t *TransitionConfiguration) UnmarshalJSON(enc []byte) error {
 	return nil
 }
 
-type transitionConfigurationJSON struct {
-	TerminalTotalDifficulty string        `json:"terminalTotalDifficulty"`
-	TerminalBlockHash       hexutil.Bytes `json:"terminalBlockHash"`
-	TerminalBlockNumber     string        `json:"terminalBlockNumber"`
-}
-
-// MarshalJSON --
-func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
-	num := new(big.Int).SetBytes(t.TerminalBlockNumber)
-	numHex := hexutil.EncodeBig(num)
-	return json.Marshal(transitionConfigurationJSON{
-		TerminalTotalDifficulty: t.TerminalTotalDifficulty,
-		TerminalBlockHash:       t.TerminalBlockHash,
-		TerminalBlockNumber:     numHex,
-	})
-}
-
-// UnmarshalJSON --
-func (t *TransitionConfiguration) UnmarshalJSON(enc []byte) error {
-	dec := transitionConfigurationJSON{}
-	if err := json.Unmarshal(enc, &dec); err != nil {
-		return err
-	}
-	*t = TransitionConfiguration{}
-	num, err := hexutil.DecodeBig(dec.TerminalBlockNumber)
-	if err != nil {
-		return err
-	}
-	t.TerminalTotalDifficulty = dec.TerminalTotalDifficulty
-	t.TerminalBlockHash = dec.TerminalBlockHash
-	t.TerminalBlockNumber = num.Bytes()
-	return nil
-}
-
 type forkchoiceStateJSON struct {
 	HeadBlockHash      hexutil.Bytes `json:"headBlockHash"`
 	SafeBlockHash      hexutil.Bytes `json:"safeBlockHash"`

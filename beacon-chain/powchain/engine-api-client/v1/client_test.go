@@ -22,7 +22,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var _ = EngineCaller(&Client{})
+var _ = Caller(&Client{})
 
 func TestClient_IPC(t *testing.T) {
 	server := newTestIPCServer(t)
@@ -71,9 +71,8 @@ func TestClient_IPC(t *testing.T) {
 	t.Run(ExchangeTransitionConfigurationMethod, func(t *testing.T) {
 		want, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
 		require.Equal(t, true, ok)
-		resp, err := client.ExchangeTransitionConfiguration(ctx, want)
+		err := client.ExchangeTransitionConfiguration(ctx, want)
 		require.NoError(t, err)
-		require.DeepEqual(t, want, resp)
 	})
 	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
@@ -304,9 +303,8 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpc = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.ExchangeTransitionConfiguration(ctx, want)
+		err = client.ExchangeTransitionConfiguration(ctx, want)
 		require.NoError(t, err)
-		require.DeepEqual(t, want, resp)
 	})
 	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
 		arg := common.BytesToHash([]byte("foo"))
@@ -382,8 +380,8 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		client := &Client{}
 		client.rpc = rpcClient
 
-		_, err = client.ExchangeTransitionConfiguration(ctx, request)
-		require.Equal(t, true, errors.Is(err, ErrMismatchTerminalBlockHash))
+		err = client.ExchangeTransitionConfiguration(ctx, request)
+		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
 	})
 	t.Run("wrong terminal total difficulty", func(t *testing.T) {
 		request, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
@@ -415,8 +413,8 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		client := &Client{}
 		client.rpc = rpcClient
 
-		_, err = client.ExchangeTransitionConfiguration(ctx, request)
-		require.Equal(t, true, errors.Is(err, ErrMismatchTerminalTotalDiff))
+		err = client.ExchangeTransitionConfiguration(ctx, request)
+		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
 	})
 }
 
