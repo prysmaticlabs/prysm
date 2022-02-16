@@ -2,7 +2,6 @@ package enginev1
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -212,7 +211,6 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	dec := executionPayloadJSON{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
-		fmt.Println("got weird err")
 		return err
 	}
 	*e = ExecutionPayload{}
@@ -295,6 +293,40 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 	p.LatestValidHash = *dec.LatestValidHash
 	p.Status = PayloadStatus_Status(PayloadStatus_Status_value[dec.Status])
 	p.ValidationError = *dec.ValidationError
+	return nil
+}
+
+type transitionConfigurationJSON struct {
+	TerminalTotalDifficulty string        `json:"terminalTotalDifficulty"`
+	TerminalBlockHash       hexutil.Bytes `json:"terminalBlockHash"`
+	TerminalBlockNumber     string        `json:"terminalBlockNumber"`
+}
+
+// MarshalJSON --
+func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
+	num := new(big.Int).SetBytes(t.TerminalBlockNumber)
+	numHex := hexutil.EncodeBig(num)
+	return json.Marshal(transitionConfigurationJSON{
+		TerminalTotalDifficulty: t.TerminalTotalDifficulty,
+		TerminalBlockHash:       t.TerminalBlockHash,
+		TerminalBlockNumber:     numHex,
+	})
+}
+
+// UnmarshalJSON --
+func (t *TransitionConfiguration) UnmarshalJSON(enc []byte) error {
+	dec := transitionConfigurationJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*t = TransitionConfiguration{}
+	num, err := hexutil.DecodeBig(dec.TerminalBlockNumber)
+	if err != nil {
+		return err
+	}
+	t.TerminalTotalDifficulty = dec.TerminalTotalDifficulty
+	t.TerminalBlockHash = dec.TerminalBlockHash
+	t.TerminalBlockNumber = num.Bytes()
 	return nil
 }
 
