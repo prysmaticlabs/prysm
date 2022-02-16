@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
@@ -41,27 +42,6 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) ([][]*[32]byte, error) 
 	return refLayers, nil
 }
 
-func ReturnTrieLayerVectorize(elements [][32]byte, length uint64) [][]*[32]byte {
-	refLayers := make([][]*[32]byte, ssz.Depth(length)+1)
-	currLevel := 0
-	refLayers[currLevel] = make([]*[32]byte, len(elements))
-	for i := range elements {
-		refLayers[currLevel][i] = &elements[i]
-	}
-	for {
-		elements = htr.VectorizedSha256(elements)
-		currLevel++
-		refLayers[currLevel] = make([]*[32]byte, len(elements))
-		for i := range elements {
-			refLayers[currLevel][i] = &elements[i]
-		}
-		if len(elements) == 1 {
-			break
-		}
-	}
-	return refLayers
-}
-
 // ReturnTrieLayerVariable returns the representation of a merkle trie when
 // provided with the elements of a variable sized trie and the corresponding depth of
 // it.
@@ -85,56 +65,38 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	buffer.Grow(64)
 
 	for i := 0; i < int(depth); i++ {
-		oddNodeLength := len(layers[i])%2 == 1
-		if oddNodeLength {
-			zerohash := trie.ZeroHashes[i]
-			layers[i] = append(layers[i], &zerohash)
-		}
-		updatedValues := make([]*[32]byte, 0, len(layers[i])/2)
-		for j := 0; j < len(layers[i]); j += 2 {
-			buffer.Write(layers[i][j][:])
-			buffer.Write(layers[i][j+1][:])
-			concat := hasher(buffer.Bytes())
-			updatedValues = append(updatedValues, &concat)
-			buffer.Reset()
-		}
-		// remove zerohash node from tree
-		if oddNodeLength {
-			layers[i] = layers[i][:len(layers[i])-1]
-		}
-		layers[i+1] = updatedValues
-	}
-	return layers
-}
-
-func ReturnTrieLayerVariableVectorize(elements [][32]byte, length uint64) [][]*[32]byte {
-	depth := ssz.Depth(length)
-	layers := make([][]*[32]byte, depth+1)
-	// Return zerohash at depth
-	if len(elements) == 0 {
-		zerohash := trie.ZeroHashes[depth]
-		layers[len(layers)-1] = []*[32]byte{&zerohash}
-		return layers
-	}
-	transformedLeaves := make([]*[32]byte, len(elements))
-	for i := range elements {
-		arr := elements[i]
-		transformedLeaves[i] = &arr
-	}
-	layers[0] = transformedLeaves
-	for i := 0; i < int(depth); i++ {
 		layerLen := len(layers[i])
 		oddNodeLength := layerLen%2 == 1
-		if oddNodeLength {
-			zerohash := trie.ZeroHashes[i]
-			elements = append(elements, zerohash)
-			layerLen++
-		}
-		length := math.Max(uint64(layerLen/2), 1)
-		layers[i+1] = make([]*[32]byte, length)
-		elements = htr.VectorizedSha256(elements)
-		for j := range elements {
-			layers[i+1][j] = &elements[j]
+		if features.Get().EnableVectorizedHTR {
+			if oddNodeLength {
+				zerohash := trie.ZeroHashes[i]
+				elements = append(elements, zerohash)
+				layerLen++
+			}
+			length := math.Max(uint64(layerLen/2), 1)
+			layers[i+1] = make([]*[32]byte, length)
+			elements = htr.VectorizedSha256(elements)
+			for j := range elements {
+				layers[i+1][j] = &elements[j]
+			}
+		} else {
+			if oddNodeLength {
+				zerohash := trie.ZeroHashes[i]
+				layers[i] = append(layers[i], &zerohash)
+			}
+			updatedValues := make([]*[32]byte, 0, len(layers[i])/2)
+			for j := 0; j < len(layers[i]); j += 2 {
+				buffer.Write(layers[i][j][:])
+				buffer.Write(layers[i][j+1][:])
+				concat := hasher(buffer.Bytes())
+				updatedValues = append(updatedValues, &concat)
+				buffer.Reset()
+			}
+			// remove zerohash node from tree
+			if oddNodeLength {
+				layers[i] = layers[i][:len(layers[i])-1]
+			}
+			layers[i+1] = updatedValues
 		}
 	}
 	return layers
@@ -334,7 +296,21 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 		if !math.IsPowerOf2(uint64(len(hashLayer))) {
 			return nil, nil, errors.Errorf("hash layer is a non power of 2: %d", len(hashLayer))
 		}
-		hashLayer = htr.VectorizedSha256(hashLayer)
+		chunkBuffer := bytes.NewBuffer([]byte{})
+		chunkBuffer.Grow(64)
+		if features.Get().EnableVectorizedHTR {
+			hashLayer = htr.VectorizedSha256(hashLayer)
+		} else {
+			layer := make([][32]byte, len(hashLayer)/2)
+			for j := 0; j < len(hashLayer); j += 2 {
+				chunkBuffer.Write(hashLayer[j][:])
+				chunkBuffer.Write(hashLayer[j+1][:])
+				hashedChunk := hasher(chunkBuffer.Bytes())
+				layer[j/2] = hashedChunk
+				chunkBuffer.Reset()
+			}
+			hashLayer = layer
+		}
 		layers[i] = hashLayer
 		i++
 	}
