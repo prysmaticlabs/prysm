@@ -59,5 +59,4 @@ func handleExchangeConfigurationError(err error) {
 		log.WithError(err).Fatal(configMismatchLog)
 	}
 	log.WithError(err).Error("Could not check configuration values between execution and consensus client")
-	return
 }
