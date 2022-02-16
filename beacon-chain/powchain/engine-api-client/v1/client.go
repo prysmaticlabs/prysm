@@ -118,20 +118,20 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
 func (c *Client) ExchangeTransitionConfiguration(
 	ctx context.Context, cfg *pb.TransitionConfiguration,
-) (*pb.TransitionConfiguration, error) {
+) error {
 	// Terminal block number should be set to 0
 	zeroBigNum := big.NewInt(0)
 	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
 	result := &pb.TransitionConfiguration{}
 	if err := c.rpc.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
-		return nil, handleRPCError(err)
+		return handleRPCError(err)
 	}
 	// We surface an error to the user if local configuration settings mismatch
 	// according to the response from the execution node.
 	cfgTerminalHash := params.BeaconConfig().TerminalBlockHash[:]
 	if !bytes.Equal(cfgTerminalHash, result.TerminalBlockHash) {
-		return nil, errors.Wrapf(
-			ErrMismatchTerminalBlockHash,
+		return errors.Wrapf(
+			ErrConfigMismatch,
 			"got %#x from execution node, wanted %#x",
 			result.TerminalBlockHash,
 			cfgTerminalHash,
@@ -139,14 +139,14 @@ func (c *Client) ExchangeTransitionConfiguration(
 	}
 	ttdCfg := params.BeaconConfig().TerminalTotalDifficulty
 	if ttdCfg != result.TerminalTotalDifficulty {
-		return nil, errors.Wrapf(
-			ErrMismatchTerminalTotalDiff,
+		return errors.Wrapf(
+			ErrConfigMismatch,
 			"got %s from execution node, wanted %s",
 			result.TerminalTotalDifficulty,
 			ttdCfg,
 		)
 	}
-	return result, nil
+	return nil
 }
 
 // LatestExecutionBlock fetches the latest execution engine block by calling

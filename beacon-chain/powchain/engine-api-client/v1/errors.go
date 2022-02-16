@@ -22,7 +22,7 @@ var (
 	// ErrMismatchTerminalBlockHash when the terminal block hash value received via
 	// the API mismatches Prysm's configuration value.
 	ErrMismatchTerminalBlockHash = errors.New("terminal block hash mismatch")
-	// ErrMismatchTerminalTotalDiff when the terminal total difficulty value received via
-	// the API mismatches Prysm's configuration value.
-	ErrMismatchTerminalTotalDiff = errors.New("terminal total difficulty mismatch")
+	// ErrConfigMismatch when the execution node's terminal total difficulty or
+	// terminal block hash received via the API mismatches Prysm's configuration value.
+	ErrConfigMismatch = errors.New("execution client configuration mismatch")
 )
