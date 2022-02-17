@@ -77,39 +77,3 @@ func attDataRootWithHasher(hasher ssz.HashFn, data *ethpb.AttestationData) ([32]
 
 	return ssz.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
-
-func marshalAttData(data *ethpb.AttestationData) []byte {
-	enc := make([]byte, 128)
-
-	if data != nil {
-		// Slot.
-		slotBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(slotBuf, uint64(data.Slot))
-		copy(enc[0:8], slotBuf)
-
-		// Committee index.
-		indexBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(indexBuf, uint64(data.CommitteeIndex))
-		copy(enc[8:16], indexBuf)
-
-		copy(enc[16:48], data.BeaconBlockRoot)
-
-		// Source epoch and root.
-		if data.Source != nil {
-			sourceEpochBuf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(sourceEpochBuf, uint64(data.Source.Epoch))
-			copy(enc[48:56], sourceEpochBuf)
-			copy(enc[56:88], data.Source.Root)
-		}
-
-		// Target.
-		if data.Target != nil {
-			targetEpochBuf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(targetEpochBuf, uint64(data.Target.Epoch))
-			copy(enc[88:96], targetEpochBuf)
-			copy(enc[96:128], data.Target.Root)
-		}
-	}
-
-	return enc
-}

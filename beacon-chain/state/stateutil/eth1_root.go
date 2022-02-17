@@ -41,22 +41,6 @@ func Eth1DataRootWithHasher(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]by
 	return root, nil
 }
 
-// Eth1DatasEncKey returns the encoded key in bytes of input `eth1Data`s,
-// the returned key bytes can be used for caching purposes.
-func Eth1DatasEncKey(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
-	hasher := hash.CustomSHA256Hasher()
-	enc := make([]byte, len(eth1Datas)*32)
-	for i := 0; i < len(eth1Datas); i++ {
-		eth1, err := Eth1DataRootWithHasher(hasher, eth1Datas[i])
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
-		}
-		copy(enc[(i*32):(i+1)*32], eth1[:])
-	}
-	hashKey := hash.FastSum256(enc)
-	return hashKey, nil
-}
-
 // Eth1DatasRoot returns the hash tree root of input `eth1Datas`.
 func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
