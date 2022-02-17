@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -38,6 +37,7 @@ type Eth1NodeSet struct {
 	e2etypes.ComponentRunner
 	started      chan struct{}
 	keystorePath string
+	enr          string
 }
 
 // NewEth1NodeSet creates and returns a set of Eth1 nodes.
@@ -51,13 +51,17 @@ func (s *Eth1NodeSet) KeystorePath() string {
 	return s.keystorePath
 }
 
+func (s *Eth1NodeSet) SetENR(enr string) {
+	s.enr = enr
+}
+
 // Start starts all the beacon nodes in set.
 func (s *Eth1NodeSet) Start(ctx context.Context) error {
 	// Create Eth1 nodes. The number of nodes is the same as the number of beacon nodes
 	// because we want each beacon node to connect to its own Eth1 node.
 	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		node := NewEth1Node(i)
+		node := NewEth1Node(i, s.enr)
 		nodes[i] = node
 	}
 
@@ -81,13 +85,15 @@ type Eth1Node struct {
 	started      chan struct{}
 	keystorePath string
 	index        int
+	enr          string
 }
 
 // NewEth1Node creates and returns ETH1 node.
-func NewEth1Node(index int) *Eth1Node {
+func NewEth1Node(index int, enr string) *Eth1Node {
 	return &Eth1Node{
 		started: make(chan struct{}, 1),
 		index:   index,
+		enr:     enr,
 	}
 }
 
@@ -115,6 +121,9 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort+10*node.index),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+10*node.index+e2e.ETH1WSOffset),
+		fmt.Sprintf("--bootnodes=%s", node.enr),
+		fmt.Sprintf("--port=%d", 30303+node.index),
+		"--networkid=123456",
 		"--http",
 		"--http.addr=127.0.0.1",
 		"--http.corsdomain=\"*\"",
@@ -123,9 +132,9 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		"--ws",
 		"--ws.addr=127.0.0.1",
 		"--ws.origins=\"*\"",
-		"--dev",
-		"--dev.period=2",
 		"--ipcdisable",
+		"--mine",
+		"--miner.etherbase=0x0000000000000000000000000000000000000001",
 	}
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log")
@@ -149,17 +158,18 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	}
 	web3 := ethclient.NewClient(client)
 
-	// Access the dev account keystore to deploy the contract.
-	fileName, err := exec.Command("ls", path.Join(eth1Path, "keystore")).Output() // #nosec G204
+	fileName := "UTC--2021-12-22T19-14-08.590377700Z--878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
+	keystorePath, err := bazel.Runfile("/testing/endtoend/static-files/eth1/" + fileName)
 	if err != nil {
 		return err
 	}
-	keystorePath := path.Join(eth1Path, fmt.Sprintf("keystore/%s", strings.TrimSpace(string(fileName))))
+
+	// Access the dev account keystore to deploy the contract.
 	jsonBytes, err := ioutil.ReadFile(keystorePath) // #nosec G304 -- ReadFile is safe
 	if err != nil {
 		return err
 	}
-	store, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
+	store, err := keystore.DecryptKey(jsonBytes, "password" /*password*/)
 	if err != nil {
 		return err
 	}
@@ -217,10 +227,6 @@ func mineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uin
 	if err != nil {
 		return err
 	}
-	chainID, err := web3.NetworkID(context.Background())
-	if err != nil {
-		return err
-	}
 	block, err := web3.BlockByNumber(context.Background(), nil)
 	if err != nil {
 		return err
@@ -229,7 +235,7 @@ func mineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uin
 
 	for block.NumberU64() <= finishBlock {
 		spamTX := types.NewTransaction(nonce, keystore.Address, big.NewInt(0), 21000, big.NewInt(1e6), []byte{})
-		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(chainID), keystore.PrivateKey)
+		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(big.NewInt(123456)), keystore.PrivateKey)
 		if err != nil {
 			return err
 		}

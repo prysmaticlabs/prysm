@@ -88,24 +88,6 @@ func (r *testRunner) run() {
 		})
 	}
 
-	// ETH1 node.
-	eth1Nodes := components.NewEth1NodeSet()
-	g.Go(func() error {
-		if err := eth1Nodes.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start eth1node")
-		}
-		return nil
-	})
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
-		}
-		if err := components.SendAndMineDeposits(eth1Nodes.KeystorePath(), 0, minGenesisActiveCount, 0, true /* partial */); err != nil {
-			return errors.Wrap(err, "failed to send and mine deposits")
-		}
-		return nil
-	})
-
 	// Boot node.
 	bootNode := components.NewBootNode()
 	g.Go(func() error {
@@ -114,6 +96,23 @@ func (r *testRunner) run() {
 		}
 		return nil
 	})
+
+	// ETH1 node.
+	eth1Nodes := components.NewEth1NodeSet()
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
+			return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
+		}
+		eth1Nodes.SetENR(bootNode.ENR())
+		if err := eth1Nodes.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start eth1node")
+		}
+		if err := components.SendAndMineDeposits(eth1Nodes.KeystorePath(), 0, minGenesisActiveCount, 0, true /* partial */); err != nil {
+			return errors.Wrap(err, "failed to send and mine deposits")
+		}
+		return nil
+	})
+
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
