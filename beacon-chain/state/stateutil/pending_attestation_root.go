@@ -40,29 +40,6 @@ func PendingAttRootWithHasher(hasher ssz.HashFn, att *ethpb.PendingAttestation) 
 	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// pendingAttEncKey returns the encoded key in bytes of input `pendingAttestation`,
-// the returned key bytes can be used for caching purposes.
-func pendingAttEncKey(att *ethpb.PendingAttestation) []byte {
-	enc := make([]byte, 2192)
-
-	if att != nil {
-		copy(enc[0:2048], att.AggregationBits)
-
-		inclusionBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(inclusionBuf, uint64(att.InclusionDelay))
-		copy(enc[2048:2056], inclusionBuf)
-
-		attDataBuf := marshalAttData(att.Data)
-		copy(enc[2056:2184], attDataBuf)
-
-		proposerBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(proposerBuf, uint64(att.ProposerIndex))
-		copy(enc[2184:2192], proposerBuf)
-	}
-
-	return enc
-}
-
 func attDataRootWithHasher(hasher ssz.HashFn, data *ethpb.AttestationData) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 

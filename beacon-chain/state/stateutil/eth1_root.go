@@ -12,27 +12,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// eth1DataEncKey returns the encoded key in bytes of input `eth1Data`,
-// the returned key bytes can be used for caching purposes.
-func eth1DataEncKey(eth1Data *ethpb.Eth1Data) []byte {
-	enc := make([]byte, 0, 96)
-	if eth1Data != nil {
-		if len(eth1Data.DepositRoot) > 0 {
-			depRoot := bytesutil.ToBytes32(eth1Data.DepositRoot)
-			enc = append(enc, depRoot[:]...)
-		}
-		eth1DataCountBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(eth1DataCountBuf, eth1Data.DepositCount)
-		eth1CountRoot := bytesutil.ToBytes32(eth1DataCountBuf)
-		enc = append(enc, eth1CountRoot[:]...)
-		if len(eth1Data.BlockHash) > 0 {
-			blockHash := bytesutil.ToBytes32(eth1Data.BlockHash)
-			enc = append(enc, blockHash[:]...)
-		}
-	}
-	return enc
-}
-
 // Eth1DataRootWithHasher returns the hash tree root of input `eth1Data`.
 func Eth1DataRootWithHasher(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	if eth1Data == nil {
