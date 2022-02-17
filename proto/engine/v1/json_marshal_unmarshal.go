@@ -187,7 +187,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	for i, tx := range e.Transactions {
 		transactions[i] = tx
 	}
-	baseFee := new(big.Int).SetBytes(e.BaseFeePerGas)
+	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
 	return json.Marshal(executionPayloadJSON{
 		ParentHash:    e.ParentHash,
