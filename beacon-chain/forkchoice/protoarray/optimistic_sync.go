@@ -23,12 +23,10 @@ func (s *Store) pruneInvalid(ctx context.Context, root [32]byte) error {
 	} else {
 		for i, n := range children {
 			if n == node {
-				if i == len(children)-1 {
-					node.parent.children = children[:len(children)-2]
-				} else {
+				if i != len(children)-1 {
 					children[i] = children[len(children)-1]
-					node.parent.children = children[:len(children)-2]
 				}
+				node.parent.children = children[:len(children)-2]
 				break
 			}
 		}

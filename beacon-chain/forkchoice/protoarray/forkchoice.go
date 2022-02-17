@@ -29,8 +29,8 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 	return &ForkChoice{store: s, balances: b, votes: v}
 }
 
-// NodeNumber returns the current number of nodes in the Store
-func (f *ForkChoice) NodeNumber() int {
+// NodeCount returns the current number of nodes in the Store
+func (f *ForkChoice) NodeCount() int {
 	return len(f.store.nodeByRoot)
 }
 
@@ -50,7 +50,7 @@ func (f *ForkChoice) Head(
 
 	calledHeadCount.Inc()
 
-	// Using the write lock here because `updateCanonicalNodes` that gets called subsequently requires a write operation.
+	// Using the write lock here because `applyWeightChanges` that gets called subsequently requires a write operation.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 
@@ -69,7 +69,7 @@ func (f *ForkChoice) Head(
 	}
 
 	if err := f.store.treeRoot.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not update best descendants")
+		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
 
 	return f.store.head(ctx, justifiedRoot)
@@ -152,7 +152,7 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 	defer f.store.nodesLock.RUnlock()
 
 	node, ok := f.store.nodeByRoot[root]
-	if !ok {
+	if !ok || node == nil {
 		return false
 	}
 
@@ -276,6 +276,6 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 
 // Heads returns a list of possible heads from fork choice store, it returns the
 // roots and the slots of the leaf nodes.
-func (f *ForkChoice) Heads() ([][32]byte, []types.Slot) {
-	return f.store.heads()
+func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
+	return f.store.tips()
 }

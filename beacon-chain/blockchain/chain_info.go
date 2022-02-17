@@ -287,7 +287,7 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
-	return s.cfg.ForkChoiceStore.Heads()
+	return s.cfg.ForkChoiceStore.Tips()
 }
 
 // HeadPublicKeyToValidatorIndex returns the validator index of the `pubkey` in current head state.

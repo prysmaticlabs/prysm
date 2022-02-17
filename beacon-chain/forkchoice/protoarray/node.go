@@ -63,7 +63,8 @@ func (n *Node) depth() uint64 {
 }
 
 // applyWeightChanges recomputes the weight of the node passed as an argument and all of its descendants,
-// using the current balance stored in each node.
+// using the current balance stored in each node. This function requires a lock
+// in Store.nodesLock
 func (n *Node) applyWeightChanges(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -106,7 +107,8 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 		}
 		childLeadsToViableHead := child.leadsToViableHead(justifiedEpoch, finalizedEpoch)
 		if childLeadsToViableHead && !hasViableDescendant {
-			// The child leads to a viable head, but the current parent's best child doesnt.
+			// The child leads to a viable head, but the current
+			// parent's best child doesn't.
 			bestWeight = child.weight
 			bestChild = child
 			hasViableDescendant = true
@@ -136,8 +138,8 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 }
 
 // viableForHead returns true if the node is viable to head.
-// Any node with diff finalized or justified epoch than the ones in fork choice store
-// should not be viable to head.
+// Any node with different finalized or justified epoch than
+// the ones in fork choice store should not be viable to head.
 func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch types.Epoch) bool {
 	justified := justifiedEpoch == n.justifiedEpoch || justifiedEpoch == 0
 	finalized := finalizedEpoch == n.finalizedEpoch || finalizedEpoch == 0
@@ -168,5 +170,6 @@ func (n *Node) setFullyValidated(ctx context.Context) error {
 		return nil
 	}
 
+	n.optimistic = false
 	return n.parent.setFullyValidated(ctx)
 }

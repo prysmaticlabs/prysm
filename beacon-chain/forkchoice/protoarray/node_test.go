@@ -47,6 +47,9 @@ func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
 
 	// The updated balances of each node is 100
 	s := f.store
+
+	s.nodesLock.Lock()
+	defer s.nodesLock.Unlock()
 	s.nodeByRoot[indexToHash(1)].balance = 100
 	s.nodeByRoot[indexToHash(2)].balance = 100
 	s.nodeByRoot[indexToHash(3)].balance = 100
@@ -67,6 +70,8 @@ func TestNode_ApplyWeightChanges_NegativeChange(t *testing.T) {
 
 	// The updated balances of each node is 100
 	s := f.store
+	s.nodesLock.Lock()
+	defer s.nodesLock.Unlock()
 	s.nodeByRoot[indexToHash(1)].weight = 400
 	s.nodeByRoot[indexToHash(2)].weight = 400
 	s.nodeByRoot[indexToHash(3)].weight = 400
@@ -171,7 +176,7 @@ func TestNode_ViableForHead(t *testing.T) {
 	}
 }
 
-func TestStore_LeadsToViableHead(t *testing.T) {
+func TestNode_LeadsToViableHead(t *testing.T) {
 	f := setup(4, 3)
 	ctx := context.Background()
 	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
@@ -184,4 +189,44 @@ func TestStore_LeadsToViableHead(t *testing.T) {
 	require.Equal(t, true, f.store.nodeByRoot[indexToHash(5)].leadsToViableHead(4, 3))
 	require.Equal(t, false, f.store.nodeByRoot[indexToHash(2)].leadsToViableHead(4, 3))
 	require.Equal(t, false, f.store.nodeByRoot[indexToHash(4)].leadsToViableHead(4, 3))
+}
+
+func TestNode_SetFullyValidated(t *testing.T) {
+	f := setup(1, 1)
+	ctx := context.Background()
+	// insert blocks in the fork pattern (optimistic status in parenthesis)
+	//
+	// 0 (false) -- 1 (false) -- 2 (false) -- 3 (true) -- 4 (true)
+	//               \
+	//                 -- 5 (true)
+	//
+	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1, false))
+	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(2), 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(3), 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(1), 1, 1, true))
+
+	opt, err := f.IsOptimistic(indexToHash(5))
+	require.NoError(t, err)
+	require.Equal(t, true, opt)
+
+	opt, err = f.IsOptimistic(indexToHash(4))
+	require.NoError(t, err)
+	require.Equal(t, true, opt)
+
+	require.NoError(t, f.store.nodeByRoot[indexToHash(4)].setFullyValidated(ctx))
+
+	// block 5 should still be optimistic
+	opt, err = f.IsOptimistic(indexToHash(5))
+	require.NoError(t, err)
+	require.Equal(t, true, opt)
+
+	// block 4 and 3 should now be valid
+	opt, err = f.IsOptimistic(indexToHash(4))
+	require.NoError(t, err)
+	require.Equal(t, false, opt)
+
+	opt, err = f.IsOptimistic(indexToHash(3))
+	require.NoError(t, err)
+	require.Equal(t, false, opt)
 }

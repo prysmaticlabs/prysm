@@ -382,7 +382,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	require.NoError(t, err)
 
 	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
-	assert.Equal(t, 5, service.cfg.ForkChoiceStore.NodeNumber(), "Miss match nodes")
+	assert.Equal(t, 5, service.cfg.ForkChoiceStore.NodeCount(), "Miss match nodes")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[4])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[6])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[8])), "Didn't save node")
@@ -423,7 +423,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
-	assert.Equal(t, 5, service.cfg.ForkChoiceStore.NodeNumber(), "Miss match nodes")
+	assert.Equal(t, 5, service.cfg.ForkChoiceStore.NodeCount(), "Miss match nodes")
 	// Ensure all roots and their respective blocks exist.
 	wantedRoots := [][]byte{roots[0], roots[3], roots[4], roots[6], roots[8]}
 	for i, rt := range wantedRoots {
@@ -479,7 +479,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	require.NoError(t, err)
 
 	// There should be 2 nodes, block 65 and block 64.
-	assert.Equal(t, 2, service.cfg.ForkChoiceStore.NodeNumber(), "Miss match nodes")
+	assert.Equal(t, 2, service.cfg.ForkChoiceStore.NodeCount(), "Miss match nodes")
 
 	// Block with slot 63 should be in fork choice because it's less than finalized epoch 1.
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(r63), "Didn't save node")

@@ -21,7 +21,7 @@ type ForkChoicer interface {
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
 	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
-	Heads() ([][32]byte, []types.Slot)
+	Tips() ([][32]byte, []types.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
 }
 
@@ -53,5 +53,5 @@ type Getter interface {
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
 	IsCanonical(root [32]byte) bool
-	NodeNumber() int
+	NodeCount() int
 }

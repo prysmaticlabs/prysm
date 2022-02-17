@@ -225,7 +225,7 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 //         J        -- K -- L
 //
 //
-func TestStore_Heads(t *testing.T) {
+func TestStore_tips(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
@@ -247,7 +247,7 @@ func TestStore_Heads(t *testing.T) {
 		[32]byte{'l'}: 106,
 		[32]byte{'j'}: 102,
 	}
-	roots, slots := f.store.heads()
+	roots, slots := f.store.tips()
 	for i, r := range roots {
 		expectedSlot, ok := expectedMap[r]
 		require.Equal(t, true, ok)

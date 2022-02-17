@@ -87,6 +87,7 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 	require.NoError(t, f.ProcessBlock(ctx, 5, [32]byte{'5'}, [32]byte{'4'}, 1, 1, false))
 	require.NoError(t, f.ProcessBlock(ctx, 6, [32]byte{'6'}, [32]byte{'5'}, 1, 1, false))
 
+	f.store.nodesLock.Lock()
 	f.store.nodeByRoot[[32]byte{'3'}].balance = 10
 	require.NoError(t, f.store.treeRoot.applyWeightChanges(ctx))
 	require.Equal(t, uint64(10), f.store.nodeByRoot[[32]byte{'1'}].weight)
@@ -94,6 +95,7 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 
 	require.NoError(t, f.store.treeRoot.updateBestDescendant(ctx, 1, 1))
 	require.DeepEqual(t, [32]byte{'3'}, f.store.treeRoot.bestDescendant.root)
+	f.store.nodesLock.Unlock()
 
 	h, err := f.store.head(ctx, [32]byte{'1'})
 	require.NoError(t, err)

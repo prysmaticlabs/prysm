@@ -223,9 +223,9 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 	return nil
 }
 
-// heads returns a list of possible heads from fork choice store, it returns the
+// tips returns a list of possible heads from fork choice store, it returns the
 // roots and the slots of the leaf nodes.
-func (s *Store) heads() ([][32]byte, []types.Slot) {
+func (s *Store) tips() ([][32]byte, []types.Slot) {
 	var roots [][32]byte
 	var slots []types.Slot
 	for root, node := range s.nodeByRoot {
