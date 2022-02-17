@@ -16,7 +16,7 @@ import (
 
 // ComputeFieldRootsWithHasherPhase0 hashes the provided phase 0 state and returns its respective field roots.
 func ComputeFieldRootsWithHasherPhase0(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
-	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherPhase0")
+	_, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasherPhase0")
 	defer span.End()
 
 	if state == nil {
@@ -164,7 +164,7 @@ func ComputeFieldRootsWithHasherPhase0(ctx context.Context, state *ethpb.BeaconS
 
 // ComputeFieldRootsWithHasherAltair hashes the provided altair state and returns its respective field roots.
 func ComputeFieldRootsWithHasherAltair(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
-	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherAltair")
+	_, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasherAltair")
 	defer span.End()
 
 	if state == nil {
@@ -334,7 +334,7 @@ func ComputeFieldRootsWithHasherAltair(ctx context.Context, state *ethpb.BeaconS
 
 // ComputeFieldRootsWithHasherBellatrix hashes the provided bellatrix state and returns its respective field roots.
 func ComputeFieldRootsWithHasherBellatrix(ctx context.Context, state *ethpb.BeaconStateBellatrix) ([][]byte, error) {
-	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherBellatrix")
+	_, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasherBellatrix")
 	defer span.End()
 
 	if state == nil {
