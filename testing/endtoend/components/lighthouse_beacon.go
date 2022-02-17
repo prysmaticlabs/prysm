@@ -112,7 +112,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--port=%d", e2e.TestParams.BeaconNodeRPCPort+index+e2e.LighthouseP2PPortOffset),
 		fmt.Sprintf("--http-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+e2e.LighthouseHTTPPortOffset),
 		fmt.Sprintf("--target-peers=%d", 10),
-		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort),
+		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort+10*node.index),
 		fmt.Sprintf("--boot-nodes=%s", node.enr),
 		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BeaconNodeMetricsPort+index+e2e.LighthouseMetricsPortOffset),
 		"--metrics",

@@ -89,18 +89,18 @@ func (r *testRunner) run() {
 	}
 
 	// ETH1 node.
-	eth1Node := components.NewEth1Node()
+	eth1Nodes := components.NewEth1NodeSet()
 	g.Go(func() error {
-		if err := eth1Node.Start(ctx); err != nil {
+		if err := eth1Nodes.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start eth1node")
 		}
 		return nil
 	})
 	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node}); err != nil {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
 			return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
 		}
-		if err := components.SendAndMineDeposits(eth1Node.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
+		if err := components.SendAndMineDeposits(eth1Nodes.KeystorePath(), 0, minGenesisActiveCount, 0, true /* partial */); err != nil {
 			return errors.Wrap(err, "failed to send and mine deposits")
 		}
 		return nil
@@ -117,7 +117,7 @@ func (r *testRunner) run() {
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode}); err != nil {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode}); err != nil {
 			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
 		}
 		beaconNodes.SetENR(bootNode.ENR())
@@ -142,7 +142,7 @@ func (r *testRunner) run() {
 	if multiClientActive {
 		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
 		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode, beaconNodes}); err != nil {
+			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode, beaconNodes}); err != nil {
 				return errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run")
 			}
 			lighthouseNodes.SetENR(bootNode.ENR())
@@ -192,7 +192,7 @@ func (r *testRunner) run() {
 
 		// Wait for all required nodes to start.
 		requiredComponents := []e2etypes.ComponentRunner{
-			tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
+			tracingSink, eth1Nodes, bootNode, beaconNodes, validatorNodes,
 		}
 		if multiClientActive {
 			requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{keyGen, lighthouseNodes, lighthouseValidatorNodes}...)
@@ -224,7 +224,7 @@ func (r *testRunner) run() {
 
 		if config.TestDeposits {
 			log.Info("Running deposit tests")
-			r.testDeposits(ctx, g, eth1Node, []e2etypes.ComponentRunner{beaconNodes})
+			r.testDeposits(ctx, g, eth1Nodes.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
 		}
 
 		// Create GRPC connection to beacon nodes.
@@ -314,7 +314,7 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 
 // testDeposits runs tests when config.TestDeposits is enabled.
 func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
-	eth1Node *components.Eth1Node, requiredNodes []e2etypes.ComponentRunner) {
+	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
@@ -323,7 +323,7 @@ func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
 			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
 		}
 		go func() {
-			err := components.SendAndMineDeposits(eth1Node.KeystorePath(), int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
+			err := components.SendAndMineDeposits(keystorePath, 0, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
 			if err != nil {
 				r.t.Fatal(err)
 			}
