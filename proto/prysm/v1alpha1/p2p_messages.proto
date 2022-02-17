@@ -26,6 +26,12 @@ message BeaconBlocksByRangeRequest {
   uint64 step = 3;
 }
 
+message TxBlobsByRangeRequest {
+  uint64 execution_block_number = 1;
+  uint64 count = 2;
+  uint64 step = 3;
+}
+
 message ENRForkID {
   bytes current_fork_digest = 1 [(ethereum.eth.ext.ssz_size) = "4"];
   bytes next_fork_version = 2 [(ethereum.eth.ext.ssz_size) = "4"];
