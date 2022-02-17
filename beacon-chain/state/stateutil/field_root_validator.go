@@ -13,6 +13,17 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
+const (
+	// number of field roots for the validator object.
+	validatorFieldRoots = 8
+
+	// Depth of tree representation of an individual
+	// validator.
+	// NumOfRoots = 2 ^ (TreeDepth)
+	// 8 = 2 ^ 3
+	validatorTreeDepth = 3
+)
+
 // ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
 // a list of validator structs according to the Ethereum
 // Simple Serialize specification.
@@ -68,7 +79,7 @@ func (h *stateRootHasher) validatorRoots(hasher func([]byte) [32]byte, validator
 }
 
 func (h *stateRootHasher) optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
-	roots := make([][32]byte, 0, len(validators)*8)
+	roots := make([][32]byte, 0, len(validators)*validatorFieldRoots)
 	hasher := hash.CustomSHA256Hasher()
 	for i := 0; i < len(validators); i++ {
 		fRoots, err := ValidatorFieldRoots(hasher, validators[i])
@@ -81,7 +92,7 @@ func (h *stateRootHasher) optimizedValidatorRoots(validators []*ethpb.Validator)
 	// A validator's tree can represented with a depth of 3. As log2(8) = 3
 	// Using this property we can lay out all the individual fields of a
 	// validator and hash them in single level using our vectorized routine.
-	for i := 0; i < 3; i++ {
+	for i := 0; i < validatorTreeDepth; i++ {
 		roots = htr.VectorizedSha256(roots)
 	}
 	return roots, nil
