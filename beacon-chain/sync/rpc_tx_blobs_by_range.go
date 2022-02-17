@@ -6,7 +6,6 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -29,11 +28,11 @@ func (s *Service) txBlobsByRangeRPCHandler(
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	m, ok := msg.(*pb.BeaconBlocksByRangeRequest)
+	m, ok := msg.(*pb.TxBlobsByRangeRequest)
 	if !ok {
 		return errors.New("message is not type *pb.TxBlobsByRangeRequest")
 	}
-	if err := s.validateRangeRequest(m); err != nil {
+	if err := s.validateTxBlobRangeRequest(m); err != nil {
 		s.writeErrorResponseToStream(
 			responseCodeInvalidRequest,
 			err.Error(),
@@ -46,33 +45,30 @@ func (s *Service) txBlobsByRangeRPCHandler(
 		return err
 	}
 
-	// The initial count for the first batch to be returned back.
+	// The initial count for the first batch.
 	count := m.Count
 	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
 	if count > allowedBlocksPerSecond {
 		count = allowedBlocksPerSecond
 	}
 	// initial batch start and end slots to be returned to remote peer.
-	startSlot := m.StartSlot
-	endSlot := startSlot.Add(m.Step * (count - 1))
+	startExecBlockNum := m.ExecutionBlockNumber
+	endBlockNum := startExecBlockNum + (m.Step * (count - 1))
 
 	// The final requested slot from remote peer.
-	endReqSlot := startSlot.Add(m.Step * (m.Count - 1))
+	finalRequestEndBlockNum := startExecBlockNum + (m.Step * (m.Count - 1))
+	_ = endBlockNum
+	_ = finalRequestEndBlockNum
 }
 
-func (s *Service) validateTxBlobRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
-	startSlot := r.StartSlot
+func (s *Service) validateTxBlobRangeRequest(r *pb.TxBlobsByRangeRequest) error {
+	start := r.ExecutionBlockNumber
 	count := r.Count
 	step := r.Step
 
-	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
-	// Add a buffer for possible large range requests from nodes syncing close to the
-	// head of the chain.
-	buffer := rangeLimit * 2
-	highestExpectedSlot := s.cfg.chain.CurrentSlot().Add(uint64(buffer))
-
+	maxRequestItems := params.BeaconNetworkConfig().MaxRequestBlocks
 	// Ensure all request params are within appropriate bounds
-	if count == 0 || count > maxRequestBlocks {
+	if count == 0 || count > maxRequestItems {
 		return p2ptypes.ErrInvalidRequest
 	}
 
@@ -80,19 +76,24 @@ func (s *Service) validateTxBlobRangeRequest(r *pb.BeaconBlocksByRangeRequest) e
 		return p2ptypes.ErrInvalidRequest
 	}
 
-	if startSlot > highestExpectedSlot {
-		return p2ptypes.ErrInvalidRequest
-	}
+	// TODO: Check that start < highest execution block number.
 
-	endSlot := startSlot.Add(step * (count - 1))
-	if endSlot-startSlot > rangeLimit {
+	// Check the requested range is within bounds.
+	end := start + (step * (count - 1))
+	if end-start > rangeLimit {
 		return p2ptypes.ErrInvalidRequest
 	}
 	return nil
 }
 
-func (s *Service) writeTxBlobRangeToStream(ctx context.Context, startSlot, endSlot types.Slot, step uint64,
-	prevRoot *[32]byte, stream libp2pcore.Stream) error {
+func (s *Service) writeTxBlobRangeToStream(
+	ctx context.Context,
+	startExecBlockNum,
+	endExecBlockNum uint64,
+	step uint64,
+	prevBeaconBlockRoot *[32]byte,
+	stream libp2pcore.Stream,
+) error {
 	ctx, span := trace.StartSpan(ctx, "sync.writeTxBlobRangeToStream")
 	defer span.End()
 

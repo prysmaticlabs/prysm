@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 const (
@@ -24,6 +25,8 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
+	// GetBlobsMethod v1 request string for JSON-RPC.
+	GetBlobsMethod = "engine_getBlobsV1"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
 	// ExecutionBlockByHashMethod request string for JSON-RPC.
@@ -41,6 +44,11 @@ type ForkchoiceUpdatedResponse struct {
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
+// BlobsResponse for engine_getBlobsV1.
+type BlobsResponse struct {
+	Blobs []*ethpb.Blob `json:"blobs"`
+}
+
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
@@ -49,6 +57,7 @@ type EngineCaller interface {
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*ForkchoiceUpdatedResponse, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
+	GetBlobs(ctx context.Context, payloadId [8]byte) (*BlobsResponse, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) (*pb.TransitionConfiguration, error)
@@ -112,6 +121,13 @@ func (c *Client) ForkchoiceUpdated(
 func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
 	result := &pb.ExecutionPayload{}
 	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
+	return result, handleRPCError(err)
+}
+
+// GetBlobs calls the engine_getBlobsV1 method via JSON-RPC.
+func (c *Client) GetBlobs(ctx context.Context, payloadId [8]byte) (*BlobsResponse, error) {
+	result := &BlobsResponse{}
+	err := c.rpc.CallContext(ctx, result, GetBlobsMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
 }
 

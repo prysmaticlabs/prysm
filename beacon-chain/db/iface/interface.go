@@ -31,6 +31,8 @@ type ReadOnlyDatabase interface {
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error)
 	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]block.SignedBeaconBlock, error)
 	ValidatedTips(ctx context.Context) (map[[32]byte]types.Slot, error)
+	// Sharding transaction blob methods.
+	TxBlob(ctx context.Context, beaconBlockRoot [32]byte, txIndex uint64) (*ethpb.Blob, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	GenesisState(ctx context.Context) (state.BeaconState, error)
@@ -64,6 +66,8 @@ type NoHeadAccessDatabase interface {
 	SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	UpdateValidatedTips(ctx context.Context, newVals map[[32]byte]types.Slot) error
+	// Sharding transaction blob methods.
+	SaveTxBlob(ctx context.Context, beaconBlockRoot [32]byte, txIndex uint64, blob *ethpb.Blob) error
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
 	SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error
