@@ -20,15 +20,15 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	s.proposerBoostLock.Lock()
 	defer s.proposerBoostLock.Unlock()
 
-	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
-		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
-		if !ok || previousNode == nil {
-			return errInvalidProposerBoostRoot
-		}
-		previousNode.balance -= s.previousProposerBoostScore
-	}
-
 	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
+		if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
+			previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
+			if !ok || previousNode == nil {
+				return errInvalidProposerBoostRoot
+			}
+			previousNode.balance -= s.previousProposerBoostScore
+		}
+
 		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
 		if !ok || currentNode == nil {
 			return errInvalidProposerBoostRoot
