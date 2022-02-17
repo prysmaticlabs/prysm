@@ -73,8 +73,8 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 				elements = append(elements, zerohash)
 				layerLen++
 			}
-			length := math.Max(uint64(layerLen/2), 1)
-			layers[i+1] = make([]*[32]byte, length)
+
+			layers[i+1] = make([]*[32]byte, layerLen/2)
 			elements = htr.VectorizedSha256(elements)
 			for j := range elements {
 				layers[i+1][j] = &elements[j]
