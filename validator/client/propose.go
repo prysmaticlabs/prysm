@@ -42,6 +42,8 @@ const signExitErr = "could not sign voluntary exit proposal"
 func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	currEpoch := slots.ToEpoch(slot)
 	switch {
+	case currEpoch >= params.BeaconConfig().ShanghaiForkEpoch:
+		v.proposeBlockShanghai(ctx, slot, pubKey)
 	case currEpoch >= params.BeaconConfig().BellatrixForkEpoch:
 		v.proposeBlockBellatrix(ctx, slot, pubKey)
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
@@ -383,7 +385,25 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 
 	var sig bls.Signature
 	switch b.Version() {
-
+	case version.Shanghai:
+		block, ok := b.Proto().(*ethpb.BeaconBlockAndBlobs)
+		if !ok {
+			return nil, nil, errors.New("could not convert obj to beacon block bellatrix")
+		}
+		blockRoot, err := signing.ComputeSigningRoot(block, domain.SignatureDomain)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, signingRootErr)
+		}
+		sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey:       pubKey[:],
+			SigningRoot:     blockRoot[:],
+			SignatureDomain: domain.SignatureDomain,
+			Object:          &validatorpb.SignRequest_BlockV3{BlockV3: block},
+		})
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not sign block proposal")
+		}
+		return sig.Marshal(), domain, nil
 	case version.Bellatrix:
 		block, ok := b.Proto().(*ethpb.BeaconBlockBellatrix)
 		if !ok {

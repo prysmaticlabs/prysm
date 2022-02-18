@@ -140,6 +140,7 @@ type BeaconChainConfig struct {
 	AltairForkEpoch      types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`      // AltairForkEpoch is used to represent the assigned fork epoch for altair.
 	BellatrixForkVersion []byte                  `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	BellatrixForkEpoch   types.Epoch             `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
+	ShanghaiForkVersion  []byte                  `yaml:"SHANGHAI_FORK_VERSION" spec:"true"`  // ShanghaiForkVersion is used to represent the fork version for shanghai.
 	ShanghaiForkEpoch    types.Epoch             `yaml:"SHANGHAI_FORK_EPOCH" spec:"true"`
 	ShardingForkVersion  []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
 	ShardingForkEpoch    types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
@@ -201,4 +202,6 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 	// Set Bellatrix fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
+	// Set Shanghai fork data.
+	b.ForkVersionSchedule[bytesutil.ToBytes4(b.ShanghaiForkVersion)] = b.ShanghaiForkEpoch
 }
