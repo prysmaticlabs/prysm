@@ -52,7 +52,7 @@ type config struct {
 	muxHandler                   MuxHandler
 	pbHandlers                   []*PbMux
 	router                       *mux.Router
-	timeout                      uint64
+	timeout                      time.Duration
 }
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.

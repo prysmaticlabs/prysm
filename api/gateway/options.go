@@ -85,7 +85,7 @@ func WithApiMiddleware(endpointFactory apimiddleware.EndpointFactory) Option {
 
 func WithTimeout(timeout uint64) Option {
 	return func(g *Gateway) error {
-		g.cfg.timeout = timeout
+		g.cfg.timeout = time.Minute * time.Duration(timeout)
 		gwruntime.DefaultContextTimeout = time.Minute * time.Duration(timeout)
 		return nil
 	}

@@ -3,6 +3,7 @@ package apimiddleware
 import (
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -14,7 +15,7 @@ import (
 type ApiProxyMiddleware struct {
 	GatewayAddress  string
 	EndpointCreator EndpointFactory
-	Timeout         uint64
+	Timeout         time.Duration
 	router          *mux.Router
 }
 
