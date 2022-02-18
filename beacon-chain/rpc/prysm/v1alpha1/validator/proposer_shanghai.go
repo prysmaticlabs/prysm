@@ -12,12 +12,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, error) {
+func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAndBlobs, error) {
 	bellatrixBlk, err := vs.getBellatrixBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	payload, _, err := vs.getExecutionPayload(ctx, req.Slot)
+	payload, err := vs.getExecutionPayload(ctx, req.Slot)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +62,7 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 			VoluntaryExits:    bellatrixBlk.Body.VoluntaryExits,
 			SyncAggregate:     bellatrixBlk.Body.SyncAggregate,
 			ExecutionPayload:  shanghaiPayload,
+			BlobKzgs:          nil, // TODO: Add blob KZGs here.
 		},
 	}
 	// Compute state root with the newly constructed block.
@@ -80,5 +81,9 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 		return nil, fmt.Errorf("could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
-	return blk, nil
+	blockWithBlobs := &ethpb.BeaconBlockAndBlobs{
+		Block: blk,
+		Blobs: nil, // TODO: Add blobs here.
+	}
+	return blockWithBlobs, nil
 }

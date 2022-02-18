@@ -104,6 +104,11 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		if err != nil {
 			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
 		}
+	case *ethpb.GenericSignedBeaconBlock_Shanghai:
+		blk, err = wrapper.WrappedShanghaiSignedBeaconBlock(b.Shanghai)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
+		}
 	default:
 		return nil, status.Error(codes.Internal, "block version not supported")
 	}

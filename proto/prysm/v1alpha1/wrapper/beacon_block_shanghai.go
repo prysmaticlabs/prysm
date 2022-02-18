@@ -6,6 +6,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -13,12 +14,11 @@ import (
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
 type shanghaiSignedBeaconBlock struct {
-	b *eth.SignedBeaconBlockWithBlobKZGs
+	b *eth.SignedBeaconBlockAndBlobs
 }
 
 // WrappedShanghaiSignedBeaconBlock is constructor which wraps a protobuf shanghai block with the block wrapper.
-// Deprecated: use WrappedSignedBeaconBlock instead.
-func WrappedShanghaiSignedBeaconBlock(b *eth.SignedBeaconBlockWithBlobKZGs) (block.SignedBeaconBlock, error) {
+func WrappedShanghaiSignedBeaconBlock(b *eth.SignedBeaconBlockAndBlobs) (block.SignedBeaconBlock, error) {
 	w := shanghaiSignedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -28,17 +28,17 @@ func WrappedShanghaiSignedBeaconBlock(b *eth.SignedBeaconBlockWithBlobKZGs) (blo
 
 // Signature returns the respective block signature.
 func (w shanghaiSignedBeaconBlock) Signature() []byte {
-	return w.b.Signature
+	return w.b.Block.Signature
 }
 
 // Block returns the underlying beacon block object.
 func (w shanghaiSignedBeaconBlock) Block() block.BeaconBlock {
-	return shanghaiBeaconBlock{b: w.b.Block}
+	return shanghaiBeaconBlock{b: w.b.Block.Block}
 }
 
 // IsNil checks if the underlying beacon block is nil.
 func (w shanghaiSignedBeaconBlock) IsNil() bool {
-	return w.b == nil || w.b.Block == nil
+	return w.b == nil || w.b.Block == nil || w.b.Block.Block == nil
 }
 
 // Copy performs a deep copy of the signed beacon block object.
@@ -74,7 +74,7 @@ func (w shanghaiSignedBeaconBlock) Proto() proto.Message {
 }
 
 // PbshanghaiBlock returns the underlying protobuf object.
-func (w shanghaiSignedBeaconBlock) PbShanghaiBlock() (*eth.SignedBeaconBlockWithBlobKZGs, error) {
+func (w shanghaiSignedBeaconBlock) PbShanghaiBlock() (*eth.SignedBeaconBlockAndBlobs, error) {
 	return w.b, nil
 }
 
@@ -99,17 +99,17 @@ func (_ shanghaiSignedBeaconBlock) Version() int {
 }
 
 func (w shanghaiSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
-	root, err := w.b.Block.Body.HashTreeRoot()
+	root, err := w.b.Block.Block.Body.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash block")
 	}
 
 	return &eth.SignedBeaconBlockHeader{
 		Header: &eth.BeaconBlockHeader{
-			Slot:          w.b.Block.Slot,
-			ProposerIndex: w.b.Block.ProposerIndex,
-			ParentRoot:    w.b.Block.ParentRoot,
-			StateRoot:     w.b.Block.StateRoot,
+			Slot:          w.b.Block.Block.Slot,
+			ProposerIndex: w.b.Block.Block.ProposerIndex,
+			ParentRoot:    w.b.Block.Block.ParentRoot,
+			StateRoot:     w.b.Block.Block.StateRoot,
 			BodyRoot:      root[:],
 		},
 		Signature: w.Signature(),
@@ -197,7 +197,7 @@ func (w shanghaiBeaconBlock) Proto() proto.Message {
 
 // Version of the underlying protobuf object.
 func (_ shanghaiBeaconBlock) Version() int {
-	return version.shanghai
+	return version.Shanghai
 }
 
 // shanghaiBeaconBlockBody is a wrapper of a beacon block body.
@@ -276,7 +276,10 @@ func (w shanghaiBeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
 
-// ExecutionPayload returns the Execution payload of the block body.
 func (w shanghaiBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+	return nil, errors.New("unsupported execution payload")
+}
+
+func (w shanghaiBeaconBlockBody) ExecutionPayloadWithBlobTxs() (*enginev1.ExecutionPayloadWithBlobTxs, error) {
 	return w.b.ExecutionPayload, nil
 }
