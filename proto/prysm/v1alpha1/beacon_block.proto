@@ -36,6 +36,9 @@ message GenericSignedBeaconBlock {
 
         // Representing a signed, post-Bellatrix fork beacon block.
         SignedBeaconBlockBellatrix bellatrix = 3;
+
+        // Representing a signed, post-Shanghai fork beacon block.
+        SignedBeaconBlockAndBlobs shanghai = 4;
     }
 }
 
@@ -49,6 +52,9 @@ message GenericBeaconBlock {
 
         // Representing a post-Bellatrix fork beacon block.
         BeaconBlockBellatrix bellatrix = 3;
+
+        // Representing a signed, post-Shanghai fork beacon block.
+        BeaconBlockAndBlobs shanghai = 4;
     }
 }
 
@@ -387,8 +393,13 @@ message BeaconBlockBodyWithBlobKZGs {
 }
 
 message BeaconBlockAndBlobs {
-    SignedBeaconBlockWithBlobKZGs block =1;
-    repeated Blob blobs =2 [(ethereum.eth.ext.ssz_max)  = "16777216"];
+    BeaconBlockWithBlobKZGs block = 1;
+    repeated Blob blobs = 2 [(ethereum.eth.ext.ssz_max)  = "16777216"];
+}
+
+message SignedBeaconBlockAndBlobs {
+    SignedBeaconBlockWithBlobKZGs block = 1;
+    repeated Blob blobs = 2 [(ethereum.eth.ext.ssz_max)  = "16777216"];
 }
 
 message Blob {
