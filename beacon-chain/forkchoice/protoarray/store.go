@@ -20,27 +20,29 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	s.proposerBoostLock.Lock()
 	defer s.proposerBoostLock.Unlock()
 
-	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
-		if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
-			previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
-			if !ok || previousNode == nil {
-				return errInvalidProposerBoostRoot
-			}
-			previousNode.balance -= s.previousProposerBoostScore
+	proposerScore := uint64(0)
+	var err error
+	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
+		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
+		if !ok || previousNode == nil {
+			return errInvalidProposerBoostRoot
 		}
+		previousNode.balance -= s.previousProposerBoostScore
+	}
 
+	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
 		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
 		if !ok || currentNode == nil {
 			return errInvalidProposerBoostRoot
 		}
-		proposerScore, err := computeProposerBoostScore(newBalances)
+		proposerScore, err = computeProposerBoostScore(newBalances)
 		if err != nil {
 			return err
 		}
 		currentNode.balance += proposerScore
-		s.previousProposerBoostRoot = s.proposerBoostRoot
-		s.previousProposerBoostScore = proposerScore
 	}
+	s.previousProposerBoostRoot = s.proposerBoostRoot
+	s.previousProposerBoostScore = proposerScore
 	return nil
 }
 
