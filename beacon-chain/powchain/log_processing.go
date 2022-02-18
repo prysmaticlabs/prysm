@@ -428,27 +428,27 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 }
 
 func (s *Service) retrieveBlockHashAndTime(ctx context.Context, blkNum *big.Int) ([32]byte, uint64, error) {
-	hash, err := s.BlockHashByHeight(ctx, blkNum)
+	bHash, err := s.BlockHashByHeight(ctx, blkNum)
 	if err != nil {
 		return [32]byte{}, 0, errors.Wrap(err, "could not get eth1 block hash")
 	}
-	if hash == [32]byte{} {
+	if bHash == [32]byte{} {
 		return [32]byte{}, 0, errors.Wrap(err, "got empty block hash")
 	}
 	timeStamp, err := s.BlockTimeByHeight(ctx, blkNum)
 	if err != nil {
 		return [32]byte{}, 0, errors.Wrap(err, "could not get block timestamp")
 	}
-	return hash, timeStamp, nil
+	return bHash, timeStamp, nil
 }
 
 // checkBlockNumberForChainStart checks the given block number for if chainstart has occurred.
 func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big.Int) error {
-	hash, timeStamp, err := s.retrieveBlockHashAndTime(ctx, blkNum)
+	bHash, timeStamp, err := s.retrieveBlockHashAndTime(ctx, blkNum)
 	if err != nil {
 		return err
 	}
-	s.checkForChainstart(ctx, hash, blkNum, timeStamp)
+	s.checkForChainstart(ctx, bHash, blkNum, timeStamp)
 	return nil
 }
 
