@@ -333,7 +333,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	err = web3Service.ProcessETH1Block(context.Background(), big.NewInt(int64(logs[len(logs)-1].BlockNumber)))
 	require.NoError(t, err)
 
-	cachedDeposits := web3Service.ChainStartDeposits()
+	cachedDeposits := web3Service.chainStartData.ChainstartDeposits
 	require.Equal(t, depositsReqForChainStart, len(cachedDeposits))
 
 	// Receive the chain started event.
@@ -425,7 +425,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	err = web3Service.processPastLogs(context.Background())
 	require.NoError(t, err)
 
-	cachedDeposits := web3Service.ChainStartDeposits()
+	cachedDeposits := web3Service.chainStartData.ChainstartDeposits
 	requiredDepsForChainstart := depositsReqForChainStart + depositOffset
 	require.Equal(t, requiredDepsForChainstart, len(cachedDeposits), "Did not cache the chain start deposits correctly")
 
@@ -529,7 +529,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	err = web3Service.processPastLogs(context.Background())
 	require.NoError(t, err)
 
-	cachedDeposits := web3Service.ChainStartDeposits()
+	cachedDeposits := web3Service.chainStartData.ChainstartDeposits
 	require.Equal(t, totalNumOfDeposits, len(cachedDeposits), "Did not cache the chain start deposits correctly")
 
 	// Receive the chain started event.
