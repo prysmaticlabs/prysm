@@ -398,7 +398,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 			PublicKey:       pubKey[:],
 			SigningRoot:     blockRoot[:],
 			SignatureDomain: domain.SignatureDomain,
-			Object:          &validatorpb.SignRequest_BlockV3{BlockV3: block},
+			Object:          &validatorpb.SignRequest_BlockV4{BlockV4: block},
 		})
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not sign block proposal")
@@ -679,6 +679,142 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		"numDeposits":     len(bellatrixBlk.Bellatrix.Body.Deposits),
 		"graffiti":        string(bellatrixBlk.Bellatrix.Body.Graffiti),
 		"fork":            "bellatrix",
+	}).Info("Submitted new block")
+
+	if v.emitAccountMetrics {
+		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
+	}
+}
+
+// This is a routine to propose shanghai compatible beacon blocks.
+func (v *validator) proposeBlockShanghai(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+	if slot == 0 {
+		log.Debug("Assigned to genesis slot, skipping proposal")
+		return
+	}
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockShanghai")
+	defer span.End()
+
+	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
+
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
+
+	// Sign randao reveal, it's used to request block from beacon node
+	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
+	if err != nil {
+		log.WithError(err).Error("Failed to sign randao reveal")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	g, err := v.getGraffiti(ctx, pubKey)
+	if err != nil {
+		log.WithError(err).Warn("Could not get graffiti")
+	}
+
+	// Request block from beacon node
+	b, err := v.validatorClient.GetBeaconBlock(ctx, &ethpb.BlockRequest{
+		Slot:         slot,
+		RandaoReveal: randaoReveal,
+		Graffiti:     g,
+	})
+	if err != nil {
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	shanghaiBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_Shanghai)
+	if !ok {
+		log.Error("Not a Shanghai block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	// Sign returned block from beacon node
+	wb, err := wrapper.WrappedShanghaiBeaconBlock(shanghaiBlk.Shanghai.Block)
+	if err != nil {
+		log.WithError(err).Error("Failed to wrap block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, slot, wb)
+	if err != nil {
+		log.WithError(err).Error("Failed to sign block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	blk := &ethpb.SignedBeaconBlockWithBlobKZGs{
+		Block:     shanghaiBlk.Shanghai.Block,
+		Signature: sig,
+	}
+	sBlk := &ethpb.SignedBeaconBlockAndBlobs{
+		Block: blk,
+		Blobs: shanghaiBlk.Shanghai.Blobs,
+	}
+
+	signingRoot, err := signing.ComputeSigningRoot(shanghaiBlk.Shanghai.Block, domain.SignatureDomain)
+	if err != nil {
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		log.WithError(err).Error("Failed to compute signing root for block")
+		return
+	}
+
+	wsb, err := wrapper.WrappedShanghaiSignedBeaconBlock(sBlk)
+	if err != nil {
+		log.WithError(err).Error("Failed to wrap signed block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	if err := v.slashableProposalCheck(ctx, pubKey, wsb, signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, wb, nil),
+		).WithError(err).Error("Failed block slashing protection check")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	// Propose and broadcast block via beacon node
+	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, &ethpb.GenericSignedBeaconBlock{
+		Block: &ethpb.GenericSignedBeaconBlock_Shanghai{Shanghai: sBlk},
+	})
+	if err != nil {
+		log.WithError(err).Error("Failed to propose block")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+
+	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	log.WithFields(logrus.Fields{
+		"slot":            blk.Block.Slot,
+		"blockRoot":       blkRoot,
+		"numAttestations": len(blk.Block.Body.Attestations),
+		"numDeposits":     len(blk.Block.Body.Deposits),
+		"graffiti":        string(blk.Block.Body.Graffiti),
+		"fork":            "shanghai",
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {
