@@ -3,7 +3,6 @@ package components
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -11,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -28,6 +29,8 @@ import (
 
 const timeGapPerTX = 100 * time.Millisecond
 const timeGapPerMiningTX = 250 * time.Millisecond
+const networkId = 123456
+const staticFilesPath = "/testing/endtoend/static-files/eth1"
 
 var _ e2etypes.ComponentRunner = (*Eth1Node)(nil)
 var _ e2etypes.ComponentRunner = (*Eth1NodeSet)(nil)
@@ -123,7 +126,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+10*node.index+e2e.ETH1WSOffset),
 		fmt.Sprintf("--bootnodes=%s", node.enr),
 		fmt.Sprintf("--port=%d", 30303+node.index),
-		"--networkid=123456",
+		fmt.Sprintf("--networkid=%d", networkId),
 		"--http",
 		"--http.addr=127.0.0.1",
 		"--http.corsdomain=\"*\"",
@@ -136,7 +139,29 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		"--mine",
 		"--miner.etherbase=0x0000000000000000000000000000000000000001",
 	}
-	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
+
+	genesisSrcPath, err := bazel.Runfile(path.Join(staticFilesPath, "genesis.json"))
+	if err != nil {
+		return err
+	}
+	genesisDstPath := binaryPath[:strings.LastIndex(binaryPath, "/")]
+	cmd := exec.Command("cp", genesisSrcPath, genesisDstPath)
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+	if err = cmd.Wait(); err != nil {
+		return err
+	}
+
+	cmd = exec.CommandContext(ctx, binaryPath, "init genesis.json") // #nosec G204 -- Safe
+	if err = cmd.Start(); err != nil {
+		return fmt.Errorf("failed to init eth1 chain: %w", err)
+	}
+	if err = cmd.Wait(); err != nil {
+		return err
+	}
+
+	cmd = exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log")
 	if err != nil {
 		return err
@@ -159,7 +184,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	web3 := ethclient.NewClient(client)
 
 	fileName := "UTC--2021-12-22T19-14-08.590377700Z--878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
-	keystorePath, err := bazel.Runfile("/testing/endtoend/static-files/eth1/" + fileName)
+	keystorePath, err := bazel.Runfile(path.Join(staticFilesPath, fileName))
 	if err != nil {
 		return err
 	}
@@ -235,7 +260,7 @@ func mineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uin
 
 	for block.NumberU64() <= finishBlock {
 		spamTX := types.NewTransaction(nonce, keystore.Address, big.NewInt(0), 21000, big.NewInt(1e6), []byte{})
-		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(big.NewInt(123456)), keystore.PrivateKey)
+		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(big.NewInt(networkId)), keystore.PrivateKey)
 		if err != nil {
 			return err
 		}

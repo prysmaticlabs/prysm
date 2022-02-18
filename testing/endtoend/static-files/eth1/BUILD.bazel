@@ -1,7 +1,13 @@
 filegroup(
-    name = "eth1keys",
+    name = "eth1data",
     srcs = [
         "UTC--2021-12-22T19-14-08.590377700Z--878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
+        "UTC--2021-12-22T19-14-13.423928600Z--4e9a3d9d1cd2a2b2371b8b3f489ae72259886f1a",
+        "UTC--2021-12-22T19-14-16.977667900Z--df8466f277964bb7a0ffd819403302c34dcd530a",
+        "UTC--2021-12-22T19-14-21.531351400Z--5c613e39fc0ad91afda24587e6f52192d75fba50",
+        "UTC--2021-12-22T19-14-25.369306000Z--375ae6107f8cc4cf34842b71c6f746a362ad8eac",
+        "UTC--2021-12-22T19-14-33.473095100Z--1f6298457c5d76270325b724da5d1953923a6b88",
+        "genesis.json",
     ],
     visibility = ["//visibility:public"],
 )

@@ -45,7 +45,7 @@ var BeaconNodeLogFileName = "beacon-%d.log"
 var ValidatorLogFileName = "vals-%d.log"
 
 // StandardBeaconCount is a global constant for the count of beacon nodes of standard E2E tests.
-var StandardBeaconCount = 2
+var StandardBeaconCount = 1
 
 // StandardLighthouseNodeCount is a global constant for the count of lighthouse beacon nodes of standard E2E tests.
 var StandardLighthouseNodeCount = 2
