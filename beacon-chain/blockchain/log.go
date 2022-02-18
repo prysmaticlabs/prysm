@@ -51,11 +51,11 @@ func logBlockSyncStatus(block block.BeaconBlock, blockRoot [32]byte, finalized *
 	log.WithFields(logrus.Fields{
 		"slot":           block.Slot(),
 		"slotInEpoch":    block.Slot() % params.BeaconConfig().SlotsPerEpoch,
-		"block":          fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
+		"blockRoot":      fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
+		"parentRoot":     fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
 		"epoch":          slots.ToEpoch(block.Slot()),
 		"finalizedEpoch": finalized.Epoch,
 		"finalizedRoot":  fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
-		"parentRoot":     fmt.Sprintf("0x%s...", hex.EncodeToString(block.ParentRoot())[:8]),
 		"version":        version.String(block.Version()),
 	}).Info("Synced new block")
 	log.WithFields(logrus.Fields{

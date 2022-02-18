@@ -178,7 +178,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	rBlock.Block.ParentRoot = gRoot[:]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), blks[0]))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, blkRoots[0], firstState))
-	_, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
+	_, _, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
 	require.NoError(t, err)
 }
 

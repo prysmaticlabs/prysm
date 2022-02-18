@@ -802,12 +802,14 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
-
-			if err := s.processPastLogs(ctx); err != nil {
-				log.Errorf("Unable to process past logs %v", err)
-				s.retryETH1Node(err)
-				continue
+			if !features.Get().KilnTestnet {
+				if err := s.processPastLogs(ctx); err != nil {
+					log.Errorf("Unable to process past logs %v", err)
+					s.retryETH1Node(err)
+					continue
+				}
 			}
+
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				log.Errorf("Unable to process past headers %v", err)
@@ -816,7 +818,7 @@ func (s *Service) initPOWService() {
 			}
 			// Handle edge case with embedded genesis state by fetching genesis header to determine
 			// its height.
-			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 {
+			if s.chainStartData.Chainstarted && s.chainStartData.GenesisBlock == 0 && !features.Get().KilnTestnet {
 				genHash := common.BytesToHash(s.chainStartData.Eth1Data.BlockHash)
 				genBlock := s.chainStartData.GenesisBlock
 				// In the event our provided chainstart data references a non-existent blockhash
