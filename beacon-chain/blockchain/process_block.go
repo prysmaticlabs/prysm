@@ -160,7 +160,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 			default:
 				return errors.New("unknown payload status")
 			}
-			if copiedPreState.Version() == version.Bellatrix && fullyValidated {
+			if fullyValidated {
 				mergeBlock, err := blocks.MergeTransitionBlock(copiedPreState, body)
 				if err != nil {
 					return errors.Wrap(err, "could not check if merge block is terminal")
@@ -796,14 +796,6 @@ func (s *Service) validateTerminalBlock(ctx context.Context, b block.SignedBeaco
 	parentTransitionBlkTTD := new(uint256.Int)
 	parentTransitionBlkTTD.SetBytes(bytesutil.ReverseByteOrder(parentTransitionBlk.TotalDifficulty))
 
-	validated, err := validTerminalPowBlock(transitionBlkTTD, parentTransitionBlkTTD)
-	if err != nil {
-		return err
-	}
-	if !validated {
-		return errors.New("invalid difficulty for terminal block")
-	}
-
 	log.WithFields(logrus.Fields{
 		"slot":                                 b.Block().Slot(),
 		"transitionBlockHash":                  common.BytesToHash(payload.ParentHash).String(),
@@ -811,7 +803,15 @@ func (s *Service) validateTerminalBlock(ctx context.Context, b block.SignedBeaco
 		"terminalTotalDifficulty":              params.BeaconConfig().TerminalTotalDifficulty,
 		"transitionBlockTotalDifficulty":       transitionBlkTTD,
 		"transitionBlockParentTotalDifficulty": parentTransitionBlkTTD,
-	}).Info("Verified terminal block")
+	}).Info("Validating terminal block")
+
+	validated, err := validTerminalPowBlock(transitionBlkTTD, parentTransitionBlkTTD)
+	if err != nil {
+		return err
+	}
+	if !validated {
+		return errors.New("invalid difficulty for terminal block")
+	}
 
 	return nil
 }
