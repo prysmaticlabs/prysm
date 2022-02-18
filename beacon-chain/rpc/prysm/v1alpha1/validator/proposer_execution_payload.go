@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -56,7 +55,7 @@ import (
 //    return execution_engine.notify_forkchoice_updated(parent_hash, finalized_block_hash, payload_attributes)
 func (vs *Server) getExecutionPayload(
 	ctx context.Context, slot types.Slot,
-) (*enginev1.ExecutionPayload, *v1.BlobsResponse, error) {
+) (*enginev1.ExecutionPayload, error) {
 	// TODO_MERGE: Reuse the same head state as in building phase0 block attestation.
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {

@@ -17,7 +17,7 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 	if err != nil {
 		return nil, err
 	}
-	payload, blobs, err := vs.getExecutionPayload(ctx, req.Slot)
+	payload, _, err := vs.getExecutionPayload(ctx, req.Slot)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 		BaseFeePerGas:    payload.BaseFeePerGas,
 		BlockHash:        payload.BlockHash,
 		Transactions:     payload.Transactions,
-		BlobTransactions: nil,
+		BlobTransactions: nil, // TODO: Parse blob transactions into SSZ format...
 	}
 
 	log.WithFields(logrus.Fields{
@@ -61,12 +61,15 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 			Deposits:          bellatrixBlk.Body.Deposits,
 			VoluntaryExits:    bellatrixBlk.Body.VoluntaryExits,
 			SyncAggregate:     bellatrixBlk.Body.SyncAggregate,
-			ExecutionPayload:  payload,
+			ExecutionPayload:  shanghaiPayload,
 		},
 	}
 	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedShanghaiSignedBeaconBlock(
-		&ethpb.Signedbeacon{Block: blk, Signature: make([]byte, 96)},
+	wsb, err := wrapper.WrappedSignedBeaconBlock(
+		&ethpb.SignedBeaconBlockWithBlobKZGs{
+			Block:     blk,
+			Signature: make([]byte, 96),
+		},
 	)
 	if err != nil {
 		return nil, err

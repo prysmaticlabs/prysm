@@ -30,6 +30,8 @@ func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
 		return WrappedAltairSignedBeaconBlock(b)
 	case *eth.SignedBeaconBlockBellatrix:
 		return WrappedBellatrixSignedBeaconBlock(b)
+	case *eth.SignedBeaconBlockWithBlobKZGs:
+		return WrappedShanghaiSignedBeaconBlock(b)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", i)
 	}
