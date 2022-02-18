@@ -201,6 +201,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AltairForkEpoch:      mainnetAltairForkEpoch,
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   math.MaxUint64,
+	ShanghaiForkEpoch:    math.MaxUint64,
 	ShardingForkVersion:  []byte{3, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
 	ForkVersionSchedule: map[[4]byte]types.Epoch{

@@ -34,33 +34,42 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	if slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
+	switch {
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch:
 		blk, err := vs.getPhase0BeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: blk}}, nil
-	} else if slots.ToEpoch(req.Slot) < params.BeaconConfig().BellatrixForkEpoch {
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().BellatrixForkEpoch:
 		blk, err := vs.getAltairBeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().ShanghaiForkEpoch:
+		// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
+		if err := vs.optimisticStatus(ctx); err != nil {
+			return nil, err
+		}
+
+		blk, err := vs.getBellatrixBeaconBlock(ctx, req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
+		}
+
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
+	default:
+		// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
+		if err := vs.optimisticStatus(ctx); err != nil {
+			return nil, err
+		}
+		blk, err := vs.getShanghaiBeaconBlock(ctx, req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Shanghai{Shanghai: blk}}, nil
 	}
-
-	// TODO: Return a beacon block with blobs...
-
-	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
-	if err := vs.optimisticStatus(ctx); err != nil {
-		return nil, err
-	}
-
-	blk, err := vs.getBellatrixBeaconBlock(ctx, req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
-	}
-
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
