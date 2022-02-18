@@ -52,6 +52,7 @@ type config struct {
 	muxHandler                   MuxHandler
 	pbHandlers                   []*PbMux
 	router                       *mux.Router
+	timeout                      uint64
 }
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
@@ -248,6 +249,7 @@ func (g *Gateway) registerApiMiddleware() {
 	g.proxy = &apimiddleware.ApiProxyMiddleware{
 		GatewayAddress:  g.cfg.gatewayAddr,
 		EndpointCreator: g.cfg.apiMiddlewareEndpointFactory,
+		Timeout:         g.cfg.timeout,
 	}
 	log.Info("Starting API middleware")
 	g.proxy.Run(g.cfg.router)

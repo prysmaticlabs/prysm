@@ -75,9 +75,9 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *h
 }
 
 // ProxyRequest proxies the request to grpc-gateway.
-func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
+func (m *ApiProxyMiddleware) ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
 	// We do not use http.DefaultClient because it does not have any timeout.
-	netClient := &http.Client{Timeout: time.Minute * 2}
+	netClient := &http.Client{Timeout: time.Minute * time.Duration(m.Timeout)}
 	grpcResp, err := netClient.Do(req)
 	if err != nil {
 		return nil, InternalServerErrorWithMessage(err, "could not proxy request")

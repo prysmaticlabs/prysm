@@ -14,6 +14,7 @@ import (
 type ApiProxyMiddleware struct {
 	GatewayAddress  string
 	EndpointCreator EndpointFactory
+	Timeout         uint64
 	router          *mux.Router
 }
 
@@ -120,7 +121,7 @@ func (m *ApiProxyMiddleware) WithMiddleware(path string) http.HandlerFunc {
 			WriteError(w, errJson, nil)
 			return
 		}
-		grpcResp, errJson := ProxyRequest(req)
+		grpcResp, errJson := m.ProxyRequest(req)
 		if errJson != nil {
 			WriteError(w, errJson, nil)
 			return
