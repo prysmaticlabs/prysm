@@ -194,6 +194,28 @@ func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*p
 
 // Returns a list of SSZ-encoded,
 func mockBlobTransactions(numItems uint64) ([][]byte, error) {
+	blobTxs := make([]*pb.SignedBlobTransaction, numItems)
+	foo := [32]byte{}
+	addr := [20]byte{}
+	for i := uint64(0); i < numItems; i++ {
+		blobTxs[i] = &pb.SignedBlobTransaction{
+			Header: &pb.BlobTransaction{
+				Nonce:               i,
+				Gas:                 1,
+				MaxBasefee:          foo[:],
+				PriorityFee:         foo[:],
+				Address:             addr[:],
+				Value:               foo[:],
+				Data:                []byte("foo"),
+				BlobVersionedHashes: nil,
+			},
+			Signatures: &pb.ECDSASignature{
+				V: []byte{1},
+				R: make([]byte, 32),
+				S: make([]byte, 32),
+			},
+		}
+	}
 	txs := make([][]byte, 0) // TODO: Add some mock txs.
 	return txs, nil
 }
