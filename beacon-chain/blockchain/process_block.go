@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -790,22 +791,32 @@ func (s *Service) validateTerminalBlock(ctx context.Context, b block.SignedBeaco
 	if err != nil {
 		return errors.Wrap(err, "could not get transition parent block")
 	}
-	transitionBlkTTD := new(uint256.Int)
-	transitionBlkTTD.SetBytes(bytesutil.ReverseByteOrder(transitionBlk.TotalDifficulty))
-
-	parentTransitionBlkTTD := new(uint256.Int)
-	parentTransitionBlkTTD.SetBytes(bytesutil.ReverseByteOrder(parentTransitionBlk.TotalDifficulty))
-
+	transitionBlkTD, ok := new(big.Int).SetString(transitionBlk.TotalDifficulty, 10)
+	if !ok {
+		return errors.New("could not set total difficulty")
+	}
+	transitionBlkTTD, overflows := uint256.FromBig(transitionBlkTD)
+	if overflows {
+		return errors.New("total difficulty overflows")
+	}
+	parentBlkTD, ok := new(big.Int).SetString(parentTransitionBlk.TotalDifficulty, 10)
+	if !ok {
+		return errors.New("could not set total difficulty")
+	}
+	parentBlkTTD, overflows := uint256.FromBig(parentBlkTD)
+	if overflows {
+		return errors.New("total difficulty overflows")
+	}
 	log.WithFields(logrus.Fields{
 		"slot":                                 b.Block().Slot(),
 		"transitionBlockHash":                  common.BytesToHash(payload.ParentHash).String(),
 		"transitionBlockParentHash":            common.BytesToHash(transitionBlk.ParentHash).String(),
 		"terminalTotalDifficulty":              params.BeaconConfig().TerminalTotalDifficulty,
 		"transitionBlockTotalDifficulty":       transitionBlkTTD,
-		"transitionBlockParentTotalDifficulty": parentTransitionBlkTTD,
+		"transitionBlockParentTotalDifficulty": parentBlkTTD,
 	}).Info("Validating terminal block")
 
-	validated, err := validTerminalPowBlock(transitionBlkTTD, parentTransitionBlkTTD)
+	validated, err := validTerminalPowBlock(transitionBlkTTD, parentBlkTTD)
 	if err != nil {
 		return err
 	}
