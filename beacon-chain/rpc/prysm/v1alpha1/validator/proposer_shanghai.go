@@ -67,9 +67,12 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 	}
 	// Compute state root with the newly constructed block.
 	wsb, err := wrapper.WrappedSignedBeaconBlock(
-		&ethpb.SignedBeaconBlockWithBlobKZGs{
-			Block:     blk,
-			Signature: make([]byte, 96),
+		&ethpb.SignedBeaconBlockAndBlobs{
+			Block: &ethpb.SignedBeaconBlockWithBlobKZGs{
+				Block:     blk,
+				Signature: make([]byte, 96),
+			},
+			Blobs: nil, // TODO: Add blobs.
 		},
 	)
 	if err != nil {

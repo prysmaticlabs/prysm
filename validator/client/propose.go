@@ -694,6 +694,7 @@ func (v *validator) proposeBlockShanghai(ctx context.Context, slot types.Slot, p
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockShanghai")
 	defer span.End()
+	log.Warn("STARTING PROPOSE BLOCK SHANGHAI")
 
 	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
 	lock.Lock()
