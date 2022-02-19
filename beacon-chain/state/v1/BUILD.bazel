@@ -40,8 +40,7 @@ go_library(
         "//testing/benchmark:__pkg__",
         "//testing/spectest:__subpackages__",
         "//testing/util:__pkg__",
-        "//tools/benchmark-files-gen:__pkg__",
-        "//tools/pcli:__pkg__",
+        "//tools:__subpackages__",
     ],
     deps = [
         "//beacon-chain/state:go_default_library",

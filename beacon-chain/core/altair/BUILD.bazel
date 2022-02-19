@@ -18,6 +18,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
         "//testing/util:__pkg__",
+        "//tools:__subpackages__",
         "//validator/client:__pkg__",
     ],
     deps = [
