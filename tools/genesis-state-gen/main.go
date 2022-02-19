@@ -11,7 +11,12 @@ import (
 	"os"
 	"strings"
 
+	ssz "github.com/ferranbt/fastssz"
 	"github.com/ghodss/yaml"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
+	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v2"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -40,6 +45,13 @@ var (
 	sszOutputFile    = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile   = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
 	jsonOutputFile   = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
+	forkName         = flag.String("fork", "phase0", "Fork name to use for genesis state generation")
+)
+
+const (
+	phase0Fork = iota
+	altairFork
+	bellatrixFork
 )
 
 func main() {
@@ -54,7 +66,7 @@ func main() {
 	if !*useMainnetConfig {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
-	var genesisState *ethpb.BeaconState
+	var phase0Genesis *ethpb.BeaconState
 	var err error
 	if *depositJSONFile != "" {
 		inputFile := *depositJSONFile
@@ -74,7 +86,7 @@ func main() {
 			}
 		}()
 		log.Printf("Generating genesis state from input JSON deposit data %s", inputFile)
-		genesisState, err = genesisStateFromJSONValidators(inputJSON, *genesisTime)
+		phase0Genesis, err = genesisStateFromJSONValidators(inputJSON, *genesisTime)
 		if err != nil {
 			log.Printf("Could not generate genesis beacon state: %v", err)
 			return
@@ -85,10 +97,61 @@ func main() {
 			return
 		}
 		// If no JSON input is specified, we create the state deterministically from interop keys.
-		genesisState, _, err = interop.GenerateGenesisState(context.Background(), *genesisTime, uint64(*numValidators))
+		phase0Genesis, _, err = interop.GenerateGenesisState(context.Background(), *genesisTime, uint64(*numValidators))
 		if err != nil {
 			log.Printf("Could not generate genesis beacon state: %v", err)
 			return
+		}
+	}
+
+	// Upgrade genesis state.
+	var genesisState ssz.Marshaler
+	ctx := context.Background()
+	var fork int
+	switch *forkName {
+	case "phase0":
+		fork = phase0Fork
+	case "altair":
+		fork = altairFork
+	case "bellatrix":
+		fork = bellatrixFork
+	default:
+		log.Fatalf("Unknown fork name %s", *forkName)
+	}
+	if *forkName != "phase0" {
+		log.Printf("Upgrading genesis state to fork %s.", *forkName)
+	}
+	if fork >= altairFork {
+		wrappedGenesisState, err := v1.InitializeFromProtoUnsafe(phase0Genesis)
+		if err != nil {
+			log.Fatalf("Could not initialize genesis state: %v", err)
+			return
+		}
+		altairState, err := altair.UpgradeToAltair(ctx, wrappedGenesisState)
+		if err != nil {
+			log.Fatalf("Could not upgrade genesis state: %v", err)
+			return
+		}
+		var ok bool
+		genesisState, ok = altairState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
+		if !ok {
+			log.Fatalf("Could not convert to altair state")
+			return
+		}
+	}
+	if fork >= bellatrixFork {
+		altairState, err := v2.InitializeFromProtoUnsafe(genesisState.(*ethpb.BeaconStateAltair))
+		if err != nil {
+			log.Fatalf("Could not initialize genesis state: %v", err)
+		}
+		bellatrixState, err := execution.UpgradeToBellatrix(ctx, altairState)
+		if err != nil {
+			log.Fatalf("Could not upgrade genesis state: %v", err)
+		}
+		var ok bool
+		genesisState, ok = bellatrixState.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
+		if !ok {
+			log.Fatalf("Could not convert to bellatrix state")
 		}
 	}
 
