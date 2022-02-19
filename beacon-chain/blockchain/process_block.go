@@ -117,7 +117,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	fullyValidated := false
-	if copiedPreState.Version() == version.Bellatrix || postState.Version() == version.Bellatrix {
+	if copiedPreState.Version() == version.Bellatrix || postState.Version() == version.Bellatrix || copiedPreState.Version() == version.Shanghai || postState.Version() == version.Shanghai {
 		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
 		if err != nil {
 			return errors.Wrap(err, "could not check if execution is enabled")
@@ -188,7 +188,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// update forkchoice synced tips if the block is not optimistic
-	if postState.Version() == version.Bellatrix || fullyValidated {
+	if postState.Version() == version.Shanghai || postState.Version() == version.Bellatrix || fullyValidated {
 		root, err := b.HashTreeRoot()
 		if err != nil {
 			return err
@@ -262,7 +262,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Notify execution layer with fork choice head update if this is post merge block.
-	if postState.Version() == version.Bellatrix {
+	if postState.Version() == version.Bellatrix || postState.Version() == version.Shanghai {
 		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
 		if err != nil {
 			return errors.Wrap(err, "could not check if execution is enabled")
@@ -278,7 +278,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				return err
 			}
 			finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-			if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
+			if finalizedBlock != nil && (finalizedBlock.Version() == version.Bellatrix || finalizedBlock.Version() == version.Shanghai) {
 				finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 				if err != nil {
 					return err

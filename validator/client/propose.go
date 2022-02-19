@@ -386,9 +386,9 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	var sig bls.Signature
 	switch b.Version() {
 	case version.Shanghai:
-		block, ok := b.Proto().(*ethpb.BeaconBlockAndBlobs)
+		block, ok := b.Proto().(*ethpb.BeaconBlockWithBlobKZGs)
 		if !ok {
-			return nil, nil, errors.New("could not convert obj to beacon block bellatrix")
+			return nil, nil, errors.New("could not convert obj to beacon block shanghai")
 		}
 		blockRoot, err := signing.ComputeSigningRoot(block, domain.SignatureDomain)
 		if err != nil {

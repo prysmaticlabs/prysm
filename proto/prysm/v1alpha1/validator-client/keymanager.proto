@@ -79,7 +79,7 @@ message SignRequest {
         ethereum.eth.v1alpha1.BeaconBlockBellatrix blockV3 = 111;
 
         // Shanghai objects.
-        ethereum.eth.v1alpha1.BeaconBlockAndBlobs blockV4 = 112;
+        ethereum.eth.v1alpha1.BeaconBlockWithBlobKZGs blockV4 = 112;
     }
     reserved 4, 5; // Reserving old, deleted fields.
     uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];

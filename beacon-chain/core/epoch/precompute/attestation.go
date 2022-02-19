@@ -183,7 +183,7 @@ func UpdateBalance(vp []*Validator, bBal *Balance, stateVersion int) *Balance {
 			if stateVersion == version.Phase0 && v.IsPrevEpochAttester {
 				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
 			}
-			if (stateVersion == version.Altair || stateVersion == version.Bellatrix) && v.IsPrevEpochSourceAttester {
+			if (stateVersion == version.Altair || stateVersion == version.Bellatrix || stateVersion == version.Shanghai) && v.IsPrevEpochSourceAttester {
 				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsPrevEpochTargetAttester {

@@ -145,9 +145,9 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk block.Signe
 	}()
 
 	// Broadcast the new block to the network.
-	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
-		return nil, fmt.Errorf("could not broadcast block: %v", err)
-	}
+	//if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
+	//	return nil, fmt.Errorf("could not broadcast block: %v", err)
+	//}
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")

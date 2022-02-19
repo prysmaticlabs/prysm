@@ -53,7 +53,7 @@ func (c *SyncCommitteeHeadStateCache) Get(slot types.Slot) (state.BeaconState, e
 		return nil, ErrIncorrectType
 	}
 	switch st.Version() {
-	case version.Altair, version.Bellatrix:
+	case version.Altair, version.Bellatrix, version.Shanghai:
 	default:
 		return nil, ErrIncorrectType
 	}

@@ -44,7 +44,7 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 			VoluntaryExits:    bellatrixBlk.Body.VoluntaryExits,
 			SyncAggregate:     bellatrixBlk.Body.SyncAggregate,
 			BlobKzgs:          nil, // TODO: Add blob KZGs here.
-			ExecutionPayload: payload,
+			ExecutionPayload:  payload,
 		},
 	}
 	// Compute state root with the newly constructed block.
