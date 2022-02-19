@@ -34,7 +34,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -213,42 +212,36 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 func TestProposer_ProposeBlock_OK(t *testing.T) {
 	tests := []struct {
 		name  string
-		block func([32]byte) (block.SignedBeaconBlock, *ethpb.GenericSignedBeaconBlock)
+		block func([32]byte) *ethpb.GenericSignedBeaconBlock
 	}{
 		{
 			name: "phase0",
-			block: func(parent [32]byte) (block.SignedBeaconBlock, *ethpb.GenericSignedBeaconBlock) {
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBeaconBlock()
 				blockToPropose.Block.Slot = 5
 				blockToPropose.Block.ParentRoot = parent[:]
 				blk := &ethpb.GenericSignedBeaconBlock_Phase0{Phase0: blockToPropose}
-				wrapped, err := wrapper.WrappedSignedBeaconBlock(blockToPropose)
-				require.NoError(t, err)
-				return wrapped, &ethpb.GenericSignedBeaconBlock{Block: blk}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
 		{
 			name: "altair",
-			block: func(parent [32]byte) (block.SignedBeaconBlock, *ethpb.GenericSignedBeaconBlock) {
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBeaconBlockAltair()
 				blockToPropose.Block.Slot = 5
 				blockToPropose.Block.ParentRoot = parent[:]
 				blk := &ethpb.GenericSignedBeaconBlock_Altair{Altair: blockToPropose}
-				wrapped, err := wrapper.WrappedSignedBeaconBlock(blockToPropose)
-				require.NoError(t, err)
-				return wrapped, &ethpb.GenericSignedBeaconBlock{Block: blk}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
 		{
 			name: "bellatrix",
-			block: func(parent [32]byte) (block.SignedBeaconBlock, *ethpb.GenericSignedBeaconBlock) {
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBeaconBlockBellatrix()
 				blockToPropose.Block.Slot = 5
 				blockToPropose.Block.ParentRoot = parent[:]
 				blk := &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blockToPropose}
-				wrapped, err := wrapper.WrappedSignedBeaconBlock(blockToPropose)
-				require.NoError(t, err)
-				return wrapped, &ethpb.GenericSignedBeaconBlock{Block: blk}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
 	}
@@ -281,8 +274,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				BlockNotifier:     c.BlockNotifier(),
 				P2P:               mockp2p.NewTestP2P(t),
 			}
-			blockToSave, blockToPropose := tt.block(bsRoot)
-			require.NoError(t, db.SaveBlock(ctx, blockToSave))
+			blockToPropose := tt.block(bsRoot)
 			_, err = proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
 			assert.NoError(t, err, "Could not propose block correctly")
 		})
