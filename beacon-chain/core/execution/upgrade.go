@@ -84,3 +84,67 @@ func UpgradeToBellatrix(ctx context.Context, state state.BeaconState) (state.Bea
 
 	return v3.InitializeFromProtoUnsafe(s)
 }
+
+func UpgradeToShanghai(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+	epoch := time.CurrentEpoch(state)
+
+	currentSyncCommittee, err := state.CurrentSyncCommittee()
+	if err != nil {
+		return nil, err
+	}
+	nextSyncCommittee, err := state.NextSyncCommittee()
+	if err != nil {
+		return nil, err
+	}
+	prevEpochParticipation, err := state.PreviousEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	currentEpochParticipation, err := state.CurrentEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	inactivityScores, err := state.InactivityScores()
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := state.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	s := &ethpb.BeaconStateBellatrix{
+		GenesisTime:           state.GenesisTime(),
+		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
+		Slot:                  state.Slot(),
+		Fork: &ethpb.Fork{
+			PreviousVersion: state.Fork().CurrentVersion,
+			CurrentVersion:  params.BeaconConfig().ShanghaiForkVersion,
+			Epoch:           epoch,
+		},
+		LatestBlockHeader:            state.LatestBlockHeader(),
+		BlockRoots:                   state.BlockRoots(),
+		StateRoots:                   state.StateRoots(),
+		HistoricalRoots:              state.HistoricalRoots(),
+		Eth1Data:                     state.Eth1Data(),
+		Eth1DataVotes:                state.Eth1DataVotes(),
+		Eth1DepositIndex:             state.Eth1DepositIndex(),
+		Validators:                   state.Validators(),
+		Balances:                     state.Balances(),
+		RandaoMixes:                  state.RandaoMixes(),
+		Slashings:                    state.Slashings(),
+		PreviousEpochParticipation:   prevEpochParticipation,
+		CurrentEpochParticipation:    currentEpochParticipation,
+		JustificationBits:            state.JustificationBits(),
+		PreviousJustifiedCheckpoint:  state.PreviousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:   state.CurrentJustifiedCheckpoint(),
+		FinalizedCheckpoint:          state.FinalizedCheckpoint(),
+		InactivityScores:             inactivityScores,
+		CurrentSyncCommittee:         currentSyncCommittee,
+		NextSyncCommittee:            nextSyncCommittee,
+		LatestExecutionPayloadHeader: payload,
+	}
+
+	return v3.InitializeFromProtoUnsafe(s)
+}

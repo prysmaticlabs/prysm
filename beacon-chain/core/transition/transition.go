@@ -285,6 +285,13 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 				return nil, err
 			}
 		}
+		if time.CanUpgradeToShanghai(state.Slot()) {
+			state, err = execution.UpgradeToShanghai(ctx, state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
 	}
 
 	if highestSlot < state.Slot() {
