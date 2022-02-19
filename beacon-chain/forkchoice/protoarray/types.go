@@ -19,7 +19,6 @@ type ForkChoice struct {
 type Store struct {
 	justifiedEpoch             types.Epoch                            // latest justified epoch in store.
 	finalizedEpoch             types.Epoch                            // latest finalized epoch in store.
-	finalizedRoot              [fieldparams.RootLength]byte           // latest finalized root in store.
 	pruneThreshold             uint64                                 // do not prune tree unless threshold is reached.
 	proposerBoostRoot          [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot  [fieldparams.RootLength]byte           // previous block root that was boosted after being received in a timely manner.

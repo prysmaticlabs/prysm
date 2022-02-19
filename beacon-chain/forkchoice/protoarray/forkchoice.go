@@ -14,11 +14,10 @@ import (
 var lastHeadRoot [32]byte
 
 // New initializes a new fork choice store.
-func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *ForkChoice {
+func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	s := &Store{
 		justifiedEpoch:    justifiedEpoch,
 		finalizedEpoch:    finalizedEpoch,
-		finalizedRoot:     finalizedRoot,
 		proposerBoostRoot: [32]byte{},
 		nodeByRoot:        make(map[[fieldparams.RootLength]byte]*Node),
 		pruneThreshold:    defaultPruneThreshold,

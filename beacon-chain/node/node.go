@@ -310,7 +310,7 @@ func (b *BeaconNode) Close() {
 }
 
 func (b *BeaconNode) startForkChoice() {
-	f := protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
+	f := protoarray.New(0, 0)
 	b.forkChoiceStore = f
 }
 
