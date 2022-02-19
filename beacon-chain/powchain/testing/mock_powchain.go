@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -56,11 +55,6 @@ func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 		blk = big.NewInt(GenesisTime)
 	}
 	return uint64(GenesisTime), blk
-}
-
-// DepositTrie --
-func (_ *POWChain) DepositTrie() *trie.SparseMerkleTrie {
-	return &trie.SparseMerkleTrie{}
 }
 
 // BlockExists --
@@ -105,17 +99,6 @@ func (m *POWChain) BlockByTimestamp(_ context.Context, time uint64) (*types.Head
 		}
 	}
 	return &types.HeaderInfo{Number: chosenNumber, Time: chosenTime}, nil
-}
-
-// DepositRoot --
-func (_ *POWChain) DepositRoot() [32]byte {
-	root := []byte("depositroot")
-	return bytesutil.ToBytes32(root)
-}
-
-// ChainStartDeposits --
-func (_ *POWChain) ChainStartDeposits() []*ethpb.Deposit {
-	return []*ethpb.Deposit{}
 }
 
 // ChainStartEth1Data --
