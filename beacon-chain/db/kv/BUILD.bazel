@@ -24,6 +24,7 @@ go_library(
         "state.go",
         "state_summary.go",
         "state_summary_cache.go",
+        "tx_blobs.go",
         "utils.go",
         "validated_tips.go",
         "wss.go",

@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/params"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/sirupsen/logrus"
@@ -20,23 +19,6 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 	payload, err := vs.getExecutionPayload(ctx, req.Slot)
 	if err != nil {
 		return nil, err
-	}
-	shanghaiPayload := &enginev1.ExecutionPayloadWithBlobTxs{
-		ParentHash:       payload.ParentHash,
-		FeeRecipient:     payload.FeeRecipient,
-		StateRoot:        payload.StateRoot,
-		ReceiptsRoot:     payload.ReceiptsRoot,
-		LogsBloom:        payload.LogsBloom,
-		Random:           payload.Random,
-		BlockNumber:      payload.BlockNumber,
-		GasLimit:         payload.GasLimit,
-		GasUsed:          payload.GasUsed,
-		Timestamp:        payload.Timestamp,
-		ExtraData:        payload.ExtraData,
-		BaseFeePerGas:    payload.BaseFeePerGas,
-		BlockHash:        payload.BlockHash,
-		Transactions:     payload.Transactions,
-		BlobTransactions: nil, // TODO: Parse blob transactions into SSZ format...
 	}
 
 	log.WithFields(logrus.Fields{
@@ -61,7 +43,6 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 			Deposits:          bellatrixBlk.Body.Deposits,
 			VoluntaryExits:    bellatrixBlk.Body.VoluntaryExits,
 			SyncAggregate:     bellatrixBlk.Body.SyncAggregate,
-			ExecutionPayload:  shanghaiPayload,
 			BlobKzgs:          nil, // TODO: Add blob KZGs here.
 		},
 	}

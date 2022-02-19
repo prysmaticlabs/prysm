@@ -388,7 +388,7 @@ message BeaconBlockBodyWithBlobKZGs {
     repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
     repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
     SyncAggregate sync_aggregate = 9;
-    ethereum.engine.v1.ExecutionPayloadWithBlobTxs execution_payload = 10;
+    ethereum.engine.v1.ExecutionPayload execution_payload = 10;
     repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16777216"];
 }
 

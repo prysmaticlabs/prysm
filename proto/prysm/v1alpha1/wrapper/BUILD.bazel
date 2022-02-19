@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "beacon_block.go",
+        "beacon_block_shanghai.go",
         "metadata.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper",

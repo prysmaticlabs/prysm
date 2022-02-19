@@ -279,7 +279,3 @@ func (w shanghaiBeaconBlockBody) Proto() proto.Message {
 func (w shanghaiBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return nil, errors.New("unsupported execution payload")
 }
-
-func (w shanghaiBeaconBlockBody) ExecutionPayloadWithBlobTxs() (*enginev1.ExecutionPayloadWithBlobTxs, error) {
-	return w.b.ExecutionPayload, nil
-}
