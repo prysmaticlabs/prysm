@@ -24,9 +24,9 @@ func (vs *Server) GetSyncMessageBlockRoot(
 ) (*ethpb.SyncMessageBlockRootResponse, error) {
 	// An optimistic validator MUST NOT participate in sync committees
 	// (i.e., sign across the DOMAIN_SYNC_COMMITTEE, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF or DOMAIN_CONTRIBUTION_AND_PROOF domains).
-	if err := vs.optimisticStatus(ctx); err != nil {
-		return nil, err
-	}
+	//if err := vs.optimisticStatus(ctx); err != nil {
+	//	return nil, err
+	//}
 
 	r, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
@@ -89,9 +89,9 @@ func (vs *Server) GetSyncCommitteeContribution(
 ) (*ethpb.SyncCommitteeContribution, error) {
 	// An optimistic validator MUST NOT participate in sync committees
 	// (i.e., sign across the DOMAIN_SYNC_COMMITTEE, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF or DOMAIN_CONTRIBUTION_AND_PROOF domains).
-	if err := vs.optimisticStatus(ctx); err != nil {
-		return nil, err
-	}
+	//if err := vs.optimisticStatus(ctx); err != nil {
+	//	return nil, err
+	//}
 
 	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
 	if err != nil {
