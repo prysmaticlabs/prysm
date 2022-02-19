@@ -71,7 +71,7 @@ message SignedBlobTransaction {
 }
 
 message BlobTransaction {
-	uint64 nounce = 1;
+	uint64 nonce = 1;
 	uint64 gas = 2;
 	bytes max_basefee = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes priority_fee = 4 [(ethereum.eth.ext.ssz_size) = "32"];
