@@ -11,9 +11,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -129,11 +131,20 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 }
 
 // GetBlobs calls the engine_getBlobsV1 method via JSON-RPC.
-func (c *Client) GetBlobs(ctx context.Context, payloadId [8]byte) (*ethpb.Blob, error) {
-	result := &ethpb.Blob{
-		Blob: make([][]byte, 0), // TODO: Mock blobs.
+func (c *Client) GetBlobs(_ context.Context, _ [8]byte) (*ethpb.Blob, error) {
+	blobBytes := make([][]byte, 4096)
+	gen := rand.NewGenerator()
+	for i := 0; i < len(blobBytes); i++ {
+		item := make([]byte, 48)
+		_, err := gen.Read(item)
+		if err != nil {
+			return nil, err
+		}
+		blobBytes[i] = item
 	}
-	return result, nil
+	return &ethpb.Blob{
+		Blob: blobBytes,
+	}, nil
 }
 
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
@@ -215,7 +226,16 @@ func mockBlobTransactions(numItems uint64) ([][]byte, error) {
 				S: make([]byte, 32),
 			},
 		}
-		_ = blobTx
+		enc, err := blobTx.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		prefixByte := "0x05"
+		prefixByteEnc, err := hexutil.Decode(prefixByte)
+		if err != nil {
+			return nil, err
+		}
+		txs[i] = append(prefixByteEnc, enc...)
 	}
 	return txs, nil
 }

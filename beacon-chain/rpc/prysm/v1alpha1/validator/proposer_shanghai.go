@@ -20,12 +20,17 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 	if err != nil {
 		return nil, err
 	}
-
+	blobs, err := vs.ExecutionEngineCaller.GetBlobs(ctx, [8]byte{})
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Save blobs, broadcast, and convert to KZGs
 	log.WithFields(logrus.Fields{
 		"hash":       fmt.Sprintf("%#x", payload.BlockHash),
 		"parentHash": fmt.Sprintf("%#x", payload.ParentHash),
 		"number":     payload.BlockNumber,
 		"txCount":    len(payload.Transactions),
+		"blobCount":  len(blobs.Blob),
 	}).Info("Received payload")
 
 	blk := &ethpb.BeaconBlockWithBlobKZGs{
@@ -54,7 +59,7 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 				Block:     blk,
 				Signature: make([]byte, 96),
 			},
-			Blobs: nil, // TODO: Add blobs.
+			Blobs: []*ethpb.Blob{blobs},
 		},
 	)
 	if err != nil {
@@ -68,7 +73,7 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 	blk.StateRoot = stateRoot
 	blockWithBlobs := &ethpb.BeaconBlockAndBlobs{
 		Block: blk,
-		Blobs: nil, // TODO: Add blobs here.
+		Blobs: []*ethpb.Blob{blobs},
 	}
 	return blockWithBlobs, nil
 }
