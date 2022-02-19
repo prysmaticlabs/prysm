@@ -140,7 +140,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		// Expect nodes to have a boosted, back-propagated score.
 		// Ancestors have the added weights of their children. Genesis is a special exception at 0 weight,
-		require.Equal(t, f.store.treeRoot.weight, uint64(0))
+		require.Equal(t, f.store.treeRootNode.weight, uint64(0))
 
 		// Otherwise, assuming a block, A, that is not-genesis:
 		//

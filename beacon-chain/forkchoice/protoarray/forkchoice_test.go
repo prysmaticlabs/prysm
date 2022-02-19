@@ -89,12 +89,12 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 
 	f.store.nodesLock.Lock()
 	f.store.nodeByRoot[[32]byte{'3'}].balance = 10
-	require.NoError(t, f.store.treeRoot.applyWeightChanges(ctx))
+	require.NoError(t, f.store.treeRootNode.applyWeightChanges(ctx))
 	require.Equal(t, uint64(10), f.store.nodeByRoot[[32]byte{'1'}].weight)
 	require.Equal(t, uint64(0), f.store.nodeByRoot[[32]byte{'2'}].weight)
 
-	require.NoError(t, f.store.treeRoot.updateBestDescendant(ctx, 1, 1))
-	require.DeepEqual(t, [32]byte{'3'}, f.store.treeRoot.bestDescendant.root)
+	require.NoError(t, f.store.treeRootNode.updateBestDescendant(ctx, 1, 1))
+	require.DeepEqual(t, [32]byte{'3'}, f.store.treeRootNode.bestDescendant.root)
 	f.store.nodesLock.Unlock()
 
 	h, err := f.store.head(ctx, [32]byte{'1'})
@@ -117,8 +117,8 @@ func TestForkChoice_AncestorRoot(t *testing.T) {
 	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
 	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1, false))
 	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(3), indexToHash(2), 1, 1, false))
-	f.store.treeRoot = f.store.nodeByRoot[indexToHash(1)]
-	f.store.treeRoot.parent = nil
+	f.store.treeRootNode = f.store.nodeByRoot[indexToHash(1)]
+	f.store.treeRootNode.parent = nil
 
 	r, err := f.AncestorRoot(ctx, indexToHash(3), 6)
 	assert.NoError(t, err)

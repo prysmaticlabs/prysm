@@ -64,11 +64,11 @@ func (f *ForkChoice) Head(
 		return [32]byte{}, errors.Wrap(err, "could not apply proposer boost score")
 	}
 
-	if err := f.store.treeRoot.applyWeightChanges(ctx); err != nil {
+	if err := f.store.treeRootNode.applyWeightChanges(ctx); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not apply weight changes")
 	}
 
-	if err := f.store.treeRoot.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
+	if err := f.store.treeRootNode.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
 

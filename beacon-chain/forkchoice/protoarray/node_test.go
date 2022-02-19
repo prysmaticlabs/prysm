@@ -54,7 +54,7 @@ func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
 	s.nodeByRoot[indexToHash(2)].balance = 100
 	s.nodeByRoot[indexToHash(3)].balance = 100
 
-	assert.NoError(t, s.treeRoot.applyWeightChanges(ctx))
+	assert.NoError(t, s.treeRootNode.applyWeightChanges(ctx))
 
 	assert.Equal(t, uint64(300), s.nodeByRoot[indexToHash(1)].weight)
 	assert.Equal(t, uint64(200), s.nodeByRoot[indexToHash(2)].weight)
@@ -80,7 +80,7 @@ func TestNode_ApplyWeightChanges_NegativeChange(t *testing.T) {
 	s.nodeByRoot[indexToHash(2)].balance = 100
 	s.nodeByRoot[indexToHash(3)].balance = 100
 
-	assert.NoError(t, s.treeRoot.applyWeightChanges(ctx))
+	assert.NoError(t, s.treeRootNode.applyWeightChanges(ctx))
 
 	assert.Equal(t, uint64(300), s.nodeByRoot[indexToHash(1)].weight)
 	assert.Equal(t, uint64(200), s.nodeByRoot[indexToHash(2)].weight)
@@ -95,8 +95,8 @@ func TestNode_UpdateBestDescendant_NonViableChild(t *testing.T) {
 
 	// Verify parent's best child and best descendant are `none`.
 	s := f.store
-	assert.Equal(t, 1, len(s.treeRoot.children))
-	nilBestDescendant := s.treeRoot.bestDescendant == nil
+	assert.Equal(t, 1, len(s.treeRootNode.children))
+	nilBestDescendant := s.treeRootNode.bestDescendant == nil
 	assert.Equal(t, true, nilBestDescendant)
 }
 
@@ -107,8 +107,8 @@ func TestNode_UpdateBestDescendant_ViableChild(t *testing.T) {
 	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
 
 	s := f.store
-	assert.Equal(t, 1, len(s.treeRoot.children))
-	assert.Equal(t, s.treeRoot.children[0], s.treeRoot.bestDescendant)
+	assert.Equal(t, 1, len(s.treeRootNode.children))
+	assert.Equal(t, s.treeRootNode.children[0], s.treeRootNode.bestDescendant)
 }
 
 func TestNode_UpdateBestDescendant_HigherWeightChild(t *testing.T) {
@@ -121,10 +121,10 @@ func TestNode_UpdateBestDescendant_HigherWeightChild(t *testing.T) {
 	s := f.store
 	s.nodeByRoot[indexToHash(1)].weight = 100
 	s.nodeByRoot[indexToHash(2)].weight = 200
-	assert.NoError(t, s.treeRoot.updateBestDescendant(ctx, 1, 1))
+	assert.NoError(t, s.treeRootNode.updateBestDescendant(ctx, 1, 1))
 
-	assert.Equal(t, 2, len(s.treeRoot.children))
-	assert.Equal(t, s.treeRoot.children[1], s.treeRoot.bestDescendant)
+	assert.Equal(t, 2, len(s.treeRootNode.children))
+	assert.Equal(t, s.treeRootNode.children[1], s.treeRootNode.bestDescendant)
 }
 
 func TestNode_UpdateBestDescendant_LowerWeightChild(t *testing.T) {
@@ -137,10 +137,10 @@ func TestNode_UpdateBestDescendant_LowerWeightChild(t *testing.T) {
 	s := f.store
 	s.nodeByRoot[indexToHash(1)].weight = 200
 	s.nodeByRoot[indexToHash(2)].weight = 100
-	assert.NoError(t, s.treeRoot.updateBestDescendant(ctx, 1, 1))
+	assert.NoError(t, s.treeRootNode.updateBestDescendant(ctx, 1, 1))
 
-	assert.Equal(t, 2, len(s.treeRoot.children))
-	assert.Equal(t, s.treeRoot.children[0], s.treeRoot.bestDescendant)
+	assert.Equal(t, 2, len(s.treeRootNode.children))
+	assert.Equal(t, s.treeRootNode.children[0], s.treeRootNode.bestDescendant)
 }
 
 func TestNode_TestDepth(t *testing.T) {
@@ -185,7 +185,7 @@ func TestNode_LeadsToViableHead(t *testing.T) {
 	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(2), 1, 1, false))
 	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(3), 4, 3, false))
 
-	require.Equal(t, true, f.store.treeRoot.leadsToViableHead(4, 3))
+	require.Equal(t, true, f.store.treeRootNode.leadsToViableHead(4, 3))
 	require.Equal(t, true, f.store.nodeByRoot[indexToHash(5)].leadsToViableHead(4, 3))
 	require.Equal(t, false, f.store.nodeByRoot[indexToHash(2)].leadsToViableHead(4, 3))
 	require.Equal(t, false, f.store.nodeByRoot[indexToHash(4)].leadsToViableHead(4, 3))

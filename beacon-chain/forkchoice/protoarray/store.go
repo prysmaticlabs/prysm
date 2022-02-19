@@ -139,7 +139,7 @@ func (s *Store) insert(ctx context.Context,
 	s.nodeByRoot[root] = n
 	if parent != nil {
 		parent.children = append(parent.children, n)
-		if err := s.treeRoot.updateBestDescendant(ctx, s.justifiedEpoch, s.finalizedEpoch); err != nil {
+		if err := s.treeRootNode.updateBestDescendant(ctx, s.justifiedEpoch, s.finalizedEpoch); err != nil {
 			return err
 		}
 	}
@@ -153,8 +153,8 @@ func (s *Store) insert(ctx context.Context,
 	}
 
 	// Set the node as root if the store was empty
-	if s.treeRoot == nil {
-		s.treeRoot = n
+	if s.treeRootNode == nil {
+		s.treeRootNode = n
 		s.headNode = n
 	}
 
@@ -214,12 +214,12 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 	}
 
 	// Prune nodeByRoot starting from root
-	if err := s.pruneMaps(ctx, s.treeRoot, finalizedNode); err != nil {
+	if err := s.pruneMaps(ctx, s.treeRootNode, finalizedNode); err != nil {
 		return err
 	}
 
 	finalizedNode.parent = nil
-	s.treeRoot = finalizedNode
+	s.treeRootNode = finalizedNode
 
 	prunedCount.Inc()
 	return nil
@@ -243,5 +243,5 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 func (s *Store) TreeRoot() *Node {
 	s.nodesLock.RLock()
 	defer s.nodesLock.RUnlock()
-	return s.treeRoot
+	return s.treeRootNode
 }

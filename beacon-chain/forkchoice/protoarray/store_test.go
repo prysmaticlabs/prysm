@@ -49,7 +49,7 @@ func TestStore_NodeByRoot(t *testing.T) {
 	f := setup(0, 0)
 	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
 	require.NoError(t, f.ProcessBlock(context.Background(), 2, indexToHash(2), indexToHash(1), 0, 0, false))
-	node0 := f.store.treeRoot
+	node0 := f.store.treeRootNode
 	node1 := node0.children[0]
 	node2 := node1.children[0]
 
@@ -113,14 +113,14 @@ func TestStore_UpdateBestDescendant_ContextCancelled(t *testing.T) {
 
 func TestStore_Insert(t *testing.T) {
 	// The new node does not have a parent.
-	treeRoot := &Node{slot: 0, root: indexToHash(0)}
-	nodeByRoot := map[[32]byte]*Node{indexToHash(0): treeRoot}
-	s := &Store{nodeByRoot: nodeByRoot, treeRoot: treeRoot}
+	treeRootNode := &Node{slot: 0, root: indexToHash(0)}
+	nodeByRoot := map[[32]byte]*Node{indexToHash(0): treeRootNode}
+	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode}
 	require.NoError(t, s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), 1, 1, false))
 	assert.Equal(t, 2, len(s.nodeByRoot), "Did not insert block")
-	assert.Equal(t, (*Node)(nil), treeRoot.parent, "Incorrect parent")
-	assert.Equal(t, 1, len(treeRoot.children), "Incorrect children number")
-	child := treeRoot.children[0]
+	assert.Equal(t, (*Node)(nil), treeRootNode.parent, "Incorrect parent")
+	assert.Equal(t, 1, len(treeRootNode.children), "Incorrect children number")
+	child := treeRootNode.children[0]
 	assert.Equal(t, types.Epoch(1), child.justifiedEpoch, "Incorrect justification")
 	assert.Equal(t, types.Epoch(1), child.finalizedEpoch, "Incorrect finalization")
 	assert.Equal(t, indexToHash(100), child.root, "Incorrect root")

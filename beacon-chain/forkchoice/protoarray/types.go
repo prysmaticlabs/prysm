@@ -24,7 +24,7 @@ type Store struct {
 	proposerBoostRoot          [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot  [fieldparams.RootLength]byte           // previous block root that was boosted after being received in a timely manner.
 	previousProposerBoostScore uint64                                 // previous proposer boosted root score.
-	treeRoot                   *Node                                  // the root node of the store tree.
+	treeRootNode               *Node                                  // the root node of the store tree.
 	headNode                   *Node                                  // last head Node
 	nodeByRoot                 map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
 	nodesLock                  sync.RWMutex
