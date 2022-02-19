@@ -44,11 +44,6 @@ type ForkchoiceUpdatedResponse struct {
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
-// BlobsResponse for engine_getBlobsV1.
-type BlobsResponse struct {
-	Blobs []*ethpb.Blob `json:"blobs"`
-}
-
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
@@ -57,7 +52,7 @@ type EngineCaller interface {
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*ForkchoiceUpdatedResponse, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
-	GetBlobs(ctx context.Context, payloadId [8]byte) (*BlobsResponse, error)
+	GetBlobs(ctx context.Context, payloadId [8]byte) (*ethpb.Blob, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) (*pb.TransitionConfiguration, error)
@@ -121,14 +116,24 @@ func (c *Client) ForkchoiceUpdated(
 func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
 	result := &pb.ExecutionPayload{}
 	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Use real transactions here.
+	mockTxs, err := mockBlobTransactions(256)
+	if err != nil {
+		return nil, err
+	}
+	result.Transactions = mockTxs
 	return result, handleRPCError(err)
 }
 
 // GetBlobs calls the engine_getBlobsV1 method via JSON-RPC.
-func (c *Client) GetBlobs(ctx context.Context, payloadId [8]byte) (*BlobsResponse, error) {
-	result := &BlobsResponse{}
-	err := c.rpc.CallContext(ctx, result, GetBlobsMethod, pb.PayloadIDBytes(payloadId))
-	return result, handleRPCError(err)
+func (c *Client) GetBlobs(ctx context.Context, payloadId [8]byte) (*ethpb.Blob, error) {
+	result := &ethpb.Blob{
+		Blob: make([][]byte, 0), // TODO: Mock blobs.
+	}
+	return result, nil
 }
 
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
@@ -185,6 +190,12 @@ func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*p
 	result := &pb.ExecutionBlock{}
 	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
+}
+
+// Returns a list of SSZ-encoded,
+func mockBlobTransactions(numItems uint64) ([][]byte, error) {
+	txs := make([][]byte, 0) // TODO: Add some mock txs.
+	return txs, nil
 }
 
 // Handles errors received from the RPC server according to the specification.
