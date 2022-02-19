@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -791,17 +791,17 @@ func (s *Service) validateTerminalBlock(ctx context.Context, b block.SignedBeaco
 	if err != nil {
 		return errors.Wrap(err, "could not get transition parent block")
 	}
-	transitionBlkTD, ok := new(big.Int).SetString(transitionBlk.TotalDifficulty, 10)
-	if !ok {
-		return errors.New("could not set total difficulty")
+	transitionBlkTDBig, err := hexutil.DecodeBig(transitionBlk.TotalDifficulty)
+	if err != nil {
+		return errors.Wrap(err, "could not decode transition total difficulty")
 	}
-	transitionBlkTTD, overflows := uint256.FromBig(transitionBlkTD)
+	transitionBlkTTD, overflows := uint256.FromBig(transitionBlkTDBig)
 	if overflows {
 		return errors.New("total difficulty overflows")
 	}
-	parentBlkTD, ok := new(big.Int).SetString(parentTransitionBlk.TotalDifficulty, 10)
-	if !ok {
-		return errors.New("could not set total difficulty")
+	parentBlkTD, err := hexutil.DecodeBig(parentTransitionBlk.TotalDifficulty)
+	if err != nil {
+		return errors.Wrap(err, "could not decode transition total difficulty")
 	}
 	parentBlkTTD, overflows := uint256.FromBig(parentBlkTD)
 	if overflows {

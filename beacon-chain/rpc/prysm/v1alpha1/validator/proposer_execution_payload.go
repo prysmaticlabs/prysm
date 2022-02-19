@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -214,11 +215,11 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	}).Info("Retrieving latest execution block")
 
 	for {
-		td, ok := new(big.Int).SetString(blk.TotalDifficulty, 10)
-		if !ok {
-			return nil, false, errors.New("could not set total difficulty")
+		transitionBlkTDBig, err := hexutil.DecodeBig(blk.TotalDifficulty)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
 		}
-		currentTotalDifficulty, overflows := uint256.FromBig(td)
+		currentTotalDifficulty, overflows := uint256.FromBig(transitionBlkTDBig)
 		if overflows {
 			return nil, false, errors.New("total difficulty overflowed")
 		}
@@ -238,12 +239,11 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 		}).Info("Retrieving parent execution block")
 
 		if blockReachedTTD {
-			parentTotalDifficulty := new(uint256.Int)
-			parentTD, ok := new(big.Int).SetString(parentBlk.TotalDifficulty, 10)
-			if !ok {
-				return nil, false, errors.New("could not set total difficulty")
+			parentTDBig, err := hexutil.DecodeBig(parentBlk.TotalDifficulty)
+			if err != nil {
+				return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
 			}
-			parentTotalDifficulty, overflows := uint256.FromBig(parentTD)
+			parentTotalDifficulty, overflows := uint256.FromBig(parentTDBig)
 			if overflows {
 				return nil, false, errors.New("total difficulty overflowed")
 			}
