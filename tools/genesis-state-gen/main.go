@@ -120,6 +120,8 @@ func main() {
 	}
 	if *forkName != "phase0" {
 		log.Printf("Upgrading genesis state to fork %s.", *forkName)
+	} else {
+		genesisState = phase0Genesis
 	}
 	if fork >= altairFork {
 		wrappedGenesisState, err := v1.InitializeFromProtoUnsafe(phase0Genesis)
