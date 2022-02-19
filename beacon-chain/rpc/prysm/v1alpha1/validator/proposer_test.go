@@ -275,8 +275,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				P2P:               mockp2p.NewTestP2P(t),
 			}
 			blockToPropose := tt.block(bsRoot)
-			_, err = proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
+			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
 			assert.NoError(t, err, "Could not propose block correctly")
+			if res == nil || len(res.BlockRoot) == 0 {
+				t.Error("No block root was returned")
+			}
 		})
 	}
 }
