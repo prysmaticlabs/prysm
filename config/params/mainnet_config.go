@@ -25,7 +25,7 @@ const (
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Placeholder for the merge epoch until it is decided
 	mainnetBellatrixForkEpoch = math.MaxUint64
-	mainnetShanghaiForkEpoch = math.MaxUint64
+	mainnetShanghaiForkEpoch  = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -202,14 +202,15 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AltairForkEpoch:      mainnetAltairForkEpoch,
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   math.MaxUint64,
-	ShanghaiForkEpoch:    math.MaxUint64,
 	ShardingForkVersion:  []byte{3, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
+	ShanghaiForkVersion:  []byte{4, 0, 0, 0},
+	ShanghaiForkEpoch:    math.MaxUint64,
 	ForkVersionSchedule: map[[4]byte]types.Epoch{
 		{0, 0, 0, 0}: genesisForkEpoch,
 		{1, 0, 0, 0}: mainnetAltairForkEpoch,
 		{2, 0, 0, 0}: mainnetBellatrixForkEpoch,
-		{3, 0, 0, 0}: mainnetShanghaiForkEpoch,
+		{4, 0, 0, 0}: mainnetShanghaiForkEpoch,
 		// Any further forks must be specified here by their epoch number.
 	},
 

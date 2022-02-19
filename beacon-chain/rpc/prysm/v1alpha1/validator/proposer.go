@@ -61,9 +61,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
 	default:
 		// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
-		if err := vs.optimisticStatus(ctx); err != nil {
-			return nil, err
-		}
+		//if err := vs.optimisticStatus(ctx); err != nil {
+		//	return nil, err
+		//}
 		blk, err := vs.getShanghaiBeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)

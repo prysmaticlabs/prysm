@@ -231,6 +231,12 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 				return nil, err
 			}
 		}
+		if prysmTime.CanUpgradeToShanghai(state.Slot()) {
+			state, err = execution.UpgradeToShanghai(ctx, state)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return state, nil
