@@ -71,9 +71,6 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 	diff := new(big.Int).SetBytes(e.Difficulty)
 	diffHex := hexutil.EncodeBig(diff)
 
-	totalDiff := new(big.Int).SetBytes(e.TotalDifficulty)
-	totalDiffHex := hexutil.EncodeBig(totalDiff)
-
 	size := new(big.Int).SetBytes(e.Size)
 	sizeHex := hexutil.EncodeBig(size)
 
@@ -90,7 +87,7 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 		ReceiptsRoot:     e.ReceiptsRoot,
 		LogsBloom:        e.LogsBloom,
 		Difficulty:       diffHex,
-		TotalDifficulty:  totalDiffHex,
+		TotalDifficulty:  e.TotalDifficulty,
 		GasLimit:         hexutil.Uint64(e.GasLimit),
 		GasUsed:          hexutil.Uint64(e.GasUsed),
 		Timestamp:        hexutil.Uint64(e.Timestamp),
@@ -130,11 +127,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	e.Difficulty = diff.Bytes()
-	totalDiff, err := hexutil.DecodeBig(dec.TotalDifficulty)
-	if err != nil {
-		return err
-	}
-	e.TotalDifficulty = totalDiff.Bytes()
+	e.TotalDifficulty = dec.TotalDifficulty
 	e.GasLimit = uint64(dec.GasLimit)
 	e.GasUsed = uint64(dec.GasUsed)
 	e.Timestamp = uint64(dec.Timestamp)

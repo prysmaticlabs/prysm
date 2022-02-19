@@ -35,10 +35,10 @@ message ExecutionBlock {
 	bytes receipts_root         = 8;
 	bytes logs_bloom            = 9;
 	bytes difficulty            = 10;
-	bytes total_difficulty      = 11;
+	string total_difficulty     = 11;
 	uint64 gas_limit            = 12;
 	uint64 gas_used             = 13;
-	bytes  base_fee_per_gas     = 14;
+	bytes base_fee_per_gas      = 14;
 	bytes size                  = 15;
 	uint64 timestamp            = 16;
 	bytes extra_data            = 17;

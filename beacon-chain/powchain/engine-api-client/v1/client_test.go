@@ -563,7 +563,7 @@ func fixtures() map[string]interface{} {
 		ReceiptsRoot:     receiptsRoot,
 		LogsBloom:        logsBloom,
 		Difficulty:       bytesutil.PadTo([]byte("1"), fieldparams.RootLength),
-		TotalDifficulty:  bytesutil.PadTo([]byte("2"), fieldparams.RootLength),
+		TotalDifficulty:  "2",
 		GasLimit:         3,
 		GasUsed:          4,
 		Timestamp:        5,

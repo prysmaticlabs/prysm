@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -201,11 +202,10 @@ func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) ([]byte, bool, error) {
 	ttd := new(big.Int)
 	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
-	terminalTotalDifficulty, of := uint256.FromBig(ttd)
-	if of {
+	terminalTotalDifficulty, overflows := uint256.FromBig(ttd)
+	if overflows {
 		return nil, false, errors.New("could not convert terminal total difficulty to uint256")
 	}
-
 	blk, err := vs.ExecutionEngineCaller.LatestExecutionBlock(ctx)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "could not get latest execution block")
@@ -217,8 +217,14 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	}).Info("Retrieving latest execution block")
 
 	for {
-		currentTotalDifficulty := new(uint256.Int)
-		currentTotalDifficulty.SetBytes(bytesutil.ReverseByteOrder(blk.TotalDifficulty))
+		transitionBlkTDBig, err := hexutil.DecodeBig(blk.TotalDifficulty)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
+		}
+		currentTotalDifficulty, overflows := uint256.FromBig(transitionBlkTDBig)
+		if overflows {
+			return nil, false, errors.New("total difficulty overflowed")
+		}
 		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 		parentHash := bytesutil.ToBytes32(blk.ParentHash)
 		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
@@ -235,8 +241,14 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 		}).Info("Retrieving parent execution block")
 
 		if blockReachedTTD {
-			parentTotalDifficulty := new(uint256.Int)
-			parentTotalDifficulty.SetBytes(bytesutil.ReverseByteOrder(parentBlk.TotalDifficulty))
+			parentTDBig, err := hexutil.DecodeBig(parentBlk.TotalDifficulty)
+			if err != nil {
+				return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
+			}
+			parentTotalDifficulty, overflows := uint256.FromBig(parentTDBig)
+			if overflows {
+				return nil, false, errors.New("total difficulty overflowed")
+			}
 			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 			if !parentReachedTTD {
 				log.WithFields(logrus.Fields{

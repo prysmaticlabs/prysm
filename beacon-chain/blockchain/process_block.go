@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -790,22 +791,32 @@ func (s *Service) validateTerminalBlock(ctx context.Context, b block.SignedBeaco
 	if err != nil {
 		return errors.Wrap(err, "could not get transition parent block")
 	}
-	transitionBlkTTD := new(uint256.Int)
-	transitionBlkTTD.SetBytes(bytesutil.ReverseByteOrder(transitionBlk.TotalDifficulty))
-
-	parentTransitionBlkTTD := new(uint256.Int)
-	parentTransitionBlkTTD.SetBytes(bytesutil.ReverseByteOrder(parentTransitionBlk.TotalDifficulty))
-
+	transitionBlkTDBig, err := hexutil.DecodeBig(transitionBlk.TotalDifficulty)
+	if err != nil {
+		return errors.Wrap(err, "could not decode transition total difficulty")
+	}
+	transitionBlkTTD, overflows := uint256.FromBig(transitionBlkTDBig)
+	if overflows {
+		return errors.New("total difficulty overflows")
+	}
+	parentBlkTD, err := hexutil.DecodeBig(parentTransitionBlk.TotalDifficulty)
+	if err != nil {
+		return errors.Wrap(err, "could not decode transition total difficulty")
+	}
+	parentBlkTTD, overflows := uint256.FromBig(parentBlkTD)
+	if overflows {
+		return errors.New("total difficulty overflows")
+	}
 	log.WithFields(logrus.Fields{
 		"slot":                                 b.Block().Slot(),
 		"transitionBlockHash":                  common.BytesToHash(payload.ParentHash).String(),
 		"transitionBlockParentHash":            common.BytesToHash(transitionBlk.ParentHash).String(),
 		"terminalTotalDifficulty":              params.BeaconConfig().TerminalTotalDifficulty,
 		"transitionBlockTotalDifficulty":       transitionBlkTTD,
-		"transitionBlockParentTotalDifficulty": parentTransitionBlkTTD,
+		"transitionBlockParentTotalDifficulty": parentBlkTTD,
 	}).Info("Validating terminal block")
 
-	validated, err := validTerminalPowBlock(transitionBlkTTD, parentTransitionBlkTTD)
+	validated, err := validTerminalPowBlock(transitionBlkTTD, parentBlkTTD)
 	if err != nil {
 		return err
 	}

@@ -2,15 +2,27 @@ package enginev1_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/holiman/uint256"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
+
+func TestTDD(t *testing.T) {
+	data := "0x12a054f8c"
+	encBytes, err := hexutil.DecodeBig(data)
+	require.NoError(t, err)
+	transitionBlkTTD, overflows := uint256.FromBig(encBytes)
+	require.Equal(t, false, overflows)
+	fmt.Printf("%d\n", transitionBlkTTD.Uint64())
+}
 
 func TestJsonMarshalUnmarshal(t *testing.T) {
 	t.Run("payload attributes", func(t *testing.T) {
@@ -135,7 +147,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			ReceiptsRoot:     []byte("receiptsRoot"),
 			LogsBloom:        []byte("logsBloom"),
 			Difficulty:       []byte("1"),
-			TotalDifficulty:  []byte("2"),
+			TotalDifficulty:  "2",
 			GasLimit:         3,
 			GasUsed:          4,
 			Timestamp:        5,
