@@ -211,116 +211,79 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	assert.Equal(t, false, hasUnaggregatedAtt, "Expected block to not have unaggregated attestation")
 }
 
-func TestProposer_ProposeBlock_Phase0_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-
-	genesis := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
-
-	numDeposits := uint64(64)
-	beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-	bsRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err)
-	genesisRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
-
-	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-	proposerServer := &Server{
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		BlockReceiver:     c,
-		HeadFetcher:       c,
-		BlockNotifier:     c.BlockNotifier(),
-		P2P:               mockp2p.NewTestP2P(t),
+func TestProposer_ProposeBlock_OK(t *testing.T) {
+	tests := []struct {
+		name  string
+		block func([32]byte) *ethpb.GenericSignedBeaconBlock
+	}{
+		{
+			name: "phase0",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlock()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Phase0{Phase0: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "altair",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockAltair()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Altair{Altair: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "bellatrix",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockBellatrix()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
 	}
-	req := util.NewBeaconBlock()
-	req.Block.Slot = 5
-	req.Block.ParentRoot = bsRoot[:]
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(req)))
-	blk := &ethpb.GenericSignedBeaconBlock_Phase0{Phase0: req}
-	_, err = proposerServer.ProposeBeaconBlock(context.Background(), &ethpb.GenericSignedBeaconBlock{Block: blk})
-	assert.NoError(t, err, "Could not propose block correctly")
-}
 
-func TestProposer_ProposeBlock_Altair_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			params.SetupTestConfigCleanup(t)
+			params.OverrideBeaconConfig(params.MainnetConfig())
 
-	genesis := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+			genesis := util.NewBeaconBlock()
+			require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
 
-	numDeposits := uint64(64)
-	beaconState, _ := util.DeterministicGenesisStateAltair(t, numDeposits)
-	bsRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err)
-	genesisRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+			numDeposits := uint64(64)
+			beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+			bsRoot, err := beaconState.HashTreeRoot(ctx)
+			require.NoError(t, err)
+			genesisRoot, err := genesis.Block.HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
-	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-	proposerServer := &Server{
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		BlockReceiver:     c,
-		HeadFetcher:       c,
-		BlockNotifier:     c.BlockNotifier(),
-		P2P:               mockp2p.NewTestP2P(t),
+			c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+			proposerServer := &Server{
+				ChainStartFetcher: &mockPOW.POWChain{},
+				Eth1InfoFetcher:   &mockPOW.POWChain{},
+				Eth1BlockFetcher:  &mockPOW.POWChain{},
+				BlockReceiver:     c,
+				HeadFetcher:       c,
+				BlockNotifier:     c.BlockNotifier(),
+				P2P:               mockp2p.NewTestP2P(t),
+			}
+			blockToPropose := tt.block(bsRoot)
+			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
+			assert.NoError(t, err, "Could not propose block correctly")
+			if res == nil || len(res.BlockRoot) == 0 {
+				t.Error("No block root was returned")
+			}
+		})
 	}
-	blockToPropose := util.NewBeaconBlockAltair()
-	blockToPropose.Block.Slot = 5
-	blockToPropose.Block.ParentRoot = bsRoot[:]
-	blk := &ethpb.GenericSignedBeaconBlock_Altair{Altair: blockToPropose}
-	wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(blockToPropose)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wrapped))
-	_, err = proposerServer.ProposeBeaconBlock(context.Background(), &ethpb.GenericSignedBeaconBlock{Block: blk})
-	assert.NoError(t, err, "Could not propose block correctly")
-}
-
-func TestProposer_ProposeBlock_Bellatrix_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-
-	genesis := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
-
-	numDeposits := uint64(64)
-	beaconState, _ := util.DeterministicGenesisStateBellatrix(t, numDeposits)
-	bsRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err)
-	genesisRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
-
-	c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-	proposerServer := &Server{
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		BlockReceiver:     c,
-		HeadFetcher:       c,
-		BlockNotifier:     c.BlockNotifier(),
-		P2P:               mockp2p.NewTestP2P(t),
-	}
-	blockToPropose := util.NewBeaconBlockBellatrix()
-	blockToPropose.Block.Slot = 5
-	blockToPropose.Block.ParentRoot = bsRoot[:]
-	blk := &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blockToPropose}
-	wrapped, err := wrapper.WrappedSignedBeaconBlock(blockToPropose)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wrapped))
-	_, err = proposerServer.ProposeBeaconBlock(context.Background(), &ethpb.GenericSignedBeaconBlock{Block: blk})
-	assert.NoError(t, err, "Could not propose block correctly")
 }
 
 func TestProposer_ComputeStateRoot_OK(t *testing.T) {
