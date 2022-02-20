@@ -87,17 +87,17 @@ func (w bellatrixSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBe
 }
 
 // PbPhase0Block is a stub.
-func (_ bellatrixSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
+func (bellatrixSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedPhase0Block
 }
 
 // PbAltairBlock returns the underlying protobuf object.
-func (_ bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
+func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, errors.New("unsupported altair block")
 }
 
 // Version of the underlying protobuf object.
-func (_ bellatrixSignedBeaconBlock) Version() int {
+func (bellatrixSignedBeaconBlock) Version() int {
 	return version.Bellatrix
 }
 
@@ -206,7 +206,7 @@ func (w bellatrixBeaconBlock) Proto() proto.Message {
 }
 
 // Version of the underlying protobuf object.
-func (_ bellatrixBeaconBlock) Version() int {
+func (bellatrixBeaconBlock) Version() int {
 	return version.Bellatrix
 }
 

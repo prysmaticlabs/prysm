@@ -88,17 +88,17 @@ func (w Phase0SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error)
 }
 
 // PbAltairBlock is a stub.
-func (_ Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
+func (Phase0SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, errors.New("unsupported altair block")
 }
 
 // PbBellatrixBlock is a stub.
-func (_ Phase0SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+func (Phase0SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return nil, errors.New("unsupported bellatrix block")
 }
 
 // Version of the underlying protobuf object.
-func (_ Phase0SignedBeaconBlock) Version() int {
+func (Phase0SignedBeaconBlock) Version() int {
 	return version.Phase0
 }
 
@@ -203,7 +203,7 @@ func (w Phase0BeaconBlock) Proto() proto.Message {
 }
 
 // Version of the underlying protobuf object.
-func (_ Phase0BeaconBlock) Version() int {
+func (Phase0BeaconBlock) Version() int {
 	return version.Phase0
 }
 
@@ -259,7 +259,7 @@ func (w Phase0BeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
 }
 
 // SyncAggregate returns the sync aggregate in the block.
-func (_ Phase0BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
+func (Phase0BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 	return nil, errors.New("Sync aggregate is not supported in phase 0 block")
 }
 
@@ -280,6 +280,6 @@ func (w Phase0BeaconBlockBody) Proto() proto.Message {
 }
 
 // ExecutionPayload is a stub.
-func (_ Phase0BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+func (Phase0BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return nil, errors.New("ExecutionPayload is not supported in phase 0 block body")
 }

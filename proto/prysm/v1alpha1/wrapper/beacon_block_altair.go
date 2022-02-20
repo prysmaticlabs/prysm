@@ -92,17 +92,17 @@ func (w altairSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, 
 }
 
 // PbPhase0Block is a stub.
-func (_ altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
+func (altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedPhase0Block
 }
 
 // PbBellatrixBlock is a stub.
-func (_ altairSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+func (altairSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return nil, errors.New("unsupported bellatrix block")
 }
 
 // Version of the underlying protobuf object.
-func (_ altairSignedBeaconBlock) Version() int {
+func (altairSignedBeaconBlock) Version() int {
 	return version.Altair
 }
 
@@ -211,7 +211,7 @@ func (w altairBeaconBlock) Proto() proto.Message {
 }
 
 // Version of the underlying protobuf object.
-func (_ altairBeaconBlock) Version() int {
+func (altairBeaconBlock) Version() int {
 	return version.Altair
 }
 
@@ -292,6 +292,6 @@ func (w altairBeaconBlockBody) Proto() proto.Message {
 }
 
 // ExecutionPayload is a stub.
-func (_ altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+func (altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return nil, errors.New("ExecutionPayload is not supported in altair block body")
 }
