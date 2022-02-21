@@ -47,7 +47,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
-	case slots.ToEpoch(req.Slot) < params.BeaconConfig().ShanghaiForkEpoch:
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().MiniDankShardingForkEpoch:
 		// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 		//if err := vs.optimisticStatus(ctx); err != nil {
 		//	return nil, err
@@ -64,11 +64,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		//if err := vs.optimisticStatus(ctx); err != nil {
 		//	return nil, err
 		//}
-		blk, err := vs.getShanghaiBeaconBlock(ctx, req)
+		blk, err := vs.getMiniDankShardingBeaconBlock(ctx, req)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
 		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Shanghai{Shanghai: blk}}, nil
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_MiniDanksharding{MiniDanksharding: blk}}, nil
 	}
 }
 
@@ -104,8 +104,8 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		if err != nil {
 			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
 		}
-	case *ethpb.GenericSignedBeaconBlock_Shanghai:
-		blk, err = wrapper.WrappedShanghaiSignedBeaconBlock(b.Shanghai)
+	case *ethpb.GenericBeaconBlock_MiniDanksharding:
+		blk, err = wrapper.WrappedMiniDankShardingSignedBeaconBlock(b.MiniDanksharding)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
 		}

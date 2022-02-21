@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAndBlobs, error) {
+func (vs *Server) getMiniDankShardingBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockWithBlobKZGs, error) {
 	bellatrixBlk, err := vs.getBellatrixBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, err
@@ -61,12 +61,9 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 	}
 	// Compute state root with the newly constructed block.
 	wsb, err := wrapper.WrappedSignedBeaconBlock(
-		&ethpb.SignedBeaconBlockAndBlobs{
-			Block: &ethpb.SignedBeaconBlockWithBlobKZGs{
-				Block:     blk,
-				Signature: make([]byte, 96),
-			},
-			Blobs: []*ethpb.Blob{blobs},
+		&ethpb.SignedBeaconBlockWithBlobKZGs{
+			Block: blk,
+			Signature: make([]byte, 96),
 		},
 	)
 	if err != nil {
@@ -78,11 +75,8 @@ func (vs *Server) getShanghaiBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 		return nil, fmt.Errorf("could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
-	blockWithBlobs := &ethpb.BeaconBlockAndBlobs{
-		Block: blk,
-		Blobs: []*ethpb.Blob{blobs},
-	}
-	return blockWithBlobs, nil
+
+	return blk, nil
 }
 
 // Returns a list of SSZ-encoded,

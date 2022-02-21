@@ -70,9 +70,9 @@ func CanUpgradeToBellatrix(slot types.Slot) bool {
 	return epochStart && bellatrixEpoch
 }
 
-func CanUpgradeToShanghai(slot types.Slot) bool {
+func CanUpgradeToMiniDankSharding(slot types.Slot) bool {
 	epochStart := slots.IsEpochStart(slot)
-	e := slots.ToEpoch(slot) == params.BeaconConfig().ShanghaiForkEpoch
+	e := slots.ToEpoch(slot) == params.BeaconConfig().MiniDankShardingForkEpoch
 	return epochStart && e
 }
 

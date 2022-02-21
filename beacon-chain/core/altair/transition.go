@@ -77,7 +77,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		if err != nil {
 			return nil, err
 		}
-	case version.Bellatrix, version.Shanghai:
+	case version.Bellatrix, version.MiniDankSharding:
 		state, err = e.ProcessSlashings(state, cfg.ProportionalSlashingMultiplierBellatrix)
 		if err != nil {
 			return nil, err

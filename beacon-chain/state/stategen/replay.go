@@ -206,7 +206,7 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 				if err != nil {
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix, version.Shanghai:
+			case version.Altair, version.Bellatrix, version.MiniDankSharding:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not process epoch with optimization")
@@ -231,8 +231,8 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 				return nil, err
 			}
 		}
-		if prysmTime.CanUpgradeToShanghai(state.Slot()) {
-			state, err = execution.UpgradeToShanghai(ctx, state)
+		if prysmTime.CanUpgradeToMiniDankSharding(state.Slot()) {
+			state, err = execution.UpgradeToMiniDankSharding(ctx, state)
 			if err != nil {
 				return nil, err
 			}

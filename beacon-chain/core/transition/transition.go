@@ -255,7 +255,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix, version.Shanghai:
+			case version.Altair, version.Bellatrix, version.MiniDankSharding:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
@@ -285,8 +285,8 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 				return nil, err
 			}
 		}
-		if time.CanUpgradeToShanghai(state.Slot()) {
-			state, err = execution.UpgradeToShanghai(ctx, state)
+		if time.CanUpgradeToMiniDankSharding(state.Slot()) {
+			state, err = execution.UpgradeToMiniDankSharding(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

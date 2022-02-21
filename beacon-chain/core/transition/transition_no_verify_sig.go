@@ -137,7 +137,7 @@ func CalculateStateRoot(
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
-	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix || signed.Version() == version.Shanghai {
+	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix || signed.Version() == version.MiniDankSharding {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return [32]byte{}, err
@@ -174,7 +174,7 @@ func ProcessBlockNoVerifyAnySig(
 		return nil, nil, err
 	}
 
-	if signed.Block().Version() != version.Shanghai {
+	if signed.Block().Version() != version.MiniDankSharding {
 		if state.Version() != signed.Block().Version() {
 			return nil, nil, fmt.Errorf("state and block are different version. %d != %d", state.Version(), signed.Block().Version())
 		}
@@ -185,7 +185,7 @@ func ProcessBlockNoVerifyAnySig(
 	if err != nil {
 		return nil, nil, err
 	}
-	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix || signed.Version() == version.Shanghai {
+	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix || signed.Version() == version.MiniDankSharding {
 		sa, err := signed.Block().Body().SyncAggregate()
 		if err != nil {
 			return nil, nil, err
@@ -260,7 +260,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Bellatrix, version.Shanghai:
+	case version.Altair, version.Bellatrix, version.MiniDankSharding:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
@@ -307,7 +307,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	if state.Version() == version.Bellatrix || state.Version() == version.Shanghai {
+	if state.Version() == version.Bellatrix || state.Version() == version.MiniDankSharding {
 		enabled, err := b.ExecutionEnabled(state, blk.Body())
 		if err != nil {
 			return nil, errors.Wrap(err, "could not check if execution is enabled")

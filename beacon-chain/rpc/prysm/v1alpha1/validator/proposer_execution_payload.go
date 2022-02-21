@@ -115,7 +115,7 @@ func (vs *Server) getExecutionPayload(
 		return nil, err
 	}
 	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-	if finalizedBlock != nil && (finalizedBlock.Version() == version.Bellatrix || finalizedBlock.Version() == version.Shanghai) {
+	if finalizedBlock != nil && (finalizedBlock.Version() == version.Bellatrix || finalizedBlock.Version() == version.MiniDankSharding) {
 		finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 		if err != nil {
 			return nil, err

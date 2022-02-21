@@ -273,7 +273,7 @@ func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, v
 	switch beaconState.Version() {
 	case version.Altair:
 		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientAltair
-	case version.Bellatrix, version.Shanghai:
+	case version.Bellatrix, version.MiniDankSharding:
 		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientBellatrix
 	default:
 		return nil, nil, errors.Errorf("invalid state type version: %T", beaconState.Version())

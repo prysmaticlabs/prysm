@@ -52,9 +52,9 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 			return err
 		}
 		obtainedCtx = digest[:]
-	case version.Shanghai:
+	case version.MiniDankSharding:
 		valRoot := chain.GenesisValidatorsRoot()
-		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().ShanghaiForkEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().MiniDankShardingForkEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}

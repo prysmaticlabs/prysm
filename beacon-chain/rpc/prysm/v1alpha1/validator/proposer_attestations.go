@@ -89,7 +89,7 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 	switch st.Version() {
 	case version.Phase0:
 		attestationProcessor = blocks.ProcessAttestationNoVerifySignature
-	case version.Altair, version.Bellatrix, version.Shanghai:
+	case version.Altair, version.Bellatrix, version.MiniDankSharding:
 		// Use a wrapper here, as go needs strong typing for the function signature.
 		attestationProcessor = func(ctx context.Context, st state.BeaconState, attestation *ethpb.Attestation) (state.BeaconState, error) {
 			totalBalance, err := helpers.TotalActiveBalance(st)

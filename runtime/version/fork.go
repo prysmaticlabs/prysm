@@ -4,7 +4,7 @@ const (
 	Phase0 = iota
 	Altair
 	Bellatrix
-	Shanghai
+	MiniDankSharding
 )
 
 func String(version int) string {
@@ -15,8 +15,8 @@ func String(version int) string {
 		return "altair"
 	case Bellatrix:
 		return "bellatrix"
-	case Shanghai:
-		return "shanghai"
+	case MiniDankSharding:
+		return "miniDankSharding"
 	default:
 		return "unknown version"
 	}

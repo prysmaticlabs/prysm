@@ -42,8 +42,8 @@ const signExitErr = "could not sign voluntary exit proposal"
 func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	currEpoch := slots.ToEpoch(slot)
 	switch {
-	case currEpoch >= params.BeaconConfig().ShanghaiForkEpoch:
-		v.proposeBlockShanghai(ctx, slot, pubKey)
+	case currEpoch >= params.BeaconConfig().MiniDankShardingForkEpoch:
+		v.proposeBlockMiniDankSharding(ctx, slot, pubKey)
 	case currEpoch >= params.BeaconConfig().BellatrixForkEpoch:
 		v.proposeBlockBellatrix(ctx, slot, pubKey)
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
@@ -385,10 +385,10 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 
 	var sig bls.Signature
 	switch b.Version() {
-	case version.Shanghai:
+	case version.MiniDankSharding:
 		block, ok := b.Proto().(*ethpb.BeaconBlockWithBlobKZGs)
 		if !ok {
-			return nil, nil, errors.New("could not convert obj to beacon block shanghai")
+			return nil, nil, errors.New("could not convert obj to beacon block miniDankSharding")
 		}
 		blockRoot, err := signing.ComputeSigningRoot(block, domain.SignatureDomain)
 		if err != nil {
@@ -686,13 +686,13 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 	}
 }
 
-// This is a routine to propose shanghai compatible beacon blocks.
-func (v *validator) proposeBlockShanghai(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+// This is a routine to propose miniDankSharding compatible beacon blocks.
+func (v *validator) proposeBlockMiniDankSharding(ctx context.Context, slot types.Slot, pubKey [48]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
-	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockShanghai")
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockMiniDankSharding")
 	defer span.End()
 	log.Warn("STARTING PROPOSE BLOCK SHANGHAI")
 
@@ -733,9 +733,9 @@ func (v *validator) proposeBlockShanghai(ctx context.Context, slot types.Slot, p
 		}
 		return
 	}
-	shanghaiBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_Shanghai)
+	miniDankShardingBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_MiniDankSharding)
 	if !ok {
-		log.Error("Not a Shanghai block")
+		log.Error("Not a MiniDankSharding block")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -743,7 +743,7 @@ func (v *validator) proposeBlockShanghai(ctx context.Context, slot types.Slot, p
 	}
 
 	// Sign returned block from beacon node
-	wb, err := wrapper.WrappedShanghaiBeaconBlock(shanghaiBlk.Shanghai.Block)
+	wb, err := wrapper.WrappedMiniDankShardingBeaconBlock(miniDankShardingBlk.MiniDankSharding)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap block")
 		if v.emitAccountMetrics {
@@ -760,15 +760,11 @@ func (v *validator) proposeBlockShanghai(ctx context.Context, slot types.Slot, p
 		return
 	}
 	blk := &ethpb.SignedBeaconBlockWithBlobKZGs{
-		Block:     shanghaiBlk.Shanghai.Block,
+		Block:     miniDankShardingBlk.MiniDankSharding,
 		Signature: sig,
 	}
-	sBlk := &ethpb.SignedBeaconBlockAndBlobs{
-		Block: blk,
-		Blobs: shanghaiBlk.Shanghai.Blobs,
-	}
 
-	signingRoot, err := signing.ComputeSigningRoot(shanghaiBlk.Shanghai.Block, domain.SignatureDomain)
+	signingRoot, err := signing.ComputeSigningRoot(miniDankShardingBlk.MiniDankSharding, domain.SignatureDomain)
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -777,7 +773,7 @@ func (v *validator) proposeBlockShanghai(ctx context.Context, slot types.Slot, p
 		return
 	}
 
-	wsb, err := wrapper.WrappedShanghaiSignedBeaconBlock(sBlk)
+	wsb, err := wrapper.WrappedMiniDankShardingSignedBeaconBlock(blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap signed block")
 		if v.emitAccountMetrics {
@@ -798,7 +794,7 @@ func (v *validator) proposeBlockShanghai(ctx context.Context, slot types.Slot, p
 
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, &ethpb.GenericSignedBeaconBlock{
-		Block: &ethpb.GenericSignedBeaconBlock_Shanghai{Shanghai: sBlk},
+		Block: &ethpb.GenericSignedBeaconBlock_MiniDankSharding{MiniDankSharding: blk},
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
@@ -815,7 +811,7 @@ func (v *validator) proposeBlockShanghai(ctx context.Context, slot types.Slot, p
 		"numAttestations": len(blk.Block.Body.Attestations),
 		"numDeposits":     len(blk.Block.Body.Deposits),
 		"graffiti":        string(blk.Block.Body.Graffiti),
-		"fork":            "shanghai",
+		"fork":            "miniDankSharding",
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {

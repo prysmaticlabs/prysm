@@ -37,8 +37,8 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Bellatrix fork beacon block.
         SignedBeaconBlockBellatrix bellatrix = 3;
 
-        // Representing a signed, post-Shanghai fork beacon block.
-        SignedBeaconBlockAndBlobs shanghai = 4;
+        // Representing a signed, post-MiniDankSharding fork beacon block.
+        SignedBeaconBlockWithBlobKZGs mini_danksharding = 4;
     }
 }
 
@@ -53,8 +53,8 @@ message GenericBeaconBlock {
         // Representing a post-Bellatrix fork beacon block.
         BeaconBlockBellatrix bellatrix = 3;
 
-        // Representing a signed, post-Shanghai fork beacon block.
-        BeaconBlockAndBlobs shanghai = 4;
+        // Representing a signed, post-MiniDankSharding fork beacon block.
+        BeaconBlockWithBlobKZGs mini_danksharding = 4;
     }
 }
 
@@ -392,14 +392,10 @@ message BeaconBlockBodyWithBlobKZGs {
     repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16777216"];
 }
 
-message BeaconBlockAndBlobs {
-    BeaconBlockWithBlobKZGs block = 1;
-    repeated Blob blobs = 2 [(ethereum.eth.ext.ssz_max)  = "16777216"];
-}
-
-message SignedBeaconBlockAndBlobs {
-    SignedBeaconBlockWithBlobKZGs block = 1;
-    repeated Blob blobs = 2 [(ethereum.eth.ext.ssz_max)  = "16777216"];
+message BlobWrapper {
+    bytes beacon_block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+    uint64 beacon_block_slot = 2;
+    repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16777216"];
 }
 
 message Blob {

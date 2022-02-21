@@ -636,7 +636,7 @@ func marshalBlock(_ context.Context, blk block.SignedBeaconBlock) ([]byte, error
 		return nil, err
 	}
 	switch blk.Version() {
-	case version.Bellatrix, version.Shanghai:
+	case version.Bellatrix, version.MiniDankSharding:
 		return snappy.Encode(nil, append(bellatrixKey, obj...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, obj...)), nil

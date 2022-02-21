@@ -85,7 +85,7 @@ func UpgradeToBellatrix(ctx context.Context, state state.BeaconState) (state.Bea
 	return v3.InitializeFromProtoUnsafe(s)
 }
 
-func UpgradeToShanghai(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+func UpgradeToMiniDankSharding(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	epoch := time.CurrentEpoch(state)
 
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
@@ -120,7 +120,7 @@ func UpgradeToShanghai(ctx context.Context, state state.BeaconState) (state.Beac
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
-			CurrentVersion:  params.BeaconConfig().ShanghaiForkVersion,
+			CurrentVersion:  params.BeaconConfig().MiniDankShardingForkVersion,
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:            state.LatestBlockHeader(),
