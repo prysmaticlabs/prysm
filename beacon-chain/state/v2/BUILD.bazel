@@ -68,6 +68,7 @@ go_test(
         "getters_test.go",
         "getters_validator_test.go",
         "proofs_test.go",
+        "references_test.go",
         "setters_test.go",
         "state_trie_test.go",
     ],
