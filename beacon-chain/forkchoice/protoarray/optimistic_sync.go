@@ -4,9 +4,9 @@ import (
 	"context"
 )
 
-// pruneInvalid removes the node with the given root and all of its children
+// removeNode removes the node with the given root and all of its children
 // from the Fork Choice Store.
-func (s *Store) pruneInvalid(ctx context.Context, root [32]byte) error {
+func (s *Store) removeNode(ctx context.Context, root [32]byte) error {
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
 
@@ -31,17 +31,16 @@ func (s *Store) pruneInvalid(ctx context.Context, root [32]byte) error {
 			}
 		}
 	}
-	return s.removeSubtree(ctx, node)
+	return s.removeNodeAndChildren(ctx, node)
 }
 
-// removeSubtree removes `node` and all of its descendant from the Store
-func (s *Store) removeSubtree(ctx context.Context, node *Node) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
+// removeNodeAndChildren removes `node` and all of its descendant from the Store
+func (s *Store) removeNodeAndChildren(ctx context.Context, node *Node) error {
 	for _, child := range node.children {
-		if err := s.removeSubtree(ctx, child); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if err := s.removeNodeAndChildren(ctx, child); err != nil {
 			return err
 		}
 	}

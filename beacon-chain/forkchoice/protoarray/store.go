@@ -85,7 +85,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 		return [32]byte{}, errUnknownJustifiedRoot
 	}
 
-	// If the justified node doesn't have a best descendent,
+	// If the justified node doesn't have a best descendant,
 	// the best node is itself.
 	bestDescendant := justifiedNode.bestDescendant
 	if bestDescendant == nil {
@@ -145,7 +145,7 @@ func (s *Store) insert(ctx context.Context,
 	}
 
 	if !optimistic {
-		if err := n.setFullyValidated(ctx); err != nil {
+		if err := n.setNodeAndParentValidated(ctx); err != nil {
 			return err
 		}
 	} else {
@@ -167,10 +167,8 @@ func (s *Store) insert(ctx context.Context,
 
 // updateCheckpoints Update the justified / finalized epochs in store if necessary.
 func (s *Store) updateCheckpoints(justifiedEpoch, finalizedEpoch types.Epoch) {
-	if s.justifiedEpoch != justifiedEpoch || s.finalizedEpoch != finalizedEpoch {
-		s.justifiedEpoch = justifiedEpoch
-		s.finalizedEpoch = finalizedEpoch
-	}
+	s.justifiedEpoch = justifiedEpoch
+	s.finalizedEpoch = finalizedEpoch
 }
 
 // pruneMaps prunes the `nodeByRoot` map

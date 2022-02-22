@@ -66,26 +66,25 @@ func (n *Node) depth() uint64 {
 // using the current balance stored in each node. This function requires a lock
 // in Store.nodesLock
 func (n *Node) applyWeightChanges(ctx context.Context) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	// update the children
-	childrensWeight := uint64(0)
-	for _, child := range n.children {
-		if err := child.applyWeightChanges(ctx); err != nil {
-			return err
-		}
-		childrensWeight += child.weight
-	}
 	if n.root == params.BeaconConfig().ZeroHash {
 		return nil
 	}
-	n.weight = n.balance + childrensWeight
+	// Recursively calling the children to sum their weights.
+	childrenWeight := uint64(0)
+	for _, child := range n.children {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if err := child.applyWeightChanges(ctx); err != nil {
+			return err
+		}
+		childrenWeight += child.weight
+	}
+	n.weight = n.balance + childrenWeight
 	return nil
 }
 
-// updateBestDescendant updates the best descendant of this node and its
-// children.
+// updateBestDescendant updates the best descendant of this node and its children.
 func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -159,9 +158,8 @@ func (n *Node) BestDescendant() *Node {
 	return n.bestDescendant
 }
 
-// setFullyValidated sets the current node and all of its ancestors as fully
-// validated (i.e. non-optimistic) nodes
-func (n *Node) setFullyValidated(ctx context.Context) error {
+// setNodeAndParentValidated sets the current node and the parent as validated (i.e. non-optimistic).
+func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -171,5 +169,5 @@ func (n *Node) setFullyValidated(ctx context.Context) error {
 	}
 
 	n.optimistic = false
-	return n.parent.setFullyValidated(ctx)
+	return n.parent.setNodeAndParentValidated(ctx)
 }

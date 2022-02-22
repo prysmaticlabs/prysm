@@ -64,7 +64,7 @@ func TestPruneInvalid(t *testing.T) {
 		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1, true))
 		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1, true))
 
-		require.NoError(t, f.store.pruneInvalid(context.Background(), tc.root))
+		require.NoError(t, f.store.removeNode(context.Background(), tc.root))
 		require.Equal(t, tc.wantedNodeNumber, f.store.NodeNumber())
 	}
 }

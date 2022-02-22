@@ -273,7 +273,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	return nil
 }
 
-// Heads returns a list of possible heads from fork choice store, it returns the
+// Tips returns a list of possible heads from fork choice store, it returns the
 // roots and the slots of the leaf nodes.
 func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
 	return f.store.tips()

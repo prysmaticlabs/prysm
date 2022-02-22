@@ -214,7 +214,7 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, opt)
 
-	require.NoError(t, f.store.nodeByRoot[indexToHash(4)].setFullyValidated(ctx))
+	require.NoError(t, f.store.nodeByRoot[indexToHash(4)].setNodeAndParentValidated(ctx))
 
 	// block 5 should still be optimistic
 	opt, err = f.IsOptimistic(indexToHash(5))
