@@ -81,7 +81,6 @@ var (
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
-	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
 	PreGenesisState() state.BeaconState
 	ClearPreGenesisData()
@@ -271,12 +270,6 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// ChainStartDeposits returns a slice of validator deposit data processed
-// by the deposit contract and cached in the powchain service.
-func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
-	return s.chainStartData.ChainstartDeposits
-}
-
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
@@ -380,45 +373,6 @@ func (s *Service) ETH1ConnectionErrors() []error {
 		errs = append(errs, err)
 	}
 	return errs
-}
-
-// DepositRoot returns the Merkle root of the latest deposit trie
-// from the ETH1.0 deposit contract.
-func (s *Service) DepositRoot() [32]byte {
-	return s.depositTrie.HashTreeRoot()
-}
-
-// DepositTrie returns the sparse Merkle trie used for storing
-// deposits from the ETH1.0 deposit contract.
-func (s *Service) DepositTrie() *trie.SparseMerkleTrie {
-	return s.depositTrie
-}
-
-// LatestBlockHeight in the ETH1.0 chain.
-func (s *Service) LatestBlockHeight() *big.Int {
-	return big.NewInt(int64(s.latestEth1Data.BlockHeight))
-}
-
-// LatestBlockHash in the ETH1.0 chain.
-func (s *Service) LatestBlockHash() common.Hash {
-	return bytesutil.ToBytes32(s.latestEth1Data.BlockHash)
-}
-
-// AreAllDepositsProcessed determines if all the logs from the deposit contract
-// are processed.
-func (s *Service) AreAllDepositsProcessed() (bool, error) {
-	s.processingLock.RLock()
-	defer s.processingLock.RUnlock()
-	countByte, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
-	if err != nil {
-		return false, errors.Wrap(err, "could not get deposit count")
-	}
-	count := bytesutil.FromBytes8(countByte)
-	deposits := s.cfg.depositCache.AllDeposits(s.ctx, nil)
-	if count != uint64(len(deposits)) {
-		return false, nil
-	}
-	return true, nil
 }
 
 // refers to the latest eth1 block which follows the condition: eth1_timestamp +

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
@@ -28,10 +27,7 @@ const (
 // a list of validator structs according to the Ethereum
 // Simple Serialize specification.
 func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
-	if features.Get().EnableSSZCache {
-		return CachedHasher.validatorRegistryRoot(vals)
-	}
-	return NocachedHasher.validatorRegistryRoot(vals)
+	return validatorRegistryRoot(vals)
 }
 
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
@@ -50,6 +46,18 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 			return [32]byte{}, err
 		}
 	}
+}
+
+func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
+	roots := make([][32]byte, len(validators))
+	hasher := hash.CustomSHA256Hasher()
+	for i := 0; i < len(validators); i++ {
+		val, err := validatorRoot(hasher, validators[i])
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
+		}
+		roots[i] = val
+	}
 
 	validatorsRootsRoot, err := ssz.BitwiseMerkleizeArrays(hasher, roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
 	if err != nil {
@@ -63,6 +71,7 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	var validatorsRootsBufRoot [32]byte
 	copy(validatorsRootsBufRoot[:], validatorsRootsBuf.Bytes())
 	res := ssz.MixInLength(validatorsRootsRoot, validatorsRootsBufRoot[:])
+
 	return res, nil
 }
 
@@ -98,26 +107,9 @@ func (h *stateRootHasher) optimizedValidatorRoots(validators []*ethpb.Validator)
 	return roots, nil
 }
 
-func (h *stateRootHasher) validatorRoot(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
+func validatorRoot(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
 	if validator == nil {
 		return [32]byte{}, errors.New("nil validator")
 	}
-
-	enc := validatorEncKey(validator)
-	// Check if it exists in cache:
-	if h.rootsCache != nil {
-		if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
-			return found.([32]byte), nil
-		}
-	}
-
-	valRoot, err := ValidatorRootWithHasher(hasher, validator)
-	if err != nil {
-		return [32]byte{}, err
-	}
-
-	if h.rootsCache != nil {
-		h.rootsCache.Set(string(enc), valRoot, 32)
-	}
-	return valRoot, nil
+	return ValidatorRootWithHasher(hasher, validator)
 }
