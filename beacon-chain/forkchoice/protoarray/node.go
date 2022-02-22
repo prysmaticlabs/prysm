@@ -66,9 +66,6 @@ func (n *Node) depth() uint64 {
 // using the current balance stored in each node. This function requires a lock
 // in Store.nodesLock
 func (n *Node) applyWeightChanges(ctx context.Context) error {
-	if n.root == params.BeaconConfig().ZeroHash {
-		return nil
-	}
 	// Recursively calling the children to sum their weights.
 	childrenWeight := uint64(0)
 	for _, child := range n.children {
@@ -79,6 +76,9 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 			return err
 		}
 		childrenWeight += child.weight
+	}
+	if n.root == params.BeaconConfig().ZeroHash {
+		return nil
 	}
 	n.weight = n.balance + childrenWeight
 	return nil
