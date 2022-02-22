@@ -7,17 +7,17 @@ import (
 )
 
 func TestArraysTreeRoot_OnlyPowerOf2(t *testing.T) {
-	_, err := NocachedHasher.arraysRoot([][]byte{}, 1, "testing")
+	_, err := arraysRoot([][]byte{}, 1)
 	assert.NoError(t, err)
-	_, err = NocachedHasher.arraysRoot([][]byte{}, 4, "testing")
+	_, err = arraysRoot([][]byte{}, 4)
 	assert.NoError(t, err)
-	_, err = NocachedHasher.arraysRoot([][]byte{}, 8, "testing")
+	_, err = arraysRoot([][]byte{}, 8)
 	assert.NoError(t, err)
-	_, err = NocachedHasher.arraysRoot([][]byte{}, 10, "testing")
+	_, err = arraysRoot([][]byte{}, 10)
 	assert.ErrorContains(t, "hash layer is a non power of 2", err)
 }
 
 func TestArraysTreeRoot_ZeroLength(t *testing.T) {
-	_, err := NocachedHasher.arraysRoot([][]byte{}, 0, "testing")
+	_, err := arraysRoot([][]byte{}, 0)
 	assert.ErrorContains(t, "zero leaves provided", err)
 }
