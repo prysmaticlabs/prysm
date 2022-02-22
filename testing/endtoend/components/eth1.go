@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -138,6 +137,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		"--ipcdisable",
 		"--mine",
 		"--miner.etherbase=0x0000000000000000000000000000000000000001",
+		"--miner.threads=1",
 	}
 
 	genesisSrcPath, err := bazel.Runfile(path.Join(staticFilesPath, "genesis.json"))
@@ -145,30 +145,41 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		return err
 	}
 	genesisDstPath := binaryPath[:strings.LastIndex(binaryPath, "/")]
-	cmd := exec.Command("cp", genesisSrcPath, genesisDstPath)
-	if err = cmd.Start(); err != nil {
+	cpCmd := exec.Command("cp", genesisSrcPath, genesisDstPath)
+	if err = cpCmd.Start(); err != nil {
 		return err
 	}
-	if err = cmd.Wait(); err != nil {
-		return err
-	}
-
-	cmd = exec.CommandContext(ctx, binaryPath, "init genesis.json") // #nosec G204 -- Safe
-	if err = cmd.Start(); err != nil {
-		return fmt.Errorf("failed to init eth1 chain: %w", err)
-	}
-	if err = cmd.Wait(); err != nil {
+	if err = cpCmd.Wait(); err != nil {
 		return err
 	}
 
-	cmd = exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
+	initCmd := exec.CommandContext(
+		ctx,
+		binaryPath,
+		"init",
+		genesisDstPath+"/genesis.json",
+		fmt.Sprintf("--datadir=%s", eth1Path)) // #nosec G204 -- Safe
+	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_"+strconv.Itoa(node.index)+".log")
+	if err != nil {
+		return err
+	}
+	initCmd.Stdout = initFile
+	initCmd.Stderr = initFile
+	if err = initCmd.Start(); err != nil {
+		return err
+	}
+	if err = initCmd.Wait(); err != nil {
+		return err
+	}
+
+	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log")
 	if err != nil {
 		return err
 	}
-	cmd.Stdout = file
-	cmd.Stderr = file
-	if err = cmd.Start(); err != nil {
+	runCmd.Stdout = file
+	runCmd.Stderr = file
+	if err = runCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start eth1 chain: %w", err)
 	}
 
@@ -194,17 +205,17 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	store, err := keystore.DecryptKey(jsonBytes, "password" /*password*/)
+	store, err := keystore.DecryptKey(jsonBytes, "password")
 	if err != nil {
 		return err
 	}
 
 	// Advancing the blocks eth1follow distance to prevent issues reading the chain.
-	if err = mineBlocks(web3, store, params.BeaconConfig().Eth1FollowDistance); err != nil {
+	/*if err = mineBlocks(web3, store, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		return fmt.Errorf("unable to advance chain: %w", err)
-	}
+	}*/
 
-	txOpts, err := bind.NewTransactorWithChainID(bytes.NewReader(jsonBytes), "" /*password*/, big.NewInt(1337))
+	txOpts, err := bind.NewTransactorWithChainID(bytes.NewReader(jsonBytes), "password", big.NewInt(networkId))
 	if err != nil {
 		return err
 	}
@@ -229,9 +240,9 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	}
 
 	// Advancing the blocks another eth1follow distance to prevent issues reading the chain.
-	if err = mineBlocks(web3, store, params.BeaconConfig().Eth1FollowDistance); err != nil {
+	/*if err = mineBlocks(web3, store, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		return fmt.Errorf("unable to advance chain: %w", err)
-	}
+	}*/
 
 	// Save keystore path (used for saving and mining deposits).
 	node.keystorePath = keystorePath
@@ -239,7 +250,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	// Mark node as ready.
 	close(node.started)
 
-	return cmd.Wait()
+	return runCmd.Wait()
 }
 
 // Started checks whether ETH1 node is started and ready to be queried.

@@ -39,8 +39,8 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.MaxSeedLookahead = 1
 
 	// PoW parameters.
-	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
-	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
+	e2eConfig.DepositChainID = 123456   // Chain ID of eth1 dev net.
+	e2eConfig.DepositNetworkID = 123456 // Network ID of eth1 dev net.
 
 	// Altair Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
