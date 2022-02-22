@@ -160,7 +160,7 @@ func (n *Node) BestDescendant() *Node {
 }
 
 // setFullyValidated sets the current node and all of its ancestors as fully
-// validated (ie. non-optimistic) nodes
+// validated (i.e. non-optimistic) nodes
 func (n *Node) setFullyValidated(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return ctx.Err()

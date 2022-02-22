@@ -213,11 +213,11 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	return n.root[:], nil
 }
 
-// updateBalances updates the balances that directly voted for each block  taking into account the
-// validators latest votes.
+// updateBalances updates the balances that directly voted for each block taking into account the
+// validators' latest votes.
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	for index, vote := range f.votes {
-		// Skip if validator has never voted for current root and next root (ie. if the
+		// Skip if validator has never voted for current root and next root (i.e. if the
 		// votes are zero hash aka genesis block), there's nothing to compute.
 		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
 			continue
