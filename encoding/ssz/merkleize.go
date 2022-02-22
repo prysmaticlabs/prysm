@@ -214,7 +214,9 @@ func MerkelizeVector(elements [][32]byte, length uint64) [32]byte {
 			zerohash := trie.ZeroHashes[i]
 			elements = append(elements, zerohash)
 		}
-		elements = htr.VectorizedSha256(elements)
+		outputLen := len(elements) / 2
+		htr.VectorizedSha256(elements, elements[:outputLen])
+		elements = elements[:outputLen]
 	}
 	return elements[0]
 }

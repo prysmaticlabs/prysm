@@ -58,8 +58,9 @@ func ValidatorFieldRoots(hasher ssz.HashFn, validator *ethpb.Validator) ([][32]b
 		}
 		var pubKeyRoot [32]byte
 		if features.Get().EnableVectorizedHTR {
-			returnedRoots := htr.VectorizedSha256(pubKeyChunks)
-			pubKeyRoot = returnedRoots[0]
+			outputChunk := make([][32]byte, 1)
+			htr.VectorizedSha256(pubKeyChunks, outputChunk)
+			pubKeyRoot = outputChunk[0]
 		} else {
 			pubKeyRoot, err = ssz.BitwiseMerkleizeArrays(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
 			if err != nil {

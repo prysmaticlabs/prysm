@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
@@ -30,33 +31,21 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 	return validatorRegistryRoot(vals)
 }
 
-func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
+func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 
 	var err error
 	var roots [][32]byte
 	if features.Get().EnableVectorizedHTR {
-		roots, err = h.optimizedValidatorRoots(validators)
+		roots, err = optimizedValidatorRoots(validators)
 		if err != nil {
 			return [32]byte{}, err
 		}
 	} else {
-		roots, err = h.validatorRoots(hasher, validators)
+		roots, err = validatorRoots(hasher, validators)
 		if err != nil {
 			return [32]byte{}, err
 		}
-	}
-}
-
-func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
-	roots := make([][32]byte, len(validators))
-	hasher := hash.CustomSHA256Hasher()
-	for i := 0; i < len(validators); i++ {
-		val, err := validatorRoot(hasher, validators[i])
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
-		}
-		roots[i] = val
 	}
 
 	validatorsRootsRoot, err := ssz.BitwiseMerkleizeArrays(hasher, roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
@@ -75,10 +64,10 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	return res, nil
 }
 
-func (h *stateRootHasher) validatorRoots(hasher func([]byte) [32]byte, validators []*ethpb.Validator) ([][32]byte, error) {
+func validatorRoots(hasher func([]byte) [32]byte, validators []*ethpb.Validator) ([][32]byte, error) {
 	roots := make([][32]byte, len(validators))
 	for i := 0; i < len(validators); i++ {
-		val, err := h.validatorRoot(hasher, validators[i])
+		val, err := validatorRoot(hasher, validators[i])
 		if err != nil {
 			return [][32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
@@ -87,7 +76,7 @@ func (h *stateRootHasher) validatorRoots(hasher func([]byte) [32]byte, validator
 	return roots, nil
 }
 
-func (h *stateRootHasher) optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
+func optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
 	roots := make([][32]byte, 0, len(validators)*validatorFieldRoots)
 	hasher := hash.CustomSHA256Hasher()
 	for i := 0; i < len(validators); i++ {
@@ -102,7 +91,11 @@ func (h *stateRootHasher) optimizedValidatorRoots(validators []*ethpb.Validator)
 	// Using this property we can lay out all the individual fields of a
 	// validator and hash them in single level using our vectorized routine.
 	for i := 0; i < validatorTreeDepth; i++ {
-		roots = htr.VectorizedSha256(roots)
+		// Overwrite input lists as we are hashing by level
+		// and only need the highest level to proceed.
+		outputLen := len(roots) / 2
+		htr.VectorizedSha256(roots, roots[:outputLen])
+		roots = roots[:outputLen]
 	}
 	return roots, nil
 }
