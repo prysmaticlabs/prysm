@@ -16,7 +16,7 @@ import (
 
 func TestReturnTrieLayer_OK(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	root, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	root, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
 	blockRts := newState.BlockRoots()
 	roots := make([][32]byte, 0, len(blockRts))
@@ -63,7 +63,7 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 	require.NoError(t, newState.UpdateBlockRootAtIndex(changedIdx[0], changedRoots[0]))
 	require.NoError(t, newState.UpdateBlockRootAtIndex(changedIdx[1], changedRoots[1]))
 
-	expectedRoot, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	expectedRoot, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
 	root, _, err := stateutil.RecomputeFromLayer(changedRoots, changedIdx, layers)
 	require.NoError(t, err)
