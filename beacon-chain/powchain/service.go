@@ -756,12 +756,12 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
+
 			if err := s.processPastLogs(ctx); err != nil {
 				log.Errorf("Unable to process past logs %v", err)
 				s.retryETH1Node(err)
 				continue
 			}
-
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				log.Errorf("Unable to process past headers %v", err)

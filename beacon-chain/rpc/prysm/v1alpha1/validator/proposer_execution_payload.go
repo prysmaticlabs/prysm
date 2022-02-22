@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -77,7 +78,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 			// `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
 			isActivationEpochReached := params.BeaconConfig().TerminalBlockHashActivationEpoch <= slots.ToEpoch(slot)
 			if !isActivationEpochReached {
-				return blocks.EmptyPayload(), nil
+				return emptyPayload(), nil
 			}
 		}
 
@@ -87,7 +88,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 		}
 		if !hasTerminalBlock {
 			// No terminal block signals this is pre merge, empty payload is used.
-			return blocks.EmptyPayload(), nil
+			return emptyPayload(), nil
 		}
 		// Terminal block found signals production on top of terminal PoW block.
 	} else {
@@ -260,5 +261,18 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 			}
 		}
 		blk = parentBlk
+	}
+}
+
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		Random:        make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
 	}
 }
