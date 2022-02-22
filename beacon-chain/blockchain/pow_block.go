@@ -107,7 +107,6 @@ func validateTerminalBlockHash(blkSlot types.Slot, payload *enginev1.ExecutionPa
 	if bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) == [32]byte{} {
 		return nil
 	}
-	// `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
 	if params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(blkSlot) {
 		return errors.New("terminal block hash activation epoch not reached")
 	}
