@@ -95,7 +95,7 @@ func (m slotList) Swap(i, j int) {
 
 func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot) ([]block.SignedBeaconBlock, error) {
 	if len(m.slotIndex) == 0 && len(m.slotMap) > 0 {
-		for k, _ := range m.slotMap {
+		for k := range m.slotMap {
 			m.slotIndex = append(m.slotIndex, k)
 		}
 		sort.Sort(sort.Reverse(m.slotIndex))
