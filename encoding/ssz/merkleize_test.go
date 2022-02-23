@@ -112,3 +112,7 @@ func TestConstructProofNormalPath(t *testing.T) {
 		assert.DeepEqual(t, result[i], v)
 	}
 }
+
+func TestDepthOfOne(t *testing.T) {
+	assert.Equal(t, uint8(0), ssz.Depth(1))
+}
