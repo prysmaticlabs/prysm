@@ -49,7 +49,7 @@ type FakeValidator struct {
 	IndexToPubkeyMap                  map[uint64][fieldparams.BLSPubkeyLength]byte
 	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
 	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
-	Keymanager                        keymanager.IKeymanager
+	Km                                keymanager.IKeymanager
 }
 
 type ctxKey string
@@ -63,7 +63,7 @@ func (fv *FakeValidator) Done() {
 }
 
 // WaitForWalletInitialization for mocking.
-func (fv *FakeValidator) WaitForWalletInitialization(_ context.Context) error {
+func (fv *FakeValidator) WaitForKeymanagerInitialization(_ context.Context) error {
 	fv.WaitForWalletInitializationCalled = true
 	return nil
 }
@@ -214,9 +214,9 @@ func (_ *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, error
 	return ctx.Value(AllValidatorsAreExitedCtxKey).(bool), nil
 }
 
-// GetKeymanager for mocking
-func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
-	return fv.Keymanager
+// Keymanager for mocking
+func (fv *FakeValidator) Keymanager() (keymanager.IKeymanager, error) {
+	return fv.Km, nil
 }
 
 // CheckDoppelGanger for mocking

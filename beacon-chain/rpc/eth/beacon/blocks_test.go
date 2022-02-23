@@ -108,13 +108,13 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 	return genBlk, blkContainers
 }
 
-func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpbalpha.SignedBeaconBlockMerge, []*ethpbalpha.BeaconBlockContainer) {
+func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpbalpha.SignedBeaconBlockBellatrix, []*ethpbalpha.BeaconBlockContainer) {
 	parentRoot := [32]byte{1, 2, 3}
-	genBlk := util.NewBeaconBlockMerge()
+	genBlk := util.NewBeaconBlockBellatrix()
 	genBlk.Block.ParentRoot = parentRoot[:]
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	signedBlk, err := wrapper.WrappedMergeSignedBeaconBlock(genBlk)
+	signedBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(genBlk)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, signedBlk))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
@@ -123,7 +123,7 @@ func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Da
 	blks := make([]block.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
-		b := util.NewBeaconBlockMerge()
+		b := util.NewBeaconBlockBellatrix()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
 		att1 := util.NewAttestation()
@@ -135,7 +135,7 @@ func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Da
 		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		signedB, err := wrapper.WrappedMergeSignedBeaconBlock(b)
+		signedB, err := wrapper.WrappedBellatrixSignedBeaconBlock(b)
 		require.NoError(t, err)
 		blks[i] = signedB
 		blkContainers[i] = &ethpbalpha.BeaconBlockContainer{
@@ -756,20 +756,20 @@ func TestServer_GetBlockV2(t *testing.T) {
 		_, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
 		headBlock := blkContainers[len(blkContainers)-1]
 
-		b2 := util.NewBeaconBlockMerge()
+		b2 := util.NewBeaconBlockBellatrix()
 		b2.Block.Slot = 30
 		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-		signedBlk, err := wrapper.WrappedMergeSignedBeaconBlock(b2)
+		signedBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(b2)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, signedBlk))
-		b3 := util.NewBeaconBlockMerge()
+		b3 := util.NewBeaconBlockBellatrix()
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-		signedBlk, err = wrapper.WrappedMergeSignedBeaconBlock(b2)
+		signedBlk, err = wrapper.WrappedBellatrixSignedBeaconBlock(b2)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, signedBlk))
 
-		chainBlk, err := wrapper.WrappedMergeSignedBeaconBlock(headBlock.GetBellatrixBlock())
+		chainBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(headBlock.GetBellatrixBlock())
 		require.NoError(t, err)
 		bs := &Server{
 			BeaconDB: beaconDB,
@@ -788,7 +788,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 		tests := []struct {
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBeaconBlockMerge
+			want    *ethpbalpha.SignedBeaconBlockBellatrix
 			wantErr bool
 		}{
 			{
@@ -856,12 +856,12 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v2Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				b, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_MergeBlock)
+				b, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock)
 				require.Equal(t, true, ok)
-				if !reflect.DeepEqual(b.MergeBlock, v2Block) {
+				if !reflect.DeepEqual(b.BellatrixBlock, v2Block) {
 					t.Error("Expected blocks to equal")
 				}
-				assert.Equal(t, ethpbv2.Version_MERGE, blk.Version)
+				assert.Equal(t, ethpbv2.Version_BELLATRIX, blk.Version)
 			})
 		}
 	})

@@ -123,7 +123,7 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribe(topic string, validator wrappedVal, handle subHandler, digest [4]byte) *pubsub.Subscription {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
@@ -285,7 +285,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 // subscribe to a static subnet  with the given topic and index.A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
@@ -358,7 +358,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	handle subHandler,
 	digest [4]byte,
 ) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
@@ -487,7 +487,7 @@ func (s *Service) subscribeSyncSubnet(
 // subscribe to a static subnet with the given topic and index. A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		panic(err)
@@ -558,7 +558,7 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 	handle subHandler,
 	digest [4]byte,
 ) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		panic(err)
@@ -640,7 +640,7 @@ func (s *Service) unSubscribeFromTopic(topic string) {
 // find if we have peers who are subscribed to the same subnet
 func (s *Service) validPeersExist(subnetTopic string) bool {
 	numOfPeers := s.cfg.p2p.PubSub().ListPeers(subnetTopic + s.cfg.p2p.Encoding().ProtocolSuffix())
-	return uint64(len(numOfPeers)) >= flags.Get().MinimumPeersPerSubnet
+	return len(numOfPeers) >= flags.Get().MinimumPeersPerSubnet
 }
 
 func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
@@ -681,7 +681,7 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 	for _, sub := range wantedSubs {
 		subnetTopic := fmt.Sprintf(topic, digest, sub) + s.cfg.p2p.Encoding().ProtocolSuffix()
 		peers := s.cfg.p2p.PubSub().ListPeers(subnetTopic)
-		if uint64(len(peers)) > flags.Get().MinimumPeersPerSubnet {
+		if len(peers) > flags.Get().MinimumPeersPerSubnet {
 			// In the event we have more than the minimum, we can
 			// mark the remaining as viable for pruning.
 			peers = peers[:flags.Get().MinimumPeersPerSubnet]
@@ -724,7 +724,7 @@ func (_ *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uin
 }
 
 func (s *Service) currentForkDigest() ([4]byte, error) {
-	genRoot := s.cfg.chain.GenesisValidatorRoot()
+	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	return forks.CreateForkDigest(s.cfg.chain.GenesisTime(), genRoot[:])
 }
 

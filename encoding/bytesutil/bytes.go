@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
@@ -403,4 +404,19 @@ func ReverseByteOrder(input []byte) []byte {
 		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
 	}
 	return b
+}
+
+// ZeroRoot returns whether or not a root is of proper length and non-zero hash.
+func ZeroRoot(root []byte) bool {
+	return string(make([]byte, fieldparams.RootLength)) == string(root)
+}
+
+// IsRoot checks whether the byte array is a root.
+func IsRoot(root []byte) bool {
+	return len(root) == fieldparams.RootLength
+}
+
+// IsValidRoot checks whether the byte array is a valid root.
+func IsValidRoot(root []byte) bool {
+	return IsRoot(root) && !ZeroRoot(root)
 }

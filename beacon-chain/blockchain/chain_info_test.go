@@ -45,7 +45,7 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, beaconDB)
-	c.finalizedCheckpt = cp
+	c.store.SetFinalizedCheckpt(cp)
 
 	assert.Equal(t, cp.Epoch, c.FinalizedCheckpt().Epoch, "Unexpected finalized epoch")
 }
@@ -56,7 +56,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	genesisRoot := [32]byte{'A'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c := setupBeaconChain(t, beaconDB)
-	c.finalizedCheckpt = cp
+	c.store.SetFinalizedCheckpt(cp)
 	c.originBlockRoot = genesisRoot
 	assert.DeepEqual(t, c.originBlockRoot[:], c.FinalizedCheckpt().Root)
 }
@@ -67,7 +67,7 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	c := setupBeaconChain(t, beaconDB)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
 	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c.justifiedCheckpt = cp
+	c.store.SetJustifiedCheckpt(cp)
 	assert.Equal(t, cp.Epoch, c.CurrentJustifiedCheckpt().Epoch, "Unexpected justified epoch")
 }
 
@@ -77,7 +77,7 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	c := setupBeaconChain(t, beaconDB)
 	genesisRoot := [32]byte{'B'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c.justifiedCheckpt = cp
+	c.store.SetJustifiedCheckpt(cp)
 	c.originBlockRoot = genesisRoot
 	assert.DeepEqual(t, c.originBlockRoot[:], c.CurrentJustifiedCheckpt().Root)
 }
@@ -88,7 +88,7 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, beaconDB)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
-	c.prevJustifiedCheckpt = cp
+	c.store.SetPrevJustifiedCheckpt(cp)
 	assert.Equal(t, cp.Epoch, c.PreviousJustifiedCheckpt().Epoch, "Unexpected previous justified epoch")
 }
 
@@ -98,7 +98,7 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	genesisRoot := [32]byte{'C'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c := setupBeaconChain(t, beaconDB)
-	c.prevJustifiedCheckpt = cp
+	c.store.SetPrevJustifiedCheckpt(cp)
 	c.originBlockRoot = genesisRoot
 	assert.DeepEqual(t, c.originBlockRoot[:], c.PreviousJustifiedCheckpt().Root)
 }
@@ -185,15 +185,15 @@ func TestCurrentFork_NilHeadSTate(t *testing.T) {
 	}
 }
 
-func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
+func TestGenesisValidatorsRoot_CanRetrieve(t *testing.T) {
 	// Should not panic if head state is nil.
 	c := &Service{}
-	assert.Equal(t, [32]byte{}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
+	assert.Equal(t, [32]byte{}, c.GenesisValidatorsRoot(), "Did not get correct genesis validators root")
 
 	s, err := v1.InitializeFromProto(&ethpb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
 	require.NoError(t, err)
 	c.head = &head{state: s}
-	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
+	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorsRoot(), "Did not get correct genesis validators root")
 }
 
 func TestHeadETH1Data_Nil(t *testing.T) {
@@ -265,17 +265,17 @@ func TestService_HeadSeed(t *testing.T) {
 	require.DeepEqual(t, seed, root)
 }
 
-func TestService_HeadGenesisValidatorRoot(t *testing.T) {
+func TestService_HeadGenesisValidatorsRoot(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, 1)
 	c := &Service{}
 
 	c.head = &head{}
-	root := c.HeadGenesisValidatorRoot()
+	root := c.HeadGenesisValidatorsRoot()
 	require.Equal(t, [32]byte{}, root)
 
 	c.head = &head{state: s}
-	root = c.HeadGenesisValidatorRoot()
-	require.DeepEqual(t, root[:], s.GenesisValidatorRoot())
+	root = c.HeadGenesisValidatorsRoot()
+	require.DeepEqual(t, root[:], s.GenesisValidatorsRoot())
 }
 
 func TestService_ProtoArrayStore(t *testing.T) {
@@ -354,4 +354,26 @@ func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
 	p, err = c.HeadValidatorIndexToPublicKey(context.Background(), 0)
 	require.NoError(t, err)
 	require.Equal(t, [fieldparams.BLSPubkeyLength]byte{}, p)
+}
+
+func TestService_IsOptimistic(t *testing.T) {
+	ctx := context.Background()
+	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
+
+	opt, err := c.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, opt)
+}
+
+func TestService_IsOptimisticForRoot(t *testing.T) {
+	ctx := context.Background()
+	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
+
+	opt, err := c.IsOptimisticForRoot(ctx, [32]byte{'a'}, 100)
+	require.NoError(t, err)
+	require.Equal(t, true, opt)
 }

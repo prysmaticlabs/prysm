@@ -2,15 +2,14 @@ package testing
 
 import (
 	"context"
-	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -23,11 +22,6 @@ type FaultyMockPOWChain struct {
 // Eth2GenesisPowchainInfo --
 func (_ *FaultyMockPOWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return 0, big.NewInt(0)
-}
-
-// LatestBlockHeight --
-func (_ *FaultyMockPOWChain) LatestBlockHeight() *big.Int {
-	return big.NewInt(0)
 }
 
 // BlockExists --
@@ -54,21 +48,6 @@ func (_ *FaultyMockPOWChain) BlockByTimestamp(_ context.Context, _ uint64) (*typ
 	return &types.HeaderInfo{Number: big.NewInt(0)}, nil
 }
 
-// DepositRoot --
-func (_ *FaultyMockPOWChain) DepositRoot() [32]byte {
-	return [32]byte{}
-}
-
-// DepositTrie --
-func (_ *FaultyMockPOWChain) DepositTrie() *trie.SparseMerkleTrie {
-	return &trie.SparseMerkleTrie{}
-}
-
-// ChainStartDeposits --
-func (_ *FaultyMockPOWChain) ChainStartDeposits() []*ethpb.Deposit {
-	return []*ethpb.Deposit{}
-}
-
 // ChainStartEth1Data --
 func (_ *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
@@ -76,7 +55,11 @@ func (_ *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState --
 func (_ *FaultyMockPOWChain) PreGenesisState() state.BeaconState {
-	return &v1.BeaconState{}
+	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	if err != nil {
+		panic("could not initialize state")
+	}
+	return s
 }
 
 // ClearPreGenesisData --

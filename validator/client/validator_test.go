@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
@@ -24,8 +25,12 @@ import (
 	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc"
@@ -124,7 +129,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	// Make sure its clean at the start.
 	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
-	assert.DeepEqual(t, []byte(nil), savedGenValRoot, "Unexpected saved genesis validator root")
+	assert.DeepEqual(t, []byte(nil), savedGenValRoot, "Unexpected saved genesis validators root")
 
 	genesis := uint64(time.Unix(1, 0).Unix())
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
@@ -145,7 +150,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	savedGenValRoot, err = db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validator root")
+	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validators root")
 	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 
@@ -194,7 +199,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validator root")
+	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validators root")
 	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 
@@ -1326,4 +1331,82 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
 	require.NoError(t, err)
 	require.Equal(t, true, aggregator)
+}
+
+func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	root := make([]byte, 32)
+	copy(root[2:], "a")
+	err := db.SaveGenesisValidatorsRoot(ctx, root)
+	require.NoError(t, err)
+	w := wallet.NewWalletForWeb3Signer()
+	decodedKey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
+	require.NoError(t, err)
+	keys := [][48]byte{
+		bytesutil.ToBytes48(decodedKey),
+	}
+	v := validator{
+		db:     db,
+		useWeb: false,
+		wallet: w,
+		Web3SignerConfig: &remote_web3signer.SetupConfig{
+			BaseEndpoint:       "http://localhost:8545",
+			ProvidedPublicKeys: keys,
+		},
+	}
+	err = v.WaitForKeymanagerInitialization(context.Background())
+	require.NoError(t, err)
+	km, err := v.Keymanager()
+	require.NoError(t, err)
+	require.NotNil(t, km)
+}
+
+func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	root := make([]byte, 32)
+	copy(root[2:], "a")
+	err := db.SaveGenesisValidatorsRoot(ctx, root)
+	require.NoError(t, err)
+	walletChan := make(chan *wallet.Wallet, 1)
+	v := validator{
+		db:                      db,
+		useWeb:                  true,
+		walletInitializedFeed:   &event.Feed{},
+		walletIntializedChannel: walletChan,
+	}
+	go func() {
+		err = v.WaitForKeymanagerInitialization(ctx)
+		require.NoError(t, err)
+		km, err := v.Keymanager()
+		require.NoError(t, err)
+		require.NotNil(t, km)
+	}()
+
+	walletChan <- wallet.New(&wallet.Config{
+		KeymanagerKind: keymanager.Local,
+	})
+}
+
+func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	root := make([]byte, 32)
+	copy(root[2:], "a")
+	err := db.SaveGenesisValidatorsRoot(ctx, root)
+	require.NoError(t, err)
+	v := validator{
+		db:     db,
+		useWeb: false,
+		interopKeysConfig: &local.InteropKeymanagerConfig{
+			NumValidatorKeys: 2,
+			Offset:           1,
+		},
+	}
+	err = v.WaitForKeymanagerInitialization(ctx)
+	require.NoError(t, err)
+	km, err := v.Keymanager()
+	require.NoError(t, err)
+	require.NotNil(t, km)
 }

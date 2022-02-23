@@ -490,7 +490,7 @@ func TestFilterSubnetPeers(t *testing.T) {
 	// Try with only peers from subnet 20.
 	wantedPeers = []peer.ID{p2.BHost.ID()}
 	// Connect an excess amount of peers in the particular subnet.
-	for i := uint64(1); i <= flags.Get().MinimumPeersPerSubnet; i++ {
+	for i := 1; i <= flags.Get().MinimumPeersPerSubnet; i++ {
 		nPeer := createPeer(t, subnet20)
 		p.Connect(nPeer)
 		wantedPeers = append(wantedPeers, nPeer.BHost.ID())
@@ -597,7 +597,7 @@ func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
 	}
 	// Empty cache at the end of the test.
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
-	genRoot := r.cfg.chain.GenesisValidatorRoot()
+	genRoot := r.cfg.chain.GenesisValidatorsRoot()
 	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 	r.subscribeStaticWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
@@ -637,7 +637,7 @@ func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
 	// Empty cache at the end of the test.
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), 0, []uint64{0, 1}, 10*time.Second)
-	genRoot := r.cfg.chain.GenesisValidatorRoot()
+	genRoot := r.cfg.chain.GenesisValidatorsRoot()
 	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 

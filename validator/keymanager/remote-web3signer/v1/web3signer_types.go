@@ -4,50 +4,50 @@ package v1
 
 // AggregationSlotSignRequest is a request object for web3signer sign api.
 type AggregationSlotSignRequest struct {
-	Type            string           `json:"type"`
-	ForkInfo        *ForkInfo        `json:"fork_info"`
+	Type            string           `json:"type" validate:"required"`
+	ForkInfo        *ForkInfo        `json:"fork_info" validate:"required"`
 	SigningRoot     string           `json:"signingRoot"`
-	AggregationSlot *AggregationSlot `json:"aggregation_slot"`
+	AggregationSlot *AggregationSlot `json:"aggregation_slot" validate:"required"`
 }
 
 // AggregationSlotSignRequest is a request object for web3signer sign api.
 type AggregateAndProofSignRequest struct {
-	Type              string             `json:"type"`
-	ForkInfo          *ForkInfo          `json:"fork_info"`
+	Type              string             `json:"type" validate:"required"`
+	ForkInfo          *ForkInfo          `json:"fork_info" validate:"required"`
 	SigningRoot       string             `json:"signingRoot"`
-	AggregateAndProof *AggregateAndProof `json:"aggregation_and_proof"`
+	AggregateAndProof *AggregateAndProof `json:"aggregate_and_proof" validate:"required"`
 }
 
 // AttestationSignRequest is a request object for web3signer sign api.
 type AttestationSignRequest struct {
-	Type        string           `json:"type"`
-	ForkInfo    *ForkInfo        `json:"fork_info"`
+	Type        string           `json:"type" validate:"required"`
+	ForkInfo    *ForkInfo        `json:"fork_info" validate:"required"`
 	SigningRoot string           `json:"signingRoot"`
-	Attestation *AttestationData `json:"attestation"`
+	Attestation *AttestationData `json:"attestation" validate:"required"`
 }
 
 // BlockSignRequest is a request object for web3signer sign api.
 type BlockSignRequest struct {
-	Type        string       `json:"type"`
-	ForkInfo    *ForkInfo    `json:"fork_info"`
+	Type        string       `json:"type" validate:"required"`
+	ForkInfo    *ForkInfo    `json:"fork_info" validate:"required"`
 	SigningRoot string       `json:"signingRoot"`
-	Block       *BeaconBlock `json:"block"`
+	Block       *BeaconBlock `json:"block" validate:"required"`
 }
 
 // BlockV2AltairSignRequest is a request object for web3signer sign api.
 type BlockV2AltairSignRequest struct {
-	Type        string                    `json:"type"`
-	ForkInfo    *ForkInfo                 `json:"fork_info"`
+	Type        string                    `json:"type" validate:"required"`
+	ForkInfo    *ForkInfo                 `json:"fork_info" validate:"required"`
 	SigningRoot string                    `json:"signingRoot"`
-	BeaconBlock *BeaconBlockAltairBlockV2 `json:"beacon_block"`
+	BeaconBlock *BeaconBlockAltairBlockV2 `json:"beacon_block" validate:"required"`
 }
 
 // BlockV2SignRequest is a request object for web3signer sign api.
 type BlockV2SignRequest struct {
-	Type        string              `json:"type"`
-	ForkInfo    *ForkInfo           `json:"fork_info"`
+	Type        string              `json:"type" validate:"required"`
+	ForkInfo    *ForkInfo           `json:"fork_info" validate:"required"`
 	SigningRoot string              `json:"signingRoot"`
-	BeaconBlock *BeaconBlockBlockV2 `json:"beacon_block"`
+	BeaconBlock *BeaconBlockBlockV2 `json:"beacon_block" validate:"required"`
 }
 
 // DepositSignRequest Not currently supported by Prysm.
@@ -55,42 +55,42 @@ type BlockV2SignRequest struct {
 
 // RandaoRevealSignRequest is a request object for web3signer sign api.
 type RandaoRevealSignRequest struct {
-	Type         string        `json:"type"`
-	ForkInfo     *ForkInfo     `json:"fork_info"`
+	Type         string        `json:"type" validate:"required"`
+	ForkInfo     *ForkInfo     `json:"fork_info" validate:"required"`
 	SigningRoot  string        `json:"signingRoot"`
-	RandaoReveal *RandaoReveal `json:"randao_reveal"`
+	RandaoReveal *RandaoReveal `json:"randao_reveal" validate:"required"`
 }
 
 // VoluntaryExitSignRequest is a request object for web3signer sign api.
 type VoluntaryExitSignRequest struct {
-	Type          string         `json:"type"`
+	Type          string         `json:"type" validate:"required"`
 	ForkInfo      *ForkInfo      `json:"fork_info"`
-	SigningRoot   string         `json:"signingRoot"`
-	VoluntaryExit *VoluntaryExit `json:"voluntary_exit"`
+	SigningRoot   string         `json:"signingRoot" validate:"required"`
+	VoluntaryExit *VoluntaryExit `json:"voluntary_exit" validate:"required"`
 }
 
 // SyncCommitteeMessageSignRequest is a request object for web3signer sign api.
 type SyncCommitteeMessageSignRequest struct {
-	Type                 string                `json:"type"`
-	ForkInfo             *ForkInfo             `json:"fork_info"`
+	Type                 string                `json:"type" validate:"required"`
+	ForkInfo             *ForkInfo             `json:"fork_info" validate:"required"`
 	SigningRoot          string                `json:"signingRoot"`
-	SyncCommitteeMessage *SyncCommitteeMessage `json:"sync_committee_message"`
+	SyncCommitteeMessage *SyncCommitteeMessage `json:"sync_committee_message" validate:"required"`
 }
 
 // SyncCommitteeSelectionProofSignRequest is a request object for web3signer sign api.
 type SyncCommitteeSelectionProofSignRequest struct {
-	Type                        string                       `json:"type"`
-	ForkInfo                    *ForkInfo                    `json:"fork_info"`
+	Type                        string                       `json:"type" validate:"required"`
+	ForkInfo                    *ForkInfo                    `json:"fork_info" validate:"required"`
 	SigningRoot                 string                       `json:"signingRoot"`
-	SyncAggregatorSelectionData *SyncAggregatorSelectionData `json:"sync_aggregator_selection_data"`
+	SyncAggregatorSelectionData *SyncAggregatorSelectionData `json:"sync_aggregator_selection_data" validate:"required"`
 }
 
 // SyncCommitteeContributionAndProofSignRequest is a request object for web3signer sign api.
 type SyncCommitteeContributionAndProofSignRequest struct {
-	Type                 string                `json:"type"`
-	ForkInfo             *ForkInfo             `json:"fork_info"`
+	Type                 string                `json:"type" validate:"required"`
+	ForkInfo             *ForkInfo             `json:"fork_info" validate:"required"`
 	SigningRoot          string                `json:"signingRoot"`
-	ContributionAndProof *ContributionAndProof `json:"contribution_and_proof"`
+	ContributionAndProof *ContributionAndProof `json:"contribution_and_proof" validate:"required"`
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -304,7 +304,7 @@ type ContributionAndProof struct {
 // SyncCommitteeContribution a sub property of AggregatorSelectionSignRequest.
 type SyncCommitteeContribution struct {
 	Slot              string `json:"slot"`               /* uint64 */
-	BeaconBlockRoot   string `json:"block_root"`         /* Hash32 */ // Prysm uses BlockRoot instead of BeaconBlockRoot
+	BeaconBlockRoot   string `json:"beacon_block_root"`  /* Hash32 */ // Prysm uses BlockRoot instead of BeaconBlockRoot
 	SubcommitteeIndex string `json:"subcommittee_index"` /* uint64 */
 	AggregationBits   string `json:"aggregation_bits"`   /* SSZ hexadecimal string */
 	Signature         string `json:"signature"`          /* 96 byte hexadecimal string */
@@ -313,8 +313,3 @@ type SyncCommitteeContribution struct {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-
-// SignResponse the response object of the web3signer sign api.
-type SignResponse struct {
-	Signature string `json:"signature"`
-}

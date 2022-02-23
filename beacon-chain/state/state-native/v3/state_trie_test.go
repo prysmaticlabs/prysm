@@ -25,7 +25,7 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 	count := uint64(100)
 	vals := make([]*ethpb.Validator, 0, count)
 	for i := uint64(1); i < count; i++ {
-		someRoot := [32]byte{}
+		someRoot := [fieldparams.RootLength]byte{}
 		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
@@ -89,7 +89,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	count := uint64(100)
 	vals := make([]*ethpb.Validator, 0, count)
 	for i := uint64(1); i < count; i++ {
-		someRoot := [32]byte{}
+		someRoot := [fieldparams.RootLength]byte{}
 		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
@@ -108,6 +108,8 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 		Validators: vals,
 	})
 	assert.NoError(t, err)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
 
 	wg := new(sync.WaitGroup)
 
@@ -116,10 +118,10 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 		// Continuously lock and unlock the state
 		// by acquiring the lock.
 		for i := 0; i < 1000; i++ {
-			for _, f := range st.stateFieldLeaves {
+			for _, f := range s.stateFieldLeaves {
 				f.Lock()
 				if f.Empty() {
-					f.InsertFieldLayer(make([][]*[32]byte, 10))
+					f.InsertFieldLayer(make([][]*[fieldparams.RootLength]byte, 10))
 				}
 				f.Unlock()
 				f.FieldReference().AddRef()

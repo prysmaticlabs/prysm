@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -614,21 +615,21 @@ func HydrateBeaconBlockBodyAltair(b *ethpb.BeaconBlockBodyAltair) *ethpb.BeaconB
 	return b
 }
 
-// HydrateSignedBeaconBlockMerge hydrates a signed beacon block with correct field length sizes
+// HydrateSignedBeaconBlockBellatrix hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateSignedBeaconBlockMerge(b *ethpb.SignedBeaconBlockMerge) *ethpb.SignedBeaconBlockMerge {
+func HydrateSignedBeaconBlockBellatrix(b *ethpb.SignedBeaconBlockBellatrix) *ethpb.SignedBeaconBlockBellatrix {
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
-	b.Block = HydrateBeaconBlockMerge(b.Block)
+	b.Block = HydrateBeaconBlockBellatrix(b.Block)
 	return b
 }
 
-// HydrateBeaconBlockMerge hydrates a beacon block with correct field length sizes
+// HydrateBeaconBlockBellatrix hydrates a beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockMerge(b *ethpb.BeaconBlockMerge) *ethpb.BeaconBlockMerge {
+func HydrateBeaconBlockBellatrix(b *ethpb.BeaconBlockBellatrix) *ethpb.BeaconBlockBellatrix {
 	if b == nil {
-		b = &ethpb.BeaconBlockMerge{}
+		b = &ethpb.BeaconBlockBellatrix{}
 	}
 	if b.ParentRoot == nil {
 		b.ParentRoot = make([]byte, 32)
@@ -636,15 +637,15 @@ func HydrateBeaconBlockMerge(b *ethpb.BeaconBlockMerge) *ethpb.BeaconBlockMerge 
 	if b.StateRoot == nil {
 		b.StateRoot = make([]byte, 32)
 	}
-	b.Body = HydrateBeaconBlockBodyMerge(b.Body)
+	b.Body = HydrateBeaconBlockBodyBellatrix(b.Body)
 	return b
 }
 
-// HydrateBeaconBlockBodyMerge hydrates a beacon block body with correct field length sizes
+// HydrateBeaconBlockBodyBellatrix hydrates a beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockBodyMerge(b *ethpb.BeaconBlockBodyMerge) *ethpb.BeaconBlockBodyMerge {
+func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.BeaconBlockBodyBellatrix {
 	if b == nil {
-		b = &ethpb.BeaconBlockBodyMerge{}
+		b = &ethpb.BeaconBlockBodyBellatrix{}
 	}
 	if b.RandaoReveal == nil {
 		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
@@ -665,11 +666,11 @@ func HydrateBeaconBlockBodyMerge(b *ethpb.BeaconBlockBodyMerge) *ethpb.BeaconBlo
 		}
 	}
 	if b.ExecutionPayload == nil {
-		b.ExecutionPayload = &ethpb.ExecutionPayload{
+		b.ExecutionPayload = &enginev1.ExecutionPayload{
 			ParentHash:    make([]byte, 32),
 			FeeRecipient:  make([]byte, 20),
 			StateRoot:     make([]byte, 32),
-			ReceiptRoot:   make([]byte, 32),
+			ReceiptsRoot:  make([]byte, 32),
 			LogsBloom:     make([]byte, 256),
 			Random:        make([]byte, 32),
 			BaseFeePerGas: make([]byte, 32),

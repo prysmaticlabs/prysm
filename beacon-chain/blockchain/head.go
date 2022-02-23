@@ -23,6 +23,21 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// UpdateHeadWithBalances updates the beacon state head after getting justified balanced from cache.
+func (s *Service) UpdateHeadWithBalances(ctx context.Context) error {
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
+		return errors.New("no justified checkpoint")
+	}
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
+		return errors.Wrap(err, msg)
+	}
+
+	return s.updateHead(ctx, balances)
+}
+
 // This defines the current chain service's view of head.
 type head struct {
 	slot  types.Slot              // current head slot.
@@ -37,16 +52,15 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateHead")
 	defer span.End()
 
-	// To get the proper head update, a node first checks its best justified
-	// can become justified. This is designed to prevent bounce attack and
-	// ensure head gets its best justified info.
-	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
-		s.justifiedCheckpt = s.bestJustifiedCheckpt
-	}
-
 	// Get head from the fork choice service.
-	f := s.finalizedCheckpt
-	j := s.justifiedCheckpt
+	f := s.store.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
+	j := s.store.JustifiedCheckpt()
+	if j == nil {
+		return errNilJustifiedInStore
+	}
 	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
 	headStartRoot := bytesutil.ToBytes32(j.Root)
@@ -251,10 +265,10 @@ func (s *Service) headState(ctx context.Context) state.BeaconState {
 	return s.head.state.Copy()
 }
 
-// This returns the genesis validator root of the head state.
+// This returns the genesis validators root of the head state.
 // This is a lock free version.
-func (s *Service) headGenesisValidatorRoot() [32]byte {
-	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+func (s *Service) headGenesisValidatorsRoot() [32]byte {
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorsRoot())
 }
 
 // This returns the validator referenced by the provided index in

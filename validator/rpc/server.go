@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -52,7 +51,6 @@ type Config struct {
 	WalletInitializedFeed    *event.Feed
 	NodeGatewayEndpoint      string
 	Wallet                   *wallet.Wallet
-	Keymanager               keymanager.IKeymanager
 }
 
 // Server defining a gRPC server for the remote signer API.
@@ -75,7 +73,6 @@ type Server struct {
 	host                      string
 	port                      string
 	listener                  net.Listener
-	keymanager                keymanager.IKeymanager
 	withCert                  string
 	withKey                   string
 	credentialError           error
@@ -121,7 +118,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		walletInitializedFeed:    cfg.WalletInitializedFeed,
 		walletInitialized:        cfg.Wallet != nil,
 		wallet:                   cfg.Wallet,
-		keymanager:               cfg.Keymanager,
 		nodeGatewayEndpoint:      cfg.NodeGatewayEndpoint,
 		validatorMonitoringHost:  cfg.ValidatorMonitoringHost,
 		validatorMonitoringPort:  cfg.ValidatorMonitoringPort,

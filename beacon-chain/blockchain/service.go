@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -54,11 +55,6 @@ type Service struct {
 	headLock    sync.RWMutex
 	// originBlockRoot is the genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
 	originBlockRoot       [32]byte
-	justifiedCheckpt      *ethpb.Checkpoint
-	prevJustifiedCheckpt  *ethpb.Checkpoint
-	bestJustifiedCheckpt  *ethpb.Checkpoint
-	finalizedCheckpt      *ethpb.Checkpoint
-	prevFinalizedCheckpt  *ethpb.Checkpoint
 	nextEpochBoundarySlot types.Slot
 	boundaryRoots         [][32]byte
 	checkpointStateCache  *cache.CheckpointStateCache
@@ -66,6 +62,7 @@ type Service struct {
 	initSyncBlocksLock    sync.RWMutex
 	justifiedBalances     *stateBalanceCache
 	wsVerifier            *WeakSubjectivityVerifier
+	store                 *store.Store
 }
 
 // config options for the service.
@@ -99,6 +96,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]block.SignedBeaconBlock),
 		cfg:                  &config{},
+		store:                &store.Store{},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
@@ -180,21 +178,20 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get justified checkpoint")
 	}
-	s.prevJustifiedCheckpt = ethpb.CopyCheckpoint(justified)
-	s.bestJustifiedCheckpt = ethpb.CopyCheckpoint(justified)
-	s.justifiedCheckpt = ethpb.CopyCheckpoint(justified)
-
 	finalized, err := s.cfg.BeaconDB.FinalizedCheckpoint(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint")
 	}
-	s.prevFinalizedCheckpt = ethpb.CopyCheckpoint(finalized)
-	s.finalizedCheckpt = ethpb.CopyCheckpoint(finalized)
+	s.store = store.New(justified, finalized)
 
 	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
 	s.cfg.ForkChoiceStore = store
 
-	ss, err := slots.EpochStart(s.finalizedCheckpt.Epoch)
+	if err := s.loadSyncedTips(originRoot, saved.Slot()); err != nil {
+		return err
+	}
+
+	ss, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get start slot of finalized epoch")
 	}
@@ -204,14 +201,14 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 			"startSlot": ss,
 			"endSlot":   h.Slot(),
 		}).Info("Loading blocks to fork choice store, this may take a while.")
-		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, s.finalizedCheckpt, s.justifiedCheckpt); err != nil {
+		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, finalized, justified); err != nil {
 			return errors.Wrap(err, "could not fill in fork choice store missing blocks")
 		}
 	}
 
 	// not attempting to save initial sync blocks here, because there shouldn't be any until
 	// after the statefeed.Initialized event is fired (below)
-	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, s.finalizedCheckpt.Epoch); err != nil {
+	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, finalized.Epoch); err != nil {
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
 		return errors.Wrap(err, "could not verify initial checkpoint provided for chain sync")
 	}
@@ -220,7 +217,7 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             s.genesisTime,
-			GenesisValidatorsRoot: saved.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
 		},
 	})
 
@@ -382,7 +379,7 @@ func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             genesisTime,
-			GenesisValidatorsRoot: initializedState.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: initializedState.GenesisValidatorsRoot(),
 		},
 	})
 }
@@ -446,12 +443,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 
 	// Finalized checkpoint at genesis is a zero hash.
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
-
-	s.justifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
-	s.prevJustifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
-	s.bestJustifiedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
-	s.finalizedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
-	s.prevFinalizedCheckpt = ethpb.CopyCheckpoint(genesisCheckpoint)
+	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
 	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
 		genesisBlk.Block().Slot(),

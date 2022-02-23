@@ -106,7 +106,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
-	valRoot := s.cfg.chain.GenesisValidatorRoot()
+	valRoot := s.cfg.chain.GenesisValidatorsRoot()
 	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.chain.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (meta
 	if len(digest) != forkDigestLength {
 		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
 	}
-	vRoot := chain.GenesisValidatorRoot()
+	vRoot := chain.GenesisValidatorsRoot()
 	for k, mdFunc := range types.MetaDataMap {
 		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {

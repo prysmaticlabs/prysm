@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -29,14 +28,10 @@ func init() {
 // to its corresponding data type.
 var fieldMap map[types.FieldIndex]types.DataType
 
-// ErrNilInnerState returns when the inner state is nil and no copy set or get
-// operations can be performed on state.
-var ErrNilInnerState = errors.New("nil inner state")
-
 // Field Aliases for values from the types package.
 const (
 	genesisTime                 = types.GenesisTime
-	genesisValidatorRoot        = types.GenesisValidatorRoot
+	genesisValidatorsRoot       = types.GenesisValidatorsRoot
 	slot                        = types.Slot
 	fork                        = types.Fork
 	latestBlockHeader           = types.LatestBlockHeader

@@ -53,10 +53,14 @@ func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBloc
 	}
 
 	// Reports on block and fork choice metrics.
-	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
-	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, s.finalizedCheckpt, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
+	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
 		return err
 	}
 	// Log state transition data.
@@ -98,13 +102,21 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+		finalized := s.store.FinalizedCheckpt()
+		if finalized == nil {
+			return errNilFinalizedInStore
+		}
+		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
 
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, s.finalizedCheckpt.Epoch); err != nil {
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, finalized.Epoch); err != nil {
 		// log.Fatalf will prevent defer from being called
 		span.End()
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
@@ -148,8 +160,12 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality types.Epoch
-	if currentEpoch > s.finalizedCheckpt.Epoch {
-		sinceFinality = currentEpoch - s.finalizedCheckpt.Epoch
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	if currentEpoch > finalized.Epoch {
+		sinceFinality = currentEpoch - finalized.Epoch
 	}
 
 	if sinceFinality >= epochsSinceFinalitySaveHotStateDB {

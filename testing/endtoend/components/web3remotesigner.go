@@ -79,6 +79,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		fmt.Sprintf("--key-store-path=%s", keystorePath),
 		fmt.Sprintf("--data-path=%s", websignerDataDir),
 		fmt.Sprintf("--http-listen-port=%d", Web3RemoteSignerPort),
+		"--logging=ALL",
 		// Command
 		"eth2",
 		// Command flags

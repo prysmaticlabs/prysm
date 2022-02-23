@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v2"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -25,14 +26,20 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
+func InitializeFromProto(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
+	}
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
 }
 
 // InitializeFromSSZReader can be used when the source for a serialized BeaconState object
 // is an io.Reader. This allows client code to remain agnostic about whether the data comes
 // from the network or a file without needing to read the entire state into mem as a large byte slice.
-func InitializeFromSSZReader(r io.Reader) (*BeaconState, error) {
+func InitializeFromSSZReader(r io.Reader) (state.BeaconStateAltair, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromSSZReader(r)
+	}
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -42,7 +49,10 @@ func InitializeFromSSZReader(r io.Reader) (*BeaconState, error) {
 
 // InitializeFromSSZBytes is a convenience method to obtain a BeaconState by unmarshaling
 // a slice of bytes containing the ssz-serialized representation of the state.
-func InitializeFromSSZBytes(marshaled []byte) (*BeaconState, error) {
+func InitializeFromSSZBytes(marshaled []byte) (state.BeaconStateAltair, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromSSZBytes(marshaled)
+	}
 	st := &ethpb.BeaconStateAltair{}
 	if err := st.UnmarshalSSZ(marshaled); err != nil {
 		return nil, err
@@ -52,7 +62,11 @@ func InitializeFromSSZBytes(marshaled []byte) (*BeaconState, error) {
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoUnsafe(st)
+	}
+
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -136,7 +150,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
 			FinalizedCheckpoint:         b.finalizedCheckpoint(),
-			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
+			GenesisValidatorsRoot:       b.genesisValidatorsRoot(),
 			CurrentSyncCommittee:        b.currentSyncCommittee(),
 			NextSyncCommittee:           b.nextSyncCommittee(),
 		},
@@ -298,7 +312,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.state.GenesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.state.Slot)), nil

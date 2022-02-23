@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"go.opencensus.io/trace"
 )
@@ -21,19 +22,49 @@ var lastHeadRoot [32]byte
 // New initializes a new fork choice store.
 func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *ForkChoice {
 	s := &Store{
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		finalizedRoot:  finalizedRoot,
-		nodes:          make([]*Node, 0),
-		nodesIndices:   make(map[[32]byte]uint64),
-		canonicalNodes: make(map[[32]byte]bool),
-		pruneThreshold: defaultPruneThreshold,
+		justifiedEpoch:    justifiedEpoch,
+		finalizedEpoch:    finalizedEpoch,
+		finalizedRoot:     finalizedRoot,
+		proposerBoostRoot: [32]byte{},
+		nodes:             make([]*Node, 0),
+		nodesIndices:      make(map[[32]byte]uint64),
+		canonicalNodes:    make(map[[32]byte]bool),
+		pruneThreshold:    defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
+	st := &optimisticStore{
+		validatedTips: make(map[[32]byte]types.Slot),
+	}
+	return &ForkChoice{store: s, balances: b, votes: v, syncedTips: st}
+}
 
-	return &ForkChoice{store: s, balances: b, votes: v}
+// SetSyncedTips sets the synced and validated tips from the passed map
+func (f *ForkChoice) SetSyncedTips(tips map[[32]byte]types.Slot) error {
+	if len(tips) == 0 {
+		return errInvalidSyncedTips
+	}
+	newTips := make(map[[32]byte]types.Slot, len(tips))
+	for k, v := range tips {
+		newTips[k] = v
+	}
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
+	f.syncedTips.validatedTips = newTips
+	return nil
+}
+
+// SyncedTips returns the synced and validated tips from the fork choice store.
+func (f *ForkChoice) SyncedTips() map[[32]byte]types.Slot {
+	f.syncedTips.RLock()
+	defer f.syncedTips.RUnlock()
+
+	m := make(map[[32]byte]types.Slot)
+	for k, v := range f.syncedTips.validatedTips {
+		m[k] = v
+	}
+	return m
 }
 
 // Head returns the head root from fork choice store.
@@ -63,7 +94,7 @@ func (f *ForkChoice) Head(
 	}
 	f.votes = newVotes
 
-	if err := f.store.applyWeightChanges(ctx, justifiedEpoch, finalizedEpoch, deltas); err != nil {
+	if err := f.store.applyWeightChanges(ctx, justifiedEpoch, finalizedEpoch, newBalances, deltas); err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
@@ -115,7 +146,7 @@ func (f *ForkChoice) ProcessBlock(
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
 // root is different than the current store finalized root, and the number of the store has met prune threshold.
 func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
-	return f.store.prune(ctx, finalizedRoot)
+	return f.store.prune(ctx, finalizedRoot, f.syncedTips)
 }
 
 // Nodes returns the copied list of block nodes in the fork choice store.
@@ -226,6 +257,13 @@ func (s *Store) FinalizedEpoch() types.Epoch {
 	return s.finalizedEpoch
 }
 
+// ProposerBoost of fork choice store.
+func (s *Store) ProposerBoost() [fieldparams.RootLength]byte {
+	s.proposerBoostLock.RLock()
+	defer s.proposerBoostLock.RUnlock()
+	return s.proposerBoostRoot
+}
+
 // Nodes of fork choice store.
 func (s *Store) Nodes() []*Node {
 	s.nodesLock.RLock()
@@ -257,7 +295,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 
 	justifiedNode := s.nodes[justifiedIndex]
 	bestDescendantIndex := justifiedNode.bestDescendant
-	// If the justified node doesn't have a best descendent,
+	// If the justified node doesn't have a best descendant,
 	// the best node is itself.
 	if bestDescendantIndex == NonExistentNode {
 		bestDescendantIndex = justifiedIndex
@@ -294,28 +332,38 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 	defer span.End()
 
 	// Set the input node to canonical.
-	s.canonicalNodes[root] = true
-
-	// Get the input's parent node index.
 	i := s.nodesIndices[root]
-	n := s.nodes[i]
-	p := n.parent
-
-	for p != NonExistentNode {
+	var newCanonicalRoots [][32]byte
+	var n *Node
+	for i != NonExistentNode {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 
 		// Get the parent node, if the node is already in canonical mapping,
 		// we can be sure rest of the ancestors are canonical. Exit early.
-		n = s.nodes[p]
+		n = s.nodes[i]
 		if s.canonicalNodes[n.root] {
 			break
 		}
 
 		// Set parent node to canonical. Repeat until parent node index is undefined.
-		s.canonicalNodes[n.root] = true
-		p = n.parent
+		newCanonicalRoots = append(newCanonicalRoots, n.root)
+		i = n.parent
+	}
+
+	// i is either NonExistentNode or has the index of the last canonical
+	// node before the last head update.
+	if i == NonExistentNode {
+		s.canonicalNodes = make(map[[fieldparams.RootLength]byte]bool)
+	} else {
+		for j := i + 1; j < uint64(len(s.nodes)); j++ {
+			delete(s.canonicalNodes, s.nodes[j].root)
+		}
+	}
+
+	for _, canonicalRoot := range newCanonicalRoots {
+		s.canonicalNodes[canonicalRoot] = true
 	}
 
 	return nil
@@ -340,7 +388,7 @@ func (s *Store) insert(ctx context.Context,
 
 	index := uint64(len(s.nodes))
 	parentIndex, ok := s.nodesIndices[parent]
-	// Mark genesis block's parent as non existent.
+	// Mark genesis block's parent as non-existent.
 	if !ok {
 		parentIndex = NonExistentNode
 	}
@@ -360,7 +408,7 @@ func (s *Store) insert(ctx context.Context,
 	s.nodesIndices[root] = index
 	s.nodes = append(s.nodes, n)
 
-	// Update parent with the best child and descendent only if it's available.
+	// Update parent with the best child and descendant only if it's available.
 	if n.parent != NonExistentNode {
 		if err := s.updateBestChildAndDescendant(parentIndex, index); err != nil {
 			return err
@@ -376,9 +424,11 @@ func (s *Store) insert(ctx context.Context,
 
 // applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
 // and its best child. For each node, it updates the weight with input delta and
-// back propagate the nodes delta to its parents delta. After scoring changes,
-// the best child is then updated along with best descendant.
-func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, delta []int) error {
+// back propagate the nodes' delta to its parents' delta. After scoring changes,
+// the best child is then updated along with the best descendant.
+func (s *Store) applyWeightChanges(
+	ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, newBalances []uint64, delta []int,
+) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
@@ -393,7 +443,11 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 		s.finalizedEpoch = finalizedEpoch
 	}
 
+	// Proposer score defaults to 0.
+	proposerScore := uint64(0)
+
 	// Iterate backwards through all index to node in store.
+	var err error
 	for i := len(s.nodes) - 1; i >= 0; i-- {
 		n := s.nodes[i]
 
@@ -405,36 +459,51 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 
 		nodeDelta := delta[i]
 
+		// If we have a node where the proposer boost was previously applied,
+		// we then decrease the delta by the required score amount.
+		s.proposerBoostLock.Lock()
+		if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash && s.previousProposerBoostRoot == n.root {
+			nodeDelta -= int(s.previousProposerBoostScore)
+		}
+
+		if s.proposerBoostRoot != params.BeaconConfig().ZeroHash && s.proposerBoostRoot == n.root {
+			proposerScore, err = computeProposerBoostScore(newBalances)
+			if err != nil {
+				s.proposerBoostLock.Unlock()
+				return err
+			}
+			nodeDelta = nodeDelta + int(proposerScore)
+		}
+		s.proposerBoostLock.Unlock()
+
+		// A node's weight can not be negative but the delta can be negative.
 		if nodeDelta < 0 {
-			// A node's weight can not be negative but the delta can be negative.
-			if int(n.weight)+nodeDelta < 0 {
+			d := uint64(-nodeDelta)
+			if n.weight < d {
 				n.weight = 0
 			} else {
-				// Absolute value of node delta.
-				d := nodeDelta
-				if nodeDelta < 0 {
-					d *= -1
-				}
-				// Subtract node's weight.
-				n.weight -= uint64(d)
+				n.weight -= d
 			}
 		} else {
-			// Add node's weight.
 			n.weight += uint64(nodeDelta)
 		}
 
-		s.nodes[i] = n
-
-		// Update parent's best child and descendent if the node has a known parent.
+		// Update parent's best child and descendant if the node has a known parent.
 		if n.parent != NonExistentNode {
 			// Protection against node parent index out of bound. This should not happen.
 			if int(n.parent) >= len(delta) {
 				return errInvalidParentDelta
 			}
-			// Back propagate the nodes delta to its parent.
+			// Back propagate the nodes' delta to its parent.
 			delta[n.parent] += nodeDelta
 		}
 	}
+
+	// Set the previous boosted root and score.
+	s.proposerBoostLock.Lock()
+	s.previousProposerBoostRoot = s.proposerBoostRoot
+	s.previousProposerBoostScore = proposerScore
+	s.proposerBoostLock.Unlock()
 
 	for i := len(s.nodes) - 1; i >= 0; i-- {
 		n := s.nodes[i]
@@ -451,14 +520,14 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch, finalize
 	return nil
 }
 
-// updateBestChildAndDescendant updates parent node's best child and descendent.
+// updateBestChildAndDescendant updates parent node's best child and descendant.
 // It looks at input parent node and input child node and potentially modifies parent's best
-// child and best descendent indices.
+// child and best descendant indices.
 // There are four outcomes:
-// 1.)  The child is already the best child but it's now invalid due to a FFG change and should be removed.
+// 1.)  The child is already the best child, but it's now invalid due to a FFG change and should be removed.
 // 2.)  The child is already the best child and the parent is updated with the new best descendant.
 // 3.)  The child is not the best child but becomes the best child.
-// 4.)  The child is not the best child and does not become best child.
+// 4.)  The child is not the best child and does not become the best child.
 func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) error {
 
 	// Protection against parent index out of bound, this should not happen.
@@ -493,12 +562,12 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 
 	if parent.bestChild != NonExistentNode {
 		if parent.bestChild == childIndex && !childLeadsToViableHead {
-			// If the child is already the best child of the parent but it's not viable for head,
+			// If the child is already the best child of the parent, but it's not viable for head,
 			// we should remove it. (Outcome 1)
 			newParentChild = changeToNone
 		} else if parent.bestChild == childIndex {
-			// If the child is already the best child of the parent, set it again to ensure best
-			// descendent of the parent is updated. (Outcome 2)
+			// If the child is already the best child of the parent, set it again to ensure the best
+			// descendant of the parent is updated. (Outcome 2)
 			newParentChild = changeToChild
 		} else {
 			// Protection against parent's best child going out of bound.
@@ -513,7 +582,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 			}
 
 			if childLeadsToViableHead && !bestChildLeadsToViableHead {
-				// The child leads to a viable head, but the current parent's best child doesnt.
+				// The child leads to a viable head, but the current parent's best child doesn't.
 				newParentChild = changeToChild
 			} else if !childLeadsToViableHead && bestChildLeadsToViableHead {
 				// The child doesn't lead to a viable head, the current parent's best child does.
@@ -556,15 +625,15 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 // prune prunes the store with the new finalized root. The tree is only
 // pruned if the input finalized root are different than the one in stored and
 // the number of the nodes in store has met prune threshold.
-func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
+func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *optimisticStore) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
 	defer span.End()
 
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
 
-	// The node would have seen finalized root or else it'd
-	// be able to prune it.
+	// The node would have seen finalized root or else it
+	// wouldn't be able to prune it.
 	finalizedIndex, ok := s.nodesIndices[finalizedRoot]
 	if !ok {
 		return errUnknownFinalizedRoot
@@ -576,78 +645,78 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 		return nil
 	}
 
-	// Remove the key/values from indices mapping on to be pruned nodes.
-	// These nodes are before the finalized index.
-	for i := uint64(0); i < finalizedIndex; i++ {
-		if int(i) >= len(s.nodes) {
-			return errInvalidNodeIndex
-		}
-		delete(s.nodesIndices, s.nodes[i].root)
-	}
+	// Traverse through the node list starting from the finalized node at index 0.
+	// Nodes that are not branching off from the finalized node will be removed.
+	syncedTips.Lock()
+	defer syncedTips.Unlock()
 
-	// Finalized index can not be greater than the length of the node.
-	if int(finalizedIndex) >= len(s.nodes) {
-		return errors.New("invalid finalized index")
+	canonicalNodesMap := make(map[uint64]uint64, uint64(len(s.nodes))-finalizedIndex)
+	canonicalNodes := make([]*Node, 1, uint64(len(s.nodes))-finalizedIndex)
+	finalizedNode := s.nodes[finalizedIndex]
+	finalizedTipIndex, err := s.findSyncedTip(ctx, finalizedNode, syncedTips)
+	if err != nil {
+		return err
 	}
-	s.nodes = s.nodes[finalizedIndex:]
+	finalizedNode.parent = NonExistentNode
+	canonicalNodes[0] = finalizedNode
+	canonicalNodesMap[finalizedIndex] = uint64(0)
 
-	// Adjust indices to node mapping.
-	for k, v := range s.nodesIndices {
-		s.nodesIndices[k] = v - finalizedIndex
-	}
-
-	// Iterate through existing nodes and adjust its parent/child indices with the newly pruned layout.
-	for i, node := range s.nodes {
-		if node.parent != NonExistentNode {
-			// If the node's parent is less than finalized index, set it to non existent.
-			if node.parent >= finalizedIndex {
-				node.parent -= finalizedIndex
-			} else {
-				node.parent = NonExistentNode
+	for idx := uint64(0); idx < uint64(len(s.nodes)); idx++ {
+		node := copyNode(s.nodes[idx])
+		parentIdx, ok := canonicalNodesMap[node.parent]
+		if ok {
+			s.nodesIndices[node.root] = uint64(len(canonicalNodes))
+			canonicalNodesMap[idx] = uint64(len(canonicalNodes))
+			node.parent = parentIdx
+			canonicalNodes = append(canonicalNodes, node)
+		} else {
+			// Remove node and synced tip that is not part of finalized branch.
+			delete(s.nodesIndices, node.root)
+			_, ok := syncedTips.validatedTips[node.root]
+			if ok && idx != finalizedTipIndex {
+				delete(syncedTips.validatedTips, node.root)
 			}
 		}
+	}
+	s.nodesIndices[finalizedRoot] = uint64(0)
+
+	// Recompute the best child and descendant for each canonical nodes.
+	for _, node := range canonicalNodes {
 		if node.bestChild != NonExistentNode {
-			if node.bestChild < finalizedIndex {
-				return errInvalidBestChildIndex
-			}
-			node.bestChild -= finalizedIndex
+			node.bestChild = canonicalNodesMap[node.bestChild]
 		}
 		if node.bestDescendant != NonExistentNode {
-			if node.bestDescendant < finalizedIndex {
-				return errInvalidBestDescendantIndex
-			}
-			node.bestDescendant -= finalizedIndex
+			node.bestDescendant = canonicalNodesMap[node.bestDescendant]
 		}
-
-		s.nodes[i] = node
 	}
 
+	s.nodes = canonicalNodes
 	prunedCount.Inc()
-
+	syncedTipsCount.Set(float64(len(syncedTips.validatedTips)))
 	return nil
 }
 
-// leadsToViableHead returns true if the node or the best descendent of the node is viable for head.
+// leadsToViableHead returns true if the node or the best descendant of the node is viable for head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
 func (s *Store) leadsToViableHead(node *Node) (bool, error) {
-	var bestDescendentViable bool
-	bestDescendentIndex := node.bestDescendant
+	var bestDescendantViable bool
+	bestDescendantIndex := node.bestDescendant
 
 	// If the best descendant is not part of the leaves.
-	if bestDescendentIndex != NonExistentNode {
-		// Protection against out of bound, best descendent index can not be
+	if bestDescendantIndex != NonExistentNode {
+		// Protection against out of bound, the best descendant index can not be
 		// exceeds length of nodes list.
-		if bestDescendentIndex >= uint64(len(s.nodes)) {
+		if bestDescendantIndex >= uint64(len(s.nodes)) {
 			return false, errInvalidBestDescendantIndex
 		}
 
-		bestDescendentNode := s.nodes[bestDescendentIndex]
-		bestDescendentViable = s.viableForHead(bestDescendentNode)
+		bestDescendantNode := s.nodes[bestDescendantIndex]
+		bestDescendantViable = s.viableForHead(bestDescendantNode)
 	}
 
-	// The node is viable as long as the best descendent is viable.
-	return bestDescendentViable || s.viableForHead(node), nil
+	// The node is viable as long as the best descendant is viable.
+	return bestDescendantViable || s.viableForHead(node), nil
 }
 
 // viableForHead returns true if the node is viable to head.
@@ -660,4 +729,18 @@ func (s *Store) viableForHead(node *Node) bool {
 	finalized := s.finalizedEpoch == node.finalizedEpoch || s.finalizedEpoch == 0
 
 	return justified && finalized
+}
+
+// Returns the list of leaves in the Fork Choice store.
+// These are all the nodes that have NonExistentNode as best child.
+// This internal method assumes that the caller holds a lock in s.nodesLock.
+func (s *Store) leaves() ([]uint64, error) {
+	var leaves []uint64
+	for i := uint64(0); i < uint64(len(s.nodes)); i++ {
+		node := s.nodes[i]
+		if node.bestChild == NonExistentNode {
+			leaves = append(leaves, i)
+		}
+	}
+	return leaves, nil
 }
