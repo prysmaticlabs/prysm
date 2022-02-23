@@ -20,7 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// validates terminal block hash in the event of manual overrides before checking for total difficulty.
+// validateMergeBlock validates terminal block hash in the event of manual overrides before checking for total difficulty.
 //
 // def validate_merge_block(block: BeaconBlock) -> None:
 //    if TERMINAL_BLOCK_HASH != Hash32():
@@ -100,7 +100,7 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 	return blk.ParentHash, blkTDUint256, nil
 }
 
-// validateTerminalBlockDifficulties validates if the merge block is a valid terminal PoW block.
+// validateTerminalBlockHash validates if the merge block is a valid terminal PoW block.
 // spec code:
 // if TERMINAL_BLOCK_HASH != Hash32():
 //        # If `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
@@ -120,7 +120,7 @@ func validateTerminalBlockHash(blkSlot types.Slot, payload *enginev1.ExecutionPa
 	return nil
 }
 
-// validates terminal pow block by comparing own total difficulty with parent's total difficulty.
+// validateTerminalBlockDifficulties validates terminal pow block by comparing own total difficulty with parent's total difficulty.
 //
 // def is_valid_terminal_pow_block(block: PowBlock, parent: PowBlock) -> bool:
 //    is_total_difficulty_reached = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
