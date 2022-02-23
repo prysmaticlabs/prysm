@@ -228,19 +228,12 @@ func SendAndMineDeposits(keystorePath string, eth1NodeIndex int, validatorNum, o
 	if err = sendDeposits(web3, keystoreBytes, validatorNum, offset, partial); err != nil {
 		return err
 	}
-	/*mineKey, err := keystore.DecryptKey(keystoreBytes, "password")
-	if err != nil {
-		return err
-	}
-	if err = mineBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		return fmt.Errorf("failed to mine blocks %w", err)
-	}*/
 	return nil
 }
 
 // sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
 func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int, partial bool) error {
-	txOps, err := bind.NewTransactorWithChainID(bytes.NewReader(keystoreBytes), "password", big.NewInt(networkId))
+	txOps, err := bind.NewTransactorWithChainID(bytes.NewReader(keystoreBytes), keystorePassword, big.NewInt(networkId))
 	if err != nil {
 		return err
 	}
