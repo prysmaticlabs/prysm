@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/dberr"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -39,11 +39,11 @@ func TestMockHistoryStates(t *testing.T) {
 	require.DeepEqual(t, hist.states[hist.slotMap[middle]], shouldExist)
 
 	cantExist, err := hist.StateOrError(ctx, hist.slotMap[end])
-	require.ErrorIs(t, err, dberr.ErrStateNotFound)
+	require.ErrorIs(t, err, db.ErrNotFoundState)
 	require.Equal(t, nil, cantExist)
 
 	cantExist, err = hist.StateOrError(ctx, hist.slotMap[begin])
-	require.ErrorIs(t, err, dberr.ErrStateNotFound)
+	require.ErrorIs(t, err, db.ErrNotFoundState)
 	require.Equal(t, nil, cantExist)
 }
 
@@ -127,7 +127,7 @@ func (m *mockHistory) StateOrError(ctx context.Context, blockRoot [32]byte) (sta
 	if s, ok := m.states[blockRoot]; ok {
 		return s, nil
 	}
-	return nil, dberr.ErrStateNotFound
+	return nil, db.ErrNotFoundState
 }
 
 func (m *mockHistory) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {

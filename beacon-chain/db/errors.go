@@ -7,3 +7,5 @@ import "github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 // i/o error. This variable copies the value in the kv package to the same scope as the Database interfaces,
 // so that it is available to code paths that do not interact directly with the kv package.
 var ErrNotFound = kv.ErrNotFound
+var ErrNotFoundState = kv.ErrNotFoundState
+var ErrNotFoundOriginBlockRoot = kv.ErrNotFoundOriginBlockRoot

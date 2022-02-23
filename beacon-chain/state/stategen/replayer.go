@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/dberr"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -56,8 +56,8 @@ var _ Replayer = &stateReplayer{}
 
 type stateReplayer struct {
 	s           state.BeaconState
-	descendents []block.SignedBeaconBlock
-	blockSlot   types.Slot
+	descendants []block.SignedBeaconBlock
+	target      types.Slot
 	method      retrievalMethod
 	chainer     chainer
 }
@@ -69,11 +69,11 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 	defer span.End()
 
 	var s state.BeaconState
-	var descendents []block.SignedBeaconBlock
+	var descendants []block.SignedBeaconBlock
 	var err error
 	switch rs.method {
 	case forSlot:
-		s, descendents, err = rs.chainer.chainForSlot(ctx, rs.blockSlot)
+		s, descendants, err = rs.chainer.chainForSlot(ctx, rs.target)
 		if err != nil {
 			return nil, err
 		}
@@ -84,11 +84,11 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 	start := time.Now()
 	log.WithFields(logrus.Fields{
 		"startSlot": s.Slot(),
-		"endSlot":   rs.blockSlot,
-		"diff":      rs.blockSlot - s.Slot(),
+		"endSlot":   rs.target,
+		"diff":      rs.target - s.Slot(),
 	}).Debug("replaying canonical blocks from most recent state")
 
-	for _, b := range descendents {
+	for _, b := range descendants {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -97,8 +97,8 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 			return nil, err
 		}
 	}
-	if rs.blockSlot > s.Slot() {
-		s, err = ReplayProcessSlots(ctx, s, rs.blockSlot)
+	if rs.target > s.Slot() {
+		s, err = ReplayProcessSlots(ctx, s, rs.target)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, target types.Slot) (s
 			"diff":      target - s.Slot(),
 		}).Debug("calling process_slots on remaining slots")
 
-		if rs.blockSlot > s.Slot() {
+		if rs.target > s.Slot() {
 			// err will be handled after the bookend log
 			s, err = ReplayProcessSlots(ctx, s, target)
 		}
@@ -186,7 +186,7 @@ type canonicalBuilder struct {
 var _ ReplayerBuilder = &canonicalBuilder{}
 
 func (r *canonicalBuilder) ForSlot(target types.Slot) Replayer {
-	return &stateReplayer{chainer: r.chainer, method: forSlot, blockSlot: target}
+	return &stateReplayer{chainer: r.chainer, method: forSlot, target: target}
 }
 
 // chainer is responsible for supplying the chain components necessary to rebuild a state,
@@ -218,12 +218,12 @@ func (r *canonicalChainer) chainForSlot(ctx context.Context, target types.Slot) 
 	if err != nil {
 		return nil, nil, errors.Wrap(err, fmt.Sprintf("unable to find replay data for slot=%d", target))
 	}
-	s, descendents, err := r.ancestorChain(ctx, b)
+	s, descendants, err := r.ancestorChain(ctx, b)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to query for ancestor and descendent blocks")
+		return nil, nil, errors.Wrap(err, "failed to query for ancestor and descendant blocks")
 	}
 
-	return s, descendents, nil
+	return s, descendants, nil
 }
 
 // canonicalBlockForSlot uses HighestSlotBlocksBelow(target+1) and the CanonicalChecker
@@ -308,7 +308,7 @@ func (r *canonicalChainer) ancestorChain(ctx context.Context, tail block.SignedB
 		// compute hash_tree_root of current block and try to look up the corresponding state
 		root, err := b.HashTreeRoot()
 		if err != nil {
-			msg := fmt.Sprintf("could not compute htr for descendent block @ slot=%d", b.Slot())
+			msg := fmt.Sprintf("could not compute htr for descendant block @ slot=%d", b.Slot())
 			return nil, nil, errors.Wrap(err, msg)
 		}
 		st, err := r.h.StateOrError(ctx, root)
@@ -320,8 +320,8 @@ func (r *canonicalChainer) ancestorChain(ctx context.Context, tail block.SignedB
 			reverseChain(chain)
 			return st, chain, nil
 		}
-		// ErrStateNotFound errors are fine, but other errors mean something is wrong with the db
-		if !errors.Is(err, dberr.ErrStateNotFound) {
+		// ErrNotFoundState errors are fine, but other errors mean something is wrong with the db
+		if !errors.Is(err, db.ErrNotFoundState) {
 			return nil, nil, errors.Wrap(err, fmt.Sprintf("error querying database for state w/ block root = %#x", root))
 		}
 		parent, err := r.h.Block(ctx, bytesutil.ToBytes32(b.ParentRoot()))
@@ -331,7 +331,7 @@ func (r *canonicalChainer) ancestorChain(ctx context.Context, tail block.SignedB
 		}
 		if helpers.BeaconBlockIsNil(parent) != nil {
 			msg := fmt.Sprintf("unable to retrieve parent of block @ slot=%d by root=%#x", b.Slot(), b.ParentRoot())
-			return nil, nil, errors.Wrap(dberr.ErrNotFound, msg)
+			return nil, nil, errors.Wrap(db.ErrNotFound, msg)
 		}
 		chain = append(chain, tail)
 		tail = parent

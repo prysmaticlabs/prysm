@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/dberr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -56,7 +55,7 @@ func (s *Store) StateOrError(ctx context.Context, blockRoot [32]byte) (state.Bea
 		return nil, err
 	}
 	if st == nil || st.IsNil() {
-		return nil, errors.Wrap(dberr.ErrStateNotFound, fmt.Sprintf("no state with blockroot=%#x", blockRoot))
+		return nil, errors.Wrap(ErrNotFoundState, fmt.Sprintf("no state with blockroot=%#x", blockRoot))
 	}
 	return st, nil
 }
