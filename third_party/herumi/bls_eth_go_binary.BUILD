@@ -104,6 +104,9 @@ cc_library(
         "@io_bazel_rules_go//go/platform:darwin_amd64": [
             "bls/lib/darwin/amd64/libbls384_256.a",
         ],
+        "@io_bazel_rules_go//go/platform:darwin_arm64": [
+            "bls/lib/darwin/arm64/libbls384_256.a",
+        ],
         "@io_bazel_rules_go//go/platform:linux_amd64": [
             "bls/lib/linux/amd64/libbls384_256.a",
         ],
