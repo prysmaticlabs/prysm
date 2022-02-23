@@ -334,7 +334,8 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
-	return s.cfg.ForkChoiceStore.Optimistic(ctx, s.head.root, s.head.slot)
+	// TODO(10242): Optimistic status is always false until the merge. Use real optimistic status from forkchoice when ready.
+	return false, nil
 }
 
 // IsOptimisticForRoot takes the root and slot as aguments instead of the current head
