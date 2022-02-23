@@ -143,7 +143,7 @@ func Test_validateMergeBlock(t *testing.T) {
 
 	cfg.TerminalTotalDifficulty = "1"
 	params.OverrideBeaconConfig(cfg)
-	require.ErrorContains(t, "could not validate ttd, configTTD: 1, currentTTD: 2, parentTTD: 1", service.validateMergeBlock(ctx, b))
+	require.ErrorContains(t, "invalid TTD, configTTD: 1, currentTTD: 2, parentTTD: 1", service.validateMergeBlock(ctx, b))
 }
 
 func Test_getBlkParentHashAndTD(t *testing.T) {
