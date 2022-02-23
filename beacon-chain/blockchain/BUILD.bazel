@@ -109,6 +109,7 @@ go_test(
         "log_test.go",
         "metrics_test.go",
         "mock_test.go",
+        "mock_engine_test.go",
         "optimistic_sync_test.go",
         "pow_block_test.go",
         "process_attestation_test.go",
