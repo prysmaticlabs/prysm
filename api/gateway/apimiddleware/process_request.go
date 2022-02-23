@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -79,6 +80,9 @@ func (m *ApiProxyMiddleware) ProxyRequest(req *http.Request) (*http.Response, Er
 	netClient := &http.Client{Timeout: m.Timeout}
 	grpcResp, err := netClient.Do(req)
 	if err != nil {
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			return nil, TimeoutError()
+		}
 		return nil, InternalServerErrorWithMessage(err, "could not proxy request")
 	}
 	if grpcResp == nil {
@@ -110,9 +114,14 @@ func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []
 				w.Header().Set(h, v)
 			}
 		}
-		// Set code to HTTP code because unmarshalled body contained gRPC code.
-		errJson.SetCode(resp.StatusCode)
-		WriteError(w, errJson, resp.Header)
+		// Handle gRPC timeout.
+		if resp.StatusCode == http.StatusGatewayTimeout {
+			WriteError(w, TimeoutError(), resp.Header)
+		} else {
+			// Set code to HTTP code because unmarshalled body contained gRPC code.
+			errJson.SetCode(resp.StatusCode)
+			WriteError(w, errJson, resp.Header)
+		}
 	}
 	return responseHasError, nil
 }
