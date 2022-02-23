@@ -686,3 +686,35 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	assert.NotNil(t, err)
 	assert.Equal(t, pubsub.ValidationReject, res)
 }
+
+func TestValidateAggregateAndProof_Optimistic(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	exit, s := setupValidExit(t)
+
+	r := &Service{
+		cfg: &config{
+			p2p: p,
+			chain: &mock.ChainService{
+				State:      s,
+				Optimistic: true,
+			},
+			initialSync: &mockSync.Sync{IsSyncing: false},
+		},
+	}
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, exit)
+	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	res, err := r.validateAggregateAndProof(ctx, "", m)
+	_ = err
+	valid := res == pubsub.ValidationIgnore
+	assert.Equal(t, true, valid, "Validation should have ignored the message")
+}
