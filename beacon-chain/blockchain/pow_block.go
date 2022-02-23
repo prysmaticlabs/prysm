@@ -11,6 +11,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -37,6 +38,9 @@ import (
 //    # Check if `pow_block` is a valid terminal PoW block
 //    assert is_valid_terminal_pow_block(pow_block, pow_parent)
 func (s *Service) validateMergeBlock(ctx context.Context, b block.SignedBeaconBlock) error {
+	if err := helpers.BeaconBlockIsNil(b); err != nil {
+		return err
+	}
 	payload, err := b.Block().Body().ExecutionPayload()
 	if err != nil {
 		return err
@@ -55,12 +59,12 @@ func (s *Service) validateMergeBlock(ctx context.Context, b block.SignedBeaconBl
 	if err != nil {
 		return errors.Wrap(err, "could not get merge parent block total difficulty")
 	}
-	validated, err := validateTerminalBlockDifficulties(mergeBlockTD, mergeBlockParentTD)
+	valid, err := validateTerminalBlockDifficulties(mergeBlockTD, mergeBlockParentTD)
 	if err != nil {
 		return err
 	}
-	if !validated {
-		return fmt.Errorf("could not validate ttd, configTTD: %s, currentTTD: %s, parentTTD: %s",
+	if !valid {
+		return fmt.Errorf("invalid TTD, configTTD: %s, currentTTD: %s, parentTTD: %s",
 			params.BeaconConfig().TerminalTotalDifficulty, mergeBlockTD, mergeBlockParentTD)
 	}
 

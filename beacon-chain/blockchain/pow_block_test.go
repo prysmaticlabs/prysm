@@ -6,12 +6,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/holiman/uint256"
-	"github.com/pkg/errors"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -188,6 +185,13 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	}
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
 	require.ErrorContains(t, "could not decode merge block total difficulty: hex string without 0x prefix", err)
+
+	engine.blks[h] = &enginev1.ExecutionBlock{
+		ParentHash:      p[:],
+		TotalDifficulty: "0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+	}
+	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
+	require.ErrorContains(t, "could not decode merge block total difficulty: hex number > 256 bits", err)
 }
 
 func Test_validateTerminalBlockHash(t *testing.T) {
@@ -205,40 +209,3 @@ func Test_validateTerminalBlockHash(t *testing.T) {
 	require.NoError(t, validateTerminalBlockHash(1, &enginev1.ExecutionPayload{ParentHash: cfg.TerminalBlockHash.Bytes()}))
 }
 
-type mockEngineService struct {
-	blks map[[32]byte]*enginev1.ExecutionBlock
-}
-
-func (*mockEngineService) NewPayload(context.Context, *enginev1.ExecutionPayload) (*enginev1.PayloadStatus, error) {
-	return nil, nil
-}
-
-func (*mockEngineService) ForkchoiceUpdated(context.Context, *enginev1.ForkchoiceState, *enginev1.PayloadAttributes) (*v1.ForkchoiceUpdatedResponse, error) {
-	return nil, nil
-}
-
-func (*mockEngineService) GetPayloadV1(
-	_ context.Context, _ enginev1.PayloadIDBytes,
-) *enginev1.ExecutionPayload {
-	return nil
-}
-
-func (*mockEngineService) GetPayload(context.Context, [8]byte) (*enginev1.ExecutionPayload, error) {
-	return nil, nil
-}
-
-func (*mockEngineService) ExchangeTransitionConfiguration(context.Context, *enginev1.TransitionConfiguration) (*enginev1.TransitionConfiguration, error) {
-	return nil, nil
-}
-
-func (*mockEngineService) LatestExecutionBlock(context.Context) (*enginev1.ExecutionBlock, error) {
-	return nil, nil
-}
-
-func (m *mockEngineService) ExecutionBlockByHash(_ context.Context, hash common.Hash) (*enginev1.ExecutionBlock, error) {
-	blk, ok := m.blks[common.BytesToHash(hash.Bytes())]
-	if !ok {
-		return nil, errors.New("block not found")
-	}
-	return blk, nil
-}
