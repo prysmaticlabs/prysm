@@ -46,4 +46,3 @@ func (m *mockEngineService) ExecutionBlockByHash(_ context.Context, hash common.
 	}
 	return blk, nil
 }
-

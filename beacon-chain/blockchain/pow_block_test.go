@@ -208,4 +208,3 @@ func Test_validateTerminalBlockHash(t *testing.T) {
 
 	require.NoError(t, validateTerminalBlockHash(1, &enginev1.ExecutionPayload{ParentHash: cfg.TerminalBlockHash.Bytes()}))
 }
-
