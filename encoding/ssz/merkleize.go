@@ -35,7 +35,7 @@ func Depth(v uint64) (out uint8) {
 	// Zero is a special case, it has a 0 depth.
 	// Example:
 	//  (in out): (0 0), (1 1), (2 1), (3 2), (4 2), (5 3), (6 3), (7 3), (8 3), (9 4)
-	if v == 0 {
+	if v <= 1 {
 		return 0
 	}
 	v--
