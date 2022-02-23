@@ -293,3 +293,34 @@ func TestSeenAttesterSlashingIndices(t *testing.T) {
 		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(tc.checkIndices1, tc.checkIndices2))
 	}
 }
+
+func TestValidateAttesterSlashing_Optimistic(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	slashing, s := setupValidAttesterSlashing(t)
+
+	r := &Service{
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s, Optimistic: true},
+			initialSync: &mockSync.Sync{IsSyncing: false},
+		},
+	}
+
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
+	require.NoError(t, err)
+
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	_ = err
+	valid := res == pubsub.ValidationIgnore
+	assert.Equal(t, true, valid, "Should have ignore this message")
+}

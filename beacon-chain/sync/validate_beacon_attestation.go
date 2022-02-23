@@ -40,6 +40,17 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
+
+	// We should not attempt to process this message if the node is running in optimistic mode.
+	// We just ignore in p2p so that the peer is not penalized.
+	status, err := s.cfg.chain.IsOptimistic(ctx)
+	if err != nil {
+		return pubsub.ValidationReject, nil
+	}
+	if status {
+		return pubsub.ValidationIgnore, nil
+	}
+
 	ctx, span := trace.StartSpan(ctx, "sync.validateCommitteeIndexBeaconAttestation")
 	defer span.End()
 
