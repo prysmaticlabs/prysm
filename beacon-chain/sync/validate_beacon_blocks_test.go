@@ -1221,7 +1221,7 @@ func Test_validateBellatrixBeaconBlock(t *testing.T) {
 	b := util.NewBeaconBlockBellatrix()
 	blk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.ErrorContains(t, "block and state are not the same version", r.validateBellatrixBeaconBlock(ctx,st, blk.Block()))
+	require.ErrorContains(t, "block and state are not the same version", r.validateBellatrixBeaconBlock(ctx, st, blk.Block()))
 }
 
 func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
@@ -1244,12 +1244,11 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
 	require.NoError(t, err)
 
-	presentTime := time.Now().Unix()
 	msg := util.NewBeaconBlockBellatrix()
 	msg.Block.ParentRoot = bRoot[:]
 	msg.Block.Slot = 1
 	msg.Block.ProposerIndex = proposerIdx
-	msg.Block.Body.ExecutionPayload.Timestamp = uint64(presentTime)
+	msg.Block.Body.ExecutionPayload.Timestamp = beaconState.GenesisTime() + params.BeaconConfig().SecondsPerSlot
 	msg.Block.Body.ExecutionPayload.GasUsed = 10
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
@@ -1259,8 +1258,8 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-
-	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
+	chainService := &mock.ChainService{Genesis: time.Unix(int64(beaconState.GenesisTime()), 0),
+		Optimistic: true,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
@@ -1277,26 +1276,8 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
 	}
-	//
-	//
-	//buf := new(bytes.Buffer)
-	//_, err = p.Encoding().EncodeGossip(buf, msg)
-	//require.NoError(t, err)
-	//topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	//genesisValidatorsRoot := r.cfg.chain.GenesisValidatorsRoot()
-	//BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
-	//assert.NoError(t, err)
-	//topic = r.addDigestToTopic(topic, BellatrixDigest)
-	//m := &pubsub.Message{
-	//	Message: &pubsubpb.Message{
-	//		Data:  buf.Bytes(),
-	//		Topic: &topic,
-	//	},
-	//}
 
-	st, _ := util.DeterministicGenesisStateAltair(t, 1)
 	blk, err := wrapper.WrappedSignedBeaconBlock(msg)
 	require.NoError(t, err)
-	require.ErrorContains(t, "block and state are not the same version", r.validateBellatrixBeaconBlock(ctx,st, blk.Block()))
-
+	require.ErrorContains(t, "parent of the block is optimistic", r.validateBellatrixBeaconBlock(ctx, beaconState, blk.Block()))
 }

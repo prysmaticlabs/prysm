@@ -31,7 +31,6 @@ var (
 	ErrOptimisticParent = errors.New("parent of the block is optimistic")
 )
 
-
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
 // this method rebroadcasts the message.
@@ -280,7 +279,7 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	}
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
-	isParentOptimistic , err := s.cfg.headFetcher.IsOptimisticForRoot(ctx, parentRoot, parentState.Slot())
+	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, parentRoot, parentState.Slot())
 	if err != nil {
 		return err
 	}
