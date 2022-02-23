@@ -357,6 +357,7 @@ func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
 }
 
 func TestService_IsOptimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig()
 	cfg.BellatrixForkEpoch = 0
 	params.OverrideBeaconConfig(cfg)
