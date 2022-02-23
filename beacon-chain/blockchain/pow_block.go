@@ -49,7 +49,7 @@ func (s *Service) validateMergeBlock(ctx context.Context, b block.SignedBeaconBl
 	}
 	mergeBlockParentHash, mergeBlockTD, err := s.getBlkParentHashAndTD(ctx, payload.ParentHash)
 	if err != nil {
-		return errors.Wrap(err, "could not get merge block total difficulty")
+		return errors.Wrap(err, "could not get merge block parent hash and total difficulty")
 	}
 	_, mergeBlockParentTD, err := s.getBlkParentHashAndTD(ctx, mergeBlockParentHash)
 	if err != nil {
