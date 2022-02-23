@@ -1,7 +1,6 @@
 package wrapper
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -45,7 +44,7 @@ func (m BlockMutator) Apply(b block.SignedBeaconBlock) error {
 	return errors.Wrap(ErrUnsupportedSignedBeaconBlock, msg)
 }
 
-func SetBlockStateRoot(ctx context.Context, b block.SignedBeaconBlock, sr [32]byte) error {
+func SetBlockStateRoot(b block.SignedBeaconBlock, sr [32]byte) error {
 	return BlockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.StateRoot = sr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.StateRoot = sr[:] },

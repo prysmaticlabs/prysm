@@ -93,7 +93,7 @@ func (m slotList) Swap(i, j int) {
 	m[i], m[j] = m[j], m[i]
 }
 
-func (m *mockHistory) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]block.SignedBeaconBlock, error) {
+func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot) ([]block.SignedBeaconBlock, error) {
 	if len(m.slotIndex) == 0 && len(m.slotMap) > 0 {
 		for k, _ := range m.slotMap {
 			m.slotIndex = append(m.slotIndex, k)
@@ -108,7 +108,7 @@ func (m *mockHistory) HighestSlotBlocksBelow(ctx context.Context, slot types.Slo
 	return []block.SignedBeaconBlock{}, nil
 }
 
-func (m *mockHistory) GenesisBlock(ctx context.Context) (block.SignedBeaconBlock, error) {
+func (m *mockHistory) GenesisBlock(_ context.Context) (block.SignedBeaconBlock, error) {
 	genesisRoot, ok := m.slotMap[0]
 	if !ok {
 		return nil, ErrGenesisBlockNotFound
@@ -116,21 +116,21 @@ func (m *mockHistory) GenesisBlock(ctx context.Context) (block.SignedBeaconBlock
 	return m.blocks[genesisRoot], nil
 }
 
-func (m *mockHistory) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
+func (m *mockHistory) Block(_ context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
 	if b, ok := m.blocks[blockRoot]; ok {
 		return b, nil
 	}
 	return nil, nil
 }
 
-func (m *mockHistory) StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+func (m *mockHistory) StateOrError(_ context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	if s, ok := m.states[blockRoot]; ok {
 		return s, nil
 	}
 	return nil, db.ErrNotFoundState
 }
 
-func (m *mockHistory) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
+func (m *mockHistory) IsCanonical(_ context.Context, blockRoot [32]byte) (bool, error) {
 	canon, ok := m.canonical[blockRoot]
 	return ok && canon, nil
 }
@@ -229,7 +229,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 
 		sr, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
-		err = wrapper.SetBlockStateRoot(ctx, b, sr)
+		err = wrapper.SetBlockStateRoot(b, sr)
 		require.NoError(t, err)
 
 		pr, err = b.Block().HashTreeRoot()
