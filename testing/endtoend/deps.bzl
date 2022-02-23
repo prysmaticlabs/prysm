@@ -6,10 +6,12 @@ lighthouse_archive_name = "lighthouse-%s-x86_64-unknown-linux-gnu-portable.tar.g
 def e2e_deps():
     http_archive(
         name = "web3signer",
-        urls = ["https://artifacts.consensys.net/public/web3signer/raw/names/web3signer.tar.gz/versions/21.10.5/web3signer-21.10.5.tar.gz"],
-        sha256 = "d122429f6a310bc555d1281e0b3f4e3ac43a7beec5e5dcf0a0d2416a5984f461",
+        # Built from commit 196462 part of an in progress PR:
+        # https://github.com/ConsenSys/web3signer/pull/515
+	    urls = ["https://prysmaticlabs.com/uploads/web3signer-196462.tar.gz"],
+	    sha256 = "c7af370044afaf8cb096c852f600600c674669da3b0547900cf4d38a3aca52bb",
         build_file = "@prysm//testing/endtoend:web3signer.BUILD",
-        strip_prefix = "web3signer-21.10.5",
+	    strip_prefix = "web3signer-develop",
     )
 
     http_archive(

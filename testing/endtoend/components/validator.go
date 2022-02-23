@@ -150,7 +150,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		args = append(args, features.E2EValidatorFlags...)
 	}
 	if v.config.UseWeb3RemoteSigner {
-		args = append(args, fmt.Sprintf("--%s=localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
+		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
 		// Write the pubkeys as comma seperated hex strings with 0x prefix.
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
 		_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
