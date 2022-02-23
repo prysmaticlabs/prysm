@@ -34,7 +34,7 @@ func Depth(v uint64) (out uint8) {
 	// Then adding 1 to it to not get the index of the first bit, but the length of the bits (depth of tree)
 	// Zero is a special case, it has a 0 depth.
 	// Example:
-	//  (in out): (0 0), (1 1), (2 1), (3 2), (4 2), (5 3), (6 3), (7 3), (8 3), (9 4)
+	//  (in out): (0 0), (1 0), (2 1), (3 2), (4 2), (5 3), (6 3), (7 3), (8 3), (9 4)
 	if v <= 1 {
 		return 0
 	}
