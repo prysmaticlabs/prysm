@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -334,8 +335,11 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
-	// TODO(10242): Optimistic status is always false until the merge. Use real optimistic status from forkchoice when ready.
-	return false, nil
+	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
+		return false, nil
+	}
+
+	return s.cfg.ForkChoiceStore.Optimistic(ctx, s.head.root, s.head.slot)
 }
 
 // IsOptimisticForRoot takes the root and slot as aguments instead of the current head
