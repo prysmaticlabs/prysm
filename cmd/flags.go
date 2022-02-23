@@ -4,7 +4,6 @@ package cmd
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
@@ -250,11 +249,11 @@ var (
 		Usage: "Specifies the size in bytes of bolt db's mmap syscall allocation",
 		Value: 536870912, // 512 Mb as a default value.
 	}
-	// ApiTimeoutFlag specifies the timeout value for API requests in minutes. A timeout of zero means no timeout.
+	// ApiTimeoutFlag specifies the timeout value for API requests in seconds. A timeout of zero means no timeout.
 	ApiTimeoutFlag = &cli.IntFlag{
 		Name:  "api-timeout",
-		Usage: "Specifies the timeout value for API requests in minutes",
-		Value: int(2 * time.Minute),
+		Usage: "Specifies the timeout value for API requests in seconds",
+		Value: 120,
 	}
 )
 
