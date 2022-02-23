@@ -264,5 +264,5 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 	resp, err := km.FetchValidatingPublicKeys(ctx)
 	assert.NotNil(t, err)
 	assert.Nil(t, resp)
-	assert.Equal(t, fmt.Errorf("mock error"), err)
+	assert.Equal(t, "could not get public keys from remote server url: http://example2.com/api/v1/eth2/publicKeys: mock error", fmt.Sprintf("%v", err))
 }
