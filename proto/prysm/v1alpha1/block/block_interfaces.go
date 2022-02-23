@@ -38,6 +38,7 @@ type BeaconBlock interface {
 	Proto() proto.Message
 	ssz.Marshaler
 	ssz.Unmarshaler
+	ssz.HashRoot
 	Version() int
 }
 

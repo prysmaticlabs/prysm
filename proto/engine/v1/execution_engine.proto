@@ -35,10 +35,10 @@ message ExecutionBlock {
 	bytes receipts_root         = 8;
 	bytes logs_bloom            = 9;
 	bytes difficulty            = 10;
-	bytes total_difficulty      = 11;
+	string total_difficulty     = 11;
 	uint64 gas_limit            = 12;
 	uint64 gas_used             = 13;
-	bytes  base_fee_per_gas     = 14;
+	bytes base_fee_per_gas      = 14;
 	bytes size                  = 15;
 	uint64 timestamp            = 16;
 	bytes extra_data            = 17;
@@ -63,6 +63,12 @@ message ExecutionPayload {
 	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
 	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
+}
+
+message TransitionConfiguration {
+	string terminal_total_difficulty = 1;
+	bytes terminal_block_hash        = 2;
+	bytes terminal_block_number      = 3;
 }
 
 message PayloadAttributes {

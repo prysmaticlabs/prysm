@@ -79,6 +79,7 @@ go_library(
 	    "@com_github_ferranbt_fastssz//:go_default_library",
 	    "//encoding/bytesutil:go_default_library",
 	    "//config/fieldparams:go_default_library",
+	    "//config/params:go_default_library",
     ],  # keep
 )
 
@@ -93,5 +94,6 @@ go_test(
         "//testing/require:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
 	    "//config/fieldparams:go_default_library",
+	    "//config/params:go_default_library",
     ],
 )

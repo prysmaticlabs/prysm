@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -76,7 +78,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 			// `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
 			isActivationEpochReached := params.BeaconConfig().TerminalBlockHashActivationEpoch <= slots.ToEpoch(slot)
 			if !isActivationEpochReached {
-				return blocks.EmptyPayload(), nil
+				return emptyPayload(), nil
 			}
 		}
 
@@ -86,7 +88,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 		}
 		if !hasTerminalBlock {
 			// No terminal block signals this is pre merge, empty payload is used.
-			return blocks.EmptyPayload(), nil
+			return emptyPayload(), nil
 		}
 		// Terminal block found signals production on top of terminal PoW block.
 	} else {
@@ -199,11 +201,10 @@ func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) ([]byte, bool, error) {
 	ttd := new(big.Int)
 	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
-	terminalTotalDifficulty, of := uint256.FromBig(ttd)
-	if of {
+	terminalTotalDifficulty, overflows := uint256.FromBig(ttd)
+	if overflows {
 		return nil, false, errors.New("could not convert terminal total difficulty to uint256")
 	}
-
 	blk, err := vs.ExecutionEngineCaller.LatestExecutionBlock(ctx)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "could not get latest execution block")
@@ -215,8 +216,14 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	}).Info("Retrieving latest execution block")
 
 	for {
-		currentTotalDifficulty := new(uint256.Int)
-		currentTotalDifficulty.SetBytes(bytesutil.ReverseByteOrder(blk.TotalDifficulty))
+		transitionBlkTDBig, err := hexutil.DecodeBig(blk.TotalDifficulty)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
+		}
+		currentTotalDifficulty, overflows := uint256.FromBig(transitionBlkTDBig)
+		if overflows {
+			return nil, false, errors.New("total difficulty overflowed")
+		}
 		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 		parentHash := bytesutil.ToBytes32(blk.ParentHash)
 		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
@@ -233,8 +240,14 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 		}).Info("Retrieving parent execution block")
 
 		if blockReachedTTD {
-			parentTotalDifficulty := new(uint256.Int)
-			parentTotalDifficulty.SetBytes(bytesutil.ReverseByteOrder(parentBlk.TotalDifficulty))
+			parentTDBig, err := hexutil.DecodeBig(parentBlk.TotalDifficulty)
+			if err != nil {
+				return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
+			}
+			parentTotalDifficulty, overflows := uint256.FromBig(parentTDBig)
+			if overflows {
+				return nil, false, errors.New("total difficulty overflowed")
+			}
 			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 			if !parentReachedTTD {
 				log.WithFields(logrus.Fields{
@@ -248,5 +261,18 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 			}
 		}
 		blk = parentBlk
+	}
+}
+
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		Random:        make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
 	}
 }

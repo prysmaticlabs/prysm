@@ -19,4 +19,10 @@ var (
 	ErrUnknownPayload = errors.New("payload does not exist or is not available")
 	// ErrUnsupportedScheme for unsupported URL schemes.
 	ErrUnsupportedScheme = errors.New("unsupported url scheme, only http(s) and ipc are supported")
+	// ErrMismatchTerminalBlockHash when the terminal block hash value received via
+	// the API mismatches Prysm's configuration value.
+	ErrMismatchTerminalBlockHash = errors.New("terminal block hash mismatch")
+	// ErrMismatchTerminalTotalDiff when the terminal total difficulty value received via
+	// the API mismatches Prysm's configuration value.
+	ErrMismatchTerminalTotalDiff = errors.New("terminal total difficulty mismatch")
 )
