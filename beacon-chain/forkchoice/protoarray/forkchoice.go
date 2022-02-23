@@ -234,13 +234,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 			newBalance = newBalances[index]
 		}
 
-		// Skip if validator has never voted for current root and next root (i.e. if the
-		// votes are zero hash aka genesis block), there's nothing to compute.
-		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
-			continue
-		}
-
-		// Perform delta only if the validator's balance or vote has changed.
+		// Update only if the validator's balance or vote has changed.
 		if vote.currentRoot != vote.nextRoot || oldBalance != newBalance {
 			// Ignore the vote if the root is not in fork choice
 			// store, that means we have not seen the block before.
