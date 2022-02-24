@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/grpc"
@@ -75,11 +75,14 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *h
 }
 
 // ProxyRequest proxies the request to grpc-gateway.
-func ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
+func (m *ApiProxyMiddleware) ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
 	// We do not use http.DefaultClient because it does not have any timeout.
-	netClient := &http.Client{Timeout: time.Minute * 2}
+	netClient := &http.Client{Timeout: m.Timeout}
 	grpcResp, err := netClient.Do(req)
 	if err != nil {
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			return nil, TimeoutError()
+		}
 		return nil, InternalServerErrorWithMessage(err, "could not proxy request")
 	}
 	if grpcResp == nil {
@@ -111,9 +114,14 @@ func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []
 				w.Header().Set(h, v)
 			}
 		}
-		// Set code to HTTP code because unmarshalled body contained gRPC code.
-		errJson.SetCode(resp.StatusCode)
-		WriteError(w, errJson, resp.Header)
+		// Handle gRPC timeout.
+		if resp.StatusCode == http.StatusGatewayTimeout {
+			WriteError(w, TimeoutError(), resp.Header)
+		} else {
+			// Set code to HTTP code because unmarshalled body contained gRPC code.
+			errJson.SetCode(resp.StatusCode)
+			WriteError(w, errJson, resp.Header)
+		}
 	}
 	return responseHasError, nil
 }

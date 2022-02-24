@@ -515,6 +515,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	timeout := cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
 		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
@@ -580,6 +581,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gateway.WithAllowedOrigins(allowedOrigins),
 		gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}),
 		gateway.WithMuxHandler(muxHandler),
+		gateway.WithTimeout(uint64(timeout)),
 	}
 	gw, err := gateway.New(cliCtx.Context, opts...)
 	if err != nil {

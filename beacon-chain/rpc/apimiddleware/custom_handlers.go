@@ -74,7 +74,7 @@ func handleGetSSZ(
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
-	grpcResponse, errJson := apimiddleware.ProxyRequest(req)
+	grpcResponse, errJson := m.ProxyRequest(req)
 	if errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
