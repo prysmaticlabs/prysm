@@ -51,7 +51,7 @@ func TestClient_IPC(t *testing.T) {
 		require.DeepEqual(t, want.PayloadId, payloadID)
 	})
 	t.Run(NewPayloadMethod, func(t *testing.T) {
-		want, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
+		want, ok := fix["ValidPayloadStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
@@ -142,44 +142,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			forkChoiceStateReq, err := json.Marshal(forkChoiceState)
-			require.NoError(t, err)
-			payloadAttrsReq, err := json.Marshal(payloadAttributes)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(forkChoiceStateReq),
-			))
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(payloadAttrsReq),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
@@ -200,44 +163,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		want, ok := fix["ForkchoiceUpdatedSyncingResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			forkChoiceStateReq, err := json.Marshal(forkChoiceState)
-			require.NoError(t, err)
-			payloadAttrsReq, err := json.Marshal(payloadAttributes)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(forkChoiceStateReq),
-			))
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(payloadAttrsReq),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
@@ -258,44 +184,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		want, ok := fix["ForkchoiceUpdatedInvalidResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			forkChoiceStateReq, err := json.Marshal(forkChoiceState)
-			require.NoError(t, err)
-			payloadAttrsReq, err := json.Marshal(payloadAttributes)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(forkChoiceStateReq),
-			))
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(payloadAttrsReq),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
@@ -316,44 +205,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		want, ok := fix["ForkchoiceUpdatedAcceptedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			forkChoiceStateReq, err := json.Marshal(forkChoiceState)
-			require.NoError(t, err)
-			payloadAttrsReq, err := json.Marshal(payloadAttributes)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(forkChoiceStateReq),
-			))
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(payloadAttrsReq),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
@@ -374,44 +226,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		want, ok := fix["ForkchoiceUpdatedInvalidTerminalBlockResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			forkChoiceStateReq, err := json.Marshal(forkChoiceState)
-			require.NoError(t, err)
-			payloadAttrsReq, err := json.Marshal(payloadAttributes)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(forkChoiceStateReq),
-			))
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(payloadAttrsReq),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
@@ -422,40 +237,9 @@ func TestClient_HTTP(t *testing.T) {
 	t.Run(NewPayloadMethod+" VALID status", func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
-		want, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
+		want, ok := fix["ValidPayloadStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			reqArg, err := json.Marshal(execPayload)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(reqArg),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.NewPayload(ctx, execPayload)
@@ -467,38 +251,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.Equal(t, true, ok)
 		want, ok := fix["SyncingStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			reqArg, err := json.Marshal(execPayload)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(reqArg),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.NewPayload(ctx, execPayload)
@@ -510,38 +263,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.Equal(t, true, ok)
 		want, ok := fix["InvalidBlockHashStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			reqArg, err := json.Marshal(execPayload)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(reqArg),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.NewPayload(ctx, execPayload)
@@ -553,38 +275,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.Equal(t, true, ok)
 		want, ok := fix["InvalidTerminalBlockStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			reqArg, err := json.Marshal(execPayload)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(reqArg),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.NewPayload(ctx, execPayload)
@@ -596,38 +287,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.Equal(t, true, ok)
 		want, ok := fix["InvalidStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			reqArg, err := json.Marshal(execPayload)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(reqArg),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.NewPayload(ctx, execPayload)
@@ -639,38 +299,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.Equal(t, true, ok)
 		want, ok := fix["UnknownStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			defer func() {
-				require.NoError(t, r.Body.Close())
-			}()
-			enc, err := ioutil.ReadAll(r.Body)
-			require.NoError(t, err)
-			jsonRequestString := string(enc)
-
-			reqArg, err := json.Marshal(execPayload)
-			require.NoError(t, err)
-
-			// We expect the JSON string RPC request contains the right arguments.
-			require.Equal(t, true, strings.Contains(
-				jsonRequestString, string(reqArg),
-			))
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      1,
-				"result":  want,
-			}
-			err = json.NewEncoder(w).Encode(resp)
-			require.NoError(t, err)
-		}))
-		defer srv.Close()
-
-		rpcClient, err := rpc.DialHTTP(srv.URL)
-		require.NoError(t, err)
-		defer rpcClient.Close()
-
-		client := &Client{}
-		client.rpc = rpcClient
+		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.NewPayload(ctx, execPayload)
@@ -1166,9 +795,83 @@ func (*testEngineService) NewPayloadV1(
 	_ context.Context, _ *pb.ExecutionPayload,
 ) *pb.PayloadStatus {
 	fix := fixtures()
-	item, ok := fix["PayloadStatus"].(*pb.PayloadStatus)
+	item, ok := fix["ValidPayloadStatus"].(*pb.PayloadStatus)
 	if !ok {
 		panic("not found")
 	}
 	return item
+}
+
+func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.PayloadAttributes, res *ForkchoiceUpdatedResponse) *Client {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+		enc, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		jsonRequestString := string(enc)
+
+		forkChoiceStateReq, err := json.Marshal(fcs)
+		require.NoError(t, err)
+		payloadAttrsReq, err := json.Marshal(att)
+		require.NoError(t, err)
+
+		// We expect the JSON string RPC request contains the right arguments.
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(forkChoiceStateReq),
+		))
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(payloadAttrsReq),
+		))
+		resp := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  res,
+		}
+		err = json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
+	}))
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+
+	client := &Client{}
+	client.rpc = rpcClient
+
+	return client
+}
+
+func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.ExecutionPayload) *Client {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+		enc, err := ioutil.ReadAll(r.Body)
+		require.NoError(t, err)
+		jsonRequestString := string(enc)
+
+		reqArg, err := json.Marshal(payload)
+		require.NoError(t, err)
+
+		// We expect the JSON string RPC request contains the right arguments.
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(reqArg),
+		))
+		resp := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  status,
+		}
+		err = json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
+	}))
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+
+	client := &Client{}
+	client.rpc = rpcClient
+	return client
 }
