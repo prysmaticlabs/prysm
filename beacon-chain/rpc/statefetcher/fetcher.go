@@ -194,10 +194,11 @@ func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.B
 	return nil, &stateNotFoundErr
 }
 
-// StateBySlot returns a state that has had process_block applied to the state if a
-// canonical block is available for the slot, otherwise process_block will have been applied
-// to all states w/ canonical blocks leading up to and including the requested slot, w/ process_slots applied
-// for all subsequent slots.
+// StateBySlot returns the post-state for the requested slot. To generate the state, it uses the
+// most recent canonical state prior to the target slot, and all canonical blocks
+// between the found state's slot and the target slot.
+// process_blocks is applied for all canonical blocks, and process_slots is called for any skipped
+// slots, or slots following the most recent canonical block up to and including the target slot.
 func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
