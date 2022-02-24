@@ -44,7 +44,7 @@ func (_ MockSignedBeaconBlock) PbBellatrixBlock() (*ethpb.SignedBeaconBlockBella
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (_ MockSignedBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
 	panic("implement me")
 }
 
@@ -56,7 +56,7 @@ func (_ MockSignedBeaconBlock) SizeSSZ() int {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
+func (_ MockSignedBeaconBlock) UnmarshalSSZ(_ []byte) error {
 	panic("implement me")
 }
 
@@ -107,7 +107,7 @@ func (_ MockBeaconBlock) Proto() proto.Message {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (_ MockBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
 	panic("implement me")
 }
 
@@ -119,11 +119,11 @@ func (_ MockBeaconBlock) SizeSSZ() int {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) UnmarshalSSZ(buf []byte) error {
+func (_ MockBeaconBlock) UnmarshalSSZ(_ []byte) error {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) HashTreeRootWith(hh *ssz.Hasher) error {
+func (_ MockBeaconBlock) HashTreeRootWith(_ *ssz.Hasher) error {
 	panic("implement me")
 }
 
