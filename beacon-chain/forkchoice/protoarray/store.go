@@ -16,7 +16,7 @@ const defaultPruneThreshold = 256
 
 // This defines the largest staked power that an attacker is willing to
 // spend in an attack to "safe head"
-const safeHeadAttackersWeight = uint64(4096 * 32 * 10^9)
+const safeHeadAttackersWeight = uint64(4096 * 32000000000)
 
 // applyProposerBoostScore applies the current proposer boost scores to the
 // relevant nodes
@@ -247,7 +247,7 @@ func (s *Store) TreeRoot() *Node {
 	return s.treeRootNode
 }
 
-// Safe returns whether the block is considered safe with respect to 
+// Safe returns whether the block is considered safe with respect to
 // synchronicity assumptions on the network and how much an attacker is willing
 // to spend
 func (s *Store) Safe(ctx context.Context, root [32]byte, committeeWeight uint64) (bool, error) {
@@ -260,7 +260,7 @@ func (s *Store) Safe(ctx context.Context, root [32]byte, committeeWeight uint64)
 		return false, nil
 	}
 
-	potentialVotes := uint64(s.headNode.slot - node.slot + 1) * committeeWeight
+	potentialVotes := uint64(s.headNode.slot-node.slot+1) * committeeWeight
 	actualVotes := node.weight
 
 	tailWeight := uint64(0)
@@ -274,5 +274,5 @@ func (s *Store) Safe(ctx context.Context, root [32]byte, committeeWeight uint64)
 
 	s.proposerBoostLock.RLock()
 	defer s.proposerBoostLock.RUnlock()
-	return potentialVotes + 2 * actualVotes > potentialVotes + safeHeadAttackersWeight + s.previousProposerBoostScore , nil
+	return potentialVotes+2*actualVotes > potentialVotes+safeHeadAttackersWeight+s.previousProposerBoostScore, nil
 }
