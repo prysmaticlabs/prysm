@@ -36,7 +36,7 @@ func (s *Service) checkTransitionConfiguration(ctx context.Context) {
 		if errors.Is(err, v1.ErrConfigMismatch) {
 			log.WithError(err).Fatal(configMismatchLog)
 		}
-		log.WithError(err).Error(configMismatchLog)
+		log.WithError(err).Error("Could not check configuration values between execution and consensus client")
 	}
 
 	// We poll the execution client to see if the transition configuration has changed.
