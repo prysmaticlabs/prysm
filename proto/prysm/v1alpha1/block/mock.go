@@ -16,7 +16,7 @@ func (m MockSignedBeaconBlock) Block() BeaconBlock {
 	return m.BeaconBlock
 }
 
-func (m MockSignedBeaconBlock) Signature() []byte {
+func (_ MockSignedBeaconBlock) Signature() []byte {
 	panic("implement me")
 }
 
@@ -24,47 +24,47 @@ func (m MockSignedBeaconBlock) IsNil() bool {
 	return m.BeaconBlock == nil || m.Block().IsNil()
 }
 
-func (m MockSignedBeaconBlock) Copy() SignedBeaconBlock {
+func (_ MockSignedBeaconBlock) Copy() SignedBeaconBlock {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) Proto() proto.Message {
+func (_ MockSignedBeaconBlock) Proto() proto.Message {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) PbPhase0Block() (*ethpb.SignedBeaconBlock, error) {
+func (_ MockSignedBeaconBlock) PbPhase0Block() (*ethpb.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error) {
+func (_ MockSignedBeaconBlock) PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error) {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error) {
+func (_ MockSignedBeaconBlock) PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error) {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (_ MockSignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
+func (_ MockSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) SizeSSZ() int {
+func (_ MockSignedBeaconBlock) SizeSSZ() int {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
+func (_ MockSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) Version() int {
+func (_ MockSignedBeaconBlock) Version() int {
 	panic("implement me")
 }
 
-func (m MockSignedBeaconBlock) Header() (*ethpb.SignedBeaconBlockHeader, error) {
+func (_ MockSignedBeaconBlock) Header() (*ethpb.SignedBeaconBlockHeader, error) {
 	panic("implement me")
 }
 
