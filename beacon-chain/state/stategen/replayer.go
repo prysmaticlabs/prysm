@@ -30,8 +30,8 @@ type HistoryAccessor interface {
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 }
 
-// CanonicalChecker is used by the Replayer to find the highest canonical block in the database <= the target slot
-// in practice this should be satisfied by a type that uses the fork choice store.
+// CanonicalChecker is used by the Replayer to find the highest canonical block in the database <= the target slot.
+// In practice this should be satisfied by a type that uses the fork choice store.
 type CanonicalChecker interface {
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
 }
