@@ -337,10 +337,7 @@ func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.
 	if err != nil {
 		return nil, err
 	}
-	st, err := vs.ReplayerBuilder.ForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
-	if err != nil {
-		return nil, err
-	}
+	// replay to first slot of following epoch
 	return vs.ReplayerBuilder.ForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
 }
 
