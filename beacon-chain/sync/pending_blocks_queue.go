@@ -15,12 +15,11 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
-	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
 )
 
@@ -328,7 +327,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if ssz.DeepEqual(blk.Proto(), b.Proto()) {
+		if equality.DeepEqual(blk.Proto(), b.Proto()) {
 			continue
 		}
 		newBlks = append(newBlks, blk)

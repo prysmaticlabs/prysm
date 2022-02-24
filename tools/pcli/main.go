@@ -13,14 +13,13 @@ import (
 	"github.com/kr/pretty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func main() {
@@ -191,7 +190,7 @@ func main() {
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}
-					if !ssz.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
+					if !equality.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
 						diff, _ := messagediff.PrettyDiff(expectedState, postState.InnerStateUnsafe())
 						log.Errorf("Derived state differs from provided post state: %s", diff)
 					}
