@@ -816,7 +816,7 @@ func (s *Service) validateTerminalBlock(ctx context.Context, b block.SignedBeaco
 		"transitionBlockParentTotalDifficulty": parentBlkTTD,
 	}).Info("Validating terminal block")
 
-	validated, err := validTerminalPowBlock(transitionBlkTTD, parentBlkTTD)
+	validated, err := validateTerminalBlockDifficulties(transitionBlkTTD, parentBlkTTD)
 	if err != nil {
 		return err
 	}
