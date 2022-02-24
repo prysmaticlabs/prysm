@@ -66,7 +66,7 @@ func (client *ApiClient) Sign(ctx context.Context, pubKey string, request SignRe
 		return nil, fmt.Errorf("public key not found")
 	}
 	if resp.StatusCode == http.StatusPreconditionFailed {
-		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Signing Request Body: %v, Full Response: %v", client.BaseURL.String()+requestPath, string(request), resp)
+		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Status: %v", client.BaseURL.String()+requestPath, resp.StatusCode)
 	}
 
 	return unmarshalSignatureResponse(resp.Body)
@@ -150,17 +150,26 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 		signRequestDurationSeconds.WithLabelValues(req.Method, strconv.Itoa(resp.StatusCode)).Observe(duration.Seconds())
 	}
 	if resp.StatusCode != http.StatusOK {
-		requestDump, err = httputil.DumpRequest(req, true)
+		requestDump, err = httputil.DumpRequestOut(req, true)
 		if err != nil {
 			return nil, err
 		}
+		responseDump, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, err
+		}
+		log.Error("web3signer request failed",
+			"status", resp.StatusCode,
+			"request", string(requestDump),
+			"response", string(responseDump),
+		)
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
-		err = fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request: %s, Full Response: %v", fullPath, string(requestDump), resp)
+		err = fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v Status: %v", fullPath, resp.StatusCode)
 		tracing.AnnotateError(span, err)
 		return nil, err
 	} else if resp.StatusCode == http.StatusBadRequest {
-		err = fmt.Errorf("bad request format, Signing Request URL: %v, Signing Request: %v, Full Response: %v", fullPath, string(requestDump), resp)
+		err = fmt.Errorf("bad request format, Signing Request URL: %v Status: %v", fullPath, resp.StatusCode)
 		tracing.AnnotateError(span, err)
 		return nil, err
 	}
