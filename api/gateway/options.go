@@ -83,10 +83,11 @@ func WithApiMiddleware(endpointFactory apimiddleware.EndpointFactory) Option {
 	}
 }
 
-func WithTimeout(timeout uint64) Option {
+// WithTimeout allows changing the timeout value for API calls.
+func WithTimeout(seconds uint64) Option {
 	return func(g *Gateway) error {
-		g.cfg.timeout = time.Second * time.Duration(timeout)
-		gwruntime.DefaultContextTimeout = time.Second * time.Duration(timeout)
+		g.cfg.timeout = time.Second * time.Duration(seconds)
+		gwruntime.DefaultContextTimeout = time.Second * time.Duration(seconds)
 		return nil
 	}
 }
