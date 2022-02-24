@@ -160,8 +160,8 @@ type ReplayerBuilder interface {
 }
 
 // NewCanonicalBuilder handles initializing the default concrete ReplayerBuilder implementation.
-func NewCanonicalBuilder(h HistoryAccessor, c CanonicalChecker, cs CurrentSlotter) *canonicalBuilder {
-	return &canonicalBuilder{
+func NewCanonicalBuilder(h HistoryAccessor, c CanonicalChecker, cs CurrentSlotter) *CanonicalBuilder {
+	return &CanonicalBuilder{
 		chainer: &canonicalChainer{
 			h:  h,
 			c:  c,
@@ -176,16 +176,16 @@ const (
 	forSlot retrievalMethod = iota
 )
 
-// canonicalBuilder builds a Replayer that uses a combination of database queries and a
+// CanonicalBuilder builds a Replayer that uses a combination of database queries and a
 // CanonicalChecker (which should usually be a fork choice store implementing an IsCanonical method)
 // to determine the canonical chain and apply it to generate the desired state.
-type canonicalBuilder struct {
+type CanonicalBuilder struct {
 	chainer chainer
 }
 
-var _ ReplayerBuilder = &canonicalBuilder{}
+var _ ReplayerBuilder = &CanonicalBuilder{}
 
-func (r *canonicalBuilder) ForSlot(target types.Slot) Replayer {
+func (r *CanonicalBuilder) ForSlot(target types.Slot) Replayer {
 	return &stateReplayer{chainer: r.chainer, method: forSlot, target: target}
 }
 
