@@ -78,7 +78,7 @@ func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldpa
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
 		if err != nil {
 			erroredResponsesTotal.Inc()
-			return nil, err
+			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", km.publicKeysURL))
 		}
 		km.providedPublicKeys = providedPublicKeys
 	}
