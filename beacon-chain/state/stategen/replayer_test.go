@@ -3,9 +3,9 @@ package stategen
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"testing"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
