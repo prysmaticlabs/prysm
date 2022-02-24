@@ -6,6 +6,7 @@ package v1
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"math/big"
 	"net/url"
 	"time"
@@ -44,10 +45,10 @@ type ForkchoiceUpdatedResponse struct {
 // Caller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type Caller interface {
-	NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (*pb.PayloadStatus, error)
+	NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
-	) (*ForkchoiceUpdatedResponse, error)
+	) (*pb.PayloadIDBytes, []byte, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
@@ -93,19 +94,55 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
-func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (*pb.PayloadStatus, error) {
+func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error) {
 	result := &pb.PayloadStatus{}
 	err := c.rpc.CallContext(ctx, result, NewPayloadMethod, payload)
-	return result, handleRPCError(err)
+	if err != nil {
+		return nil, handleRPCError(err)
+	}
+
+	switch result.Status {
+	case pb.PayloadStatus_INVALID_BLOCK_HASH:
+		return nil, fmt.Errorf("could not validate block hash: %v", result.ValidationError)
+	case pb.PayloadStatus_INVALID_TERMINAL_BLOCK:
+		return nil, fmt.Errorf("could not satisfy terminal block condition: %v", result.ValidationError)
+	case pb.PayloadStatus_ACCEPTED, pb.PayloadStatus_SYNCING:
+		return nil, ErrAcceptedSyncingPayloadStatus
+	case pb.PayloadStatus_INVALID:
+		return result.LatestValidHash, ErrInvalidPayloadStatus
+	case pb.PayloadStatus_VALID:
+		return result.LatestValidHash, nil
+	default:
+		return nil, ErrUnknownPayloadStatus
+	}
 }
 
 // ForkchoiceUpdated calls the engine_forkchoiceUpdatedV1 method via JSON-RPC.
 func (c *Client) ForkchoiceUpdated(
 	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
-) (*ForkchoiceUpdatedResponse, error) {
+) (*pb.PayloadIDBytes, []byte, error) {
 	result := &ForkchoiceUpdatedResponse{}
 	err := c.rpc.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
-	return result, handleRPCError(err)
+	if err != nil {
+		return nil, nil, handleRPCError(err)
+	}
+
+	if result.Status == nil {
+		return nil, nil, ErrNilResponse
+	}
+	resp := result.Status
+	switch resp.Status {
+	case pb.PayloadStatus_INVALID_TERMINAL_BLOCK:
+		return nil, nil, fmt.Errorf("could not satisfy terminal block condition: %v", resp.ValidationError)
+	case pb.PayloadStatus_SYNCING:
+		return nil, nil, ErrAcceptedSyncingPayloadStatus
+	case pb.PayloadStatus_INVALID:
+		return nil, resp.LatestValidHash, ErrInvalidPayloadStatus
+	case pb.PayloadStatus_VALID:
+		return result.PayloadId, resp.LatestValidHash, nil
+	default:
+		return nil, nil, ErrUnknownPayloadStatus
+	}
 }
 
 // GetPayload calls the engine_getPayloadV1 method via JSON-RPC.

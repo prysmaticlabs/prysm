@@ -249,6 +249,12 @@ var (
 		Usage: "Specifies the size in bytes of bolt db's mmap syscall allocation",
 		Value: 536870912, // 512 Mb as a default value.
 	}
+	// ApiTimeoutFlag specifies the timeout value for API requests in seconds. A timeout of zero means no timeout.
+	ApiTimeoutFlag = &cli.IntFlag{
+		Name:  "api-timeout",
+		Usage: "Specifies the timeout value for API requests in seconds",
+		Value: 120,
+	}
 )
 
 // LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.

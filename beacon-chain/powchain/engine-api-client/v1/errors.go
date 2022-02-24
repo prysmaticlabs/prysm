@@ -17,9 +17,23 @@ var (
 	ErrServer = errors.New("client error while processing request")
 	// ErrUnknownPayload corresponds to JSON-RPC code -32001.
 	ErrUnknownPayload = errors.New("payload does not exist or is not available")
+	// ErrUnknownPayloadStatus when the payload status is unknown.
+	ErrUnknownPayloadStatus = errors.New("unknown payload status")
 	// ErrUnsupportedScheme for unsupported URL schemes.
 	ErrUnsupportedScheme = errors.New("unsupported url scheme, only http(s) and ipc are supported")
 	// ErrConfigMismatch when the execution node's terminal total difficulty or
 	// terminal block hash received via the API mismatches Prysm's configuration value.
 	ErrConfigMismatch = errors.New("execution client configuration mismatch")
+	// ErrMismatchTerminalBlockHash when the terminal block hash value received via
+	// the API mismatches Prysm's configuration value.
+	ErrMismatchTerminalBlockHash = errors.New("terminal block hash mismatch")
+	// ErrMismatchTerminalTotalDiff when the terminal total difficulty value received via
+	// the API mismatches Prysm's configuration value.
+	ErrMismatchTerminalTotalDiff = errors.New("terminal total difficulty mismatch")
+	// ErrAcceptedSyncingPayloadStatus when the status of the payload is syncing or accepted.
+	ErrAcceptedSyncingPayloadStatus = errors.New("payload status is SYNCING or ACCEPTED")
+	// ErrInvalidPayloadStatus when the status of the payload is invalid.
+	ErrInvalidPayloadStatus = errors.New("payload status is INVALID")
+	// ErrNilResponse when the response is nil.
+	ErrNilResponse = errors.New("nil response")
 )
