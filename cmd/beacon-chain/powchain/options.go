@@ -1,10 +1,10 @@
 package powchaincmd
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -57,7 +57,7 @@ func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 	if len(strData) == 0 {
 		return nil, fmt.Errorf("provided JWT secret in file %s cannot be empty", jwtSecretFile)
 	}
-	secret, err := hexutil.Decode(strData)
+	secret, err := hex.DecodeString(strings.TrimPrefix(strData, "0x"))
 	if err != nil {
 		return nil, err
 	}
