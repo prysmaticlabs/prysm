@@ -1,12 +1,21 @@
 package blockchain
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"testing"
 
 	"github.com/holiman/uint256"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -66,10 +75,10 @@ func Test_validTerminalPowBlock(t *testing.T) {
 			cfg := params.BeaconConfig()
 			cfg.TerminalTotalDifficulty = fmt.Sprint(tt.ttd)
 			params.OverrideBeaconConfig(cfg)
-			got, err := validTerminalPowBlock(tt.currentDifficulty, tt.parentDifficulty)
+			got, err := validateTerminalBlockDifficulties(tt.currentDifficulty, tt.parentDifficulty)
 			require.NoError(t, err)
 			if got != tt.want {
-				t.Errorf("validTerminalPowBlock() = %v, want %v", got, tt.want)
+				t.Errorf("validateTerminalBlockDifficulties() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -87,7 +96,115 @@ func Test_validTerminalPowBlockSpecConfig(t *testing.T) {
 	parent, of := uint256.FromBig(i)
 	require.Equal(t, of, false)
 
-	got, err := validTerminalPowBlock(current, parent)
+	got, err := validateTerminalBlockDifficulties(current, parent)
 	require.NoError(t, err)
 	require.Equal(t, true, got)
+}
+
+func Test_validateMergeBlock(t *testing.T) {
+	cfg := params.BeaconConfig()
+	cfg.TerminalTotalDifficulty = "2"
+	params.OverrideBeaconConfig(cfg)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	engine := &mockEngineService{blks: map[[32]byte]*enginev1.ExecutionBlock{}}
+	service.cfg.ExecutionEngineCaller = engine
+	engine.blks[[32]byte{'a'}] = &enginev1.ExecutionBlock{
+		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		TotalDifficulty: "0x2",
+	}
+	engine.blks[[32]byte{'b'}] = &enginev1.ExecutionBlock{
+		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+		TotalDifficulty: "0x1",
+	}
+	blk := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{
+			Slot: 1,
+			Body: &ethpb.BeaconBlockBodyBellatrix{
+				ExecutionPayload: &enginev1.ExecutionPayload{
+					ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				},
+			},
+		},
+	}
+	b, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, service.validateMergeBlock(ctx, b))
+
+	cfg.TerminalTotalDifficulty = "1"
+	params.OverrideBeaconConfig(cfg)
+	require.ErrorContains(t, "invalid TTD, configTTD: 1, currentTTD: 2, parentTTD: 1", service.validateMergeBlock(ctx, b))
+}
+
+func Test_getBlkParentHashAndTD(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	engine := &mockEngineService{blks: map[[32]byte]*enginev1.ExecutionBlock{}}
+	service.cfg.ExecutionEngineCaller = engine
+	h := [32]byte{'a'}
+	p := [32]byte{'b'}
+	td := "0x1"
+	engine.blks[h] = &enginev1.ExecutionBlock{
+		ParentHash:      p[:],
+		TotalDifficulty: td,
+	}
+	parentHash, totalDifficulty, err := service.getBlkParentHashAndTD(ctx, h[:])
+	require.NoError(t, err)
+	require.Equal(t, p, bytesutil.ToBytes32(parentHash))
+	require.Equal(t, td, totalDifficulty.String())
+
+	_, _, err = service.getBlkParentHashAndTD(ctx, []byte{'c'})
+	require.ErrorContains(t, "could not get pow block: block not found", err)
+
+	engine.blks[h] = nil
+	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
+	require.ErrorContains(t, "pow block is nil", err)
+
+	engine.blks[h] = &enginev1.ExecutionBlock{
+		ParentHash:      p[:],
+		TotalDifficulty: "1",
+	}
+	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
+	require.ErrorContains(t, "could not decode merge block total difficulty: hex string without 0x prefix", err)
+
+	engine.blks[h] = &enginev1.ExecutionBlock{
+		ParentHash:      p[:],
+		TotalDifficulty: "0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+	}
+	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
+	require.ErrorContains(t, "could not decode merge block total difficulty: hex number > 256 bits", err)
+}
+
+func Test_validateTerminalBlockHash(t *testing.T) {
+	require.NoError(t, validateTerminalBlockHash(1, &enginev1.ExecutionPayload{}))
+
+	cfg := params.BeaconConfig()
+	cfg.TerminalBlockHash = [32]byte{0x01}
+	params.OverrideBeaconConfig(cfg)
+	require.ErrorContains(t, "terminal block hash activation epoch not reached", validateTerminalBlockHash(1, &enginev1.ExecutionPayload{}))
+
+	cfg.TerminalBlockHashActivationEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+	require.ErrorContains(t, "parent hash does not match terminal block hash", validateTerminalBlockHash(1, &enginev1.ExecutionPayload{}))
+
+	require.NoError(t, validateTerminalBlockHash(1, &enginev1.ExecutionPayload{ParentHash: cfg.TerminalBlockHash.Bytes()}))
 }
