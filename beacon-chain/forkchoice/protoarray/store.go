@@ -247,6 +247,9 @@ func (s *Store) TreeRoot() *Node {
 	return s.treeRootNode
 }
 
+// Safe returns whether the block is considered safe with respect to 
+// synchronicity assumptions on the network and how much an attacker is willing
+// to spend
 func (s *Store) Safe(ctx context.Context, root [32]byte, committeeWeight uint64) (bool, error) {
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
