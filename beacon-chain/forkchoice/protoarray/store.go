@@ -14,6 +14,10 @@ import (
 // before getting pruned upon new finalization.
 const defaultPruneThreshold = 256
 
+// This defines the largest staked power that an attacker is willing to
+// spend in an attack to "safe head"
+const safeHeadAttackersWeight = uint64(4096 * 32 * 10^9)
+
 // applyProposerBoostScore applies the current proposer boost scores to the
 // relevant nodes
 func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
@@ -241,4 +245,31 @@ func (s *Store) TreeRoot() *Node {
 	s.nodesLock.RLock()
 	defer s.nodesLock.RUnlock()
 	return s.treeRootNode
+}
+
+func (s *Store) Safe(ctx context.Context, root [32]byte, committeeWeight uint64) (bool, error) {
+	node, ok := s.nodeByRoot[root]
+	if !ok || node == nil {
+		return false, errNilNode
+	}
+
+	if node.bestDescendant != nil && node.bestDescendant != s.headNode {
+		return false, nil
+	}
+
+	potentialVotes := uint64(s.headNode.slot - node.slot + 1) * committeeWeight
+	actualVotes := node.weight
+
+	tailWeight := uint64(0)
+	for node.parent != nil {
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+		node = node.parent
+		tailWeight += node.balance
+	}
+
+	s.proposerBoostLock.RLock()
+	defer s.proposerBoostLock.RUnlock()
+	return potentialVotes + 2 * actualVotes > potentialVotes + safeHeadAttackersWeight + s.previousProposerBoostScore , nil
 }
