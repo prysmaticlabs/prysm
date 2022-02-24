@@ -341,7 +341,7 @@ func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.
 	if err != nil {
 		return nil, err
 	}
-	return st, nil
+	return vs.ReplayerBuilder.ForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
 }
 
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {
