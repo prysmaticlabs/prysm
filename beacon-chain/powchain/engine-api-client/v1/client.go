@@ -101,9 +101,6 @@ func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (
 		return nil, handleRPCError(err)
 	}
 
-	if result == nil {
-		return nil, ErrNilResponse
-	}
 	switch result.Status {
 	case pb.PayloadStatus_INVALID_BLOCK_HASH:
 		return nil, fmt.Errorf("could not validate block hash: %v", result.ValidationError)
@@ -130,7 +127,7 @@ func (c *Client) ForkchoiceUpdated(
 		return nil, nil, handleRPCError(err)
 	}
 
-	if result == nil || result.Status == nil {
+	if result.Status == nil {
 		return nil, nil, ErrNilResponse
 	}
 	resp := result.Status
