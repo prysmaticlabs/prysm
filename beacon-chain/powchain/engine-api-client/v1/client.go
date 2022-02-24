@@ -135,7 +135,7 @@ func (c *Client) ForkchoiceUpdated(
 	case pb.PayloadStatus_INVALID_TERMINAL_BLOCK:
 		return nil, nil, fmt.Errorf("could not satisfy terminal block condition: %v", resp.ValidationError)
 	case pb.PayloadStatus_SYNCING:
-		return nil, nil,  ErrAcceptedSyncingPayloadStatus
+		return nil, nil, ErrAcceptedSyncingPayloadStatus
 	case pb.PayloadStatus_INVALID:
 		return nil, resp.LatestValidHash, ErrInvalidPayloadStatus
 	case pb.PayloadStatus_VALID:
