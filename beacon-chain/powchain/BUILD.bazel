@@ -90,6 +90,7 @@ go_test(
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
+        "//beacon-chain/powchain/engine-api-client/v1:go_default_library",
         "//beacon-chain/powchain/engine-api-client/v1/mocks:go_default_library",
         "//beacon-chain/powchain/testing:go_default_library",
         "//beacon-chain/powchain/types:go_default_library",
