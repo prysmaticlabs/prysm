@@ -23,6 +23,7 @@ go_test(
     srcs = ["client_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/powchain/engine-api-client/v1/mocks:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//encoding/bytesutil:go_default_library",

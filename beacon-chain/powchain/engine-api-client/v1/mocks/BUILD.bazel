@@ -6,7 +6,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/powchain/engine-api-client/v1:go_default_library",
         "//proto/engine/v1:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
     ],
