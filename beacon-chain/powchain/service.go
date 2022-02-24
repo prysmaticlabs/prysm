@@ -301,10 +301,7 @@ func (s *Service) Status() error {
 		return nil
 	}
 	// get error from run function
-	if s.runError != nil {
-		return s.runError
-	}
-	return nil
+	return s.runError
 }
 
 // EngineAPIClient returns the associated engine API client to interact
