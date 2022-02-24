@@ -3,18 +3,19 @@ package stategen
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-// combines a mock history sanity check w/ tests on canonicalBlockForSlot
-// to show how canonicalBlockForSlot relates to HighestSlotBlocksBelow
-func TestMockHistoryCanonicalBlockForSlot(t *testing.T) {
+// happy path tests
+func TestCanonicalBlockForSlotHappy(t *testing.T) {
 	ctx := context.Background()
 	var begin, middle, end types.Slot = 100, 150, 155
 	specs := []mockHistorySpec{
@@ -57,6 +58,123 @@ func TestMockHistoryCanonicalBlockForSlot(t *testing.T) {
 	}
 }
 
+func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
+	ctx := context.Background()
+	var begin, middle, end types.Slot = 100, 150, 155
+	specs := []mockHistorySpec{
+		{slot: begin},
+		{slot: middle, savedState: true},
+		{slot: end, canonicalBlock: true},
+	}
+	hist := newMockHistory(t, specs, end+1)
+
+	slotOrderObserved := make([]types.Slot, 0)
+	derp := errors.New("HighestSlotBlocksBelow don't work")
+	// since only the end block and genesis are canonical, once the slot drops below
+	// end, we should always get genesis
+	cases := []struct {
+		name              string
+		slot              types.Slot
+		canon             CanonicalChecker
+		overrideHighest   func(context.Context, types.Slot) ([]block.SignedBeaconBlock, error)
+		slotOrderExpected []types.Slot
+		err               error
+		root              [32]byte
+	}{
+		{
+			name: "HigestSlotBlocksBelow not called for genesis",
+			overrideHighest: func(_ context.Context, _ types.Slot) ([]block.SignedBeaconBlock, error) {
+				return nil, derp
+			},
+			root: hist.slotMap[0],
+		},
+		{
+			name: "wrapped error from HigestSlotBlocksBelow returned",
+			err:  derp,
+			overrideHighest: func(_ context.Context, _ types.Slot) ([]block.SignedBeaconBlock, error) {
+				return nil, derp
+			},
+			slot: end,
+		},
+		{
+			name: "HigestSlotBlocksBelow empty list",
+			err:  ErrNoBlocksBelowSlot,
+			overrideHighest: func(_ context.Context, _ types.Slot) ([]block.SignedBeaconBlock, error) {
+				return []block.SignedBeaconBlock{}, nil
+			},
+			slot: end,
+		},
+		{
+			name:  "HigestSlotBlocksBelow no canonical",
+			err:   ErrNoCanonicalBlockForSlot,
+			canon: &mockCanonicalChecker{is: false},
+			slot:  end,
+		},
+		{
+			name: "slot ordering correct - only genesis canonical",
+			canon: &mockCanonicalChecker{isCanon: func(root [32]byte) (bool, error) {
+				if root == hist.slotMap[0] {
+					return true, nil
+				}
+				return false, nil
+			}},
+			overrideHighest: func(_ context.Context, s types.Slot) ([]block.SignedBeaconBlock, error) {
+				slotOrderObserved = append(slotOrderObserved, s)
+				// this allows the mock HighestSlotBlocksBelow to continue to execute now that we've recorded
+				// the slot in our channel
+				return nil, errFallThroughOverride
+			},
+			slotOrderExpected: []types.Slot{156, 155, 150, 100},
+			slot:              end,
+			root:              hist.slotMap[0],
+		},
+		{
+			name: "slot ordering correct - slot 100 canonical",
+			canon: &mockCanonicalChecker{isCanon: func(root [32]byte) (bool, error) {
+				if root == hist.slotMap[100] {
+					return true, nil
+				}
+				return false, nil
+			}},
+			overrideHighest: func(_ context.Context, s types.Slot) ([]block.SignedBeaconBlock, error) {
+				slotOrderObserved = append(slotOrderObserved, s)
+				// this allows the mock HighestSlotBlocksBelow to continue to execute now that we've recorded
+				// the slot in our channel
+				return nil, errFallThroughOverride
+			},
+			slotOrderExpected: []types.Slot{156, 155, 150},
+			slot:              end,
+			root:              hist.slotMap[100],
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var canon CanonicalChecker = hist
+			if c.canon != nil {
+				canon = c.canon
+			}
+			cc := canonicalChainer{hist, canon, hist}
+			hist.overrideHighestSlotBlocksBelow = c.overrideHighest
+			r, _, err := cc.canonicalBlockForSlot(ctx, c.slot)
+			if c.err == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, c.err)
+			}
+			if len(c.slotOrderExpected) > 0 {
+				require.Equal(t, len(c.slotOrderExpected), len(slotOrderObserved), "HighestSlotBlocksBelow not called the expected number of times")
+				for i := range c.slotOrderExpected {
+					require.Equal(t, c.slotOrderExpected[i], slotOrderObserved[i])
+				}
+			}
+			if c.root != [32]byte{} {
+				require.Equal(t, c.root, r)
+			}
+			slotOrderObserved = make([]types.Slot, 0)
+		})
+	}
+}
+
 type mockCanonicalChainer struct {
 	State  state.BeaconState
 	Blocks []block.SignedBeaconBlock
@@ -87,10 +205,6 @@ func TestCanonicalChainerFuture(t *testing.T) {
 	require.ErrorIs(t, err, ErrFutureSlotRequested)
 }
 
-// TODO
-func TestCanonicalChainerOK(t *testing.T) {
-}
-
 func TestAncestorChainOK(t *testing.T) {
 	ctx := context.Background()
 	var begin, middle, end types.Slot = 100, 150, 155
@@ -119,8 +233,73 @@ func TestAncestorChainOK(t *testing.T) {
 	require.Equal(t, expectedSt, st)
 }
 
-// TODO
-func TestChainForSlotOK(t *testing.T) {
+func TestChainForSlot(t *testing.T) {
+	ctx := context.Background()
+	var zero, one, two, three types.Slot = 50, 51, 150, 151
+	specs := []mockHistorySpec{
+		{slot: zero, canonicalBlock: true, savedState: true},
+		{slot: one, canonicalBlock: true},
+		{slot: two},
+		{slot: three, canonicalBlock: true},
+	}
+	hist := newMockHistory(t, specs, three+10)
+	cc := &canonicalChainer{h: hist, c: hist, cs: hist}
+	firstNonGenesisRoot := hist.slotMap[zero]
+	nonGenesisStateRoot, err := hist.states[firstNonGenesisRoot].HashTreeRoot(ctx)
+	require.NoError(t, err)
+
+	cases := []struct {
+		name       string
+		slot       types.Slot
+		stateRoot  [32]byte
+		blockRoots [][32]byte
+	}{
+		{
+			name:       "above latest slot (but before current slot)",
+			slot:       three + 1,
+			stateRoot:  nonGenesisStateRoot,
+			blockRoots: [][32]byte{hist.slotMap[one], hist.slotMap[two], hist.slotMap[three]},
+		},
+		{
+			name:       "last canonical slot - two treated as canonical because it is parent of three",
+			slot:       three,
+			stateRoot:  nonGenesisStateRoot,
+			blockRoots: [][32]byte{hist.slotMap[one], hist.slotMap[two], hist.slotMap[three]},
+		},
+		{
+			name:       "non-canonical slot skipped",
+			slot:       two,
+			stateRoot:  nonGenesisStateRoot,
+			blockRoots: [][32]byte{hist.slotMap[one]},
+		},
+		{
+			name:       "first canonical slot",
+			slot:       one,
+			stateRoot:  nonGenesisStateRoot,
+			blockRoots: [][32]byte{hist.slotMap[one]},
+		},
+		{
+			name:       "slot at saved state",
+			slot:       zero,
+			stateRoot:  nonGenesisStateRoot,
+			blockRoots: [][32]byte{},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			st, blocks, err := cc.chainForSlot(ctx, c.slot)
+			require.NoError(t, err)
+			actualStRoot, err := st.HashTreeRoot(ctx)
+			require.NoError(t, err)
+			require.Equal(t, c.stateRoot, actualStRoot)
+			require.Equal(t, len(c.blockRoots), len(blocks))
+			for i, b := range blocks {
+				root, err := b.Block().HashTreeRoot()
+				require.NoError(t, err)
+				require.Equal(t, c.blockRoots[i], root)
+			}
+		})
+	}
 }
 
 func TestAncestorChainOrdering(t *testing.T) {
@@ -181,6 +360,115 @@ func TestAncestorChainOrdering(t *testing.T) {
 	}
 }
 
-// TODO
-func TestBestForSlotValidation(t *testing.T) {
+func TestBestForSlot(t *testing.T) {
+	nilBlock, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	require.NoError(t, err)
+	nilBody, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}})
+	require.NoError(t, err)
+	derp := errors.New("fake hash tree root method no hash good")
+	badHTR := &block.MockSignedBeaconBlock{BeaconBlock: &block.MockBeaconBlock{HtrErr: derp, BeaconBlockBody: &block.MockBeaconBlockBody{}}}
+	var goodHTR [32]byte
+	copy(goodHTR[:], []byte{23})
+	var betterHTR [32]byte
+	copy(betterHTR[:], []byte{42})
+	good := &block.MockSignedBeaconBlock{BeaconBlock: &block.MockBeaconBlock{BeaconBlockBody: &block.MockBeaconBlockBody{}, Htr: goodHTR}}
+	better := &block.MockSignedBeaconBlock{BeaconBlock: &block.MockBeaconBlock{BeaconBlockBody: &block.MockBeaconBlockBody{}, Htr: betterHTR}}
+
+	cases := []struct {
+		name   string
+		err    error
+		blocks []block.SignedBeaconBlock
+		best   block.SignedBeaconBlock
+		root   [32]byte
+		cc     CanonicalChecker
+	}{
+		{
+			name:   "empty list",
+			err:    ErrNoCanonicalBlockForSlot,
+			blocks: []block.SignedBeaconBlock{},
+		},
+		{
+			name:   "empty SignedBeaconBlock",
+			err:    ErrNoCanonicalBlockForSlot,
+			blocks: []block.SignedBeaconBlock{nil},
+		},
+		{
+			name:   "empty BeaconBlock",
+			err:    ErrNoCanonicalBlockForSlot,
+			blocks: []block.SignedBeaconBlock{nilBlock},
+		},
+		{
+			name:   "empty BeaconBlockBody",
+			err:    ErrNoCanonicalBlockForSlot,
+			blocks: []block.SignedBeaconBlock{nilBody},
+		},
+		{
+			name:   "bad HTR",
+			err:    ErrInvalidDBBlock,
+			blocks: []block.SignedBeaconBlock{badHTR},
+		},
+		{
+			name:   "IsCanonical fail",
+			blocks: []block.SignedBeaconBlock{good, better},
+			cc:     &mockCanonicalChecker{is: true, err: derp},
+			err:    derp,
+		},
+		{
+			name:   "all non-canonical",
+			err:    ErrNoCanonicalBlockForSlot,
+			blocks: []block.SignedBeaconBlock{good, better},
+			cc:     &mockCanonicalChecker{is: false},
+		},
+		{
+			name:   "one canonical",
+			blocks: []block.SignedBeaconBlock{good},
+			cc:     &mockCanonicalChecker{is: true},
+			root:   goodHTR,
+			best:   good,
+		},
+		{
+			name:   "all canonical",
+			blocks: []block.SignedBeaconBlock{better, good},
+			cc:     &mockCanonicalChecker{is: true},
+			root:   betterHTR,
+			best:   better,
+		},
+		{
+			name:   "first wins",
+			blocks: []block.SignedBeaconBlock{good, better},
+			cc:     &mockCanonicalChecker{is: true},
+			root:   goodHTR,
+			best:   good,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			chk := CanonicalChecker(&mockCanonicalChecker{is: true})
+			if c.cc != nil {
+				chk = c.cc
+			}
+			cc := &canonicalChainer{c: chk}
+			r, b, err := cc.bestForSlot(context.Background(), c.blocks)
+			if c.err == nil {
+				require.NoError(t, err)
+				require.DeepEqual(t, c.best, b)
+				require.Equal(t, c.root, r)
+			} else {
+				require.ErrorIs(t, err, c.err)
+			}
+		})
+	}
+}
+
+type mockCanonicalChecker struct {
+	isCanon func([32]byte) (bool, error)
+	is      bool
+	err     error
+}
+
+func (m *mockCanonicalChecker) IsCanonical(_ context.Context, root [32]byte) (bool, error) {
+	if m.isCanon != nil {
+		return m.isCanon(root)
+	}
+	return m.is, m.err
 }

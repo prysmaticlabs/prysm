@@ -70,13 +70,14 @@ type mockHistorySpec struct {
 }
 
 type mockHistory struct {
-	blocks       map[[32]byte]block.SignedBeaconBlock
-	slotMap      map[types.Slot][32]byte
-	slotIndex    slotList
-	canonical    map[[32]byte]bool
-	states       map[[32]byte]state.BeaconState
-	hiddenStates map[[32]byte]state.BeaconState
-	current      types.Slot
+	blocks                         map[[32]byte]block.SignedBeaconBlock
+	slotMap                        map[types.Slot][32]byte
+	slotIndex                      slotList
+	canonical                      map[[32]byte]bool
+	states                         map[[32]byte]state.BeaconState
+	hiddenStates                   map[[32]byte]state.BeaconState
+	current                        types.Slot
+	overrideHighestSlotBlocksBelow func(context.Context, types.Slot) ([]block.SignedBeaconBlock, error)
 }
 
 type slotList []types.Slot
@@ -93,7 +94,15 @@ func (m slotList) Swap(i, j int) {
 	m[i], m[j] = m[j], m[i]
 }
 
+var errFallThroughOverride = errors.New("override yielding control back to real HighestSlotBlocksBelow")
+
 func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot) ([]block.SignedBeaconBlock, error) {
+	if m.overrideHighestSlotBlocksBelow != nil {
+		s, err := m.overrideHighestSlotBlocksBelow(context.Background(), slot)
+		if !errors.Is(err, errFallThroughOverride) {
+			return s, err
+		}
+	}
 	if len(m.slotIndex) == 0 && len(m.slotMap) > 0 {
 		for k := range m.slotMap {
 			m.slotIndex = append(m.slotIndex, k)
