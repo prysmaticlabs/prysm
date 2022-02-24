@@ -4,29 +4,29 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
 // EngineClient --
 type EngineClient struct {
-	PayloadStatus             *pb.PayloadStatus
-	ForkChoiceUpdatedResponse *v1.ForkchoiceUpdatedResponse
-	ExecutionPayload          *pb.ExecutionPayload
-	Err                       error
-	ExecutionBlock            *pb.ExecutionBlock
+	NewPayloadResp        []byte
+	PayloadIDBytes        *pb.PayloadIDBytes
+	ForkChoiceUpdatedResp []byte
+	ExecutionPayload      *pb.ExecutionPayload
+	Err                   error
+	ExecutionBlock        *pb.ExecutionBlock
 }
 
 // NewPayload --
-func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) (*pb.PayloadStatus, error) {
-	return e.PayloadStatus, nil
+func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) ([]byte, error) {
+	return e.NewPayloadResp, nil
 }
 
 // ForkchoiceUpdated --
 func (e *EngineClient) ForkchoiceUpdated(
 	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
-) (*v1.ForkchoiceUpdatedResponse, error) {
-	return e.ForkChoiceUpdatedResponse, nil
+) (*pb.PayloadIDBytes, []byte, error) {
+	return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, nil
 }
 
 // GetPayload --

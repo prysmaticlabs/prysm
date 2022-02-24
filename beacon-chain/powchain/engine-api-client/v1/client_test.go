@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -22,7 +23,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var _ = Caller(&Client{})
+var (
+	_ = Caller(&Client{})
+	_ = Caller(&mocks.EngineClient{})
+)
 
 func TestClient_IPC(t *testing.T) {
 	server := newTestIPCServer(t)
