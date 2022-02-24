@@ -47,7 +47,7 @@ type Replayer interface {
 	ReplayBlocks(ctx context.Context) (state.BeaconState, error)
 	// ReplayToSlot invokes ReplayBlocks under the hood,
 	// but then also runs process_slots to advance the state past the root or slot used in the builder.
-	// for example, if you wanted the state to be at the target slot, but only integrating blocks up to
+	// For example, if you wanted the state to be at the target slot, but only integrating blocks up to
 	// slot-1, you could request Builder.ForSlot(slot-1).ReplayToSlot(slot)
 	ReplayToSlot(ctx context.Context, target types.Slot) (state.BeaconState, error)
 }
