@@ -274,5 +274,5 @@ func (s *Store) Safe(ctx context.Context, root [32]byte, committeeWeight uint64)
 
 	s.proposerBoostLock.RLock()
 	defer s.proposerBoostLock.RUnlock()
-	return potentialVotes+2*actualVotes > potentialVotes+safeHeadAttackersWeight+s.previousProposerBoostScore, nil
+	return tailWeight+2*actualVotes > potentialVotes+safeHeadAttackersWeight+s.previousProposerBoostScore, nil
 }
