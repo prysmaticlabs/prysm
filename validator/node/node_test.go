@@ -116,7 +116,7 @@ func TestWeb3SignerConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "Bad base url",
+			name: "Bad base URL",
 			args: args{
 				baseURL: "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88,",
 				publicKeysOrURL: "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c," +
@@ -145,7 +145,7 @@ func TestWeb3SignerConfig(t *testing.T) {
 			wantErrMsg: "could not decode public key for web3signer: localhost: hex string without 0x prefix",
 		},
 		{
-			name: "Base Url missing scheme or host",
+			name: "Base URL missing scheme or host",
 			args: args{
 				baseURL:         "localhost:8545",
 				publicKeysOrURL: "localhost",
