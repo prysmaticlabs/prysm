@@ -133,25 +133,25 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		if err = cpCmd.Wait(); err != nil {
 			return err
 		}
+	}
 
-		initCmd := exec.CommandContext(
-			ctx,
-			binaryPath,
-			"init",
-			genesisDstPath+"/genesis.json",
-			fmt.Sprintf("--datadir=%s", eth1Path)) // #nosec G204 -- Safe
-		initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_"+strconv.Itoa(node.index)+".log")
-		if err != nil {
-			return err
-		}
-		initCmd.Stdout = initFile
-		initCmd.Stderr = initFile
-		if err = initCmd.Start(); err != nil {
-			return err
-		}
-		if err = initCmd.Wait(); err != nil {
-			return err
-		}
+	initCmd := exec.CommandContext(
+		ctx,
+		binaryPath,
+		"init",
+		genesisDstPath+"/genesis.json",
+		fmt.Sprintf("--datadir=%s", eth1Path)) // #nosec G204 -- Safe
+	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_"+strconv.Itoa(node.index)+".log")
+	if err != nil {
+		return err
+	}
+	initCmd.Stdout = initFile
+	initCmd.Stderr = initFile
+	if err = initCmd.Start(); err != nil {
+		return err
+	}
+	if err = initCmd.Wait(); err != nil {
+		return err
 	}
 
 	args := []string{
