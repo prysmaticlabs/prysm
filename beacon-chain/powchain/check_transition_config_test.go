@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -26,4 +27,32 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 	<-time.After(100 * time.Millisecond)
 	cancel()
 	require.LogsContain(t, hook, "Could not check configuration values")
+}
+
+func TestService_handleExchangeConfigurationError(t *testing.T) {
+	hook := logTest.NewGlobal()
+	t.Run("clears existing service error", func(t *testing.T) {
+		srv := &Service{}
+		srv.runError = v1.ErrConfigMismatch
+		srv.handleExchangeConfigurationError(nil)
+		require.Equal(t, true, srv.runError == nil)
+	})
+	t.Run("does not clear existing service error if wrong kind", func(t *testing.T) {
+		srv := &Service{}
+		err := errors.New("something else went wrong")
+		srv.runError = err
+		srv.handleExchangeConfigurationError(nil)
+		require.ErrorIs(t, err, srv.runError)
+	})
+	t.Run("sets service error on config mismatch", func(t *testing.T) {
+		srv := &Service{}
+		srv.handleExchangeConfigurationError(v1.ErrConfigMismatch)
+		require.Equal(t, v1.ErrConfigMismatch, srv.runError)
+		require.LogsContain(t, hook, configMismatchLog)
+	})
+	t.Run("does not set service error if unrelated problem", func(t *testing.T) {
+		srv := &Service{}
+		srv.handleExchangeConfigurationError(errors.New("foo"))
+		require.LogsContain(t, hook, "Could not check configuration values")
+	})
 }
