@@ -232,11 +232,11 @@ func startNode(ctx *cli.Context) error {
 
 	blockchainFlagOpts, err := blockchaincmd.FlagOptions(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
