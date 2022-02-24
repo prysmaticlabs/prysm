@@ -124,6 +124,7 @@ func (client *ApiClient) GetServerStatus(ctx context.Context) (string, error) {
 
 // doRequest is a utility method for requests.
 func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
+	var requestDump []byte
 	ctx, span := trace.StartSpan(ctx, "remote_web3signer.Client.doRequest")
 	defer span.End()
 	span.AddAttributes(
@@ -136,10 +137,7 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 		return nil, errors.Wrap(err, "invalid format, failed to create new Post Request Object")
 	}
 	req.Header.Set("Content-Type", "application/json")
-	requestDump, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		return nil, err
-	}
+
 	start := time.Now()
 	resp, err := client.RestClient.Do(req)
 	duration := time.Since(start)
@@ -150,6 +148,12 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 		return resp, err
 	} else {
 		signRequestDurationSeconds.WithLabelValues(req.Method, strconv.Itoa(resp.StatusCode)).Observe(duration.Seconds())
+	}
+	if resp.StatusCode != http.StatusOK {
+		requestDump, err = httputil.DumpRequest(req, true)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
 		err = fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v, Signing Request: %s, Full Response: %v", fullPath, string(requestDump), resp)
