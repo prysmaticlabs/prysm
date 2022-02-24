@@ -183,7 +183,7 @@ func BenchmarkBeaconState(b *testing.B) {
 	require.NoError(b, err)
 
 	b.Run("Vectorized SHA256", func(b *testing.B) {
-		st, err := v1.InitializeFromProto(pbState)
+		st, err := v1.InitializeFromProtoUnsafe(pbState)
 		require.NoError(b, err)
 		_, err = st.HashTreeRoot(context.Background())
 		assert.NoError(b, err)

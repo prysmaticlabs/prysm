@@ -215,7 +215,7 @@ func MerkelizeVector(elements [][32]byte, length uint64) [32]byte {
 			elements = append(elements, zerohash)
 		}
 		outputLen := len(elements) / 2
-		htr.VectorizedSha256(elements, elements[:outputLen])
+		htr.VectorizedSha256(elements, elements)
 		elements = elements[:outputLen]
 	}
 	return elements[0]

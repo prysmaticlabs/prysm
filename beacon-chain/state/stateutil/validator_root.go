@@ -23,7 +23,7 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// ValidatorRootWithHasher describes a method from which the hash tree root
+// ValidatorFieldRoots describes a method from which the hash tree root
 // of a validator is returned.
 func ValidatorFieldRoots(hasher ssz.HashFn, validator *ethpb.Validator) ([][32]byte, error) {
 	var fieldRoots [][32]byte
