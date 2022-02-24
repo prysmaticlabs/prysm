@@ -16,7 +16,7 @@ func (m MockSignedBeaconBlock) Block() BeaconBlock {
 	return m.BeaconBlock
 }
 
-func (_ MockSignedBeaconBlock) Signature() []byte {
+func (MockSignedBeaconBlock) Signature() []byte {
 	panic("implement me")
 }
 
@@ -24,47 +24,47 @@ func (m MockSignedBeaconBlock) IsNil() bool {
 	return m.BeaconBlock == nil || m.Block().IsNil()
 }
 
-func (_ MockSignedBeaconBlock) Copy() SignedBeaconBlock {
+func (MockSignedBeaconBlock) Copy() SignedBeaconBlock {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) Proto() proto.Message {
+func (MockSignedBeaconBlock) Proto() proto.Message {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) PbPhase0Block() (*ethpb.SignedBeaconBlock, error) {
+func (MockSignedBeaconBlock) PbPhase0Block() (*ethpb.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error) {
+func (MockSignedBeaconBlock) PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error) {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error) {
+func (MockSignedBeaconBlock) PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error) {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
+func (MockSignedBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
+func (MockSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) SizeSSZ() int {
+func (MockSignedBeaconBlock) SizeSSZ() int {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) UnmarshalSSZ(_ []byte) error {
+func (MockSignedBeaconBlock) UnmarshalSSZ(_ []byte) error {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) Version() int {
+func (MockSignedBeaconBlock) Version() int {
 	panic("implement me")
 }
 
-func (_ MockSignedBeaconBlock) Header() (*ethpb.SignedBeaconBlockHeader, error) {
+func (MockSignedBeaconBlock) Header() (*ethpb.SignedBeaconBlockHeader, error) {
 	panic("implement me")
 }
 
@@ -83,15 +83,15 @@ func (m MockBeaconBlock) Slot() types.Slot {
 	return m.BlockSlot
 }
 
-func (_ MockBeaconBlock) ProposerIndex() types.ValidatorIndex {
+func (MockBeaconBlock) ProposerIndex() types.ValidatorIndex {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) ParentRoot() []byte {
+func (MockBeaconBlock) ParentRoot() []byte {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) StateRoot() []byte {
+func (MockBeaconBlock) StateRoot() []byte {
 	panic("implement me")
 }
 
@@ -99,89 +99,89 @@ func (m MockBeaconBlock) Body() BeaconBlockBody {
 	return m.BeaconBlockBody
 }
 
-func (_ MockBeaconBlock) IsNil() bool {
+func (MockBeaconBlock) IsNil() bool {
 	return false
 }
 
-func (_ MockBeaconBlock) Proto() proto.Message {
+func (MockBeaconBlock) Proto() proto.Message {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
+func (MockBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) MarshalSSZ() ([]byte, error) {
+func (MockBeaconBlock) MarshalSSZ() ([]byte, error) {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) SizeSSZ() int {
+func (MockBeaconBlock) SizeSSZ() int {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) UnmarshalSSZ(_ []byte) error {
+func (MockBeaconBlock) UnmarshalSSZ(_ []byte) error {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) HashTreeRootWith(_ *ssz.Hasher) error {
+func (MockBeaconBlock) HashTreeRootWith(_ *ssz.Hasher) error {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlock) Version() int {
+func (MockBeaconBlock) Version() int {
 	panic("implement me")
 }
 
 type MockBeaconBlockBody struct{}
 
-func (_ MockBeaconBlockBody) RandaoReveal() []byte {
+func (MockBeaconBlockBody) RandaoReveal() []byte {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) Eth1Data() *ethpb.Eth1Data {
+func (MockBeaconBlockBody) Eth1Data() *ethpb.Eth1Data {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) Graffiti() []byte {
+func (MockBeaconBlockBody) Graffiti() []byte {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) ProposerSlashings() []*ethpb.ProposerSlashing {
+func (MockBeaconBlockBody) ProposerSlashings() []*ethpb.ProposerSlashing {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) AttesterSlashings() []*ethpb.AttesterSlashing {
+func (MockBeaconBlockBody) AttesterSlashings() []*ethpb.AttesterSlashing {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) Attestations() []*ethpb.Attestation {
+func (MockBeaconBlockBody) Attestations() []*ethpb.Attestation {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) Deposits() []*ethpb.Deposit {
+func (MockBeaconBlockBody) Deposits() []*ethpb.Deposit {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) VoluntaryExits() []*ethpb.SignedVoluntaryExit {
+func (MockBeaconBlockBody) VoluntaryExits() []*ethpb.SignedVoluntaryExit {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) SyncAggregate() (*ethpb.SyncAggregate, error) {
+func (MockBeaconBlockBody) SyncAggregate() (*ethpb.SyncAggregate, error) {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) IsNil() bool {
+func (MockBeaconBlockBody) IsNil() bool {
 	return false
 }
 
-func (_ MockBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
+func (MockBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) Proto() proto.Message {
+func (MockBeaconBlockBody) Proto() proto.Message {
 	panic("implement me")
 }
 
-func (_ MockBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+func (MockBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	panic("implement me")
 }
 
