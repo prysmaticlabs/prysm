@@ -357,6 +357,11 @@ func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
 }
 
 func TestService_IsOptimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
@@ -365,6 +370,14 @@ func TestService_IsOptimistic(t *testing.T) {
 	opt, err := c.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, opt)
+}
+
+func TestService_IsOptimisticBeforeBellatrix(t *testing.T) {
+	ctx := context.Background()
+	c := &Service{genesisTime: time.Now()}
+	opt, err := c.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, opt)
 }
 
 func TestService_IsOptimisticForRoot(t *testing.T) {

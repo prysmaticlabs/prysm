@@ -2,7 +2,6 @@ package enginev1
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -72,9 +71,6 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 	diff := new(big.Int).SetBytes(e.Difficulty)
 	diffHex := hexutil.EncodeBig(diff)
 
-	totalDiff := new(big.Int).SetBytes(e.TotalDifficulty)
-	totalDiffHex := hexutil.EncodeBig(totalDiff)
-
 	size := new(big.Int).SetBytes(e.Size)
 	sizeHex := hexutil.EncodeBig(size)
 
@@ -91,7 +87,7 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 		ReceiptsRoot:     e.ReceiptsRoot,
 		LogsBloom:        e.LogsBloom,
 		Difficulty:       diffHex,
-		TotalDifficulty:  totalDiffHex,
+		TotalDifficulty:  e.TotalDifficulty,
 		GasLimit:         hexutil.Uint64(e.GasLimit),
 		GasUsed:          hexutil.Uint64(e.GasUsed),
 		Timestamp:        hexutil.Uint64(e.Timestamp),
@@ -131,11 +127,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	e.Difficulty = diff.Bytes()
-	totalDiff, err := hexutil.DecodeBig(dec.TotalDifficulty)
-	if err != nil {
-		return err
-	}
-	e.TotalDifficulty = totalDiff.Bytes()
+	e.TotalDifficulty = dec.TotalDifficulty
 	e.GasLimit = uint64(dec.GasLimit)
 	e.GasUsed = uint64(dec.GasUsed)
 	e.Timestamp = uint64(dec.Timestamp)
@@ -188,7 +180,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	for i, tx := range e.Transactions {
 		transactions[i] = tx
 	}
-	baseFee := new(big.Int).SetBytes(e.BaseFeePerGas)
+	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
 	return json.Marshal(executionPayloadJSON{
 		ParentHash:    e.ParentHash,
@@ -212,7 +204,6 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	dec := executionPayloadJSON{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
-		fmt.Println("got weird err")
 		return err
 	}
 	*e = ExecutionPayload{}
@@ -270,17 +261,18 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 }
 
 type payloadStatusJSON struct {
-	LatestValidHash hexutil.Bytes `json:"latestValidHash"`
-	Status          string        `json:"status"`
-	ValidationError string        `json:"validationError"`
+	LatestValidHash *hexutil.Bytes `json:"latestValidHash"`
+	Status          string         `json:"status"`
+	ValidationError *string        `json:"validationError"`
 }
 
 // MarshalJSON --
 func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
+	hash := p.LatestValidHash
 	return json.Marshal(payloadStatusJSON{
-		LatestValidHash: p.LatestValidHash,
+		LatestValidHash: (*hexutil.Bytes)(&hash),
 		Status:          p.Status.String(),
-		ValidationError: p.ValidationError,
+		ValidationError: &p.ValidationError,
 	})
 }
 
@@ -291,9 +283,47 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*p = PayloadStatus{}
-	p.LatestValidHash = dec.LatestValidHash
+	if dec.LatestValidHash != nil {
+		p.LatestValidHash = *dec.LatestValidHash
+	}
 	p.Status = PayloadStatus_Status(PayloadStatus_Status_value[dec.Status])
-	p.ValidationError = dec.ValidationError
+	if dec.ValidationError != nil {
+		p.ValidationError = *dec.ValidationError
+	}
+	return nil
+}
+
+type transitionConfigurationJSON struct {
+	TerminalTotalDifficulty string        `json:"terminalTotalDifficulty"`
+	TerminalBlockHash       hexutil.Bytes `json:"terminalBlockHash"`
+	TerminalBlockNumber     string        `json:"terminalBlockNumber"`
+}
+
+// MarshalJSON --
+func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
+	num := new(big.Int).SetBytes(t.TerminalBlockNumber)
+	numHex := hexutil.EncodeBig(num)
+	return json.Marshal(transitionConfigurationJSON{
+		TerminalTotalDifficulty: t.TerminalTotalDifficulty,
+		TerminalBlockHash:       t.TerminalBlockHash,
+		TerminalBlockNumber:     numHex,
+	})
+}
+
+// UnmarshalJSON --
+func (t *TransitionConfiguration) UnmarshalJSON(enc []byte) error {
+	dec := transitionConfigurationJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*t = TransitionConfiguration{}
+	num, err := hexutil.DecodeBig(dec.TerminalBlockNumber)
+	if err != nil {
+		return err
+	}
+	t.TerminalTotalDifficulty = dec.TerminalTotalDifficulty
+	t.TerminalBlockHash = dec.TerminalBlockHash
+	t.TerminalBlockNumber = num.Bytes()
 	return nil
 }
 
