@@ -158,11 +158,11 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 		if err != nil {
 			return nil, err
 		}
-		log.Error("web3signer request failed",
-			"status", resp.StatusCode,
-			"request", string(requestDump),
-			"response", string(responseDump),
-		)
+		log.WithFields(logrus.Fields{
+			"status": resp.StatusCode,
+			"request": string(requestDump),
+			"response": string(responseDump),
+		}).Error("web3signer request failed")
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
 		err = fmt.Errorf("internal Web3Signer server error, Signing Request URL: %v Status: %v", fullPath, resp.StatusCode)
