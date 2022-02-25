@@ -32,34 +32,35 @@ var ErrNilState = errors.New("nil state")
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State                       state.BeaconState
-	Root                        []byte
-	Block                       block.SignedBeaconBlock
+	Optimistic                  bool
+	ValidAttestation            bool
+	ValidatorsRoot              [32]byte
+	PublicKey                   [fieldparams.BLSPubkeyLength]byte
 	FinalizedCheckPoint         *ethpb.Checkpoint
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
-	BlocksReceived              []block.SignedBeaconBlock
+	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
 	Balance                     *precompute.Balance
-	Genesis                     time.Time
-	ValidatorsRoot              [32]byte
+	ForkChoiceStore             *protoarray.Store
 	CanonicalRoots              map[[32]byte]bool
 	Fork                        *ethpb.Fork
 	ETH1Data                    *ethpb.Eth1Data
+	InitSyncBlockRoots          map[[32]byte]bool
 	DB                          db.Database
+	State                       state.BeaconState
+	Block                       block.SignedBeaconBlock
+	VerifyBlkDescendantErr      error
 	stateNotifier               statefeed.Notifier
+	BlocksReceived              []block.SignedBeaconBlock
+	SyncCommitteeIndices        []types.CommitteeIndex
 	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
-	ValidAttestation            bool
-	ForkChoiceStore             *protoarray.Store
-	VerifyBlkDescendantErr      error
-	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
-	SyncCommitteeIndices        []types.CommitteeIndex
+	Root                        []byte
 	SyncCommitteeDomain         []byte
 	SyncSelectionProofDomain    []byte
 	SyncContributionProofDomain []byte
-	PublicKey                   [fieldparams.BLSPubkeyLength]byte
 	SyncCommitteePubkeys        [][]byte
-	InitSyncBlockRoots          map[[32]byte]bool
+	Genesis                     time.Time
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -442,7 +443,7 @@ func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ type
 
 // IsOptimistic mocks the same method in the chain service.
 func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
-	return false, nil
+	return s.Optimistic, nil
 }
 
 // IsOptimisticForRoot mocks the same method in the chain service.

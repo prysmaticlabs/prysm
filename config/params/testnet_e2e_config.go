@@ -1,6 +1,9 @@
 package params
 
-const altairE2EForkEpoch = 6
+const (
+	altairE2EForkEpoch    = 6
+	bellatrixE2EForkEpoch = 8 //nolint:deadcode
+)
 
 // UseE2EConfig for beacon chain services.
 func UseE2EConfig() {
