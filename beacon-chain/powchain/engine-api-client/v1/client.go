@@ -74,6 +74,11 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 	c := &Client{
 		cfg: defaultConfig(),
 	}
+	for _, opt := range opts {
+		if err := opt(c); err != nil {
+			return nil, err
+		}
+	}
 	switch u.Scheme {
 	case "http", "https":
 		c.rpc, err = rpc.DialHTTPWithClient(endpoint, c.cfg.httpClient)
@@ -84,11 +89,6 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 	}
 	if err != nil {
 		return nil, err
-	}
-	for _, opt := range opts {
-		if err := opt(c); err != nil {
-			return nil, err
-		}
 	}
 	return c, nil
 }

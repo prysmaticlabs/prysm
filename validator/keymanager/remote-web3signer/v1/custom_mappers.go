@@ -108,7 +108,7 @@ func MapBeaconBlockBody(body *ethpb.BeaconBlockBody) (*BeaconBlockBody, error) {
 		RandaoReveal: hexutil.Encode(body.RandaoReveal),
 		Eth1Data: &Eth1Data{
 			DepositRoot:  hexutil.Encode(body.Eth1Data.DepositRoot),
-			DepositCount: fmt.Sprint(0),
+			DepositCount: fmt.Sprint(body.Eth1Data.DepositCount),
 			BlockHash:    hexutil.Encode(body.Eth1Data.BlockHash),
 		},
 		Graffiti:          hexutil.Encode(body.Graffiti),
