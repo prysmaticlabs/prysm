@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit/mock"
+	file2 "github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -30,6 +31,8 @@ const timeGapPerTX = 100 * time.Millisecond
 const networkId = 123456
 const staticFilesPath = "/testing/endtoend/static-files/eth1"
 const keystorePassword = "password"
+
+var bootstrapNode = ""
 
 var _ e2etypes.ComponentRunner = (*Eth1Node)(nil)
 var _ e2etypes.ComponentRunner = (*Eth1NodeSet)(nil)
@@ -145,7 +148,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	initCmd.Stdout = initFile
+	//initCmd.Stdout = initFile
 	initCmd.Stderr = initFile
 	if err = initCmd.Start(); err != nil {
 		return err
@@ -153,12 +156,24 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	if err = initCmd.Wait(); err != nil {
 		return err
 	}
-
+	// We want only one node to mine blocks.
+	isMiner := node.index == 0
+	if !isMiner {
+		for bootstrapNode == "" {
+			time.Sleep(2 * time.Second)
+		}
+	}
+	bootNode := ""
+	if !isMiner {
+		bootNode = bootstrapNode
+	} else {
+		bootNode = node.enr
+	}
 	args := []string{
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort+10*node.index),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+10*node.index+e2e.ETH1WSOffset),
-		fmt.Sprintf("--bootnodes=%s", node.enr),
+		fmt.Sprintf("--bootnodes=%s", bootNode),
 		fmt.Sprintf("--port=%d", 30303+node.index),
 		fmt.Sprintf("--networkid=%d", networkId),
 		"--http",
@@ -170,12 +185,30 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		"--ws.addr=127.0.0.1",
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
+		"--verbosity=4",
 	}
 
-	// We want only one node to mine blocks.
-	isMiner := node.index == 0
+	keystoreFileName := "UTC--2021-12-22T19-14-08.590377700Z--878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
+	keystorePass := "password.txt"
+	keystorePath, err := bazel.Runfile(path.Join(staticFilesPath, keystoreFileName))
+	if err != nil {
+		return err
+	}
+	jsonBytes, err := ioutil.ReadFile(keystorePath) // #nosec G304 -- ReadFile is safe
+	if err != nil {
+		return err
+	}
+	err = file2.WriteFile(eth1Path+"/keystore/"+keystoreFileName, jsonBytes)
+	if err != nil {
+		return err
+	}
+	err = file2.WriteFile(eth1Path+"/keystore/"+keystorePass, []byte("password"))
+	if err != nil {
+		return err
+	}
+
 	if isMiner {
-		args = append(args, "--mine", "--miner.etherbase=0x0000000000000000000000000000000000000001", "--miner.threads=1")
+		args = append(args, "--mine", "--unlock=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766", "--allow-insecure-unlock", fmt.Sprintf("--password=%s", eth1Path+"/keystore/"+keystorePass))
 	}
 
 	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
@@ -185,6 +218,8 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	}
 	runCmd.Stdout = file
 	runCmd.Stderr = file
+	log.Infof("Starting eth1 node %d with flags: %s", node.index, strings.Join(args[2:], " "))
+
 	if err = runCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start eth1 chain: %w", err)
 	}
@@ -193,6 +228,16 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 		if err = helpers.WaitForTextInFile(file, "Commit new mining work"); err != nil {
 			return fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
 		}
+		if err = helpers.WaitForTextInFile(file, "Started P2P networking"); err != nil {
+			return fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
+		}
+		enode, err := enodeFromLogFile(file.Name())
+		if err != nil {
+			return err
+		}
+		enode = "enode://" + enode + "@127.0.0.1:" + fmt.Sprintf("%d", 30303+node.index)
+		bootstrapNode = enode
+		log.Infof("enode is %s", enode)
 	}
 
 	// Connect to the started geth dev chain.
@@ -256,4 +301,28 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 // Started checks whether ETH1 node is started and ready to be queried.
 func (node *Eth1Node) Started() <-chan struct{} {
 	return node.started
+}
+
+func enodeFromLogFile(name string) (string, error) {
+	byteContent, err := ioutil.ReadFile(name) // #nosec G304
+	if err != nil {
+		return "", err
+	}
+	contents := string(byteContent)
+
+	searchText := "self=enode://"
+	startIdx := strings.Index(contents, searchText)
+	if startIdx == -1 {
+		return "", fmt.Errorf("did not find ENR text in %s", contents)
+	}
+	startIdx += len(searchText)
+	endIdx := strings.Index(contents[startIdx:], "@")
+	if endIdx == -1 {
+		return "", fmt.Errorf("did not find ENR text in %s", contents)
+	}
+	enode := contents[startIdx : startIdx+endIdx]
+	if strings.HasPrefix(enode, "-") {
+		enode = strings.TrimPrefix(enode, "-")
+	}
+	return enode, nil
 }
