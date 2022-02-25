@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -159,8 +160,8 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 			return nil, err
 		}
 		log.WithFields(logrus.Fields{
-			"status": resp.StatusCode,
-			"request": string(requestDump),
+			"status":   resp.StatusCode,
+			"request":  string(requestDump),
 			"response": string(responseDump),
 		}).Error("web3signer request failed")
 	}
