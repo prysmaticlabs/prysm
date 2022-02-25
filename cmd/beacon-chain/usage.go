@@ -74,6 +74,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.RestoreTargetDirFlag,
 			cmd.BoltMMapInitialSizeFlag,
 			cmd.ValidatorMonitorIndicesFlag,
+			cmd.ApiTimeoutFlag,
 		},
 	},
 	{

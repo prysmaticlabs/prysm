@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
@@ -13,12 +12,12 @@ type mockEngineService struct {
 	blks map[[32]byte]*enginev1.ExecutionBlock
 }
 
-func (*mockEngineService) NewPayload(context.Context, *enginev1.ExecutionPayload) (*enginev1.PayloadStatus, error) {
+func (*mockEngineService) NewPayload(context.Context, *enginev1.ExecutionPayload) ([]byte, error) {
 	return nil, nil
 }
 
-func (*mockEngineService) ForkchoiceUpdated(context.Context, *enginev1.ForkchoiceState, *enginev1.PayloadAttributes) (*v1.ForkchoiceUpdatedResponse, error) {
-	return nil, nil
+func (*mockEngineService) ForkchoiceUpdated(context.Context, *enginev1.ForkchoiceState, *enginev1.PayloadAttributes) (*enginev1.PayloadIDBytes, []byte, error) {
+	return nil, nil, nil
 }
 
 func (*mockEngineService) GetPayloadV1(
