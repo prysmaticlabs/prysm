@@ -19,11 +19,21 @@ func defaultConfig() *config {
 	}
 }
 
-// WithHTTPClient allows setting a custom HTTP client
-// for the API connection.
-func WithHTTPClient(httpClient *http.Client) Option {
+// WithJWTSecret allows setting a JWT secret for authenticating
+// the client via HTTP connections.
+func WithJWTSecret(secret []byte) Option {
 	return func(c *Client) error {
-		c.cfg.httpClient = httpClient
+		if len(secret) == 0 {
+			return nil
+		}
+		authTransport := &jwtTransport{
+			underlyingTransport: http.DefaultTransport,
+			jwtSecret:           secret,
+		}
+		c.cfg.httpClient = &http.Client{
+			Timeout:   DefaultTimeout,
+			Transport: authTransport,
+		}
 		return nil
 	}
 }

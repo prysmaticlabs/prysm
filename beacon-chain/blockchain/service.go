@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -83,6 +84,7 @@ type config struct {
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	FinalizedStateAtStartUp state.BeaconState
+	ExecutionEngineCaller   enginev1.EngineCaller
 }
 
 // NewService instantiates a new block service instance that will
@@ -217,7 +219,7 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             s.genesisTime,
-			GenesisValidatorsRoot: saved.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
 		},
 	})
 
@@ -379,7 +381,7 @@ func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             genesisTime,
-			GenesisValidatorsRoot: initializedState.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: initializedState.GenesisValidatorsRoot(),
 		},
 	})
 }

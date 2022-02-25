@@ -30,8 +30,10 @@ import (
 	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	nativev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
@@ -79,7 +81,6 @@ var (
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
-	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
 	PreGenesisState() state.BeaconState
 	ClearPreGenesisData()
@@ -126,17 +127,18 @@ type RPCClient interface {
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	depositContractAddr     common.Address
-	beaconDB                db.HeadAccessDatabase
-	depositCache            *depositcache.DepositCache
-	stateNotifier           statefeed.Notifier
-	stateGen                *stategen.State
-	eth1HeaderReqLimit      uint64
-	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
-	httpEndpoints           []network.Endpoint
-	executionEndpoint       string
-	currHttpEndpoint        network.Endpoint
-	finalizedStateAtStartup state.BeaconState
+	depositContractAddr        common.Address
+	beaconDB                   db.HeadAccessDatabase
+	depositCache               *depositcache.DepositCache
+	stateNotifier              statefeed.Notifier
+	stateGen                   *stategen.State
+	eth1HeaderReqLimit         uint64
+	beaconNodeStatsUpdater     BeaconNodeStatsUpdater
+	httpEndpoints              []network.Endpoint
+	executionEndpoint          string
+	executionEndpointJWTSecret []byte
+	currHttpEndpoint           network.Endpoint
+	finalizedStateAtStartup    state.BeaconState
 }
 
 // Service fetches important information about the canonical
@@ -269,16 +271,14 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// ChainStartDeposits returns a slice of validator deposit data processed
-// by the deposit contract and cached in the powchain service.
-func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
-	return s.chainStartData.ChainstartDeposits
-}
-
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &v1.BeaconState{}
+	if features.Get().EnableNativeState {
+		s.preGenesisState = &nativev1.BeaconState{}
+	} else {
+		s.preGenesisState = &v1.BeaconState{}
+	}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -374,45 +374,6 @@ func (s *Service) ETH1ConnectionErrors() []error {
 		errs = append(errs, err)
 	}
 	return errs
-}
-
-// DepositRoot returns the Merkle root of the latest deposit trie
-// from the ETH1.0 deposit contract.
-func (s *Service) DepositRoot() [32]byte {
-	return s.depositTrie.HashTreeRoot()
-}
-
-// DepositTrie returns the sparse Merkle trie used for storing
-// deposits from the ETH1.0 deposit contract.
-func (s *Service) DepositTrie() *trie.SparseMerkleTrie {
-	return s.depositTrie
-}
-
-// LatestBlockHeight in the ETH1.0 chain.
-func (s *Service) LatestBlockHeight() *big.Int {
-	return big.NewInt(int64(s.latestEth1Data.BlockHeight))
-}
-
-// LatestBlockHash in the ETH1.0 chain.
-func (s *Service) LatestBlockHash() common.Hash {
-	return bytesutil.ToBytes32(s.latestEth1Data.BlockHash)
-}
-
-// AreAllDepositsProcessed determines if all the logs from the deposit contract
-// are processed.
-func (s *Service) AreAllDepositsProcessed() (bool, error) {
-	s.processingLock.RLock()
-	defer s.processingLock.RUnlock()
-	countByte, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
-	if err != nil {
-		return false, errors.Wrap(err, "could not get deposit count")
-	}
-	count := bytesutil.FromBytes8(countByte)
-	deposits := s.cfg.depositCache.AllDeposits(s.ctx, nil)
-	if count != uint64(len(deposits)) {
-		return false, nil
-	}
-	return true, nil
 }
 
 // refers to the latest eth1 block which follows the condition: eth1_timestamp +
@@ -1098,7 +1059,10 @@ func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
 	if s.cfg.executionEndpoint == "" {
 		return nil
 	}
-	client, err := engine.New(ctx, s.cfg.executionEndpoint)
+	opts := []engine.Option{
+		engine.WithJWTSecret(s.cfg.executionEndpointJWTSecret),
+	}
+	client, err := engine.New(ctx, s.cfg.executionEndpoint, opts...)
 	if err != nil {
 		return err
 	}

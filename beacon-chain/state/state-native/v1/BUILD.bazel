@@ -97,6 +97,7 @@ go_test(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
+        "//beacon-chain/state/testing:go_default_library",
         "//beacon-chain/state/types:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",

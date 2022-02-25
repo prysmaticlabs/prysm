@@ -34,7 +34,7 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Gene
 	if genesisTime.IsZero() {
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
-	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorRoot()
+	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorsRoot()
 	if bytes.Equal(validatorRoot[:], params.BeaconConfig().ZeroHash[:]) {
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}

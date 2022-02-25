@@ -27,13 +27,14 @@ import (
 )
 
 const (
-	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
-	filePollingInterval = 500 * time.Millisecond
-	memoryHeapFileName  = "node_heap_%d.pb.gz"
-	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
-	fileBufferSize      = 64 * 1024
-	maxFileBufferSize   = 1024 * 1024
-	AltairE2EForkEpoch  = 6
+	maxPollingWaitTime    = 60 * time.Second // A minute so timing out doesn't take very long.
+	filePollingInterval   = 500 * time.Millisecond
+	memoryHeapFileName    = "node_heap_%d.pb.gz"
+	cpuProfileFileName    = "node_cpu_profile_%d.pb.gz"
+	fileBufferSize        = 64 * 1024
+	maxFileBufferSize     = 1024 * 1024
+	AltairE2EForkEpoch    = 6
+	BellatrixE2EForkEpoch = 8
 )
 
 // Graffiti is a list of sample graffiti strings.

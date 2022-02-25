@@ -130,6 +130,10 @@ var (
 		Name:  "disable-balance-trie-computation",
 		Usage: "This disables optimized hash tree root operations for our balance field.",
 	}
+	enableNativeState = &cli.BoolFlag{
+		Name:  "enable-native-state",
+		Usage: "Enables representing the beacon state as a pure Go struct.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -178,6 +182,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableActiveBalanceCache,
 	disableBatchGossipVerification,
 	disableBalanceTrieComputation,
+	enableNativeState,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

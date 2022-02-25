@@ -61,7 +61,6 @@ type Flags struct {
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 
 	// Cache toggles.
-	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
@@ -74,6 +73,8 @@ type Flags struct {
 	// Bug fixes related flags.
 	CorrectlyInsertOrphanedAtts bool
 	CorrectlyPruneCanonicalAtts bool
+
+	EnableNativeState bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -149,8 +150,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.WriteSSZStateTransitions = true
 	}
 
-	cfg.EnableSSZCache = true
-
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
@@ -217,6 +216,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBalanceTrieComputation.Name) {
 		logDisabled(disableBalanceTrieComputation)
 		cfg.EnableBalanceTrieComputation = false
+	}
+	cfg.EnableNativeState = false
+	if ctx.Bool(enableNativeState.Name) {
+		logEnabled(enableNativeState)
+		cfg.EnableNativeState = true
 	}
 	Init(cfg)
 }

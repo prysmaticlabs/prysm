@@ -8,7 +8,7 @@ import (
 
 func TestStateFieldIndexes(t *testing.T) {
 	assert.Equal(t, FieldIndex(0), GenesisTime)
-	assert.Equal(t, FieldIndex(1), GenesisValidatorRoot)
+	assert.Equal(t, FieldIndex(1), GenesisValidatorsRoot)
 	assert.Equal(t, FieldIndex(2), Slot)
 	assert.Equal(t, FieldIndex(3), Fork)
 	assert.Equal(t, FieldIndex(4), LatestBlockHeader)

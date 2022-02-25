@@ -185,15 +185,15 @@ func TestCurrentFork_NilHeadSTate(t *testing.T) {
 	}
 }
 
-func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
+func TestGenesisValidatorsRoot_CanRetrieve(t *testing.T) {
 	// Should not panic if head state is nil.
 	c := &Service{}
-	assert.Equal(t, [32]byte{}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
+	assert.Equal(t, [32]byte{}, c.GenesisValidatorsRoot(), "Did not get correct genesis validators root")
 
 	s, err := v1.InitializeFromProto(&ethpb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
 	require.NoError(t, err)
 	c.head = &head{state: s}
-	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorRoot(), "Did not get correct genesis validator root")
+	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorsRoot(), "Did not get correct genesis validators root")
 }
 
 func TestHeadETH1Data_Nil(t *testing.T) {
@@ -265,17 +265,17 @@ func TestService_HeadSeed(t *testing.T) {
 	require.DeepEqual(t, seed, root)
 }
 
-func TestService_HeadGenesisValidatorRoot(t *testing.T) {
+func TestService_HeadGenesisValidatorsRoot(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, 1)
 	c := &Service{}
 
 	c.head = &head{}
-	root := c.HeadGenesisValidatorRoot()
+	root := c.HeadGenesisValidatorsRoot()
 	require.Equal(t, [32]byte{}, root)
 
 	c.head = &head{state: s}
-	root = c.HeadGenesisValidatorRoot()
-	require.DeepEqual(t, root[:], s.GenesisValidatorRoot())
+	root = c.HeadGenesisValidatorsRoot()
+	require.DeepEqual(t, root[:], s.GenesisValidatorsRoot())
 }
 
 func TestService_ProtoArrayStore(t *testing.T) {
@@ -357,6 +357,11 @@ func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
 }
 
 func TestService_IsOptimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
@@ -365,6 +370,14 @@ func TestService_IsOptimistic(t *testing.T) {
 	opt, err := c.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, opt)
+}
+
+func TestService_IsOptimisticBeforeBellatrix(t *testing.T) {
+	ctx := context.Background()
+	c := &Service{genesisTime: time.Now()}
+	opt, err := c.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, opt)
 }
 
 func TestService_IsOptimisticForRoot(t *testing.T) {
