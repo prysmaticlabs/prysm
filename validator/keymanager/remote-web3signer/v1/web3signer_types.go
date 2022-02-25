@@ -215,9 +215,9 @@ type Deposit struct {
 }
 
 // DepositData a sub property of Deposit.
-// DepositData :Prysm uses Deposit_data instead of DepositData which is inconsistent naming
+// DepositData Prysm uses Deposit_data instead of DepositData which is inconsistent naming
 type DepositData struct {
-	PublicKey             string `json:"public_key"`
+	PublicKey             string `json:"pubkey"`
 	WithdrawalCredentials string `json:"withdrawal_credentials"`
 	Amount                string `json:"amount"` /* uint64 */
 	Signature             string `json:"signature"`
