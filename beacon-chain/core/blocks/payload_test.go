@@ -528,7 +528,7 @@ func Test_ValidatePayload(t *testing.T) {
 		{
 			name:    "incorrect random",
 			payload: emptyPayload(),
-			err:     errors.New("incorrect random"),
+			err:     errors.New("incorrect prev randao"),
 		},
 		{
 			name: "incorrect timestamp",
