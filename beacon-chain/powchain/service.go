@@ -127,17 +127,18 @@ type RPCClient interface {
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	depositContractAddr     common.Address
-	beaconDB                db.HeadAccessDatabase
-	depositCache            *depositcache.DepositCache
-	stateNotifier           statefeed.Notifier
-	stateGen                *stategen.State
-	eth1HeaderReqLimit      uint64
-	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
-	httpEndpoints           []network.Endpoint
-	executionEndpoint       string
-	currHttpEndpoint        network.Endpoint
-	finalizedStateAtStartup state.BeaconState
+	depositContractAddr        common.Address
+	beaconDB                   db.HeadAccessDatabase
+	depositCache               *depositcache.DepositCache
+	stateNotifier              statefeed.Notifier
+	stateGen                   *stategen.State
+	eth1HeaderReqLimit         uint64
+	beaconNodeStatsUpdater     BeaconNodeStatsUpdater
+	httpEndpoints              []network.Endpoint
+	executionEndpoint          string
+	executionEndpointJWTSecret []byte
+	currHttpEndpoint           network.Endpoint
+	finalizedStateAtStartup    state.BeaconState
 }
 
 // Service fetches important information about the canonical
@@ -1058,7 +1059,10 @@ func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
 	if s.cfg.executionEndpoint == "" {
 		return nil
 	}
-	client, err := engine.New(ctx, s.cfg.executionEndpoint)
+	opts := []engine.Option{
+		engine.WithJWTSecret(s.cfg.executionEndpointJWTSecret),
+	}
+	client, err := engine.New(ctx, s.cfg.executionEndpoint, opts...)
 	if err != nil {
 		return err
 	}
