@@ -434,7 +434,7 @@ func CopyExecutionPayload(payload *enginev1.ExecutionPayload) *enginev1.Executio
 		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
 		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
 		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
-		PrevRandao:    bytesutil.SafeCopyBytes(payload.Random),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
 		BlockNumber:   payload.BlockNumber,
 		GasLimit:      payload.GasLimit,
 		GasUsed:       payload.GasUsed,
