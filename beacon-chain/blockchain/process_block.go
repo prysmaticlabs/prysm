@@ -1,14 +1,10 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -16,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -116,7 +113,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	fullyValidated := false
+	optmisticBlock := false
 	if copiedPreState.Version() == version.Bellatrix || postState.Version() == version.Bellatrix {
 		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
 		if err != nil {
@@ -128,46 +125,38 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				return errors.Wrap(err, "could not get body execution payload")
 			}
 			// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
-			status, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+			_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 			if err != nil {
-				return err
+				if err == v1.ErrAcceptedSyncingPayloadStatus {
+					candidate, err := s.optimisticCandidateBlock(ctx, b)
+					if err != nil {
+						return errors.Wrap(err, "could not check if block is optimistic candidate")
+					}
+					if !candidate {
+						return errors.New("could not optimistically sync block")
+					}
+					optmisticBlock = true
+					log.WithFields(logrus.Fields{
+						"slot":        b.Slot(),
+						"root":        fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:])),
+						"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+					}).Info("Block is optimistic candidate")
+				} else {
+					return err
+				}
 			}
 			log.WithFields(logrus.Fields{
-				"status:":    status.Status,
 				"hash:":      fmt.Sprintf("%#x", payload.BlockHash),
 				"parentHash": fmt.Sprintf("%#x", payload.ParentHash),
 			}).Info("Successfully called newPayload")
 
-			switch status.Status {
-			case enginev1.PayloadStatus_INVALID, enginev1.PayloadStatus_INVALID_BLOCK_HASH, enginev1.PayloadStatus_INVALID_TERMINAL_BLOCK:
-				// TODO_MERGE walk up the parent chain removing
-				return fmt.Errorf("could not prcess execution payload with status : %v", status.Status)
-			case enginev1.PayloadStatus_SYNCING, enginev1.PayloadStatus_ACCEPTED:
-				candidate, err := s.optimisticCandidateBlock(ctx, b)
-				if err != nil {
-					return errors.Wrap(err, "could not check if block is optimistic candidate")
-				}
-				if !candidate {
-					return errors.New("could not optimistically sync block")
-				}
-				log.WithFields(logrus.Fields{
-					"slot":        b.Slot(),
-					"root":        fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:])),
-					"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
-				}).Info("Block is optimistic candidate")
-				break
-			case enginev1.PayloadStatus_VALID:
-				fullyValidated = true
-			default:
-				return errors.New("unknown payload status")
-			}
-			if fullyValidated {
+			if !optmisticBlock {
 				mergeBlock, err := blocks.MergeTransitionBlock(copiedPreState, body)
 				if err != nil {
 					return errors.Wrap(err, "could not check if merge block is terminal")
 				}
 				if mergeBlock {
-					if err := s.validateTerminalBlock(ctx, signed); err != nil {
+					if err := s.validateMergeBlock(ctx, signed); err != nil {
 						return err
 					}
 				}
@@ -188,7 +177,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// update forkchoice synced tips if the block is not optimistic
-	if postState.Version() == version.Bellatrix || fullyValidated {
+	if postState.Version() == version.Bellatrix || !optmisticBlock {
 		root, err := b.HashTreeRoot()
 		if err != nil {
 			return err
@@ -291,32 +280,24 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 				SafeBlockHash:      headPayload.BlockHash,
 				FinalizedBlockHash: finalizedBlockHash,
 			}
-			resp, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /* attribute */)
+			_, _, err = s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /* attribute */)
 			if err != nil {
-				return err
+				if err == v1.ErrAcceptedSyncingPayloadStatus {
+					candidate, err := s.optimisticCandidateBlock(ctx, b)
+					if err != nil {
+						return errors.Wrap(err, "could not check if block is optimistic candidate")
+					}
+					if !candidate {
+						return errors.Wrap(err, "could not optimistically sync block")
+					}
+				} else {
+					return err
+				}
 			}
 
 			log.WithFields(logrus.Fields{
-				"status:": resp.Status.Status,
-				"hash:":   fmt.Sprintf("%#x", headPayload.BlockHash),
+				"hash:": fmt.Sprintf("%#x", headPayload.BlockHash),
 			}).Info("Successfully called forkchoiceUpdated")
-
-			switch resp.Status.Status {
-			case enginev1.PayloadStatus_INVALID, enginev1.PayloadStatus_INVALID_BLOCK_HASH, enginev1.PayloadStatus_INVALID_TERMINAL_BLOCK:
-				return fmt.Errorf("could not prcess execution payload with status : %v", resp.Status.Status)
-			case enginev1.PayloadStatus_SYNCING, enginev1.PayloadStatus_ACCEPTED:
-				candidate, err := s.optimisticCandidateBlock(ctx, b)
-				if err != nil {
-					return errors.Wrap(err, "could not check if block is optimistic candidate")
-				}
-				if !candidate {
-					return errors.Wrap(err, "could not optimistically sync block")
-				}
-				break
-			case enginev1.PayloadStatus_VALID:
-			default:
-				return errors.Wrap(err, "could not execute payload")
-			}
 		}
 	}
 
@@ -445,32 +426,25 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 				if err != nil {
 					return nil, nil, nil, errors.Wrap(err, "could not get body execution payload")
 				}
-				status, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+				_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 				if err != nil {
-					return nil, nil, nil, err
-				}
-				switch status.Status {
-				case enginev1.PayloadStatus_INVALID, enginev1.PayloadStatus_INVALID_BLOCK_HASH, enginev1.PayloadStatus_INVALID_TERMINAL_BLOCK:
-					// TODO_MERGE walk up the parent chain removing
-					return nil, nil, nil, fmt.Errorf("could not prcess execution payload with status : %v", status.Status)
-				case enginev1.PayloadStatus_SYNCING, enginev1.PayloadStatus_ACCEPTED:
-					candidate, err := s.optimisticCandidateBlock(ctx, b.Block())
-					if err != nil {
-						return nil, nil, nil, errors.Wrap(err, "could not check if block is optimistic candidate")
+					if err == v1.ErrAcceptedSyncingPayloadStatus {
+						candidate, err := s.optimisticCandidateBlock(ctx, b.Block())
+						if err != nil {
+							return nil, nil, nil, errors.Wrap(err, "could not check if block is optimistic candidate")
+						}
+						if !candidate {
+							return nil, nil, nil, errors.New("could not optimistically sync block")
+						}
+						log.WithFields(logrus.Fields{
+							"slot":        b.Block().Slot(),
+							"root":        fmt.Sprintf("%#x", bytesutil.Trunc(blockRoots[i][:])),
+							"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+						}).Info("Block is optimistic candidate")
+						optimistic[i] = true
+					} else {
+						return nil, nil, nil, err
 					}
-					if !candidate {
-						return nil, nil, nil, errors.New("could not optimistically sync block")
-					}
-					log.WithFields(logrus.Fields{
-						"slot":        b.Block().Slot(),
-						"root":        fmt.Sprintf("%#x", bytesutil.Trunc(blockRoots[i][:])),
-						"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
-					}).Info("Block is optimistic candidate")
-					optimistic[i] = true
-					break
-				case enginev1.PayloadStatus_VALID:
-				default:
-					return nil, nil, nil, errors.New("unknown payload status")
 				}
 				if !optimistic[i] {
 					mergeBlock, err := blocks.MergeTransitionBlock(preStateCopied, b.Block().Body())
@@ -478,7 +452,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 						return nil, nil, nil, errors.Wrap(err, "could not check if merge block is terminal")
 					}
 					if mergeBlock {
-						if err := s.validateTerminalBlock(ctx, b); err != nil {
+						if err := s.validateMergeBlock(ctx, b); err != nil {
 							return nil, nil, nil, err
 						}
 					}
@@ -511,18 +485,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 					FinalizedBlockHash: finalizedBlockHash,
 				}
 
-				resp, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /* attribute */)
-				if err != nil {
+				_, _, err = s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /* attribute */)
+				if err != nil && err != v1.ErrAcceptedSyncingPayloadStatus {
 					return nil, nil, nil, err
-				}
-				switch resp.Status.Status {
-				case enginev1.PayloadStatus_INVALID, enginev1.PayloadStatus_INVALID_BLOCK_HASH, enginev1.PayloadStatus_INVALID_TERMINAL_BLOCK:
-					return nil, nil, nil, fmt.Errorf("could not prcess execution payload with status : %v", resp.Status.Status)
-				case enginev1.PayloadStatus_SYNCING, enginev1.PayloadStatus_ACCEPTED:
-					break
-				case enginev1.PayloadStatus_VALID:
-				default:
-					return nil, nil, nil, errors.Wrap(err, "could not execute payload")
 				}
 			}
 		}
@@ -742,88 +707,6 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 			}
 		}
 	}
-	return nil
-}
-
-// validates terminal block hash in the event of manual overrides before checking for total difficulty.
-//
-// def validate_merge_block(block: BeaconBlock) -> None:
-//    """
-//    Check the parent PoW block of execution payload is a valid terminal PoW block.
-//
-//    Note: Unavailable PoW block(s) may later become available,
-//    and a client software MAY delay a call to ``validate_merge_block``
-//    until the PoW block(s) become available.
-//    """
-//    if TERMINAL_BLOCK_HASH != Hash32():
-//        # If `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
-//        assert compute_epoch_at_slot(block.slot) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-//        return block.block_hash == TERMINAL_BLOCK_HASH
-//
-//    pow_block = get_pow_block(block.body.execution_payload.parent_hash)
-//    # Check if `pow_block` is available
-//    assert pow_block is not None
-//    pow_parent = get_pow_block(pow_block.parent_hash)
-//    # Check if `pow_parent` is available
-//    assert pow_parent is not None
-//    # Check if `pow_block` is a valid terminal PoW block
-//    assert is_valid_terminal_pow_block(pow_block, pow_parent)
-func (s *Service) validateTerminalBlock(ctx context.Context, b block.SignedBeaconBlock) error {
-	payload, err := b.Block().Body().ExecutionPayload()
-	if err != nil {
-		return err
-	}
-	if bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) != [32]byte{} {
-		// `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
-		if params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(b.Block().Slot()) {
-			return errors.New("terminal block hash activation epoch not reached")
-		}
-		if !bytes.Equal(payload.ParentHash, params.BeaconConfig().TerminalBlockHash.Bytes()) {
-			return errors.New("parent hash does not match terminal block hash")
-		}
-		return nil
-	}
-	transitionBlk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(ctx, common.BytesToHash(payload.ParentHash))
-	if err != nil {
-		return errors.Wrap(err, "could not get transition block")
-	}
-	parentTransitionBlk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(ctx, common.BytesToHash(transitionBlk.ParentHash))
-	if err != nil {
-		return errors.Wrap(err, "could not get transition parent block")
-	}
-	transitionBlkTDBig, err := hexutil.DecodeBig(transitionBlk.TotalDifficulty)
-	if err != nil {
-		return errors.Wrap(err, "could not decode transition total difficulty")
-	}
-	transitionBlkTTD, overflows := uint256.FromBig(transitionBlkTDBig)
-	if overflows {
-		return errors.New("total difficulty overflows")
-	}
-	parentBlkTD, err := hexutil.DecodeBig(parentTransitionBlk.TotalDifficulty)
-	if err != nil {
-		return errors.Wrap(err, "could not decode transition total difficulty")
-	}
-	parentBlkTTD, overflows := uint256.FromBig(parentBlkTD)
-	if overflows {
-		return errors.New("total difficulty overflows")
-	}
-	log.WithFields(logrus.Fields{
-		"slot":                                 b.Block().Slot(),
-		"transitionBlockHash":                  common.BytesToHash(payload.ParentHash).String(),
-		"transitionBlockParentHash":            common.BytesToHash(transitionBlk.ParentHash).String(),
-		"terminalTotalDifficulty":              params.BeaconConfig().TerminalTotalDifficulty,
-		"transitionBlockTotalDifficulty":       transitionBlkTTD,
-		"transitionBlockParentTotalDifficulty": parentBlkTTD,
-	}).Info("Validating terminal block")
-
-	validated, err := validTerminalPowBlock(transitionBlkTTD, parentBlkTTD)
-	if err != nil {
-		return err
-	}
-	if !validated {
-		return errors.New("invalid difficulty for terminal block")
-	}
-
 	return nil
 }
 
