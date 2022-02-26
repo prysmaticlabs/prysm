@@ -67,7 +67,7 @@ func TestUpgradeToBellatrix(t *testing.T) {
 		StateRoot:        make([]byte, 32),
 		ReceiptRoot:      make([]byte, 32),
 		LogsBloom:        make([]byte, 256),
-		Random:           make([]byte, 32),
+		PrevRandao:       make([]byte, 32),
 		BlockNumber:      0,
 		GasLimit:         0,
 		GasUsed:          0,

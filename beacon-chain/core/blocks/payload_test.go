@@ -78,7 +78,7 @@ func Test_MergeComplete(t *testing.T) {
 			name: "has random",
 			payload: func() *ethpb.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
-				h.Random = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				h.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
@@ -246,7 +246,7 @@ func Test_MergeBlock(t *testing.T) {
 			name: "empty header, payload has random",
 			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
-				p.Random = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				p.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
 			}(),
 			header: emptyPayloadHeader(),
@@ -520,7 +520,7 @@ func Test_ValidatePayload(t *testing.T) {
 			name: "validate passes",
 			payload: func() *enginev1.ExecutionPayload {
 				h := emptyPayload()
-				h.Random = random
+				h.PrevRandao = random
 				h.Timestamp = uint64(ts.Unix())
 				return h
 			}(), err: nil,
@@ -528,13 +528,13 @@ func Test_ValidatePayload(t *testing.T) {
 		{
 			name:    "incorrect random",
 			payload: emptyPayload(),
-			err:     errors.New("incorrect random"),
+			err:     errors.New("incorrect prev randao"),
 		},
 		{
 			name: "incorrect timestamp",
 			payload: func() *enginev1.ExecutionPayload {
 				h := emptyPayload()
-				h.Random = random
+				h.PrevRandao = random
 				h.Timestamp = 1
 				return h
 			}(),
@@ -568,7 +568,7 @@ func Test_ProcessPayload(t *testing.T) {
 			name: "process passes",
 			payload: func() *enginev1.ExecutionPayload {
 				h := emptyPayload()
-				h.Random = random
+				h.PrevRandao = random
 				h.Timestamp = uint64(ts.Unix())
 				return h
 			}(), err: nil,
@@ -582,7 +582,7 @@ func Test_ProcessPayload(t *testing.T) {
 			name: "incorrect timestamp",
 			payload: func() *enginev1.ExecutionPayload {
 				h := emptyPayload()
-				h.Random = random
+				h.PrevRandao = random
 				h.Timestamp = 1
 				return h
 			}(),
@@ -621,7 +621,7 @@ func Test_PayloadToHeader(t *testing.T) {
 	p.StateRoot = b
 	p.ReceiptsRoot = b
 	p.LogsBloom = b
-	p.Random = b
+	p.PrevRandao = b
 	p.ExtraData = b
 	p.BaseFeePerGas = b
 	p.BlockHash = b
@@ -635,7 +635,7 @@ func Test_PayloadToHeader(t *testing.T) {
 	require.DeepSSZEqual(t, h.StateRoot, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.ReceiptRoot, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.LogsBloom, make([]byte, fieldparams.LogsBloomLength))
-	require.DeepSSZEqual(t, h.Random, make([]byte, fieldparams.RootLength))
+	require.DeepSSZEqual(t, h.PrevRandao, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.ExtraData, make([]byte, 0))
 	require.DeepSSZEqual(t, h.BaseFeePerGas, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.BlockHash, make([]byte, fieldparams.RootLength))
@@ -663,7 +663,7 @@ func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
 		StateRoot:        make([]byte, fieldparams.RootLength),
 		ReceiptRoot:      make([]byte, fieldparams.RootLength),
 		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-		Random:           make([]byte, fieldparams.RootLength),
+		PrevRandao:       make([]byte, fieldparams.RootLength),
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
@@ -678,7 +678,7 @@ func emptyPayload() *enginev1.ExecutionPayload {
 		StateRoot:     make([]byte, fieldparams.RootLength),
 		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		Random:        make([]byte, fieldparams.RootLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 		Transactions:  make([][]byte, 0),
