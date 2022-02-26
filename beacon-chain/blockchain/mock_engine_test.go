@@ -30,8 +30,8 @@ func (*mockEngineService) GetPayload(context.Context, [8]byte) (*enginev1.Execut
 	return nil, nil
 }
 
-func (*mockEngineService) ExchangeTransitionConfiguration(context.Context, *enginev1.TransitionConfiguration) (*enginev1.TransitionConfiguration, error) {
-	return nil, nil
+func (*mockEngineService) ExchangeTransitionConfiguration(context.Context, *enginev1.TransitionConfiguration) error {
+	return nil
 }
 
 func (*mockEngineService) LatestExecutionBlock(context.Context) (*enginev1.ExecutionBlock, error) {
