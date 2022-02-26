@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/holiman/uint256"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -26,8 +27,12 @@ func (s *Service) checkTransitionConfiguration(ctx context.Context) {
 	if s.engineAPIClient == nil {
 		return
 	}
+	i := new(big.Int)
+	i.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	ttd := new(uint256.Int)
+	ttd.SetFromBig(i)
 	cfg := &pb.TransitionConfiguration{
-		TerminalTotalDifficulty: params.BeaconConfig().TerminalTotalDifficulty,
+		TerminalTotalDifficulty: ttd.Hex(),
 		TerminalBlockHash:       params.BeaconConfig().TerminalBlockHash[:],
 		TerminalBlockNumber:     big.NewInt(0).Bytes(), // A value of 0 is recommended in the request.
 	}

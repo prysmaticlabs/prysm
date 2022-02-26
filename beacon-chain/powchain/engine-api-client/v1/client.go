@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -175,11 +176,15 @@ func (c *Client) ExchangeTransitionConfiguration(
 		)
 	}
 	ttdCfg := params.BeaconConfig().TerminalTotalDifficulty
-	if ttdCfg != result.TerminalTotalDifficulty {
+	ttdResult, err := hexutil.DecodeBig(result.TerminalTotalDifficulty)
+	if err != nil {
+		return errors.Wrap(err, "could not decode received terminal total difficulty")
+	}
+	if ttdResult.String() != ttdCfg {
 		return errors.Wrapf(
 			ErrConfigMismatch,
 			"got %s from execution node, wanted %s",
-			result.TerminalTotalDifficulty,
+			ttdResult.String(),
 			ttdCfg,
 		)
 	}

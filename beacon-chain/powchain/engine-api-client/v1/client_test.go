@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -467,7 +468,7 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 			}()
 
 			// Change the terminal block hash.
-			resp.TerminalTotalDifficulty = "bar"
+			resp.TerminalTotalDifficulty = "0x1"
 			respJSON := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      1,
@@ -680,9 +681,11 @@ func fixtures() map[string]interface{} {
 		},
 		PayloadId: &id,
 	}
+	b, _ := new(big.Int).SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	ttd, _ := uint256.FromBig(b)
 	transitionCfg := &pb.TransitionConfiguration{
 		TerminalBlockHash:       params.BeaconConfig().TerminalBlockHash[:],
-		TerminalTotalDifficulty: params.BeaconConfig().TerminalTotalDifficulty,
+		TerminalTotalDifficulty: ttd.Hex(),
 		TerminalBlockNumber:     big.NewInt(0).Bytes(),
 	}
 	validStatus := &pb.PayloadStatus{
