@@ -526,7 +526,7 @@ func Test_ValidatePayload(t *testing.T) {
 			}(), err: nil,
 		},
 		{
-			name:    "incorrect random",
+			name:    "incorrect prev randao",
 			payload: emptyPayload(),
 			err:     errors.New("incorrect prev randao"),
 		},
@@ -574,9 +574,9 @@ func Test_ProcessPayload(t *testing.T) {
 			}(), err: nil,
 		},
 		{
-			name:    "incorrect random",
+			name:    "incorrect prev randao",
 			payload: emptyPayload(),
-			err:     errors.New("incorrect random"),
+			err:     errors.New("incorrect prev randao"),
 		},
 		{
 			name: "incorrect timestamp",
