@@ -36,10 +36,8 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error)
 		return nil, errors.New("received nil state")
 	}
 
-	var bRoots customtypes.BlockRoots
-	for i, r := range st.BlockRoots {
-		copy(bRoots[i][:], r)
-	}
+	bRoots := customtypes.SetFromSlice(st.BlockRoots)
+
 	var sRoots customtypes.StateRoots
 	for i, r := range st.StateRoots {
 		copy(sRoots[i][:], r)
@@ -60,7 +58,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error)
 		slot:                        st.Slot,
 		fork:                        st.Fork,
 		latestBlockHeader:           st.LatestBlockHeader,
-		blockRoots:                  &bRoots,
+		blockRoots:                  bRoots,
 		stateRoots:                  &sRoots,
 		historicalRoots:             hRoots,
 		eth1Data:                    st.Eth1Data,
@@ -99,7 +97,6 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error)
 	// Initialize field reference tracking for shared data.
 	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[previousEpochAttestations] = stateutil.NewRef(1)
 	b.sharedFieldReferences[currentEpochAttestations] = stateutil.NewRef(1)
 	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
@@ -200,6 +197,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			}
 		}
 	}
+	b.blockRoots.IncreaseRef()
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -211,6 +209,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			}
 
 		}
+		b.blockRoots.MinusRef()
 		for i := 0; i < fieldCount; i++ {
 			field := types.FieldIndex(i)
 			delete(b.stateFieldLeaves, field)

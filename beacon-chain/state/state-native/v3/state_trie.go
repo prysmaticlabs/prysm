@@ -36,10 +36,8 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconStat
 		return nil, errors.New("received nil state")
 	}
 
-	var bRoots customtypes.BlockRoots
-	for i, r := range st.BlockRoots {
-		bRoots[i] = bytesutil.ToBytes32(r)
-	}
+	bRoots := customtypes.SetFromSlice(st.BlockRoots)
+
 	var sRoots customtypes.StateRoots
 	for i, r := range st.StateRoots {
 		sRoots[i] = bytesutil.ToBytes32(r)
@@ -60,7 +58,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconStat
 		slot:                         st.Slot,
 		fork:                         st.Fork,
 		latestBlockHeader:            st.LatestBlockHeader,
-		blockRoots:                   &bRoots,
+		blockRoots:                   bRoots,
 		stateRoots:                   &sRoots,
 		historicalRoots:              hRoots,
 		eth1Data:                     st.Eth1Data,

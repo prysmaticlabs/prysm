@@ -55,7 +55,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
+			numOfElems:  retrieveLength(elements),
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
@@ -65,7 +65,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
+			numOfElems:  retrieveLength(elements),
 		}, nil
 	default:
 		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())
@@ -96,14 +96,14 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		f.numOfElems = retrieveLength(elements)
 		return fieldRoot, nil
 	case types.CompositeArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		f.numOfElems = retrieveLength(elements)
 		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	case types.CompressedArray:
 		numOfElems, err := f.field.ElemsInChunk()
@@ -128,7 +128,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		f.numOfElems = retrieveLength(elements)
 		return stateutil.AddInMixin(fieldRoot, uint64(f.numOfElems))
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())

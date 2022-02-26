@@ -56,9 +56,10 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 		}
 		length *= comLength
 	}
-	val := reflect.Indirect(reflect.ValueOf(elements))
-	if val.Len() > int(length) {
-		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), val.Len(), length)
+	elemLen := retrieveLength(elements)
+
+	if elemLen > int(length) {
+		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), elemLen, length)
 	}
 	return nil
 }
@@ -71,7 +72,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 		case [][]byte:
 			return handleByteArrays(val, indices, convertAll)
 		case *customtypes.BlockRoots:
-			return handle32ByteArrays(val[:], indices, convertAll)
+			return handleIndexer(val, indices, convertAll)
 		default:
 			return nil, errors.Errorf("Incorrect type used for block roots")
 		}
@@ -176,6 +177,34 @@ func handle32ByteArrays(val [][32]byte, indices []uint64, convertAll bool) ([][3
 				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
 			}
 			rootCreator(val[idx])
+		}
+	}
+	return roots, nil
+}
+
+// handle32ByteArrays computes and returns 32 byte arrays in a slice of root format.
+func handleIndexer(indexer customtypes.Indexer, indices []uint64, convertAll bool) ([][32]byte, error) {
+	length := len(indices)
+	totalLength := indexer.TotalLength()
+	if convertAll {
+		length = int(totalLength)
+	}
+	roots := make([][32]byte, 0, length)
+	rootCreator := func(input [32]byte) {
+		roots = append(roots, input)
+	}
+	if convertAll {
+		for i := uint64(0); i < uint64(length); i++ {
+			rootCreator(indexer.RootAtIndex(i))
+		}
+		return roots, nil
+	}
+	if totalLength > 0 {
+		for _, idx := range indices {
+			if idx > totalLength-1 {
+				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, totalLength)
+			}
+			rootCreator(indexer.RootAtIndex(idx))
 		}
 	}
 	return roots, nil
@@ -342,4 +371,18 @@ func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, err
 		return roots, nil
 	}
 	return [][32]byte{}, nil
+}
+
+func retrieveLength(elements interface{}) int {
+	elemLen := int(0)
+	elemVal := reflect.ValueOf(elements)
+	if reflect.Indirect(elemVal).Kind() == reflect.Struct {
+		meth := elemVal.MethodByName("TotalLength")
+		ret := meth.Call([]reflect.Value{})
+		elemLen = int(ret[0].Uint())
+	} else {
+		val := reflect.Indirect(elemVal)
+		elemLen = val.Len()
+	}
+	return elemLen
 }

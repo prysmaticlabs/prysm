@@ -76,8 +76,8 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 // input index value.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
-	if uint64(len(b.blockRoots)) <= idx {
+	if b.blockRoots.TotalLength() <= idx {
 		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}
-	return b.blockRoots[idx], nil
+	return b.blockRoots.RootAtIndex(idx), nil
 }
