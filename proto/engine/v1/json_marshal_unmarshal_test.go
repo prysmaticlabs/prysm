@@ -18,7 +18,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		feeRecipient := bytesutil.PadTo([]byte("feeRecipient"), fieldparams.FeeRecipientLength)
 		jsonPayload := &enginev1.PayloadAttributes{
 			Timestamp:             1,
-			Random:                random,
+			PrevRandao:            random,
 			SuggestedFeeRecipient: feeRecipient,
 		}
 		enc, err := json.Marshal(jsonPayload)
@@ -26,7 +26,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		payloadPb := &enginev1.PayloadAttributes{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
 		require.DeepEqual(t, uint64(1), payloadPb.Timestamp)
-		require.DeepEqual(t, random, payloadPb.Random)
+		require.DeepEqual(t, random, payloadPb.PrevRandao)
 		require.DeepEqual(t, feeRecipient, payloadPb.SuggestedFeeRecipient)
 	})
 	t.Run("payload status", func(t *testing.T) {
@@ -93,7 +93,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			StateRoot:     stateRoot,
 			ReceiptsRoot:  receiptsRoot,
 			LogsBloom:     logsBloom,
-			Random:        random,
+			PrevRandao:    random,
 			BlockNumber:   1,
 			GasLimit:      2,
 			GasUsed:       3,
@@ -112,7 +112,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, stateRoot, payloadPb.StateRoot)
 		require.DeepEqual(t, receiptsRoot, payloadPb.ReceiptsRoot)
 		require.DeepEqual(t, logsBloom, payloadPb.LogsBloom)
-		require.DeepEqual(t, random, payloadPb.Random)
+		require.DeepEqual(t, random, payloadPb.PrevRandao)
 		require.DeepEqual(t, uint64(1), payloadPb.BlockNumber)
 		require.DeepEqual(t, uint64(2), payloadPb.GasLimit)
 		require.DeepEqual(t, uint64(3), payloadPb.GasUsed)

@@ -672,7 +672,7 @@ func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.B
 			StateRoot:     make([]byte, 32),
 			ReceiptsRoot:  make([]byte, 32),
 			LogsBloom:     make([]byte, 256),
-			Random:        make([]byte, 32),
+			PrevRandao:    make([]byte, 32),
 			BaseFeePerGas: make([]byte, 32),
 			BlockHash:     make([]byte, 32),
 		}
