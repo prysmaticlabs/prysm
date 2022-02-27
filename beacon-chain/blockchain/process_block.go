@@ -101,10 +101,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	// TODO_MERGE: Optimize this copy.
 	copiedPreState := preState.Copy()
 
-	// TODO_MERGE: Break `ExecuteStateTransition` into per_slot and block processing so we can call `ExecutePayload` in the middle.
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
-		// TODO_MERGE: Notify execution client in the event of invalid conensus block
 		return err
 	}
 
@@ -309,7 +307,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
-		preStateCopied := preState.Copy() // TODO_MERGE: Optimize this copy.
+		preStateCopied := preState.Copy()
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, nil, err
