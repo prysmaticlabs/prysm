@@ -242,11 +242,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinSlashingPenaltyQuotientBellatrix:     32,
 	ProportionalSlashingMultiplierBellatrix: 3,
 	InactivityPenaltyQuotientBellatrix:      1 << 24,
-	TerminalBlockHash:                       [32]byte{},
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
 
 	// Bellatrix
-	TerminalBlockHashActivationEpoch: math.MaxUint64,
+	TerminalBlockHashActivationEpoch: 18446744073709551615,
+	TerminalBlockHash:                [32]byte{},
+	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
 }

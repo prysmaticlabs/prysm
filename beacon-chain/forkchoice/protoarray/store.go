@@ -40,6 +40,19 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 	return &ForkChoice{store: s, balances: b, votes: v, syncedTips: st}
 }
 
+// SetSyncedTips sets the synced and validated tips from the passed map
+func (f *ForkChoice) SetSyncedTips(tips map[[32]byte]types.Slot) error {
+	if len(tips) == 0 {
+		return errInvalidSyncedTips
+	}
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
+	for k, v := range tips {
+		f.syncedTips.validatedTips[k] = v
+	}
+	return nil
+}
+
 // SyncedTips returns the synced and validated tips from the fork choice store.
 func (f *ForkChoice) SyncedTips() map[[32]byte]types.Slot {
 	f.syncedTips.RLock()

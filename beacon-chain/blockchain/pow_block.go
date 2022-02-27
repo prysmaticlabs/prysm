@@ -1,7 +1,10 @@
 package blockchain
 
 import (
+	"math/big"
+
 	"github.com/holiman/uint256"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 )
 
@@ -11,9 +14,16 @@ import (
 //    is_total_difficulty_reached = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
 //    is_parent_total_difficulty_valid = parent.total_difficulty < TERMINAL_TOTAL_DIFFICULTY
 //    return is_total_difficulty_reached and is_parent_total_difficulty_valid
-func validTerminalPowBlock(currentDifficulty *uint256.Int, parentDifficulty *uint256.Int) bool {
-	ttd := params.BeaconConfig().TerminalTotalDifficulty
+func validTerminalPowBlock(currentDifficulty *uint256.Int, parentDifficulty *uint256.Int) (bool, error) {
+	b, ok := new(big.Int).SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	if !ok {
+		return false, errors.New("failed to parse terminal total difficulty")
+	}
+	ttd, of := uint256.FromBig(b)
+	if of {
+		return false, errors.New("overflow terminal total difficulty")
+	}
 	totalDifficultyReached := currentDifficulty.Cmp(ttd) >= 0
 	parentTotalDifficultyValid := ttd.Cmp(parentDifficulty) > 0
-	return totalDifficultyReached && parentTotalDifficultyValid
+	return totalDifficultyReached && parentTotalDifficultyValid, nil
 }

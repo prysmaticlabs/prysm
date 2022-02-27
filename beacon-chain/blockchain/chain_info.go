@@ -55,6 +55,7 @@ type HeadFetcher interface {
 	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
 	IsOptimistic(ctx context.Context) (bool, error)
+	IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
@@ -334,6 +335,12 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 	return s.cfg.ForkChoiceStore.Optimistic(ctx, s.head.root, s.head.slot)
+}
+
+// IsOptimisticForRoot takes the root and slot as aguments instead of the current head
+// and returns true if it is optimistic.
+func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error) {
+	return s.cfg.ForkChoiceStore.Optimistic(ctx, root, slot)
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.

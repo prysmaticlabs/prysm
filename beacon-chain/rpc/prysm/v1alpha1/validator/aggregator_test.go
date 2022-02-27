@@ -30,7 +30,8 @@ import (
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	ctx := context.Background()
 
-	s := &v1.BeaconState{}
+	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	require.NoError(t, err)
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -39,7 +40,7 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1}
 	wanted := "Syncing to latest head, not ready to respond"
-	_, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	_, err = aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 	assert.ErrorContains(t, wanted, err)
 }
 

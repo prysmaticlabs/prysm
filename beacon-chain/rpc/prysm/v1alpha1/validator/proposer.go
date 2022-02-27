@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -68,99 +67,6 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 	return vs.getPhase0BeaconBlock(ctx, req)
-}
-
-func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, error) {
-	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := vs.getExecutionPayload(ctx, req.Slot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload")
-	}
-
-	log.WithFields(logrus.Fields{
-		"blockNumber":   payload.BlockNumber,
-		"blockHash":     fmt.Sprintf("%#x", payload.BlockHash),
-		"parentHash":    fmt.Sprintf("%#x", payload.ParentHash),
-		"coinBase":      fmt.Sprintf("%#x", payload.FeeRecipient),
-		"gasLimit":      payload.GasLimit,
-		"gasUsed":       payload.GasUsed,
-		"baseFeePerGas": payload.BaseFeePerGas,
-		"random":        fmt.Sprintf("%#x", payload.Random),
-		"extraData":     fmt.Sprintf("%#x", payload.ExtraData),
-		"txs":           payload.Transactions,
-	}).Info("Retrieved payload")
-
-	blk := &ethpb.BeaconBlockBellatrix{
-		Slot:          altairBlk.Slot,
-		ProposerIndex: altairBlk.ProposerIndex,
-		ParentRoot:    altairBlk.ParentRoot,
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		Body: &ethpb.BeaconBlockBodyBellatrix{
-			RandaoReveal:      altairBlk.Body.RandaoReveal,
-			Eth1Data:          altairBlk.Body.Eth1Data,
-			Graffiti:          altairBlk.Body.Graffiti,
-			ProposerSlashings: altairBlk.Body.ProposerSlashings,
-			AttesterSlashings: altairBlk.Body.AttesterSlashings,
-			Attestations:      altairBlk.Body.Attestations,
-			Deposits:          altairBlk.Body.Deposits,
-			VoluntaryExits:    altairBlk.Body.VoluntaryExits,
-			SyncAggregate:     altairBlk.Body.SyncAggregate,
-			ExecutionPayload:  payload,
-		},
-	}
-	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(
-		&ethpb.SignedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := vs.computeStateRoot(ctx, wsb)
-	if err != nil {
-		interop.WriteBlockToDisk(wsb, true /*failed*/)
-		return nil, fmt.Errorf("could not compute state root: %v", err)
-	}
-	blk.StateRoot = stateRoot
-	return blk, nil
-}
-
-func (vs *Server) buildAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.buildAltairBeaconBlock")
-	defer span.End()
-	blkData, err := vs.buildPhase0BlockData(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("could not build block data: %v", err)
-	}
-	// Use zero hash as stub for state root to compute later.
-	stateRoot := params.BeaconConfig().ZeroHash[:]
-
-	// No need for safe sub as req.Slot cannot be 0 if requesting Altair blocks. If 0, we will be throwing
-	// an error in the first validity check of this endpoint.
-	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(blkData.ParentRoot))
-	if err != nil {
-		return nil, err
-	}
-
-	return &ethpb.BeaconBlockAltair{
-		Slot:          req.Slot,
-		ParentRoot:    blkData.ParentRoot,
-		StateRoot:     stateRoot,
-		ProposerIndex: blkData.ProposerIdx,
-		Body: &ethpb.BeaconBlockBodyAltair{
-			Eth1Data:          blkData.Eth1Data,
-			Deposits:          blkData.Deposits,
-			Attestations:      blkData.Attestations,
-			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: blkData.ProposerSlashings,
-			AttesterSlashings: blkData.AttesterSlashings,
-			VoluntaryExits:    blkData.VoluntaryExits,
-			Graffiti:          blkData.Graffiti[:],
-			SyncAggregate:     syncAggregate,
-		},
-	}, nil
 }
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt

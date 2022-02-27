@@ -2,11 +2,11 @@ package testing
 
 import (
 	"context"
-	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -87,7 +87,11 @@ func (_ *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState --
 func (_ *FaultyMockPOWChain) PreGenesisState() state.BeaconState {
-	return &v1.BeaconState{}
+	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	if err != nil {
+		panic("could not initialize state")
+	}
+	return s
 }
 
 // ClearPreGenesisData --
