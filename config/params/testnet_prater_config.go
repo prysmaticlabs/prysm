@@ -2,7 +2,6 @@ package params
 
 import (
 	eth1Params "github.com/ethereum/go-ethereum/params"
-	"github.com/holiman/uint256"
 )
 
 // UsePraterNetworkConfig uses the Prater specific

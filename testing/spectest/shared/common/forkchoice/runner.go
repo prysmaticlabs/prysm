@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
-	"github.com/holiman/uint256"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -56,12 +55,7 @@ func Run(t *testing.T, config string, fork int) {
 				require.NoError(t, err)
 
 				cfg := params.BeaconConfig()
-				b, _ := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129638912", 10)
-				ttd, of := uint256.FromBig(b)
-				if of {
-					t.Fatal("Could not set big int")
-				}
-				cfg.TerminalTotalDifficulty = ttd
+				cfg.TerminalTotalDifficulty = "115792089237316195423570985008687907853269984665640564039457584007913129638912"
 				params.OverrideBeaconConfig(cfg)
 
 				var beaconState state.BeaconState
@@ -171,8 +165,9 @@ func Run(t *testing.T, config string, fork int) {
 							require.DeepSSZEqual(t, cp, service.FinalizedCheckpt())
 						}
 						if c.ProposerBoostRoot != nil {
-							want := common.FromHex(*c.ProposerBoostRoot)
-							require.DeepEqual(t, bytesutil.ToBytes32(want), service.ProtoArrayStore().ProposerBoost())
+							want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
+							got := fmt.Sprintf("%#x", service.ProtoArrayStore().ProposerBoost())
+							require.DeepEqual(t, want, got)
 						}
 					}
 				}

@@ -128,6 +128,7 @@ func (s *Service) Start() {
 		if err := s.startFromSavedState(saved); err != nil {
 			log.Fatal(err)
 		}
+		s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 	} else {
 		if err := s.startFromPOWChain(); err != nil {
 			log.Fatal(err)
@@ -223,8 +224,6 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
 		},
 	})
-
-	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 
 	return nil
 }
