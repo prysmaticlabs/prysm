@@ -17,11 +17,6 @@ var (
 		Name:  "prater",
 		Usage: "Run Prysm configured for the Prater test network",
 	}
-	// KintsugiTestnet flag for the multiclient Ethereum consensus testnet.
-	KintsugiTestnet = &cli.BoolFlag{
-		Name:  "kintsugi-testnet",
-		Usage: "Run Prysm configured for the Kintsugi test network",
-	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
@@ -135,6 +130,10 @@ var (
 		Name:  "disable-balance-trie-computation",
 		Usage: "This disables optimized hash tree root operations for our balance field.",
 	}
+	enableNativeState = &cli.BoolFlag{
+		Name:  "enable-native-state",
+		Usage: "Enables representing the beacon state as a pure Go struct.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -149,7 +148,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableAttestingHistoryDBCache,
 	PyrmontTestnet,
 	PraterTestnet,
-	KintsugiTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
@@ -169,7 +167,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableGRPCConnectionLogging,
 	PyrmontTestnet,
 	PraterTestnet,
-	KintsugiTestnet,
 	Mainnet,
 	enablePeerScorer,
 	enableLargerGossipHistory,
@@ -185,6 +182,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableActiveBalanceCache,
 	disableBatchGossipVerification,
 	disableBalanceTrieComputation,
+	enableNativeState,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

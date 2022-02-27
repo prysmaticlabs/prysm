@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/eth/catalyst"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -76,7 +77,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 			// `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
 			isActivationEpochReached := params.BeaconConfig().TerminalBlockHashActivationEpoch <= slots.ToEpoch(slot)
 			if !isActivationEpochReached {
-				return blocks.EmptyPayload(), nil
+				return emptyPayload(), nil
 			}
 		}
 
@@ -86,7 +87,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 		}
 		if !hasTerminalBlock {
 			// No terminal block signals this is pre merge, empty payload is used.
-			return blocks.EmptyPayload(), nil
+			return emptyPayload(), nil
 		}
 		// Terminal block found signals production on top of terminal PoW block.
 	} else {
@@ -120,45 +121,33 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 		finalizedBlockHash = finalizedPayload.BlockHash
 	}
 
-	f := catalyst.ForkchoiceStateV1{
-		HeadBlockHash:      common.BytesToHash(parentHash),
-		SafeBlockHash:      common.BytesToHash(parentHash),
-		FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
+	f := &enginev1.ForkchoiceState{
+		HeadBlockHash:      parentHash,
+		SafeBlockHash:      parentHash,
+		FinalizedBlockHash: finalizedBlockHash,
 	}
-	p := catalyst.PayloadAttributesV1{
+	p := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
-		Random:                common.BytesToHash(random),
-		SuggestedFeeRecipient: params.BeaconConfig().FeeRecipient,
+		Random:                random,
+		SuggestedFeeRecipient: params.BeaconConfig().FeeRecipient.Bytes(),
 	}
-	id, err := vs.ExecutionEngineCaller.PreparePayload(ctx, f, p)
+	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
-	data, err := vs.ExecutionEngineCaller.GetPayload(ctx, id)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get payload")
+
+	if payloadID == nil {
+		return nil, errors.New("forkchoice returned nil")
 	}
 
-	return executableDataToExecutionPayload(data), nil
-}
-
-func executableDataToExecutionPayload(ed *catalyst.ExecutableDataV1) *enginev1.ExecutionPayload {
-	return &enginev1.ExecutionPayload{
-		ParentHash:    bytesutil.PadTo(ed.ParentHash.Bytes(), 32),
-		FeeRecipient:  bytesutil.PadTo(ed.FeeRecipient.Bytes(), 20),
-		StateRoot:     bytesutil.PadTo(ed.StateRoot.Bytes(), 32),
-		ReceiptsRoot:  bytesutil.PadTo(ed.ReceiptsRoot.Bytes(), 32),
-		LogsBloom:     bytesutil.PadTo(ed.LogsBloom, 256),
-		Random:        bytesutil.PadTo(ed.Random.Bytes(), 32),
-		BlockNumber:   ed.Number,
-		GasLimit:      ed.GasLimit,
-		GasUsed:       ed.GasUsed,
-		Timestamp:     ed.Timestamp,
-		ExtraData:     ed.ExtraData,
-		BaseFeePerGas: bytesutil.PadTo(ed.BaseFeePerGas.Bytes(), 32),
-		BlockHash:     bytesutil.PadTo(ed.BlockHash.Bytes(), 32),
-		Transactions:  ed.Transactions,
-	}
+	log.WithFields(logrus.Fields{
+		"id":   fmt.Sprintf("%#x", &payloadID),
+		"slot": slot,
+		"hash": fmt.Sprintf("%#x", parentHash),
+	}).Info("Received payload ID")
+	var id [8]byte
+	copy(id[:], payloadID[:])
+	return vs.ExecutionEngineCaller.GetPayload(ctx, id)
 }
 
 // This returns the valid terminal block hash with an existence bool value.
@@ -205,64 +194,80 @@ func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 //
 //    return None
 func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) ([]byte, bool, error) {
-	blk, err := vs.ExecutionEngineCaller.LatestExecutionBlock()
+	ttd := new(big.Int)
+	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	terminalTotalDifficulty, overflows := uint256.FromBig(ttd)
+	if overflows {
+		return nil, false, errors.New("could not convert terminal total difficulty to uint256")
+	}
+	blk, err := vs.ExecutionEngineCaller.LatestExecutionBlock(ctx)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "could not get latest execution block")
 	}
-	parentBlk, err := vs.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(blk.ParentHash))
-	if err != nil {
-		return nil, false, errors.Wrap(err, "could not get parent execution block")
-	}
-	if parentBlk == nil {
-		return nil, false, nil
-	}
+	log.WithFields(logrus.Fields{
+		"number": blk.Number,
+		"hash":   fmt.Sprintf("%#x", blk.Hash),
+		"td":     blk.TotalDifficulty,
+	}).Info("Retrieving latest execution block")
 
-	terminalTotalDifficulty := new(big.Int)
-	terminalTotalDifficulty.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
-
-	currentTotalDifficulty := common.HexToHash(blk.TotalDifficulty).Big()
-	parentTotalDifficulty := common.HexToHash(parentBlk.TotalDifficulty).Big()
-	blkNumber := blk.Number
-	// TODO_MERGE: This can theoretically loop indefinitely. More discussion: https://github.com/ethereum/consensus-specs/issues/2636
-	logged := false
 	for {
-		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
-		parentReachedTTD := terminalTotalDifficulty.Cmp(parentTotalDifficulty) >= 0
-
-		if blockReachedTTD && parentReachedTTD {
-			log.WithFields(logrus.Fields{
-				"currentTotalDifficulty":  currentTotalDifficulty,
-				"parentTotalDifficulty":   parentTotalDifficulty,
-				"terminalTotalDifficulty": terminalTotalDifficulty,
-				"terminalBlockHash":       fmt.Sprintf("%#x", common.HexToHash(blk.Hash)),
-				"terminalBlockNumber":     blkNumber,
-			}).Info("'Terminal difficulty reached")
-			return common.HexToHash(blk.Hash).Bytes(), true, err
-		} else {
-			if !logged {
-				log.WithFields(logrus.Fields{
-					"currentTotalDifficulty":  currentTotalDifficulty,
-					"parentTotalDifficulty":   parentTotalDifficulty,
-					"terminalTotalDifficulty": terminalTotalDifficulty,
-					"terminalBlockHash":       fmt.Sprintf("%#x", common.HexToHash(blk.Hash)),
-					"terminalBlockNumber":     blkNumber,
-				}).Info("Terminal difficulty NOT reached")
-				logged = true
-			}
-
-			blk := parentBlk
-			blkNumber = blk.Number
-			// TODO_MERGE: Add pow block cache to avoid requesting seen block.
-
-			parentBlk, err = vs.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(blk.ParentHash))
-			if err != nil {
-				return nil, false, err
-			}
-			if parentBlk == nil {
-				return nil, false, nil
-			}
-			currentTotalDifficulty = common.HexToHash(blk.TotalDifficulty).Big()
-			parentTotalDifficulty = common.HexToHash(parentBlk.TotalDifficulty).Big()
+		transitionBlkTDBig, err := hexutil.DecodeBig(blk.TotalDifficulty)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
 		}
+		currentTotalDifficulty, overflows := uint256.FromBig(transitionBlkTDBig)
+		if overflows {
+			return nil, false, errors.New("total difficulty overflowed")
+		}
+		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+		parentHash := bytesutil.ToBytes32(blk.ParentHash)
+		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
+			return nil, false, nil
+		}
+		parentBlk, err := vs.ExecutionEngineCaller.ExecutionBlockByHash(ctx, parentHash)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not get parent execution block")
+		}
+		log.WithFields(logrus.Fields{
+			"number": parentBlk.Number,
+			"hash":   fmt.Sprintf("%#x", parentBlk.Hash),
+			"td":     parentBlk.TotalDifficulty,
+		}).Info("Retrieving parent execution block")
+
+		if blockReachedTTD {
+			parentTDBig, err := hexutil.DecodeBig(parentBlk.TotalDifficulty)
+			if err != nil {
+				return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
+			}
+			parentTotalDifficulty, overflows := uint256.FromBig(parentTDBig)
+			if overflows {
+				return nil, false, errors.New("total difficulty overflowed")
+			}
+			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+			if !parentReachedTTD {
+				log.WithFields(logrus.Fields{
+					"number":   blk.Number,
+					"hash":     fmt.Sprintf("%#x", blk.Hash),
+					"td":       blk.TotalDifficulty,
+					"parentTd": parentBlk.TotalDifficulty,
+					"ttd":      terminalTotalDifficulty,
+				}).Info("Retrieved terminal block hash")
+				return blk.Hash, true, nil
+			}
+		}
+		blk = parentBlk
+	}
+}
+
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		Random:        make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
 	}
 }

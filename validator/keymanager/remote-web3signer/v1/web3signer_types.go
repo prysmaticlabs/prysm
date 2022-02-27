@@ -215,9 +215,9 @@ type Deposit struct {
 }
 
 // DepositData a sub property of Deposit.
-// DepositData :Prysm uses Deposit_data instead of DepositData which is inconsistent naming
+// DepositData Prysm uses Deposit_data instead of DepositData which is inconsistent naming
 type DepositData struct {
-	PublicKey             string `json:"public_key"`
+	PublicKey             string `json:"pubkey"`
 	WithdrawalCredentials string `json:"withdrawal_credentials"`
 	Amount                string `json:"amount"` /* uint64 */
 	Signature             string `json:"signature"`
@@ -304,7 +304,7 @@ type ContributionAndProof struct {
 // SyncCommitteeContribution a sub property of AggregatorSelectionSignRequest.
 type SyncCommitteeContribution struct {
 	Slot              string `json:"slot"`               /* uint64 */
-	BeaconBlockRoot   string `json:"block_root"`         /* Hash32 */ // Prysm uses BlockRoot instead of BeaconBlockRoot
+	BeaconBlockRoot   string `json:"beacon_block_root"`  /* Hash32 */ // Prysm uses BlockRoot instead of BeaconBlockRoot
 	SubcommitteeIndex string `json:"subcommittee_index"` /* uint64 */
 	AggregationBits   string `json:"aggregation_bits"`   /* SSZ hexadecimal string */
 	Signature         string `json:"signature"`          /* 96 byte hexadecimal string */

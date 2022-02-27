@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -235,6 +236,49 @@ func (vs *Server) activationStatus(
 	}
 
 	return activeValidatorExists, statusResponses, nil
+}
+
+// optimisticStatus returns an error if the node is currently optimistic with respect to head.
+// by definition, an optimistic node is not a full node. It is unable to produce blocks,
+// since an execution engine cannot produce a payload upon an unknown parent.
+// It cannot faithfully attest to the head block of the chain, since it has not fully verified that block.
+//
+// Spec:
+// https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md
+func (vs *Server) optimisticStatus(ctx context.Context) error {
+	blk, err := vs.HeadFetcher.HeadBlock(ctx)
+	if err != nil {
+		return err
+	}
+	if slots.ToEpoch(blk.Block().Slot()) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil
+	}
+	st, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	enabled, err := blocks.ExecutionEnabled(st, blk.Block().Body())
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		return nil
+	}
+
+	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if !optimistic {
+		return nil
+	}
+
+	root, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not get head root: %v", err)
+	}
+	return status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators. Head root: %#x", root)
+
 }
 
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.

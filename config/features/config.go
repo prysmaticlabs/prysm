@@ -36,8 +36,7 @@ const disabledFeatureFlag = "Disabled feature flag"
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Testnet Flags.
-	PyrmontTestnet  bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
-	KintsugiTestnet bool // KintsugiTestnet defines the flag through which we can enable node to run on the merge testnet.
+	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
 
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
@@ -62,7 +61,6 @@ type Flags struct {
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 
 	// Cache toggles.
-	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
@@ -75,6 +73,8 @@ type Flags struct {
 	// Bug fixes related flags.
 	CorrectlyInsertOrphanedAtts bool
 	CorrectlyPruneCanonicalAtts bool
+
+	EnableNativeState bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -129,11 +129,6 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		log.Warn("Running on the Prater Testnet")
 		params.UsePraterConfig()
 		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(KintsugiTestnet.Name) {
-		log.Warn("Running on the Merge Testnet")
-		params.UseMergeTestConfig()
-		params.UseMergeTestNetworkConfig()
-		cfg.KintsugiTestnet = true
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
 		params.UseMainnetConfig()
@@ -154,8 +149,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logEnabled(writeSSZStateTransitionsFlag)
 		cfg.WriteSSZStateTransitions = true
 	}
-
-	cfg.EnableSSZCache = true
 
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		logDisabled(disableGRPCConnectionLogging)
@@ -223,6 +216,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableBalanceTrieComputation.Name) {
 		logDisabled(disableBalanceTrieComputation)
 		cfg.EnableBalanceTrieComputation = false
+	}
+	cfg.EnableNativeState = false
+	if ctx.Bool(enableNativeState.Name) {
+		logEnabled(enableNativeState)
+		cfg.EnableNativeState = true
 	}
 	Init(cfg)
 }

@@ -5,13 +5,11 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -24,11 +22,6 @@ type FaultyMockPOWChain struct {
 // Eth2GenesisPowchainInfo --
 func (_ *FaultyMockPOWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return 0, big.NewInt(0)
-}
-
-// LatestBlockHeight --
-func (_ *FaultyMockPOWChain) LatestBlockHeight() *big.Int {
-	return big.NewInt(0)
 }
 
 // BlockExists --
@@ -53,31 +46,6 @@ func (_ *FaultyMockPOWChain) BlockTimeByHeight(_ context.Context, _ *big.Int) (u
 // BlockByTimestamp --
 func (_ *FaultyMockPOWChain) BlockByTimestamp(_ context.Context, _ uint64) (*types.HeaderInfo, error) {
 	return &types.HeaderInfo{Number: big.NewInt(0)}, nil
-}
-
-// DepositRoot --
-func (_ *FaultyMockPOWChain) DepositRoot() [32]byte {
-	return [32]byte{}
-}
-
-// BlockByHash is a stub for `FaultyMockPOWChain`.
-func (m *FaultyMockPOWChain) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	panic("not implemented")
-}
-
-// BlockByNumber is a stub for `FaultyMockPOWChain`.
-func (m *FaultyMockPOWChain) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	panic("not implemented")
-}
-
-// DepositTrie --
-func (_ *FaultyMockPOWChain) DepositTrie() *trie.SparseMerkleTrie {
-	return &trie.SparseMerkleTrie{}
-}
-
-// ChainStartDeposits --
-func (_ *FaultyMockPOWChain) ChainStartDeposits() []*ethpb.Deposit {
-	return []*ethpb.Deposit{}
 }
 
 // ChainStartEth1Data --

@@ -235,7 +235,7 @@ func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 	tests := []struct {
 		root      [32]byte                // the root of the new VALID block
 		tips      map[[32]byte]types.Slot // the old synced tips
-		newtips   map[[32]byte]types.Slot // the updated synced tips
+		newTips   map[[32]byte]types.Slot // the updated synced tips
 		wantedErr error
 	}{
 		{
@@ -327,7 +327,7 @@ func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 		} else {
 			require.NoError(t, err)
 			f.syncedTips.RLock()
-			require.DeepEqual(t, f.syncedTips.validatedTips, tc.newtips)
+			require.DeepEqual(t, f.syncedTips.validatedTips, tc.newTips)
 			f.syncedTips.RUnlock()
 		}
 	}
@@ -345,7 +345,7 @@ func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 //             J(1)             -- K(1) -- L(0)
 //
 // And every block in the Fork choice is optimistic. Synced_Tips contains a
-// single block that is outside of Fork choice. The numbers in parenthesis are
+// single block that is outside of Fork choice. The numbers in parentheses are
 // the weights of the nodes before removal
 //
 func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
@@ -535,15 +535,16 @@ func TestFindSyncedTip(t *testing.T) {
 	}
 	for _, tc := range tests {
 		f.store.nodesLock.RLock()
-		defer f.store.nodesLock.RUnlock()
 		node := f.store.nodes[f.store.nodesIndices[tc.root]]
 		syncedTips := &optimisticStore{
 			validatedTips: tc.tips,
 		}
 		syncedTips.RLock()
-		defer syncedTips.RUnlock()
 		idx, err := f.store.findSyncedTip(ctx, node, syncedTips)
 		require.NoError(t, err)
 		require.Equal(t, tc.wanted, f.store.nodes[idx].root)
+
+		f.store.nodesLock.RUnlock()
+		syncedTips.RUnlock()
 	}
 }

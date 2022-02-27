@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -163,6 +164,74 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	require.LogsContain(t, hook, "data already exists")
 }
 
+func TestChainStart_SyncedTipsInDB(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	chainService := setupBeaconChain(t, beaconDB)
+
+	genesisBlk := util.NewBeaconBlock()
+	blkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
+	s, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, s.SetSlot(1))
+	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
+	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, blkRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
+	require.NoError(t, beaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
+	chainService.cfg.FinalizedStateAtStartUp = s
+
+	tips := make(map[[32]byte]types.Slot)
+	tips[bytesutil.ToBytes32([]byte{'a'})] = 1
+	tips[bytesutil.ToBytes32([]byte{'b'})] = 2
+	require.NoError(t, beaconDB.UpdateValidatedTips(ctx, tips))
+
+	// Test the start function.
+	chainService.Start()
+
+	// Test synced Tips in DB
+	tips2 := chainService.cfg.ForkChoiceStore.SyncedTips()
+	require.Equal(t, len(tips2), len(tips))
+	for k, v := range tips {
+		v2, ok := tips2[k]
+		require.Equal(t, true, ok)
+		require.Equal(t, v, v2)
+	}
+}
+
+func TestChainStart_SyncedTipsNotInDB(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	chainService := setupBeaconChain(t, beaconDB)
+
+	genesisBlk := util.NewBeaconBlock()
+	blkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
+	s, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, s.SetSlot(1))
+	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
+	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, blkRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
+	require.NoError(t, beaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
+	chainService.cfg.FinalizedStateAtStartUp = s
+	// Test the start function.
+	chainService.Start()
+
+	// Test synced Tips in DB
+	tips := chainService.cfg.ForkChoiceStore.SyncedTips()
+	require.Equal(t, 1, len(tips))
+	slot, ok := tips[blkRoot]
+	require.Equal(t, true, ok)
+	require.Equal(t, types.Slot(1), slot)
+}
+
 func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
@@ -278,7 +347,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
-	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
@@ -322,7 +391,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
-	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
@@ -378,7 +447,7 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(headBlock.Block.Slot))
-	require.NoError(t, headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]))
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, finalizedRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))

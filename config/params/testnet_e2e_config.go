@@ -1,10 +1,8 @@
 package params
 
-import "math"
-
 const (
-	altairE2EForkEpoch = 6
-	MergeE2EForkEpoch  = math.MaxUint64
+	altairE2EForkEpoch    = 6
+	bellatrixE2EForkEpoch = 8 //nolint:deadcode
 )
 
 // UseE2EConfig for beacon chain services.
@@ -49,9 +47,6 @@ func E2ETestConfig() *BeaconChainConfig {
 
 	// Altair Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
-
-	// Merge Fork Parameters.
-	//e2eConfig.BellatrixForkVersion = MergeE2EForkEpoch  // TODO_MERGE: Add a proper merge fork version when e2e is ready for it.
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]

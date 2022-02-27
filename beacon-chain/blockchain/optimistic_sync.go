@@ -2,12 +2,132 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/sirupsen/logrus"
 )
+
+// notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
+// 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
+// 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.BeaconBlock, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+	// Must not call fork choice updated until the transition conditions are met on the Pow network.
+	switch headBlk.Version() {
+	case version.Phase0, version.Altair:
+		return nil, nil
+	}
+	isExecutionBlk, err := blocks.ExecutionBlock(headBlk.Body())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not determine if block is execution block")
+	}
+	if !isExecutionBlk {
+		return nil, nil
+	}
+	headPayload, err := headBlk.Body().ExecutionPayload()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get execution payload")
+	}
+	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get finalized block")
+	}
+	var finalizedHash []byte
+	switch finalizedBlock.Version() {
+	case version.Phase0, version.Altair:
+		// Before a post-transition block is finalized, finalized hash field must be Hash32().
+		finalizedHash = params.BeaconConfig().ZeroHash[:]
+	default:
+		payload, err := finalizedBlock.Block().Body().ExecutionPayload()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get finalized block execution payload")
+		}
+		finalizedHash = payload.BlockHash
+	}
+
+	fcs := &enginev1.ForkchoiceState{
+		HeadBlockHash:      headPayload.BlockHash,
+		SafeBlockHash:      headPayload.BlockHash,
+		FinalizedBlockHash: finalizedHash,
+	}
+
+	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /*payload attribute*/)
+	if err != nil {
+		switch err {
+		case v1.ErrAcceptedSyncingPayloadStatus:
+			log.WithFields(logrus.Fields{
+				"headSlot":      headBlk.Slot(),
+				"headHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
+				"finalizedHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
+			}).Info("Called fork choice updated with optimistic block")
+			return payloadID, nil
+		default:
+			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
+		}
+	}
+	return payloadID, nil
+}
+
+// notifyForkchoiceUpdate signals execution engine on a new payload
+func (s *Service) notifyNewPayload(ctx context.Context, preState, postState state.BeaconState, blk block.SignedBeaconBlock) error {
+	// Execution payload is only supported in Bellatrix and beyond.
+	switch postState.Version() {
+	case version.Phase0, version.Altair:
+		return nil
+	}
+	if err := helpers.BeaconBlockIsNil(blk); err != nil {
+		return err
+	}
+	body := blk.Block().Body()
+	enabled, err := blocks.ExecutionEnabled(postState, blk.Block().Body())
+	if err != nil {
+		return errors.Wrap(err, "could not determine if execution is enabled")
+	}
+	if !enabled {
+		return nil
+	}
+	payload, err := body.ExecutionPayload()
+	if err != nil {
+		return errors.Wrap(err, "could not get execution payload")
+	}
+	_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+	if err != nil {
+		switch err {
+		case v1.ErrAcceptedSyncingPayloadStatus:
+			log.WithFields(logrus.Fields{
+				"slot":      postState.Slot(),
+				"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+			}).Info("Called new payload with optimistic block")
+			return nil
+		default:
+			return errors.Wrap(err, "could not validate execution payload from execution engine")
+		}
+	}
+
+	// During the transition event, the transition block should be verified for sanity.
+	switch preState.Version() {
+	case version.Phase0, version.Altair:
+		return nil
+	}
+	atTransition, err := blocks.MergeTransitionBlock(preState, body)
+	if err != nil {
+		return errors.Wrap(err, "could not check if merge block is terminal")
+	}
+	if !atTransition {
+		return nil
+	}
+	return s.validateMergeBlock(ctx, blk)
+}
 
 // optimisticCandidateBlock returns true if this block can be optimistically synced.
 //
@@ -30,4 +150,22 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 		return false, err
 	}
 	return blocks.ExecutionBlock(jBlock.Block().Body())
+}
+
+// loadSyncedTips loads a previously saved synced Tips from DB
+// if no synced tips are saved, then it creates one from the given
+// root and slot number.
+func (s *Service) loadSyncedTips(root [32]byte, slot types.Slot) error {
+	// Initialize synced tips
+	tips, err := s.cfg.BeaconDB.ValidatedTips(s.ctx)
+	if err != nil || len(tips) == 0 {
+		tips[root] = slot
+		if err != nil {
+			log.WithError(err).Warn("Could not read synced tips from DB, using finalized checkpoint as synced tip")
+		}
+	}
+	if err := s.cfg.ForkChoiceStore.SetSyncedTips(tips); err != nil {
+		return errors.Wrap(err, "could not set synced tips")
+	}
+	return nil
 }

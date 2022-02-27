@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -83,8 +84,8 @@ type config struct {
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	BlockFetcher            powchain.POWBlockFetcher
-	ExecutionEngineCaller   powchain.ExecutionEngineCaller
 	FinalizedStateAtStartUp state.BeaconState
+	ExecutionEngineCaller   enginev1.EngineCaller
 }
 
 // NewService instantiates a new block service instance that will
@@ -189,16 +190,8 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
 	s.cfg.ForkChoiceStore = store
 
-	// Initialize Fork Choice Synced Tips
-	tips, err := s.cfg.BeaconDB.ValidatedTips(s.ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get synced tips")
-	}
-	if len(tips) == 0 {
-		tips[originRoot] = saved.Slot()
-	}
-	if err := s.cfg.ForkChoiceStore.SetSyncedTips(tips); err != nil {
-		return errors.Wrap(err, "could not set synced tips")
+	if err := s.loadSyncedTips(originRoot, saved.Slot()); err != nil {
+		return err
 	}
 
 	ss, err := slots.EpochStart(finalized.Epoch)
@@ -227,7 +220,7 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             s.genesisTime,
-			GenesisValidatorsRoot: saved.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
 		},
 	})
 
@@ -389,7 +382,7 @@ func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
 			StartTime:             genesisTime,
-			GenesisValidatorsRoot: initializedState.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: initializedState.GenesisValidatorsRoot(),
 		},
 	})
 }

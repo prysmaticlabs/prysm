@@ -120,11 +120,6 @@ func (_ *Service) AllDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
-// ChainStartDeposits mocks out the powchain functionality for interop.
-func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
-	return s.chainStartDeposits
-}
-
 // ChainStartEth1Data mocks out the powchain functionality for interop.
 func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}

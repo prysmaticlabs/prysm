@@ -239,9 +239,9 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remote_web3signer.SetupConfig{
-		BaseEndpoint:          "example.com",
+		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "example.com/public_keys",
+		PublicKeysURL:         "http://example.com/public_keys",
 	}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -455,9 +455,9 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false,
 		Web3SignerConfig: &remote_web3signer.SetupConfig{
-			BaseEndpoint:          "example.com",
+			BaseEndpoint:          "http://example.com",
 			GenesisValidatorsRoot: root,
-			PublicKeysURL:         "example.com/public_keys",
+			PublicKeysURL:         "http://example.com/public_keys",
 		}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{

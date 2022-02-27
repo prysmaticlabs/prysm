@@ -1,37 +1,28 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/eth/catalyst"
-	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -110,63 +101,13 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	// TODO_MERGE: Optimize this copy.
 	copiedPreState := preState.Copy()
 
-	body := signed.Block().Body()
-	// TODO_MERGE: Break `ExecuteStateTransition` into per_slot and block processing so we can call `ExecutePayload` in the middle.
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
-		// TODO_MERGE: Notify execution client in the event of invalid conensus block
 		return err
 	}
 
-	fullyValidated := false
-	if postState.Version() == version.Bellatrix {
-		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
-		if err != nil {
-			return errors.Wrap(err, "could not check if execution is enabled")
-		}
-		if executionEnabled {
-			payload, err := body.ExecutionPayload()
-			if err != nil {
-				return errors.Wrap(err, "could not get body execution payload")
-			}
-			// This is not the earliest we can call `ExecutePayload`, see above to do as the soonest we can call is after per_slot processing.
-			_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
-			switch err {
-			case powchain.ErrInvalidPayload:
-				// TODO_MERGE walk up the parent chain removing
-				// invalid blocks
-				return errors.Wrap(err, "could not sync block with invalid execution payload")
-			case powchain.ErrSyncing:
-				candidate, err := s.optimisticCandidateBlock(ctx, b)
-				if err != nil {
-					return errors.Wrap(err, "could not check if block is optimistic candidate")
-				}
-				if !candidate {
-					return errors.Wrap(err, "could not optimistically sync block")
-				}
-				log.WithFields(logrus.Fields{
-					"slot":        b.Slot(),
-					"root":        fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:])),
-					"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
-				}).Info("Block is optimistic candidate")
-				break
-			case nil:
-				fullyValidated = true
-			default:
-				return errors.Wrap(err, "could not execute payload")
-			}
-			if fullyValidated {
-				mergeBlock, err := blocks.MergeTransitionBlock(copiedPreState, body)
-				if err != nil {
-					return errors.Wrap(err, "could not check if merge block is terminal")
-				}
-				if mergeBlock {
-					if err := s.validateTerminalBlock(signed); err != nil {
-						return err
-					}
-				}
-			}
-		}
+	if err := s.notifyNewPayload(ctx, copiedPreState, postState, signed); err != nil {
+		return errors.Wrap(err, "could not verify new payload")
 	}
 
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
@@ -182,7 +123,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// update forkchoice synced tips if the block is not optimistic
-	if fullyValidated {
+	if postState.Version() == version.Bellatrix {
 		root, err := b.HashTreeRoot()
 		if err != nil {
 			return err
@@ -255,48 +196,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		log.WithError(err).Warn("Could not update head")
 	}
 
-	// Notify execution layer with fork choice head update if this is post merge block.
-	if postState.Version() == version.Bellatrix {
-		executionEnabled, err := blocks.ExecutionEnabled(postState, body)
-		if err != nil {
-			return errors.Wrap(err, "could not check if execution is enabled")
-		}
-		if executionEnabled {
-			// Spawn the update task, without waiting for it to complete.
-			go func() {
-				headPayload, err := s.headBlock().Block().Body().ExecutionPayload()
-				if err != nil {
-					log.WithError(err)
-					return
-				}
-				// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
-				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalized.Root))
-				if err != nil {
-					log.WithError(err)
-					return
-				}
-				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-				if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
-					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
-					if err != nil {
-						log.WithError(err)
-						return
-					}
-					finalizedBlockHash = finalizedPayload.BlockHash
-				}
-
-				f := catalyst.ForkchoiceStateV1{
-					HeadBlockHash:      common.BytesToHash(headPayload.BlockHash),
-					SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
-					FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
-				}
-				if err := s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f); err != nil && err != powchain.ErrSyncing {
-					log.WithError(err)
-					return
-				}
-			}()
-		}
-
+	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), bytesutil.ToBytes32(finalized.Root)); err != nil {
+		return err
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
@@ -406,93 +307,13 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
-		preStateCopied := preState.Copy() // TODO_MERGE: Optimize this copy.
+		preStateCopied := preState.Copy()
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-
-		// Non merge blocks are never optimistic
-		optimistic[i] = false
-		if preState.Version() == version.Bellatrix {
-			executionEnabled, err := blocks.ExecutionEnabled(preState, b.Block().Body())
-			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "could not check if execution is enabled")
-			}
-			if executionEnabled {
-				payload, err := b.Block().Body().ExecutionPayload()
-				if err != nil {
-					return nil, nil, nil, errors.Wrap(err, "could not get body execution payload")
-				}
-				_, err = s.cfg.ExecutionEngineCaller.ExecutePayload(ctx, executionPayloadToExecutableData(payload))
-				switch err {
-				case powchain.ErrInvalidPayload:
-					// TODO_MERGE walk up the parent chain removing
-					// invalid blocks
-					return nil, nil, nil, errors.Wrap(err, "could not sync block with invalid execution payload")
-				case powchain.ErrSyncing:
-					candidate, err := s.optimisticCandidateBlock(ctx, b.Block())
-					if err != nil {
-						return nil, nil, nil, errors.Wrap(err, "could not check if block is optimistic candidate")
-					}
-					if !candidate {
-						return nil, nil, nil, errors.Wrap(err, "could not optimistically sync block")
-					}
-					log.WithFields(logrus.Fields{
-						"slot":        b.Block().Slot(),
-						"root":        fmt.Sprintf("%#x", bytesutil.Trunc(blockRoots[i][:])),
-						"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
-					}).Info("Block is optimistic candidate")
-					optimistic[i] = true
-					break
-				case nil:
-					break
-				default:
-					return nil, nil, nil, errors.Wrap(err, "could not execute payload")
-				}
-				if !optimistic[i] {
-					mergeBlock, err := blocks.MergeTransitionBlock(preStateCopied, b.Block().Body())
-					if err != nil {
-						return nil, nil, nil, errors.Wrap(err, "could not check if merge block is terminal")
-					}
-					if mergeBlock {
-						if err := s.validateTerminalBlock(b); err != nil {
-							return nil, nil, nil, err
-						}
-					}
-				}
-
-				headPayload, err := b.Block().Body().ExecutionPayload()
-				if err != nil {
-					return nil, nil, nil, err
-
-				}
-				// TODO_MERGE: Loading the finalized block from DB on per block is not ideal. Finalized block should be cached here
-				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(preState.FinalizedCheckpoint().Root))
-				if err != nil {
-					return nil, nil, nil, err
-
-				}
-				finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-				if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
-					finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
-					if err != nil {
-						return nil, nil, nil, err
-
-					}
-					finalizedBlockHash = finalizedPayload.BlockHash
-				}
-
-				f := catalyst.ForkchoiceStateV1{
-					HeadBlockHash:      common.BytesToHash(headPayload.BlockHash),
-					SafeBlockHash:      common.BytesToHash(headPayload.BlockHash),
-					FinalizedBlockHash: common.BytesToHash(finalizedBlockHash),
-				}
-				err = s.cfg.ExecutionEngineCaller.NotifyForkChoiceValidated(ctx, f)
-				if err != nil && err != powchain.ErrSyncing {
-					return nil, nil, nil, err
-				}
-			}
+		if err := s.notifyNewPayload(ctx, preStateCopied, preState, b); err != nil {
+			return nil, nil, nil, err
 		}
 
 		// Save potential boundary states.
@@ -539,6 +360,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 
 	s.saveInitSyncBlock(blockRoot, signed)
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
+		return err
+	}
+	if _, err := s.notifyForkchoiceUpdate(ctx, b, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
 		return err
 	}
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
@@ -711,111 +535,6 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 		}
 	}
 	return nil
-}
-
-// validates terminal block hash in the event of manual overrides before checking for total difficulty.
-//
-// def validate_merge_block(block: BeaconBlock) -> None:
-//    """
-//    Check the parent PoW block of execution payload is a valid terminal PoW block.
-//
-//    Note: Unavailable PoW block(s) may later become available,
-//    and a client software MAY delay a call to ``validate_merge_block``
-//    until the PoW block(s) become available.
-//    """
-//    if TERMINAL_BLOCK_HASH != Hash32():
-//        # If `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
-//        assert compute_epoch_at_slot(block.slot) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-//        return block.block_hash == TERMINAL_BLOCK_HASH
-//
-//    pow_block = get_pow_block(block.body.execution_payload.parent_hash)
-//    # Check if `pow_block` is available
-//    assert pow_block is not None
-//    pow_parent = get_pow_block(pow_block.parent_hash)
-//    # Check if `pow_parent` is available
-//    assert pow_parent is not None
-//    # Check if `pow_block` is a valid terminal PoW block
-//    assert is_valid_terminal_pow_block(pow_block, pow_parent)
-func (s *Service) validateTerminalBlock(b block.SignedBeaconBlock) error {
-	payload, err := b.Block().Body().ExecutionPayload()
-	if err != nil {
-		return err
-	}
-	if bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) != [32]byte{} {
-		// `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
-		if params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(b.Block().Slot()) {
-			return errors.New("terminal block hash activation epoch not reached")
-		}
-		if !bytes.Equal(payload.ParentHash, params.BeaconConfig().TerminalBlockHash.Bytes()) {
-			return errors.New("parent hash does not match terminal block hash")
-		}
-		return nil
-	}
-	transitionBlk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(common.BytesToHash(payload.ParentHash))
-	if err != nil {
-		return errors.Wrap(err, "could not get transition block")
-	}
-	if transitionBlk == nil {
-		return errors.New("transition block is nil")
-	}
-	parentTransitionBlk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(common.HexToHash(transitionBlk.ParentHash))
-	if err != nil {
-		return errors.Wrap(err, "could not get transition parent block")
-	}
-	if parentTransitionBlk == nil {
-		return errors.New("transition parent block is nil")
-	}
-	transitionBlkTTD, err := uint256.FromHex(transitionBlk.TotalDifficulty)
-	if err != nil {
-		return err
-	}
-	transitionParentBlkTTD, err := uint256.FromHex(parentTransitionBlk.TotalDifficulty)
-	if err != nil {
-		return err
-	}
-
-	validated, err := validTerminalPowBlock(transitionBlkTTD, transitionParentBlkTTD)
-	if err != nil {
-		return err
-	}
-	if !validated {
-		return errors.New("invalid difficulty for terminal block")
-	}
-
-	log.WithFields(logrus.Fields{
-		"slot":                                 b.Block().Slot(),
-		"transitionBlockHash":                  common.BytesToHash(payload.ParentHash).String(),
-		"transitionBlockParentHash":            common.HexToHash(transitionBlk.ParentHash).String(),
-		"terminalTotalDifficulty":              params.BeaconConfig().TerminalTotalDifficulty,
-		"transitionBlockTotalDifficulty":       transitionBlkTTD,
-		"transitionBlockParentTotalDifficulty": transitionParentBlkTTD,
-	}).Info("Verified terminal block")
-
-	return nil
-}
-
-func executionPayloadToExecutableData(payload *enginev1.ExecutionPayload) *catalyst.ExecutableDataV1 {
-	// Convert the base fee bytes from little endian to big endian
-	baseFeeInBigEndian := bytesutil.ReverseByteOrder(payload.BaseFeePerGas)
-	baseFeePerGas := new(big.Int)
-	baseFeePerGas.SetBytes(baseFeeInBigEndian)
-
-	return &catalyst.ExecutableDataV1{
-		BlockHash:     common.BytesToHash(payload.BlockHash),
-		ParentHash:    common.BytesToHash(payload.ParentHash),
-		FeeRecipient:  common.BytesToAddress(payload.FeeRecipient),
-		StateRoot:     common.BytesToHash(payload.StateRoot),
-		ReceiptsRoot:  common.BytesToHash(payload.ReceiptsRoot),
-		LogsBloom:     payload.LogsBloom,
-		Random:        common.BytesToHash(payload.Random),
-		Number:        payload.BlockNumber,
-		GasLimit:      payload.GasLimit,
-		GasUsed:       payload.GasUsed,
-		Timestamp:     payload.Timestamp,
-		ExtraData:     payload.ExtraData,
-		BaseFeePerGas: baseFeePerGas,
-		Transactions:  payload.Transactions,
-	}
 }
 
 // Saves synced and validated tips to DB.

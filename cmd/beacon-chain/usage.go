@@ -74,6 +74,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.RestoreTargetDirFlag,
 			cmd.BoltMMapInitialSizeFlag,
 			cmd.ValidatorMonitorIndicesFlag,
+			cmd.ApiTimeoutFlag,
 		},
 	},
 	{
@@ -107,6 +108,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GPRCGatewayCorsDomain,
 			flags.HTTPWeb3ProviderFlag,
 			flags.ExecutionProviderFlag,
+			flags.ExecutionJWTSecretFlag,
 			flags.FallbackWeb3ProviderFlag,
 			flags.SetGCPercent,
 			flags.HeadSync,
@@ -123,6 +125,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WeakSubjectivityCheckpt,
 			flags.Eth1HeaderReqLimit,
 			flags.GenesisStatePath,
+			flags.MinPeersPerSubnet,
 		},
 	},
 	{
