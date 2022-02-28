@@ -161,7 +161,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, errors.Errorf("unknown parent for block with slot %d and parent root %#x", blk.Block().Slot(), blk.Block().ParentRoot())
 	}
 
-	if err := s.validateBeaconBlock(ctx, blk, blockRoot, genesisTime); err != nil {
+	if err := s.validateBeaconBlock(ctx, blk, blockRoot); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
@@ -181,7 +181,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock, blockRoot [32]byte, genesisTime uint64) error {
+func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
