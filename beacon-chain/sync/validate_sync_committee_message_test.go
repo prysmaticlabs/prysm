@@ -589,7 +589,7 @@ func TestValidateSyncCommitteeMessage_Optimistic(t *testing.T) {
 		},
 	}
 	res, err := r.validateCommitteeIndexBeaconAttestation(ctx, "foobar", msg)
-	_ = err
+	assert.NoError(t, err)
 	valid := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, valid, "Should have ignore this message")
 }

@@ -235,7 +235,7 @@ func TestValidateProposerSlashing_Optimistic(t *testing.T) {
 		},
 	}
 	res, err := r.validateProposerSlashing(ctx, "", m)
-	_ = err
+	assert.NoError(t, err)
 	valid := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, valid, "Did not ignore the message")
 }
