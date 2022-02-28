@@ -21,6 +21,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -97,24 +98,21 @@ func (r *testRunner) run() {
 		return nil
 	})
 
-	// ETH1 node.
-	eth1Nodes := components.NewEth1NodeSet()
+	// ETH1 nodes.
+	eth1Nodes := eth1.NewNodeSet()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
+			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
 		}
 		eth1Nodes.SetENR(bootNode.ENR())
 		if err := eth1Nodes.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start eth1node")
 		}
-		if err := components.SendAndMineDeposits(eth1Nodes.KeystorePath(), 0, minGenesisActiveCount, 0, true /* partial */); err != nil {
-			return errors.Wrap(err, "failed to send and mine deposits")
-		}
 		return nil
 	})
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
+			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
 		}
 		if err := components.SendAndMineDeposits(eth1Nodes.KeystorePath(), 0, minGenesisActiveCount, 0, true /* partial */); err != nil {
 			return errors.Wrap(err, "failed to send and mine deposits")
