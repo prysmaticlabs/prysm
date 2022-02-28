@@ -141,7 +141,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
@@ -162,7 +162,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedSyncingResponse"].(*ForkchoiceUpdatedResponse)
@@ -183,7 +183,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedInvalidResponse"].(*ForkchoiceUpdatedResponse)
@@ -204,7 +204,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedAcceptedResponse"].(*ForkchoiceUpdatedResponse)
@@ -225,7 +225,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedInvalidTerminalBlockResponse"].(*ForkchoiceUpdatedResponse)
@@ -603,7 +603,7 @@ func fixtures() map[string]interface{} {
 		StateRoot:     foo[:],
 		ReceiptsRoot:  foo[:],
 		LogsBloom:     baz,
-		Random:        foo[:],
+		PrevRandao:    foo[:],
 		BlockNumber:   1,
 		GasLimit:      1,
 		GasUsed:       1,

@@ -2268,7 +2268,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 					StateRoot:     make([]byte, fieldparams.RootLength),
 					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-					Random:        make([]byte, fieldparams.RootLength),
+					PrevRandao:    make([]byte, fieldparams.RootLength),
 					BaseFeePerGas: make([]byte, fieldparams.RootLength),
 					BlockHash:     make([]byte, fieldparams.RootLength),
 				},
