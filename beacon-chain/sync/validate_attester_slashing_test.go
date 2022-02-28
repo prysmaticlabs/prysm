@@ -320,7 +320,7 @@ func TestValidateAttesterSlashing_Optimistic(t *testing.T) {
 		},
 	}
 	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
-	_ = err
+	assert.NoError(t, err)
 	valid := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, valid, "Should have ignore this message")
 }

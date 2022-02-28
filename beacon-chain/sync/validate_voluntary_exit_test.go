@@ -223,7 +223,7 @@ func TestValidateVoluntaryExit_Optimistic(t *testing.T) {
 		},
 	}
 	res, err := r.validateVoluntaryExit(ctx, "", m)
-	_ = err
+	assert.NoError(t, err)
 	valid := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, valid, "Validation should have ignored the message")
 }

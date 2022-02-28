@@ -45,7 +45,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	// We just ignore in p2p so that the peer is not penalized.
 	status, err := s.cfg.chain.IsOptimistic(ctx)
 	if err != nil {
-		return pubsub.ValidationReject, nil
+		return pubsub.ValidationReject, err
 	}
 	if status {
 		return pubsub.ValidationIgnore, nil
