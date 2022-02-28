@@ -132,26 +132,22 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 		Random:                random,
 		SuggestedFeeRecipient: params.BeaconConfig().FeeRecipient.Bytes(),
 	}
-	res, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
+	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
-	log.WithFields(logrus.Fields{
-		"status:": res.Status.Status,
-		"hash:":   fmt.Sprintf("%#x", f.HeadBlockHash),
-	}).Info("Successfully called forkchoiceUpdated with attribute")
 
-	if res == nil || res.PayloadId == nil {
+	if payloadID == nil {
 		return nil, errors.New("forkchoice returned nil")
 	}
 
 	log.WithFields(logrus.Fields{
-		"id":   fmt.Sprintf("%#x", &res.PayloadId),
+		"id":   fmt.Sprintf("%#x", &payloadID),
 		"slot": slot,
 		"hash": fmt.Sprintf("%#x", parentHash),
 	}).Info("Received payload ID")
 	var id [8]byte
-	copy(id[:], res.PayloadId[:])
+	copy(id[:], payloadID[:])
 	return vs.ExecutionEngineCaller.GetPayload(ctx, id)
 }
 

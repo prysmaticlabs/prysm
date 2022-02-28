@@ -429,26 +429,26 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) && cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
 		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
 		publicKeysStr := cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name)
-		u, err := url.Parse(urlStr)
+		u, err := url.ParseRequestURI(urlStr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "web3signer url %s is invalid", urlStr)
+		}
+		if u.Scheme == "" || u.Host == "" {
+			return nil, fmt.Errorf("web3signer url must be in the format of http(s)://host:port url used: %v", urlStr)
 		}
 		web3signerConfig = &remote_web3signer.SetupConfig{
 			BaseEndpoint:          u.String(),
 			GenesisValidatorsRoot: nil,
 		}
-		u, err = url.Parse(publicKeysStr)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not parse %s as a URL for web3signer remote public keys", publicKeysStr)
-		}
-		if u != nil {
+		pURL, err := url.ParseRequestURI(publicKeysStr)
+		if err == nil && pURL.Scheme != "" && pURL.Host != "" {
 			web3signerConfig.PublicKeysURL = publicKeysStr
 		} else {
 			var validatorKeys [][48]byte
 			for _, key := range strings.Split(publicKeysStr, ",") {
-				decodedKey, err := hexutil.Decode(key)
-				if err != nil {
-					return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+				decodedKey, decodeErr := hexutil.Decode(key)
+				if decodeErr != nil {
+					return nil, errors.Wrapf(decodeErr, "could not decode public key for web3signer: %s", key)
 				}
 				validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
 			}
@@ -515,6 +515,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
 	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
 	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	timeout := cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
 		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
@@ -580,6 +581,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gateway.WithAllowedOrigins(allowedOrigins),
 		gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}),
 		gateway.WithMuxHandler(muxHandler),
+		gateway.WithTimeout(uint64(timeout)),
 	}
 	gw, err := gateway.New(cliCtx.Context, opts...)
 	if err != nil {

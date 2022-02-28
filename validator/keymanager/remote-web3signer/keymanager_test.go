@@ -55,9 +55,9 @@ func TestKeymanager_Sign(t *testing.T) {
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		BaseEndpoint:          "example.com",
+		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "example2.com/api/v1/eth2/publicKeys",
+		PublicKeysURL:         "http://example2.com/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
@@ -189,7 +189,7 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		BaseEndpoint:          "example.com",
+		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
 		ProvidedPublicKeys:    keys,
 	}
@@ -223,9 +223,9 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		BaseEndpoint:          "example.com",
+		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "example2.com/api/v1/eth2/publicKeys",
+		PublicKeysURL:         "http://example2.com/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
@@ -252,9 +252,9 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		BaseEndpoint:          "example.com",
+		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "example2.com/api/v1/eth2/publicKeys",
+		PublicKeysURL:         "http://example2.com/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
@@ -264,5 +264,5 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 	resp, err := km.FetchValidatingPublicKeys(ctx)
 	assert.NotNil(t, err)
 	assert.Nil(t, resp)
-	assert.Equal(t, fmt.Errorf("mock error"), err)
+	assert.Equal(t, "could not get public keys from remote server url: http://example2.com/api/v1/eth2/publicKeys: mock error", fmt.Sprintf("%v", err))
 }
