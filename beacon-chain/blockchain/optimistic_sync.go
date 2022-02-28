@@ -22,6 +22,9 @@ import (
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
 func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.BeaconBlock, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
+		return nil, errors.New("nil head block")
+	}
 	// Must not call fork choice updated until the transition conditions are met on the Pow network.
 	switch headBlk.Version() {
 	case version.Phase0, version.Altair:
@@ -38,7 +41,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, s.ensureRootNotZeros(finalizedRoot))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
@@ -80,6 +83,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 
 // notifyForkchoiceUpdate signals execution engine on a new payload
 func (s *Service) notifyNewPayload(ctx context.Context, preState, postState state.BeaconState, blk block.SignedBeaconBlock) error {
+	if preState == nil || postState == nil {
+		return errors.New("pre and post states must not be nil")
+	}
 	// Execution payload is only supported in Bellatrix and beyond.
 	switch postState.Version() {
 	case version.Phase0, version.Altair:
