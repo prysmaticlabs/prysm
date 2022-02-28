@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
 	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -113,8 +112,6 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		return err
 	}
 	expectedNumOfPeers := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount - 1
-
-	fmt.Println("RPC port: " + strconv.Itoa(e2e.TestParams.BeaconNodeRPCPort+index))
 
 	args := []string{
 		fmt.Sprintf("--%s=%s/eth2-beacon-node-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),

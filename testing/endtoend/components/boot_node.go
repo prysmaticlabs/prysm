@@ -64,12 +64,12 @@ func (node *BootNode) Start(ctx context.Context) error {
 	}
 
 	if err = helpers.WaitForTextInFile(stdOutFile, "Running bootnode"); err != nil {
-		return fmt.Errorf("could not find bootstrapEnr for bootnode, this means the bootnode had issues starting: %w", err)
+		return fmt.Errorf("could not find enr for bootnode, this means the bootnode had issues starting: %w", err)
 	}
 
 	node.enr, err = enrFromLogFile(stdOutFile.Name())
 	if err != nil {
-		return fmt.Errorf("could not get bootstrapEnr for bootnode: %w", err)
+		return fmt.Errorf("could not get enr for bootnode: %w", err)
 	}
 
 	// Mark node as ready.
