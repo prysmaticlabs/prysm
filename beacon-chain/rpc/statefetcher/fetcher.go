@@ -110,7 +110,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 			return nil, errors.Wrap(err, "could not get head state")
 		}
 	case "genesis":
-		s, err = p.stateBySlot(ctx, 0)
+		s, err = p.StateBySlot(ctx, 0)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get genesis state")
 		}

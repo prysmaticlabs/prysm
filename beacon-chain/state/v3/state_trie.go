@@ -33,7 +33,7 @@ func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (state.BeaconStateBella
 
 // InitializeFromSSZBytes is a convenience method to obtain a BeaconState by unmarshaling
 // a slice of bytes containing the ssz-serialized representation of the state.
-func InitializeFromSSZBytes(marshaled []byte) (*BeaconState, error) {
+func InitializeFromSSZBytes(marshaled []byte) (state.BeaconState, error) {
 	st := &ethpb.BeaconStateBellatrix{}
 	if err := st.UnmarshalSSZ(marshaled); err != nil {
 		return nil, err

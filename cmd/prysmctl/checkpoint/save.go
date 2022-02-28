@@ -224,4 +224,3 @@ func _saveCheckpoint(client *openapi.Client) error {
 	return nil
 }
 */
-

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	"io"
 	"io/ioutil"
 	"net"
@@ -19,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -101,8 +101,8 @@ func validHostname(h string) (string, error) {
 }
 
 // GetBlockBySlot queries the beacon node API for the SignedBeaconBlockAltair for the given slot
-func (c *Client) GetBlockBySlot(slot uint64) (io.Reader, error) {
-	blockPath := path.Join(GET_SIGNED_BLOCK_PATH, strconv.FormatUint(slot, 10))
+func (c *Client) GetBlockBySlot(slot types.Slot) (io.Reader, error) {
+	blockPath := path.Join(GET_SIGNED_BLOCK_PATH, strconv.FormatUint(uint64(slot), 10))
 	u := c.urlForPath(blockPath)
 	log.Printf("requesting %s", u.String())
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)

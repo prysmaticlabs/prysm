@@ -5,24 +5,21 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/api/grpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
+	"github.com/r3labs/sse"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/api/grpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
-	"github.com/r3labs/sse"
 )
 
 type sszConfig struct {
 	sszPath      string
 	fileName     string
 	responseJson sszResponseJson
-	clientOpts   []apimiddleware.ClientOption
 }
 
 func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
@@ -30,7 +27,6 @@ func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimi
 		sszPath:      "/eth/v1/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
 		responseJson: &beaconStateSSZResponseJson{},
-		clientOpts:   []apimiddleware.ClientOption{apimiddleware.WithTimeout(time.Minute * 4)},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -49,7 +45,6 @@ func handleGetBeaconStateSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint api
 		sszPath:      "/eth/v2/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
 		responseJson: &beaconStateSSZResponseV2Json{},
-		clientOpts:   []apimiddleware.ClientOption{apimiddleware.WithTimeout(time.Minute * 4)},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }

@@ -1,6 +1,7 @@
 package sniff
 
 import (
+	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -89,13 +90,13 @@ func testBlockAltair() *ethpb.SignedBeaconBlockAltair {
 	}
 }
 
-func testBlockMerge() *ethpb.SignedBeaconBlockMerge {
-	return &ethpb.SignedBeaconBlockMerge{
-		Block: &ethpb.BeaconBlockMerge{
+func testBlockMerge() *ethpb.SignedBeaconBlockBellatrix {
+	return &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{
 			ProposerIndex: types.ValidatorIndex(0),
 			ParentRoot:    make([]byte, 32),
 			StateRoot:     make([]byte, 32),
-			Body: &ethpb.BeaconBlockBodyMerge{
+			Body: &ethpb.BeaconBlockBodyBellatrix{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
 					DepositRoot:  make([]byte, 32),
@@ -112,11 +113,11 @@ func testBlockMerge() *ethpb.SignedBeaconBlockMerge {
 					SyncCommitteeBits:      make([]byte, 64),
 					SyncCommitteeSignature: make([]byte, 96),
 				},
-				ExecutionPayload: &ethpb.ExecutionPayload{
+				ExecutionPayload: &v1.ExecutionPayload{
 					ParentHash:    make([]byte, 32),
 					FeeRecipient:  make([]byte, 20),
 					StateRoot:     make([]byte, 32),
-					ReceiptRoot:   make([]byte, 32),
+					ReceiptsRoot:  make([]byte, 32),
 					LogsBloom:     make([]byte, 256),
 					Random:        make([]byte, 32),
 					BlockNumber:   0,

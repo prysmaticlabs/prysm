@@ -3,11 +3,12 @@ package checkpoint
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
-	"os"
 )
 
 type Initializer interface {

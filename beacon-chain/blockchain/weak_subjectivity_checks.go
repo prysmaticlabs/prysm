@@ -89,7 +89,7 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	}
 	for _, root := range roots {
 		if v.root == root {
-			log.Info("Weak subjectivity check has passed")
+			log.Info("Weak subjectivity check has passed!!")
 			v.verified = true
 			return nil
 		}

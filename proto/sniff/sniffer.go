@@ -3,7 +3,6 @@ package sniff
 import (
 	"encoding/binary"
 	"fmt"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"

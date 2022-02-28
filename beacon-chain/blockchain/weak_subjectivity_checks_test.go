@@ -2,8 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/time/slots"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -16,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
@@ -47,7 +46,6 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 		{
 			name:           "can't find the block in DB",
 			checkpt:        &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength), Epoch: 1},
-			checkpt:        &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'a'}, 32), Epoch: 1},
 			finalizedEpoch: blockEpoch + 1,
 			wantErr:        errWSBlockNotFound,
 		},

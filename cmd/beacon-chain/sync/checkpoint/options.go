@@ -2,6 +2,7 @@ package checkpoint
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/checkpoint"

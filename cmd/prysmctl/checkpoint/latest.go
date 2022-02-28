@@ -3,21 +3,11 @@ package checkpoint
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/client/openapi"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/proto/sniff"
-	"github.com/prysmaticlabs/prysm/time/slots"
-	"io"
 	"net"
 	"net/url"
-	"strconv"
 	"time"
 
-	//"time"
-
-	//"github.com/prysmaticlabs/prysm/api/client/openapi"
+	"github.com/prysmaticlabs/prysm/api/client/openapi"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -75,53 +65,13 @@ func cliActionLatest(_ *cli.Context) error {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	_, err = openapi.DownloadOriginData(ctx, client)
+	od, err := openapi.DownloadOriginData(ctx, client)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	return nil
-}
-
-func _cliActionLatest(_ *cli.Context) error {
-	ctx := context.Background()
-	client, err := setupClient()
-	if err != nil {
-		return err
-	}
-
-	stateReader, err := client.GetStateById(openapi.StateIdHead)
-	if err != nil {
-		return errors.Wrap(err, "error fetching head state")
-	}
-	stateBytes, err := io.ReadAll(stateReader)
-	if err != nil {
-		return errors.Wrap(err, "failed to read response body for get head state api call")
-	}
-	log.Printf("state response byte len=%d", len(stateBytes))
-	state, err := sniff.BeaconState(stateBytes)
-	if err != nil {
-		return errors.Wrap(err, "error unmarshaling state to correct version")
-	}
-	cf, err := sniff.ConfigForkForState(stateBytes)
-	if err != nil {
-		return errors.Wrap(err, "error detecting chain config for beacon state")
-	}
-	params.OverrideBeaconConfig(cf.Config)
-	epoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, state)
-	if err != nil {
-		return errors.Wrap(err, "error computing the weak subjectivity epoch from head state")
-	}
-	bSlot, err := slots.EpochStart(epoch)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Error computing first slot of epoch=%d", epoch))
-	}
-	root, err := client.GetBlockRoot(strconv.Itoa(int(bSlot)))
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error requesting block root from api for slot=%d", bSlot))
-	}
-	wsFlag := fmt.Sprintf("--weak-subjectivity-checkpoint=%#x:%d", root, epoch)
-	log.Printf("latest weak subjectivity checkpoint verification flag:\n%s", wsFlag)
-
+	fmt.Println("\nUse the following flag when starting a prysm Beacon Node to ensure the chain history " +
+		"includes the Weak Subjectivity Checkpoint:")
+	fmt.Printf("--weak-subjectivity-checkpoint=%#x:%d\n\n", od.WeakSubjectivity.BlockRoot, od.WeakSubjectivity.Epoch)
 	return nil
 }
 

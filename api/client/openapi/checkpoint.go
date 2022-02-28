@@ -3,6 +3,8 @@ package openapi
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -12,10 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/sniff"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
-	"io"
 )
-
-var ErrMismatchedLatestBlockRoot = errors.New("block root in state does not match value from api")
 
 type WeakSubjectivityData struct {
 	BlockRoot [32]byte
@@ -25,11 +24,11 @@ type WeakSubjectivityData struct {
 
 type OriginData struct {
 	WeakSubjectivity *WeakSubjectivityData
-	StateBytes []byte
-	BlockBytes []byte
-	State state.BeaconState
-	Block block.SignedBeaconBlock
-	ConfigFork *sniff.ConfigFork
+	StateBytes       []byte
+	BlockBytes       []byte
+	State            state.BeaconState
+	Block            block.SignedBeaconBlock
+	ConfigFork       *sniff.ConfigFork
 }
 
 // this method downloads the head state, which can be used to find the correct chain config
@@ -98,25 +97,28 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 	}
 	log.Printf("detected supported config in checkpoint state, name=%s, fork=%s", cf.ConfigName.String(), cf.Fork)
 
-	state, err := sniff.BeaconStateForConfigFork(stateBytes, cf)
+	st, err := sniff.BeaconStateForConfigFork(stateBytes, cf)
 	if err != nil {
 		return nil, errors.Wrap(err, "error using detected config fork to unmarshal state bytes")
 	}
+	//blockRoot := blockRootFromState(st)
 
 	// compute state and block roots
-	stateRoot, err := state.HashTreeRoot(ctx)
+	stateRoot, err := st.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing hash_tree_root of state")
 	}
-	blockRoot, err := state.LatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "error computing hash_tree_root of latest_block_header")
-	}
-	log.Printf("found hash_tree_root(state.latest_block_header)=%#x", blockRoot)
 
-	bReader, err := client.GetBlockByRoot(fmt.Sprintf("%#x", blockRoot))
+	header := st.LatestBlockHeader()
+	header.StateRoot = stateRoot[:]
+	computedBlockRoot, err := header.HashTreeRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by root = %#x", blockRoot))
+		return nil, errors.Wrap(err, "error while computing block root using state data")
+	}
+
+	bReader, err := client.GetBlockByRoot(fmt.Sprintf("%#x", computedBlockRoot))
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by slot = %d", slot))
 	}
 	blockBytes, err := io.ReadAll(bReader)
 	if err != nil {
@@ -126,14 +128,14 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to unmarshal block to a supported type using the detected fork schedule")
 	}
-	realBlockRoot, err := block.Block().HashTreeRoot()
+	blockRoot, err := block.Block().HashTreeRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "error computing hash_tree_root of retrieved block")
+		return nil, errors.Wrap(err, "error computing hash_tree_root for block obtained via root")
 	}
 
-	log.Printf("BeaconState slot=%d, Block slot=%d", state.Slot(), block.Block().Slot())
+	log.Printf("BeaconState slot=%d, Block slot=%d", st.Slot(), block.Block().Slot())
 	log.Printf("BeaconState htr=%#xd, Block state_root=%#x", stateRoot, block.Block().StateRoot())
-	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", blockRoot, realBlockRoot)
+	log.Printf("BeaconBlock root computed from state=%#x, Block HTR=%#x", computedBlockRoot, blockRoot)
 
 	return &OriginData{
 		WeakSubjectivity: &WeakSubjectivityData{
@@ -141,12 +143,17 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 			StateRoot: stateRoot,
 			Epoch:     epoch,
 		},
-		State: state,
+		State:      st,
 		StateBytes: stateBytes,
-		Block: block,
+		Block:      block,
 		BlockBytes: blockBytes,
 		ConfigFork: cf,
 	}, nil
+}
+
+func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error) {
+	//return downloadBackwardsCompatible(ctx, client)
+	return downloadPrysmOriginData(ctx, client)
 }
 
 // DownloadOriginData attempts to use the proposed weak_subjectivity beacon node api
@@ -155,7 +162,7 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 // that will only be supported by prysm at first, in the event of a 404 we fallback to using a
 // different technique where we first download the head state which can be used to compute the
 // weak subjectivity epoch on the client side.
-func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error) {
+func downloadPrysmOriginData(ctx context.Context, client *Client) (*OriginData, error) {
 	ws, err := client.GetWeakSubjectivity()
 	if err != nil {
 		// a 404 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
@@ -202,17 +209,11 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing hash_tree_root of latest_block_header")
 	}
-	log.Printf("found hash_tree_root(state.latest_block_header)=%#x", blockRoot)
-	if blockRoot != ws.BlockRoot {
-		log.Warn("checkpoint block root doesn't match hash_tree_root(state.latest_block_header)")
-		msg := fmt.Sprintf("api block_root=%#x, hash_tree_root(state.latest_block_header)=%#x", ws.BlockRoot, blockRoot)
-		return nil, errors.Wrap(ErrMismatchedLatestBlockRoot, msg)
-	}
 
-	log.Printf("hash_tree_root(state.latest_block_header) matches API response, fetching %#x", blockRoot)
-	bReader, err := client.GetBlockByRoot(fmt.Sprintf("%#x", blockRoot))
+	bReader, err := client.GetBlockByRoot(fmt.Sprintf("%#x", ws.BlockRoot))
+	//bReader, err := client.GetBlockBySlot(slot)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by root = %#x", blockRoot))
+		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by slot = %d", slot))
 	}
 	blockBytes, err := io.ReadAll(bReader)
 	if err != nil {
@@ -231,10 +232,10 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", blockRoot, realBlockRoot)
 	return &OriginData{
 		WeakSubjectivity: ws,
-		State: state,
-		Block: block,
-		StateBytes: stateBytes,
-		BlockBytes: blockBytes,
-		ConfigFork: cf,
+		State:            state,
+		Block:            block,
+		StateBytes:       stateBytes,
+		BlockBytes:       blockBytes,
+		ConfigFork:       cf,
 	}, nil
 }
