@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -125,7 +125,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if !ssz.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
+	if !equality.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
 		t.Fatalf("MetadataV0 unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 
@@ -213,7 +213,7 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if !ssz.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
+	if !equality.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
 		t.Fatalf("MetadataV1 unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
 	}
 

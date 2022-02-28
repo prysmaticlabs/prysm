@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/testing/assertions",
     visibility = ["//visibility:public"],
     deps = [
-        "//encoding/ssz:go_default_library",
+        "//encoding/ssz/equality:go_default_library",
         "@com_github_d4l3k_messagediff//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
