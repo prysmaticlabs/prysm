@@ -90,7 +90,7 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 		case [][]byte:
 			return handleByteArrays(val, indices, convertAll)
 		case *customtypes.RandaoMixes:
-			return handle32ByteArrays(val[:], indices, convertAll)
+			return handleIndexer(val, indices, convertAll)
 		default:
 			return nil, errors.Errorf("Incorrect type used for randao mixes")
 		}

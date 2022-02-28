@@ -20,24 +20,24 @@ type Indexer interface {
 
 // BlockRoots represents block roots of the beacon state.
 type BlockRoots struct {
-	baseArray    *baseArray
+	baseArray    *baseArrayBlockRoots
 	fieldJournal map[uint64][32]byte
 	*stateutil.Reference
 }
 
-type baseArray struct {
+type baseArrayBlockRoots struct {
 	baseArray *[fieldparams.BlockRootsLength][32]byte
 	*sync.RWMutex
 	*stateutil.Reference
 }
 
-func (b *baseArray) RootAtIndex(idx uint64) [32]byte {
+func (b *baseArrayBlockRoots) RootAtIndex(idx uint64) [32]byte {
 	b.RWMutex.RLock()
 	defer b.RWMutex.RUnlock()
 	return b.baseArray[idx]
 }
 
-func (b *baseArray) TotalLength() uint64 {
+func (b *baseArrayBlockRoots) TotalLength() uint64 {
 	return fieldparams.BlockRootsLength
 }
 
@@ -124,7 +124,7 @@ func (r *BlockRoots) Slice() [][]byte {
 
 func SetFromSlice(slice [][]byte) *BlockRoots {
 	br := &BlockRoots{
-		baseArray: &baseArray{
+		baseArray: &baseArrayBlockRoots{
 			baseArray: new([fieldparams.BlockRootsLength][32]byte),
 			RWMutex:   new(sync.RWMutex),
 			Reference: stateutil.NewRef(1),

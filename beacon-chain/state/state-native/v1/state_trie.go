@@ -46,10 +46,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error)
 	for i, r := range st.HistoricalRoots {
 		copy(hRoots[i][:], r)
 	}
-	var mixes customtypes.RandaoMixes
-	for i, m := range st.RandaoMixes {
-		copy(mixes[i][:], m)
-	}
+	mixes := customtypes.SetFromSliceRandao(st.RandaoMixes)
 
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	b := &BeaconState{
@@ -66,7 +63,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error)
 		eth1DepositIndex:            st.Eth1DepositIndex,
 		validators:                  st.Validators,
 		balances:                    st.Balances,
-		randaoMixes:                 &mixes,
+		randaoMixes:                 mixes,
 		slashings:                   st.Slashings,
 		previousEpochAttestations:   st.PreviousEpochAttestations,
 		currentEpochAttestations:    st.CurrentEpochAttestations,
@@ -198,6 +195,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		}
 	}
 	b.blockRoots.IncreaseRef()
+	b.randaoMixes.IncreaseRef()
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -210,6 +208,8 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 		}
 		b.blockRoots.MinusRef()
+		b.randaoMixes.MinusRef()
+
 		for i := 0; i < fieldCount; i++ {
 			field := types.FieldIndex(i)
 			delete(b.stateFieldLeaves, field)

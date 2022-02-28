@@ -37,11 +37,10 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 // input index value.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) randaoMixAtIndex(idx uint64) ([32]byte, error) {
-	if uint64(len(b.randaoMixes)) <= idx {
+	if b.randaoMixes.TotalLength() <= idx {
 		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}
-
-	return b.randaoMixes[idx], nil
+	return b.randaoMixes.RootAtIndex(idx), nil
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
@@ -63,5 +62,5 @@ func (b *BeaconState) randaoMixesLength() int {
 		return 0
 	}
 
-	return len(b.randaoMixes)
+	return int(b.randaoMixes.TotalLength())
 }

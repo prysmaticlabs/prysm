@@ -46,10 +46,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconStat
 	for i, r := range st.HistoricalRoots {
 		hRoots[i] = bytesutil.ToBytes32(r)
 	}
-	var mixes customtypes.RandaoMixes
-	for i, m := range st.RandaoMixes {
-		mixes[i] = bytesutil.ToBytes32(m)
-	}
+	mixes := customtypes.SetFromSliceRandao(st.RandaoMixes)
 
 	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	b := &BeaconState{
@@ -66,7 +63,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconStat
 		eth1DepositIndex:             st.Eth1DepositIndex,
 		validators:                   st.Validators,
 		balances:                     st.Balances,
-		randaoMixes:                  &mixes,
+		randaoMixes:                  mixes,
 		slashings:                    st.Slashings,
 		previousEpochParticipation:   st.PreviousEpochParticipation,
 		currentEpochParticipation:    st.CurrentEpochParticipation,
@@ -206,6 +203,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 			}
 		}
 	}
+	b.blockRoots.IncreaseRef()
+	b.randaoMixes.IncreaseRef()
+
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
@@ -215,6 +215,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 				b.stateFieldLeaves[field].FieldReference().MinusRef()
 			}
 		}
+		b.blockRoots.DecreaseRef()
+		b.randaoMixes.DecreaseRef()
+
 		for i := 0; i < fieldCount; i++ {
 			field := types.FieldIndex(i)
 			delete(b.stateFieldLeaves, field)
