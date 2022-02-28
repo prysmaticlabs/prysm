@@ -52,7 +52,7 @@ func BitwiseMerkleize(hasher HashFn, chunks [][]byte, count, limit uint64) ([32]
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
 	if features.Get().EnableVectorizedHTR {
-		return MerkelizeList(chunks, limit), nil
+		return MerkleizeList(chunks, limit), nil
 	}
 	hashFn := NewHasherFunc(hasher)
 	leafIndexer := func(i uint64) []byte {
@@ -67,7 +67,7 @@ func BitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count, limit uint6
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
 	if features.Get().EnableVectorizedHTR {
-		return MerkelizeVector(chunks, limit), nil
+		return MerkleizeVector(chunks, limit), nil
 	}
 	hashFn := NewHasherFunc(hasher)
 	leafIndexer := func(i uint64) []byte {

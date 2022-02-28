@@ -198,9 +198,9 @@ func ConstructProof(hasher Hasher, count, limit uint64, leaf func(i uint64) []by
 	return
 }
 
-// MerkelizeVector uses our optimized routine to hash a list of 32-byte
+// MerkleizeVector uses our optimized routine to hash a list of 32-byte
 // elements.
-func MerkelizeVector(elements [][32]byte, length uint64) [32]byte {
+func MerkleizeVector(elements [][32]byte, length uint64) [32]byte {
 	depth := Depth(length)
 	// Return zerohash at depth
 	if len(elements) == 0 {
@@ -221,9 +221,9 @@ func MerkelizeVector(elements [][32]byte, length uint64) [32]byte {
 	return elements[0]
 }
 
-// MerkelizeList uses our optimized routine to hash a 2d-list of
+// MerkleizeList uses our optimized routine to hash a 2d-list of
 // elements.
-func MerkelizeList(elements [][]byte, length uint64) [32]byte {
+func MerkleizeList(elements [][]byte, length uint64) [32]byte {
 	depth := Depth(length)
 	// Return zerohash at depth
 	if len(elements) == 0 {
@@ -234,5 +234,5 @@ func MerkelizeList(elements [][]byte, length uint64) [32]byte {
 	for i := range elements {
 		copy(newElems[i][:], elements[i])
 	}
-	return MerkelizeVector(newElems, length)
+	return MerkleizeVector(newElems, length)
 }
