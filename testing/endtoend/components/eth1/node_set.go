@@ -2,7 +2,6 @@ package eth1
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -63,7 +62,6 @@ func (s *NodeSet) Start(ctx context.Context) error {
 	return helpers.WaitOnNodes(ctx, append(nodes, miner), func() {
 		// All nodes started, close channel, so that all services waiting on a set, can proceed.
 		s.keystorePath = miner.KeystorePath()
-		fmt.Println("Setting keystorepath to " + s.keystorePath)
 		close(s.started)
 	})
 }
