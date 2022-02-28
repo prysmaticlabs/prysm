@@ -204,8 +204,7 @@ func MerkleizeVector(elements [][32]byte, length uint64) [32]byte {
 	depth := Depth(length)
 	// Return zerohash at depth
 	if len(elements) == 0 {
-		zerohash := trie.ZeroHashes[depth]
-		return zerohash
+		return trie.ZeroHashes[depth]
 	}
 	for i := 0; i < int(depth); i++ {
 		layerLen := len(elements)
@@ -227,8 +226,7 @@ func MerkleizeList(elements [][]byte, length uint64) [32]byte {
 	depth := Depth(length)
 	// Return zerohash at depth
 	if len(elements) == 0 {
-		zerohash := trie.ZeroHashes[depth]
-		return zerohash
+		return trie.ZeroHashes[depth]
 	}
 	newElems := make([][32]byte, len(elements))
 	for i := range elements {
