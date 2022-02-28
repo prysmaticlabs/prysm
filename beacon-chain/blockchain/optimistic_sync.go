@@ -26,8 +26,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		return nil, errors.New("nil head block")
 	}
 	// Must not call fork choice updated until the transition conditions are met on the Pow network.
-	switch headBlk.Version() {
-	case version.Phase0, version.Altair:
+	if isPreBellatrixBlk(headBlk) {
 		return nil, nil
 	}
 	isExecutionBlk, err := blocks.ExecutionBlock(headBlk.Body())
@@ -46,11 +45,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
 	var finalizedHash []byte
-	switch finalizedBlock.Version() {
-	case version.Phase0, version.Altair:
-		// Before a post-transition block is finalized, finalized hash field must be Hash32().
+	if isPreBellatrixBlk(finalizedBlock.Block()) {
 		finalizedHash = params.BeaconConfig().ZeroHash[:]
-	default:
+	} else {
 		payload, err := finalizedBlock.Block().Body().ExecutionPayload()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized block execution payload")
@@ -64,6 +61,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		FinalizedBlockHash: finalizedHash,
 	}
 
+	// payload attribute is only required when requesting payload, here we are just updating fork choice, so it is nil.
 	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /*payload attribute*/)
 	if err != nil {
 		switch err {
@@ -87,8 +85,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preState, postState stat
 		return errors.New("pre and post states must not be nil")
 	}
 	// Execution payload is only supported in Bellatrix and beyond.
-	switch postState.Version() {
-	case version.Phase0, version.Altair:
+	if isPreBellatrixState(postState) {
 		return nil
 	}
 	if err := helpers.BeaconBlockIsNil(blk); err != nil {
@@ -121,8 +118,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preState, postState stat
 	}
 
 	// During the transition event, the transition block should be verified for sanity.
-	switch preState.Version() {
-	case version.Phase0, version.Altair:
+	if isPreBellatrixState(preState) {
 		return nil
 	}
 	atTransition, err := blocks.MergeTransitionBlock(preState, body)
@@ -133,6 +129,26 @@ func (s *Service) notifyNewPayload(ctx context.Context, preState, postState stat
 		return nil
 	}
 	return s.validateMergeBlock(ctx, blk)
+}
+
+// isPreBellatrixState returns true if input state is before bellatrix fork.
+func isPreBellatrixState(st state.BeaconState) bool {
+	switch st.Version() {
+	case version.Phase0, version.Altair:
+		return true
+	default:
+		return false
+	}
+}
+
+// isPreBellatrixBlk returns true if input block is before bellatrix fork.
+func isPreBellatrixBlk(blk block.BeaconBlock) bool {
+	switch blk.Version() {
+	case version.Phase0, version.Altair:
+		return true
+	default:
+		return false
+	}
 }
 
 // optimisticCandidateBlock returns true if this block can be optimistically synced.
