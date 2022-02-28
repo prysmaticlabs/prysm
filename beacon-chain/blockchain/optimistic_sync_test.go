@@ -115,7 +115,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk.Block.Body.ExecutionPayload.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
-				blk.Block.Body.ExecutionPayload.Random = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				blk.Block.Body.ExecutionPayload.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				wr, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)

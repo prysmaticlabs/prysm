@@ -1151,12 +1151,11 @@ def prysm_deps():
         sum = "h1:1r7pUrabqp18hOBcwBwiTsbnFeTZHV9eER/QT5JVZxY=",
         version = "v0.0.0-20200121045136-8c9f03a8e57e",
     )
-
     go_repository(
-        name = "com_github_golang_jwt_jwt",
-        importpath = "github.com/golang-jwt/jwt",
-        sum = "h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=",
-        version = "v3.2.2+incompatible",
+        name = "com_github_golang_jwt_jwt_v4",
+        importpath = "github.com/golang-jwt/jwt/v4",
+        sum = "h1:kHL1vqdqWNfATmA0FNMdmZNMyZI1U6O31X4rlIPoBog=",
+        version = "v4.3.0",
     )
     go_repository(
         name = "com_github_golang_lint",
@@ -2984,6 +2983,13 @@ def prysm_deps():
         sum = "h1:0tVE4tdWQK9ZpYygoV7+vS6QkDvQVySboMVEIxBJmXw=",
         version = "v0.0.0-20210809151128-385d8c5e3fb7",
     )
+    go_repository(
+        name = "com_github_prysmaticlabs_gohashtree",
+        importpath = "github.com/prysmaticlabs/gohashtree",
+        sum = "h1:qVXMFNUGWbPpP7986YPsmL84A54oY7b/N+SOIBS3i5w=",
+        version = "v0.0.0-20220208111633-0606f58df32f",
+    )
+
     go_repository(
         name = "com_github_prysmaticlabs_prombbolt",
         importpath = "github.com/prysmaticlabs/prombbolt",

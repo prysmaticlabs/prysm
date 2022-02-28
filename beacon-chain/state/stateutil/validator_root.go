@@ -4,8 +4,10 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -14,6 +16,16 @@ import (
 // ValidatorRootWithHasher describes a method from which the hash tree root
 // of a validator is returned.
 func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32]byte, error) {
+	fieldRoots, err := ValidatorFieldRoots(hasher, validator)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+}
+
+// ValidatorFieldRoots describes a method from which the hash tree root
+// of a validator is returned.
+func ValidatorFieldRoots(hasher ssz.HashFn, validator *ethpb.Validator) ([][32]byte, error) {
 	var fieldRoots [][32]byte
 	if validator != nil {
 		pubkey := bytesutil.ToBytes48(validator.PublicKey)
@@ -40,18 +52,25 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 		binary.LittleEndian.PutUint64(withdrawalBuf[:8], uint64(validator.WithdrawableEpoch))
 
 		// Public key.
-		pubKeyChunks, err := ssz.Pack([][]byte{pubkey[:]})
+		pubKeyChunks, err := ssz.PackByChunk([][]byte{pubkey[:]})
 		if err != nil {
-			return [32]byte{}, err
+			return [][32]byte{}, err
 		}
-		pubKeyRoot, err := ssz.BitwiseMerkleize(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
-		if err != nil {
-			return [32]byte{}, err
+		var pubKeyRoot [32]byte
+		if features.Get().EnableVectorizedHTR {
+			outputChunk := make([][32]byte, 1)
+			htr.VectorizedSha256(pubKeyChunks, outputChunk)
+			pubKeyRoot = outputChunk[0]
+		} else {
+			pubKeyRoot, err = ssz.BitwiseMerkleizeArrays(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
+			if err != nil {
+				return [][32]byte{}, err
+			}
 		}
 		fieldRoots = [][32]byte{pubKeyRoot, withdrawCreds, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
 			activationBuf, exitBuf, withdrawalBuf}
 	}
-	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return fieldRoots, nil
 }
 
 // Uint64ListRootWithRegistryLimit computes the HashTreeRoot Merkleization of

@@ -139,11 +139,16 @@ var (
 		Name:  "enable-native-state",
 		Usage: "Enables representing the beacon state as a pure Go struct.",
 	}
+	enableVecHTR = &cli.BoolFlag{
+		Name:  "enable-vectorized-htr",
+		Usage: "Enables new go sha256 library which utilizes optimized routines for merkle trees",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enablePeerScorer,
+	enableVecHTR,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -190,6 +195,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBatchGossipVerification,
 	disableBalanceTrieComputation,
 	enableNativeState,
+	enableVecHTR,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

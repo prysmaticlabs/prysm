@@ -2,6 +2,7 @@ package ssz
 
 import (
 	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
 )
 
 // Merkleize.go is mostly a directly copy of the same filename from
@@ -34,8 +35,8 @@ func Depth(v uint64) (out uint8) {
 	// Then adding 1 to it to not get the index of the first bit, but the length of the bits (depth of tree)
 	// Zero is a special case, it has a 0 depth.
 	// Example:
-	//  (in out): (0 0), (1 1), (2 1), (3 2), (4 2), (5 3), (6 3), (7 3), (8 3), (9 4)
-	if v == 0 {
+	//  (in out): (0 0), (1 0), (2 1), (3 2), (4 2), (5 3), (6 3), (7 3), (8 3), (9 4)
+	if v <= 1 {
 		return 0
 	}
 	v--
@@ -195,4 +196,41 @@ func ConstructProof(hasher Hasher, count, limit uint64, leaf func(i uint64) []by
 	}
 
 	return
+}
+
+// MerkleizeVector uses our optimized routine to hash a list of 32-byte
+// elements.
+func MerkleizeVector(elements [][32]byte, length uint64) [32]byte {
+	depth := Depth(length)
+	// Return zerohash at depth
+	if len(elements) == 0 {
+		return trie.ZeroHashes[depth]
+	}
+	for i := 0; i < int(depth); i++ {
+		layerLen := len(elements)
+		oddNodeLength := layerLen%2 == 1
+		if oddNodeLength {
+			zerohash := trie.ZeroHashes[i]
+			elements = append(elements, zerohash)
+		}
+		outputLen := len(elements) / 2
+		htr.VectorizedSha256(elements, elements)
+		elements = elements[:outputLen]
+	}
+	return elements[0]
+}
+
+// MerkleizeList uses our optimized routine to hash a 2d-list of
+// elements.
+func MerkleizeList(elements [][]byte, length uint64) [32]byte {
+	depth := Depth(length)
+	// Return zerohash at depth
+	if len(elements) == 0 {
+		return trie.ZeroHashes[depth]
+	}
+	newElems := make([][32]byte, len(elements))
+	for i := range elements {
+		copy(newElems[i][:], elements[i])
+	}
+	return MerkleizeVector(newElems, length)
 }

@@ -44,7 +44,16 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			Deposits:          altairBlk.Body.Deposits,
 			VoluntaryExits:    altairBlk.Body.VoluntaryExits,
 			SyncAggregate:     altairBlk.Body.SyncAggregate,
-			ExecutionPayload:  payload,
+			ExecutionPayload: &enginev1.ExecutionPayload{
+				ParentHash:    make([]byte, fieldparams.RootLength),
+				FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:     make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+				LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:    make([]byte, fieldparams.RootLength),
+				BaseFeePerGas: make([]byte, fieldparams.RootLength),
+				BlockHash:     make([]byte, fieldparams.RootLength),
+			}, // TODO(9853) Insert real execution payload.
 		},
 	}
 	// Compute state root with the newly constructed block.

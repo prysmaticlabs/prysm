@@ -34,6 +34,7 @@ var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.HTTPWeb3ProviderFlag,
 	flags.ExecutionProviderFlag,
+	flags.ExecutionJWTSecretFlag,
 	flags.FallbackWeb3ProviderFlag,
 	flags.RPCHost,
 	flags.RPCPort,
@@ -117,6 +118,7 @@ var appFlags = []cli.Flag{
 	cmd.RestoreTargetDirFlag,
 	cmd.BoltMMapInitialSizeFlag,
 	cmd.ValidatorMonitorIndicesFlag,
+	cmd.ApiTimeoutFlag,
 }
 
 func init() {
@@ -231,11 +233,11 @@ func startNode(ctx *cli.Context) error {
 
 	blockchainFlagOpts, err := blockchaincmd.FlagOptions(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
