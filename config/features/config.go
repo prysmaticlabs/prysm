@@ -37,7 +37,6 @@ const disabledFeatureFlag = "Disabled feature flag"
 type Flags struct {
 	// Testnet Flags.
 	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
-	KilnTestnet    bool // KilnTestnet defines the flag through which we can enable node to run on the merge testnet.
 
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
@@ -130,11 +129,6 @@ func configureTestnet(ctx *cli.Context, cfg *Flags) {
 		log.Warn("Running on the Prater Testnet")
 		params.UsePraterConfig()
 		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(KilnTestnet.Name) {
-		log.Warn("Running on the Kiln(merge) Testnet")
-		params.UseMergeTestConfig()
-		params.UseMergeTestNetworkConfig()
-		cfg.KilnTestnet = true
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
 		params.UseMainnetConfig()

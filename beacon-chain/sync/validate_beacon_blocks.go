@@ -173,7 +173,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		if errors.Is(errOptimisticParent, err) {
 			return pubsub.ValidationIgnore, err
 		}
-		return pubsub.ValidationReject, err
 	}
 
 	// Record attribute of valid block.

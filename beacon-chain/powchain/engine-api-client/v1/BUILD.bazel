@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "auth.go",
         "client.go",
         "errors.go",
         "options.go",
@@ -14,13 +15,17 @@ go_library(
         "//proto/engine/v1:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
+        "@com_github_golang_jwt_jwt_v4//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["client_test.go"],
+    srcs = [
+        "auth_test.go",
+        "client_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//config/fieldparams:go_default_library",
@@ -30,6 +35,7 @@ go_test(
         "//testing/require:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
+        "@com_github_golang_jwt_jwt_v4//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
