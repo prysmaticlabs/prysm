@@ -28,7 +28,9 @@ import (
 )
 
 var (
-	ErrOptimisticParent = errors.New("parent of the block is optimistic")
+	// errOptimisticParent is used where the p2p scoring penalties need to be
+	// avoided due to validating blocks parent being optimistic.
+	errOptimisticParent = errors.New("parent of the block is optimistic")
 )
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
@@ -168,7 +170,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	err = s.validateBeaconBlock(ctx, blk, blockRoot, genesisTime)
 	if err != nil {
 		// If the parent is optimistic, be gracious and don't penalize the peer.
-		if errors.Is(ErrOptimisticParent, err) {
+		if errors.Is(errOptimisticParent, err) {
 			return pubsub.ValidationIgnore, err
 		}
 		return pubsub.ValidationReject, err
@@ -284,7 +286,7 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 		return err
 	}
 	if isParentOptimistic {
-		return ErrOptimisticParent
+		return errOptimisticParent
 	}
 	return nil
 }
