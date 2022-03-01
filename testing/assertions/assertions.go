@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/d4l3k/messagediff"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -61,7 +61,7 @@ func DeepNotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg 
 
 // DeepSSZEqual compares values using ssz.DeepEqual.
 func DeepSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if !ssz.DeepEqual(expected, actual) {
+	if !equality.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		diff, _ := messagediff.PrettyDiff(expected, actual)
@@ -71,7 +71,7 @@ func DeepSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg 
 
 // DeepNotSSZEqual compares values using ssz.DeepEqual.
 func DeepNotSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if ssz.DeepEqual(expected, actual) {
+	if equality.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)

@@ -47,6 +47,7 @@ func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.S
 	f.syncedTips.RLock()
 	_, ok := f.syncedTips.validatedTips[root]
 	if ok {
+		f.syncedTips.RUnlock()
 		return false, nil
 	}
 	f.syncedTips.RUnlock()

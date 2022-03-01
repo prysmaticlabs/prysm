@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -42,9 +43,9 @@ type ForkchoiceUpdatedResponse struct {
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
-// EngineCaller defines a client that can interact with an Ethereum
+// Caller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
-type EngineCaller interface {
+type Caller interface {
 	NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
@@ -52,7 +53,7 @@ type EngineCaller interface {
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
-	) (*pb.TransitionConfiguration, error)
+	) error
 	LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error)
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
 }
@@ -74,6 +75,11 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 	c := &Client{
 		cfg: defaultConfig(),
 	}
+	for _, opt := range opts {
+		if err := opt(c); err != nil {
+			return nil, err
+		}
+	}
 	switch u.Scheme {
 	case "http", "https":
 		c.rpc, err = rpc.DialHTTPWithClient(endpoint, c.cfg.httpClient)
@@ -84,11 +90,6 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 	}
 	if err != nil {
 		return nil, err
-	}
-	for _, opt := range opts {
-		if err := opt(c); err != nil {
-			return nil, err
-		}
 	}
 	return c, nil
 }
@@ -155,35 +156,39 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
 func (c *Client) ExchangeTransitionConfiguration(
 	ctx context.Context, cfg *pb.TransitionConfiguration,
-) (*pb.TransitionConfiguration, error) {
+) error {
 	// We set terminal block number to 0 as the parameter is not set on the consensus layer.
 	zeroBigNum := big.NewInt(0)
 	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
 	result := &pb.TransitionConfiguration{}
 	if err := c.rpc.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
-		return nil, handleRPCError(err)
+		return handleRPCError(err)
 	}
 	// We surface an error to the user if local configuration settings mismatch
 	// according to the response from the execution node.
 	cfgTerminalHash := params.BeaconConfig().TerminalBlockHash[:]
 	if !bytes.Equal(cfgTerminalHash, result.TerminalBlockHash) {
-		return nil, errors.Wrapf(
-			ErrMismatchTerminalBlockHash,
+		return errors.Wrapf(
+			ErrConfigMismatch,
 			"got %#x from execution node, wanted %#x",
 			result.TerminalBlockHash,
 			cfgTerminalHash,
 		)
 	}
 	ttdCfg := params.BeaconConfig().TerminalTotalDifficulty
-	if ttdCfg != result.TerminalTotalDifficulty {
-		return nil, errors.Wrapf(
-			ErrMismatchTerminalTotalDiff,
+	ttdResult, err := hexutil.DecodeBig(result.TerminalTotalDifficulty)
+	if err != nil {
+		return errors.Wrap(err, "could not decode received terminal total difficulty")
+	}
+	if ttdResult.String() != ttdCfg {
+		return errors.Wrapf(
+			ErrConfigMismatch,
 			"got %s from execution node, wanted %s",
-			result.TerminalTotalDifficulty,
+			ttdResult.String(),
 			ttdCfg,
 		)
 	}
-	return result, nil
+	return nil
 }
 
 // LatestExecutionBlock fetches the latest execution engine block by calling

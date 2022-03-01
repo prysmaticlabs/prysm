@@ -127,17 +127,18 @@ type RPCClient interface {
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	depositContractAddr     common.Address
-	beaconDB                db.HeadAccessDatabase
-	depositCache            *depositcache.DepositCache
-	stateNotifier           statefeed.Notifier
-	stateGen                *stategen.State
-	eth1HeaderReqLimit      uint64
-	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
-	httpEndpoints           []network.Endpoint
-	executionEndpoint       string
-	currHttpEndpoint        network.Endpoint
-	finalizedStateAtStartup state.BeaconState
+	depositContractAddr        common.Address
+	beaconDB                   db.HeadAccessDatabase
+	depositCache               *depositcache.DepositCache
+	stateNotifier              statefeed.Notifier
+	stateGen                   *stategen.State
+	eth1HeaderReqLimit         uint64
+	beaconNodeStatsUpdater     BeaconNodeStatsUpdater
+	httpEndpoints              []network.Endpoint
+	executionEndpoint          string
+	executionEndpointJWTSecret []byte
+	currHttpEndpoint           network.Endpoint
+	finalizedStateAtStartup    state.BeaconState
 }
 
 // Service fetches important information about the canonical
@@ -156,7 +157,7 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
-	engineAPIClient         *engine.Client
+	engineAPIClient         engine.Caller
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -215,6 +216,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	if err := s.initializeEngineAPIClient(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to initialize engine API client")
 	}
+
+	// Check transition configuration for the engine API client in the background.
+	go s.checkTransitionConfiguration(ctx)
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
@@ -298,15 +302,12 @@ func (s *Service) Status() error {
 		return nil
 	}
 	// get error from run function
-	if s.runError != nil {
-		return s.runError
-	}
-	return nil
+	return s.runError
 }
 
 // EngineAPIClient returns the associated engine API client to interact
 // with an execution node via JSON-RPC.
-func (s *Service) EngineAPIClient() *engine.Client {
+func (s *Service) EngineAPIClient() engine.Caller {
 	return s.engineAPIClient
 }
 
@@ -1058,7 +1059,10 @@ func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
 	if s.cfg.executionEndpoint == "" {
 		return nil
 	}
-	client, err := engine.New(ctx, s.cfg.executionEndpoint)
+	opts := []engine.Option{
+		engine.WithJWTSecret(s.cfg.executionEndpointJWTSecret),
+	}
+	client, err := engine.New(ctx, s.cfg.executionEndpoint, opts...)
 	if err != nil {
 		return err
 	}
