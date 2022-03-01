@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block/mock"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -367,13 +368,13 @@ func TestBestForSlot(t *testing.T) {
 	nilBody, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}})
 	require.NoError(t, err)
 	derp := errors.New("fake hash tree root method no hash good")
-	badHTR := &block.MockSignedBeaconBlock{BeaconBlock: &block.MockBeaconBlock{HtrErr: derp, BeaconBlockBody: &block.MockBeaconBlockBody{}}}
+	badHTR := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{HtrErr: derp, BeaconBlockBody: &mock.BeaconBlockBody{}}}
 	var goodHTR [32]byte
 	copy(goodHTR[:], []byte{23})
 	var betterHTR [32]byte
 	copy(betterHTR[:], []byte{42})
-	good := &block.MockSignedBeaconBlock{BeaconBlock: &block.MockBeaconBlock{BeaconBlockBody: &block.MockBeaconBlockBody{}, Htr: goodHTR}}
-	better := &block.MockSignedBeaconBlock{BeaconBlock: &block.MockBeaconBlock{BeaconBlockBody: &block.MockBeaconBlockBody{}, Htr: betterHTR}}
+	good := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{BeaconBlockBody: &mock.BeaconBlockBody{}, Htr: goodHTR}}
+	better := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{BeaconBlockBody: &mock.BeaconBlockBody{}, Htr: betterHTR}}
 
 	cases := []struct {
 		name   string
@@ -485,13 +486,13 @@ func TestReverseChain(t *testing.T) {
 				t.Errorf("different list lengths")
 			}
 			for i := 0; i < len(actual); i++ {
-				sblockA, ok := actual[i].(*block.MockSignedBeaconBlock)
+				sblockA, ok := actual[i].(*mock.SignedBeaconBlock)
 				require.Equal(t, true, ok)
-				blockA, ok := sblockA.BeaconBlock.(*block.MockBeaconBlock)
+				blockA, ok := sblockA.BeaconBlock.(*mock.BeaconBlock)
 				require.Equal(t, true, ok)
-				sblockE, ok := expected[i].(*block.MockSignedBeaconBlock)
+				sblockE, ok := expected[i].(*mock.SignedBeaconBlock)
 				require.Equal(t, true, ok)
-				blockE, ok := sblockE.BeaconBlock.(*block.MockBeaconBlock)
+				blockE, ok := sblockE.BeaconBlock.(*mock.BeaconBlock)
 				require.Equal(t, true, ok)
 				require.Equal(t, blockA.Htr, blockE.Htr)
 			}
@@ -520,7 +521,7 @@ func mockBlocks(n int, iter func(int, chan uint32)) []block.SignedBeaconBlock {
 	for i := range bchan {
 		h := [32]byte{}
 		binary.LittleEndian.PutUint32(h[:], i)
-		b := &block.MockSignedBeaconBlock{BeaconBlock: &block.MockBeaconBlock{BeaconBlockBody: &block.MockBeaconBlockBody{}, Htr: h}}
+		b := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{BeaconBlockBody: &mock.BeaconBlockBody{}, Htr: h}}
 		mb = append(mb, b)
 	}
 	return mb
