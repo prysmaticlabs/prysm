@@ -21,22 +21,14 @@ func TestStore_PruneThreshold(t *testing.T) {
 
 func TestStore_JustifiedEpoch(t *testing.T) {
 	j := types.Epoch(100)
-	s := &Store{
-		justifiedEpoch: j,
-	}
-	if got := s.JustifiedEpoch(); got != j {
-		t.Errorf("JustifiedEpoch() = %v, want %v", got, j)
-	}
+	f := setup(j, j)
+	require.Equal(t, j, f.JustifiedEpoch())
 }
 
 func TestStore_FinalizedEpoch(t *testing.T) {
-	f := types.Epoch(50)
-	s := &Store{
-		finalizedEpoch: f,
-	}
-	if got := s.FinalizedEpoch(); got != f {
-		t.Errorf("FinalizedEpoch() = %v, want %v", got, f)
-	}
+	j := types.Epoch(50)
+	f := setup(j, j)
+	require.Equal(t, j, f.FinalizedEpoch())
 }
 
 func TestStore_NodeNumber(t *testing.T) {

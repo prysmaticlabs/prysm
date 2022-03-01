@@ -206,27 +206,27 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(3), 1, 1, true))
 	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(1), 1, 1, true))
 
-	opt, err := f.IsOptimistic(indexToHash(5))
+	opt, err := f.IsOptimistic(ctx, indexToHash(5))
 	require.NoError(t, err)
 	require.Equal(t, true, opt)
 
-	opt, err = f.IsOptimistic(indexToHash(4))
+	opt, err = f.IsOptimistic(ctx, indexToHash(4))
 	require.NoError(t, err)
 	require.Equal(t, true, opt)
 
 	require.NoError(t, f.store.nodeByRoot[indexToHash(4)].setNodeAndParentValidated(ctx))
 
 	// block 5 should still be optimistic
-	opt, err = f.IsOptimistic(indexToHash(5))
+	opt, err = f.IsOptimistic(ctx, indexToHash(5))
 	require.NoError(t, err)
 	require.Equal(t, true, opt)
 
 	// block 4 and 3 should now be valid
-	opt, err = f.IsOptimistic(indexToHash(4))
+	opt, err = f.IsOptimistic(ctx, indexToHash(4))
 	require.NoError(t, err)
 	require.Equal(t, false, opt)
 
-	opt, err = f.IsOptimistic(indexToHash(3))
+	opt, err = f.IsOptimistic(ctx, indexToHash(3))
 	require.NoError(t, err)
 	require.Equal(t, false, opt)
 }
