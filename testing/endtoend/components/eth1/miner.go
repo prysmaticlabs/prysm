@@ -58,7 +58,8 @@ func (m *Miner) SetBootstrapENR(bootstrapEnr string) {
 	m.bootstrapEnr = bootstrapEnr
 }
 
-// Start TODO
+// Start runs a mining ETH1 node.
+// The miner is responsible for moving the ETH1 chain forward and for deploying the deposit contract.
 func (m *Miner) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {

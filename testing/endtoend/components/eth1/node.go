@@ -34,7 +34,8 @@ func NewNode(index int, enr string) *Node {
 	}
 }
 
-// Start TODO
+// Start runs a non-mining ETH1 node.
+// To connect to a miner and start working properly, this node should be a part of a NodeSet.
 func (node *Node) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {

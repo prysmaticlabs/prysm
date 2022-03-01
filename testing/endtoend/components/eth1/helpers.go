@@ -11,10 +11,10 @@ import (
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 )
 
-// NetworkId TODO
-const NetworkId = 123456
+// NetworkId is the ID of the ETH1 chain.
+const NetworkId = 1337
 
-// KeystorePassword TODO
+// KeystorePassword is the password used to decrypt ETH1 keystores.
 const KeystorePassword = "password"
 
 const minerPort = 30303
@@ -28,7 +28,7 @@ var _ e2etypes.ComponentRunner = (*NodeSet)(nil)
 var _ e2etypes.ComponentRunner = (*Miner)(nil)
 var _ e2etypes.ComponentRunner = (*Node)(nil)
 
-// WaitForBlocks TODO
+// WaitForBlocks waits for a certain amount of blocks to be mined by the ETH1 chain before returning.
 func WaitForBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToWait uint64) error {
 	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
 	if err != nil {

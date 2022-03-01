@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
-        "constants.go",
+        "helpers.go",
         "miner.go",
         "node.go",
         "node_set.go",
