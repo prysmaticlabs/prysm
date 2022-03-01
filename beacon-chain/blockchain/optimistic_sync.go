@@ -22,9 +22,11 @@ import (
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
 func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.BeaconBlock, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
+		return nil, errors.New("nil head block")
+	}
 	// Must not call fork choice updated until the transition conditions are met on the Pow network.
-	switch headBlk.Version() {
-	case version.Phase0, version.Altair:
+	if isPreBellatrix(headBlk.Version()) {
 		return nil, nil
 	}
 	isExecutionBlk, err := blocks.ExecutionBlock(headBlk.Body())
@@ -43,11 +45,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
 	var finalizedHash []byte
-	switch finalizedBlock.Version() {
-	case version.Phase0, version.Altair:
-		// Before a post-transition block is finalized, finalized hash field must be Hash32().
+	if isPreBellatrix(finalizedBlock.Block().Version()) {
 		finalizedHash = params.BeaconConfig().ZeroHash[:]
-	default:
+	} else {
 		payload, err := finalizedBlock.Block().Body().ExecutionPayload()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized block execution payload")
@@ -61,6 +61,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		FinalizedBlockHash: finalizedHash,
 	}
 
+	// payload attribute is only required when requesting payload, here we are just updating fork choice, so it is nil.
 	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /*payload attribute*/)
 	if err != nil {
 		switch err {
@@ -80,9 +81,11 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 
 // notifyForkchoiceUpdate signals execution engine on a new payload
 func (s *Service) notifyNewPayload(ctx context.Context, preState, postState state.BeaconState, blk block.SignedBeaconBlock) error {
+	if preState == nil || postState == nil {
+		return errors.New("pre and post states must not be nil")
+	}
 	// Execution payload is only supported in Bellatrix and beyond.
-	switch postState.Version() {
-	case version.Phase0, version.Altair:
+	if isPreBellatrix(postState.Version()) {
 		return nil
 	}
 	if err := helpers.BeaconBlockIsNil(blk); err != nil {
@@ -115,8 +118,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preState, postState stat
 	}
 
 	// During the transition event, the transition block should be verified for sanity.
-	switch preState.Version() {
-	case version.Phase0, version.Altair:
+	if isPreBellatrix(preState.Version()) {
 		return nil
 	}
 	atTransition, err := blocks.MergeTransitionBlock(preState, body)
@@ -127,6 +129,11 @@ func (s *Service) notifyNewPayload(ctx context.Context, preState, postState stat
 		return nil
 	}
 	return s.validateMergeBlock(ctx, blk)
+}
+
+// isPreBellatrix returns true if input version is before bellatrix fork.
+func isPreBellatrix(v int) bool {
+	return v == version.Phase0 || v == version.Altair
 }
 
 // optimisticCandidateBlock returns true if this block can be optimistically synced.
