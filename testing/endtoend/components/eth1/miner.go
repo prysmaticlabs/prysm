@@ -250,8 +250,5 @@ func enodeFromLogFile(name string) (string, error) {
 		return "", fmt.Errorf("did not find ENR text in %s", contents)
 	}
 	enode := contents[startIdx : startIdx+endIdx]
-	if strings.HasPrefix(enode, "-") {
-		enode = strings.TrimPrefix(enode, "-")
-	}
-	return enode, nil
+	return strings.TrimPrefix(enode, "-"), nil
 }
