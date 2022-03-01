@@ -18,21 +18,20 @@ func Eth1DataRootWithHasher(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]by
 		return [32]byte{}, errors.New("nil eth1 data")
 	}
 
-	fieldRoots := make([][]byte, 3)
+	fieldRoots := make([][32]byte, 3)
 	for i := 0; i < len(fieldRoots); i++ {
-		fieldRoots[i] = make([]byte, 32)
+		fieldRoots[i] = [32]byte{}
 	}
+
 	if len(eth1Data.DepositRoot) > 0 {
-		depRoot := bytesutil.ToBytes32(eth1Data.DepositRoot)
-		fieldRoots[0] = depRoot[:]
+		fieldRoots[0] = bytesutil.ToBytes32(eth1Data.DepositRoot)
 	}
+
 	eth1DataCountBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(eth1DataCountBuf, eth1Data.DepositCount)
-	eth1CountRoot := bytesutil.ToBytes32(eth1DataCountBuf)
-	fieldRoots[1] = eth1CountRoot[:]
+	fieldRoots[1] = bytesutil.ToBytes32(eth1DataCountBuf)
 	if len(eth1Data.BlockHash) > 0 {
-		blockHash := bytesutil.ToBytes32(eth1Data.BlockHash)
-		fieldRoots[2] = blockHash[:]
+		fieldRoots[2] = bytesutil.ToBytes32(eth1Data.BlockHash)
 	}
 	root, err := ssz.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
@@ -44,23 +43,19 @@ func Eth1DataRootWithHasher(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]by
 // Eth1DatasRoot returns the hash tree root of input `eth1Datas`.
 func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	eth1VotesRoots := make([][]byte, 0)
+	eth1VotesRoots := make([][32]byte, 0)
 	for i := 0; i < len(eth1Datas); i++ {
 		eth1, err := Eth1DataRootWithHasher(hasher, eth1Datas[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
 		}
-		eth1VotesRoots = append(eth1VotesRoots, eth1[:])
-	}
-	eth1Chunks, err := ssz.Pack(eth1VotesRoots)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
+		eth1VotesRoots = append(eth1VotesRoots, eth1)
 	}
 
 	eth1VotesRootsRoot, err := ssz.BitwiseMerkleize(
 		hasher,
-		eth1Chunks,
-		uint64(len(eth1Chunks)),
+		eth1VotesRoots,
+		uint64(len(eth1VotesRoots)),
 		fieldparams.Eth1DataVotesLength,
 	)
 	if err != nil {

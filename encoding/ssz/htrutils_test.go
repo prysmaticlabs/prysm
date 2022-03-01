@@ -123,36 +123,36 @@ func TestTransactionsRoot(t *testing.T) {
 	}
 }
 
-func TestPackChunks(t *testing.T) {
+func TestPackByChunk_SingleList(t *testing.T) {
 	tests := []struct {
 		name  string
 		input []byte
-		want  [][]byte
+		want  [][32]byte
 	}{
 		{
 			name:  "nil",
 			input: nil,
-			want:  [][]byte{},
+			want:  [][32]byte{},
 		},
 		{
 			name:  "empty",
 			input: []byte{},
-			want:  [][]byte{},
+			want:  [][32]byte{},
 		},
 		{
 			name:  "one",
 			input: []byte{1},
-			want:  [][]byte{{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+			want:  [][32]byte{{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
 		},
 		{
 			name:  "one, two",
 			input: []byte{1, 2},
-			want:  [][]byte{{1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+			want:  [][32]byte{{1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ssz.PackChunks(tt.input)
+			got, err := ssz.PackByChunk([][]byte{tt.input})
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, tt.want, got)
 		})
