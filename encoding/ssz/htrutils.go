@@ -54,9 +54,9 @@ func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, erro
 // a list of [32]byte roots according to the Ethereum Simple Serialize
 // specification.
 func ByteArrayRootWithLimit(roots [][]byte, limit uint64) ([32]byte, error) {
-	newRoots, err := PackByChunk(roots)
-	if err != nil {
-		return [32]byte{}, err
+	newRoots := make([][32]byte, len(roots))
+	for i, r := range roots {
+		copy(newRoots[i][:], r)
 	}
 	result, err := BitwiseMerkleize(hash.CustomSHA256Hasher(), newRoots, uint64(len(newRoots)), limit)
 	if err != nil {
