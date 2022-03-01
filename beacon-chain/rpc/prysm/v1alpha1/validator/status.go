@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -246,25 +245,9 @@ func (vs *Server) activationStatus(
 // Spec:
 // https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md
 func (vs *Server) optimisticStatus(ctx context.Context) error {
-	blk, err := vs.HeadFetcher.HeadBlock(ctx)
-	if err != nil {
-		return err
-	}
-	if slots.ToEpoch(blk.Block().Slot()) < params.BeaconConfig().BellatrixForkEpoch {
+	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
-	st, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-	enabled, err := blocks.ExecutionEnabled(st, blk.Block().Body())
-	if err != nil {
-		return err
-	}
-	if !enabled {
-		return nil
-	}
-
 	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)

@@ -585,10 +585,16 @@ func TestActivationStatus_OK(t *testing.T) {
 }
 
 func TestOptimisticStatus(t *testing.T) {
-	server := &Server{HeadFetcher: &mockChain.ChainService{}}
+	server := &Server{HeadFetcher: &mockChain.ChainService{}, TimeFetcher: &mockChain.ChainService{}}
 	err := server.optimisticStatus(context.Background())
 	require.NoError(t, err)
-	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: true}}
+
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 2
+	params.OverrideBeaconConfig(cfg)
+
+	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: true}, TimeFetcher: &mockChain.ChainService{}}
 	err = server.optimisticStatus(context.Background())
 	s, ok := status.FromError(err)
 	require.Equal(t, true, ok)
