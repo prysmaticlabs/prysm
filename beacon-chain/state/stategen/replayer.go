@@ -82,10 +82,15 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 	}
 
 	start := time.Now()
+	diff, err := rs.target.SafeSubSlot(s.Slot())
+	if err != nil {
+		msg := fmt.Sprintf("error subtracting state.slot %d from replay target slot %d", s.Slot(), rs.target)
+		return nil, errors.Wrap(err, msg)
+	}
 	log.WithFields(logrus.Fields{
 		"startSlot": s.Slot(),
 		"endSlot":   rs.target,
-		"diff":      rs.target - s.Slot(),
+		"diff":      diff,
 	}).Debug("replaying canonical blocks from most recent state")
 
 	for _, b := range descendants {
