@@ -133,12 +133,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preState, postState stat
 
 // isPreBellatrix returns true if input version is before bellatrix fork.
 func isPreBellatrix(v int) bool {
-	switch v {
-	case version.Phase0, version.Altair:
-		return true
-	default:
-		return false
-	}
+	return v == version.Phase0 || v == version.Altair
 }
 
 // optimisticCandidateBlock returns true if this block can be optimistically synced.
