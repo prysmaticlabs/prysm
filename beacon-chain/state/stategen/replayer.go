@@ -115,7 +115,7 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 // but then also runs process_slots to advance the state past the root or slot used in the builder.
 // for example, if you wanted the state to be at the target slot, but only integrating blocks up to
 // slot-1, you could request Builder.ForSlot(slot-1).ReplayToSlot(slot)
-func (rs *stateReplayer) ReplayToSlot(ctx context.Context, target types.Slot) (state.BeaconState, error) {
+func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.stateReplayer.ReplayToSlot")
 	defer span.End()
 
@@ -124,17 +124,17 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, target types.Slot) (s
 		return nil, errors.Wrap(err, "failed to ReplayBlocks")
 	}
 
-	if target > s.Slot() {
+	if replayTo > s.Slot() {
 		start := time.Now()
 		log.WithFields(logrus.Fields{
 			"startSlot": s.Slot(),
-			"endSlot":   target,
-			"diff":      target - s.Slot(),
+			"endSlot":   replayTo,
+			"diff":      replayTo - s.Slot(),
 		}).Debug("calling process_slots on remaining slots")
 
 		if rs.target > s.Slot() {
 			// err will be handled after the bookend log
-			s, err = ReplayProcessSlots(ctx, s, target)
+			s, err = ReplayProcessSlots(ctx, s, replayTo)
 		}
 
 		duration := time.Since(start)
@@ -142,7 +142,7 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, target types.Slot) (s
 			"duration": duration,
 		}).Debug("time spent in process_slots")
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("ReplayToSlot failed to seek to slot %d after applying blocks", target))
+			return nil, errors.Wrap(err, fmt.Sprintf("ReplayToSlot failed to seek to slot %d after applying blocks", replayTo))
 		}
 	}
 	return s, nil
