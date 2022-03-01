@@ -138,12 +138,17 @@ var (
 		Name:  "enable-vectorized-htr",
 		Usage: "Enables new go sha256 library which utilizes optimized routines for merkle trees",
 	}
+	enableForkChoiceTree = &cli.BoolFlag{
+		Name:  "enable-forkchoice-tree",
+		Usage: "Enables new forkchoice store structure that uses doubly linked trees",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enablePeerScorer,
 	enableVecHTR,
+	enableForkChoiceTree,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -189,6 +194,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBalanceTrieComputation,
 	enableNativeState,
 	enableVecHTR,
+	enableForkChoiceTree,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

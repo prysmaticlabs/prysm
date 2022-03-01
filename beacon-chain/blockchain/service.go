@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -31,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -186,7 +188,12 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	}
 	s.store = store.New(justified, finalized)
 
-	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
+	var store f.ForkChoicer
+	if features.Get().EnableForkChoiceTree {
+		store = nodetree.New(justified.Epoch, finalized.Epoch)
+	} else {
+		store = protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
+	}
 	s.cfg.ForkChoiceStore = store
 
 	ss, err := slots.EpochStart(finalized.Epoch)

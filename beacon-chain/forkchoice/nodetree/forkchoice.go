@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"go.opencensus.io/trace"
 )
@@ -299,4 +300,11 @@ func (f *ForkChoice) JustifiedEpoch() types.Epoch {
 // FinalizedEpoch of fork choice store.
 func (f *ForkChoice) FinalizedEpoch() types.Epoch {
 	return f.store.finalizedEpoch
+}
+
+func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	ret := make([]*pbrpc.ForkChoiceNode, len(f.store.nodeByRoot))
+	return f.store.treeRootNode.rpcNodes(ret)
 }

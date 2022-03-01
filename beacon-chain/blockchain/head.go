@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -77,7 +78,11 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 		if err != nil {
 			return err
 		}
+		if features.Get().EnableForkChoiceTree {
+			s.cfg.ForkChoiceStore = nodetree.New(j.Epoch, f.Epoch)
+		} else {
 		s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+		}
                 // TODO(10261) send optimistic status
 		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j, false /* optimistic status */); err != nil {
 			return err

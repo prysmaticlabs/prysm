@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 )
@@ -170,4 +171,10 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 
 	n.optimistic = false
 	return n.parent.setNodeAndParentValidated(ctx)
+}
+
+// rpcNodes is used by the RPC Debug endpoint to return information
+// about all nodes in the fork choice store
+func (n *Node) rpcNodes(ret []*pbrpc.ForkChoiceNode) []*pbrpc.ForkChoiceNode {
+	return ret
 }

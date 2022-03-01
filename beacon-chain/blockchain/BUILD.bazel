@@ -49,6 +49,7 @@ go_library(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/forkchoice:go_default_library",
+        "//beacon-chain/forkchoice/nodetree:go_default_library",
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",

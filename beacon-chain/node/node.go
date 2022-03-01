@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/deterministic-genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/monitor"
@@ -310,8 +311,11 @@ func (b *BeaconNode) Close() {
 }
 
 func (b *BeaconNode) startForkChoice() {
-	f := protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
-	b.forkChoiceStore = f
+	if features.Get().EnableForkChoiceTree {
+		b.forkChoiceStore = nodetree.New(0, 0)
+	} else {
+		b.forkChoiceStore = protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
+	}
 }
 
 func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
