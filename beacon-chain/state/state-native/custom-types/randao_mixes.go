@@ -83,7 +83,7 @@ func (r *RandaoMixes) MarshalSSZTo(dst []byte) ([]byte, error) {
 
 // MarshalSSZ marshals BlockRoots into a serialized object.
 func (r *RandaoMixes) MarshalSSZ() ([]byte, error) {
-	marshalled := make([]byte, fieldparams.BlockRootsLength*32)
+	marshalled := make([]byte, fieldparams.RandaoMixesLength*32)
 	for i := uint64(0); i < r.baseArray.TotalLength(); i++ {
 		if val, ok := r.fieldJournal[i]; ok {
 			copy(marshalled[i*32:], val[:])
@@ -161,6 +161,17 @@ func (r *RandaoMixes) SetRootAtIndex(idx uint64, val [32]byte) {
 	r.MinusRef()
 	r.Reference = stateutil.NewRef(1)
 	r.fieldJournal[idx] = val
+}
+
+func (r *RandaoMixes) Copy() *RandaoMixes {
+	r.baseArray.AddRef()
+	r.Reference.AddRef()
+	rm := &RandaoMixes{
+		baseArray:    r.baseArray,
+		fieldJournal: r.fieldJournal,
+		Reference:    r.Reference,
+	}
+	return rm
 }
 
 func (r *RandaoMixes) TotalLength() uint64 {

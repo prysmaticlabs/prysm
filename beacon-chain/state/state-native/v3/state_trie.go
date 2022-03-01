@@ -96,9 +96,7 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconStat
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[randaoMixes] = stateutil.NewRef(1)
 	b.sharedFieldReferences[stateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[blockRoots] = stateutil.NewRef(1)
 	b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
 	b.sharedFieldReferences[slashings] = stateutil.NewRef(1)
@@ -125,9 +123,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 		eth1DepositIndex: b.eth1DepositIndex,
 
 		// Large arrays, infrequently changed, constant size.
-		randaoMixes:   b.randaoMixes,
+		randaoMixes:   b.randaoMixes.Copy(),
 		stateRoots:    b.stateRoots,
-		blockRoots:    b.blockRoots,
+		blockRoots:    b.blockRoots.Copy(),
 		slashings:     b.slashings,
 		eth1DataVotes: b.eth1DataVotes,
 
@@ -203,8 +201,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 			}
 		}
 	}
-	b.blockRoots.IncreaseRef()
-	b.randaoMixes.IncreaseRef()
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.

@@ -122,6 +122,23 @@ func (r *BlockRoots) Slice() [][]byte {
 	return bRoots
 }
 
+// Slice converts a customtypes.BlockRoots object into a 2D byte slice.
+func (r *BlockRoots) Array() [fieldparams.BlockRootsLength][32]byte {
+	if r == nil {
+		return [fieldparams.BlockRootsLength][32]byte{}
+	}
+	bRoots := [fieldparams.BlockRootsLength][32]byte{}
+	for i := uint64(0); i < r.baseArray.TotalLength(); i++ {
+		if val, ok := r.fieldJournal[i]; ok {
+			bRoots[i] = val
+			continue
+		}
+		rt := r.baseArray.RootAtIndex(i)
+		bRoots[i] = rt
+	}
+	return bRoots
+}
+
 func SetFromSlice(slice [][]byte) *BlockRoots {
 	br := &BlockRoots{
 		baseArray: &baseArrayBlockRoots{
@@ -139,7 +156,13 @@ func SetFromSlice(slice [][]byte) *BlockRoots {
 }
 
 func (r *BlockRoots) SetFromBaseField(field [fieldparams.BlockRootsLength][32]byte) {
-	r.baseArray.baseArray = &field
+	r.baseArray = &baseArrayBlockRoots{
+		baseArray: &field,
+		RWMutex:   new(sync.RWMutex),
+		Reference: stateutil.NewRef(1),
+	}
+	r.fieldJournal = map[uint64][32]byte{}
+	r.Reference = stateutil.NewRef(1)
 }
 
 func (r *BlockRoots) RootAtIndex(idx uint64) [32]byte {
@@ -151,7 +174,9 @@ func (r *BlockRoots) RootAtIndex(idx uint64) [32]byte {
 
 func (r *BlockRoots) SetRootAtIndex(idx uint64, val [32]byte) {
 	if r.Refs() <= 1 && r.baseArray.Refs() <= 1 {
+		r.baseArray.Lock()
 		r.baseArray.baseArray[idx] = val
+		r.baseArray.Unlock()
 		return
 	}
 	if r.Refs() <= 1 {
@@ -166,6 +191,17 @@ func (r *BlockRoots) SetRootAtIndex(idx uint64, val [32]byte) {
 	r.MinusRef()
 	r.Reference = stateutil.NewRef(1)
 	r.fieldJournal[idx] = val
+}
+
+func (r *BlockRoots) Copy() *BlockRoots {
+	r.baseArray.AddRef()
+	r.Reference.AddRef()
+	br := &BlockRoots{
+		baseArray:    r.baseArray,
+		fieldJournal: r.fieldJournal,
+		Reference:    r.Reference,
+	}
+	return br
 }
 
 func (r *BlockRoots) TotalLength() uint64 {

@@ -1,24 +1,25 @@
 package customtypes
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestBlockRoots_Casting(t *testing.T) {
 	var b [fieldparams.BlockRootsLength][32]byte
-	d := BlockRoots(b)
-	if !reflect.DeepEqual([fieldparams.BlockRootsLength][32]byte(d), b) {
-		t.Errorf("Unequal: %v = %v", d, b)
+	f := SetFromSlice([][]byte{})
+	f.SetFromBaseField(b)
+	if !reflect.DeepEqual(f.Array(), b) {
+		t.Errorf("Unequal: %v = %v", f.Array(), b)
 	}
 }
 
 func TestBlockRoots_UnmarshalSSZ(t *testing.T) {
 	t.Run("Ok", func(t *testing.T) {
-		d := BlockRoots{}
+		d := SetFromSlice([][]byte{})
 		var b [fieldparams.BlockRootsLength][32]byte
 		b[0] = [32]byte{'f', 'o', 'o'}
 		b[1] = [32]byte{'b', 'a', 'r'}
@@ -32,8 +33,8 @@ func TestBlockRoots_UnmarshalSSZ(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
-		if !reflect.DeepEqual(b, [fieldparams.BlockRootsLength][32]byte(d)) {
-			t.Errorf("Unequal: %v = %v", b, [fieldparams.BlockRootsLength][32]byte(d))
+		if !reflect.DeepEqual(b, d.Array()) {
+			t.Errorf("Unequal: %v = %v", b, d.Array())
 		}
 	})
 
@@ -70,27 +71,46 @@ func TestBlockRoots_MarshalSSZTo(t *testing.T) {
 }
 
 func TestBlockRoots_MarshalSSZ(t *testing.T) {
-	d := BlockRoots{}
-	d[0] = [32]byte{'f', 'o', 'o'}
-	d[1] = [32]byte{'b', 'a', 'r'}
+	d := SetFromSlice([][]byte{})
+	d.IncreaseRef()
+	d.SetRootAtIndex(0, [32]byte{'f', 'o', 'o'})
+	d.IncreaseRef()
+	d.IncreaseRef()
+	d.SetRootAtIndex(1, [32]byte{'b', 'a', 'r'})
 	b, err := d.MarshalSSZ()
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if !reflect.DeepEqual(d[0][:], b[0:32]) {
-		t.Errorf("Unequal: %v = %v", d[0], b[0:32])
+	rt := d.RootAtIndex(0)
+	if !reflect.DeepEqual(rt[:], b[0:32]) {
+		t.Errorf("Unequal: %v = %v", rt, b[0:32])
 	}
-	if !reflect.DeepEqual(d[1][:], b[32:64]) {
-		t.Errorf("Unequal: %v = %v", d[0], b[32:64])
+	rt = d.RootAtIndex(1)
+	if !reflect.DeepEqual(rt[:], b[32:64]) {
+		t.Errorf("Unequal: %v = %v", rt, b[32:64])
+	}
+	d2 := SetFromSlice([][]byte{})
+	err = d2.UnmarshalSSZ(b)
+	if err != nil {
+		t.Error(err)
+	}
+	res, err := d2.MarshalSSZ()
+	if err != nil {
+		t.Error(err)
+	}
+	if !bytes.Equal(res, b) {
+		t.Error("unequal")
 	}
 }
 
 func TestBlockRoots_SizeSSZ(t *testing.T) {
-	d := BlockRoots{}
+	d := SetFromSlice([][]byte{})
 	if d.SizeSSZ() != fieldparams.BlockRootsLength*32 {
 		t.Errorf("Wrong SSZ size. Expected %v vs actual %v", fieldparams.BlockRootsLength*32, d.SizeSSZ())
 	}
 }
+
+/*
 
 func TestBlockRoots_Slice(t *testing.T) {
 	a, b, c := [32]byte{'a'}, [32]byte{'b'}, [32]byte{'c'}
@@ -103,3 +123,4 @@ func TestBlockRoots_Slice(t *testing.T) {
 	assert.DeepEqual(t, b[:], slice[10])
 	assert.DeepEqual(t, c[:], slice[100])
 }
+*/

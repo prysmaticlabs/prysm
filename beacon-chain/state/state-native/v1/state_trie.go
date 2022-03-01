@@ -121,9 +121,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 		slashings: b.slashings,
 
 		// Large arrays, infrequently changed, constant size.
-		blockRoots:                b.blockRoots,
+		blockRoots:                b.blockRoots.Copy(),
 		stateRoots:                b.stateRoots,
-		randaoMixes:               b.randaoMixes,
+		randaoMixes:               b.randaoMixes.Copy(),
 		previousEpochAttestations: b.previousEpochAttestations,
 		currentEpochAttestations:  b.currentEpochAttestations,
 		eth1DataVotes:             b.eth1DataVotes,
@@ -194,8 +194,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 			}
 		}
 	}
-	b.blockRoots.IncreaseRef()
-	b.randaoMixes.IncreaseRef()
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
