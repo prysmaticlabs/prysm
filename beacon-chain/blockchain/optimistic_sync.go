@@ -38,7 +38,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, s.ensureRootNotZeros(finalizedRoot))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
