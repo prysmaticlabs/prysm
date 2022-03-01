@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"testing"
 
@@ -471,4 +472,56 @@ func (m *mockCanonicalChecker) IsCanonical(_ context.Context, root [32]byte) (bo
 		return m.isCanon(root)
 	}
 	return m.is, m.err
+}
+
+func TestReverseChain(t *testing.T) {
+	// test 0,1,2,3 elements to handle: zero case; single element; even number; odd number
+	for i := 0; i < 4; i ++ {
+		t.Run(fmt.Sprintf("reverseChain with %d elements", i), func(t *testing.T){
+			actual := mockBlocks(i, incrFwd)
+			expected := mockBlocks(i, incrBwd)
+			reverseChain(actual)
+			if len(actual) != len(expected) {
+				t.Errorf("different list lengths")
+			}
+			for i := 0; i < len(actual); i++ {
+				sblockA, ok := actual[i].(*block.MockSignedBeaconBlock)
+				require.Equal(t, true, ok)
+				blockA, ok := sblockA.BeaconBlock.(*block.MockBeaconBlock)
+				require.Equal(t, true, ok)
+				sblockE, ok := expected[i].(*block.MockSignedBeaconBlock)
+				require.Equal(t, true, ok)
+				blockE, ok := sblockE.BeaconBlock.(*block.MockBeaconBlock)
+				require.Equal(t, true, ok)
+				require.Equal(t, blockA.Htr, blockE.Htr)
+			}
+		})
+	}
+}
+
+func incrBwd(n int, c chan uint32) {
+	for i := n-1; i >= 0; i-- {
+		c <- uint32(i)
+	}
+	close(c)
+}
+
+func incrFwd(n int, c chan uint32) {
+	for i := 0; i < n; i++ {
+		c <- uint32(i)
+	}
+	close(c)
+}
+
+func mockBlocks(n int, iter func(int, chan uint32)) []block.SignedBeaconBlock {
+	bchan := make(chan uint32)
+	go iter(n, bchan)
+	mb := make([]block.SignedBeaconBlock, 0)
+	for i := range bchan {
+		h := [32]byte{}
+		binary.LittleEndian.PutUint32(h[:], i)
+		b := &block.MockSignedBeaconBlock{BeaconBlock: &block.MockBeaconBlock{BeaconBlockBody: &block.MockBeaconBlockBody{}, Htr: h}}
+		mb = append(mb, b)
+	}
+	return mb
 }
