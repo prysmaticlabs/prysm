@@ -132,12 +132,12 @@ func TestPackByChunk_SingleList(t *testing.T) {
 		{
 			name:  "nil",
 			input: nil,
-			want:  [][32]byte{},
+			want:  [][32]byte{{}},
 		},
 		{
 			name:  "empty",
 			input: []byte{},
-			want:  [][32]byte{},
+			want:  [][32]byte{{}},
 		},
 		{
 			name:  "one",
