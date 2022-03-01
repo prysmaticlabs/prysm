@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "block_interfaces.go",
         "block_utils.go",
-        "mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block",
     visibility = ["//visibility:public"],

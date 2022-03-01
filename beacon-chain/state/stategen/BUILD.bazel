@@ -72,6 +72,7 @@ go_test(
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
+        "//proto/prysm/v1alpha1/block/mock:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//runtime/version:go_default_library",
         "//testing/assert:go_default_library",

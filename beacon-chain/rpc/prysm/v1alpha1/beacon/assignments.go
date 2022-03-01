@@ -61,7 +61,7 @@ func (bs *Server) ListValidatorAssignments(
 	}
 	requestedState, err := bs.ReplayerBuilder.ForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
-		msg := fmt.Sprintf("could not replay all blocks from the closest stored state (at slot %d) " +
+		msg := fmt.Sprintf("could not replay all blocks from the closest stored state (at slot %d) "+
 			"to the requested epoch (%d) - %v", startSlot, requestedEpoch, err)
 		return nil, status.Error(codes.Internal, msg)
 	}

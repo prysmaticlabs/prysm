@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block/mock"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block/mock"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -477,8 +477,8 @@ func (m *mockCanonicalChecker) IsCanonical(_ context.Context, root [32]byte) (bo
 
 func TestReverseChain(t *testing.T) {
 	// test 0,1,2,3 elements to handle: zero case; single element; even number; odd number
-	for i := 0; i < 4; i ++ {
-		t.Run(fmt.Sprintf("reverseChain with %d elements", i), func(t *testing.T){
+	for i := 0; i < 4; i++ {
+		t.Run(fmt.Sprintf("reverseChain with %d elements", i), func(t *testing.T) {
 			actual := mockBlocks(i, incrFwd)
 			expected := mockBlocks(i, incrBwd)
 			reverseChain(actual)
@@ -501,7 +501,7 @@ func TestReverseChain(t *testing.T) {
 }
 
 func incrBwd(n int, c chan uint32) {
-	for i := n-1; i >= 0; i-- {
+	for i := n - 1; i >= 0; i-- {
 		c <- uint32(i)
 	}
 	close(c)

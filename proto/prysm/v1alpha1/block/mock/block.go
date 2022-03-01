@@ -1,10 +1,10 @@
 package mock
 
 import (
-	"github.com/ferranbt/fastssz"
-	"github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ssz "github.com/ferranbt/fastssz"
+	types "github.com/prysmaticlabs/eth2-types"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"google.golang.org/protobuf/proto"
 )
