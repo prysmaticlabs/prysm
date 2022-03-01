@@ -5,6 +5,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -16,6 +17,7 @@ type SignedBeaconBlock interface {
 	IsNil() bool
 	Copy() SignedBeaconBlock
 	Proto() proto.Message
+	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
@@ -40,6 +42,7 @@ type BeaconBlock interface {
 	ssz.Unmarshaler
 	ssz.HashRoot
 	Version() int
+	AsSignRequestObject() validatorpb.SignRequest_Object
 }
 
 // BeaconBlockBody describes the method set employed by an object

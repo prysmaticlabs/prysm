@@ -60,12 +60,17 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 // by passing in the slot and the signed randao reveal of the slot.
 //
 // DEPRECATED: Use GetBeaconBlock instead to handle blocks pre and post-Altair hard fork. This endpoint
-// cannot handle blocks after the Altair fork epoch.
+// cannot handle blocks after the Altair fork epoch. If requesting a block after Altair, nothing will
+// be returned.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	return vs.getPhase0BeaconBlock(ctx, req)
+	blk, err := vs.GetBeaconBlock(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return blk.GetPhase0(), nil
 }
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
