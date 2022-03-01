@@ -278,25 +278,20 @@ func TestService_HeadGenesisValidatorsRoot(t *testing.T) {
 	require.DeepEqual(t, root[:], s.GenesisValidatorsRoot())
 }
 
-func TestService_ProtoArrayStore(t *testing.T) {
-	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
-	p := c.ProtoArrayStore()
-	require.Equal(t, 0, int(p.FinalizedEpoch()))
-}
-
 func TestService_ChainHeads(t *testing.T) {
-	ctx := context.Background()
-	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}}
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, [32]byte{}, 0, 0))
+        ctx := context.Background()
+        c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0)}}
+        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
+        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
+        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 0, 0, false))
+        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{}, 0, 0, false))
+        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, 0, 0, false))
 
-	roots, slots := c.ChainHeads()
-	require.DeepEqual(t, [][32]byte{{'c'}, {'d'}, {'e'}}, roots)
-	require.DeepEqual(t, []types.Slot{102, 103, 104}, slots)
+        roots, slots := c.ChainHeads()
+        require.DeepEqual(t, [][32]byte{{'c'}, {'d'}, {'e'}}, roots)
+        require.DeepEqual(t, []types.Slot{102, 103, 104}, slots)
 }
+
 
 func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, 10)

@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"go.opencensus.io/trace"
 )
@@ -130,17 +131,35 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 	processedAttestationCount.Inc()
 }
 
+// NodeCount returns the current number of nodes in the Store
+func (f *ForkChoice) NodeCount() int {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	return len(f.store.nodes)
+}
+
+// ProposerBoost returns the proposerBoost of the store
+func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
+	return f.store.proposerBoost()
+}
+
 // ProcessBlock processes a new block by inserting it to the fork choice store.
 func (f *ForkChoice) ProcessBlock(
 	ctx context.Context,
 	slot types.Slot,
-	blockRoot, parentRoot, graffiti [32]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch,
-) error {
+	blockRoot, parentRoot [32]byte,
+	justifiedEpoch, finalizedEpoch types.Epoch, optimistic bool) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
 	defer span.End()
 
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, graffiti, justifiedEpoch, finalizedEpoch)
+	if err := f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch); err != nil {
+		return err
+	}
+
+	if !optimistic {
+		return f.SetValid(ctx, blockRoot)
+	}
+	return nil
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
@@ -149,34 +168,11 @@ func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
 	return f.store.prune(ctx, finalizedRoot, f.syncedTips)
 }
 
-// Nodes returns the copied list of block nodes in the fork choice store.
-func (f *ForkChoice) Nodes() []*Node {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
-	cpy := make([]*Node, len(f.store.nodes))
-	copy(cpy, f.store.nodes)
-	return cpy
-}
-
 // Store returns the fork choice store object which contains all the information regarding proto array fork choice.
 func (f *ForkChoice) Store() *Store {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	return f.store
-}
-
-// Node returns the copied node in the fork choice store.
-func (f *ForkChoice) Node(root [32]byte) *Node {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
-	index, ok := f.store.nodesIndices[root]
-	if !ok {
-		return nil
-	}
-
-	return copyNode(f.store.nodes[index])
 }
 
 // HasNode returns true if the node exists in fork choice store,
@@ -248,17 +244,17 @@ func (s *Store) PruneThreshold() uint64 {
 }
 
 // JustifiedEpoch of fork choice store.
-func (s *Store) JustifiedEpoch() types.Epoch {
-	return s.justifiedEpoch
+func (f *ForkChoice) JustifiedEpoch() types.Epoch {
+	return f.store.justifiedEpoch
 }
 
 // FinalizedEpoch of fork choice store.
-func (s *Store) FinalizedEpoch() types.Epoch {
-	return s.finalizedEpoch
+func (f *ForkChoice) FinalizedEpoch() types.Epoch {
+	return f.store.finalizedEpoch
 }
 
-// ProposerBoost of fork choice store.
-func (s *Store) ProposerBoost() [fieldparams.RootLength]byte {
+// proposerBoost of fork choice store.
+func (s *Store) proposerBoost() [fieldparams.RootLength]byte {
 	s.proposerBoostLock.RLock()
 	defer s.proposerBoostLock.RUnlock()
 	return s.proposerBoostRoot
@@ -373,7 +369,7 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 // It then updates the new node's parent with best child and descendant node.
 func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
-	root, parent, graffiti [32]byte,
+	root, parent [32]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
@@ -396,7 +392,6 @@ func (s *Store) insert(ctx context.Context,
 	n := &Node{
 		slot:           slot,
 		root:           root,
-		graffiti:       graffiti,
 		parent:         parentIndex,
 		justifiedEpoch: justifiedEpoch,
 		finalizedEpoch: finalizedEpoch,
@@ -743,4 +738,61 @@ func (s *Store) leaves() ([]uint64, error) {
 		}
 	}
 	return leaves, nil
+}
+
+// Tips returns all possible chain heads (leaves of fork choice tree).
+// Heads roots and heads slots are returned.
+func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
+
+	// Deliberate choice to not preallocate space for below.
+	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
+	headsRoots := make([][32]byte, 0)
+	headsSlots := make([]types.Slot, 0)
+
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	for _, node := range f.store.nodes {
+		// Possible heads have no children.
+		if node.BestDescendant() == NonExistentNode && node.BestChild() == NonExistentNode {
+			headsRoots = append(headsRoots, node.Root())
+			headsSlots = append(headsSlots, node.Slot())
+		}
+	}
+	return headsRoots, headsSlots
+}
+
+func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	ret := make([]*pbrpc.ForkChoiceNode, len(f.store.nodes))
+	var parentRoot [32]byte
+	for i, node := range f.store.nodes {
+		root := node.Root()
+		parentIdx := node.parent
+		if parentIdx == NonExistentNode {
+			parentRoot = params.BeaconConfig().ZeroHash
+		} else {
+			parent := f.store.nodes[parentIdx]
+			parentRoot = parent.Root()
+		}
+		bestDescendantIdx := node.BestDescendant()
+		var bestDescendantRoot [32]byte
+		if bestDescendantIdx == NonExistentNode {
+			bestDescendantRoot = params.BeaconConfig().ZeroHash
+		} else {
+			bestDescendantNode := f.store.nodes[bestDescendantIdx]
+			bestDescendantRoot = bestDescendantNode.Root()
+		}
+
+		ret[i] = &pbrpc.ForkChoiceNode {
+			Slot: node.Slot(), 
+			Root: root[:],
+			Parent: parentRoot[:],
+			JustifiedEpoch: node.JustifiedEpoch(),
+			FinalizedEpoch: node.FinalizedEpoch(),
+			Weight: node.Weight(),
+			BestDescendant: bestDescendantRoot[:],
+		}
+	}
+	return ret
 }

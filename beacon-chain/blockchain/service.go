@@ -189,10 +189,6 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
 	s.cfg.ForkChoiceStore = store
 
-	if err := s.loadSyncedTips(originRoot, saved.Slot()); err != nil {
-		return err
-	}
-
 	ss, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get start slot of finalized epoch")
@@ -451,9 +447,8 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 		genesisBlk.Block().Slot(),
 		genesisBlkRoot,
 		params.BeaconConfig().ZeroHash,
-		[32]byte{},
 		genesisCheckpoint.Epoch,
-		genesisCheckpoint.Epoch); err != nil {
+		genesisCheckpoint.Epoch, false /* optimistic status */); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 

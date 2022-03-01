@@ -40,7 +40,7 @@ service Debug {
         };
     }
     // Returns a proto array fork choice object from the beacon node.
-    rpc GetProtoArrayForkChoice(google.protobuf.Empty) returns (ProtoArrayForkChoiceResponse) {
+    rpc GetForkChoice(google.protobuf.Empty) returns (ForkChoiceResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/debug/forkchoice"
         };
@@ -103,36 +103,30 @@ message LoggingLevelRequest {
     Level level = 1;
 }
 
-message ProtoArrayForkChoiceResponse {
-    // The prune threshold of how many nodes allowed in proto array store.
-    uint64 prune_threshold = 1;
-    // Latest justified epoch in proto array store.
-    uint64 justified_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
-    // Latest finalized epoch in proto array store.
-    uint64 finalized_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
-    // The list of the proto array nodes in store.
-    repeated ProtoArrayNode proto_array_nodes = 4;
-    // Root to indices mapping of the proto array nodes in store.
-    map<string, uint64> indices = 5;
+message ForkChoiceResponse {
+    // Latest justified epoch in forkchoice store.
+    uint64 justified_epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    // Latest finalized epoch in forkchoice store.
+    uint64 finalized_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    // The list of the forkchoice nodes in store.
+    repeated ForkChoiceNode forkchoice_nodes = 4;
 }
 
-message ProtoArrayNode {
-    // Slot of the proto array node.
+message ForkChoiceNode {
+    // Slot of the forkchoice node.
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-    // Root of the proto array node.
+    // Root of the forkchoice node.
     bytes root = 2;
-    // Parent of the proto array node.
-    uint64 parent = 3;
-    // Justified epoch of the current proto array node.
+    // Parent of the forkchoice node.
+    bytes parent = 3;
+    // Justified epoch of the current forkchoice node.
     uint64 justified_epoch = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
-    // finalized epoch of the current proto array node.
+    // finalized epoch of the current forkchoice node.
     uint64 finalized_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
-    // Current weight of the current proto array node.
+    // Current weight of the current forkchoice node.
     uint64 weight = 6;
-    // Best child of the current proto array node.
-    uint64 best_child = 7;
-    // Best descendant of the proto array node.
-    uint64 best_descendant = 8;
+    // Best descendant of the forkchoice node.
+    bytes best_descendant = 7;
 }
 
 message DebugPeerResponses {
