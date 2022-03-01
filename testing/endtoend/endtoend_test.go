@@ -98,15 +98,28 @@ func (r *testRunner) run() {
 		return nil
 	})
 
-	// ETH1 nodes.
-	eth1Nodes := eth1.NewNodeSet()
+	// ETH1 miner.
+	eth1Miner := eth1.NewMiner()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
 			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
 		}
-		eth1Nodes.SetENR(bootNode.ENR())
+		eth1Miner.SetBootstrapENR(bootNode.ENR())
+		if err := eth1Miner.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start the ETH1 miner")
+		}
+		return nil
+	})
+
+	// ETH1 non-mining nodes.
+	eth1Nodes := eth1.NewNodeSet()
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Miner}); err != nil {
+			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
+		}
+		eth1Nodes.SetMinerENR(eth1Miner.ENR())
 		if err := eth1Nodes.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start eth1node")
+			return errors.Wrap(err, "failed to start ETH1 nodes")
 		}
 		return nil
 	})
@@ -114,7 +127,7 @@ func (r *testRunner) run() {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
 			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
 		}
-		if err := components.SendAndMineDeposits(eth1Nodes.KeystorePath(), 0, minGenesisActiveCount, 0, true /* partial */); err != nil {
+		if err := components.SendAndMineDeposits(eth1Miner.KeystorePath(), 0, minGenesisActiveCount, 0, true /* partial */); err != nil {
 			return errors.Wrap(err, "failed to send and mine deposits")
 		}
 		return nil
@@ -230,7 +243,7 @@ func (r *testRunner) run() {
 
 		if config.TestDeposits {
 			log.Info("Running deposit tests")
-			r.testDeposits(ctx, g, eth1Nodes.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
+			r.testDeposits(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
 		}
 
 		// Create GRPC connection to beacon nodes.

@@ -34,7 +34,7 @@ func NewNode(index int, enr string) *Node {
 	}
 }
 
-// Start starts an ETH1 local dev chain and deploys a deposit contract.
+// Start TODO
 func (node *Node) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {

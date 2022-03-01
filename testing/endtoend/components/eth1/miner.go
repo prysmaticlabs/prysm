@@ -27,29 +27,39 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Miner represents an ETH1 node which is mining blocks.
+// Miner represents an ETH1 node which mines blocks.
 type Miner struct {
 	e2etypes.ComponentRunner
 	started      chan struct{}
 	bootstrapEnr string
-	enrChan      chan string
+	enr          string
 	keystorePath string
 }
 
-// NewMiner creates and returns ETH1 node miner.
-func NewMiner(bootstrapEnr string, enrChan chan string) *Miner {
+// NewMiner creates and returns an ETH1 node miner.
+func NewMiner() *Miner {
 	return &Miner{
-		started:      make(chan struct{}, 1),
-		bootstrapEnr: bootstrapEnr,
-		enrChan:      enrChan,
+		started: make(chan struct{}, 1),
 	}
 }
 
-func (node *Miner) KeystorePath() string {
-	return node.keystorePath
+// KeystorePath returns the path of the keystore file.
+func (m *Miner) KeystorePath() string {
+	return m.keystorePath
 }
 
-func (node *Miner) Start(ctx context.Context) error {
+// ENR returns the miner's enode.
+func (m *Miner) ENR() string {
+	return m.enr
+}
+
+// SetBootstrapENR sets the bootstrap record.
+func (m *Miner) SetBootstrapENR(bootstrapEnr string) {
+	m.bootstrapEnr = bootstrapEnr
+}
+
+// Start TODO
+func (m *Miner) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {
 		return errors.New("go-ethereum binary not found")
@@ -98,7 +108,7 @@ func (node *Miner) Start(ctx context.Context) error {
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+e2e.ETH1WSOffset),
-		fmt.Sprintf("--bootnodes=%s", node.bootstrapEnr),
+		fmt.Sprintf("--bootnodes=%s", m.bootstrapEnr),
 		fmt.Sprintf("--port=%d", minerPort),
 		fmt.Sprintf("--networkid=%d", NetworkId),
 		"--http",
@@ -159,9 +169,7 @@ func (node *Miner) Start(ctx context.Context) error {
 		return err
 	}
 	enode = "enode://" + enode + "@127.0.0.1:" + fmt.Sprintf("%d", minerPort)
-
-	// Communicate enode to all non-mining nodes so that they can connect with the miner through P2P.
-	node.enrChan <- enode
+	m.enr = enode
 	log.Infof("Communicated enode. Enode is %s", enode)
 
 	// Connect to the started geth dev chain.
@@ -210,17 +218,17 @@ func (node *Miner) Start(ctx context.Context) error {
 	}
 
 	// Save keystore path (used for saving and mining deposits).
-	node.keystorePath = keystorePath
+	m.keystorePath = keystorePath
 
 	// Mark node as ready.
-	close(node.started)
+	close(m.started)
 
 	return runCmd.Wait()
 }
 
 // Started checks whether ETH1 node is started and ready to be queried.
-func (node *Miner) Started() <-chan struct{} {
-	return node.started
+func (m *Miner) Started() <-chan struct{} {
+	return m.started
 }
 
 func enodeFromLogFile(name string) (string, error) {
