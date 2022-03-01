@@ -20,10 +20,9 @@ import (
 // Node represents ETH1 node.
 type Node struct {
 	e2etypes.ComponentRunner
-	started      chan struct{}
-	keystorePath string
-	index        int
-	enr          string
+	started chan struct{}
+	index   int
+	enr     string
 }
 
 // NewNode creates and returns ETH1 node.
@@ -33,11 +32,6 @@ func NewNode(index int, enr string) *Node {
 		index:   index,
 		enr:     enr,
 	}
-}
-
-// KeystorePath exposes node's keystore path.
-func (node *Node) KeystorePath() string {
-	return node.keystorePath
 }
 
 // Start starts an ETH1 local dev chain and deploys a deposit contract.
@@ -78,7 +72,7 @@ func (node *Node) Start(ctx context.Context) error {
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort+10*node.index),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+10*node.index+e2e.ETH1WSOffset),
 		fmt.Sprintf("--bootnodes=%s", node.enr),
-		fmt.Sprintf("--port=%d", minerPort+node.index),
+		fmt.Sprintf("--port=%d", minerPort+10*node.index),
 		fmt.Sprintf("--networkid=%d", NetworkId),
 		"--http",
 		"--http.addr=127.0.0.1",

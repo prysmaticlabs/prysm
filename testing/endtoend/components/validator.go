@@ -14,6 +14,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
@@ -228,6 +229,13 @@ func SendAndMineDeposits(keystorePath string, eth1NodeIndex int, validatorNum, o
 	}
 	if err = sendDeposits(web3, keystoreBytes, validatorNum, offset, partial); err != nil {
 		return err
+	}
+	mineKey, err := keystore.DecryptKey(keystoreBytes, eth1.KeystorePassword)
+	if err != nil {
+		return err
+	}
+	if err = eth1.WaitForBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
+		return fmt.Errorf("failed to mine blocks %w", err)
 	}
 	return nil
 }

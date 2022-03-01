@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	io "github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -175,6 +176,10 @@ func (node *Miner) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// Advancing the blocks eth1follow distance to prevent issues reading the chain.
+	if err = WaitForBlocks(web3, store, params.BeaconConfig().Eth1FollowDistance); err != nil {
+		return fmt.Errorf("unable to advance chain: %w", err)
+	}
 	txOpts, err := bind.NewTransactorWithChainID(bytes.NewReader(jsonBytes), KeystorePassword, big.NewInt(NetworkId))
 	if err != nil {
 		return err
@@ -197,6 +202,11 @@ func (node *Miner) Start(ctx context.Context) error {
 			return err
 		}
 		time.Sleep(timeGapPerTX)
+	}
+
+	// Advancing the blocks another eth1follow distance to prevent issues reading the chain.
+	if err = WaitForBlocks(web3, store, params.BeaconConfig().Eth1FollowDistance); err != nil {
+		return fmt.Errorf("unable to advance chain: %w", err)
 	}
 
 	// Save keystore path (used for saving and mining deposits).
