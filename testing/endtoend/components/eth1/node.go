@@ -17,7 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Node represents ETH1 node.
+// Node represents an ETH1 node.
 type Node struct {
 	e2etypes.ComponentRunner
 	started chan struct{}

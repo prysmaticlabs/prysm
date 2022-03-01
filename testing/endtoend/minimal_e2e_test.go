@@ -26,7 +26,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	})
 }
 
-/*func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
+func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 	t.Skip("TODO(9994): Complete web3signer client implementation, currently blocked by https://github.com/ConsenSys/web3signer/issues/494")
 	e2eMinimal(t, &testArgs{
 		usePrysmSh:          false,
@@ -40,7 +40,7 @@ func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
 		usePrysmSh:          true,
 		useWeb3RemoteSigner: false,
 	})
-}*/
+}
 
 func e2eMinimal(t *testing.T, args *testArgs) {
 	params.UseE2EConfig()

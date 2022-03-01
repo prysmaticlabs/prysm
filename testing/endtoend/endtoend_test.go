@@ -127,7 +127,7 @@ func (r *testRunner) run() {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
 			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
 		}
-		if err := components.SendAndMineDeposits(eth1Miner.KeystorePath(), 0, minGenesisActiveCount, 0, true /* partial */); err != nil {
+		if err := components.SendAndMineDeposits(eth1Miner.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
 			return errors.Wrap(err, "failed to send and mine deposits")
 		}
 		return nil
@@ -342,7 +342,7 @@ func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
 			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
 		}
 		go func() {
-			err := components.SendAndMineDeposits(keystorePath, 0, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
+			err := components.SendAndMineDeposits(keystorePath, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
 			if err != nil {
 				r.t.Fatal(err)
 			}
