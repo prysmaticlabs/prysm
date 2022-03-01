@@ -21,7 +21,6 @@ import (
 func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 	ctx := context.Background()
 	zeroHash := params.BeaconConfig().ZeroHash
-	graffiti := [32]byte{}
 	balances := make([]uint64, 64) // 64 active validators.
 	for i := 0; i < len(balances); i++ {
 		balances[i] = 10
@@ -47,9 +46,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		f.ProcessAttestation(ctx, []uint64{0}, newRoot, fEpoch)
@@ -71,9 +70,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		f.ProcessAttestation(ctx, []uint64{1}, newRoot, fEpoch)
@@ -97,9 +96,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		f.ProcessAttestation(ctx, []uint64{2}, newRoot, fEpoch)
@@ -123,9 +122,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		f.ProcessAttestation(ctx, []uint64{3}, newRoot, fEpoch)
@@ -190,9 +189,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				honestBlockSlot,
 				honestBlock,
 				zeroHash,
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
@@ -207,9 +206,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				maliciouslyWithheldBlockSlot,
 				maliciouslyWithheldBlock,
 				zeroHash,
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -256,9 +255,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				honestBlockSlot,
 				honestBlock,
 				zeroHash,
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -275,9 +274,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				maliciouslyWithheldBlockSlot,
 				maliciouslyWithheldBlock,
 				zeroHash,
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -331,9 +330,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				cSlot,
 				c,
 				a, // parent
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -355,9 +354,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				bSlot,
 				b,
 				a, // parent
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 
@@ -379,9 +378,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				dSlot,
 				d,
 				b, // parent
-				graffiti,
 				jEpoch,
 				fEpoch,
+				false,
 			),
 		)
 

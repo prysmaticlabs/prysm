@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -168,13 +168,6 @@ func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
 	return f.store.prune(ctx, finalizedRoot, f.syncedTips)
 }
 
-// Store returns the fork choice store object which contains all the information regarding proto array fork choice.
-func (f *ForkChoice) Store() *Store {
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
-	return f.store
-}
-
 // HasNode returns true if the node exists in fork choice store,
 // false else wise.
 func (f *ForkChoice) HasNode(root [32]byte) bool {
@@ -258,20 +251,6 @@ func (s *Store) proposerBoost() [fieldparams.RootLength]byte {
 	s.proposerBoostLock.RLock()
 	defer s.proposerBoostLock.RUnlock()
 	return s.proposerBoostRoot
-}
-
-// Nodes of fork choice store.
-func (s *Store) Nodes() []*Node {
-	s.nodesLock.RLock()
-	defer s.nodesLock.RUnlock()
-	return s.nodes
-}
-
-// NodesIndices of fork choice store.
-func (s *Store) NodesIndices() map[[32]byte]uint64 {
-	s.nodesLock.RLock()
-	defer s.nodesLock.RUnlock()
-	return s.nodesIndices
 }
 
 // head starts from justified root and then follows the best descendant links
@@ -784,13 +763,13 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 			bestDescendantRoot = bestDescendantNode.Root()
 		}
 
-		ret[i] = &pbrpc.ForkChoiceNode {
-			Slot: node.Slot(), 
-			Root: root[:],
-			Parent: parentRoot[:],
+		ret[i] = &pbrpc.ForkChoiceNode{
+			Slot:           node.Slot(),
+			Root:           root[:],
+			Parent:         parentRoot[:],
 			JustifiedEpoch: node.JustifiedEpoch(),
 			FinalizedEpoch: node.FinalizedEpoch(),
-			Weight: node.Weight(),
+			Weight:         node.Weight(),
 			BestDescendant: bestDescendantRoot[:],
 		}
 	}
