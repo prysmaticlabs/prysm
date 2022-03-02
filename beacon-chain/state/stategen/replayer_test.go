@@ -27,6 +27,7 @@ func headerFromBlock(b block.SignedBeaconBlock) (*ethpb.BeaconBlockHeader, error
 		StateRoot: b.Block().StateRoot(),
 		ProposerIndex: b.Block().ProposerIndex(),
 		BodyRoot: bodyRoot[:],
+		ParentRoot: b.Block().ParentRoot(),
 	}, nil
 }
 
@@ -77,6 +78,52 @@ func TestReplayBlocks(t *testing.T) {
 	require.Equal(t, expected.Slot(), st.Slot())
 	// NOTE: HTR is not compared, because process_block is not called for non-canonical blocks,
 	// so there are multiple differences compared to the "db" state that applies all blocks
+}
+
+
+func TestReplayToSlot(t *testing.T) {
+	ctx := context.Background()
+	var zero, one, two, three, four, five types.Slot = 50, 51, 150, 151, 152, 200
+	specs := []mockHistorySpec{
+		{slot: zero},
+		{slot: one, savedState: true},
+		{slot: two},
+		{slot: three},
+		{slot: four},
+		{slot: five, canonicalBlock: true},
+	}
+
+	// first case tests that ReplayToSlot is equivalent to ReplayBlocks
+	hist := newMockHistory(t, specs, five+1)
+	bld := NewCanonicalBuilder(hist, hist, hist)
+
+	st, err := bld.ForSlot(five).ReplayToSlot(ctx, five)
+	require.NoError(t, err)
+	expected := hist.hiddenStates[hist.slotMap[five]]
+	expectedHTR, err := expected.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	expectedLBH := expected.LatestBlockHeader()
+	actualLBH := st.LatestBlockHeader()
+	require.Equal(t, expectedLBH.Slot, actualLBH.Slot)
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.ParentRoot), bytesutil.ToBytes32(actualLBH.ParentRoot))
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.StateRoot), bytesutil.ToBytes32(actualLBH.StateRoot))
+	require.Equal(t, expectedLBH.ProposerIndex, actualLBH.ProposerIndex)
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.BodyRoot), bytesutil.ToBytes32(actualLBH.BodyRoot))
+	require.Equal(t, expectedHTR, actualHTR)
+
+	st, err = bld.ForSlot(five).ReplayToSlot(ctx, five+100)
+	require.NoError(t, err)
+	require.Equal(t, five+100, st.Slot())
+	expectedLBH, err = headerFromBlock(hist.blocks[hist.slotMap[five]])
+	require.NoError(t, err)
+	actualLBH = st.LatestBlockHeader()
+	require.Equal(t, expectedLBH.Slot, actualLBH.Slot)
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.ParentRoot), bytesutil.ToBytes32(actualLBH.ParentRoot))
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.StateRoot), bytesutil.ToBytes32(actualLBH.StateRoot))
+	require.Equal(t, expectedLBH.ProposerIndex, actualLBH.ProposerIndex)
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.BodyRoot), bytesutil.ToBytes32(actualLBH.BodyRoot))
 }
 
 // happy path tests

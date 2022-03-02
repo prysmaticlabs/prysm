@@ -136,7 +136,7 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo types.Slot) 
 			"diff":      replayTo - s.Slot(),
 		}).Debug("calling process_slots on remaining slots")
 
-		if rs.target > s.Slot() {
+		if replayTo > s.Slot() {
 			// err will be handled after the bookend log
 			s, err = ReplayProcessSlots(ctx, s, replayTo)
 		}
