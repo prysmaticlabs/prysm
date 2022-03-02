@@ -442,7 +442,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 
 func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.BeaconBlock,
 	root [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint, optimistic bool) error {
-        //TODO(10261) check if the blocks are optimistic or not when filling fork choice
+	//TODO(10261) check if the blocks are optimistic or not when filling fork choice
 	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}

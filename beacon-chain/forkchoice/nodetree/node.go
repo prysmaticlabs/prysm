@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // Slot of the fork choice node.

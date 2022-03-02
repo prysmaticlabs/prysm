@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	types "github.com/prysmaticlabs/eth2-types"
 )
 
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.

@@ -232,4 +232,3 @@ func (s *Store) TreeRoot() *Node {
 	defer s.nodesLock.RUnlock()
 	return s.treeRootNode
 }
-
