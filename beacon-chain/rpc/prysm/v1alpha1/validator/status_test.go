@@ -599,7 +599,7 @@ func TestOptimisticStatus(t *testing.T) {
 	s, ok := status.FromError(err)
 	require.Equal(t, true, ok)
 	require.DeepEqual(t, codes.Unavailable, s.Code())
-	require.ErrorContains(t, " The node is currently optimistic and cannot serve validators", err)
+	require.ErrorContains(t, errOptimisticMode.Error(), err)
 
 	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: false}, TimeFetcher: &mockChain.ChainService{}}
 	err = server.optimisticStatus(context.Background())

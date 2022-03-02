@@ -23,6 +23,7 @@ import (
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
+var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
 var nonExistentIndex = types.ValidatorIndex(^uint64(0))
 
 const numStatesToCheck = 2
@@ -256,11 +257,7 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 		return nil
 	}
 
-	root, err := vs.HeadFetcher.HeadRoot(ctx)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get head root: %v", err)
-	}
-	return status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators. Head root: %#x", root)
+	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
 
 }
 
