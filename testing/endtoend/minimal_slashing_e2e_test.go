@@ -1,7 +1,6 @@
 package endtoend
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -18,19 +17,12 @@ func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
-			fmt.Sprintf("--slots-per-archive-point=%d", params.BeaconConfig().SlotsPerEpoch*16),
-			fmt.Sprintf("--tracing-endpoint=http://%s", fmt.Sprintf("127.0.0.1:%d", 9411+e2eParams.TestParams.TestShardIndex)),
-			"--enable-tracing",
-			"--trace-sample-fraction=1.0",
+			"--slasher",
 		},
-		ValidatorFlags:      []string{},
-		EpochsToRun:         uint64(10),
-		TestSync:            true,
-		TestDeposits:        true,
-		UsePrysmShValidator: false,
-		UsePprof:            true,
-		UseWeb3RemoteSigner: false,
-		TracingSinkEndpoint: fmt.Sprintf("127.0.0.1:%d", 9411+e2eParams.TestParams.TestShardIndex),
+		ValidatorFlags: []string{},
+		EpochsToRun:    4,
+		TestSync:       false,
+		TestDeposits:   false,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.HealthzCheck,
