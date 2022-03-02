@@ -79,7 +79,7 @@ func (m *Miner) Start(ctx context.Context) error {
 		return err
 	}
 	genesisDstPath := binaryPath[:strings.LastIndex(binaryPath, "/")]
-	cpCmd := exec.Command("cp", genesisSrcPath, genesisDstPath) // #nosec G204 -- Safe
+	cpCmd := exec.CommandContext(ctx, "cp", genesisSrcPath, genesisDstPath) // #nosec G204 -- Safe
 	if err = cpCmd.Start(); err != nil {
 		return err
 	}
@@ -193,12 +193,12 @@ func (m *Miner) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	nonce, err := web3.PendingNonceAt(context.Background(), store.Address)
+	nonce, err := web3.PendingNonceAt(ctx, store.Address)
 	if err != nil {
 		return err
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
-	txOpts.Context = context.Background()
+	txOpts.Context = ctx
 	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3)
 	if err != nil {
 		return fmt.Errorf("failed to deploy deposit contract: %w", err)
@@ -206,7 +206,7 @@ func (m *Miner) Start(ctx context.Context) error {
 	e2e.TestParams.ContractAddress = contractAddr
 
 	// Wait for contract to mine.
-	for pending := true; pending; _, pending, err = web3.TransactionByHash(context.Background(), tx.Hash()) {
+	for pending := true; pending; _, pending, err = web3.TransactionByHash(ctx, tx.Hash()) {
 		if err != nil {
 			return err
 		}
