@@ -234,6 +234,9 @@ func (r *canonicalChainer) chainForSlot(ctx context.Context, target types.Slot) 
 // to find the highest canonical block available to replay to the given slot.
 func (r *canonicalChainer) canonicalBlockForSlot(ctx context.Context, target types.Slot) ([32]byte, block.SignedBeaconBlock, error) {
 	for target > 0 {
+		if ctx.Err() != nil {
+			return [32]byte{}, nil, errors.Wrap(ctx.Err(), "context canceled during canonicalBlockForSlot")
+		}
 		hbs, err := r.h.HighestSlotBlocksBelow(ctx, target+1)
 		if err != nil {
 			return [32]byte{}, nil, errors.Wrap(err, fmt.Sprintf("error finding highest block w/ slot <= %d", target))
@@ -295,7 +298,7 @@ func (r *canonicalChainer) bestForSlot(ctx context.Context, hbs []block.SignedBe
 }
 
 // ancestorChain works backwards through the chain lineage, accumulating blocks and checking for a saved state
-// if it finds a saved state the the tail block was descended from, it returns this state and
+// if it finds a saved state the tail block was descended from, it returns this state and
 // all blocks in the lineage, including the tail block. blocks are returned in ascending order.
 // note that this function assumes that the tail is a canonical block, and therefore assumes that
 // all ancestors are also canonical.
