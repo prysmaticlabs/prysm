@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly_linked_tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -128,13 +128,13 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 	}
 }
 
-func TestStore_OnAttestation_ErrorConditions_NodeTree(t *testing.T) {
+func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(nodetree.New(0, 0)),
+		WithForkChoiceStore(doubly_linked_tree.New(0, 0)),
 		WithStateGen(stategen.New(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
@@ -260,11 +260,11 @@ func TestStore_OnAttestation_Ok_ProtoArray(t *testing.T) {
 	require.NoError(t, service.OnAttestation(ctx, att[0]))
 }
 
-func TestStore_OnAttestation_Ok_NodeTree(t *testing.T) {
+func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := nodetree.New(0, 0)
+	fcs := doubly_linked_tree.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -494,11 +494,11 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_ProtoArray(t *testing.T) {
 	require.ErrorContains(t, "Root and finalized store are not consistent", err)
 }
 
-func TestVerifyFinalizedConsistency_InconsistentRoot_NodeTree(t *testing.T) {
+func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := nodetree.New(0, 0)
+	fcs := doubly_linked_tree.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),

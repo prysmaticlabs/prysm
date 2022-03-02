@@ -1,4 +1,4 @@
-package nodetree
+package doubly_linked_tree
 
 import (
 	"context"

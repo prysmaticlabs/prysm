@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/deterministic-genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly_linked_tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/monitor"
@@ -312,7 +312,7 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startForkChoice() {
 	if features.Get().EnableForkChoiceTree {
-		b.forkChoiceStore = nodetree.New(0, 0)
+		b.forkChoiceStore = doubly_linked_tree.New(0, 0)
 	} else {
 		b.forkChoiceStore = protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
 	}

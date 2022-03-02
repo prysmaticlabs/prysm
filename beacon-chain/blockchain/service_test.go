@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly_linked_tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -466,11 +466,11 @@ func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
 }
 
-func TestHasBlock_ForkChoiceAndDB_NodeTree(t *testing.T) {
+func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: nodetree.New(0, 0), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: doubly_linked_tree.New(0, 0), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
@@ -554,11 +554,11 @@ func BenchmarkHasBlockForkChoiceStore_ProtoArray(b *testing.B) {
 		require.Equal(b, true, s.cfg.ForkChoiceStore.HasNode(r), "Block is not in fork choice store")
 	}
 }
-func BenchmarkHasBlockForkChoiceStore_NodeTree(b *testing.B) {
+func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(b)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: nodetree.New(0, 0), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: doubly_linked_tree.New(0, 0), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
