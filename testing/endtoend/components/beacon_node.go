@@ -49,9 +49,9 @@ func NewBeaconNodes(config *e2etypes.E2EConfig) *BeaconNodeSet {
 
 // Start starts all the beacon nodes in set.
 func (s *BeaconNodeSet) Start(ctx context.Context) error {
-	if s.enr == "" {
-		return errors.New("empty ENR")
-	}
+	// if s.enr == "" {
+	// 	return errors.New("empty ENR")
+	// }
 
 	// Create beacon nodes.
 	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)

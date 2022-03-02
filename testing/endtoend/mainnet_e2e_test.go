@@ -34,7 +34,7 @@ func TestEndToeNd_MainnetConfig_Prater(t *testing.T) {
 		require.NoError(t, err)
 	}
 	evals := []types.Evaluator{
-		ev.PeersConnect,
+		// ev.PeersConnect,
 		ev.HealthzCheck,
 		ev.MetricsCheck,
 		// ev.ValidatorsAreActive,
