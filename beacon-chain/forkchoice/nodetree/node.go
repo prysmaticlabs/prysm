@@ -176,5 +176,27 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 // rpcNodes is used by the RPC Debug endpoint to return information
 // about all nodes in the fork choice store
 func (n *Node) rpcNodes(ret []*pbrpc.ForkChoiceNode) []*pbrpc.ForkChoiceNode {
+	for _, child := range n.children {
+		ret = child.rpcNodes(ret)
+	}
+	r := n.root
+	p := [32]byte{}
+	if n.parent != nil {
+		copy(p[:], n.parent.root[:])
+	}
+	b := [32]byte{}
+	if n.bestDescendant != nil {
+		copy(b[:], n.bestDescendant.root[:])
+	}
+	node := &pbrpc.ForkChoiceNode{
+		Slot:           n.slot,
+		Root:           r[:],
+		Parent:         p[:],
+		JustifiedEpoch: n.justifiedEpoch,
+		FinalizedEpoch: n.finalizedEpoch,
+		Weight:         n.weight,
+		BestDescendant: b[:],
+	}
+	ret = append(ret, node)
 	return ret
 }
