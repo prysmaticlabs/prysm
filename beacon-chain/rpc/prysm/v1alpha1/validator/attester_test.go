@@ -172,8 +172,14 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 }
 
 func TestGetAttestationData_Optimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
 	as := &Server{
 		SyncChecker: &mockSync.Sync{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 		HeadFetcher: &mock.ChainService{Optimistic: true},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
@@ -181,6 +187,17 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 	require.Equal(t, true, ok)
 	require.DeepEqual(t, codes.Unavailable, s.Code())
 	require.ErrorContains(t, " The node is currently optimistic and cannot serve validators", err)
+
+	beaconState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	as = &Server{
+		SyncChecker:      &mockSync.Sync{},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:      &mock.ChainService{Optimistic: false, State: beaconState},
+		AttestationCache: cache.NewAttestationCache(),
+	}
+	_, err = as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
+	require.NoError(t, err)
 }
 
 func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {

@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -34,14 +35,27 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 }
 
 func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
 	server := &Server{
 		HeadFetcher: &mock.ChainService{Optimistic: true},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 	_, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
 	s, ok := status.FromError(err)
 	require.Equal(t, true, ok)
 	require.DeepEqual(t, codes.Unavailable, s.Code())
 	require.ErrorContains(t, " The node is currently optimistic and cannot serve validators", err)
+
+	server = &Server{
+		HeadFetcher: &mock.ChainService{Optimistic: false},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+	}
+	_, err = server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
 }
 
 func TestSubmitSyncMessage_OK(t *testing.T) {

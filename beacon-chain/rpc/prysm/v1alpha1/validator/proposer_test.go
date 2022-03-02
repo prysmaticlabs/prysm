@@ -2286,7 +2286,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
-		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
