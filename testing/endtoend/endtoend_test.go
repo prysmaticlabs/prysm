@@ -266,7 +266,7 @@ func (r *testRunner) run() {
 		if !config.TestSync {
 			return nil
 		}
-		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
+		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
 			return errors.Wrap(err, "beacon chain sync test failed")
 		}
 		if err := r.testDoppelGangerProtection(ctx); err != nil {
@@ -353,14 +353,18 @@ func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
 
 // testBeaconChainSync creates another beacon node, and tests whether it can sync to head using previous nodes.
 func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
-	conns []*grpc.ClientConn, tickingStartTime time.Time, enr string) error {
+	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount
-	syncBeaconNode := components.NewBeaconNode(config, index, enr)
+	ethNode := eth1.NewNode(index, minerEnr)
+	g.Go(func() error {
+		return ethNode.Start(ctx)
+	})
+	syncBeaconNode := components.NewBeaconNode(config, index, bootnodeEnr)
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})
-	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{syncBeaconNode}); err != nil {
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode, syncBeaconNode}); err != nil {
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
