@@ -8,6 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -277,21 +278,39 @@ func TestService_HeadGenesisValidatorsRoot(t *testing.T) {
 	root = c.HeadGenesisValidatorsRoot()
 	require.DeepEqual(t, root[:], s.GenesisValidatorsRoot())
 }
+func TestService_ChainHeads_ProtoArray(t *testing.T) {
+	ctx := context.Background()
+	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0,
+		params.BeaconConfig().ZeroHash)}}
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, 0, 0, false))
 
-func TestService_ChainHeads(t *testing.T) {
-        ctx := context.Background()
-        c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0)}}
-        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
-        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
-        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 0, 0, false))
-        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{}, 0, 0, false))
-        require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, 0, 0, false))
-
-        roots, slots := c.ChainHeads()
-        require.DeepEqual(t, [][32]byte{{'c'}, {'d'}, {'e'}}, roots)
-        require.DeepEqual(t, []types.Slot{102, 103, 104}, slots)
+	roots, slots := c.ChainHeads()
+	require.DeepEqual(t, [][32]byte{{'c'}, {'d'}, {'e'}}, roots)
+	require.DeepEqual(t, []types.Slot{102, 103, 104}, slots)
 }
 
+func TestService_ChainHeads_NodeTree(t *testing.T) {
+	ctx := context.Background()
+	c := &Service{cfg: &config{ForkChoiceStore: nodetree.New(0, 0)}}
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{}, 0, 0, false))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, 0, 0, false))
+
+	roots, slots := c.ChainHeads()
+	require.Equal(t, 3, len(roots))
+	rootMap := map[[32]byte]types.Slot{[32]byte{'c'}: 102, [32]byte{'d'}: 103, [32]byte{'e'}: 104}
+	for i, root := range roots {
+		slot, ok := rootMap[root]
+		require.Equal(t, true, ok)
+		require.Equal(t, slot, slots[i])
+	}
+}
 
 func TestService_HeadPublicKeyToValidatorIndex(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, 10)
@@ -351,7 +370,7 @@ func TestService_HeadValidatorIndexToPublicKeyNil(t *testing.T) {
 	require.Equal(t, [fieldparams.BLSPubkeyLength]byte{}, p)
 }
 
-func TestService_IsOptimistic(t *testing.T) {
+func TestService_IsOptimistic_ProtoArray(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig()
 	cfg.BellatrixForkEpoch = 0
@@ -359,8 +378,24 @@ func TestService_IsOptimistic(t *testing.T) {
 
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, true))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, true))
+
+	opt, err := c.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, opt)
+}
+
+func TestService_IsOptimistic_NodeTree(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	ctx := context.Background()
+	c := &Service{cfg: &config{ForkChoiceStore: nodetree.New(0, 0)}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, true))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, true))
 
 	opt, err := c.IsOptimistic(ctx)
 	require.NoError(t, err)
@@ -375,11 +410,22 @@ func TestService_IsOptimisticBeforeBellatrix(t *testing.T) {
 	require.Equal(t, false, opt)
 }
 
-func TestService_IsOptimisticForRoot(t *testing.T) {
+func TestService_IsOptimisticForRoot_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}, head: &head{slot: 101, root: [32]byte{'b'}}}
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, true))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, true))
+
+	opt, err := c.IsOptimisticForRoot(ctx, [32]byte{'a'}, 100)
+	require.NoError(t, err)
+	require.Equal(t, true, opt)
+}
+
+func TestService_IsOptimisticForRoot_NodeTree(t *testing.T) {
+	ctx := context.Background()
+	c := &Service{cfg: &config{ForkChoiceStore: nodetree.New(0, 0)}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, true))
+	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, true))
 
 	opt, err := c.IsOptimisticForRoot(ctx, [32]byte{'a'}, 100)
 	require.NoError(t, err)

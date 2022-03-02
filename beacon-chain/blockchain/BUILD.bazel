@@ -103,7 +103,6 @@ go_test(
         "checktags_test.go",
         "head_sync_committee_info_test.go",
         "head_test.go",
-        "info_test.go",
         "init_test.go",
         "log_test.go",
         "metrics_test.go",

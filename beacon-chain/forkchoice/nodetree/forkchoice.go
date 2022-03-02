@@ -6,8 +6,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -31,7 +31,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 
 // NodeCount returns the current number of nodes in the Store
 func (f *ForkChoice) NodeCount() int {
-	f.store.nodesLock.Lock()
+	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	return len(f.store.nodeByRoot)
 }
@@ -288,7 +288,7 @@ func (f *ForkChoice) SetValid(ctx context.Context, root [fieldparams.RootLength]
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
 		return errNilNode
-	}	
+	}
 	return node.setNodeAndParentValidated(ctx)
 }
 
