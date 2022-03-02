@@ -34,12 +34,14 @@ type Miner struct {
 	bootstrapEnr string
 	enr          string
 	keystorePath string
+	port         int
 }
 
 // NewMiner creates and returns an ETH1 node miner.
-func NewMiner() *Miner {
+func NewMiner(port int) *Miner {
 	return &Miner{
 		started: make(chan struct{}, 1),
+		port:    port,
 	}
 }
 
@@ -110,7 +112,7 @@ func (m *Miner) Start(ctx context.Context) error {
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+e2e.ETH1WSOffset),
 		fmt.Sprintf("--bootnodes=%s", m.bootstrapEnr),
-		fmt.Sprintf("--port=%d", minerPort),
+		fmt.Sprintf("--port=%d", m.port),
 		fmt.Sprintf("--networkid=%d", NetworkId),
 		"--http",
 		"--http.addr=127.0.0.1",
@@ -169,7 +171,7 @@ func (m *Miner) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	enode = "enode://" + enode + "@127.0.0.1:" + fmt.Sprintf("%d", minerPort)
+	enode = "enode://" + enode + "@127.0.0.1:" + fmt.Sprintf("%d", m.port)
 	m.enr = enode
 	log.Infof("Communicated enode. Enode is %s", enode)
 

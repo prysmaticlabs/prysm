@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -38,6 +39,7 @@ func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 			ev.InjectDoubleVoteOnEpoch(2),
 			ev.InjectDoubleBlockOnEpoch(2),
 		},
+		Port: eth1.MinerPort + 1,
 	}
 
 	newTestRunner(t, testConfig).run()

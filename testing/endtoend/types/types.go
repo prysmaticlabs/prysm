@@ -24,6 +24,7 @@ type E2EConfig struct {
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string
+	Port                    int
 }
 
 // Evaluator defines the structure of the evaluators used to

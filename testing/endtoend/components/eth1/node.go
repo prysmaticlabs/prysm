@@ -23,14 +23,16 @@ type Node struct {
 	started chan struct{}
 	index   int
 	enr     string
+	port    int
 }
 
 // NewNode creates and returns ETH1 node.
-func NewNode(index int, enr string) *Node {
+func NewNode(index int, enr string, port int) *Node {
 	return &Node{
 		started: make(chan struct{}, 1),
 		index:   index,
 		enr:     enr,
+		port:    port,
 	}
 }
 
@@ -73,7 +75,7 @@ func (node *Node) Start(ctx context.Context) error {
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort+node.index*e2e.ETH1RPCOffsetMultiplier),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+node.index*e2e.ETH1RPCOffsetMultiplier+e2e.ETH1WSOffset),
 		fmt.Sprintf("--bootnodes=%s", node.enr),
-		fmt.Sprintf("--port=%d", minerPort+node.index*e2e.ETH1RPCOffsetMultiplier),
+		fmt.Sprintf("--port=%d", node.port+node.index*e2e.ETH1RPCOffsetMultiplier),
 		fmt.Sprintf("--networkid=%d", NetworkId),
 		"--http",
 		"--http.addr=127.0.0.1",
