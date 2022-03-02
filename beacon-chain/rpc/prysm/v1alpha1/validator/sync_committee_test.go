@@ -28,6 +28,7 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 	r := []byte{'a'}
 	server := &Server{
 		HeadFetcher: &mock.ChainService{Root: r},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 	res, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -107,6 +108,7 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 			State:                st,
 			SyncCommitteeIndices: []types.CommitteeIndex{10},
 		},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 	secKey, err := bls.RandKey()
 	require.NoError(t, err)
