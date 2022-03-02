@@ -29,14 +29,18 @@ func TestMockHistoryStates(t *testing.T) {
 		{slot: end, canonicalBlock: true},
 	}
 	hist := newMockHistory(t, specs, end+1)
+	// we should have 2 "saved" states, genesis and "middle" (savedState == true)
+	require.Equal(t, 2, len(hist.states))
 	genesisRoot := hist.slotMap[0]
 	st, err := hist.StateOrError(ctx, genesisRoot)
 	require.NoError(t, err)
 	require.DeepEqual(t, hist.states[genesisRoot], st)
+	require.Equal(t, types.Slot(0), st.Slot())
 
 	shouldExist, err := hist.StateOrError(ctx, hist.slotMap[middle])
 	require.NoError(t, err)
 	require.DeepEqual(t, hist.states[hist.slotMap[middle]], shouldExist)
+	require.Equal(t, middle, shouldExist.Slot())
 
 	cantExist, err := hist.StateOrError(ctx, hist.slotMap[end])
 	require.ErrorIs(t, err, db.ErrNotFoundState)
@@ -136,7 +140,7 @@ func (m *mockHistory) Block(_ context.Context, blockRoot [32]byte) (block.Signed
 
 func (m *mockHistory) StateOrError(_ context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	if s, ok := m.states[blockRoot]; ok {
-		return s, nil
+		return s.Copy(), nil
 	}
 	return nil, db.ErrNotFoundState
 }
@@ -196,8 +200,8 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 	}
 
 	// genesis state for history
-	ps, _ := util.DeterministicGenesisState(t, 32)
-	gsr, err := ps.HashTreeRoot(ctx)
+	gs, _ := util.DeterministicGenesisState(t, 32)
+	gsr, err := gs.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
 	// generate new genesis block using the root of the deterministic state
@@ -209,8 +213,9 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 	// add genesis block as canonical
 	mh.addBlock(pr, gb, true)
 	// add genesis state, indexed by unapplied genesis block - genesis block is never really processed...
-	mh.addState(pr, ps)
+	mh.addState(pr, gs.Copy())
 
+	ps := gs.Copy()
 	for _, spec := range hist {
 		// call process_slots and process_block separately, because process_slots updates values used in randao mix
 		// which influences proposer_index.
@@ -251,7 +256,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 			mh.hideState(pr, s)
 		}
 		mh.addBlock(pr, b, spec.canonicalBlock)
-		ps = s
+		ps = s.Copy()
 	}
 
 	require.NoError(t, mh.validateRoots())
