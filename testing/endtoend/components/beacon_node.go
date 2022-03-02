@@ -144,6 +144,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if config.NoModifyBeaconFlags {
 		log.Warn("Using config.BeaconFlags with no modifications")
 		args = config.BeaconFlags
+		args = append(args, fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, stdOutFile.Name()))
 	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
