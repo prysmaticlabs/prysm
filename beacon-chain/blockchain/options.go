@@ -52,7 +52,7 @@ func WithChainStartFetcher(f powchain.ChainStartFetcher) Option {
 }
 
 // WithExecutionEngineCaller to call execution engine.
-func WithExecutionEngineCaller(c v1.EngineCaller) Option {
+func WithExecutionEngineCaller(c v1.Caller) Option {
 	return func(s *Service) error {
 		s.cfg.ExecutionEngineCaller = c
 		return nil
