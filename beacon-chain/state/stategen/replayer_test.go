@@ -16,6 +16,26 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+func TestReplayBlocks(t *testing.T) {
+	ctx := context.Background()
+	var zero, one, two, three, four, five types.Slot = 50, 51, 150, 151, 152, 200
+	specs := []mockHistorySpec{
+		{slot: zero},
+		{slot: one, savedState: true},
+		{slot: two},
+		{slot: three},
+		{slot: four},
+		{slot: five},
+	}
+
+	hist := newMockHistory(t, specs, five+1)
+	bld := NewCanonicalBuilder(hist, hist, hist)
+	st, err := bld.ForSlot(five).ReplayBlocks(ctx)
+	require.NoError(t, err)
+	expectedState := hist.hiddenStates[hist.slotMap[five]]
+	require.DeepEqual(t, expectedState, st)
+}
+
 // happy path tests
 func TestCanonicalBlockForSlotHappy(t *testing.T) {
 	ctx := context.Background()
