@@ -143,74 +143,51 @@ func TestProposeBlock_DomainDataIsNil(t *testing.T) {
 }
 
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
-	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-	m.validatorClient.EXPECT().GetBeaconBlock(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
-	).Return(nil /*response*/, errors.New("uh oh"))
-
-	validator.ProposeBlock(context.Background(), 1, pubKey)
-	require.LogsContain(t, hook, "Failed to request block from beacon node")
-}
-
-func TestProposeBlockAltair_RequestBlockFailed(t *testing.T) {
-	hook := logTest.NewGlobal()
-	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig()
 	cfg.AltairForkEpoch = 2
+	cfg.BellatrixForkEpoch = 4
 	params.OverrideBeaconConfig(cfg)
-	validator, m, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	tests := []struct {
+		name string
+		slot types.Slot
+	}{
+		{
+			name: "phase 0",
+			slot: 1,
+		},
+		{
+			name: "altair",
+			slot: params.BeaconConfig().SlotsPerEpoch.Mul(uint64(cfg.AltairForkEpoch)),
+		},
+		{
+			name: "bellatrix",
+			slot: params.BeaconConfig().SlotsPerEpoch.Mul(uint64(cfg.BellatrixForkEpoch)),
+		},
+	}
 
-	m.validatorClient.EXPECT().GetBeaconBlock(
-		gomock.Any(), // ctx
-		gomock.Any(), // block request
-	).Return(nil /*response*/, errors.New("uh oh"))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
+			validator, m, validatorKey, finish := setup(t)
+			defer finish()
+			pubKey := [fieldparams.BLSPubkeyLength]byte{}
+			copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	validator.ProposeBlock(context.Background(), 2*params.BeaconConfig().SlotsPerEpoch, pubKey)
-	require.LogsContain(t, hook, "Failed to request block from beacon node")
-}
+			m.validatorClient.EXPECT().DomainData(
+				gomock.Any(), // ctx
+				gomock.Any(), // epoch
+			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-func TestProposeBlockBellatrix_RequestBlockFailed(t *testing.T) {
-	hook := logTest.NewGlobal()
-	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
-	cfg.BellatrixForkEpoch = 2
-	params.OverrideBeaconConfig(cfg)
-	validator, m, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+			m.validatorClient.EXPECT().GetBeaconBlock(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
+			).Return(nil /*response*/, errors.New("uh oh"))
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-	m.validatorClient.EXPECT().GetBeaconBlock(
-		gomock.Any(), // ctx
-		gomock.Any(), // block request
-	).Return(nil /*response*/, errors.New("uh oh"))
-
-	validator.ProposeBlock(context.Background(), 2*params.BeaconConfig().SlotsPerEpoch, pubKey)
-	require.LogsContain(t, hook, "Failed to request block from beacon node")
+			validator.ProposeBlock(context.Background(), tt.slot, pubKey)
+			require.LogsContain(t, hook, "Failed to request block from beacon node")
+		})
+	}
 }
 
 func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
@@ -279,175 +256,114 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 }
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
-	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-
-	dummyRoot := [32]byte{}
-	// Save a dummy proposal history at slot 0.
-	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, dummyRoot[:])
-	require.NoError(t, err)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-	testBlock := util.NewBeaconBlock()
-	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
-	testBlock.Block.Slot = slot
-	m.validatorClient.EXPECT().GetBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(testBlock.Block, nil /*err*/)
-
-	secondTestBlock := util.NewBeaconBlock()
-	secondTestBlock.Block.Slot = slot
+	slot := params.BeaconConfig().SlotsPerEpoch.Mul(5).Add(2)
 	graffiti := [32]byte{}
 	copy(graffiti[:], "someothergraffiti")
-	secondTestBlock.Block.Body.Graffiti = graffiti[:]
-	m.validatorClient.EXPECT().GetBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(secondTestBlock.Block, nil /*err*/)
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+	tests := []struct {
+		name   string
+		blocks []*ethpb.GenericBeaconBlock
+	}{
+		{
+			name: "phase0",
+			blocks: func() []*ethpb.GenericBeaconBlock {
+				block0, block1 := util.NewBeaconBlock(), util.NewBeaconBlock()
+				block1.Block.Body.Graffiti = graffiti[:]
 
-	m.validatorClient.EXPECT().ProposeBlock(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
-	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
+				var blocks []*ethpb.GenericBeaconBlock
+				for _, block := range []*ethpb.SignedBeaconBlock{block0, block1} {
+					block.Block.Slot = slot
+					blocks = append(blocks, &ethpb.GenericBeaconBlock{
+						Block: &ethpb.GenericBeaconBlock_Phase0{
+							Phase0: block.Block,
+						},
+					})
+				}
+				return blocks
+			}(),
+		},
+		{
+			name: "altair",
+			blocks: func() []*ethpb.GenericBeaconBlock {
+				block0, block1 := util.NewBeaconBlockAltair(), util.NewBeaconBlockAltair()
+				block1.Block.Body.Graffiti = graffiti[:]
 
-	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+				var blocks []*ethpb.GenericBeaconBlock
+				for _, block := range []*ethpb.SignedBeaconBlockAltair{block0, block1} {
+					block.Block.Slot = slot
+					blocks = append(blocks, &ethpb.GenericBeaconBlock{
+						Block: &ethpb.GenericBeaconBlock_Altair{
+							Altair: block.Block,
+						},
+					})
+				}
+				return blocks
+			}(),
+		},
+		{
+			name: "bellatrix",
+			blocks: func() []*ethpb.GenericBeaconBlock {
+				block0, block1 := util.NewBeaconBlockBellatrix(), util.NewBeaconBlockBellatrix()
+				block1.Block.Body.Graffiti = graffiti[:]
 
-	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsContain(t, hook, failedBlockSignLocalErr)
-}
+				var blocks []*ethpb.GenericBeaconBlock
+				for _, block := range []*ethpb.SignedBeaconBlockBellatrix{block0, block1} {
+					block.Block.Slot = slot
+					blocks = append(blocks, &ethpb.GenericBeaconBlock{
+						Block: &ethpb.GenericBeaconBlock_Bellatrix{
+							Bellatrix: block.Block,
+						},
+					})
+				}
+				return blocks
+			}(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
+			validator, m, validatorKey, finish := setup(t)
+			defer finish()
+			pubKey := [fieldparams.BLSPubkeyLength]byte{}
+			copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-func TestProposeBlockAltair_BlocksDoubleProposal(t *testing.T) {
-	hook := logTest.NewGlobal()
-	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
-	cfg.AltairForkEpoch = 2
-	params.OverrideBeaconConfig(cfg)
-	validator, m, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+			dummyRoot := [32]byte{}
+			// Save a dummy proposal history at slot 0.
+			err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, dummyRoot[:])
+			require.NoError(t, err)
 
-	dummyRoot := [32]byte{}
-	// Save a dummy proposal history at slot 0.
-	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, dummyRoot[:])
-	require.NoError(t, err)
+			m.validatorClient.EXPECT().DomainData(
+				gomock.Any(), // ctx
+				gomock.Any(), // epoch
+			).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			m.validatorClient.EXPECT().GetBeaconBlock(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
+			).Return(tt.blocks[0], nil /*err*/)
 
-	testBlock := util.NewBeaconBlockAltair()
-	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
-	testBlock.Block.Slot = slot
-	m.validatorClient.EXPECT().GetBeaconBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&ethpb.GenericBeaconBlock{
-		Block: &ethpb.GenericBeaconBlock_Altair{Altair: testBlock.Block},
-	}, nil /*err*/)
+			m.validatorClient.EXPECT().GetBeaconBlock(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
+			).Return(tt.blocks[1], nil /*err*/)
 
-	secondTestBlock := util.NewBeaconBlockAltair()
-	secondTestBlock.Block.Slot = slot
-	graffiti := [32]byte{}
-	copy(graffiti[:], "someothergraffiti")
-	secondTestBlock.Block.Body.Graffiti = graffiti[:]
-	m.validatorClient.EXPECT().GetBeaconBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&ethpb.GenericBeaconBlock{
-		Block: &ethpb.GenericBeaconBlock_Altair{Altair: secondTestBlock.Block},
-	}, nil /*err*/)
+			m.validatorClient.EXPECT().DomainData(
+				gomock.Any(), // ctx
+				gomock.Any(), // epoch
+			).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			m.validatorClient.EXPECT().ProposeBeaconBlock(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
+			).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
-	m.validatorClient.EXPECT().ProposeBeaconBlock(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
-	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
+			validator.ProposeBlock(context.Background(), slot, pubKey)
+			require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
 
-	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
-
-	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsContain(t, hook, failedBlockSignLocalErr)
-}
-
-func TestProposeBlockBellatrix_BlocksDoubleProposal(t *testing.T) {
-	hook := logTest.NewGlobal()
-	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
-	cfg.BellatrixForkEpoch = 2
-	params.OverrideBeaconConfig(cfg)
-	validator, m, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-
-	dummyRoot := [32]byte{}
-	// Save a dummy proposal history at slot 0.
-	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, dummyRoot[:])
-	require.NoError(t, err)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-	testBlock := util.NewBeaconBlockBellatrix()
-	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
-	testBlock.Block.Slot = slot
-	m.validatorClient.EXPECT().GetBeaconBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&ethpb.GenericBeaconBlock{
-		Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: testBlock.Block},
-	}, nil /*err*/)
-
-	secondTestBlock := util.NewBeaconBlockBellatrix()
-	secondTestBlock.Block.Slot = slot
-	graffiti := [32]byte{}
-	copy(graffiti[:], "someothergraffiti")
-	secondTestBlock.Block.Body.Graffiti = graffiti[:]
-	m.validatorClient.EXPECT().GetBeaconBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&ethpb.GenericBeaconBlock{
-		Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: secondTestBlock.Block},
-	}, nil /*err*/)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-	m.validatorClient.EXPECT().ProposeBeaconBlock(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
-	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
-
-	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
-
-	validator.ProposeBlock(context.Background(), slot, pubKey)
-	require.LogsContain(t, hook, failedBlockSignLocalErr)
+			validator.ProposeBlock(context.Background(), slot, pubKey)
+			require.LogsContain(t, hook, failedBlockSignLocalErr)
+		})
+	}
 }
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
@@ -470,29 +386,36 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	testBlock := util.NewBeaconBlock()
 	farFuture := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9))
 	testBlock.Block.Slot = farFuture
-	m.validatorClient.EXPECT().GetBlock(
+	m.validatorClient.EXPECT().GetBeaconBlock(
 		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(testBlock.Block, nil /*err*/)
+		gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
+	).Return(&ethpb.GenericBeaconBlock{
+		Block: &ethpb.GenericBeaconBlock_Phase0{
+			Phase0: testBlock.Block,
+		},
+	}, nil /*err*/)
 
 	secondTestBlock := util.NewBeaconBlock()
 	secondTestBlock.Block.Slot = farFuture
 	graffiti := [32]byte{}
 	copy(graffiti[:], "someothergraffiti")
 	secondTestBlock.Block.Body.Graffiti = graffiti[:]
-	m.validatorClient.EXPECT().GetBlock(
+	m.validatorClient.EXPECT().GetBeaconBlock(
 		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(secondTestBlock.Block, nil /*err*/)
-
+		gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
+	).Return(&ethpb.GenericBeaconBlock{
+		Block: &ethpb.GenericBeaconBlock_Phase0{
+			Phase0: secondTestBlock.Block,
+		},
+	}, nil /*err*/)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Times(3).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().ProposeBlock(
+	m.validatorClient.EXPECT().ProposeBeaconBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
+		gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), farFuture, pubKey)
@@ -503,133 +426,88 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 }
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
-	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	slot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9))
 
-	// Save a dummy proposal history at slot 0.
-	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
-	require.NoError(t, err)
+	tests := []struct {
+		name     string
+		pastSlot types.Slot
+	}{
+		{
+			name:     "400 slots ago",
+			pastSlot: slot.Sub(400),
+		},
+		{
+			name:     "same epoch",
+			pastSlot: slot.Sub(4),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
+			validator, m, validatorKey, finish := setup(t)
+			defer finish()
+			pubKey := [fieldparams.BLSPubkeyLength]byte{}
+			copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			// Save a dummy proposal history at slot 0.
+			err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
+			require.NoError(t, err)
 
-	farAhead := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9))
-	blk := util.NewBeaconBlock()
-	blk.Block.Slot = farAhead
-	m.validatorClient.EXPECT().GetBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(blk.Block, nil /*err*/)
+			m.validatorClient.EXPECT().DomainData(
+				gomock.Any(), // ctx
+				gomock.Any(), // epoch
+			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
+			blk := util.NewBeaconBlock()
+			blk.Block.Slot = slot
+			m.validatorClient.EXPECT().GetBeaconBlock(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
+			).Return(&ethpb.GenericBeaconBlock{
+				Block: &ethpb.GenericBeaconBlock_Phase0{
+					Phase0: blk.Block,
+				},
+			}, nil /*err*/)
 
-	m.validatorClient.EXPECT().ProposeBlock(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
-	).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
+			m.validatorClient.EXPECT().DomainData(
+				gomock.Any(), // ctx
+				gomock.Any(), // epoch
+			).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-	validator.ProposeBlock(context.Background(), farAhead, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+			m.validatorClient.EXPECT().ProposeBeaconBlock(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
+			).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
 
-	past := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod - 400))
-	blk2 := util.NewBeaconBlock()
-	blk2.Block.Slot = past
-	m.validatorClient.EXPECT().GetBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(blk2.Block, nil /*err*/)
-	validator.ProposeBlock(context.Background(), past, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
-}
+			validator.ProposeBlock(context.Background(), slot, pubKey)
+			require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
 
-func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
-	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-
-	// Save a dummy proposal history at slot 0.
-	err := validator.db.SaveProposalHistoryForSlot(context.Background(), pubKey, 0, []byte{})
-	require.NoError(t, err)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-	farAhead := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().WeakSubjectivityPeriod + 9))
-	blk := util.NewBeaconBlock()
-	blk.Block.Slot = farAhead
-	m.validatorClient.EXPECT().GetBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(blk.Block, nil /*err*/)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Times(2).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-	m.validatorClient.EXPECT().ProposeBlock(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
-	).Times(2).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
-
-	validator.ProposeBlock(context.Background(), farAhead, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
-
-	blk2 := util.NewBeaconBlock()
-	blk2.Block.Slot = farAhead - 4
-	m.validatorClient.EXPECT().GetBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(blk2.Block, nil /*err*/)
-
-	validator.ProposeBlock(context.Background(), farAhead-4, pubKey)
-	require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+			blk2 := util.NewBeaconBlock()
+			blk2.Block.Slot = tt.pastSlot
+			m.validatorClient.EXPECT().GetBeaconBlock(
+				gomock.Any(), // ctx
+				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
+			).Return(&ethpb.GenericBeaconBlock{
+				Block: &ethpb.GenericBeaconBlock_Phase0{
+					Phase0: blk2.Block,
+				},
+			}, nil /*err*/)
+			validator.ProposeBlock(context.Background(), tt.pastSlot, pubKey)
+			require.LogsDoNotContain(t, hook, failedBlockSignLocalErr)
+		})
+	}
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
-	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-	m.validatorClient.EXPECT().GetBlock(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(util.NewBeaconBlock().Block, nil /*err*/)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
-	m.validatorClient.EXPECT().ProposeBlock(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
-	).Return(&ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil /*error*/)
-
-	validator.ProposeBlock(context.Background(), 1, pubKey)
+	testProposeBlock(t, make([]byte, 32) /*graffiti*/)
 }
 
 func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	graffiti := []byte("12345678901234567890123456789012")
+	testProposeBlock(t, graffiti)
+}
 
+func testProposeBlock(t *testing.T, graffiti []byte) {
 	tests := []struct {
 		name  string
 		block *ethpb.GenericBeaconBlock
