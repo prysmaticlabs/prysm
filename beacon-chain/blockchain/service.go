@@ -86,7 +86,6 @@ type config struct {
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	BlockFetcher            powchain.POWBlockFetcher
-	ExecutionEngineCaller   v1.EngineCaller
 	FinalizedStateAtStartUp state.BeaconState
 	ExecutionEngineCaller   enginev1.Caller
 }
