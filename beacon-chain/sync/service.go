@@ -83,7 +83,6 @@ type config struct {
 	stateGen                *stategen.State
 	slasherAttestationsFeed *event.Feed
 	slasherBlockHeadersFeed *event.Feed
-	headFetcher             blockchain.HeadFetcher
 }
 
 // This defines the interface for interacting with block chain service
