@@ -56,8 +56,9 @@ var DepositCount = uint64(64)
 // Values that are used by both the beacon node and validator clients
 // to assign the relevant ports to.
 const (
-	BootnodeMetricsOffset = 20
-	ETH1WSOffset          = 1
+	BootnodeMetricsOffset   = 20
+	ETH1RPCOffsetMultiplier = 10
+	ETH1WSOffset            = 1
 
 	PrysmBeaconUDPOffset     = 10
 	PrysmBeaconTCPOffset     = 20

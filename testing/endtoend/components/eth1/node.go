@@ -70,10 +70,10 @@ func (node *Node) Start(ctx context.Context) error {
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s", eth1Path),
-		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort+10*node.index),
-		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+10*node.index+e2e.ETH1WSOffset),
+		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort+node.index*e2e.ETH1RPCOffsetMultiplier),
+		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+node.index*e2e.ETH1RPCOffsetMultiplier+e2e.ETH1WSOffset),
 		fmt.Sprintf("--bootnodes=%s", node.enr),
-		fmt.Sprintf("--port=%d", minerPort+10*node.index),
+		fmt.Sprintf("--port=%d", minerPort+node.index*e2e.ETH1RPCOffsetMultiplier),
 		fmt.Sprintf("--networkid=%d", NetworkId),
 		"--http",
 		"--http.addr=127.0.0.1",
