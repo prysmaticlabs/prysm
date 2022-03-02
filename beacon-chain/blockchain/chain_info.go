@@ -7,7 +7,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -339,6 +338,6 @@ func (s *Service) SetGenesisTime(t time.Time) {
 }
 
 // ForkChoiceStore returns the fork choice store in the service
-func (s *Service) ForkChoiceStore() f.ForkChoicer {
+func (s *Service) ForkChoiceStore() forkchoice.ForkChoicer {
 	return s.cfg.ForkChoiceStore
 }
