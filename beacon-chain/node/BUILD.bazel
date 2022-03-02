@@ -24,7 +24,7 @@ go_library(
         "//beacon-chain/db/slasherkv:go_default_library",
         "//beacon-chain/deterministic-genesis:go_default_library",
         "//beacon-chain/forkchoice:go_default_library",
-        "//beacon-chain/forkchoice/doubly_linked_tree:go_default_library",
+        "//beacon-chain/forkchoice/nodetree:go_default_library",
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/gateway:go_default_library",
         "//beacon-chain/monitor:go_default_library",

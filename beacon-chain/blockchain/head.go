@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly_linked_tree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -79,7 +79,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 			return err
 		}
 		if features.Get().EnableForkChoiceTree {
-			s.cfg.ForkChoiceStore = doubly_linked_tree.New(j.Epoch, f.Epoch)
+			s.cfg.ForkChoiceStore = nodetree.New(j.Epoch, f.Epoch)
 		} else {
 			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
 		}

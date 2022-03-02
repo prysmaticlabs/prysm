@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly_linked_tree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -131,11 +131,11 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 	}
 }
 
-func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
+func TestStore_OnBlock_NodeTree(t *testing.T) {
 	ctx := context.Background()
 
 	beaconDB := testDB.SetupDB(t)
-	fcs := doubly_linked_tree.New(0, 0)
+	fcs := nodetree.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -280,7 +280,7 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
+func TestStore_OnBlockBatch_NodeTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -298,7 +298,7 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 
-	service.cfg.ForkChoiceStore = doubly_linked_tree.New(0, 0)
+	service.cfg.ForkChoiceStore = nodetree.New(0, 0)
 	service.saveInitSyncBlock(gRoot, wrapper.WrappedPhase0SignedBeaconBlock(genesis))
 
 	st, keys := util.DeterministicGenesisState(t, 64)
@@ -394,7 +394,7 @@ func TestShouldUpdateJustified_ReturnFalse_ProtoArray(t *testing.T) {
 	assert.Equal(t, false, update, "Should not be able to update justified, received true")
 }
 
-func TestShouldUpdateJustified_ReturnFalse_DoublyLinkedTree(t *testing.T) {
+func TestShouldUpdateJustified_ReturnFalse_NodeTree(t *testing.T) {
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -402,7 +402,7 @@ func TestShouldUpdateJustified_ReturnFalse_DoublyLinkedTree(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ForkChoiceStore = doubly_linked_tree.New(0, 0)
+	service.cfg.ForkChoiceStore = nodetree.New(0, 0)
 	lastJustifiedBlk := util.NewBeaconBlock()
 	lastJustifiedBlk.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	lastJustifiedRoot, err := lastJustifiedBlk.Block.HashTreeRoot()
@@ -454,7 +454,7 @@ func TestCachedPreState_CanGetFromStateSummary_ProtoArray(t *testing.T) {
 	require.NoError(t, service.verifyBlkPreState(ctx, wrapper.WrappedPhase0BeaconBlock(b.Block)))
 }
 
-func TestCachedPreState_CanGetFromStateSummary_DoublyLinkedTree(t *testing.T) {
+func TestCachedPreState_CanGetFromStateSummary_NodeTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -474,7 +474,7 @@ func TestCachedPreState_CanGetFromStateSummary_DoublyLinkedTree(t *testing.T) {
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
-	service.cfg.ForkChoiceStore = doubly_linked_tree.New(0, 0)
+	service.cfg.ForkChoiceStore = nodetree.New(0, 0)
 	service.saveInitSyncBlock(gRoot, wrapper.WrappedPhase0SignedBeaconBlock(genesis))
 
 	b := util.NewBeaconBlock()
@@ -598,7 +598,7 @@ func TestFillForkChoiceMissingBlocks_CanSave_ProtoArray(t *testing.T) {
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[8])), "Didn't save node")
 }
 
-func TestFillForkChoiceMissingBlocks_CanSave_DoublyLinkedTree(t *testing.T) {
+func TestFillForkChoiceMissingBlocks_CanSave_NodeTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -608,7 +608,7 @@ func TestFillForkChoiceMissingBlocks_CanSave_DoublyLinkedTree(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ForkChoiceStore = doubly_linked_tree.New(0, 0)
+	service.cfg.ForkChoiceStore = nodetree.New(0, 0)
 	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: make([]byte, 32)})
 
 	genesisStateRoot := [32]byte{}
@@ -683,7 +683,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_ProtoArray(t *testing.T) {
 	}
 }
 
-func TestFillForkChoiceMissingBlocks_RootsMatch_DoublyLinkedTree(t *testing.T) {
+func TestFillForkChoiceMissingBlocks_RootsMatch_NodeTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -693,7 +693,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_DoublyLinkedTree(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ForkChoiceStore = doubly_linked_tree.New(0, 0)
+	service.cfg.ForkChoiceStore = nodetree.New(0, 0)
 	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: make([]byte, 32)})
 
 	genesisStateRoot := [32]byte{}
@@ -780,7 +780,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_ProtoArray(t *testing.T) {
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(r63), "Didn't save node")
 }
 
-func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing.T) {
+func TestFillForkChoiceMissingBlocks_FilterFinalized_NodeTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -790,7 +790,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ForkChoiceStore = doubly_linked_tree.New(0, 0)
+	service.cfg.ForkChoiceStore = nodetree.New(0, 0)
 	// Set finalized epoch to 1.
 	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 1})
 
