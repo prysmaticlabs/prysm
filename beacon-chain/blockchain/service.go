@@ -88,7 +88,7 @@ type config struct {
 	BlockFetcher            powchain.POWBlockFetcher
 	ExecutionEngineCaller   v1.EngineCaller
 	FinalizedStateAtStartUp state.BeaconState
-	ExecutionEngineCaller   enginev1.EngineCaller
+	ExecutionEngineCaller   enginev1.Caller
 }
 
 // NewService instantiates a new block service instance that will
