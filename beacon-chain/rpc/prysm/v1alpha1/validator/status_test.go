@@ -600,6 +600,10 @@ func TestOptimisticStatus(t *testing.T) {
 	require.Equal(t, true, ok)
 	require.DeepEqual(t, codes.Unavailable, s.Code())
 	require.ErrorContains(t, " The node is currently optimistic and cannot serve validators", err)
+
+	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: false}, TimeFetcher: &mockChain.ChainService{}}
+	err = server.optimisticStatus(context.Background())
+	require.NoError(t, err)
 }
 
 func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
