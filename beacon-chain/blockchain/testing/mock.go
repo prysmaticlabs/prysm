@@ -18,6 +18,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -59,6 +60,12 @@ type ChainService struct {
 	SyncContributionProofDomain []byte
 	SyncCommitteePubkeys        [][]byte
 	Genesis                     time.Time
+	ForkChoiceStore             forkchoice.ForkChoicer
+}
+
+// ForkChoicer mocks the same method in the chain service
+func (s *ChainService) ForkChoicer() forkchoice.ForkChoicer {
+	return s.ForkChoiceStore
 }
 
 // StateNotifier mocks the same method in the chain service.

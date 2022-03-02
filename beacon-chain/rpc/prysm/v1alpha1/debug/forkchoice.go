@@ -7,13 +7,13 @@ import (
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// GetProtoArrayForkChoice returns proto array fork choice store.
+// GetForkChoice returns a fork choice store.
 func (ds *Server) GetForkChoice(_ context.Context, _ *empty.Empty) (*pbrpc.ForkChoiceResponse, error) {
 	store := ds.HeadFetcher.ForkChoicer()
 
 	return &pbrpc.ForkChoiceResponse{
-		JustifiedEpoch: store.JustifiedEpoch(),
-		FinalizedEpoch: store.FinalizedEpoch(),
+		JustifiedEpoch:  store.JustifiedEpoch(),
+		FinalizedEpoch:  store.FinalizedEpoch(),
 		ForkchoiceNodes: store.ForkChoiceNodes(),
 	}, nil
 }
