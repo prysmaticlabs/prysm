@@ -1,0 +1,12 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["client.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/engine/v1:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+    ],
+)

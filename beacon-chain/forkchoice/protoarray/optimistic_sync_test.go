@@ -200,6 +200,10 @@ func TestOptimistic(t *testing.T) {
 	op, err = f.Optimistic(ctx, nodeK.root, nodeK.slot)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
+
+	// request a write Lock to synced Tips regression #10289
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
 }
 
 // This tests the algorithm to update syncedTips

@@ -9,15 +9,17 @@ import (
 )
 
 type mockEngineService struct {
-	blks map[[32]byte]*enginev1.ExecutionBlock
+	newPayloadError error
+	forkchoiceError error
+	blks            map[[32]byte]*enginev1.ExecutionBlock
 }
 
-func (*mockEngineService) NewPayload(context.Context, *enginev1.ExecutionPayload) ([]byte, error) {
-	return nil, nil
+func (m *mockEngineService) NewPayload(context.Context, *enginev1.ExecutionPayload) ([]byte, error) {
+	return nil, m.newPayloadError
 }
 
-func (*mockEngineService) ForkchoiceUpdated(context.Context, *enginev1.ForkchoiceState, *enginev1.PayloadAttributes) (*enginev1.PayloadIDBytes, []byte, error) {
-	return nil, nil, nil
+func (m *mockEngineService) ForkchoiceUpdated(context.Context, *enginev1.ForkchoiceState, *enginev1.PayloadAttributes) (*enginev1.PayloadIDBytes, []byte, error) {
+	return nil, nil, m.forkchoiceError
 }
 
 func (*mockEngineService) GetPayloadV1(
@@ -30,8 +32,8 @@ func (*mockEngineService) GetPayload(context.Context, [8]byte) (*enginev1.Execut
 	return nil, nil
 }
 
-func (*mockEngineService) ExchangeTransitionConfiguration(context.Context, *enginev1.TransitionConfiguration) (*enginev1.TransitionConfiguration, error) {
-	return nil, nil
+func (*mockEngineService) ExchangeTransitionConfiguration(context.Context, *enginev1.TransitionConfiguration) error {
+	return nil
 }
 
 func (*mockEngineService) LatestExecutionBlock(context.Context) (*enginev1.ExecutionBlock, error) {
