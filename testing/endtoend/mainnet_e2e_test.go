@@ -22,7 +22,7 @@ func TestEndToEnd_MainnetConfig(t *testing.T) {
 }
 
 func TestEndToeNd_MainnetConfig_Prater(t *testing.T) {
-	params.UseE2EMainnetConfig()
+	// params.UseE2EMainnetConfig()
 	require.NoError(t, e2eParams.Init(1))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
@@ -91,7 +91,7 @@ func TestEndToeNd_MainnetConfig_Prater(t *testing.T) {
 }
 
 func e2eMainnet(t *testing.T, usePrysmSh bool) {
-	params.UseE2EMainnetConfig()
+	// params.UseE2EMainnetConfig()
 	require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
