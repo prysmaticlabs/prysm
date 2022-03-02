@@ -117,10 +117,12 @@ func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot)
 	return []block.SignedBeaconBlock{}, nil
 }
 
+var errGenesisBlockNotFound = errors.New("canonical genesis block not found in db")
+
 func (m *mockHistory) GenesisBlock(_ context.Context) (block.SignedBeaconBlock, error) {
 	genesisRoot, ok := m.slotMap[0]
 	if !ok {
-		return nil, ErrGenesisBlockNotFound
+		return nil, errGenesisBlockNotFound
 	}
 	return m.blocks[genesisRoot], nil
 }

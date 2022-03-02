@@ -20,7 +20,6 @@ var ErrFutureSlotRequested = errors.New("cannot replay to future slots")
 var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
 var ErrNoBlocksBelowSlot = errors.New("no blocks found in db below slot")
 var ErrInvalidDBBlock = errors.New("invalid block found in database")
-var ErrGenesisBlockNotFound = errors.New("canonical genesis block not found in db")
 
 // HistoryAccessor describes the minimum set of database methods needed to support the ReplayerBuilder.
 type HistoryAccessor interface {
