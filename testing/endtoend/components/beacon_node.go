@@ -171,7 +171,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if err = cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start beacon node: %w", err)
 	}
-
+	log.Info("Beacon chain node started, waiting for gRPC server log message")
 	if err = helpers.WaitForTextInFile(stdOutFile, "gRPC server listening on port"); err != nil {
 		return fmt.Errorf("could not find multiaddr for node %d, this means the node had issues starting: %w", index, err)
 	}

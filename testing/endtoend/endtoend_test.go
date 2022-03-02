@@ -216,7 +216,7 @@ func (r *testRunner) run() {
 		}
 
 		// Blocking, wait period varies depending on number of validators.
-		r.waitForChainStart()
+		// r.waitForChainStart()
 
 		// Failing early in case chain doesn't start.
 		if t.Failed() {
