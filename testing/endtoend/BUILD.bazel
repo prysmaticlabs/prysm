@@ -107,5 +107,7 @@ go_test(
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
         "@org_golang_x_sync//errgroup:go_default_library",
+        "//cmd:go_default_library",
+        "//cmd/beacon-chain/flags:go_default_library",
     ],
 )

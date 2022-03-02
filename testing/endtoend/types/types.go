@@ -14,6 +14,7 @@ type E2EConfig struct {
 	TestSync                bool
 	UsePrysmShValidator     bool
 	UsePprof                bool
+	NoModifyBeaconFlags     bool
 	UseWeb3RemoteSigner     bool
 	TestDeposits            bool
 	UseFixedPeerIDs         bool
