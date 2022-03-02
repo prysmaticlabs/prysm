@@ -50,12 +50,6 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if cfg.BaseEndpoint == "" || !bytesutil.IsValidRoot(cfg.GenesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
 	}
-	if cfg.PublicKeysURL != "" && len(cfg.ProvidedPublicKeys) != 0 {
-		return nil, errors.New("Either a provided list of public keys or a URL to a list of public keys must be provided, but not both")
-	}
-	if cfg.PublicKeysURL == "" && len(cfg.ProvidedPublicKeys) == 0 {
-		return nil, errors.New("no valid public key options provided")
-	}
 	client, err := internal.NewApiClient(cfg.BaseEndpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create apiClient")
