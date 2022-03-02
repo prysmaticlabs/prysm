@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -16,6 +17,19 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+func headerFromBlock(b block.SignedBeaconBlock) (*ethpb.BeaconBlockHeader, error) {
+	bodyRoot, err := b.Block().Body().HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	return &ethpb.BeaconBlockHeader{
+		Slot: b.Block().Slot(),
+		StateRoot: b.Block().StateRoot(),
+		ProposerIndex: b.Block().ProposerIndex(),
+		BodyRoot: bodyRoot[:],
+	}, nil
+}
+
 func TestReplayBlocks(t *testing.T) {
 	ctx := context.Background()
 	var zero, one, two, three, four, five types.Slot = 50, 51, 150, 151, 152, 200
@@ -25,15 +39,44 @@ func TestReplayBlocks(t *testing.T) {
 		{slot: two},
 		{slot: three},
 		{slot: four},
-		{slot: five},
+		{slot: five, canonicalBlock: true},
 	}
 
 	hist := newMockHistory(t, specs, five+1)
 	bld := NewCanonicalBuilder(hist, hist, hist)
 	st, err := bld.ForSlot(five).ReplayBlocks(ctx)
 	require.NoError(t, err)
-	expectedState := hist.hiddenStates[hist.slotMap[five]]
-	require.DeepEqual(t, expectedState, st)
+	expected := hist.hiddenStates[hist.slotMap[five]]
+	expectedHTR, err := expected.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	expectedLBH := expected.LatestBlockHeader()
+	actualLBH := st.LatestBlockHeader()
+	require.Equal(t, expectedLBH.Slot, actualLBH.Slot)
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.ParentRoot), bytesutil.ToBytes32(actualLBH.ParentRoot))
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.StateRoot), bytesutil.ToBytes32(actualLBH.StateRoot))
+	require.Equal(t, expectedLBH.ProposerIndex, actualLBH.ProposerIndex)
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.BodyRoot), bytesutil.ToBytes32(actualLBH.BodyRoot))
+	require.Equal(t, expectedHTR, actualHTR)
+
+	st, err = bld.ForSlot(one).ReplayBlocks(ctx)
+	require.NoError(t, err)
+	expected = hist.states[hist.slotMap[one]]
+
+	// no canonical blocks in between, so latest block process_block_header will be for genesis
+	expectedLBH, err = headerFromBlock(hist.blocks[hist.slotMap[0]])
+	require.NoError(t, err)
+	actualLBH = st.LatestBlockHeader()
+	require.Equal(t, expectedLBH.Slot, actualLBH.Slot)
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.ParentRoot), bytesutil.ToBytes32(actualLBH.ParentRoot))
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.StateRoot), bytesutil.ToBytes32(actualLBH.StateRoot))
+	require.Equal(t, expectedLBH.ProposerIndex, actualLBH.ProposerIndex)
+	require.Equal(t, bytesutil.ToBytes32(expectedLBH.BodyRoot), bytesutil.ToBytes32(actualLBH.BodyRoot))
+
+	require.Equal(t, expected.Slot(), st.Slot())
+	// NOTE: HTR is not compared, because process_block is not called for non-canonical blocks,
+	// so there are multiple differences compared to the "db" state that applies all blocks
 }
 
 // happy path tests
@@ -343,7 +386,11 @@ func TestAncestorChainOrdering(t *testing.T) {
 	cc := &canonicalChainer{h: hist, c: hist, cs: hist}
 	st, bs, err := cc.ancestorChain(ctx, endBlock)
 	require.NoError(t, err)
-	require.DeepEqual(t, hist.states[hist.slotMap[one]], st)
+	expectedRoot, err := hist.states[hist.slotMap[one]].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedRoot, actualRoot)
 	// we asked for the chain leading up to five
 	// one has the savedState. one is applied to the savedState, so it should be omitted
 	// that means we should get two, three, four, five (length of 4)
@@ -362,7 +409,11 @@ func TestAncestorChainOrdering(t *testing.T) {
 	cc = &canonicalChainer{h: hist, c: hist, cs: hist}
 	st, bs, err = cc.ancestorChain(ctx, endBlock)
 	require.NoError(t, err)
-	require.DeepEqual(t, hist.states[hist.slotMap[one]], st)
+	expectedRoot, err = hist.states[endRoot].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualRoot, err = st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedRoot, actualRoot)
 	require.Equal(t, 0, len(bs))
 
 	// slice off the last element for an odd size list (to cover odd/even in the reverseChain func)
@@ -375,7 +426,11 @@ func TestAncestorChainOrdering(t *testing.T) {
 	endBlock = hist.blocks[endRoot]
 	st, bs, err = cc.ancestorChain(ctx, endBlock)
 	require.NoError(t, err)
-	require.DeepEqual(t, hist.states[hist.slotMap[one]], st)
+	expectedRoot, err = hist.states[hist.slotMap[one]].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualRoot, err = st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedRoot, actualRoot)
 	require.Equal(t, 3, len(bs))
 	for i, slot := range []types.Slot{two, three, four} {
 		require.Equal(t, slot, bs[i].Block().Slot(), fmt.Sprintf("wrong value at index %d", i))
