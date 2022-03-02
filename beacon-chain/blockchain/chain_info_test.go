@@ -41,6 +41,12 @@ func TestHeadRoot_Nil(t *testing.T) {
 	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], headRoot, "Incorrect pre chain start value")
 }
 
+func TestService_ForkChoiceStore(t *testing.T) {
+	c := &Service{cfg: &config{ForkChoiceStore: nodetree.New(0, 0)}}
+	p := c.ForkChoiceStore()
+	require.Equal(t, 0, int(p.FinalizedEpoch()))
+}
+
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
