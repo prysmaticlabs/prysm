@@ -66,7 +66,7 @@ func (r *testRunner) run() {
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
 
-	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	// minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
 	var keyGen, lighthouseValidatorNodes e2etypes.ComponentRunner
 	var lighthouseNodes *components.LighthouseBeaconNodeSet
@@ -74,10 +74,10 @@ func (r *testRunner) run() {
 	ctx, done := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 
-	tracingSink := components.NewTracingSink(config.TracingSinkEndpoint)
-	g.Go(func() error {
-		return tracingSink.Start(ctx)
-	})
+	// tracingSink := components.NewTracingSink(config.TracingSinkEndpoint)
+	// g.Go(func() error {
+	// 	return tracingSink.Start(ctx)
+	// })
 
 	if multiClientActive {
 		keyGen = components.NewKeystoreGenerator()
@@ -89,38 +89,38 @@ func (r *testRunner) run() {
 	}
 
 	// ETH1 node.
-	eth1Node := components.NewEth1Node()
-	g.Go(func() error {
-		if err := eth1Node.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start eth1node")
-		}
-		return nil
-	})
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
-		}
-		if err := components.SendAndMineDeposits(eth1Node.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
-			return errors.Wrap(err, "failed to send and mine deposits")
-		}
-		return nil
-	})
+	// eth1Node := components.NewEth1Node()
+	// g.Go(func() error {
+	// 	if err := eth1Node.Start(ctx); err != nil {
+	// 		return errors.Wrap(err, "failed to start eth1node")
+	// 	}
+	// 	return nil
+	// })
+	// g.Go(func() error {
+	// 	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node}); err != nil {
+	// 		return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
+	// 	}
+	// 	if err := components.SendAndMineDeposits(eth1Node.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
+	// 		return errors.Wrap(err, "failed to send and mine deposits")
+	// 	}
+	// 	return nil
+	// })
 
 	// Boot node.
-	bootNode := components.NewBootNode()
-	g.Go(func() error {
-		if err := bootNode.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start bootnode")
-		}
-		return nil
-	})
+	// bootNode := components.NewBootNode()
+	// g.Go(func() error {
+	// 	if err := bootNode.Start(ctx); err != nil {
+	// 		return errors.Wrap(err, "failed to start bootnode")
+	// 	}
+	// 	return nil
+	// })
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode}); err != nil {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ /*eth1Node, bootNode*/ }); err != nil {
 			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
 		}
-		beaconNodes.SetENR(bootNode.ENR())
+		//:beaconNodes.SetENR(bootNode.ENR())
 		if err := beaconNodes.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start beacon nodes")
 		}
@@ -139,48 +139,48 @@ func (r *testRunner) run() {
 		})
 	}
 
-	if multiClientActive {
-		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
-		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode, beaconNodes}); err != nil {
-				return errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run")
-			}
-			lighthouseNodes.SetENR(bootNode.ENR())
-			if err := lighthouseNodes.Start(ctx); err != nil {
-				return errors.Wrap(err, "failed to start lighthouse beacon nodes")
-			}
-			return nil
-		})
-	}
+	// if multiClientActive {
+	// 	lighthouseNodes = components.NewLighthouseBeaconNodes(config)
+	// 	g.Go(func() error {
+	// 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode, beaconNodes}); err != nil {
+	// 			return errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run")
+	// 		}
+	// 		lighthouseNodes.SetENR(bootNode.ENR())
+	// 		if err := lighthouseNodes.Start(ctx); err != nil {
+	// 			return errors.Wrap(err, "failed to start lighthouse beacon nodes")
+	// 		}
+	// 		return nil
+	// 	})
+	// }
 	// Validator nodes.
-	validatorNodes := components.NewValidatorNodeSet(config)
-	g.Go(func() error {
-		comps := []e2etypes.ComponentRunner{beaconNodes}
-		if config.UseWeb3RemoteSigner {
-			comps = append(comps, web3RemoteSigner)
-		}
-		if err := helpers.ComponentsStarted(ctx, comps); err != nil {
-			return errors.Wrap(err, "validator nodes require beacon nodes to run")
-		}
-		if err := validatorNodes.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start validator nodes")
-		}
-		return nil
-	})
+	// validatorNodes := components.NewValidatorNodeSet(config)
+	// g.Go(func() error {
+	// 	comps := []e2etypes.ComponentRunner{beaconNodes}
+	// 	if config.UseWeb3RemoteSigner {
+	// 		comps = append(comps, web3RemoteSigner)
+	// 	}
+	// 	if err := helpers.ComponentsStarted(ctx, comps); err != nil {
+	// 		return errors.Wrap(err, "validator nodes require beacon nodes to run")
+	// 	}
+	// 	if err := validatorNodes.Start(ctx); err != nil {
+	// 		return errors.Wrap(err, "failed to start validator nodes")
+	// 	}
+	// 	return nil
+	// })
 
-	if multiClientActive {
-		// Lighthouse Validator nodes.
-		lighthouseValidatorNodes = components.NewLighthouseValidatorNodeSet(config)
-		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{keyGen, lighthouseNodes}); err != nil {
-				return errors.Wrap(err, "validator nodes require beacon nodes to run")
-			}
-			if err := lighthouseValidatorNodes.Start(ctx); err != nil {
-				return errors.Wrap(err, "failed to start validator nodes")
-			}
-			return nil
-		})
-	}
+	// if multiClientActive {
+	// 	// Lighthouse Validator nodes.
+	// 	lighthouseValidatorNodes = components.NewLighthouseValidatorNodeSet(config)
+	// 	g.Go(func() error {
+	// 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{keyGen, lighthouseNodes}); err != nil {
+	// 			return errors.Wrap(err, "validator nodes require beacon nodes to run")
+	// 		}
+	// 		if err := lighthouseValidatorNodes.Start(ctx); err != nil {
+	// 			return errors.Wrap(err, "failed to start validator nodes")
+	// 		}
+	// 		return nil
+	// 	})
+	// }
 
 	// Run E2E evaluators and tests.
 	g.Go(func() error {
@@ -192,7 +192,8 @@ func (r *testRunner) run() {
 
 		// Wait for all required nodes to start.
 		requiredComponents := []e2etypes.ComponentRunner{
-			tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
+			beaconNodes,
+			// tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
 		}
 		if multiClientActive {
 			requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{keyGen, lighthouseNodes, lighthouseValidatorNodes}...)
@@ -224,7 +225,8 @@ func (r *testRunner) run() {
 
 		if config.TestDeposits {
 			log.Info("Running deposit tests")
-			r.testDeposits(ctx, g, eth1Node, []e2etypes.ComponentRunner{beaconNodes})
+			panic("bad")
+			// r.testDeposits(ctx, g, eth1Node, []e2etypes.ComponentRunner{beaconNodes})
 		}
 
 		// Create GRPC connection to beacon nodes.
@@ -247,12 +249,12 @@ func (r *testRunner) run() {
 		if !config.TestSync {
 			return nil
 		}
-		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
-			return errors.Wrap(err, "beacon chain sync test failed")
-		}
-		if err := r.testDoppelGangerProtection(ctx); err != nil {
-			return errors.Wrap(err, "doppel ganger protection check failed")
-		}
+		// if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
+		// 	return errors.Wrap(err, "beacon chain sync test failed")
+		// }
+		// if err := r.testDoppelGangerProtection(ctx); err != nil {
+		// 	return errors.Wrap(err, "doppel ganger protection check failed")
+		// }
 		return nil
 	})
 
