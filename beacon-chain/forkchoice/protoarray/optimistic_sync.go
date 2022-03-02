@@ -49,6 +49,7 @@ func (f *ForkChoice) IsOptimistic(ctx context.Context, root [32]byte) (bool, err
 	f.syncedTips.RLock()
 	_, ok = f.syncedTips.validatedTips[root]
 	if ok {
+		f.syncedTips.RUnlock()
 		return false, nil
 	}
 	f.syncedTips.RUnlock()
