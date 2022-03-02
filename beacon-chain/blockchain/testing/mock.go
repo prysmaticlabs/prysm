@@ -447,6 +447,6 @@ func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 }
 
 // IsOptimisticForRoot mocks the same method in the chain service.
-func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte, _ types.Slot) (bool, error) {
+func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool, error) {
 	return false, nil
 }
