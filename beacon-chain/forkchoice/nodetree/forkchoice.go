@@ -11,9 +11,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// This tracks the last reported head root. Used for metrics.
-var lastHeadRoot [32]byte
-
 // New initializes a new fork choice store.
 func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	s := &Store{
