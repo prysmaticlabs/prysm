@@ -3,10 +3,11 @@ package checkpoint
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/client/openapi"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"io"
 )
 
 type APIInitializer struct {

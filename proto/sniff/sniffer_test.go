@@ -1,10 +1,10 @@
 package sniff
 
 import (
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
