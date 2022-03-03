@@ -60,7 +60,7 @@ func DeleteAndCreateFile(tmpPath, fileName string) (*os.File, error) {
 
 // WaitForTextInFile checks a file every polling interval for the text requested.
 func WaitForTextInFile(file *os.File, text string) error {
-	d := time.Now().Add(maxPollingWaitTime)
+	d := time.Now().Add(30 * time.Minute)
 	ctx, cancel := context.WithDeadline(context.Background(), d)
 	defer cancel()
 
