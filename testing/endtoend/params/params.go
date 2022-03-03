@@ -113,51 +113,52 @@ func Init(beaconNodeCount int) error {
 		return err
 	}
 
-	bootnodePort, err := port(BootNodePort, testTotalShards, testShardIndex)
+	var existingRegistrations []int
+	bootnodePort, err := port(BootNodePort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	bootnodeMetricsPort, err := port(BootNodeMetricsPort, testTotalShards, testShardIndex)
+	bootnodeMetricsPort, err := port(BootNodeMetricsPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	eth1RPCPort, err := port(Eth1RPCPort, testTotalShards, testShardIndex)
+	eth1RPCPort, err := port(Eth1RPCPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	eth1WSPort, err := port(Eth1WSPort, testTotalShards, testShardIndex)
+	eth1WSPort, err := port(Eth1WSPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeRPCPort, err := port(PrysmBeaconNodeRPCPort, testTotalShards, testShardIndex)
+	beaconNodeRPCPort, err := port(PrysmBeaconNodeRPCPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeUDPPort, err := port(PrysmBeaconNodeUDPPort, testTotalShards, testShardIndex)
+	beaconNodeUDPPort, err := port(PrysmBeaconNodeUDPPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeTCPPort, err := port(PrysmBeaconNodeTCPPort, testTotalShards, testShardIndex)
+	beaconNodeTCPPort, err := port(PrysmBeaconNodeTCPPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeGatewayPort, err := port(PrysmBeaconNodeGatewayPort, testTotalShards, testShardIndex)
+	beaconNodeGatewayPort, err := port(PrysmBeaconNodeGatewayPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodeMetricsPort, err := port(PrysmBeaconNodeMetricsPort, testTotalShards, testShardIndex)
+	beaconNodeMetricsPort, err := port(PrysmBeaconNodeMetricsPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	beaconNodePprofPort, err := port(PrysmBeaconNodePprofPort, testTotalShards, testShardIndex)
+	beaconNodePprofPort, err := port(PrysmBeaconNodePprofPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	validatorGatewayPort, err := port(ValidatorGatewayPort, testTotalShards, testShardIndex)
+	validatorGatewayPort, err := port(ValidatorGatewayPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	validatorMetricsPort, err := port(ValidatorMetricsPort, testTotalShards, testShardIndex)
+	validatorMetricsPort, err := port(ValidatorMetricsPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
@@ -210,63 +211,64 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 		return err
 	}
 
-	bootnodePort, err := port(BootNodePort, testTotalShards, testShardIndex)
+	var existingRegistrations []int
+	bootnodePort, err := port(BootNodePort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	bootnodeMetricsPort, err := port(BootNodeMetricsPort, testTotalShards, testShardIndex)
+	bootnodeMetricsPort, err := port(BootNodeMetricsPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	eth1RPCPort, err := port(Eth1RPCPort, testTotalShards, testShardIndex)
+	eth1RPCPort, err := port(Eth1RPCPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	eth1WSPort, err := port(Eth1WSPort, testTotalShards, testShardIndex)
+	eth1WSPort, err := port(Eth1WSPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	prysmBeaconNodeRPCPort, err := port(PrysmBeaconNodeRPCPort, testTotalShards, testShardIndex)
+	prysmBeaconNodeRPCPort, err := port(PrysmBeaconNodeRPCPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	prysmBeaconNodeUDPPort, err := port(PrysmBeaconNodeUDPPort, testTotalShards, testShardIndex)
+	prysmBeaconNodeUDPPort, err := port(PrysmBeaconNodeUDPPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	prysmBeaconNodeTCPPort, err := port(PrysmBeaconNodeTCPPort, testTotalShards, testShardIndex)
+	prysmBeaconNodeTCPPort, err := port(PrysmBeaconNodeTCPPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	prysmBeaconNodeGatewayPort, err := port(PrysmBeaconNodeGatewayPort, testTotalShards, testShardIndex)
+	prysmBeaconNodeGatewayPort, err := port(PrysmBeaconNodeGatewayPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	prysmBeaconNodeMetricsPort, err := port(PrysmBeaconNodeMetricsPort, testTotalShards, testShardIndex)
+	prysmBeaconNodeMetricsPort, err := port(PrysmBeaconNodeMetricsPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	prysmBeaconNodePprofPort, err := port(PrysmBeaconNodePprofPort, testTotalShards, testShardIndex)
+	prysmBeaconNodePprofPort, err := port(PrysmBeaconNodePprofPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	lighthouseBeaconNodeP2PPort, err := port(LighthouseBeaconNodeP2PPort, testTotalShards, testShardIndex)
+	lighthouseBeaconNodeP2PPort, err := port(LighthouseBeaconNodeP2PPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	lighthouseBeaconNodeHTTPPort, err := port(LighthouseBeaconNodeHTTPPort, testTotalShards, testShardIndex)
+	lighthouseBeaconNodeHTTPPort, err := port(LighthouseBeaconNodeHTTPPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	lighthouseBeaconNodeMetricsPort, err := port(LighthouseBeaconNodeMetricsPort, testTotalShards, testShardIndex)
+	lighthouseBeaconNodeMetricsPort, err := port(LighthouseBeaconNodeMetricsPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	validatorGatewayPort, err := port(ValidatorGatewayPort, testTotalShards, testShardIndex)
+	validatorGatewayPort, err := port(ValidatorGatewayPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
-	validatorMetricsPort, err := port(ValidatorMetricsPort, testTotalShards, testShardIndex)
+	validatorMetricsPort, err := port(ValidatorMetricsPort, testTotalShards, testShardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
@@ -299,16 +301,14 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 	return nil
 }
 
-var registeredPorts []int
-
 // port returns a safe port number based on the seed and shard data.
-func port(seed, shardCount, shardIndex int) (int, error) {
-	for _, p := range registeredPorts {
+func port(seed, shardCount, shardIndex int, existingRegistrations []int) (int, error) {
+	for _, p := range existingRegistrations {
 		if seed >= p && seed <= p+(50/shardCount)-1 {
 			return 0, fmt.Errorf("port %d overlaps with already registered port %d", seed, p)
 		}
 	}
-	registeredPorts = append(registeredPorts, seed)
+	existingRegistrations = append(existingRegistrations, seed)
 
 	// Calculation example: 3 shards, seed 2000, base ports 50 ports apart.
 	// Shard 0: 2000 + (50 / 3 * 0) = 2000 (we can safely use ports 2000-2015)
