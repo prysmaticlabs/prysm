@@ -21,7 +21,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -123,17 +122,15 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// update forkchoice synced tips if the block is not optimistic
-	if postState.Version() == version.Bellatrix {
-		root, err := b.HashTreeRoot()
-		if err != nil {
-			return err
-		}
-		if err := s.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, root); err != nil {
-			return err
-		}
-		if err := s.saveSyncedTipsDB(ctx); err != nil {
-			return err
-		}
+	root, err := b.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	if err := s.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, root); err != nil {
+		return err
+	}
+	if err := s.saveSyncedTipsDB(ctx); err != nil {
+		return err
 	}
 
 	// If slasher is configured, forward the attestations in the block via

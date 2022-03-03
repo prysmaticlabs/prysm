@@ -256,8 +256,8 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 	if !optimistic {
 		return nil
 	}
-	return nil
-	// return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
+
+	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
 }
 
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
