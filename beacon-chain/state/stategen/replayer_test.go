@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -285,23 +284,6 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 		})
 	}
 }
-
-type mockCanonicalChainer struct {
-	State  state.BeaconState
-	Blocks []block.SignedBeaconBlock
-	Err    error
-	cache  CachedGetter
-}
-
-func (m mockCanonicalChainer) useCache(c CachedGetter) {
-	m.cache = c
-}
-
-func (m mockCanonicalChainer) chainForSlot(_ context.Context, _ types.Slot) (state.BeaconState, []block.SignedBeaconBlock, error) {
-	return m.State, m.Blocks, m.Err
-}
-
-var _ chainer = &mockCanonicalChainer{}
 
 type mockCurrentSlotter struct {
 	Slot types.Slot
