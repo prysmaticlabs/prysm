@@ -157,7 +157,7 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
-	engineAPIClient         *engine.Client
+	engineAPIClient         engine.Caller
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -216,6 +216,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	if err := s.initializeEngineAPIClient(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to initialize engine API client")
 	}
+
+	// Check transition configuration for the engine API client in the background.
+	go s.checkTransitionConfiguration(ctx)
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
@@ -299,15 +302,12 @@ func (s *Service) Status() error {
 		return nil
 	}
 	// get error from run function
-	if s.runError != nil {
-		return s.runError
-	}
-	return nil
+	return s.runError
 }
 
 // EngineAPIClient returns the associated engine API client to interact
 // with an execution node via JSON-RPC.
-func (s *Service) EngineAPIClient() *engine.Client {
+func (s *Service) EngineAPIClient() engine.Caller {
 	return s.engineAPIClient
 }
 
