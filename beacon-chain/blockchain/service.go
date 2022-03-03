@@ -83,8 +83,9 @@ type config struct {
 	StateGen                *stategen.State
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
+	BlockFetcher            powchain.POWBlockFetcher
 	FinalizedStateAtStartUp state.BeaconState
-	ExecutionEngineCaller   enginev1.Caller
+	ExecutionEngineCaller   enginev1.EngineCaller
 }
 
 // NewService instantiates a new block service instance that will
@@ -127,6 +128,7 @@ func (s *Service) Start() {
 		if err := s.startFromSavedState(saved); err != nil {
 			log.Fatal(err)
 		}
+		s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 	} else {
 		if err := s.startFromPOWChain(); err != nil {
 			log.Fatal(err)
@@ -222,8 +224,6 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
 		},
 	})
-
-	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 
 	return nil
 }
