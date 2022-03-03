@@ -256,3 +256,18 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 	}
 	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, filteredKeys...)
 }
+
+// ListRemoteKeys returns a list of all public keys defined for web3signer keymanager type.
+func ListRemoteKeys(ctx context.Context) {
+
+}
+
+// ImportRemoteKeys imports a list of public keys defined for web3signer keymanager type.
+func ImportRemoteKeys(ctx context.Context) {
+
+}
+
+// DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
+func DeleteRemoteKeys(ctx context.Context) {
+
+}
