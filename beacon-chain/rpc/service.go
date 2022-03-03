@@ -170,7 +170,8 @@ func (s *Service) Start() {
 			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
-
+	comboCache := s.cfg.StateGen.CombinedCache()
+	withCache := stategen.WithCache(comboCache)
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
 		AttestationCache:       cache.NewAttestationCache(),
@@ -196,7 +197,7 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
-		ReplayerBuilder:        stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher),
+		ReplayerBuilder:        stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
@@ -211,7 +212,7 @@ func (s *Service) Start() {
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
-			ReplayerBuilder:    stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher),
+			ReplayerBuilder:    stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
 		},
 		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
 	}
@@ -261,7 +262,7 @@ func (s *Service) Start() {
 		SyncChecker:                 s.cfg.SyncService,
 		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
-		ReplayerBuilder:             stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher),
+		ReplayerBuilder:             stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
 	}
 	beaconChainServerV1 := &beacon.Server{
 		BeaconDB:           s.cfg.BeaconDB,
@@ -304,7 +305,7 @@ func (s *Service) Start() {
 			HeadFetcher:        s.cfg.HeadFetcher,
 			PeerManager:        s.cfg.PeerManager,
 			PeersFetcher:       s.cfg.PeersFetcher,
-			ReplayerBuilder:    stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher),
+			ReplayerBuilder:    stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
 		}
 		debugServerV1 := &debug.Server{
 			BeaconDB:    s.cfg.BeaconDB,
@@ -314,7 +315,7 @@ func (s *Service) Start() {
 				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 				StateGenService:    s.cfg.StateGen,
-				ReplayerBuilder:    stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher),
+				ReplayerBuilder:    stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
 			},
 		}
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
