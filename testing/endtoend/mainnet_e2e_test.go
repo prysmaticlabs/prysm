@@ -74,6 +74,7 @@ func TestEndToeNd_MainnetConfig_Prater(t *testing.T) {
 			"--" + cmdshared.AcceptTosFlag.Name,
 			"--" + flags.EnableDebugRPCEndpoints.Name,
 			"--prater",
+			"--dev",
 		},
 		ValidatorFlags:          []string{},
 		EpochsToRun:             uint64(epochsToRun),
