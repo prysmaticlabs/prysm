@@ -22,7 +22,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // Payload is computed given the respected time of merge.
 //
