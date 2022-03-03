@@ -24,6 +24,7 @@ import (
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
+var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
 var nonExistentIndex = types.ValidatorIndex(^uint64(0))
 
 const numStatesToCheck = 2
@@ -246,25 +247,9 @@ func (vs *Server) activationStatus(
 // Spec:
 // https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md
 func (vs *Server) optimisticStatus(ctx context.Context) error {
-	blk, err := vs.HeadFetcher.HeadBlock(ctx)
-	if err != nil {
-		return err
-	}
-	if slots.ToEpoch(blk.Block().Slot()) < params.BeaconConfig().BellatrixForkEpoch {
+	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
-	st, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-	enabled, err := blocks.ExecutionEnabled(st, blk.Block().Body())
-	if err != nil {
-		return err
-	}
-	if !enabled {
-		return nil
-	}
-
 	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
@@ -273,12 +258,7 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 		return nil
 	}
 
-	root, err := vs.HeadFetcher.HeadRoot(ctx)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get head root: %v", err)
-	}
-	return status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators. Head root: %#x", root)
-
+	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
 }
 
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
