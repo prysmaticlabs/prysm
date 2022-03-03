@@ -301,7 +301,7 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 
 var registeredPorts []int
 
-// port returns a starting port number based on the seed and shard data.
+// port returns a safe port number based on the seed and shard data.
 func port(seed, shardCount, shardIndex int) (int, error) {
 	for _, p := range registeredPorts {
 		if seed >= p && seed <= p+(50/shardCount)-1 {
