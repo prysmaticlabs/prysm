@@ -168,11 +168,11 @@ func LogOutput(t *testing.T) {
 		}
 		LogErrorOutput(t, beaconLogFile, "beacon chain node", i)
 
-		validatorLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, i)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		LogErrorOutput(t, validatorLogFile, "validator client", i)
+		// validatorLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, i)))
+		// if err != nil {
+		// 	t.Fatal(err)
+		// }
+		// LogErrorOutput(t, validatorLogFile, "validator client", i)
 	}
 
 	t.Logf("Ending time: %s\n", time.Now().String())
