@@ -35,8 +35,8 @@ func TestEndToeNd_MainnetConfig_Prater(t *testing.T) {
 	}
 	evals := []types.Evaluator{
 		// ev.PeersConnect,
-		ev.HealthzCheck,
-		ev.MetricsCheck,
+		// ev.HealthzCheck,
+		// ev.MetricsCheck,
 		// ev.ValidatorsAreActive,
 		// ev.ValidatorsParticipatingAtEpoch(2),
 		// ev.FinalizationOccurs(3),

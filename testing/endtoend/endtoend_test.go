@@ -216,7 +216,7 @@ func (r *testRunner) run() {
 		}
 
 		// Blocking, wait period varies depending on number of validators.
-		// r.waitForChainStart()
+		r.waitForChainStart()
 
 		// Failing early in case chain doesn't start.
 		if t.Failed() {
@@ -270,12 +270,12 @@ func (r *testRunner) run() {
 // waitForChainStart allows to wait up until beacon nodes are started.
 func (r *testRunner) waitForChainStart() {
 	// Sleep depending on the count of validators, as generating the genesis state could take some time.
-	time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
+	// time.Sleep(time.Duration(params.BeaconConfig().GenesisDelay) * time.Second)
 	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
 	require.NoError(r.t, err)
 
-	r.t.Run("chain started", func(t *testing.T) {
-		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Chain started in sync service"), "Chain did not start")
+	r.t.Run("chain synced", func(t *testing.T) {
+		require.NoError(t, helpers.WaitForTextInFile(beaconLogFile, "Synced up to slot "), "Chain did not sync")
 	})
 }
 
