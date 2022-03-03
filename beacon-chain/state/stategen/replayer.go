@@ -227,7 +227,7 @@ func (c *canonicalChainer) useCache(cache CachedGetter) {
 
 // ChainForSlot creates a value that satisfies the Replayer interface via db queries
 // and the stategen transition helper methods. This implementation uses the following algorithm:
-// - find the highest canonical block >= the target slot
+// - find the highest canonical block <= the target slot
 // - starting with this block, recursively search backwards for a stored state, and accumulate intervening blocks
 func (c *canonicalChainer) chainForSlot(ctx context.Context, target types.Slot) (state.BeaconState, []block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.chainForSlot")
@@ -306,7 +306,7 @@ func (c *canonicalChainer) bestForSlot(ctx context.Context, hbs []block.SignedBe
 		}
 		canon, err := c.c.IsCanonical(ctx, root)
 		if err != nil {
-			return [32]byte{}, nil, errors.Wrap(err, "error from blockchain info fetcher IsCanonical check")
+			return [32]byte{}, nil, errors.Wrap(err, "replayer could not check if block is canonical")
 		}
 		if canon {
 			return root, b, nil
