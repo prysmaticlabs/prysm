@@ -22,6 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // Payload is computed given the respected time of merge.
 //
@@ -82,7 +83,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 			}
 		}
 
-		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHash(ctx)
+		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -163,15 +164,15 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 //            return None
 //
 //    return get_pow_block_at_terminal_total_difficulty(pow_chain)
-func (vs *Server) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
+func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context) ([]byte, bool, error) {
 	terminalBlockHash := params.BeaconConfig().TerminalBlockHash
-	// Terminal block hash override takes precedence over terminal total difficult.
+	// Terminal block hash override takes precedence over terminal total difficulty.
 	if params.BeaconConfig().TerminalBlockHash != params.BeaconConfig().ZeroHash {
-		e, _, err := vs.Eth1BlockFetcher.BlockExists(ctx, terminalBlockHash)
+		exists, _, err := vs.Eth1BlockFetcher.BlockExists(ctx, terminalBlockHash)
 		if err != nil {
 			return nil, false, err
 		}
-		if !e {
+		if !exists {
 			return nil, false, nil
 		}
 
@@ -205,22 +206,20 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	if err != nil {
 		return nil, false, errors.Wrap(err, "could not get latest execution block")
 	}
-	log.WithFields(logrus.Fields{
-		"number": blk.Number,
-		"hash":   fmt.Sprintf("%#x", blk.Hash),
-		"td":     blk.TotalDifficulty,
-	}).Info("Retrieving latest execution block")
+	if blk == nil {
+		return nil, false, errors.New("latest execution block is nil")
+	}
 
 	for {
-		transitionBlkTDBig, err := hexutil.DecodeBig(blk.TotalDifficulty)
-		if err != nil {
-			return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
+		if ctx.Err() != nil {
+			return nil, false, ctx.Err()
 		}
-		currentTotalDifficulty, overflows := uint256.FromBig(transitionBlkTDBig)
-		if overflows {
-			return nil, false, errors.New("total difficulty overflowed")
+		currentTotalDifficulty, err := tDStringToUint256(blk.TotalDifficulty)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
 		}
 		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+
 		parentHash := bytesutil.ToBytes32(blk.ParentHash)
 		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
@@ -229,26 +228,19 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
-		log.WithFields(logrus.Fields{
-			"number": parentBlk.Number,
-			"hash":   fmt.Sprintf("%#x", parentBlk.Hash),
-			"td":     parentBlk.TotalDifficulty,
-		}).Info("Retrieving parent execution block")
-
+		if parentBlk == nil {
+			return nil, false, errors.New("parent execution block is nil")
+		}
 		if blockReachedTTD {
-			parentTDBig, err := hexutil.DecodeBig(parentBlk.TotalDifficulty)
+			parentTotalDifficulty, err := tDStringToUint256(parentBlk.TotalDifficulty)
 			if err != nil {
-				return nil, false, errors.Wrap(err, "could not decode transition total difficulty")
-			}
-			parentTotalDifficulty, overflows := uint256.FromBig(parentTDBig)
-			if overflows {
-				return nil, false, errors.New("total difficulty overflowed")
+				return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
 			}
 			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 			if !parentReachedTTD {
 				log.WithFields(logrus.Fields{
 					"number":   blk.Number,
-					"hash":     fmt.Sprintf("%#x", blk.Hash),
+					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash)),
 					"td":       blk.TotalDifficulty,
 					"parentTd": parentBlk.TotalDifficulty,
 					"ttd":      terminalTotalDifficulty,
@@ -271,4 +263,15 @@ func emptyPayload() *enginev1.ExecutionPayload {
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 	}
+}
+func tDStringToUint256(td string) (*uint256.Int, error) {
+	b, err := hexutil.DecodeBig(td)
+	if err != nil {
+		return nil, err
+	}
+	i, overflows := uint256.FromBig(b)
+	if overflows {
+		return nil, errors.New("total difficulty overflowed")
+	}
+	return i, nil
 }
