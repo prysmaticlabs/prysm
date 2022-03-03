@@ -310,5 +310,9 @@ func port(seed, shardCount, shardIndex int) (int, error) {
 	}
 	registeredPorts = append(registeredPorts, seed)
 
+	// Calculation example: 3 shards, seed 2000, base ports 50 ports apart.
+	// Shard 0: 2000 + (50 / 3 * 0) = 2000 (we can safely use ports 2000-2015)
+	// Shard 1: 2000 + (50 / 3 * 1) = 2016 (we can safely use ports 2016-2031)
+	// Shard 2: 2000 + (50 / 3 * 2) = 2032 (we can safely use ports 2032-2047, and in reality 2032-2049)
 	return seed + (50 / shardCount * shardIndex), nil
 }
