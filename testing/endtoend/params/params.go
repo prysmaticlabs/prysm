@@ -302,13 +302,13 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 }
 
 // port returns a safe port number based on the seed and shard data.
-func port(seed, shardCount, shardIndex int, existingRegistrations []int) (int, error) {
-	for _, p := range existingRegistrations {
+func port(seed, shardCount, shardIndex int, existingRegistrations *[]int) (int, error) {
+	for _, p := range *existingRegistrations {
 		if seed >= p && seed <= p+(50/shardCount)-1 {
 			return 0, fmt.Errorf("port %d overlaps with already registered port %d", seed, p)
 		}
 	}
-	existingRegistrations = append(existingRegistrations, seed)
+	*existingRegistrations = append(*existingRegistrations, seed)
 
 	// Calculation example: 3 shards, seed 2000, base ports 50 ports apart.
 	// Shard 0: 2000 + (50 / 3 * 0) = 2000 (we can safely use ports 2000-2015)
