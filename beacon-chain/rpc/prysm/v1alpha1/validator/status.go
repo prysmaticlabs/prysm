@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -257,8 +256,8 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 	if !optimistic {
 		return nil
 	}
-
-	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
+	return nil
+	// return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
 }
 
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.

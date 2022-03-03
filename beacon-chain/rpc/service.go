@@ -109,7 +109,7 @@ type Config struct {
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
 	MaxMsgSize              int
-	ExecutionEngineCaller   v1.EngineCaller
+	ExecutionEngineCaller   v1.Caller
 }
 
 // NewService instantiates a new RPC service instance that will

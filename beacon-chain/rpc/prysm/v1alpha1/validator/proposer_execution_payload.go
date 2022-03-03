@@ -129,7 +129,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	}
 	p := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
-		PrevRandao:                random,
+		PrevRandao:            random,
 		SuggestedFeeRecipient: params.BeaconConfig().FeeRecipient.Bytes(),
 	}
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
@@ -267,7 +267,7 @@ func emptyPayload() *enginev1.ExecutionPayload {
 		StateRoot:     make([]byte, fieldparams.RootLength),
 		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:        make([]byte, fieldparams.RootLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 	}

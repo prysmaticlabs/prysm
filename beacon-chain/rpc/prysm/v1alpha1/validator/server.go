@@ -64,7 +64,7 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
-	ExecutionEngineCaller  v1.EngineCaller
+	ExecutionEngineCaller  v1.Caller
 	BeaconDB               db.HeadAccessDatabase
 }
 
