@@ -304,3 +304,12 @@ func (s *State) LastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 		}
 	}
 }
+
+func (s *State) CombinedCache() *CombinedCache {
+	return &CombinedCache{
+		getters: []CachedGetter{
+			s.hotStateCache,
+			s.epochBoundaryStateCache,
+		},
+	}
+}

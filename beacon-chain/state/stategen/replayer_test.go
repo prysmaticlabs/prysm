@@ -291,6 +291,11 @@ type mockCanonicalChainer struct {
 	State  state.BeaconState
 	Blocks []block.SignedBeaconBlock
 	Err    error
+	cache CachedGetter
+}
+
+func (m mockCanonicalChainer) useCache(c CachedGetter) {
+	m.cache = c
 }
 
 func (m mockCanonicalChainer) chainForSlot(_ context.Context, _ types.Slot) (state.BeaconState, []block.SignedBeaconBlock, error) {

@@ -163,15 +163,27 @@ type ReplayerBuilder interface {
 	ForSlot(target types.Slot) Replayer
 }
 
+func WithCache(c CachedGetter) CanonicalBuilderOption {
+	return func(b *CanonicalBuilder) {
+		b.chainer.useCache(c)
+	}
+}
+
+type CanonicalBuilderOption func(*CanonicalBuilder)
+
 // NewCanonicalBuilder handles initializing the default concrete ReplayerBuilder implementation.
-func NewCanonicalBuilder(h HistoryAccessor, c CanonicalChecker, cs CurrentSlotter) *CanonicalBuilder {
-	return &CanonicalBuilder{
+func NewCanonicalBuilder(h HistoryAccessor, c CanonicalChecker, cs CurrentSlotter, opts ...CanonicalBuilderOption) *CanonicalBuilder {
+	b := &CanonicalBuilder{
 		chainer: &canonicalChainer{
 			h:  h,
 			c:  c,
 			cs: cs,
 		},
 	}
+	for _, o := range opts {
+		o(b)
+	}
+	return b
 }
 
 type retrievalMethod int
@@ -197,32 +209,38 @@ func (r *CanonicalBuilder) ForSlot(target types.Slot) Replayer {
 // namely a starting BeaconState and all available blocks from the starting state up to and including the target slot
 type chainer interface {
 	chainForSlot(ctx context.Context, target types.Slot) (state.BeaconState, []block.SignedBeaconBlock, error)
+	useCache(c CachedGetter)
 }
 
 type canonicalChainer struct {
 	h  HistoryAccessor
 	c  CanonicalChecker
 	cs CurrentSlotter
+	cache CachedGetter
 }
 
 var _ chainer = &canonicalChainer{}
+
+func (c *canonicalChainer) useCache(cache CachedGetter) {
+	c.cache = cache
+}
 
 // ChainForSlot creates a value that satisfies the Replayer interface via db queries
 // and the stategen transition helper methods. This implementation uses the following algorithm:
 // - find the highest canonical block >= the target slot
 // - starting with this block, recursively search backwards for a stored state, and accumulate intervening blocks
-func (r *canonicalChainer) chainForSlot(ctx context.Context, target types.Slot) (state.BeaconState, []block.SignedBeaconBlock, error) {
+func (c *canonicalChainer) chainForSlot(ctx context.Context, target types.Slot) (state.BeaconState, []block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.chainForSlot")
 	defer span.End()
-	currentSlot := r.cs.CurrentSlot()
+	currentSlot := c.cs.CurrentSlot()
 	if target > currentSlot {
 		return nil, nil, errors.Wrap(ErrFutureSlotRequested, fmt.Sprintf("requested=%d, current=%d", target, currentSlot))
 	}
-	_, b, err := r.canonicalBlockForSlot(ctx, target)
+	_, b, err := c.canonicalBlockForSlot(ctx, target)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, fmt.Sprintf("unable to find replay data for slot=%d", target))
 	}
-	s, descendants, err := r.ancestorChain(ctx, b)
+	s, descendants, err := c.ancestorChain(ctx, b)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to query for ancestor and descendant blocks")
 	}
@@ -232,19 +250,19 @@ func (r *canonicalChainer) chainForSlot(ctx context.Context, target types.Slot) 
 
 // canonicalBlockForSlot uses HighestSlotBlocksBelow(target+1) and the CanonicalChecker
 // to find the highest canonical block available to replay to the given slot.
-func (r *canonicalChainer) canonicalBlockForSlot(ctx context.Context, target types.Slot) ([32]byte, block.SignedBeaconBlock, error) {
+func (c *canonicalChainer) canonicalBlockForSlot(ctx context.Context, target types.Slot) ([32]byte, block.SignedBeaconBlock, error) {
 	for target > 0 {
 		if ctx.Err() != nil {
 			return [32]byte{}, nil, errors.Wrap(ctx.Err(), "context canceled during canonicalBlockForSlot")
 		}
-		hbs, err := r.h.HighestSlotBlocksBelow(ctx, target+1)
+		hbs, err := c.h.HighestSlotBlocksBelow(ctx, target+1)
 		if err != nil {
 			return [32]byte{}, nil, errors.Wrap(err, fmt.Sprintf("error finding highest block w/ slot <= %d", target))
 		}
 		if len(hbs) == 0 {
 			return [32]byte{}, nil, errors.Wrap(ErrNoBlocksBelowSlot, fmt.Sprintf("slot=%d", target))
 		}
-		r, b, err := r.bestForSlot(ctx, hbs)
+		r, b, err := c.bestForSlot(ctx, hbs)
 		if err == nil {
 			// we found a valid, canonical block!
 			return r, b, nil
@@ -261,11 +279,11 @@ func (r *canonicalChainer) canonicalBlockForSlot(ctx context.Context, target typ
 		}
 		return [32]byte{}, nil, err
 	}
-	b, err := r.h.GenesisBlock(ctx)
+	b, err := c.h.GenesisBlock(ctx)
 	if err != nil {
 		return [32]byte{}, nil, errors.Wrap(err, "db error while retrieving genesis block")
 	}
-	root, _, err := r.bestForSlot(ctx, []block.SignedBeaconBlock{b})
+	root, _, err := c.bestForSlot(ctx, []block.SignedBeaconBlock{b})
 	if err != nil {
 		return [32]byte{}, nil, errors.Wrap(err, "problem retrieving genesis block")
 	}
@@ -274,7 +292,7 @@ func (r *canonicalChainer) canonicalBlockForSlot(ctx context.Context, target typ
 
 // bestForSlot encapsulates several messy realities of the underlying db code, looping through multiple blocks,
 // performing null/validity checks, and using CanonicalChecker to only pick canonical blocks.
-func (r *canonicalChainer) bestForSlot(ctx context.Context, hbs []block.SignedBeaconBlock) ([32]byte, block.SignedBeaconBlock, error) {
+func (c *canonicalChainer) bestForSlot(ctx context.Context, hbs []block.SignedBeaconBlock) ([32]byte, block.SignedBeaconBlock, error) {
 	for _, b := range hbs {
 		if helpers.BeaconBlockIsNil(b) != nil {
 			continue
@@ -286,7 +304,7 @@ func (r *canonicalChainer) bestForSlot(ctx context.Context, hbs []block.SignedBe
 			msg := fmt.Sprintf("could not compute hash_tree_root for block at slot=%d", b.Block().Slot())
 			return [32]byte{}, nil, errors.Wrap(wrapped, msg)
 		}
-		canon, err := r.c.IsCanonical(ctx, root)
+		canon, err := c.c.IsCanonical(ctx, root)
 		if err != nil {
 			return [32]byte{}, nil, errors.Wrap(err, "error from blockchain info fetcher IsCanonical check")
 		}
@@ -297,12 +315,25 @@ func (r *canonicalChainer) bestForSlot(ctx context.Context, hbs []block.SignedBe
 	return [32]byte{}, nil, errors.Wrap(ErrNoCanonicalBlockForSlot, "no good block for slot")
 }
 
+func (c *canonicalChainer) getState(ctx context.Context, root [32]byte) (state.BeaconState, error) {
+	if c.cache != nil {
+		st, err := c.cache.ByRoot(root)
+		if err == nil {
+			return st, nil
+		}
+		if !errors.Is(err, ErrNotInCache) {
+			return nil, errors.Wrap(err, "error reading from state cache during state replay")
+		}
+	}
+	return c.h.StateOrError(ctx, root)
+}
+
 // ancestorChain works backwards through the chain lineage, accumulating blocks and checking for a saved state
 // if it finds a saved state the tail block was descended from, it returns this state and
 // all blocks in the lineage, including the tail block. blocks are returned in ascending order.
 // note that this function assumes that the tail is a canonical block, and therefore assumes that
 // all ancestors are also canonical.
-func (r *canonicalChainer) ancestorChain(ctx context.Context, tail block.SignedBeaconBlock) (state.BeaconState, []block.SignedBeaconBlock, error) {
+func (c *canonicalChainer) ancestorChain(ctx context.Context, tail block.SignedBeaconBlock) (state.BeaconState, []block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.ancestorChain")
 	defer span.End()
 	chain := make([]block.SignedBeaconBlock, 0)
@@ -318,8 +349,8 @@ func (r *canonicalChainer) ancestorChain(ctx context.Context, tail block.SignedB
 			msg := fmt.Sprintf("could not compute htr for descendant block at slot=%d", b.Slot())
 			return nil, nil, errors.Wrap(err, msg)
 		}
-		st, err := r.h.StateOrError(ctx, root)
-		// err from StateOrError == nil, we've got a real state - the job is done!
+		st, err := c.getState(ctx, root)
+		// err == nil, we've got a real state - the job is done!
 		if err == nil {
 			// we found the state by the root of the head, meaning it has already been applied.
 			// we only want to return the blocks descended from it.
@@ -330,7 +361,7 @@ func (r *canonicalChainer) ancestorChain(ctx context.Context, tail block.SignedB
 		if !errors.Is(err, db.ErrNotFoundState) {
 			return nil, nil, errors.Wrap(err, fmt.Sprintf("error querying database for state w/ block root = %#x", root))
 		}
-		parent, err := r.h.Block(ctx, bytesutil.ToBytes32(b.ParentRoot()))
+		parent, err := c.h.Block(ctx, bytesutil.ToBytes32(b.ParentRoot()))
 		if err != nil {
 			msg := fmt.Sprintf("db error when retrieving parent of block at slot=%d by root=%#x", b.Slot(), b.ParentRoot())
 			return nil, nil, errors.Wrap(err, msg)
