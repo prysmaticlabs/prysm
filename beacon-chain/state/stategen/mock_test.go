@@ -266,3 +266,17 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 var _ HistoryAccessor = &mockHistory{}
 var _ CanonicalChecker = &mockHistory{}
 var _ CurrentSlotter = &mockHistory{}
+
+type mockCachedGetter struct {
+	cache map[[32]byte]state.BeaconState
+}
+
+func (m mockCachedGetter) ByRoot(root [32]byte) (state.BeaconState, error) {
+	st, ok := m.cache[root]
+	if !ok {
+		return nil, ErrNotInCache
+	}
+	return st, nil
+}
+
+var _ CachedGetter = &mockCachedGetter{}

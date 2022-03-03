@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -301,6 +303,79 @@ func TestCanonicalChainerFuture(t *testing.T) {
 	}
 	_, _, err := r.chainForSlot(context.Background(), 1)
 	require.ErrorIs(t, err, ErrFutureSlotRequested)
+}
+
+func TestAncestorChainCache(t *testing.T) {
+	ctx := context.Background()
+	var begin, middle, end types.Slot = 100, 150, 155
+	specs := []mockHistorySpec{
+		{slot: begin, canonicalBlock: true},
+		{slot: middle, canonicalBlock: true},
+		{slot: end, canonicalBlock: true},
+	}
+	hist := newMockHistory(t, specs, end+1)
+	cc := &canonicalChainer{h: hist, c: hist, cs: hist}
+
+	// should only contain the genesis block
+	require.Equal(t, 1, len(hist.states))
+
+	endBlock := hist.blocks[hist.slotMap[end]]
+	st, bs, err := cc.ancestorChain(ctx, endBlock)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(bs))
+	expectedHTR, err := hist.states[hist.slotMap[0]].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedHTR, actualHTR)
+
+	// now populate the cache, we should get the cached state instead of genesis
+	cc.cache = &mockCachedGetter{
+		cache: map[[32]byte]state.BeaconState{
+			hist.slotMap[end]: hist.hiddenStates[hist.slotMap[end]],
+		},
+	}
+	st, bs, err = cc.ancestorChain(ctx, endBlock)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(bs))
+	expectedHTR, err = hist.hiddenStates[hist.slotMap[end]].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err = st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedHTR, actualHTR)
+
+	// populate cache with a different state for good measure
+	cc.cache = &mockCachedGetter{
+		cache: map[[32]byte]state.BeaconState{
+			hist.slotMap[begin]: hist.hiddenStates[hist.slotMap[begin]],
+		},
+	}
+	st, bs, err = cc.ancestorChain(ctx, endBlock)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(bs))
+	expectedHTR, err = hist.hiddenStates[hist.slotMap[begin]].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err = st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedHTR, actualHTR)
+
+	// rebuild history w/ last state saved, make sure we get that instead of cache
+	specs[2].savedState = true
+	hist = newMockHistory(t, specs, end+1)
+	cc = &canonicalChainer{h: hist, c: hist, cs: hist}
+	cc.cache = &mockCachedGetter{
+		cache: map[[32]byte]state.BeaconState{
+			hist.slotMap[begin]: hist.hiddenStates[hist.slotMap[begin]],
+		},
+	}
+	st, bs, err = cc.ancestorChain(ctx, endBlock)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(bs))
+	expectedHTR, err = hist.states[hist.slotMap[end]].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err = st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedHTR, actualHTR)
 }
 
 func TestAncestorChainOK(t *testing.T) {
