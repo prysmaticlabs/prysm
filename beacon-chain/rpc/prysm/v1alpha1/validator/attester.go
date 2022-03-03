@@ -37,6 +37,11 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
+	// An optimistic validator MUST NOT participate in attestation. (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
+	if err := vs.optimisticStatus(ctx); err != nil {
+		return nil, err
+	}
+
 	if err := helpers.ValidateAttestationTime(req.Slot, vs.TimeFetcher.GenesisTime(),
 		params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid request: %v", err))

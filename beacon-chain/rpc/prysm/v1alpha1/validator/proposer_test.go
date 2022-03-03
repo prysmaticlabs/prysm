@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -12,7 +13,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	coretime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -39,6 +40,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -320,7 +323,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal
-	currentEpoch := time.CurrentEpoch(beaconState)
+	currentEpoch := coretime.CurrentEpoch(beaconState)
 	req.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -2284,7 +2287,8 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
 
 	proposerServer := &Server{
-		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false},
+		TimeFetcher:       &mock.ChainService{Genesis: time.Now()},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
@@ -2318,6 +2322,27 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	assert.DeepEqual(t, parentRoot[:], bellatrixBlk.Bellatrix.ParentRoot, "Expected block to have correct parent root")
 	assert.DeepEqual(t, randaoReveal, bellatrixBlk.Bellatrix.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, bellatrixBlk.Bellatrix.Body.Graffiti, "Expected block to have correct Graffiti")
+}
+
+func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.BellatrixForkEpoch = 2
+	cfg.AltairForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+	require.NoError(t, err)
+
+	proposerServer := &Server{HeadFetcher: &mock.ChainService{Optimistic: true}, TimeFetcher: &mock.ChainService{}}
+	req := &ethpb.BlockRequest{
+		Slot: bellatrixSlot + 1,
+	}
+	_, err = proposerServer.GetBeaconBlock(context.Background(), req)
+	s, ok := status.FromError(err)
+	require.Equal(t, true, ok)
+	require.DeepEqual(t, codes.Unavailable, s.Code())
+	require.ErrorContains(t, errOptimisticMode.Error(), err)
 }
 
 func TestProposer_GetSyncAggregate_OK(t *testing.T) {
