@@ -72,6 +72,9 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	}
 
 	for {
+		if ctx.Err() != nil {
+			return nil, false, ctx.Err()
+		}
 		currentTotalDifficulty, err := tDStringToUint256(blk.TotalDifficulty)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
