@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"testing"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block/mock"
@@ -23,11 +23,11 @@ func headerFromBlock(b block.SignedBeaconBlock) (*ethpb.BeaconBlockHeader, error
 		return nil, err
 	}
 	return &ethpb.BeaconBlockHeader{
-		Slot: b.Block().Slot(),
-		StateRoot: b.Block().StateRoot(),
+		Slot:          b.Block().Slot(),
+		StateRoot:     b.Block().StateRoot(),
 		ProposerIndex: b.Block().ProposerIndex(),
-		BodyRoot: bodyRoot[:],
-		ParentRoot: b.Block().ParentRoot(),
+		BodyRoot:      bodyRoot[:],
+		ParentRoot:    b.Block().ParentRoot(),
 	}, nil
 }
 
@@ -79,7 +79,6 @@ func TestReplayBlocks(t *testing.T) {
 	// NOTE: HTR is not compared, because process_block is not called for non-canonical blocks,
 	// so there are multiple differences compared to the "db" state that applies all blocks
 }
-
 
 func TestReplayToSlot(t *testing.T) {
 	ctx := context.Background()
@@ -291,7 +290,7 @@ type mockCanonicalChainer struct {
 	State  state.BeaconState
 	Blocks []block.SignedBeaconBlock
 	Err    error
-	cache CachedGetter
+	cache  CachedGetter
 }
 
 func (m mockCanonicalChainer) useCache(c CachedGetter) {

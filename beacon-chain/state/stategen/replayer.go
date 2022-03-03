@@ -213,9 +213,9 @@ type chainer interface {
 }
 
 type canonicalChainer struct {
-	h  HistoryAccessor
-	c  CanonicalChecker
-	cs CurrentSlotter
+	h     HistoryAccessor
+	c     CanonicalChecker
+	cs    CurrentSlotter
 	cache CachedGetter
 }
 
