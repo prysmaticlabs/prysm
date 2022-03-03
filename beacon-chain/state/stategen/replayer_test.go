@@ -136,7 +136,7 @@ func TestCanonicalBlockForSlotHappy(t *testing.T) {
 		{slot: end, canonicalBlock: true},
 	}
 	hist := newMockHistory(t, specs, end+1)
-	cc := canonicalChainer{hist, hist, hist}
+	cc := canonicalChainer{h: hist, c: hist, cs: hist}
 
 	// since only the end block and genesis are canonical, once the slot drops below
 	// end, we should always get genesis
@@ -265,7 +265,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 			if c.canon != nil {
 				canon = c.canon
 			}
-			cc := canonicalChainer{hist, canon, hist}
+			cc := canonicalChainer{h: hist, c: canon, cs: hist}
 			hist.overrideHighestSlotBlocksBelow = c.overrideHighest
 			r, _, err := cc.canonicalBlockForSlot(ctx, c.slot)
 			if c.err == nil {
@@ -333,16 +333,21 @@ func TestAncestorChainOK(t *testing.T) {
 	require.NoError(t, err)
 
 	// middle is the most recent slot where savedState == true
-	expectedSt := hist.states[hist.slotMap[middle]]
 	require.Equal(t, 1, len(bs))
 	require.DeepEqual(t, endBlock, bs[0])
-	require.Equal(t, expectedSt, st)
+	expectedHTR, err := hist.states[hist.slotMap[middle]].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedHTR, actualHTR)
 
 	middleBlock := hist.blocks[hist.slotMap[middle]]
 	st, bs, err = cc.ancestorChain(ctx, middleBlock)
 	require.NoError(t, err)
+	actualHTR, err = st.HashTreeRoot(ctx)
+	require.NoError(t, err)
 	require.Equal(t, 0, len(bs))
-	require.Equal(t, expectedSt, st)
+	require.Equal(t, expectedHTR, actualHTR)
 }
 
 func TestChainForSlot(t *testing.T) {
