@@ -57,7 +57,7 @@ func TestEndToeNd_MainnetConfig_Prater(t *testing.T) {
 			// fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, stdOutFile.Name()),
 			// fmt.Sprintf("--%s=%s", flags.DepositContractFlag.Name, e2e.TestParams.ContractAddress.Hex()),
 			fmt.Sprintf("--%s=%d", flags.RPCPort.Name, e2e.TestParams.BeaconNodeRPCPort+index),
-			fmt.Sprintf("--%s=http://127.0.0.1:%d", flags.HTTPWeb3ProviderFlag.Name, e2e.TestParams.Eth1RPCPort),
+			fmt.Sprintf("--%s=https://goerli.infura.io/v3/c0c32ccb156047038de5b28f343313bd", flags.HTTPWeb3ProviderFlag.Name),
 			fmt.Sprintf("--%s=%d", flags.MinSyncPeers.Name, e2e.TestParams.BeaconNodeCount-1),
 			fmt.Sprintf("--%s=%d", cmdshared.P2PUDPPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+e2e.PrysmBeaconUDPOffset),
 			fmt.Sprintf("--%s=%d", cmdshared.P2PTCPPort.Name, e2e.TestParams.BeaconNodeRPCPort+index+e2e.PrysmBeaconTCPOffset),

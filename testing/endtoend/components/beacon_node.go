@@ -175,6 +175,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if err = helpers.WaitForTextInFile(stdOutFile, "gRPC server listening on port"); err != nil {
 		return fmt.Errorf("could not find multiaddr for node %d, this means the node had issues starting: %w", index, err)
 	}
+	log.Info("Found gRPC server log message, beacon chain node is ready")
 
 	if config.UseFixedPeerIDs {
 		peerId, err := helpers.FindFollowingTextInFile(stdOutFile, "Running node with peer id of ")
