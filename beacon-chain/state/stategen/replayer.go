@@ -328,10 +328,10 @@ func (c *canonicalChainer) getState(ctx context.Context, root [32]byte) (state.B
 	return c.h.StateOrError(ctx, root)
 }
 
-// ancestorChain works backwards through the chain lineage, accumulating blocks and checking for a saved state
-// if it finds a saved state the tail block was descended from, it returns this state and
-// all blocks in the lineage, including the tail block. blocks are returned in ascending order.
-// note that this function assumes that the tail is a canonical block, and therefore assumes that
+// ancestorChain works backwards through the chain lineage, accumulating blocks and checking for a saved state.
+// If it finds a saved state that the tail block was descended from, it returns this state and
+// all blocks in the lineage, including the tail block. Blocks are returned in ascending order.
+// Note that this function assumes that the tail is a canonical block, and therefore assumes that
 // all ancestors are also canonical.
 func (c *canonicalChainer) ancestorChain(ctx context.Context, tail block.SignedBeaconBlock) (state.BeaconState, []block.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.ancestorChain")
