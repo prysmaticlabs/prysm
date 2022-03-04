@@ -43,7 +43,7 @@ func Eth1DataRootWithHasher(hasher ssz.HashFn, eth1Data *ethpb.Eth1Data) ([32]by
 // Eth1DatasRoot returns the hash tree root of input `eth1Datas`.
 func Eth1DatasRoot(eth1Datas []*ethpb.Eth1Data) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	eth1VotesRoots := make([][32]byte, 0)
+	eth1VotesRoots := make([][32]byte, 0, fieldparams.Eth1DataVotesLength)
 	for i := 0; i < len(eth1Datas); i++ {
 		eth1, err := Eth1DataRootWithHasher(hasher, eth1Datas[i])
 		if err != nil {
