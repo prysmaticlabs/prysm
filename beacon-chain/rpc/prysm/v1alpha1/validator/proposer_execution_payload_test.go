@@ -58,6 +58,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	b1pb := util.NewBeaconBlock()
 	b1r, err := b1pb.Block.HashTreeRoot()
+	require.NoError(t, err)
 	b1, err := wrapper.WrappedSignedBeaconBlock(b1pb)
 	require.NoError(t, err)
 	require.NoError(t, nonTransitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
@@ -68,6 +69,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{BlockNumber: 1}))
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
+	require.NoError(t, err)
 	b2, err := wrapper.WrappedSignedBeaconBlock(b2pb)
 	require.NoError(t, err)
 	require.NoError(t, transitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
