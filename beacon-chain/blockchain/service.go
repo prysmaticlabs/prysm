@@ -84,7 +84,7 @@ type config struct {
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	FinalizedStateAtStartUp state.BeaconState
-	ExecutionEngineCaller   enginev1.EngineCaller
+	ExecutionEngineCaller   enginev1.Caller
 }
 
 // NewService instantiates a new block service instance that will
