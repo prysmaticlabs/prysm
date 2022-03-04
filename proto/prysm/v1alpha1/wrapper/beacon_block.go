@@ -57,6 +57,9 @@ func WrappedBeaconBlock(i interface{}) (block.BeaconBlock, error) {
 	}
 }
 
+// BuildSignedBeaconBlock assembles a block.SignedBeaconBlock interface compatible struct from a
+// given beacon block an the appropriate signature. This method may be used to easily create a
+// signed beacon block.
 func BuildSignedBeaconBlock(blk block.BeaconBlock, signature []byte) (block.SignedBeaconBlock, error) {
 	switch b := blk.(type) {
 	case Phase0BeaconBlock:
