@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -23,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -90,6 +92,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
+	prepareBeaconProposalConfig        *validator_service_config.PrepareBeaconProposalFileConfig
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -929,6 +932,45 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 			log.WithField("slot", slotOffset+i).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")
 		}
 	}
+}
+
+func (v *validator) ValidatorFeeRecipients(ctx context.Context, km keymanager.IKeymanager) ([]*validator_service_config.ValidatorFeeRecipient, error) {
+	var validatorToFeeRecipientArray []*validator_service_config.ValidatorFeeRecipient
+	if v.prepareBeaconProposalConfig == nil {
+		return nil, errors.New("no config was provided to set validator fee recipients")
+	}
+	if v.prepareBeaconProposalConfig.ProposeConfig != nil {
+		for pubkeyhex, option := range v.prepareBeaconProposalConfig.ProposeConfig {
+			pubkey, err := hexutil.Decode(pubkeyhex)
+			if err != nil {
+				return nil, err
+			}
+			resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey})
+			if err != nil {
+				return nil, err
+			}
+			validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &validator_service_config.ValidatorFeeRecipient{
+				ValidatorIndex: resp.Index,
+				FeeRecipient:   option.FeeRecipient,
+			})
+		}
+	} else {
+		pubkey, err := km.FetchValidatingPublicKeys(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range pubkey {
+			resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: key[:]})
+			if err != nil {
+				return nil, err
+			}
+			validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &validator_service_config.ValidatorFeeRecipient{
+				ValidatorIndex: resp.Index,
+				FeeRecipient:   v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient,
+			})
+		}
+	}
+	return validatorToFeeRecipientArray, nil
 }
 
 // This constructs a validator subscribed key, it's used to track

@@ -322,6 +322,20 @@ var (
 		Usage: "Enables more verbose logging for counting down to duty",
 		Value: false,
 	}
+
+	// ValidatorsProposerConfigFlag defines the path or URL to a file with proposer config.
+	ValidatorsProposerConfigFlag = &cli.StringFlag{
+		Name:  "validators-proposer-config",
+		Usage: "remote URL or local file path to load proposer configuration from",
+		Value: "",
+	}
+
+	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
+	SuggestedFeeRecipientFlag = &cli.StringFlag{
+		Name:  "suggested-fee-recipient",
+		Usage: "The suggested eth1 address to receive fees from ALL validator proposers",
+		Value: "0x0",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

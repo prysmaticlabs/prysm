@@ -5,6 +5,7 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -25,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
@@ -397,25 +399,31 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		return err
 	}
 
+	bpc, err := prepareBeaconProposalConfig(c.cliCtx)
+	if err != nil {
+		return err
+	}
+
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
-		Endpoint:                   endpoint,
-		DataDir:                    dataDir,
-		LogValidatorBalances:       logValidatorBalances,
-		EmitAccountMetrics:         emitAccountMetrics,
-		CertFlag:                   cert,
-		GraffitiFlag:               g.ParseHexGraffiti(graffiti),
-		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
-		GrpcRetriesFlag:            grpcRetries,
-		GrpcRetryDelay:             grpcRetryDelay,
-		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
-		ValDB:                      c.db,
-		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
-		InteropKeysConfig:          interopKeysConfig,
-		Wallet:                     c.wallet,
-		WalletInitializedFeed:      c.walletInitialized,
-		GraffitiStruct:             gStruct,
-		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
-		Web3SignerConfig:           wsc,
+		Endpoint:                    endpoint,
+		DataDir:                     dataDir,
+		LogValidatorBalances:        logValidatorBalances,
+		EmitAccountMetrics:          emitAccountMetrics,
+		CertFlag:                    cert,
+		GraffitiFlag:                g.ParseHexGraffiti(graffiti),
+		GrpcMaxCallRecvMsgSizeFlag:  maxCallRecvMsgSize,
+		GrpcRetriesFlag:             grpcRetries,
+		GrpcRetryDelay:              grpcRetryDelay,
+		GrpcHeadersFlag:             c.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		ValDB:                       c.db,
+		UseWeb:                      c.cliCtx.Bool(flags.EnableWebFlag.Name),
+		InteropKeysConfig:           interopKeysConfig,
+		Wallet:                      c.wallet,
+		WalletInitializedFeed:       c.walletInitialized,
+		GraffitiStruct:              gStruct,
+		LogDutyCountDown:            c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
+		Web3SignerConfig:            wsc,
+		PrepareBeaconProposalConfig: bpc,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -456,6 +464,24 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 		}
 	}
 	return web3signerConfig, nil
+}
+
+func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config.PrepareBeaconProposalFileConfig, error) {
+	var config *validator_service_config.PrepareBeaconProposalFileConfig
+	if cliCtx.IsSet(flags.ValidatorsProposerConfigFlag.Name) {
+		if err := json.Unmarshal([]byte(cliCtx.String(flags.ValidatorsProposerConfigFlag.Name)), config); err != nil {
+			return nil, errors.Wrap(err, "could not parse validators proposer config")
+		}
+	}
+	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+		config = &validator_service_config.PrepareBeaconProposalFileConfig{
+			ProposeConfig: nil,
+			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+				FeeRecipient: cliCtx.String(flags.SuggestedFeeRecipientFlag.Name),
+			},
+		}
+	}
+	return config, nil
 }
 
 func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
