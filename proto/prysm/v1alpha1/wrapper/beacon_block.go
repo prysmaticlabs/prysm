@@ -71,13 +71,13 @@ func BuildSignedBeaconBlock(blk block.BeaconBlock, signature []byte) (block.Sign
 	case altairBeaconBlock:
 		pb, ok := b.Proto().(*eth.BeaconBlockAltair)
 		if !ok {
-			return nil, errors.New("unable to access inner phase0 proto")
+			return nil, errors.New("unable to access inner altair proto")
 		}
 		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockAltair{Block: pb, Signature: signature})
 	case bellatrixBeaconBlock:
 		pb, ok := b.Proto().(*eth.BeaconBlockBellatrix)
 		if !ok {
-			return nil, errors.New("unable to access inner phase0 proto")
+			return nil, errors.New("unable to access inner bellatrix proto")
 		}
 		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: pb, Signature: signature})
 	default:
