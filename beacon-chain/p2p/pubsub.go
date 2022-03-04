@@ -89,7 +89,7 @@ func (s *Service) PublishToTopic(ctx context.Context, topic string, data []byte,
 		}
 		select {
 		case <-ctx.Done():
-			return errors.Errorf("unable to find requisite number of peers for topic %s, 0 peers found to publish to.", topic)
+			return errors.Errorf("unable to find requisite number of peers for topic %s, 0 peers found to publish to", topic)
 		default:
 			time.Sleep(100 * time.Millisecond)
 		}
