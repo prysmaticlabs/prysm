@@ -8,7 +8,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/nodetree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doublylinkedtree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -42,7 +42,7 @@ func TestHeadRoot_Nil(t *testing.T) {
 }
 
 func TestService_ForkChoiceStore(t *testing.T) {
-	c := &Service{cfg: &config{ForkChoiceStore: nodetree.New(0, 0)}}
+	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New(0, 0)}}
 	p := c.ForkChoiceStore()
 	require.Equal(t, 0, int(p.FinalizedEpoch()))
 }
@@ -299,9 +299,9 @@ func TestService_ChainHeads_ProtoArray(t *testing.T) {
 	require.DeepEqual(t, []types.Slot{102, 103, 104}, slots)
 }
 
-func TestService_ChainHeads_NodeTree(t *testing.T) {
+func TestService_ChainHeads_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
-	c := &Service{cfg: &config{ForkChoiceStore: nodetree.New(0, 0)}}
+	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New(0, 0)}}
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, false))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, false))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 0, 0, false))
@@ -392,14 +392,14 @@ func TestService_IsOptimistic_ProtoArray(t *testing.T) {
 	require.Equal(t, true, opt)
 }
 
-func TestService_IsOptimistic_NodeTree(t *testing.T) {
+func TestService_IsOptimistic_DoublyLinkedTree(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig()
 	cfg.BellatrixForkEpoch = 0
 	params.OverrideBeaconConfig(cfg)
 
 	ctx := context.Background()
-	c := &Service{cfg: &config{ForkChoiceStore: nodetree.New(0, 0)}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New(0, 0)}, head: &head{slot: 101, root: [32]byte{'b'}}}
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, true))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, true))
 
@@ -427,9 +427,9 @@ func TestService_IsOptimisticForRoot_ProtoArray(t *testing.T) {
 	require.Equal(t, true, opt)
 }
 
-func TestService_IsOptimisticForRoot_NodeTree(t *testing.T) {
+func TestService_IsOptimisticForRoot_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
-	c := &Service{cfg: &config{ForkChoiceStore: nodetree.New(0, 0)}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New(0, 0)}, head: &head{slot: 101, root: [32]byte{'b'}}}
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, 0, 0, true))
 	require.NoError(t, c.cfg.ForkChoiceStore.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 0, 0, true))
 
