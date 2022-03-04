@@ -68,25 +68,27 @@ var DepositCount = uint64(64)
 
 // Base port values.
 const (
+	portSpan = 50
+
 	BootNodePort        = 2150
-	BootNodeMetricsPort = 2200
+	BootNodeMetricsPort = BootNodePort + portSpan
 
 	Eth1RPCPort = 3150
-	Eth1WSPort  = 3200
+	Eth1WSPort  = Eth1RPCPort + portSpan
 
 	PrysmBeaconNodeRPCPort     = 4150
-	PrysmBeaconNodeUDPPort     = 4200
-	PrysmBeaconNodeTCPPort     = 4250
-	PrysmBeaconNodeGatewayPort = 4300
-	PrysmBeaconNodeMetricsPort = 4350
-	PrysmBeaconNodePprofPort   = 4400
+	PrysmBeaconNodeUDPPort     = PrysmBeaconNodeRPCPort + portSpan
+	PrysmBeaconNodeTCPPort     = PrysmBeaconNodeRPCPort + 2*portSpan
+	PrysmBeaconNodeGatewayPort = PrysmBeaconNodeRPCPort + 3*portSpan
+	PrysmBeaconNodeMetricsPort = PrysmBeaconNodeRPCPort + 4*portSpan
+	PrysmBeaconNodePprofPort   = PrysmBeaconNodeRPCPort + 5*portSpan
 
 	LighthouseBeaconNodeP2PPort     = 5150
-	LighthouseBeaconNodeHTTPPort    = 5200
-	LighthouseBeaconNodeMetricsPort = 5250
+	LighthouseBeaconNodeHTTPPort    = LighthouseBeaconNodeP2PPort + portSpan
+	LighthouseBeaconNodeMetricsPort = LighthouseBeaconNodeP2PPort + 2*portSpan
 
 	ValidatorGatewayPort = 6150
-	ValidatorMetricsPort = 6200
+	ValidatorMetricsPort = ValidatorGatewayPort + portSpan
 )
 
 // Init initializes the E2E config, properly handling test sharding.
@@ -303,16 +305,17 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 
 // port returns a safe port number based on the seed and shard data.
 func port(seed, shardCount, shardIndex int, existingRegistrations *[]int) (int, error) {
+	portToRegister := seed + portSpan/shardCount*shardIndex
 	for _, p := range *existingRegistrations {
-		if seed >= p && seed <= p+(50/shardCount)-1 {
+		if portToRegister >= p && portToRegister <= p+(portSpan/shardCount)-1 {
 			return 0, fmt.Errorf("port %d overlaps with already registered port %d", seed, p)
 		}
 	}
-	*existingRegistrations = append(*existingRegistrations, seed)
+	*existingRegistrations = append(*existingRegistrations, portToRegister)
 
-	// Calculation example: 3 shards, seed 2000, base ports 50 ports apart.
+	// Calculation example: 3 shards, seed 2000, port span 50.
 	// Shard 0: 2000 + (50 / 3 * 0) = 2000 (we can safely use ports 2000-2015)
 	// Shard 1: 2000 + (50 / 3 * 1) = 2016 (we can safely use ports 2016-2031)
 	// Shard 2: 2000 + (50 / 3 * 2) = 2032 (we can safely use ports 2032-2047, and in reality 2032-2049)
-	return seed + (50 / shardCount * shardIndex), nil
+	return portToRegister, nil
 }
