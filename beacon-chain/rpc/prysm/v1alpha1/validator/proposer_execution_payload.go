@@ -246,6 +246,15 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 				}).Info("Retrieved terminal block hash")
 				return blk.Hash, true, nil
 			}
+		} else {
+			log.WithFields(logrus.Fields{
+				"number":   blk.Number,
+				"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash)),
+				"td":       blk.TotalDifficulty,
+				"parentTd": parentBlk.TotalDifficulty,
+				"ttd":      terminalTotalDifficulty,
+			}).Info("Latest pow block has not reached total difficulty")
+			return nil, false, nil
 		}
 		blk = parentBlk
 	}
