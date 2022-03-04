@@ -73,7 +73,7 @@ func (node *Node) Start(ctx context.Context) error {
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Ports.Eth1RPCPort+node.index),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Ports.Eth1WSPort+node.index),
 		fmt.Sprintf("--bootnodes=%s", node.enr),
-		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.Eth1WSPort+node.index),
+		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.Eth1Port+node.index),
 		fmt.Sprintf("--networkid=%d", NetworkId),
 		"--http",
 		"--http.addr=127.0.0.1",
