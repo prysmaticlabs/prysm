@@ -170,8 +170,14 @@ func (s *Service) Start() {
 			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
-	comboCache := s.cfg.StateGen.CombinedCache()
-	withCache := stategen.WithCache(comboCache)
+
+	var stateCache stategen.CachedGetter
+	// s.cfg.StateGen is often nil in tests...
+	if s.cfg.StateGen != nil {
+		stateCache = s.cfg.StateGen.CombinedCache()
+	}
+	withCache := stategen.WithCache(stateCache)
+
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
 		AttestationCache:       cache.NewAttestationCache(),
