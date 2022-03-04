@@ -73,8 +73,11 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	if err != nil {
 		return nil, err
 	}
+	if finalizedBlock == nil {
+		return nil, errors.New("finalized block is nil")
+	}
 	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-	if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
+	if finalizedBlock.Version() == version.Bellatrix {
 		finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 		if err != nil {
 			return nil, err
