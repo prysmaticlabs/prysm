@@ -99,7 +99,7 @@ func (r *testRunner) run() {
 	})
 
 	// ETH1 miner.
-	eth1Miner := eth1.NewMiner(r.config.Port)
+	eth1Miner := eth1.NewMiner()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
 			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
@@ -112,7 +112,7 @@ func (r *testRunner) run() {
 	})
 
 	// ETH1 non-mining nodes.
-	eth1Nodes := eth1.NewNodeSet(r.config.Port)
+	eth1Nodes := eth1.NewNodeSet()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Miner}); err != nil {
 			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
@@ -356,7 +356,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount
-	ethNode := eth1.NewNode(index, minerEnr, r.config.Port)
+	ethNode := eth1.NewNode(index, minerEnr)
 	g.Go(func() error {
 		return ethNode.Start(ctx)
 	})

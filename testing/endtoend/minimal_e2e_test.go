@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -101,7 +100,6 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		UseWeb3RemoteSigner: args.useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
-		Port:                eth1.MinerPort,
 	}
 
 	newTestRunner(t, testConfig).run()

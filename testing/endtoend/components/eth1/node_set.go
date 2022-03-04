@@ -13,14 +13,12 @@ type NodeSet struct {
 	e2etypes.ComponentRunner
 	started chan struct{}
 	enr     string
-	port    int
 }
 
 // NewNodeSet creates and returns a set of Eth1 nodes.
-func NewNodeSet(port int) *NodeSet {
+func NewNodeSet() *NodeSet {
 	return &NodeSet{
 		started: make(chan struct{}, 1),
-		port:    port,
 	}
 }
 
@@ -38,7 +36,7 @@ func (s *NodeSet) Start(ctx context.Context) error {
 	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount-1)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount-1; i++ {
 		// We start indexing nodes from 1 because the miner has an implicit 0 index.
-		node := NewNode(i+1, s.enr, s.port)
+		node := NewNode(i+1, s.enr)
 		nodes[i] = node
 	}
 
