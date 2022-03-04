@@ -7,12 +7,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/holiman/uint256"
+	types "github.com/prysmaticlabs/eth2-types"
+	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	powtesting "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func Test_tDStringToUint256(t *testing.T) {
@@ -33,6 +40,101 @@ func Test_tDStringToUint256(t *testing.T) {
 	_, err = tDStringToUint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" +
 		"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
 	require.ErrorContains(t, "hex number > 256 bits", err)
+}
+
+func TestServer_activationEpochNotReached(t *testing.T) {
+	require.Equal(t, false, activationEpochNotReached(0))
+
+	cfg := params.BeaconConfig()
+	cfg.TerminalBlockHash = common.BytesToHash(bytesutil.PadTo([]byte{0x01}, 32))
+	cfg.TerminalBlockHashActivationEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	require.Equal(t, true, activationEpochNotReached(0))
+	require.Equal(t, false, activationEpochNotReached(params.BeaconConfig().SlotsPerEpoch+1))
+}
+
+func TestServer_getExecutionPayload(t *testing.T) {
+	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	b1pb := util.NewBeaconBlock()
+	b1r, err := b1pb.Block.HashTreeRoot()
+	b1, err := wrapper.WrappedSignedBeaconBlock(b1pb)
+	require.NoError(t, err)
+	require.NoError(t, nonTransitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Root: b1r[:],
+	}))
+
+	transitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{BlockNumber: 1}))
+	b2pb := util.NewBeaconBlockBellatrix()
+	b2r, err := b2pb.Block.HashTreeRoot()
+	b2, err := wrapper.WrappedSignedBeaconBlock(b2pb)
+	require.NoError(t, err)
+	require.NoError(t, transitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Root: b2r[:],
+	}))
+
+	beaconDB := dbTest.SetupDB(t)
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), b1))
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), b2))
+
+	tests := []struct {
+		name              string
+		st                state.BeaconState
+		errString         string
+		forkchoiceErr     error
+		payloadID         *pb.PayloadIDBytes
+		terminalBlockHash common.Hash
+		activationEpoch   types.Epoch
+	}{
+		{
+			name:      "transition completed, nil payload id",
+			st:        transitionSt,
+			errString: "nil payload id",
+		},
+		{
+			name:      "transition completed, happy case",
+			st:        transitionSt,
+			payloadID: &pb.PayloadIDBytes{0x1},
+		},
+		{
+			name:          "transition completed, could not prepare payload",
+			st:            transitionSt,
+			forkchoiceErr: errors.New("fork choice error"),
+			errString:     "could not prepare payload",
+		},
+		{
+			name:      "transition not-completed, latest exec block is nil",
+			st:        nonTransitionSt,
+			errString: "latest execution block is nil",
+		},
+		{
+			name:              "transition not-completed, activation epoch not reached",
+			st:                nonTransitionSt,
+			terminalBlockHash: [32]byte{0x1},
+			activationEpoch:   1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := params.BeaconConfig()
+			cfg.TerminalBlockHash = tt.terminalBlockHash
+			cfg.TerminalBlockHashActivationEpoch = tt.activationEpoch
+			params.OverrideBeaconConfig(cfg)
+
+			vs := &Server{
+				ExecutionEngineCaller: &mocks.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr},
+				HeadFetcher:           &chainMock.ChainService{State: tt.st},
+				BeaconDB:              beaconDB,
+			}
+			_, err := vs.getExecutionPayload(context.Background(), tt.st.Slot())
+			if tt.errString != "" {
+				require.ErrorContains(t, tt.errString, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
