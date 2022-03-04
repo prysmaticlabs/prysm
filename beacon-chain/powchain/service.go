@@ -135,7 +135,6 @@ type config struct {
 	eth1HeaderReqLimit         uint64
 	beaconNodeStatsUpdater     BeaconNodeStatsUpdater
 	httpEndpoints              []network.Endpoint
-	executionEndpoint          string
 	executionEndpointJWTSecret []byte
 	currHttpEndpoint           network.Endpoint
 	finalizedStateAtStartup    state.BeaconState
@@ -1056,13 +1055,10 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 
 // Initializes a connection to the engine API if an execution provider endpoint is set.
 func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
-	if s.cfg.executionEndpoint == "" {
-		return nil
-	}
 	opts := []engine.Option{
 		engine.WithJWTSecret(s.cfg.executionEndpointJWTSecret),
 	}
-	client, err := engine.New(ctx, s.cfg.executionEndpoint, opts...)
+	client, err := engine.New(ctx, s.cfg.currHttpEndpoint.Url, opts...)
 	if err != nil {
 		return err
 	}
