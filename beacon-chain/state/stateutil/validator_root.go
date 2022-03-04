@@ -4,10 +4,8 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -20,7 +18,7 @@ func ValidatorRootWithHasher(hasher ssz.HashFn, validator *ethpb.Validator) ([32
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return ssz.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // ValidatorFieldRoots describes a method from which the hash tree root
@@ -52,20 +50,9 @@ func ValidatorFieldRoots(hasher ssz.HashFn, validator *ethpb.Validator) ([][32]b
 		binary.LittleEndian.PutUint64(withdrawalBuf[:8], uint64(validator.WithdrawableEpoch))
 
 		// Public key.
-		pubKeyChunks, err := ssz.PackByChunk([][]byte{pubkey[:]})
+		pubKeyRoot, err := merkleizePubkey(hasher, pubkey[:])
 		if err != nil {
 			return [][32]byte{}, err
-		}
-		var pubKeyRoot [32]byte
-		if features.Get().EnableVectorizedHTR {
-			outputChunk := make([][32]byte, 1)
-			htr.VectorizedSha256(pubKeyChunks, outputChunk)
-			pubKeyRoot = outputChunk[0]
-		} else {
-			pubKeyRoot, err = ssz.BitwiseMerkleizeArrays(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
-			if err != nil {
-				return [][32]byte{}, err
-			}
 		}
 		fieldRoots = [][32]byte{pubKeyRoot, withdrawCreds, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
 			activationBuf, exitBuf, withdrawalBuf}
@@ -83,20 +70,14 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 		binary.LittleEndian.PutUint64(balanceBuf, balances[i])
 		balancesMarshaling = append(balancesMarshaling, balanceBuf)
 	}
-	balancesChunks, err := ssz.Pack(balancesMarshaling)
+	balancesChunks, err := ssz.PackByChunk(balancesMarshaling)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
 	}
 	maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
 	elemSize := uint64(8)
 	balLimit := (maxBalCap*elemSize + 31) / 32
-	if balLimit == 0 {
-		if len(balances) == 0 {
-			balLimit = 1
-		} else {
-			balLimit = uint64(len(balances))
-		}
-	}
+
 	balancesRootsRoot, err := ssz.BitwiseMerkleize(hasher, balancesChunks, uint64(len(balancesChunks)), balLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
