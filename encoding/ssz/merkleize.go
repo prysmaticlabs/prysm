@@ -219,18 +219,3 @@ func MerkleizeVector(elements [][32]byte, length uint64) [32]byte {
 	}
 	return elements[0]
 }
-
-// MerkleizeList uses our optimized routine to hash a 2d-list of
-// elements.
-func MerkleizeList(elements [][]byte, length uint64) [32]byte {
-	depth := Depth(length)
-	// Return zerohash at depth
-	if len(elements) == 0 {
-		return trie.ZeroHashes[depth]
-	}
-	newElems := make([][32]byte, len(elements))
-	for i := range elements {
-		copy(newElems[i][:], elements[i])
-	}
-	return MerkleizeVector(newElems, length)
-}

@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 )
 
@@ -19,13 +20,6 @@ func ParticipationBitsRoot(bits []byte) ([32]byte, error) {
 	}
 
 	limit := (uint64(fieldparams.ValidatorRegistryLimit + 31)) / 32
-	if limit == 0 {
-		if len(bits) == 0 {
-			limit = 1
-		} else {
-			limit = uint64(len(bits))
-		}
-	}
 
 	bytesRoot, err := ssz.BitwiseMerkleize(hasher, chunkedRoots, uint64(len(chunkedRoots)), limit)
 	if err != nil {
@@ -39,9 +33,9 @@ func ParticipationBitsRoot(bits []byte) ([32]byte, error) {
 
 // packParticipationBits into chunks. It'll pad the last chunk with zero bytes if
 // it does not have length bytes per chunk.
-func packParticipationBits(bytes []byte) ([][]byte, error) {
+func packParticipationBits(bytes []byte) ([][32]byte, error) {
 	numItems := len(bytes)
-	var chunks [][]byte
+	var chunks [][32]byte
 	for i := 0; i < numItems; i += 32 {
 		j := i + 32
 		// We create our upper bound index of the chunk, if it is greater than numItems,
@@ -51,19 +45,12 @@ func packParticipationBits(bytes []byte) ([][]byte, error) {
 		}
 		// We create chunks from the list of items based on the
 		// indices determined above.
-		chunks = append(chunks, bytes[i:j])
+		chunks = append(chunks, bytesutil.ToBytes32(bytes[i:j]))
 	}
 
 	if len(chunks) == 0 {
 		return chunks, nil
 	}
 
-	// Right-pad the last chunk with zero bytes if it does not
-	// have length bytes.
-	lastChunk := chunks[len(chunks)-1]
-	for len(lastChunk) < 32 {
-		lastChunk = append(lastChunk, 0)
-	}
-	chunks[len(chunks)-1] = lastChunk
 	return chunks, nil
 }
