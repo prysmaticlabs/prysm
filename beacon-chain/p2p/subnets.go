@@ -62,8 +62,8 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	wg := new(sync.WaitGroup)
 	for {
 		if err := ctx.Err(); err != nil {
-			return false, errors.Errorf("unable to find requisite number of peers for topic %s. "+
-				"Only %d out of %d peers were able to be found", topic, currNum, threshold)
+			return false, errors.Errorf("unable to find requisite number of peers for topic %s - "+
+				"only %d out of %d peers were able to be found", topic, currNum, threshold)
 		}
 		if currNum >= threshold {
 			break
