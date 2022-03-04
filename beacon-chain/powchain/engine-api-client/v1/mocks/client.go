@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
@@ -15,6 +16,9 @@ type EngineClient struct {
 	ExecutionPayload      *pb.ExecutionPayload
 	Err                   error
 	ExecutionBlock        *pb.ExecutionBlock
+	ErrLatestExecBlock    error
+	ErrExecBlockByHash    error
+	BlockByHashMap        map[[32]byte]*pb.ExecutionBlock
 }
 
 // NewPayload --
@@ -41,10 +45,14 @@ func (e *EngineClient) ExchangeTransitionConfiguration(_ context.Context, _ *pb.
 
 // LatestExecutionBlock --
 func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlock, error) {
-	return e.ExecutionBlock, nil
+	return e.ExecutionBlock, e.ErrLatestExecBlock
 }
 
 // ExecutionBlockByHash --
-func (e *EngineClient) ExecutionBlockByHash(_ context.Context, _ common.Hash) (*pb.ExecutionBlock, error) {
-	return e.ExecutionBlock, nil
+func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash) (*pb.ExecutionBlock, error) {
+	b, ok := e.BlockByHashMap[h]
+	if !ok {
+		return nil, errors.New("block not found")
+	}
+	return b, e.ErrExecBlockByHash
 }
