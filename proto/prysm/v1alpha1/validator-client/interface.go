@@ -1,6 +1,6 @@
 package validatorpb
 
-// SignRequest_Object exports the private isSignRequest_Object interface.
-type SignRequest_Object interface {
+// SignRequestObject exports the private isSignRequest_Object interface.
+type SignRequestObject interface {
 	isSignRequest_Object
 }

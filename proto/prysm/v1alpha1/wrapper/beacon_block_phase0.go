@@ -215,7 +215,7 @@ func (Phase0BeaconBlock) Version() int {
 	return version.Phase0
 }
 
-func (w Phase0BeaconBlock) AsSignRequestObject() validatorpb.SignRequest_Object {
+func (w Phase0BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
 	return &validatorpb.SignRequest_Block{
 		Block: w.b,
 	}

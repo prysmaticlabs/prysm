@@ -42,7 +42,7 @@ type BeaconBlock interface {
 	ssz.Unmarshaler
 	ssz.HashRoot
 	Version() int
-	AsSignRequestObject() validatorpb.SignRequest_Object
+	AsSignRequestObject() validatorpb.SignRequestObject
 }
 
 // BeaconBlockBody describes the method set employed by an object

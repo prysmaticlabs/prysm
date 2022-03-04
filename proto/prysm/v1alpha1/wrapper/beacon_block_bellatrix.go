@@ -218,7 +218,7 @@ func (bellatrixBeaconBlock) Version() int {
 	return version.Bellatrix
 }
 
-func (w bellatrixBeaconBlock) AsSignRequestObject() validatorpb.SignRequest_Object {
+func (w bellatrixBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
 	return &validatorpb.SignRequest_BlockV3{
 		BlockV3: w.b,
 	}

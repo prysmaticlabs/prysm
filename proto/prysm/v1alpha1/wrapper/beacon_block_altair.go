@@ -223,7 +223,7 @@ func (altairBeaconBlock) Version() int {
 	return version.Altair
 }
 
-func (w altairBeaconBlock) AsSignRequestObject() validatorpb.SignRequest_Object {
+func (w altairBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
 	return &validatorpb.SignRequest_BlockV2{
 		BlockV2: w.b,
 	}
