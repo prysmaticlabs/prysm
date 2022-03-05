@@ -37,42 +37,38 @@ func PendingAttRootWithHasher(hasher ssz.HashFn, att *ethpb.PendingAttestation) 
 
 	fieldRoots = [][32]byte{aggregationRoot, attDataRoot, inclusionRoot, proposerRoot}
 
-	return ssz.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return ssz.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func attDataRootWithHasher(hasher ssz.HashFn, data *ethpb.AttestationData) ([32]byte, error) {
-	fieldRoots := make([][]byte, 5)
+	fieldRoots := make([][32]byte, 5)
 
 	if data != nil {
 		// Slot.
 		slotBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(slotBuf, uint64(data.Slot))
-		slotRoot := bytesutil.ToBytes32(slotBuf)
-		fieldRoots[0] = slotRoot[:]
+		fieldRoots[0] = bytesutil.ToBytes32(slotBuf)
 
 		// CommitteeIndex.
 		indexBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(indexBuf, uint64(data.CommitteeIndex))
-		interRoot := bytesutil.ToBytes32(indexBuf)
-		fieldRoots[1] = interRoot[:]
+		fieldRoots[1] = bytesutil.ToBytes32(indexBuf)
 
 		// Beacon block root.
-		blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
-		fieldRoots[2] = blockRoot[:]
+		fieldRoots[2] = bytesutil.ToBytes32(data.BeaconBlockRoot)
 
 		// Source
 		sourceRoot, err := ssz.CheckpointRoot(hasher, data.Source)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute source checkpoint merkleization")
 		}
-		fieldRoots[3] = sourceRoot[:]
+		fieldRoots[3] = sourceRoot
 
 		// Target
-		targetRoot, err := ssz.CheckpointRoot(hasher, data.Target)
+		fieldRoots[4], err = ssz.CheckpointRoot(hasher, data.Target)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute target checkpoint merkleization")
 		}
-		fieldRoots[4] = targetRoot[:]
 	}
 
 	return ssz.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))

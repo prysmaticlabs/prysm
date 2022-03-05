@@ -25,16 +25,13 @@ func Uint64Root(val uint64) [32]byte {
 // a Fork struct value according to the Ethereum
 // Simple Serialize specification.
 func ForkRoot(fork *ethpb.Fork) ([32]byte, error) {
-	fieldRoots := make([][]byte, 3)
+	fieldRoots := make([][32]byte, 3)
 	if fork != nil {
-		prevRoot := bytesutil.ToBytes32(fork.PreviousVersion)
-		fieldRoots[0] = prevRoot[:]
-		currRoot := bytesutil.ToBytes32(fork.CurrentVersion)
-		fieldRoots[1] = currRoot[:]
+		fieldRoots[0] = bytesutil.ToBytes32(fork.PreviousVersion)
+		fieldRoots[1] = bytesutil.ToBytes32(fork.CurrentVersion)
 		forkEpochBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(forkEpochBuf, uint64(fork.Epoch))
-		epochRoot := bytesutil.ToBytes32(forkEpochBuf)
-		fieldRoots[2] = epochRoot[:]
+		fieldRoots[2] = bytesutil.ToBytes32(forkEpochBuf)
 	}
 	return BitwiseMerkleize(hash.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
@@ -43,14 +40,12 @@ func ForkRoot(fork *ethpb.Fork) ([32]byte, error) {
 // a InitWithReset struct value according to the Ethereum
 // Simple Serialize specification.
 func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, error) {
-	fieldRoots := make([][]byte, 2)
+	fieldRoots := make([][32]byte, 2)
 	if checkpoint != nil {
 		epochBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(epochBuf, uint64(checkpoint.Epoch))
-		epochRoot := bytesutil.ToBytes32(epochBuf)
-		fieldRoots[0] = epochRoot[:]
-		ckpRoot := bytesutil.ToBytes32(checkpoint.Root)
-		fieldRoots[1] = ckpRoot[:]
+		fieldRoots[0] = bytesutil.ToBytes32(epochBuf)
+		fieldRoots[1] = bytesutil.ToBytes32(checkpoint.Root)
 	}
 	return BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
@@ -59,12 +54,16 @@ func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, erro
 // a list of [32]byte roots according to the Ethereum Simple Serialize
 // specification.
 func ByteArrayRootWithLimit(roots [][]byte, limit uint64) ([32]byte, error) {
-	result, err := BitwiseMerkleize(hash.CustomSHA256Hasher(), roots, uint64(len(roots)), limit)
+	newRoots := make([][32]byte, len(roots))
+	for i, r := range roots {
+		copy(newRoots[i][:], r)
+	}
+	result, err := BitwiseMerkleize(hash.CustomSHA256Hasher(), newRoots, uint64(len(newRoots)), limit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute byte array merkleization")
 	}
 	buf := new(bytes.Buffer)
-	if err := binary.Write(buf, binary.LittleEndian, uint64(len(roots))); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint64(len(newRoots))); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not marshal byte array length")
 	}
 	// We need to mix in the length of the slice.
@@ -84,7 +83,7 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 		binary.LittleEndian.PutUint64(slashBuf, slashings[i])
 		slashingMarshaling[i] = slashBuf
 	}
-	slashingChunks, err := Pack(slashingMarshaling)
+	slashingChunks, err := PackByChunk(slashingMarshaling)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack slashings into chunks")
 	}
@@ -96,16 +95,16 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 // ExecutionPayload.
 func TransactionsRoot(txs [][]byte) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	listMarshaling := make([][]byte, 0)
+	txRoots := make([][32]byte, 0)
 	for i := 0; i < len(txs); i++ {
 		rt, err := transactionRoot(txs[i])
 		if err != nil {
 			return [32]byte{}, err
 		}
-		listMarshaling = append(listMarshaling, rt[:])
+		txRoots = append(txRoots, rt)
 	}
 
-	bytesRoot, err := BitwiseMerkleize(hasher, listMarshaling, uint64(len(listMarshaling)), fieldparams.MaxTxsPerPayloadLength)
+	bytesRoot, err := BitwiseMerkleize(hasher, txRoots, uint64(len(txRoots)), fieldparams.MaxTxsPerPayloadLength)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute  merkleization")
 	}
@@ -120,7 +119,7 @@ func TransactionsRoot(txs [][]byte) ([32]byte, error) {
 
 func transactionRoot(tx []byte) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	chunkedRoots, err := PackChunks(tx)
+	chunkedRoots, err := PackByChunk([][]byte{tx})
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -137,35 +136,4 @@ func transactionRoot(tx []byte) ([32]byte, error) {
 	bytesRootBufRoot := make([]byte, 32)
 	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
-}
-
-// PackChunks a given byte array into chunks. It'll pad the last chunk with zero bytes if
-// it does not have length bytes per chunk.
-func PackChunks(bytes []byte) ([][]byte, error) {
-	numItems := len(bytes)
-	var chunks [][]byte
-	for i := 0; i < numItems; i += 32 {
-		j := i + 32
-		// We create our upper bound index of the chunk, if it is greater than numItems,
-		// we set it as numItems itself.
-		if j > numItems {
-			j = numItems
-		}
-		// We create chunks from the list of items based on the
-		// indices determined above.
-		chunks = append(chunks, bytes[i:j])
-	}
-
-	if len(chunks) == 0 {
-		return chunks, nil
-	}
-
-	// Right-pad the last chunk with zero bytes if it does not
-	// have length bytes.
-	lastChunk := chunks[len(chunks)-1]
-	for len(lastChunk) < 32 {
-		lastChunk = append(lastChunk, 0)
-	}
-	chunks[len(chunks)-1] = lastChunk
-	return chunks, nil
 }
