@@ -95,7 +95,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		return err
 	}
 	for i := 0; i < len(conns); i++ {
-		response, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", e2e.TestParams.BeaconNodeMetricsPort+i))
+		response, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", e2e.TestParams.Ports.PrysmBeaconNodeMetricsPort+i))
 		if err != nil {
 			// Continue if the connection fails, regular flake.
 			continue
