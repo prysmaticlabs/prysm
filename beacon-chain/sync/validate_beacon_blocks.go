@@ -230,7 +230,11 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 		return errors.New("incorrect proposer index")
 	}
 
-	return s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block())
+	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
+		s.setBadBlock(ctx, blockRoot)
+		return err
+	}
+	return nil
 }
 
 // validateBellatrixBeaconBlock validates the block for the Bellatrix fork.
