@@ -66,7 +66,7 @@ func (s *Store) PruneThreshold() uint64 {
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head. This function assumes a lock on s.nodesLock
 func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.head")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
 	defer span.End()
 
 	// JustifiedRoot has to be known
@@ -103,7 +103,7 @@ func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
 	root, parentRoot [fieldparams.RootLength]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch, optimistic bool) error {
-	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
+	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
 	defer span.End()
 
 	s.nodesLock.Lock()
@@ -183,7 +183,7 @@ func (s *Store) pruneMaps(ctx context.Context, node, finalizedNode *Node) error 
 // prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
 // root is different than the current store finalized root, and the number of the store has met prune threshold.
 func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
-	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.Prune")
+	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Prune")
 	defer span.End()
 
 	s.nodesLock.Lock()

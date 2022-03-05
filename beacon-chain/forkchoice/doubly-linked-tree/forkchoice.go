@@ -26,7 +26,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	return &ForkChoice{store: s, balances: b, votes: v}
 }
 
-// NodeCount returns the current number of nodes in the Store
+// NodeCount returns the current number of nodes in the Store.
 func (f *ForkChoice) NodeCount() int {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
@@ -42,7 +42,7 @@ func (f *ForkChoice) Head(
 	justifiedStateBalances []uint64,
 	finalizedEpoch types.Epoch,
 ) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Head")
 	defer span.End()
 	f.votesLock.Lock()
 	defer f.votesLock.Unlock()
@@ -77,7 +77,7 @@ func (f *ForkChoice) Head(
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
-	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
+	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessAttestation")
 	defer span.End()
 	f.votesLock.Lock()
 	defer f.votesLock.Unlock()
@@ -109,7 +109,7 @@ func (f *ForkChoice) ProcessBlock(
 	blockRoot, parentRoot [fieldparams.RootLength]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch, optimistic bool,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessBlock")
 	defer span.End()
 
 	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch, optimistic)
