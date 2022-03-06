@@ -231,6 +231,10 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
+		if errors.Is(err, ErrOptimisticParent) {
+			return err
+		}
+		// for other kinds of errors, set this block as a bad block.
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
