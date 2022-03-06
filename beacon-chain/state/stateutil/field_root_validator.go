@@ -48,7 +48,7 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 		}
 	}
 
-	validatorsRootsRoot, err := ssz.BitwiseMerkleizeArrays(hasher, roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
+	validatorsRootsRoot, err := ssz.BitwiseMerkleize(hasher, roots, uint64(len(roots)), fieldparams.ValidatorRegistryLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -77,6 +77,10 @@ func validatorRoots(hasher func([]byte) [32]byte, validators []*ethpb.Validator)
 }
 
 func optimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
+	// Exit early if no validators are provided.
+	if len(validators) == 0 {
+		return [][32]byte{}, nil
+	}
 	roots := make([][32]byte, 0, len(validators)*validatorFieldRoots)
 	hasher := hash.CustomSHA256Hasher()
 	for i := 0; i < len(validators); i++ {

@@ -55,6 +55,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -82,6 +83,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -115,6 +117,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -152,6 +155,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -191,6 +195,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -319,6 +324,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -369,6 +375,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
