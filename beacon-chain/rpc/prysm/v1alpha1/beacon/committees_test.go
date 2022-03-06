@@ -79,6 +79,7 @@ func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
 	s.ReplayerBuilder = stategen.NewCanonicalBuilder(h, cc, cs)
 }
 
+// TODO: test failure
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -97,12 +98,13 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, headState.SetRandaoMixes(mixes))
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	gRoot, err := b.Block.HashTreeRoot()
+	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, wrapper.SetBlockSlot(b, headState.Slot()))
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, b))
+	gRoot, err := b.Block().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{

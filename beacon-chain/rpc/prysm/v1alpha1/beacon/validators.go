@@ -506,20 +506,8 @@ func (bs *Server) GetValidatorParticipation(
 	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
 	// This ensures that we don't miss previous attestations when input requested epochs.
 	startSlot += params.BeaconConfig().SlotsPerEpoch - 1
-	// The start slot should be a canonical slot.
-	canonical, err := bs.isSlotCanonical(ctx, startSlot)
-	if err != nil {
-		return nil, err
-	}
-	// Keep looking back until there's a canonical slot.
-	for i := int(startSlot - 1); !canonical && i >= 0; i-- {
-		canonical, err = bs.isSlotCanonical(ctx, types.Slot(i))
-		if err != nil {
-			return nil, err
-		}
-		startSlot = types.Slot(i)
-	}
 
+	// ReplayerBuilder insures that a canonical chain is followed to the slot
 	beaconState, err := bs.ReplayerBuilder.ForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", startSlot, err))
@@ -926,37 +914,6 @@ func (bs *Server) GetIndividualVotes(
 	return &ethpb.IndividualVotesRespond{
 		IndividualVotes: votes,
 	}, nil
-}
-
-// isSlotCanonical returns true if the input slot has a canonical block in the chain,
-// if the input slot has a skip block, false is returned,
-// if the input slot has more than one block, an error is returned.
-func (bs *Server) isSlotCanonical(ctx context.Context, slot types.Slot) (bool, error) {
-	if slot == 0 {
-		return true, nil
-	}
-
-	hasBlockRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, slot)
-	if err != nil {
-		return false, err
-	}
-	if !hasBlockRoots {
-		return false, nil
-	}
-
-	// Loop through all roots in slot, and
-	// check which one is canonical.
-	for _, rt := range roots {
-		canonical, err := bs.CanonicalFetcher.IsCanonical(ctx, rt)
-		if err != nil {
-			return false, err
-		}
-		if canonical {
-			return true, nil
-		}
-
-	}
-	return false, nil
 }
 
 // Determines whether a validator has already exited.

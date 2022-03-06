@@ -351,14 +351,17 @@ func (c *canonicalChainer) ancestorChain(ctx context.Context, tail block.SignedB
 		}
 		st, err := c.getState(ctx, root)
 		// err == nil, we've got a real state - the job is done!
-		if err == nil {
+		// Note: in cases where there are skipped slots we could find a state that is a descendant
+		// of the block we are searching for. We don't want to return a future block, so in this case
+		// we keep working backwards.
+		if err == nil && st.Slot() == b.Slot() {
 			// we found the state by the root of the head, meaning it has already been applied.
 			// we only want to return the blocks descended from it.
 			reverseChain(chain)
 			return st, chain, nil
 		}
 		// ErrNotFoundState errors are fine, but other errors mean something is wrong with the db
-		if !errors.Is(err, db.ErrNotFoundState) {
+		if err != nil && !errors.Is(err, db.ErrNotFoundState) {
 			return nil, nil, errors.Wrap(err, fmt.Sprintf("error querying database for state w/ block root = %#x", root))
 		}
 		parent, err := c.h.Block(ctx, bytesutil.ToBytes32(b.ParentRoot()))
