@@ -14,10 +14,11 @@ type EngineClient struct {
 	PayloadIDBytes        *pb.PayloadIDBytes
 	ForkChoiceUpdatedResp []byte
 	ExecutionPayload      *pb.ExecutionPayload
-	Err                   error
 	ExecutionBlock        *pb.ExecutionBlock
+	Err                   error
 	ErrLatestExecBlock    error
 	ErrExecBlockByHash    error
+	ErrForkchoiceUpdated  error
 	BlockByHashMap        map[[32]byte]*pb.ExecutionBlock
 }
 
@@ -30,7 +31,7 @@ func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) ([]
 func (e *EngineClient) ForkchoiceUpdated(
 	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
 ) (*pb.PayloadIDBytes, []byte, error) {
-	return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, nil
+	return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, e.ErrForkchoiceUpdated
 }
 
 // GetPayload --
