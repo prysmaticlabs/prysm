@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"sort"
 	"strconv"
 	"testing"
@@ -1018,6 +1019,8 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 
 func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
+	transition.SkipSlotCache.Disable()
+
 	ctx := context.Background()
 	slot := types.Slot(0)
 	epochs := 10
@@ -1663,31 +1666,55 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 	beaconDB := dbTest.SetupDB(t)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
+	transition.SkipSlotCache.Disable()
 
 	ctx := context.Background()
 	validatorCount := uint64(32)
+
+	genState, _ := util.DeterministicGenesisStateAltair(t, validatorCount)
+	gsr, err := genState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockAltair())
+	require.NoError(t, wrapper.SetBlockStateRoot(gb, gsr))
+	require.NoError(t, err)
+	gRoot, err := gb.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, beaconDB.SaveState(ctx, genState, gRoot))
+	require.NoError(t, beaconDB.SaveBlock(ctx, gb))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+
+	secondSlot := 2*params.BeaconConfig().SlotsPerEpoch-1
+	headState, err := stategen.ReplayProcessSlots(ctx, genState.Copy(), secondSlot)
+	require.NoError(t, err)
+	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockAltair())
+	require.NoError(t, err)
+	require.NoError(t, wrapper.SetBlockSlot(b, secondSlot))
+
+	idx, err := helpers.BeaconProposerIndex(ctx, headState)
+	require.NoError(t, err)
+	require.NoError(t, wrapper.SetProposerIndex(b, idx))
+
+	require.NoError(t, wrapper.SetBlockParentRoot(b, gRoot))
 
 	bits := make([]byte, validatorCount)
 	for i := range bits {
 		bits[i] = 0xff
 	}
-	headState, _ := util.DeterministicGenesisStateAltair(t, validatorCount)
-	require.NoError(t, headState.SetSlot(2*params.BeaconConfig().SlotsPerEpoch-1))
 	require.NoError(t, headState.SetCurrentParticipationBits(bits))
 	require.NoError(t, headState.SetPreviousParticipationBits(bits))
 
-	b := util.NewBeaconBlockAltair()
-	b.Block.Slot = 16
-	ab, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	headState, err = transition.ProcessBlockForStateRoot(ctx, headState, b)
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, ab))
-	bRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: params.BeaconConfig().ZeroHash[:]}))
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
+	headRoot, err := headState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveState(ctx, headState, bRoot))
-	require.NoError(t, beaconDB.SaveState(ctx, headState, params.BeaconConfig().ZeroHash))
+	err = wrapper.SetBlockStateRoot(b, headRoot)
+	require.NoError(t, err)
+	headBlockRoot, err := b.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, b))
+
+	require.NoError(t, beaconDB.SaveState(ctx, genState, headBlockRoot))
 
 	m := &mock.ChainService{State: headState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
@@ -1700,7 +1727,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 		},
 		CanonicalFetcher: &mock.ChainService{
 			CanonicalRoots: map[[32]byte]bool{
-				bRoot: true,
+				gRoot: true,
 			},
 		},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
