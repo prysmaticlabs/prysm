@@ -30,8 +30,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		return nil, errors.New("analyzer is not type *inspector.Inspector")
 	}
 
-	var nodeFilter []ast.Node
-	nodeFilter = []ast.Node{
+	nodeFilter := []ast.Node{
 		(*ast.CallExpr)(nil),
 	}
 
