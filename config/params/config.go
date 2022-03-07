@@ -140,8 +140,10 @@ type BeaconChainConfig struct {
 	AltairForkEpoch      types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`      // AltairForkEpoch is used to represent the assigned fork epoch for altair.
 	BellatrixForkVersion []byte                  `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	BellatrixForkEpoch   types.Epoch             `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
-	ShardingForkVersion  []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
-	ShardingForkEpoch    types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
+	Eip4844ForkVersion   []byte                  // Eip4844ForkVersion is used to represent the fork version for Eip4844.
+	Eip4844ForkEpoch     types.Epoch             `yaml:"EIP4844_FORK_EPOCH" spec:"true"`    // Eip4844ForkEpoch is used to represent the assigned fork epoch for Eip4844.
+	ShardingForkVersion  []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
+	ShardingForkEpoch    types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	ForkVersionSchedule  map[[4]byte]types.Epoch // Schedule of fork epochs by version.
 
 	// Weak subjectivity values.
@@ -200,4 +202,5 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 	// Set Bellatrix fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
+	b.ForkVersionSchedule[bytesutil.ToBytes4(b.Eip4844ForkVersion)] = b.Eip4844ForkEpoch
 }

@@ -69,22 +69,24 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 		return nil, err
 	}
 
-	finalizedBlock, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(st.FinalizedCheckpoint().Root))
-	if err != nil {
-		return nil, err
-	}
-	if finalizedBlock == nil {
-		return nil, errors.New("finalized block is nil")
-	}
 	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-	if finalizedBlock.Version() == version.Bellatrix {
-		finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+	fRoot := bytesutil.ToBytes32(st.FinalizedCheckpoint().Root)
+	if fRoot != [32]byte{} {
+		finalizedBlock, err := vs.BeaconDB.Block(ctx, fRoot)
 		if err != nil {
 			return nil, err
 		}
-		finalizedBlockHash = finalizedPayload.BlockHash
+		if finalizedBlock == nil {
+			return nil, errors.New("finalized block is nil")
+		}
+		if finalizedBlock.Version() == version.Bellatrix {
+			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+			if err != nil {
+				return nil, err
+			}
+			finalizedBlockHash = finalizedPayload.BlockHash
+		}
 	}
-
 	f := &enginev1.ForkchoiceState{
 		HeadBlockHash:      parentHash,
 		SafeBlockHash:      parentHash,

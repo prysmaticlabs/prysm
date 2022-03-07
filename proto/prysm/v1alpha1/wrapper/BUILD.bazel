@@ -6,6 +6,7 @@ go_library(
         "beacon_block.go",
         "beacon_block_altair.go",
         "beacon_block_bellatrix.go",
+        "beacon_block_blob_kzgs.go",
         "beacon_block_phase0.go",
         "metadata.go",
     ],

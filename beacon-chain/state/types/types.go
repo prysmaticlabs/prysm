@@ -59,12 +59,12 @@ func (f FieldIndex) String(stateVersion int) string {
 	case Slashings:
 		return "slashings"
 	case PreviousEpochAttestations:
-		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
+		if version.Altair == stateVersion || version.Bellatrix == stateVersion || version.EIP4844 == stateVersion {
 			return "previousEpochParticipationBits"
 		}
 		return "previousEpochAttestations"
 	case CurrentEpochAttestations:
-		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
+		if version.Altair == stateVersion || version.Bellatrix == stateVersion || version.EIP4844 == stateVersion {
 			return "currentEpochParticipationBits"
 		}
 		return "currentEpochAttestations"

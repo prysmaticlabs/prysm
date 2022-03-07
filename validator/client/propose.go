@@ -42,6 +42,10 @@ const signExitErr = "could not sign voluntary exit proposal"
 func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	currEpoch := slots.ToEpoch(slot)
 	switch {
+	case currEpoch >= params.BeaconConfig().Eip4844ForkEpoch:
+		v.proposeBlockEip4844(ctx, slot, pubKey)
+	case currEpoch >= params.BeaconConfig().Eip4844ForkEpoch:
+		//v.proposeBlockEip4844(ctx, slot, pubKey)
 	case currEpoch >= params.BeaconConfig().BellatrixForkEpoch:
 		v.proposeBlockBellatrix(ctx, slot, pubKey)
 	case currEpoch >= params.BeaconConfig().AltairForkEpoch:
@@ -384,6 +388,25 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	var sig bls.Signature
 	switch b.Version() {
 
+	case version.EIP4844:
+		block, ok := b.Proto().(*ethpb.BeaconBlockWithBlobKZGs)
+		if !ok {
+			return nil, nil, errors.New("could not convert obj to beacon block miniDankSharding")
+		}
+		blockRoot, err := signing.ComputeSigningRoot(block, domain.SignatureDomain)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, signingRootErr)
+		}
+		sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+			PublicKey:       pubKey[:],
+			SigningRoot:     blockRoot[:],
+			SignatureDomain: domain.SignatureDomain,
+			Object:          &validatorpb.SignRequest_BlockV4{BlockV4: block},
+		})
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not sign block proposal")
+		}
+		return sig.Marshal(), domain, nil
 	case version.Bellatrix:
 		block, ok := b.Proto().(*ethpb.BeaconBlockBellatrix)
 		if !ok {
@@ -659,6 +682,107 @@ func (v *validator) proposeBlockBellatrix(ctx context.Context, slot types.Slot, 
 		"numDeposits":     len(bellatrixBlk.Bellatrix.Body.Deposits),
 		"graffiti":        string(bellatrixBlk.Bellatrix.Body.Graffiti),
 		"fork":            "bellatrix",
+	}).Info("Submitted new block")
+
+	if v.emitAccountMetrics {
+		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
+	}
+}
+
+// This is a routine to propose miniDankSharding compatible beacon blocks.
+func (v *validator) proposeBlockEip4844(ctx context.Context, slot types.Slot, pubKey [48]byte) {
+	ctx, span := trace.StartSpan(ctx, "validator.proposeBlockEip4844")
+	defer span.End()
+
+	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock.Lock()
+	defer lock.Unlock()
+
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
+
+	// Sign randao reveal, it's used to request block from beacon node
+	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
+	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
+	if err != nil {
+		log.WithError(err).Error("Failed to sign randao reveal")
+		return
+	}
+
+	g, err := v.getGraffiti(ctx, pubKey)
+	if err != nil {
+		log.WithError(err).Warn("Could not get graffiti")
+	}
+
+	// Request block from beacon node
+	b, err := v.validatorClient.GetBeaconBlock(ctx, &ethpb.BlockRequest{
+		Slot:         slot,
+		RandaoReveal: randaoReveal,
+		Graffiti:     g,
+	})
+	if err != nil {
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
+		return
+	}
+	miniDankShardingBlk, ok := b.Block.(*ethpb.GenericBeaconBlock_Eip4844)
+	if !ok {
+		log.Error("Not a Eip4844 block")
+		return
+	}
+
+	// Sign returned block from beacon node
+	wb, err := wrapper.WrappedEip4844BeaconBlock(miniDankShardingBlk.Eip4844)
+	if err != nil {
+		log.WithError(err).Error("Failed to wrap block")
+		return
+	}
+	sig, domain, err := v.signBlock(ctx, pubKey, epoch, slot, wb)
+	if err != nil {
+		log.WithError(err).Error("Failed to sign block")
+		return
+	}
+	blk := &ethpb.SignedBeaconBlockWithBlobKZGs{
+		Block:     miniDankShardingBlk.Eip4844,
+		Signature: sig,
+	}
+
+	signingRoot, err := signing.ComputeSigningRoot(miniDankShardingBlk.Eip4844, domain.SignatureDomain)
+	if err != nil {
+		log.WithError(err).Error("Failed to compute signing root for block")
+		return
+	}
+
+	wsb, err := wrapper.WrappedEip4844SignedBeaconBlock(blk)
+	if err != nil {
+		log.WithError(err).Error("Failed to wrap signed block")
+		return
+	}
+
+	if err := v.slashableProposalCheck(ctx, pubKey, wsb, signingRoot); err != nil {
+		log.WithFields(
+			blockLogFields(pubKey, wb, nil),
+		).WithError(err).Error("Failed block slashing protection check")
+		return
+	}
+
+	// Propose and broadcast block via beacon node
+	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, &ethpb.GenericSignedBeaconBlock{
+		Block: &ethpb.GenericSignedBeaconBlock_Eip4844{Eip4844: blk},
+	})
+	if err != nil {
+		log.WithError(err).Error("Failed to propose block")
+		return
+	}
+
+	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	log.WithFields(logrus.Fields{
+		"slot":            blk.Block.Slot,
+		"blockRoot":       blkRoot,
+		"numAttestations": len(blk.Block.Body.Attestations),
+		"numDeposits":     len(blk.Block.Body.Deposits),
+		"graffiti":        string(blk.Block.Body.Graffiti),
+		"fork":            "eip4844",
 	}).Info("Submitted new block")
 
 	if v.emitAccountMetrics {

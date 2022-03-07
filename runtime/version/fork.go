@@ -4,6 +4,7 @@ const (
 	Phase0 = iota
 	Altair
 	Bellatrix
+	EIP4844
 )
 
 func String(version int) string {
@@ -14,6 +15,8 @@ func String(version int) string {
 		return "altair"
 	case Bellatrix:
 		return "bellatrix"
+	case EIP4844:
+		return "eip4844"
 	default:
 		return "unknown version"
 	}

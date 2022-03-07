@@ -97,3 +97,25 @@ message ForkchoiceState {
 	bytes safe_block_hash      = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes finalized_block_hash = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 }
+
+message SignedBlobTransaction {
+	BlobTransaction header = 1;
+	ECDSASignature signature = 2;
+}
+
+message BlobTransaction {
+	uint64 nonce = 1;
+	uint64 gas = 2;
+	bytes max_basefee = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes priority_fee = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes address = 5 [(ethereum.eth.ext.ssz_size) = "20"];
+	bytes value = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes data = 7 [(ethereum.eth.ext.ssz_max) = "32"]; // Double check the max length for this
+	repeated bytes blob_versioned_hashes = 8 [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max)  = "16777216"];
+}
+
+message ECDSASignature {
+	bytes v = 1 [(ethereum.eth.ext.ssz_size) = "1"];
+	bytes r = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes s = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+}

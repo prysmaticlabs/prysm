@@ -16,7 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 const (
@@ -26,6 +28,8 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
+	// GetBlobsMethod v1 request string for JSON-RPC.
+	GetBlobsMethod = "engine_getBlobsV1"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
 	// ExecutionBlockByHashMethod request string for JSON-RPC.
@@ -51,6 +55,7 @@ type Caller interface {
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*pb.PayloadIDBytes, []byte, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
+	GetBlobs(ctx context.Context, payloadId [8]byte) ([]*ethpb.Blob, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -211,6 +216,21 @@ func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*p
 	result := &pb.ExecutionBlock{}
 	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
+}
+
+// GetBlobs calls the engine_getBlobsV1 method via JSON-RPC.
+func (c *Client) GetBlobs(_ context.Context, _ [8]byte) ([]*ethpb.Blob, error) {
+	blobBytes := make([][]byte, 4096)
+	gen := rand.NewGenerator()
+	for i := 0; i < len(blobBytes); i++ {
+		item := make([]byte, 48)
+		_, err := gen.Read(item)
+		if err != nil {
+			return nil, err
+		}
+		blobBytes[i] = item
+	}
+	return []*ethpb.Blob{{Blob: blobBytes}}, nil
 }
 
 // Handles errors received from the RPC server according to the specification.

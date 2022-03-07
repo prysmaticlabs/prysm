@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
@@ -109,7 +109,7 @@ type Config struct {
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
 	MaxMsgSize              int
-	ExecutionEngineCaller   enginev1.Caller
+	ExecutionEngineCaller   v1.Caller
 }
 
 // NewService instantiates a new RPC service instance that will

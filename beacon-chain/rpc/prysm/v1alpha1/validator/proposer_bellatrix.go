@@ -5,11 +5,10 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/sirupsen/logrus"
 )
 
 func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, error) {
@@ -17,6 +16,18 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	if err != nil {
 		return nil, err
 	}
+
+	payload, err := vs.getExecutionPayload(ctx, req.Slot)
+	if err != nil {
+		return nil, err
+	}
+
+	log.WithFields(logrus.Fields{
+		"hash":       fmt.Sprintf("%#x", payload.BlockHash),
+		"parentHash": fmt.Sprintf("%#x", payload.ParentHash),
+		"number":     payload.BlockNumber,
+		"txCount":    len(payload.Transactions),
+	}).Info("Received payload")
 
 	blk := &ethpb.BeaconBlockBellatrix{
 		Slot:          altairBlk.Slot,
@@ -33,16 +44,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			Deposits:          altairBlk.Body.Deposits,
 			VoluntaryExits:    altairBlk.Body.VoluntaryExits,
 			SyncAggregate:     altairBlk.Body.SyncAggregate,
-			ExecutionPayload: &enginev1.ExecutionPayload{
-				ParentHash:    make([]byte, fieldparams.RootLength),
-				FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-				StateRoot:     make([]byte, fieldparams.RootLength),
-				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-				LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-				PrevRandao:    make([]byte, fieldparams.RootLength),
-				BaseFeePerGas: make([]byte, fieldparams.RootLength),
-				BlockHash:     make([]byte, fieldparams.RootLength),
-			}, // TODO(9853) Insert real execution payload.
+			ExecutionPayload:  payload,
 		},
 	}
 	// Compute state root with the newly constructed block.

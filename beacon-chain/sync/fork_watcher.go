@@ -69,6 +69,16 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 				return nil
 			}
 			s.registerSubscribers(nextEpoch, digest)
+		case params.BeaconConfig().Eip4844ForkEpoch:
+			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve fork digest")
+			}
+			if s.subHandler.digestExists(digest) {
+				return nil
+			}
+			s.registerSubscribers(nextEpoch, digest)
+			// Register new RPC handlers for blob side cars.
 		}
 	}
 	return nil

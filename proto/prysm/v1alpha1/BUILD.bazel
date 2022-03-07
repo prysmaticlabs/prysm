@@ -104,6 +104,12 @@ ssz_gen_marshal(
         "SyncCommittee",
         "SyncAggregatorSelectionData",
         "PowBlock",
+        "SignedBeaconBlockWithBlobKZGs",
+        "BeaconBlockWithBlobKZGs",
+        "BeaconBlockBodyWithBlobKZGs",
+        "BeaconBlockAndBlobs",
+        "SignedBeaconBlockAndBlobs",
+        "Blob",
     ],
 )
 

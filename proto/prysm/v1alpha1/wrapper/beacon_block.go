@@ -31,6 +31,8 @@ func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
 		return WrappedAltairSignedBeaconBlock(b)
 	case *eth.SignedBeaconBlockBellatrix:
 		return WrappedBellatrixSignedBeaconBlock(b)
+	case *eth.SignedBeaconBlockWithBlobKZGs:
+		return WrappedEip4844SignedBeaconBlock(b)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", i)
 	}
@@ -46,6 +48,8 @@ func WrappedBeaconBlock(i interface{}) (block.BeaconBlock, error) {
 		return WrappedAltairBeaconBlock(b)
 	case *eth.BeaconBlockBellatrix:
 		return WrappedBellatrixBeaconBlock(b)
+	case *eth.BeaconBlockWithBlobKZGs:
+		return WrappedEip4844BeaconBlock(b)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", i)
 	}
@@ -59,6 +63,8 @@ func BuildSignedBeaconBlock(blk interface{}, signature []byte) (block.SignedBeac
 		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockAltair{Block: b, Signature: signature})
 	case *eth.BeaconBlockBellatrix:
 		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: b, Signature: signature})
+	case *eth.BeaconBlockWithBlobKZGs:
+		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockWithBlobKZGs{Block: b, Signature: signature})
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", b)
 	}

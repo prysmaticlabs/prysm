@@ -234,7 +234,7 @@ func validateBellatrixBeaconBlock(parentState state.BeaconState, blk block.Beaco
 	if parentState.Version() != blk.Version() {
 		return errors.New("block and state are not the same version")
 	}
-	if parentState.Version() != version.Bellatrix || blk.Version() != version.Bellatrix {
+	if parentState.Version() != version.Bellatrix || blk.Version() != version.Bellatrix || parentState.Version() != version.EIP4844 || blk.Version() != version.EIP4844 {
 		return nil
 	}
 

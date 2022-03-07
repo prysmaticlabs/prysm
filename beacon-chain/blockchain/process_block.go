@@ -97,10 +97,16 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
+	// TODO_MERGE: Optimize this copy.
+	copiedPreState := preState.Copy()
 
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return err
+	}
+
+	if err := s.notifyNewPayload(ctx, copiedPreState, postState, signed); err != nil {
+		return errors.Wrap(err, "could not verify new payload")
 	}
 
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
@@ -112,6 +118,18 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
+		return err
+	}
+
+	// update forkchoice synced tips if the block is not optimistic
+	root, err := b.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	if err := s.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, root); err != nil {
+		return err
+	}
+	if err := s.saveSyncedTipsDB(ctx); err != nil {
 		return err
 	}
 
@@ -175,8 +193,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		log.WithError(err).Warn("Could not update head")
 	}
 
-	if err := s.saveSyncedTipsDB(ctx); err != nil {
-		return errors.Wrap(err, "could not save synced tips")
+	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), bytesutil.ToBytes32(finalized.Root)); err != nil {
+		return err
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
@@ -251,32 +269,33 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 }
 
 func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock,
-	blockRoots [][32]byte) ([]*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
+	blockRoots [][32]byte) ([]*ethpb.Checkpoint, []*ethpb.Checkpoint, []bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
 
 	if len(blks) == 0 || len(blockRoots) == 0 {
-		return nil, nil, errors.New("no blocks provided")
+		return nil, nil, nil, errors.New("no blocks provided")
 	}
 	if err := helpers.BeaconBlockIsNil(blks[0]); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	b := blks[0].Block()
 
 	// Retrieve incoming block's pre state.
 	if err := s.verifyBlkPreState(ctx, b); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	preState, err := s.cfg.StateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot()))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if preState == nil || preState.IsNil() {
-		return nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot())
+		return nil, nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot())
 	}
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
+	optimistic := make([]bool, len(blks))
 	sigSet := &bls.SignatureBatch{
 		Signatures: [][]byte{},
 		PublicKeys: []bls.PublicKey{},
@@ -285,43 +304,49 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
+		preStateCopied := preState.Copy()
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
+		if err := s.notifyNewPayload(ctx, preStateCopied, preState, b); err != nil {
+			return nil, nil, nil, err
+		}
+
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
 			if err := s.handleEpochBoundary(ctx, preState); err != nil {
-				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
+				return nil, nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
 			}
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
+
 		sigSet.Join(set)
 	}
 	verify, err := sigSet.Verify()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if !verify {
-		return nil, nil, errors.New("batch block signature verification failed")
+		return nil, nil, nil, errors.New("batch block signature verification failed")
 	}
 	for r, st := range boundaries {
 		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 	// Also saves the last post state which to be used as pre state for the next batch.
 	lastB := blks[len(blks)-1]
 	lastBR := blockRoots[len(blockRoots)-1]
 	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return fCheckpoints, jCheckpoints, nil
+	return fCheckpoints, jCheckpoints, optimistic, nil
 }
 
 // handles a block after the block's batch has been verified, where we can save blocks
@@ -334,10 +359,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	if err := s.saveSyncedTipsDB(ctx); err != nil {
-		return errors.Wrap(err, "could not save synced tips")
+	if _, err := s.notifyForkchoiceUpdate(ctx, b, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
+		return err
 	}
-
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: signed.Block().Slot(),
 		Root: blockRoot[:],

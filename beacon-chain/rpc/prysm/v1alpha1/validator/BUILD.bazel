@@ -14,6 +14,7 @@ go_library(
         "proposer_attestations.go",
         "proposer_bellatrix.go",
         "proposer_deposits.go",
+        "proposer_eip4844.go",
         "proposer_eth1data.go",
         "proposer_execution_payload.go",
         "proposer_phase0.go",

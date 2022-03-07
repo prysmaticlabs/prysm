@@ -9,6 +9,7 @@ package kv
 var (
 	attestationsBucket      = []byte("attestations")
 	blocksBucket            = []byte("blocks")
+	blobsBucket             = []byte("blobs")
 	stateBucket             = []byte("state")
 	stateSummaryBucket      = []byte("state-summary")
 	proposerSlashingsBucket = []byte("proposer-slashings")
@@ -49,6 +50,7 @@ var (
 	// Objects that are only compatible with specific forks should be prefixed with such keys.
 	altairKey    = []byte("altair")
 	bellatrixKey = []byte("merge")
+	miniDankKey  = []byte("mini-dank")
 	// block root included in the beacon state used by weak subjectivity initial sync
 	originBlockRootKey = []byte("origin-block-root")
 

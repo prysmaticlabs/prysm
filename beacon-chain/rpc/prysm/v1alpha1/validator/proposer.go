@@ -46,19 +46,25 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
+	} else if slots.ToEpoch(req.Slot) < params.BeaconConfig().Eip4844ForkEpoch {
+		// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
+		if err := vs.optimisticStatus(ctx); err != nil {
+			return nil, err
+		}
+		blk, err := vs.getBellatrixBeaconBlock(ctx, req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
 	}
-
-	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if err := vs.optimisticStatus(ctx); err != nil {
 		return nil, err
 	}
-
-	blk, err := vs.getBellatrixBeaconBlock(ctx, req)
+	blk, err := vs.getEip4844BeaconBlock(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not fetch eip4844 beacon block: %v", err)
 	}
-
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Eip4844{Eip4844: blk}}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -92,6 +98,11 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		blk, err = wrapper.WrappedBellatrixSignedBeaconBlock(b.Bellatrix)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
+		}
+	case *ethpb.GenericSignedBeaconBlock_Eip4844:
+		blk, err = wrapper.WrappedEip4844SignedBeaconBlock(b.Eip4844)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "could not wrap eip4844 beacon block")
 		}
 	default:
 		return nil, status.Error(codes.Internal, "block version not supported")
