@@ -78,7 +78,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
 		ev.ForkTransition,
-		//ev.APIMiddlewareVerifyIntegrity,
+		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
