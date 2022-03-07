@@ -1,6 +1,7 @@
 package math_test
 
 import (
+	"fmt"
 	stdmath "math"
 	"testing"
 
@@ -364,5 +365,42 @@ func TestMath_Sub64(t *testing.T) {
 		if tt.res != got {
 			t.Errorf("Sub64() %v, want %v", got, tt.res)
 		}
+	}
+}
+
+func TestInt(t *testing.T) {
+	tests := []struct {
+		arg     uint64
+		want    int
+		wantErr bool
+	}{
+		{
+			arg:  0,
+			want: 0,
+		},
+		{
+			arg:  10000000,
+			want: 10000000,
+		},
+		{
+			arg:  stdmath.MaxInt64,
+			want: stdmath.MaxInt64,
+		},
+		{
+			arg:     stdmath.MaxInt64 + 1,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprint(tt.arg), func(t *testing.T) {
+			got, err := math.Int(tt.arg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Int() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Int() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

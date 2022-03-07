@@ -125,7 +125,7 @@ func Sub64(a, b uint64) (uint64, error) {
 // Int returns the integer value of the uint64 argument. If there is an overlow, then an error is
 // returned.
 func Int(u uint64) (int, error) {
-	if u > 1<<63 {
+	if u > stdmath.MaxInt {
 		return 0, errors.New("integer overflow")
 	}
 	return int(u), nil
