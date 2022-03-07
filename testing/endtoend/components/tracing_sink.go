@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 )
@@ -40,6 +41,9 @@ func NewTracingSink(endpoint string) *TracingSink {
 
 // Start the tracing sink.
 func (ts *TracingSink) Start(_ context.Context) error {
+	if ts.endpoint == "" {
+		return errors.New("empty endpoint provided")
+	}
 	go ts.initializeSink()
 	close(ts.started)
 	return nil

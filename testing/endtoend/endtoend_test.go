@@ -21,6 +21,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -88,24 +89,6 @@ func (r *testRunner) run() {
 		})
 	}
 
-	// ETH1 node.
-	eth1Node := components.NewEth1Node()
-	g.Go(func() error {
-		if err := eth1Node.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start eth1node")
-		}
-		return nil
-	})
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 node to run")
-		}
-		if err := components.SendAndMineDeposits(eth1Node.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
-			return errors.Wrap(err, "failed to send and mine deposits")
-		}
-		return nil
-	})
-
 	// Boot node.
 	bootNode := components.NewBootNode()
 	g.Go(func() error {
@@ -114,10 +97,46 @@ func (r *testRunner) run() {
 		}
 		return nil
 	})
+
+	// ETH1 miner.
+	eth1Miner := eth1.NewMiner()
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
+			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
+		}
+		eth1Miner.SetBootstrapENR(bootNode.ENR())
+		if err := eth1Miner.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start the ETH1 miner")
+		}
+		return nil
+	})
+
+	// ETH1 non-mining nodes.
+	eth1Nodes := eth1.NewNodeSet()
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Miner}); err != nil {
+			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
+		}
+		eth1Nodes.SetMinerENR(eth1Miner.ENR())
+		if err := eth1Nodes.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start ETH1 nodes")
+		}
+		return nil
+	})
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
+			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
+		}
+		if err := components.SendAndMineDeposits(eth1Miner.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
+			return errors.Wrap(err, "failed to send and mine deposits")
+		}
+		return nil
+	})
+
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode}); err != nil {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode}); err != nil {
 			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
 		}
 		beaconNodes.SetENR(bootNode.ENR())
@@ -142,7 +161,7 @@ func (r *testRunner) run() {
 	if multiClientActive {
 		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
 		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Node, bootNode, beaconNodes}); err != nil {
+			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode, beaconNodes}); err != nil {
 				return errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run")
 			}
 			lighthouseNodes.SetENR(bootNode.ENR())
@@ -192,7 +211,7 @@ func (r *testRunner) run() {
 
 		// Wait for all required nodes to start.
 		requiredComponents := []e2etypes.ComponentRunner{
-			tracingSink, eth1Node, bootNode, beaconNodes, validatorNodes,
+			tracingSink, eth1Nodes, bootNode, beaconNodes, validatorNodes,
 		}
 		if multiClientActive {
 			requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{keyGen, lighthouseNodes, lighthouseValidatorNodes}...)
@@ -224,7 +243,7 @@ func (r *testRunner) run() {
 
 		if config.TestDeposits {
 			log.Info("Running deposit tests")
-			r.testDeposits(ctx, g, eth1Node, []e2etypes.ComponentRunner{beaconNodes})
+			r.testDeposits(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
 		}
 
 		// Create GRPC connection to beacon nodes.
@@ -247,7 +266,7 @@ func (r *testRunner) run() {
 		if !config.TestSync {
 			return nil
 		}
-		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR()); err != nil {
+		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
 			return errors.Wrap(err, "beacon chain sync test failed")
 		}
 		if err := r.testDoppelGangerProtection(ctx); err != nil {
@@ -314,7 +333,7 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 
 // testDeposits runs tests when config.TestDeposits is enabled.
 func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
-	eth1Node *components.Eth1Node, requiredNodes []e2etypes.ComponentRunner) {
+	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
@@ -323,7 +342,7 @@ func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
 			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
 		}
 		go func() {
-			err := components.SendAndMineDeposits(eth1Node.KeystorePath(), int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
+			err := components.SendAndMineDeposits(keystorePath, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
 			if err != nil {
 				r.t.Fatal(err)
 			}
@@ -334,14 +353,18 @@ func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
 
 // testBeaconChainSync creates another beacon node, and tests whether it can sync to head using previous nodes.
 func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
-	conns []*grpc.ClientConn, tickingStartTime time.Time, enr string) error {
+	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount
-	syncBeaconNode := components.NewBeaconNode(config, index, enr)
+	ethNode := eth1.NewNode(index, minerEnr)
+	g.Go(func() error {
+		return ethNode.Start(ctx)
+	})
+	syncBeaconNode := components.NewBeaconNode(config, index, bootnodeEnr)
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})
-	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{syncBeaconNode}); err != nil {
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode, syncBeaconNode}); err != nil {
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index), grpc.WithInsecure())
