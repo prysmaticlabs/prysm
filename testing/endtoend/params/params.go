@@ -41,6 +41,7 @@ type ports struct {
 	LighthouseBeaconNodeMetricsPort int
 	ValidatorMetricsPort            int
 	ValidatorGatewayPort            int
+	JaegerTracingPort               int
 }
 
 // TestParams is the globally accessible var for getting config elements.
@@ -91,6 +92,8 @@ const (
 
 	ValidatorGatewayPort = 6150
 	ValidatorMetricsPort = ValidatorGatewayPort + portSpan
+
+	JaegerTracingPort = 9150
 )
 
 // Init initializes the E2E config, properly handling test sharding.
@@ -170,6 +173,10 @@ func Init(beaconNodeCount int) error {
 	if err != nil {
 		return err
 	}
+	jaegerTracingPort, err := port(JaegerTracingPort, testTotalShards, testShardIndex, &existingRegistrations)
+	if err != nil {
+		return err
+	}
 	testPorts := &ports{
 		BootNodePort:               bootnodePort,
 		BootNodeMetricsPort:        bootnodeMetricsPort,
@@ -184,6 +191,7 @@ func Init(beaconNodeCount int) error {
 		PrysmBeaconNodePprofPort:   beaconNodePprofPort,
 		ValidatorMetricsPort:       validatorMetricsPort,
 		ValidatorGatewayPort:       validatorGatewayPort,
+		JaegerTracingPort:          jaegerTracingPort,
 	}
 
 	TestParams = &params{
