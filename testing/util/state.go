@@ -57,33 +57,28 @@ func FillRootsNaturalOptBellatrix(state *ethpb.BeaconStateBellatrix) error {
 // NewBeaconState creates a beacon state with minimum marshalable fields.
 func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (state.BeaconState, error) {
 	seed := &ethpb.BeaconState{
-		GenesisTime:           0,
-		GenesisValidatorsRoot: make([]byte, 32),
-		Slot:                  0,
-		Fork: &ethpb.Fork{
-			PreviousVersion: make([]byte, 4),
-			CurrentVersion:  make([]byte, 4),
-		},
-		LatestBlockHeader: HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
-		BlockRoots:        filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		StateRoots:        filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		HistoricalRoots:   make([][]byte, 0),
+		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
+		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
+		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
+		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
+		Validators:                 make([]*ethpb.Validator, 0),
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, fieldparams.RootLength),
 			BlockHash:   make([]byte, 32),
 		},
+		Fork: &ethpb.Fork{
+			PreviousVersion: make([]byte, 4),
+			CurrentVersion:  make([]byte, 4),
+		},
 		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
-		Eth1DepositIndex:            0,
-		Validators:                  make([]*ethpb.Validator, 0),
-		Balances:                    make([]uint64, 0),
-		RandaoMixes:                 filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
-		Slashings:                   make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
+		HistoricalRoots:             make([][]byte, 0),
+		JustificationBits:           bitfield.Bitvector4{0x0},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
 		PreviousEpochAttestations:   make([]*ethpb.PendingAttestation, 0),
 		CurrentEpochAttestations:    make([]*ethpb.PendingAttestation, 0),
-		JustificationBits:           bitfield.Bitvector4{0x0},
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
 
 	for _, opt := range options {
@@ -103,41 +98,40 @@ func NewBeaconState(options ...func(state *ethpb.BeaconState) error) (state.Beac
 
 // NewBeaconStateAltair creates a beacon state with minimum marshalable fields.
 func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error) (state.BeaconStateAltair, error) {
+	pubkeys := make([][]byte, 512)
+	for i := range pubkeys {
+		pubkeys[i] = make([]byte, 48)
+	}
+
 	seed := &ethpb.BeaconStateAltair{
-		GenesisTime:           0,
-		GenesisValidatorsRoot: make([]byte, 32),
-		Slot:                  0,
-		Fork: &ethpb.Fork{
-			PreviousVersion: make([]byte, 4),
-			CurrentVersion:  make([]byte, 4),
-		},
-		LatestBlockHeader: HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
-		BlockRoots:        filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		StateRoots:        filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		HistoricalRoots:   make([][]byte, 0),
+		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
+		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
+		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
+		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
+		Validators:                 make([]*ethpb.Validator, 0),
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, fieldparams.RootLength),
 			BlockHash:   make([]byte, 32),
 		},
+		Fork: &ethpb.Fork{
+			PreviousVersion: make([]byte, 4),
+			CurrentVersion:  make([]byte, 4),
+		},
 		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
-		Eth1DepositIndex:            0,
-		Validators:                  make([]*ethpb.Validator, 0),
-		Balances:                    make([]uint64, 0),
-		RandaoMixes:                 filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
-		Slashings:                   make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
+		HistoricalRoots:             make([][]byte, 0),
+		JustificationBits:           bitfield.Bitvector4{0x0},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		PreviousEpochParticipation:  make([]byte, 0),
 		CurrentEpochParticipation:   make([]byte, 0),
-		JustificationBits:           bitfield.Bitvector4{0x0},
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-		InactivityScores:            make([]uint64, 0),
 		CurrentSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys:         make([][]byte, 512),
+			Pubkeys:         pubkeys,
 			AggregatePubkey: make([]byte, 48),
 		},
 		NextSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys:         make([][]byte, 512),
+			Pubkeys:         pubkeys,
 			AggregatePubkey: make([]byte, 48),
 		},
 	}
@@ -159,41 +153,40 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 
 // NewBeaconStateBellatrix creates a beacon state with minimum marshalable fields.
 func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) error) (state.BeaconStateBellatrix, error) {
+	pubkeys := make([][]byte, 512)
+	for i := range pubkeys {
+		pubkeys[i] = make([]byte, 48)
+	}
+
 	seed := &ethpb.BeaconStateBellatrix{
-		GenesisTime:           0,
-		GenesisValidatorsRoot: make([]byte, 32),
-		Slot:                  0,
-		Fork: &ethpb.Fork{
-			PreviousVersion: make([]byte, 4),
-			CurrentVersion:  make([]byte, 4),
-		},
-		LatestBlockHeader: HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
-		BlockRoots:        filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		StateRoots:        filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		HistoricalRoots:   make([][]byte, 0),
+		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
+		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
+		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
+		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
+		Validators:                 make([]*ethpb.Validator, 0),
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, fieldparams.RootLength),
 			BlockHash:   make([]byte, 32),
 		},
+		Fork: &ethpb.Fork{
+			PreviousVersion: make([]byte, 4),
+			CurrentVersion:  make([]byte, 4),
+		},
 		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
-		Eth1DepositIndex:            0,
-		Validators:                  make([]*ethpb.Validator, 0),
-		Balances:                    make([]uint64, 0),
-		RandaoMixes:                 filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
-		Slashings:                   make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
+		HistoricalRoots:             make([][]byte, 0),
+		JustificationBits:           bitfield.Bitvector4{0x0},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		PreviousEpochParticipation:  make([]byte, 0),
 		CurrentEpochParticipation:   make([]byte, 0),
-		JustificationBits:           bitfield.Bitvector4{0x0},
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-		InactivityScores:            make([]uint64, 0),
 		CurrentSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys:         make([][]byte, 512),
+			Pubkeys:         pubkeys,
 			AggregatePubkey: make([]byte, 48),
 		},
 		NextSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys:         make([][]byte, 512),
+			Pubkeys:         pubkeys,
 			AggregatePubkey: make([]byte, 48),
 		},
 		LatestExecutionPayloadHeader: &ethpb.ExecutionPayloadHeader{
@@ -203,10 +196,6 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 			ReceiptRoot:      make([]byte, 32),
 			LogsBloom:        make([]byte, 256),
 			PrevRandao:       make([]byte, 32),
-			BlockNumber:      0,
-			GasLimit:         0,
-			GasUsed:          0,
-			Timestamp:        0,
 			ExtraData:        make([]byte, 0),
 			BaseFeePerGas:    make([]byte, 32),
 			BlockHash:        make([]byte, 32),
