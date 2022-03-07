@@ -18,10 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 )
 
-var (
+const (
 	// maxBalanceCacheSize defines the max number of active balances can cache.
 	maxBalanceCacheSize = int(4)
+)
 
+var (
 	// BalanceCacheMiss tracks the number of balance requests that aren't present in the cache.
 	balanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "total_effective_balance_cache_miss",
