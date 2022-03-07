@@ -23,38 +23,7 @@ import (
 )
 
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
-// Payload is computed given the respected time of merge.
-//
-// Spec code:
-// def prepare_execution_payload(state: BeaconState,
-//                              pow_chain: Dict[Hash32, PowBlock],
-//                              finalized_block_hash: Hash32,
-//                              fee_recipient: ExecutionAddress,
-//                              execution_engine: ExecutionEngine) -> Optional[PayloadId]:
-//    if not is_merge_complete(state):
-//        is_terminal_block_hash_set = TERMINAL_BLOCK_HASH != Hash32()
-//        is_activation_epoch_reached = get_current_epoch(state.slot) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-//        if is_terminal_block_hash_set and not is_activation_epoch_reached:
-//            # Terminal block hash is set but activation epoch is not yet reached, no prepare payload call is needed
-//            return None
-//
-//        terminal_pow_block = get_terminal_pow_block(pow_chain)
-//        if terminal_pow_block is None:
-//            # Pre-merge, no prepare payload call is needed
-//            return None
-//        # Signify merge via producing on top of the terminal PoW block
-//        parent_hash = terminal_pow_block.block_hash
-//    else:
-//        # Post-merge, normal payload
-//        parent_hash = state.latest_execution_payload_header.block_hash
-//
-//    # Set the forkchoice head and initiate the payload build process
-//    payload_attributes = PayloadAttributes(
-//        timestamp=compute_timestamp_at_slot(state, state.slot),
-//        random=get_randao_mix(state, get_current_epoch(state)),
-//        fee_recipient=fee_recipient,
-//    )
-//    return execution_engine.notify_forkchoice_updated(parent_hash, finalized_block_hash, payload_attributes)
+// The payload is computed given the respected time of merge.
 func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*enginev1.ExecutionPayload, error) {
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
@@ -104,7 +73,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	if err != nil {
 		return nil, err
 	}
-
 	if err := helpers.BeaconBlockIsNil(finalizedBlock); err != nil {
 		return nil, err
 	}
@@ -235,15 +203,6 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 				}).Info("Retrieved terminal block hash")
 				return blk.Hash, true, nil
 			}
-		} else {
-			log.WithFields(logrus.Fields{
-				"number":   blk.Number,
-				"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash)),
-				"td":       blk.TotalDifficulty,
-				"parentTd": parentBlk.TotalDifficulty,
-				"ttd":      terminalTotalDifficulty,
-			}).Info("Latest pow block has not reached total difficulty")
-			return nil, false, nil
 		}
 		blk = parentBlk
 	}
