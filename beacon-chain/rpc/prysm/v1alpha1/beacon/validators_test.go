@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"sort"
 	"strconv"
 	"testing"
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -1684,7 +1684,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 	require.NoError(t, beaconDB.SaveBlock(ctx, gb))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
-	secondSlot := 2*params.BeaconConfig().SlotsPerEpoch-1
+	secondSlot := 2*params.BeaconConfig().SlotsPerEpoch - 1
 	headState, err := stategen.ReplayProcessSlots(ctx, genState.Copy(), secondSlot)
 	require.NoError(t, err)
 	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockAltair())
