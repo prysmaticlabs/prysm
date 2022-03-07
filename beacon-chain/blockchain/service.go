@@ -133,6 +133,7 @@ func (s *Service) Start() {
 			log.Fatal(err)
 		}
 	}
+	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -223,8 +224,6 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
 		},
 	})
-
-	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 
 	return nil
 }
@@ -334,7 +333,6 @@ func (s *Service) startFromPOWChain() error {
 		stateChannel := make(chan *feed.Event, 1)
 		stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 		defer stateSub.Unsubscribe()
-		s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 		for {
 			select {
 			case event := <-stateChannel:

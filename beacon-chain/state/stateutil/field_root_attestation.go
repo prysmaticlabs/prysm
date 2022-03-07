@@ -25,13 +25,13 @@ func epochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
 	}
 
 	hasher := hash.CustomSHA256Hasher()
-	roots := make([][]byte, len(atts))
+	roots := make([][32]byte, len(atts))
 	for i := 0; i < len(atts); i++ {
 		pendingRoot, err := pendingAttestationRoot(hasher, atts[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
 		}
-		roots[i] = pendingRoot[:]
+		roots[i] = pendingRoot
 	}
 
 	attsRootsRoot, err := ssz.BitwiseMerkleize(

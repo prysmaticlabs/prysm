@@ -67,8 +67,8 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s", eth1Path),
-		fmt.Sprintf("--http.port=%d", e2e.TestParams.Eth1RPCPort),
-		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Eth1RPCPort+e2e.ETH1WSOffset),
+		fmt.Sprintf("--http.port=%d", e2e.TestParams.Ports.Eth1RPCPort),
+		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Ports.Eth1WSPort),
 		"--http",
 		"--http.addr=127.0.0.1",
 		"--http.corsdomain=\"*\"",
@@ -97,7 +97,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	}
 
 	// Connect to the started geth dev chain.
-	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
+	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort))
 	if err != nil {
 		return fmt.Errorf("failed to connect to ipc: %w", err)
 	}

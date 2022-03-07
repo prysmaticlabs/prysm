@@ -56,48 +56,39 @@ import (
 //    )
 //    return execution_engine.notify_forkchoice_updated(parent_hash, finalized_block_hash, payload_attributes)
 func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*enginev1.ExecutionPayload, error) {
-	// TODO_MERGE: Reuse the same head state as in building phase0 block attestation.
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err
 	}
-	st, err = transition.ProcessSlots(ctx, st, slot)
+	st, err = transition.ProcessSlotsIfPossible(ctx, st, slot)
 	if err != nil {
 		return nil, err
 	}
 
 	var parentHash []byte
 	var hasTerminalBlock bool
-	complete, err := blocks.MergeTransitionComplete(st)
+	mergeComplete, err := blocks.MergeTransitionComplete(st)
 	if err != nil {
 		return nil, err
 	}
 
-	if !complete {
-		if bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) != [32]byte{} {
-			// `TERMINAL_BLOCK_HASH` is used as an override, the activation epoch must be reached.
-			isActivationEpochReached := params.BeaconConfig().TerminalBlockHashActivationEpoch <= slots.ToEpoch(slot)
-			if !isActivationEpochReached {
-				return emptyPayload(), nil
-			}
-		}
-
-		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if !hasTerminalBlock {
-			// No terminal block signals this is pre merge, empty payload is used.
-			return emptyPayload(), nil
-		}
-		// Terminal block found signals production on top of terminal PoW block.
-	} else {
-		// Post merge, normal payload is used.
+	if mergeComplete {
 		header, err := st.LatestExecutionPayloadHeader()
 		if err != nil {
 			return nil, err
 		}
 		parentHash = header.BlockHash
+	} else {
+		if activationEpochNotReached(slot) {
+			return emptyPayload(), nil
+		}
+		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if !hasTerminalBlock {
+			return emptyPayload(), nil
+		}
 	}
 
 	t, err := slots.ToTime(st.GenesisTime(), slot)
@@ -113,8 +104,15 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	if err != nil {
 		return nil, err
 	}
-	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
-	if finalizedBlock != nil && finalizedBlock.Version() == version.Bellatrix {
+
+	if err := helpers.BeaconBlockIsNil(finalizedBlock); err != nil {
+		return nil, err
+	}
+	var finalizedBlockHash []byte
+	switch finalizedBlock.Version() {
+	case version.Phase0, version.Altair: // Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
+		finalizedBlockHash = params.BeaconConfig().ZeroHash[:]
+	default:
 		finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 		if err != nil {
 			return nil, err
@@ -136,19 +134,10 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
-
 	if payloadID == nil {
-		return nil, errors.New("forkchoice returned nil")
+		return nil, errors.New("nil payload id")
 	}
-
-	log.WithFields(logrus.Fields{
-		"id":   fmt.Sprintf("%#x", &payloadID),
-		"slot": slot,
-		"hash": fmt.Sprintf("%#x", parentHash),
-	}).Info("Received payload ID")
-	var id [8]byte
-	copy(id[:], payloadID[:])
-	return vs.ExecutionEngineCaller.GetPayload(ctx, id)
+	return vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 }
 
 // This returns the valid terminal block hash with an existence bool value.
@@ -260,6 +249,32 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	}
 }
 
+// activationEpochNotReached returns true if activation epoch has not been reach.
+// Which satisfy the following conditions in spec:
+//        is_terminal_block_hash_set = TERMINAL_BLOCK_HASH != Hash32()
+//        is_activation_epoch_reached = get_current_epoch(state) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+//        if is_terminal_block_hash_set and not is_activation_epoch_reached:
+//      	return True
+func activationEpochNotReached(slot types.Slot) bool {
+	terminalBlockHashSet := bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) != [32]byte{}
+	if terminalBlockHashSet {
+		return params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(slot)
+	}
+	return false
+}
+
+func tDStringToUint256(td string) (*uint256.Int, error) {
+	b, err := hexutil.DecodeBig(td)
+	if err != nil {
+		return nil, err
+	}
+	i, overflows := uint256.FromBig(b)
+	if overflows {
+		return nil, errors.New("total difficulty overflowed")
+	}
+	return i, nil
+}
+
 func emptyPayload() *enginev1.ExecutionPayload {
 	return &enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
@@ -271,15 +286,4 @@ func emptyPayload() *enginev1.ExecutionPayload {
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 	}
-}
-func tDStringToUint256(td string) (*uint256.Int, error) {
-	b, err := hexutil.DecodeBig(td)
-	if err != nil {
-		return nil, err
-	}
-	i, overflows := uint256.FromBig(b)
-	if overflows {
-		return nil, errors.New("total difficulty overflowed")
-	}
-	return i, nil
 }
