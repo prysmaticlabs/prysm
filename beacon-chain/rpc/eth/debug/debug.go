@@ -28,7 +28,7 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 	if beaconSt.Version() != version.Phase0 {
 		return nil, status.Error(codes.Internal, "State has incorrect type")
 	}
-	protoSt, err := migration.BeaconStateToV1(beaconSt)
+	protoSt, err := migration.BeaconStateToProto(beaconSt)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 	}
@@ -67,7 +67,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	}
 	switch beaconSt.Version() {
 	case version.Phase0:
-		protoSt, err := migration.BeaconStateToV1(beaconSt)
+		protoSt, err := migration.BeaconStateToProto(beaconSt)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}
@@ -82,7 +82,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 		if !ok {
 			return nil, status.Error(codes.Internal, "Altair state type assertion failed")
 		}
-		protoState, err := migration.BeaconStateAltairToV2(altairState)
+		protoState, err := migration.BeaconStateAltairToProto(altairState)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}
@@ -90,6 +90,21 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Version: ethpbv2.Version_ALTAIR,
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_AltairState{AltairState: protoState},
+			},
+		}, nil
+	case version.Bellatrix:
+		bellatrixState, ok := beaconSt.(state.BeaconStateBellatrix)
+		if !ok {
+			return nil, status.Error(codes.Internal, "Bellatrix state type assertion failed")
+		}
+		protoState, err := migration.BeaconStateBellatrixToProto(bellatrixState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
+		}
+		return &ethpbv2.BeaconStateResponseV2{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.BeaconStateContainer{
+				State: &ethpbv2.BeaconStateContainer_BellatrixState{BellatrixState: protoState},
 			},
 		}, nil
 	default:
