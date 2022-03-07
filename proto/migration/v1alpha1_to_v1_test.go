@@ -436,7 +436,7 @@ func Test_V1AttestationToV1Alpha1(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Root, v1Alpha1Root)
 }
-func TestBeaconStateToV1(t *testing.T) {
+func TestBeaconStateToProto(t *testing.T) {
 	source, err := util.NewBeaconState(util.FillRootsNaturalOpt, func(state *ethpbalpha.BeaconState) error {
 		state.GenesisTime = 1
 		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorsroot"), 32)
@@ -533,7 +533,7 @@ func TestBeaconStateToV1(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	result, err := BeaconStateToV1(source)
+	result, err := BeaconStateToProto(source)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, uint64(1), result.GenesisTime)
