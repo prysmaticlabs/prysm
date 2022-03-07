@@ -788,6 +788,7 @@ func (p *Status) PeersToPrune() []peer.ID {
 	amountToPrune, err := pmath.Sub64(uint64(len(activePeers)), connLimit)
 	if err != nil {
 		// This should never happen.
+		log.WithError(err).Error("Failed to determine amount of peers to prune")
 		return []peer.ID{}
 	}
 
@@ -853,6 +854,7 @@ func (p *Status) deprecatedPeersToPrune() []peer.ID {
 	amountToPrune, err := pmath.Sub64(uint64(len(activePeers)), connLimit)
 	if err != nil {
 		// This should never happen
+		log.WithError(err).Error("Failed to determine amount of peers to prune")
 		return []peer.ID{}
 	}
 	// Also check for inbound peers above our limit.

@@ -128,5 +128,5 @@ func Int(u uint64) (int, error) {
 	if u > stdmath.MaxInt {
 		return 0, errors.New("integer overflow")
 	}
-	return int(u), nil
+	return int(u), nil // lint:ignore uintcast -- This is the preferred method of casting uint64 to int.
 }
