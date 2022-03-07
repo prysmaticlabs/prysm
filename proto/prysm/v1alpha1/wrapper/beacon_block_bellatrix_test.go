@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -348,4 +349,27 @@ func TestBellatrixBeaconBlockBody_ExecutionPayload(t *testing.T) {
 	got, err := wbb.ExecutionPayload()
 	require.NoError(t, err)
 	assert.DeepEqual(t, payloads, got)
+}
+
+func TestBellatrixBeaconBlock_PbGenericBlock(t *testing.T) {
+	abb := &ethpb.SignedBeaconBlockBellatrix{
+		Block: util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}),
+	}
+	wsb, err := wrapper.WrappedSignedBeaconBlock(abb)
+	require.NoError(t, err)
+
+	got, err := wsb.PbGenericBlock()
+	require.NoError(t, err)
+	assert.Equal(t, abb, got.GetBellatrix())
+}
+
+func TestBellatrixBeaconBlock_AsSignRequestObject(t *testing.T) {
+	abb := util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{})
+	wsb, err := wrapper.WrappedBeaconBlock(abb)
+	require.NoError(t, err)
+
+	sro := wsb.AsSignRequestObject()
+	got, ok := sro.(*validatorpb.SignRequest_BlockV3)
+	require.Equal(t, true, ok, "Not a SignRequest_BlockV3")
+	assert.Equal(t, abb, got.BlockV3)
 }
