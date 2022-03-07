@@ -51,6 +51,16 @@ func MergeTransitionBlock(st state.BeaconState, body block.BeaconBlockBody) (boo
 	return ExecutionBlock(body)
 }
 
+// IsMergeTransitionBlockUsingPayloadHeader returns true if the input block is the terminal merge block.
+// Terminal merge block must be associated with an empty payload header.
+// This is an optimized version of MergeTransitionComplete where beacon state is not required as an argument.
+func IsMergeTransitionBlockUsingPayloadHeader(h *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
+	if !isEmptyHeader(h) {
+		return false, nil
+	}
+	return ExecutionBlock(body)
+}
+
 // ExecutionBlock returns whether the block has a non-empty ExecutionPayload.
 //
 // Spec code:

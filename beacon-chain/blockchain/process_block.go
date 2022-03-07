@@ -21,6 +21,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -98,9 +99,22 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
+	preStateVersion := preState.Version()
+	var preStateHeader *ethpb.ExecutionPayloadHeader
+	switch preStateVersion {
+	case version.Phase0, version.Altair:
+	default:
+		preStateHeader, err = preState.LatestExecutionPayloadHeader()
+		if err != nil {
+			return err
+		}
+	}
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return err
+	}
+	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, postState, signed); err != nil {
+		return errors.Wrap(err, "could not verify new payload")
 	}
 
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
@@ -112,6 +126,14 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
+		return err
+	}
+
+	root, err := b.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	if err := s.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, root); err != nil {
 		return err
 	}
 
@@ -173,6 +195,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
+	}
+	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), bytesutil.ToBytes32(finalized.Root)); err != nil {
+		return err
 	}
 
 	if err := s.saveSyncedTipsDB(ctx); err != nil {
