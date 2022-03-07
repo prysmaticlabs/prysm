@@ -68,7 +68,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	if err != nil {
 		return nil, err
 	}
-	var finalizedBlockHash []byte
+	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
 	finalizedRoot := bytesutil.ToBytes32(st.FinalizedCheckpoint().Root)
 	if finalizedRoot != [32]byte{} {
 		finalizedBlock, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(st.FinalizedCheckpoint().Root))
@@ -80,7 +80,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 		}
 		switch finalizedBlock.Version() {
 		case version.Phase0, version.Altair: // Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
-			finalizedBlockHash = params.BeaconConfig().ZeroHash[:]
 		default:
 			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 			if err != nil {
