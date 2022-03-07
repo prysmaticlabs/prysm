@@ -83,7 +83,7 @@ func postAltairMsgID(pmsg *pubsub_pb.Message, fEpoch types.Epoch) string {
 
 	decodedData, err := encoder.DecodeSnappy(pmsg.Data, gossipPubSubSize)
 	if err != nil {
-		totalLength := len(params.BeaconNetworkConfig().MessageDomainInvalidSnappy) + len(topicLenBytes) + int(topicLen) + len(pmsg.Data)
+		totalLength := len(params.BeaconNetworkConfig().MessageDomainInvalidSnappy) + len(topicLenBytes) + int(topicLen) + len(pmsg.Data) // lint:ignore uintcast -- Message length cannot exceed int64
 		combinedData := make([]byte, 0, totalLength)
 		combinedData = append(combinedData, params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:]...)
 		combinedData = append(combinedData, topicLenBytes...)
@@ -92,7 +92,7 @@ func postAltairMsgID(pmsg *pubsub_pb.Message, fEpoch types.Epoch) string {
 		h := hash.Hash(combinedData)
 		return string(h[:20])
 	}
-	totalLength := len(params.BeaconNetworkConfig().MessageDomainValidSnappy) + len(topicLenBytes) + int(topicLen) + len(decodedData)
+	totalLength := len(params.BeaconNetworkConfig().MessageDomainValidSnappy) + len(topicLenBytes) + int(topicLen) + len(decodedData) // lint:ignore uintcast -- Message length cannot exceed int64
 	combinedData := make([]byte, 0, totalLength)
 	combinedData = append(combinedData, params.BeaconNetworkConfig().MessageDomainValidSnappy[:]...)
 	combinedData = append(combinedData, topicLenBytes...)

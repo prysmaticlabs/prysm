@@ -1,3 +1,4 @@
+//go:build !fuzz
 // +build !fuzz
 
 package cache
@@ -19,7 +20,7 @@ import (
 
 var (
 	// maxBalanceCacheSize defines the max number of active balances can cache.
-	maxBalanceCacheSize = uint64(4)
+	maxBalanceCacheSize = int(4)
 
 	// BalanceCacheMiss tracks the number of balance requests that aren't present in the cache.
 	balanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -42,7 +43,7 @@ type BalanceCache struct {
 // NewEffectiveBalanceCache creates a new effective balance cache for storing/accessing total balance by epoch.
 func NewEffectiveBalanceCache() *BalanceCache {
 	return &BalanceCache{
-		cache: lruwrpr.New(int(maxBalanceCacheSize)),
+		cache: lruwrpr.New(maxBalanceCacheSize),
 	}
 }
 

@@ -64,7 +64,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	buffer := bytes.NewBuffer([]byte{})
 	buffer.Grow(64)
 
-	for i := 0; i < int(depth); i++ {
+	for i := uint8(0); i < depth; i++ {
 		layerLen := len(layers[i])
 		oddNodeLength := layerLen%2 == 1
 		if features.Get().EnableVectorizedHTR {
@@ -126,12 +126,15 @@ func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][
 	}
 
 	root := *layer[0][0]
-	var err error
 
 	for _, idx := range changedIdx {
-		root, layer, err = recomputeRootFromLayer(int(idx), layer, leaves, hasher)
-		if err != nil {
+		if ii, err := math.Int(idx); err != nil {
 			return [32]byte{}, nil, err
+		} else {
+			root, layer, err = recomputeRootFromLayer(ii, layer, leaves, hasher)
+			if err != nil {
+				return [32]byte{}, nil, err
+			}
 		}
 	}
 	return root, layer, nil
@@ -144,10 +147,13 @@ func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, l
 		return *layer[0][0], layer, nil
 	}
 	root := *layer[len(layer)-1][0]
-	var err error
 
 	for i, idx := range changedIdx {
-		root, layer, err = recomputeRootFromLayerVariable(int(idx), changedLeaves[i], layer, hasher)
+		ii, err := math.Int(idx)
+		if err != nil {
+			return [32]byte{}, nil, err
+		}
+		root, layer, err = recomputeRootFromLayerVariable(ii, changedLeaves[i], layer, hasher)
 		if err != nil {
 			return [32]byte{}, nil, err
 		}

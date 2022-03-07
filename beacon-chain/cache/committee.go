@@ -1,3 +1,4 @@
+//go:build !fuzz
 // +build !fuzz
 
 package cache
@@ -22,7 +23,7 @@ import (
 var (
 	// maxCommitteesCacheSize defines the max number of shuffled committees on per randao basis can cache.
 	// Due to reorgs and long finality, it's good to keep the old cache around for quickly switch over.
-	maxCommitteesCacheSize = uint64(32)
+	maxCommitteesCacheSize = int(32)
 
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -55,7 +56,7 @@ func committeeKeyFn(obj interface{}) (string, error) {
 // NewCommitteesCache creates a new committee cache for storing/accessing shuffled indices of a committee.
 func NewCommitteesCache() *CommitteeCache {
 	return &CommitteeCache{
-		CommitteeCache: lruwrpr.New(int(maxCommitteesCacheSize)),
+		CommitteeCache: lruwrpr.New(maxCommitteesCacheSize),
 		inProgress:     make(map[string]bool),
 	}
 }

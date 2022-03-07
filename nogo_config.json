@@ -166,7 +166,9 @@
   },
   "uintcast": {
     "exclude_files": {
-      "external/.*": "Third party code"
+      "external/.*": "Third party code",
+      "math/math_helper.go": "Allowed safe cast",
+      ".*_test\\.go": "Tests are ok"
     }
   }
 }

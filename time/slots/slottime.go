@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	pmath "github.com/prysmaticlabs/prysm/math"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
@@ -20,8 +21,12 @@ const MaxSlotBuffer = uint64(1 << 7)
 // value.
 func StartTime(genesis uint64, slot types.Slot) time.Time {
 	duration := time.Second * time.Duration(slot.Mul(params.BeaconConfig().SecondsPerSlot))
-	startTime := time.Unix(int64(genesis), 0).Add(duration)
-	return startTime
+	if g, err := pmath.Int(genesis); err == nil {
+		return time.Unix(int64(g), 0).Add(duration)
+	}
+
+	// This should never happen.
+	return time.Time{}
 }
 
 // SinceGenesis returns the number of slots since
@@ -164,12 +169,12 @@ func Since(time time.Time) types.Slot {
 // CurrentSlot returns the current slot as determined by the local clock and
 // provided genesis time.
 func CurrentSlot(genesisTimeSec uint64) types.Slot {
-	now := prysmTime.Now().Unix()
-	genesis := int64(genesisTimeSec)
+	now := uint64(prysmTime.Now().Unix())
+	genesis := genesisTimeSec
 	if now < genesis {
 		return 0
 	}
-	return types.Slot(uint64(now-genesis) / params.BeaconConfig().SecondsPerSlot)
+	return types.Slot(now - genesis/params.BeaconConfig().SecondsPerSlot)
 }
 
 // ValidateClock validates a provided slot against the local

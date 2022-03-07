@@ -131,7 +131,7 @@ func (node *Eth1Node) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	txOpts.Nonce = big.NewInt(int64(nonce))
+	txOpts.Nonce = big.NewInt(0).SetUint64(nonce)
 	txOpts.Context = context.Background()
 	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3)
 	if err != nil {
