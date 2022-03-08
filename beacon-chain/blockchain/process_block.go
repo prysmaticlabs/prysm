@@ -99,15 +99,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
-	preStateVersion := preState.Version()
-	var preStateHeader *ethpb.ExecutionPayloadHeader
-	switch preStateVersion {
-	case version.Phase0, version.Altair:
-	default:
-		preStateHeader, err = preState.LatestExecutionPayloadHeader()
-		if err != nil {
-			return err
-		}
+	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+	if err != nil {
+		return err
 	}
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
@@ -126,14 +120,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
-		return err
-	}
-
-	root, err := b.HashTreeRoot()
-	if err != nil {
-		return err
-	}
-	if err := s.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, root); err != nil {
 		return err
 	}
 
@@ -273,6 +259,21 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	defer reportAttestationInclusion(b)
 
 	return s.handleEpochBoundary(ctx, postState)
+}
+
+func getStateVersionAndPayload(preState state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
+	var preStateHeader *ethpb.ExecutionPayloadHeader
+	var err error
+	preStateVersion := preState.Version()
+	switch preStateVersion {
+	case version.Phase0, version.Altair:
+	default:
+		preStateHeader, err = preState.LatestExecutionPayloadHeader()
+		if err != nil {
+			return 0, nil, err
+		}
+	}
+	return preStateVersion, preStateHeader, nil
 }
 
 func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock,

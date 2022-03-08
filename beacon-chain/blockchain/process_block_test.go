@@ -27,6 +27,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -1041,4 +1042,55 @@ func TestService_saveSyncedTipsDB(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(savedTips))
 	require.Equal(t, types.Slot(100), savedTips[r100])
+}
+
+func Test_getStateVersionAndPayload(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		st      state.BeaconState
+		version int
+		header  *ethpb.ExecutionPayloadHeader
+	}{
+		{
+			name: "phase 0 state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisState(t, 1)
+				return s
+			}(),
+			version: version.Phase0,
+			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+		},
+		{
+			name: "altair state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisStateAltair(t, 1)
+				return s
+			}(),
+			version: version.Altair,
+			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+		},
+		{
+			name: "bellatrix state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+				require.NoError(t, s.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{
+					BlockNumber: 1,
+				}))
+				return s
+			}(),
+			version: version.Bellatrix,
+			header: &ethpb.ExecutionPayloadHeader{
+				BlockNumber: 1,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			version, header, err := getStateVersionAndPayload(tt.st)
+			require.NoError(t, err)
+			require.Equal(t, tt.version, version)
+			require.DeepEqual(t, tt.header, header)
+		})
+	}
 }
