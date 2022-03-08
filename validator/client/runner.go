@@ -114,6 +114,11 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Fatalf("Could not get keymanager: %v", err)
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
+	// First time sets up the validator fees.
+	if err := v.SetPubKeyToValidatorIndexMap(ctx, km); err != nil {
+		log.Fatalf("Could not set pubkey to validator index map: %v", err)
+	}
+	v.PrepareBeaconProposer(ctx, km)
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")

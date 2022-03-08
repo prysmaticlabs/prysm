@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -73,6 +74,7 @@ type validator struct {
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
+	pubkeyHexToValidatorIndex          map[string]github_com_prysmaticlabs_eth2_types.ValidatorIndex
 	graffitiOrderedIndex               uint64
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	domainDataCache                    *ristretto.Cache
@@ -934,6 +936,25 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
+func (v *validator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymanager.IKeymanager) error {
+	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return err
+	}
+	for _, pk := range pubkeys {
+		resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pk[:]})
+		if err != nil {
+			if strings.Contains(err.Error(), "Could not find validator index for public key ") {
+				log.Infoln("Could not find validator index for public key %#x not found. Perhaps the validator is not yet active.", pubkey)
+			} else {
+				return err
+			}
+		}
+		v.pubkeyHexToValidatorIndex[hexutil.Encode(pk[:])] = resp.Index
+	}
+	return nil
+}
+
 func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) {
 	feeRecipients, err := v.feeRecipients(ctx, km)
 	if err != nil {
@@ -948,18 +969,31 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 	if v.prepareBeaconProposalConfig == nil {
 		return nil, errors.New("no config was provided to set validator fee recipients")
 	}
+
 	if v.prepareBeaconProposalConfig.ProposeConfig != nil {
 		for pubkeyhex, option := range v.prepareBeaconProposalConfig.ProposeConfig {
 			pubkey, err := hexutil.Decode(pubkeyhex)
 			if err != nil {
 				return nil, err
 			}
-			resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey})
-			if err != nil {
-				return nil, err
+			validatorIndex := v.pubkeyHexToValidatorIndex[pubkeyhex]
+			if validatorIndex == 0 {
+				// try to look up the validator index
+				resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey})
+				if err != nil {
+					// do a strings contains? to see if the error is a not found error
+					if strings.Contains(err.Error(), "Could not find validator index for public key ") {
+						log.Infoln("Could not find validator index for public key %#x not found. Perhaps the validator is not yet active.", pubkey)
+						continue
+					} else {
+						return nil, err
+					}
+				} else {
+					validatorIndex = resp.Index
+				}
 			}
 			validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &validator_service_config.ValidatorFeeRecipient{
-				ValidatorIndex: resp.Index,
+				ValidatorIndex: validatorIndex,
 				FeeRecipient:   option.FeeRecipient,
 			})
 		}
@@ -969,12 +1003,23 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 			return nil, err
 		}
 		for _, key := range pubkey {
-			resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: key[:]})
-			if err != nil {
-				return nil, err
+			validatorIndex := v.pubkeyHexToValidatorIndex[hexutil.Encode(key[:])]
+			if validatorIndex == 0 {
+				resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: key[:]})
+				if err != nil {
+					// do a strings contains? to see if the error is a not found error
+					if strings.Contains(err.Error(), "Could not find validator index for public key ") {
+						log.Infoln("Could not find validator index for public key %#x not found. Perhaps the validator is not yet active.", pubkey)
+						continue
+					} else {
+						return nil, err
+					}
+				} else {
+					validatorIndex = resp.Index
+				}
 			}
 			validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &validator_service_config.ValidatorFeeRecipient{
-				ValidatorIndex: resp.Index,
+				ValidatorIndex: validatorIndex,
 				FeeRecipient:   v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient,
 			})
 		}

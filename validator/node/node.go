@@ -485,19 +485,29 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config
 			return nil, err
 		}
 	}
+	// override the default config with the config from the command line
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
+		byteValue, err := hexutil.Decode(suggestedFee)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode suggested fee recipient: %s", suggestedFee)
+		}
+		if len(byteValue) != 20 {
+			return nil, fmt.Errorf("suggested fee recipient: %s must be a valid eth1 address", suggestedFee)
+		}
 		config = &validator_service_config.PrepareBeaconProposalFileConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
-				FeeRecipient: cliCtx.String(flags.SuggestedFeeRecipientFlag.Name),
+				FeeRecipient: suggestedFee,
 			},
 		}
 	}
+	// add warning log...
 	if !cliCtx.IsSet(flags.ValidatorsProposerConfigFlag.Name) && !cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		config = &validator_service_config.PrepareBeaconProposalFileConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
-				FeeRecipient: hexutil.Encode([]byte(eth1BurnAddress)),
+				FeeRecipient: eth1BurnAddress,
 			},
 		}
 	}

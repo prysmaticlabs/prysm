@@ -58,4 +58,5 @@ type Validator interface {
 	HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
 	PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager)
+	SetPubKeyToValidatorIndexMap(ctx context.Context, km keymanager.IKeymanager) error
 }
