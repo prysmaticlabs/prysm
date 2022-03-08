@@ -15,7 +15,6 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"go.opencensus.io/trace"
@@ -503,11 +502,17 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	ctx, span := trace.StartSpan(ctx, "beacon.ListBlockAttestations")
 	defer span.End()
 
-	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
+	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
+		return nil, err
 	}
-	if phase0Blk != nil {
+
+	_, err = blk.PbPhase0Block()
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
+	if err == nil {
 		v1Blk, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
@@ -516,36 +521,42 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 			Data: v1Blk.Block.Body.Attestations,
 		}, nil
 	}
+
 	altairBlk, err := blk.PbAltairBlock()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check for Altair block")
-	}
-	v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
-	if err != nil {
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-	return &ethpbv1.BlockAttestationsResponse{
-		Data: v2Blk.Body.Attestations,
-	}, nil
-}
+	if err == nil {
+		if altairBlk == nil {
+			return nil, status.Errorf(codes.Internal, "Nil block")
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		return &ethpbv1.BlockAttestationsResponse{
+			Data: v2Blk.Body.Attestations,
+		}, nil
+	}
 
-func (bs *Server) blocksFromId(ctx context.Context, blockId []byte) (
-	signedBlock block.SignedBeaconBlock,
-	phase0Block *ethpbalpha.SignedBeaconBlock,
-	err error,
-) {
-	blk, err := bs.blockFromBlockID(ctx, blockId)
-	err = handleGetBlockError(blk, err)
-	if err != nil {
-		return nil, nil, err
+	bellatrixBlock, err := blk.PbBellatrixBlock()
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-	phase0Blk, err := blk.PbPhase0Block()
-	// Assume we have an Altair block when Phase 0 block is unsupported.
-	// In such case we continue with the rest of the function.
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
-		return nil, nil, errors.New("Could not check for phase 0 block")
+	if err == nil {
+		if bellatrixBlock == nil {
+			return nil, status.Errorf(codes.Internal, "Nil block")
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		return &ethpbv1.BlockAttestationsResponse{
+			Data: v2Blk.Body.Attestations,
+		}, nil
 	}
-	return blk, phase0Blk, nil
+
+	return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 }
 
 func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.SignedBeaconBlock, error) {
