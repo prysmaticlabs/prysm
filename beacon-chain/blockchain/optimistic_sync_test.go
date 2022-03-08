@@ -212,7 +212,8 @@ func Test_NotifyNewPayload(t *testing.T) {
 			preState:  altairState,
 		},
 		{
-			name:      "nil states",
+			name:      "nil post state",
+			preState:  phase0State,
 			errString: "pre and post states must not be nil",
 		},
 		{

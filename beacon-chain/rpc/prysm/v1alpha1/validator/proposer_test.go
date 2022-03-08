@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -2236,6 +2237,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	cfg := params.MainnetConfig().Copy()
 	cfg.BellatrixForkEpoch = 2
 	cfg.AltairForkEpoch = 1
+	cfg.TerminalBlockHash = common.BytesToHash(bytesutil.PadTo([]byte{0x01}, 32))
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
