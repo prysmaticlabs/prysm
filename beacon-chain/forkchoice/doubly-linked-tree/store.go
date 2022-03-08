@@ -46,11 +46,6 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	return nil
 }
 
-// NodeNumber returns the current number of nodes in the Store
-func (s *Store) NodeNumber() int {
-	return len(s.nodeByRoot)
-}
-
 // ProposerBoost of fork choice store.
 func (s *Store) proposerBoost() [fieldparams.RootLength]byte {
 	s.proposerBoostLock.RLock()
@@ -160,10 +155,10 @@ func (s *Store) updateCheckpoints(justifiedEpoch, finalizedEpoch types.Epoch) {
 	s.finalizedEpoch = finalizedEpoch
 }
 
-// pruneMaps prunes the `nodeByRoot` map
+// pruneFinalizedNodeByRootMap prunes the `nodeByRoot` map
 // starting from `node` down to the finalized Node or to a leaf of the Fork
 // choice store. This method assumes a lock on nodesLock.
-func (s *Store) pruneMaps(ctx context.Context, node, finalizedNode *Node) error {
+func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalizedNode *Node) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -171,7 +166,7 @@ func (s *Store) pruneMaps(ctx context.Context, node, finalizedNode *Node) error 
 		return nil
 	}
 	for _, child := range node.children {
-		if err := s.pruneMaps(ctx, child, finalizedNode); err != nil {
+		if err := s.pruneFinalizedNodeByRootMap(ctx, child, finalizedNode); err != nil {
 			return err
 		}
 	}
@@ -182,6 +177,7 @@ func (s *Store) pruneMaps(ctx context.Context, node, finalizedNode *Node) error 
 
 // prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
 // root is different than the current store finalized root, and the number of the store has met prune threshold.
+// This function does not prune for invalid optimistically synced nodes, it deals only with pruning upon finalization
 func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Prune")
 	defer span.End()
@@ -201,7 +197,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 	}
 
 	// Prune nodeByRoot starting from root
-	if err := s.pruneMaps(ctx, s.treeRootNode, finalizedNode); err != nil {
+	if err := s.pruneFinalizedNodeByRootMap(ctx, s.treeRootNode, finalizedNode); err != nil {
 		return err
 	}
 
@@ -224,11 +220,4 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 		}
 	}
 	return roots, slots
-}
-
-//TreeRoot returns the current root Node of the Store
-func (s *Store) TreeRoot() *Node {
-	s.nodesLock.RLock()
-	defer s.nodesLock.RUnlock()
-	return s.treeRootNode
 }

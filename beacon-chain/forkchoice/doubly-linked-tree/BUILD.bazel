@@ -13,7 +13,7 @@ go_library(
         "store.go",
         "types.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doublylinkedtree",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",

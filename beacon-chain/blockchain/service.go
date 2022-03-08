@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doublylinkedtree"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -189,7 +189,7 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	s.store = store.New(justified, finalized)
 
 	var store f.ForkChoicer
-	if features.Get().EnableForkChoiceTree {
+	if features.Get().EnableForkChoiceDoublyLinkedTree {
 		store = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
 	} else {
 		store = protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))

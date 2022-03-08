@@ -10,34 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestNode_Getters(t *testing.T) {
-	slot := types.Slot(100)
-	root := [32]byte{'a'}
-	parent := &Node{}
-	jEpoch := types.Epoch(20)
-	fEpoch := types.Epoch(30)
-	weight := uint64(10000)
-	balance := uint64(10)
-	n := &Node{
-		slot:           slot,
-		root:           root,
-		parent:         parent,
-		justifiedEpoch: jEpoch,
-		finalizedEpoch: fEpoch,
-		weight:         weight,
-		balance:        balance,
-	}
-
-	require.Equal(t, slot, n.Slot())
-	require.Equal(t, root, n.Root())
-	require.Equal(t, parent, n.Parent())
-	require.Equal(t, jEpoch, n.JustifiedEpoch())
-	require.Equal(t, fEpoch, n.FinalizedEpoch())
-	require.Equal(t, weight, n.Weight())
-	descendantNil := n.bestDescendant == nil
-	require.Equal(t, true, descendantNil)
-}
-
 func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()

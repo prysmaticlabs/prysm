@@ -1,3 +1,5 @@
+//go:build !develop
+
 /*
 Package features defines which features are enabled for runtime
 in order to selectively enable certain features to maintain a stable runtime.
@@ -74,9 +76,9 @@ type Flags struct {
 	CorrectlyInsertOrphanedAtts bool
 	CorrectlyPruneCanonicalAtts bool
 
-	EnableNativeState    bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
-	EnableVectorizedHTR  bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
-	EnableForkChoiceTree bool // EnableForkChoiceTree specifies whether fork choice store will use a doubly linked tree.
+	EnableNativeState                bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
+	EnableVectorizedHTR              bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
+	EnableForkChoiceDoublyLinkedTree bool // EnableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -228,9 +230,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		logEnabled(enableVecHTR)
 		cfg.EnableVectorizedHTR = true
 	}
-	if ctx.Bool(enableForkChoiceTree.Name) {
-		logEnabled(enableForkChoiceTree)
-		cfg.EnableForkChoiceTree = true
+	if ctx.Bool(enableForkChoiceDoublyLinkedTree.Name) {
+		logEnabled(enableForkChoiceDoublyLinkedTree)
+		cfg.EnableForkChoiceDoublyLinkedTree = true
 	}
 	Init(cfg)
 }

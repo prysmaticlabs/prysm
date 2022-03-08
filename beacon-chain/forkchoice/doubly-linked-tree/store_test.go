@@ -31,10 +31,10 @@ func TestStore_FinalizedEpoch(t *testing.T) {
 	require.Equal(t, j, f.FinalizedEpoch())
 }
 
-func TestStore_NodeNumber(t *testing.T) {
+func TestStore_NodeCount(t *testing.T) {
 	f := setup(0, 0)
 	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
-	require.Equal(t, 2, f.store.NodeNumber())
+	require.Equal(t, 2, f.NodeCount())
 }
 
 func TestStore_NodeByRoot(t *testing.T) {
@@ -51,7 +51,7 @@ func TestStore_NodeByRoot(t *testing.T) {
 		indexToHash(2):                 node2,
 	}
 
-	require.Equal(t, 3, f.store.NodeNumber())
+	require.Equal(t, 3, f.NodeCount())
 	for root, node := range f.store.nodeByRoot {
 		v, ok := expectedRoots[root]
 		require.Equal(t, ok, true)

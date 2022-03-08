@@ -97,10 +97,10 @@ func (s *Store) findSyncedTip(ctx context.Context, node *Node, syncedTips *optim
 	}
 }
 
-// SetValid is called with the root of a block that was returned as
+// ConfirmOptimisticValidNode is called with the root of a block that was returned as
 // VALID by the EL. This routine recomputes and updates the synced_tips map to
 // account for this new tip.
-func (f *ForkChoice) SetValid(ctx context.Context, root [32]byte) error {
+func (f *ForkChoice) ConfirmOptimisticValidNode(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	// We can only update if given root is in Fork Choice

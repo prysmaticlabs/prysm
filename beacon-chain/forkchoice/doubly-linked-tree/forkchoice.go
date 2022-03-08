@@ -180,11 +180,6 @@ func (f *ForkChoice) IsOptimistic(_ context.Context, root [32]byte) (bool, error
 	return node.optimistic, nil
 }
 
-// Store returns the fork choice store
-func (f *ForkChoice) Store() *Store {
-	return f.store
-}
-
 // AncestorRoot returns the ancestor root of input block root at a given slot.
 func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
@@ -278,8 +273,8 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 	return f.store.proposerBoost()
 }
 
-// SetValid sets the node with the given root as a fully validated node
-func (f *ForkChoice) SetValid(ctx context.Context, root [fieldparams.RootLength]byte) error {
+// ConfirmOptimisticValidNode sets the node with the given root as a fully validated node
+func (f *ForkChoice) ConfirmOptimisticValidNode(ctx context.Context, root [fieldparams.RootLength]byte) error {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	node, ok := f.store.nodeByRoot[root]
