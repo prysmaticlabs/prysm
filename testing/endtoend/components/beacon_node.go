@@ -140,7 +140,11 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if config.UsePprof {
 		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index))
 	}
-	args = append(args, features.E2EBeaconChainFlags...)
+	// Only add in the feature flags if we either aren't performing a control test
+	// on our features or the beacon index is a power of 2.
+	if !config.TestFeature || index%2 == 0 {
+		args = append(args, features.E2EBeaconChainFlags...)
+	}
 	args = append(args, config.BeaconFlags...)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
