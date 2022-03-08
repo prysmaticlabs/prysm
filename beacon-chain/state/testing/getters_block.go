@@ -12,7 +12,7 @@ import (
 
 type getStateWithLatestBlockHeader func(*ethpb.BeaconBlockHeader) (state.BeaconState, error)
 
-func VerifyBeaconState_LatestBlockHeader(
+func VerifyBeaconStateLatestBlockHeader(
 	t *testing.T,
 	factory getState,
 	factoryLBH getStateWithLatestBlockHeader,
@@ -35,7 +35,7 @@ func VerifyBeaconState_LatestBlockHeader(
 
 type getStateWithLBlockRoots func([][]byte) (state.BeaconState, error)
 
-func VerifyBeaconState_BlockRoots(
+func VerifyBeaconStateBlockRoots(
 	t *testing.T,
 	factory getState,
 	factoryBR getStateWithLBlockRoots,
@@ -56,7 +56,7 @@ func VerifyBeaconState_BlockRoots(
 	require.DeepNotEqual(t, want, got)
 }
 
-func VerifyBeaconState_BlockRootsNative(
+func VerifyBeaconStateBlockRootsNative(
 	t *testing.T,
 	factory getState,
 	factoryBR getStateWithLBlockRoots,
@@ -89,7 +89,7 @@ func VerifyBeaconState_BlockRootsNative(
 	require.DeepNotEqual(t, want, got)
 }
 
-func VerifyBeaconState_BlockRootAtIndex(
+func VerifyBeaconStateBlockRootAtIndex(
 	t *testing.T,
 	factory getState,
 	factoryBR getStateWithLBlockRoots,
@@ -109,7 +109,7 @@ func VerifyBeaconState_BlockRootAtIndex(
 	require.DeepSSZEqual(t, want, got)
 }
 
-func VerifyBeaconState_BlockRootAtIndexNative(
+func VerifyBeaconStateBlockRootAtIndexNative(
 	t *testing.T,
 	factory getState,
 	factoryBR getStateWithLBlockRoots,

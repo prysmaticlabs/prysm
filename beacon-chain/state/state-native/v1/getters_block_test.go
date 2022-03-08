@@ -9,7 +9,7 @@ import (
 )
 
 func TestBeaconState_LatestBlockHeader(t *testing.T) {
-	testtmpl.VerifyBeaconState_LatestBlockHeader(
+	testtmpl.VerifyBeaconStateLatestBlockHeader(
 		t,
 		func() (state.BeaconState, error) {
 			return InitializeFromProto(&ethpb.BeaconState{})
@@ -21,7 +21,7 @@ func TestBeaconState_LatestBlockHeader(t *testing.T) {
 }
 
 func TestBeaconState_BlockRoots(t *testing.T) {
-	testtmpl.VerifyBeaconState_BlockRootsNative(
+	testtmpl.VerifyBeaconStateBlockRootsNative(
 		t,
 		func() (state.BeaconState, error) {
 			return InitializeFromProto(&ethpb.BeaconState{})
@@ -33,7 +33,7 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 }
 
 func TestBeaconState_BlockRootAtIndex(t *testing.T) {
-	testtmpl.VerifyBeaconState_BlockRootAtIndexNative(
+	testtmpl.VerifyBeaconStateBlockRootAtIndexNative(
 		t,
 		func() (state.BeaconState, error) {
 			return InitializeFromProto(&ethpb.BeaconState{})
