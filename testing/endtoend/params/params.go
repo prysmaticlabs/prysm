@@ -27,6 +27,7 @@ type params struct {
 type ports struct {
 	BootNodePort                    int
 	BootNodeMetricsPort             int
+	Eth1Port                        int
 	Eth1RPCPort                     int
 	Eth1WSPort                      int
 	PrysmBeaconNodeRPCPort          int
@@ -40,6 +41,7 @@ type ports struct {
 	LighthouseBeaconNodeMetricsPort int
 	ValidatorMetricsPort            int
 	ValidatorGatewayPort            int
+	JaegerTracingPort               int
 }
 
 // TestParams is the globally accessible var for getting config elements.
@@ -73,8 +75,9 @@ const (
 	BootNodePort        = 2150
 	BootNodeMetricsPort = BootNodePort + portSpan
 
-	Eth1RPCPort = 3150
-	Eth1WSPort  = Eth1RPCPort + portSpan
+	Eth1Port    = 3150
+	Eth1RPCPort = Eth1Port + portSpan
+	Eth1WSPort  = Eth1Port + 2*portSpan
 
 	PrysmBeaconNodeRPCPort     = 4150
 	PrysmBeaconNodeUDPPort     = PrysmBeaconNodeRPCPort + portSpan
@@ -89,6 +92,8 @@ const (
 
 	ValidatorGatewayPort = 6150
 	ValidatorMetricsPort = ValidatorGatewayPort + portSpan
+
+	JaegerTracingPort = 9150
 )
 
 // Init initializes the E2E config, properly handling test sharding.
@@ -121,6 +126,10 @@ func Init(beaconNodeCount int) error {
 		return err
 	}
 	bootnodeMetricsPort, err := port(BootNodeMetricsPort, testTotalShards, testShardIndex, &existingRegistrations)
+	if err != nil {
+		return err
+	}
+	eth1Port, err := port(Eth1Port, testTotalShards, testShardIndex, &existingRegistrations)
 	if err != nil {
 		return err
 	}
@@ -164,9 +173,14 @@ func Init(beaconNodeCount int) error {
 	if err != nil {
 		return err
 	}
+	jaegerTracingPort, err := port(JaegerTracingPort, testTotalShards, testShardIndex, &existingRegistrations)
+	if err != nil {
+		return err
+	}
 	testPorts := &ports{
 		BootNodePort:               bootnodePort,
 		BootNodeMetricsPort:        bootnodeMetricsPort,
+		Eth1Port:                   eth1Port,
 		Eth1RPCPort:                eth1RPCPort,
 		Eth1WSPort:                 eth1WSPort,
 		PrysmBeaconNodeRPCPort:     beaconNodeRPCPort,
@@ -177,6 +191,7 @@ func Init(beaconNodeCount int) error {
 		PrysmBeaconNodePprofPort:   beaconNodePprofPort,
 		ValidatorMetricsPort:       validatorMetricsPort,
 		ValidatorGatewayPort:       validatorGatewayPort,
+		JaegerTracingPort:          jaegerTracingPort,
 	}
 
 	TestParams = &params{
@@ -219,6 +234,10 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 		return err
 	}
 	bootnodeMetricsPort, err := port(BootNodeMetricsPort, testTotalShards, testShardIndex, &existingRegistrations)
+	if err != nil {
+		return err
+	}
+	eth1Port, err := port(Eth1Port, testTotalShards, testShardIndex, &existingRegistrations)
 	if err != nil {
 		return err
 	}
@@ -277,6 +296,7 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 	testPorts := &ports{
 		BootNodePort:                    bootnodePort,
 		BootNodeMetricsPort:             bootnodeMetricsPort,
+		Eth1Port:                        eth1Port,
 		Eth1RPCPort:                     eth1RPCPort,
 		Eth1WSPort:                      eth1WSPort,
 		PrysmBeaconNodeRPCPort:          prysmBeaconNodeRPCPort,
