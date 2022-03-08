@@ -659,8 +659,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_deckarep_golang_set",
         importpath = "github.com/deckarep/golang-set",
-        sum = "h1:SCQV0S6gTtp6itiFrTqI+pfmJ4LN85S1YzhDf9rTHJQ=",
-        version = "v1.7.1",
+        sum = "h1:sk9/l/KqpunDwP7pSjUg0keiOOLEnOBHzykLrsPppp4=",
+        version = "v1.8.0",
     )
 
     go_repository(
@@ -825,8 +825,9 @@ def prysm_deps():
         importpath = "github.com/ethereum/go-ethereum",
         patch_args = ["-p1"],
         patches = ["//third_party:com_github_ethereum_go_ethereum_secp256k1.patch"],
-        sum = "h1:DEYFP9zk+Gruf3ae1JOJVhNmxK28ee+sMELPLgYTXpA=",
-        version = "v1.10.13",
+        replace = "github.com/MariusVanDerWijden/go-ethereum",
+        sum = "h1:nZkWdyuB0ehjFrXFx3HLfLF8e6F9oS/32MRhiT5zHdk=",
+        version = "v1.8.22-0.20220214112821-d40107742729",
     )
 
     go_repository(
