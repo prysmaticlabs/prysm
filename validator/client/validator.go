@@ -934,7 +934,16 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
-func (v *validator) ValidatorFeeRecipients(ctx context.Context, km keymanager.IKeymanager) ([]*validator_service_config.ValidatorFeeRecipient, error) {
+func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) {
+	feeRecipients, err := v.feeRecipients(ctx, km)
+	if err != nil {
+		log.WithError(err).Error("Failed to get fee recipients")
+	}
+	// call API to set beacon proposer
+
+}
+
+func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager) ([]*validator_service_config.ValidatorFeeRecipient, error) {
 	var validatorToFeeRecipientArray []*validator_service_config.ValidatorFeeRecipient
 	if v.prepareBeaconProposalConfig == nil {
 		return nil, errors.New("no config was provided to set validator fee recipients")

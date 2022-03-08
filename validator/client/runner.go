@@ -181,6 +181,7 @@ func run(ctx context.Context, v iface.Validator) {
 			// Start fetching domain data for the next epoch.
 			if slots.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
+				go v.PrepareBeaconProposer(ctx, km)
 			}
 
 			var wg sync.WaitGroup

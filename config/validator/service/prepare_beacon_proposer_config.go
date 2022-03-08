@@ -3,8 +3,8 @@ package validator_service_config
 import github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 
 type PrepareBeaconProposalFileConfig struct {
-	ProposeConfig map[string]*ValidatorProposerOptions `json:"proposer_config" validate:"required"`
-	DefaultConfig *ValidatorProposerOptions            `json:"default_config" validate:"required"`
+	ProposeConfig map[string]*ValidatorProposerOptions `json:"proposer_config"`
+	DefaultConfig *ValidatorProposerOptions            `json:"default_config"`
 }
 
 type ValidatorProposerOptions struct {

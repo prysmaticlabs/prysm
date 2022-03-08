@@ -5,7 +5,6 @@ package node
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -17,12 +16,14 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/go-playground/validator/v10"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/cmd/flagutil"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -51,6 +52,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
+)
+
+const (
+	eth1BurnAddress = "0x0000000000000000000000000000000000000000"
 )
 
 // ValidatorClient defines an instance of an Ethereum validator that manages
@@ -367,6 +372,8 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
+	jsonValidator := validator.New()
+
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -402,6 +409,11 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	bpc, err := prepareBeaconProposalConfig(c.cliCtx)
 	if err != nil {
 		return err
+	}
+	if bpc.ProposeConfig != nil {
+		if err := jsonValidator.StructCtx(c.cliCtx.Context, bpc.ProposeConfig); err != nil {
+			return err
+		}
 	}
 
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
@@ -469,8 +481,8 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config.PrepareBeaconProposalFileConfig, error) {
 	var config *validator_service_config.PrepareBeaconProposalFileConfig
 	if cliCtx.IsSet(flags.ValidatorsProposerConfigFlag.Name) {
-		if err := json.Unmarshal([]byte(cliCtx.String(flags.ValidatorsProposerConfigFlag.Name)), config); err != nil {
-			return nil, errors.Wrap(err, "could not parse validators proposer config")
+		if err := flagutil.UnmarshalFromFileOrURL(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigFlag.Name), &config); err != nil {
+			return nil, err
 		}
 	}
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
@@ -478,6 +490,14 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
 				FeeRecipient: cliCtx.String(flags.SuggestedFeeRecipientFlag.Name),
+			},
+		}
+	}
+	if !cliCtx.IsSet(flags.ValidatorsProposerConfigFlag.Name) && !cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+		config = &validator_service_config.PrepareBeaconProposalFileConfig{
+			ProposeConfig: nil,
+			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+				FeeRecipient: hexutil.Encode([]byte(eth1BurnAddress)),
 			},
 		}
 	}
