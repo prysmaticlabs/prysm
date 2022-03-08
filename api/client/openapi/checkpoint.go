@@ -151,18 +151,13 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 	}, nil
 }
 
-func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error) {
-	//return downloadBackwardsCompatible(ctx, client)
-	return downloadPrysmOriginData(ctx, client)
-}
-
 // DownloadOriginData attempts to use the proposed weak_subjectivity beacon node api
 // to obtain the weak_subjectivity metadata (epoch, block_root, state_root) needed to sync
 // a beacon node from the canonical weak subjectivity checkpoint. As this is a proposed API
 // that will only be supported by prysm at first, in the event of a 404 we fallback to using a
 // different technique where we first download the head state which can be used to compute the
 // weak subjectivity epoch on the client side.
-func downloadPrysmOriginData(ctx context.Context, client *Client) (*OriginData, error) {
+func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error) {
 	ws, err := client.GetWeakSubjectivity()
 	if err != nil {
 		// a 404 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
