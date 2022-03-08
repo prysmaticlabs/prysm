@@ -946,6 +946,7 @@ func (v *validator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymana
 		if err != nil {
 			if strings.Contains(err.Error(), "Could not find validator index for public key ") {
 				log.Infoln("Could not find validator index for public key %#x not found. Perhaps the validator is not yet active.", pubkey)
+				continue
 			} else {
 				return err
 			}
@@ -969,7 +970,6 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 	if v.prepareBeaconProposalConfig == nil {
 		return nil, errors.New("no config was provided to set validator fee recipients")
 	}
-
 	if v.prepareBeaconProposalConfig.ProposeConfig != nil {
 		for pubkeyhex, option := range v.prepareBeaconProposalConfig.ProposeConfig {
 			pubkey, err := hexutil.Decode(pubkeyhex)
