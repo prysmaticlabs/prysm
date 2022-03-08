@@ -12,6 +12,7 @@ import (
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
 	TestSync                bool
+	TestFeature             bool
 	UsePrysmShValidator     bool
 	UsePprof                bool
 	UseWeb3RemoteSigner     bool
