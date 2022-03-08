@@ -1,8 +1,5 @@
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
-# TODO: Follow testing example from cockroachdb
-# https://github.com/cockroachdb/cockroach/blob/master/pkg/testutils/lint/passes/nilness/nilness_test.go
-
 go_library(
     name = "go_default_library",
     srcs = ["analyzer.go"],
