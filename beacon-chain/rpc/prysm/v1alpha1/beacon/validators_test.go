@@ -12,6 +12,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -1672,6 +1673,17 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 	validatorCount := uint64(32)
 
 	genState, _ := util.DeterministicGenesisStateAltair(t, validatorCount)
+	c, err := altair.NextSyncCommittee(ctx, genState)
+	require.NoError(t, err)
+	require.NoError(t, genState.SetCurrentSyncCommittee(c))
+
+	bits := make([]byte, validatorCount)
+	for i := range bits {
+		bits[i] = 0xff
+	}
+	require.NoError(t, genState.SetCurrentParticipationBits(bits))
+	require.NoError(t, genState.SetPreviousParticipationBits(bits))
+
 	gsr, err := genState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockAltair())
@@ -1684,39 +1696,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 	require.NoError(t, beaconDB.SaveBlock(ctx, gb))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
-	secondSlot := 2*params.BeaconConfig().SlotsPerEpoch - 1
-	headState, err := stategen.ReplayProcessSlots(ctx, genState.Copy(), secondSlot)
-	require.NoError(t, err)
-	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockAltair())
-	require.NoError(t, err)
-	require.NoError(t, wrapper.SetBlockSlot(b, secondSlot))
-
-	idx, err := helpers.BeaconProposerIndex(ctx, headState)
-	require.NoError(t, err)
-	require.NoError(t, wrapper.SetProposerIndex(b, idx))
-
-	require.NoError(t, wrapper.SetBlockParentRoot(b, gRoot))
-
-	bits := make([]byte, validatorCount)
-	for i := range bits {
-		bits[i] = 0xff
-	}
-	require.NoError(t, headState.SetCurrentParticipationBits(bits))
-	require.NoError(t, headState.SetPreviousParticipationBits(bits))
-
-	headState, err = transition.ProcessBlockForStateRoot(ctx, headState, b)
-	require.NoError(t, err)
-	headRoot, err := headState.HashTreeRoot(ctx)
-	require.NoError(t, err)
-	err = wrapper.SetBlockStateRoot(b, headRoot)
-	require.NoError(t, err)
-	headBlockRoot, err := b.Block().HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, b))
-
-	require.NoError(t, beaconDB.SaveState(ctx, genState, headBlockRoot))
-
-	m := &mock.ChainService{State: headState}
+	m := &mock.ChainService{State: genState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
 		BeaconDB:    beaconDB,
@@ -1725,16 +1705,11 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
 		},
-		CanonicalFetcher: &mock.ChainService{
-			CanonicalRoots: map[[32]byte]bool{
-				gRoot: true,
-			},
-		},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
 	require.NoError(t, err)
 
 	wanted := &ethpb.ValidatorParticipation{
@@ -1744,6 +1719,24 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T
 		CurrentEpochActiveGwei:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochAttestingGwei:        validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochTargetAttestingGwei:  validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		PreviousEpochActiveGwei:          validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		PreviousEpochAttestingGwei:       validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		PreviousEpochTargetAttestingGwei: validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		PreviousEpochHeadAttestingGwei:   validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+	}
+	assert.DeepEqual(t, true, res.Finalized, "Incorrect validator participation respond")
+	assert.DeepEqual(t, wanted, res.Participation, "Incorrect validator participation respond")
+
+	res, err = bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 1}})
+	require.NoError(t, err)
+
+	wanted = &ethpb.ValidatorParticipation{
+		GlobalParticipationRate:          1,
+		VotedEther:                       validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		EligibleEther:                    validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		CurrentEpochActiveGwei:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		CurrentEpochAttestingGwei:        params.BeaconConfig().EffectiveBalanceIncrement, // Empty because after one epoch, current participation rotates to previous
+		CurrentEpochTargetAttestingGwei:  params.BeaconConfig().EffectiveBalanceIncrement,
 		PreviousEpochActiveGwei:          validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		PreviousEpochAttestingGwei:       validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		PreviousEpochTargetAttestingGwei: validatorCount * params.BeaconConfig().MaxEffectiveBalance,
