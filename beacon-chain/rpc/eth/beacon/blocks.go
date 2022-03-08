@@ -256,7 +256,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 		}
 	}
 
-	return &emptypb.Empty{}, nil
+	return &emptypb.Empty{}, status.Error(codes.Internal, "Unknown block type")
 }
 
 // GetBlock retrieves block details for given block ID.
