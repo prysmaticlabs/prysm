@@ -1,5 +1,3 @@
-//go:build !develop
-
 /*
 Package features defines which features are enabled for runtime
 in order to selectively enable certain features to maintain a stable runtime.
