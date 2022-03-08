@@ -16,6 +16,8 @@ exports_files([
 # gazelle:map_kind go_library go_library @prysm//tools/go:def.bzl
 # gazelle:map_kind go_test go_test @prysm//tools/go:def.bzl
 # gazelle:map_kind go_repository go_repository @prysm//tools/go:def.bzl
+# gazelle:build_tags bazel
+# gazelle:exclude tools/analyzers/**/testdata/**
 gazelle(
     name = "gazelle",
     prefix = prefix,
