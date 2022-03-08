@@ -304,7 +304,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	if err == nil {
 		if altairBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil altair block")
+			return nil, status.Errorf(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
 		if err != nil {
@@ -325,7 +325,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	if err == nil {
 		if bellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil bellatrix block")
+			return nil, status.Errorf(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
 		if err != nil {
@@ -348,12 +348,17 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZV2")
 	defer span.End()
 
-	blk, phase0Blk, err := bs.blocksFromId(ctx, req.BlockId)
+	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
-	if phase0Blk != nil {
+
+	_, err = blk.PbPhase0Block()
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
+	if err == nil {
 		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
@@ -364,23 +369,54 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		}
 		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_PHASE0, Data: sszBlock}, nil
 	}
+
 	altairBlk, err := blk.PbAltairBlock()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check for Altair block")
-	}
-	v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
-	if err != nil {
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-	data := &ethpbv2.SignedBeaconBlockAltair{
-		Message:   v2Blk,
-		Signature: blk.Signature(),
+	if err == nil {
+		if altairBlk == nil {
+			return nil, status.Errorf(codes.Internal, "Nil block")
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		data := &ethpbv2.SignedBeaconBlockAltair{
+			Message:   v2Blk,
+			Signature: blk.Signature(),
+		}
+		sszData, err := data.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
+		}
+		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_ALTAIR, Data: sszData}, nil
 	}
-	sszData, err := data.MarshalSSZ()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
+
+	bellatrixBlk, err := blk.PbBellatrixBlock()
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-	return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_ALTAIR, Data: sszData}, nil
+	if err == nil {
+		if bellatrixBlk == nil {
+			return nil, status.Errorf(codes.Internal, "Nil block")
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		data := &ethpbv2.SignedBeaconBlockBellatrix{
+			Message:   v2Blk,
+			Signature: blk.Signature(),
+		}
+		sszData, err := data.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
+		}
+		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_BELLATRIX, Data: sszData}, nil
+	}
+
+	return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 }
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
