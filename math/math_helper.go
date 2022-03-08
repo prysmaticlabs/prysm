@@ -9,6 +9,16 @@ import (
 	"github.com/thomaso-mirodin/intmath/u64"
 )
 
+func init() {
+	// The Int function assumes that the operating system is 64 bit. In any case, Ethereum
+	// consensus layer uses 64 bit values almost exclusively so 64 bit OS requirement should
+	// already be established. This panic is a strict fail fast feedback to alert 32 bit users
+	// that they are not supported.
+	if stdmath.MaxUint < stdmath.MaxUint64 {
+		panic("Prysm is only supported on 64 bit OS")
+	}
+}
+
 // Common square root values.
 var squareRootTable = map[uint64]uint64{
 	4:       2,
