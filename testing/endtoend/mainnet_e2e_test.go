@@ -64,6 +64,7 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		ValidatorFlags:          []string{},
 		EpochsToRun:             uint64(epochsToRun),
 		TestSync:                true,
+		TestFeature:             true,
 		TestDeposits:            true,
 		UseFixedPeerIDs:         true,
 		UseValidatorCrossClient: crossClient,
