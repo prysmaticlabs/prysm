@@ -497,17 +497,21 @@ func (bs *Server) GetValidatorParticipation(
 			requestedEpoch,
 		)
 	}
-
-	// Get current slot state for current epoch attestations.
-	startSlot, err := slots.EpochStart(requestedEpoch)
+	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
+	// This ensures that we don't miss previous attestations when input requested epochs.
+	startSlot, err := slots.EpochEnd(requestedEpoch)
 	if err != nil {
 		return nil, err
 	}
-	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
-	// This ensures that we don't miss previous attestations when input requested epochs.
-	startSlot += params.BeaconConfig().SlotsPerEpoch - 1
+	// Get as close as we can to the end of the current epoch without going past the curent slot.
+	// The above check ensures a future *epoch* isn't requested, but the end slot of the requested epoch could still
+	// be past the current slot. In that case, use the current slot as the best approximation of the requested epoch.
+	// Replayer will make sure the slot ultimately used is canonical.
+	if startSlot > currentSlot {
+		startSlot = currentSlot
+	}
 
-	// ReplayerBuilder insures that a canonical chain is followed to the slot
+	// ReplayerBuilder ensures that a canonical chain is followed to the slot
 	beaconState, err := bs.ReplayerBuilder.ForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", startSlot, err))
