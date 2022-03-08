@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
@@ -108,6 +109,7 @@ type Config struct {
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
 	MaxMsgSize              int
+	ExecutionEngineCaller   enginev1.Caller
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -192,6 +194,8 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
+		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
+		BeaconDB:               s.cfg.BeaconDB,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
