@@ -321,7 +321,7 @@ func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 		f.syncedTips.Lock()
 		f.syncedTips.validatedTips = tc.tips
 		f.syncedTips.Unlock()
-		err := f.ConfirmOptimisticValidNode(context.Background(), tc.root)
+		err := f.SetOptimisticToValid(context.Background(), tc.root)
 		if tc.wantedErr != nil {
 			require.ErrorIs(t, err, tc.wantedErr)
 		} else {

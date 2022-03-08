@@ -69,5 +69,5 @@ type Getter interface {
 
 // Setter allows to set forkchoice information
 type Setter interface {
-	ConfirmOptimisticValidNode(context.Context, [fieldparams.RootLength]byte) error
+	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
 }

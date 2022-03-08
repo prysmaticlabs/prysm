@@ -157,7 +157,7 @@ func (f *ForkChoice) ProcessBlock(
 	}
 
 	if !optimistic {
-		return f.ConfirmOptimisticValidNode(ctx, blockRoot)
+		return f.SetOptimisticToValid(ctx, blockRoot)
 	}
 	return nil
 }

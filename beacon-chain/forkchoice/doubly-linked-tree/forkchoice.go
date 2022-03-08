@@ -273,8 +273,8 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 	return f.store.proposerBoost()
 }
 
-// ConfirmOptimisticValidNode sets the node with the given root as a fully validated node
-func (f *ForkChoice) ConfirmOptimisticValidNode(ctx context.Context, root [fieldparams.RootLength]byte) error {
+// SetOptimisticToValid sets the node with the given root as a fully validated node
+func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams.RootLength]byte) error {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	node, ok := f.store.nodeByRoot[root]
