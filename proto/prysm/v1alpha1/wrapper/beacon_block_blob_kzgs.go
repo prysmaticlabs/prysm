@@ -7,6 +7,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
@@ -72,6 +73,13 @@ func (w eip4844SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 // Proto returns the block in its underlying protobuf interface.
 func (w eip4844SignedBeaconBlock) Proto() proto.Message {
 	return w.b
+}
+
+// PbGenericBlock returns a generic signed beacon block.
+func (w eip4844SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
+	return &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Eip4844{Eip4844: w.b},
+	}, nil
 }
 
 // PbEip4844Block returns the underlying protobuf object.
@@ -204,6 +212,12 @@ func (w eip4844BeaconBlock) Proto() proto.Message {
 // Version of the underlying protobuf object.
 func (_ eip4844BeaconBlock) Version() int {
 	return version.EIP4844
+}
+
+func (w eip4844BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+	return &validatorpb.SignRequest_BlockV4{
+		BlockV4: w.b,
+	}
 }
 
 // eip4844BeaconBlockBody is a wrapper of a beacon block body.
