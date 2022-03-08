@@ -19,6 +19,9 @@ func init() {
 	}
 }
 
+// ErrOverflow occurs when an operation exceeds max or minimum values.
+var ErrOverflow = errors.New("integer overflow")
+
 // Common square root values.
 var squareRootTable = map[uint64]uint64{
 	4:       2,
@@ -136,7 +139,23 @@ func Sub64(a, b uint64) (uint64, error) {
 // returned.
 func Int(u uint64) (int, error) {
 	if u > stdmath.MaxInt {
-		return 0, errors.New("integer overflow")
+		return 0, ErrOverflow
 	}
 	return int(u), nil // lint:ignore uintcast -- This is the preferred method of casting uint64 to int.
+}
+
+// AddInt adds two or more integers and checks for integer overflows.
+func AddInt(i ...int) (int, error) {
+	var sum int
+	for _, ii := range i {
+		if ii > 0 && sum > stdmath.MaxInt-ii {
+			return 0, ErrOverflow
+		} else if ii < 0 && sum < stdmath.MinInt-ii {
+			return 0, ErrOverflow
+		}
+
+		sum += ii
+
+	}
+	return sum, nil
 }

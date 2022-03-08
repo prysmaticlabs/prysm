@@ -404,3 +404,50 @@ func TestInt(t *testing.T) {
 		})
 	}
 }
+
+func TestAddInt(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []int
+		want    int
+		wantErr bool
+	}{
+		{
+			name: "no overflow",
+			args: []int{1, 2, 3, 4, 5},
+			want: 15,
+		},
+		{
+			name:    "overflow",
+			args:    []int{1, stdmath.MaxInt},
+			wantErr: true,
+		},
+		{
+			name:    "underflow",
+			args:    []int{-1, stdmath.MinInt},
+			wantErr: true,
+		},
+		{
+			name: "max int",
+			args: []int{1, stdmath.MaxInt - 1},
+			want: stdmath.MaxInt,
+		},
+		{
+			name: "min int",
+			args: []int{-1, stdmath.MinInt + 1},
+			want: stdmath.MinInt,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := math.AddInt(tt.args...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AddInt() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("AddInt() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
