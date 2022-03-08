@@ -394,56 +394,7 @@ load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_d
 
 gometalinter_dependencies()
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
-
-go_repository(
-    name = "com_github_gostaticanalysis_comment",
-    importpath = "github.com/gostaticanalysis/comment",
-    sum = "h1:hlnx5+S2fY9Zo9ePo4AhgYsYHbM2+eAv8m/s1JiCd6Q=",
-    version = "v1.4.2",
-)
-
-go_repository(
-    name = "com_github_gostaticanalysis_testutil",
-    importpath = "github.com/gostaticanalysis/testutil",
-    sum = "h1:d2/eIbH9XjD1fFwD5SHv8x168fjbQ9PB8hvs8DSEC08=",
-    version = "v0.3.1-0.20210208050101-bfb5c8eec0e4",
-)
-
-go_repository(
-    name = "com_github_otiai10_copy",
-    importpath = "github.com/otiai10/copy",
-    sum = "h1:HvG945u96iNadPoG2/Ja2+AUJeW5YuFQMixq9yirC+k=",
-    version = "v1.2.0",
-)
-
-go_repository(
-    name = "com_github_otiai10_curr",
-    importpath = "github.com/otiai10/curr",
-    sum = "h1:TJIWdbX0B+kpNagQrjgq8bCMrbhiuX73M2XwgtDMoOI=",
-    version = "v1.0.0",
-)
-
-go_repository(
-    name = "com_github_otiai10_mint",
-    importpath = "github.com/otiai10/mint",
-    sum = "h1:BCmzIS3n71sGfHB5NMNDB3lHYPz8fWSkCAErHed//qc=",
-    version = "v1.3.1",
-)
-
-go_repository(
-    name = "com_github_tenntenn_modver",
-    importpath = "github.com/tenntenn/modver",
-    sum = "h1:2klLppGhDgzJrScMpkj9Ujy3rXPUspSjAcev9tSEBgA=",
-    version = "v1.0.1",
-)
-
-go_repository(
-    name = "com_github_tenntenn_text_transform",
-    importpath = "github.com/tenntenn/text/transform",
-    sum = "h1:f+jULpRQGxTSkNYKJ51yaw6ChIqO+Je8UqsTKN/cDag=",
-    version = "v0.0.0-20200319021203-7eef512accb3",
-)
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
