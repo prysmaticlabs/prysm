@@ -70,7 +70,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	}
 	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
 	finalizedRoot := bytesutil.ToBytes32(st.FinalizedCheckpoint().Root)
-	if finalizedRoot != [32]byte{} {
+	if finalizedRoot != [32]byte{} { // finalized root could be zeros before the first finalized block.
 		finalizedBlock, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(st.FinalizedCheckpoint().Root))
 		if err != nil {
 			return nil, err
