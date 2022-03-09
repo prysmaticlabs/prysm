@@ -6,11 +6,16 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
 )
 
 type SignedBeaconBlock struct {
 	BeaconBlock block.BeaconBlock
+}
+
+func (m SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
+	panic("implement me")
 }
 
 func (m SignedBeaconBlock) Block() block.BeaconBlock {
@@ -74,6 +79,10 @@ type BeaconBlock struct {
 	HtrErr          error
 	BeaconBlockBody block.BeaconBlockBody
 	BlockSlot       types.Slot
+}
+
+func (m BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+	panic("implement me")
 }
 
 func (m BeaconBlock) HashTreeRoot() ([32]byte, error) {
