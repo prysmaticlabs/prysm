@@ -70,4 +70,5 @@ type Getter interface {
 // Setter allows to set forkchoice information
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
+	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte) error
 }
