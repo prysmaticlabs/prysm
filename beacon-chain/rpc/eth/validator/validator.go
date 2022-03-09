@@ -303,6 +303,13 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	}, nil
 }
 
+// PrepareBeaconProposer --
+func (vs *Server) PrepareBeaconProposer(
+	_ context.Context, _ *ethpbv1.PrepareBeaconProposerRequest,
+) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
 // ProduceAttestationData requests that the beacon node produces attestation data for
 // the requested committee index and slot based on the nodes current head.
 func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.ProduceAttestationDataRequest) (*ethpbv1.ProduceAttestationDataResponse, error) {
