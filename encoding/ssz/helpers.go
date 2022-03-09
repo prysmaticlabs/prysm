@@ -8,6 +8,7 @@ import (
 	"github.com/minio/sha256-simd"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -18,13 +19,13 @@ func BitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([
 	limit := (maxCapacity + 255) / 256
 	if bfield == nil || bfield.Len() == 0 {
 		length := make([]byte, 32)
-		root, err := BitwiseMerkleize(hasher, [][]byte{}, 0, limit)
+		root, err := BitwiseMerkleize(hasher, [][32]byte{}, 0, limit)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		return MixInLength(root, length), nil
 	}
-	chunks, err := Pack([][]byte{bfield.Bytes()})
+	chunks, err := PackByChunk([][]byte{bfield.Bytes()})
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -46,72 +47,18 @@ func BitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([
 // and return the root.
 // Note that merkleize on a single chunk is simply that chunk, i.e. the identity
 // when the number of chunks is one.
-func BitwiseMerkleize(hasher HashFn, chunks [][]byte, count, limit uint64) ([32]byte, error) {
+func BitwiseMerkleize(hasher HashFn, chunks [][32]byte, count, limit uint64) ([32]byte, error) {
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
-	hashFn := NewHasherFunc(hasher)
-	leafIndexer := func(i uint64) []byte {
-		return chunks[i]
-	}
-	return Merkleize(hashFn, count, limit, leafIndexer), nil
-}
-
-// BitwiseMerkleizeArrays is used when a set of 32-byte root chunks are provided.
-func BitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count, limit uint64) ([32]byte, error) {
-	if count > limit {
-		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
+	if features.Get().EnableVectorizedHTR {
+		return MerkleizeVector(chunks, limit), nil
 	}
 	hashFn := NewHasherFunc(hasher)
 	leafIndexer := func(i uint64) []byte {
 		return chunks[i][:]
 	}
 	return Merkleize(hashFn, count, limit, leafIndexer), nil
-}
-
-// Pack a given byte array's final chunk with zeroes if needed.
-func Pack(serializedItems [][]byte) ([][]byte, error) {
-	areAllEmpty := true
-	for _, item := range serializedItems {
-		if !bytes.Equal(item, []byte{}) {
-			areAllEmpty = false
-			break
-		}
-	}
-	// If there are no items, we return an empty chunk.
-	if len(serializedItems) == 0 || areAllEmpty {
-		emptyChunk := make([]byte, bytesPerChunk)
-		return [][]byte{emptyChunk}, nil
-	} else if len(serializedItems[0]) == bytesPerChunk {
-		// If each item has exactly BYTES_PER_CHUNK length, we return the list of serialized items.
-		return serializedItems, nil
-	}
-	// We flatten the list in order to pack its items into byte chunks correctly.
-	var orderedItems []byte
-	for _, item := range serializedItems {
-		orderedItems = append(orderedItems, item...)
-	}
-	numItems := len(orderedItems)
-	var chunks [][]byte
-	for i := 0; i < numItems; i += bytesPerChunk {
-		j := i + bytesPerChunk
-		// We create our upper bound index of the chunk, if it is greater than numItems,
-		// we set it as numItems itself.
-		if j > numItems {
-			j = numItems
-		}
-		// We create chunks from the list of items based on the
-		// indices determined above.
-		chunks = append(chunks, orderedItems[i:j])
-	}
-	// Right-pad the last chunk with zero bytes if it does not
-	// have length bytesPerChunk.
-	lastChunk := chunks[len(chunks)-1]
-	for len(lastChunk) < bytesPerChunk {
-		lastChunk = append(lastChunk, 0)
-	}
-	chunks[len(chunks)-1] = lastChunk
-	return chunks, nil
 }
 
 // PackByChunk a given byte array's final chunk with zeroes if needed.

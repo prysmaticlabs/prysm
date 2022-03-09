@@ -27,6 +27,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -582,6 +584,28 @@ func TestActivationStatus_OK(t *testing.T) {
 	}
 }
 
+func TestOptimisticStatus(t *testing.T) {
+	server := &Server{HeadFetcher: &mockChain.ChainService{}, TimeFetcher: &mockChain.ChainService{}}
+	err := server.optimisticStatus(context.Background())
+	require.NoError(t, err)
+
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 2
+	params.OverrideBeaconConfig(cfg)
+
+	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: true}, TimeFetcher: &mockChain.ChainService{}}
+	err = server.optimisticStatus(context.Background())
+	s, ok := status.FromError(err)
+	require.Equal(t, true, ok)
+	require.DeepEqual(t, codes.Unavailable, s.Code())
+	require.ErrorContains(t, errOptimisticMode.Error(), err)
+
+	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: false}, TimeFetcher: &mockChain.ChainService{}}
+	err = server.optimisticStatus(context.Background())
+	require.NoError(t, err)
+}
+
 func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	ctx := context.Background()
 
@@ -937,8 +961,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "normal doppelganger request",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				mockGen := mockstategen.NewMockService()
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
+				hs, ps, os, keys, builder := createStateSetup(t, 4)
 				// Previous Epoch State
 				for i := 0; i < 3; i++ {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
@@ -954,11 +977,11 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(i), bal+2000000000))
 				}
 				vs := &Server{
-					StateGen: mockGen,
 					HeadFetcher: &mockChain.ChainService{
 						State: hs,
 					},
-					SyncChecker: &mockSync.Sync{IsSyncing: false},
+					SyncChecker:     &mockSync.Sync{IsSyncing: false},
+					ReplayerBuilder: builder,
 				}
 				request := &ethpb.DoppelGangerRequest{
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
@@ -982,9 +1005,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "doppelganger exists current epoch",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				mockGen := mockstategen.NewMockService()
-
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
+				hs, ps, os, keys, builder := createStateSetup(t, 4)
 				// Previous Epoch State
 				for i := 0; i < 2; i++ {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
@@ -1010,11 +1031,11 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-1000000000))
 
 				vs := &Server{
-					StateGen: mockGen,
 					HeadFetcher: &mockChain.ChainService{
 						State: hs,
 					},
-					SyncChecker: &mockSync.Sync{IsSyncing: false},
+					SyncChecker:     &mockSync.Sync{IsSyncing: false},
+					ReplayerBuilder: builder,
 				}
 				request := &ethpb.DoppelGangerRequest{
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
@@ -1049,9 +1070,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "doppelganger exists previous epoch",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				mockGen := mockstategen.NewMockService()
-
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
+				hs, ps, os, keys, builder := createStateSetup(t, 4)
 				// Previous Epoch State
 				for i := 0; i < 2; i++ {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
@@ -1077,11 +1096,11 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				assert.NoError(t, os.UpdateBalancesAtIndex(types.ValidatorIndex(2), bal-2000000000))
 
 				vs := &Server{
-					StateGen: mockGen,
 					HeadFetcher: &mockChain.ChainService{
 						State: hs,
 					},
-					SyncChecker: &mockSync.Sync{IsSyncing: false},
+					SyncChecker:     &mockSync.Sync{IsSyncing: false},
+					ReplayerBuilder: builder,
 				}
 				request := &ethpb.DoppelGangerRequest{
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
@@ -1116,9 +1135,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "multiple doppelganger exists",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				mockGen := mockstategen.NewMockService()
-
-				hs, ps, os, keys := createStateSetup(t, 4, mockGen)
+				hs, ps, os, keys, builder := createStateSetup(t, 4)
 				// Previous Epoch State
 				for i := 10; i < 15; i++ {
 					bal, err := ps.BalanceAtIndex(types.ValidatorIndex(i))
@@ -1136,11 +1153,11 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				}
 
 				vs := &Server{
-					StateGen: mockGen,
 					HeadFetcher: &mockChain.ChainService{
 						State: hs,
 					},
-					SyncChecker: &mockSync.Sync{IsSyncing: false},
+					SyncChecker:     &mockSync.Sync{IsSyncing: false},
+					ReplayerBuilder: builder,
 				}
 				request := &ethpb.DoppelGangerRequest{
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
@@ -1166,16 +1183,14 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "attesters are too recent",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				mockGen := mockstategen.NewMockService()
-
-				hs, _, _, keys := createStateSetup(t, 4, mockGen)
+				hs, _, _, keys, _ := createStateSetup(t, 4)
 
 				vs := &Server{
-					StateGen: nil,
 					HeadFetcher: &mockChain.ChainService{
 						State: hs,
 					},
-					SyncChecker: &mockSync.Sync{IsSyncing: false},
+					SyncChecker:     &mockSync.Sync{IsSyncing: false},
+					ReplayerBuilder: nil,
 				}
 				request := &ethpb.DoppelGangerRequest{
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
@@ -1213,8 +1228,9 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 	}
 }
 
-func createStateSetup(t *testing.T, head types.Epoch, mockgen *mockstategen.MockStateManager) (state.BeaconState,
-	state.BeaconState, state.BeaconState, []bls.SecretKey) {
+func createStateSetup(t *testing.T, head types.Epoch) (state.BeaconState,
+	state.BeaconState, state.BeaconState, []bls.SecretKey, *mockstategen.MockReplayerBuilder) {
+	rb := &mockstategen.MockReplayerBuilder{}
 	gs, keys := util.DeterministicGenesisState(t, 64)
 	hs := gs.Copy()
 	// Head State
@@ -1243,9 +1259,8 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *mockstategen.Mock
 			ProposerIndex:  10,
 		}
 		assert.NoError(t, hs.AppendCurrentEpochAttestations(pendingAtt))
-
 	}
-	mockgen.StatesBySlot[headSlot] = hs
+	rb.SetMockState(hs)
 
 	// Previous Epoch State
 	prevEpoch := headEpoch - 1
@@ -1275,9 +1290,8 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *mockstategen.Mock
 			ProposerIndex:  10,
 		}
 		assert.NoError(t, ps.AppendCurrentEpochAttestations(pendingAtt))
-
 	}
-	mockgen.StatesBySlot[prevSlot] = ps
+	rb.SetMockState(ps)
 
 	// Older Epoch State
 	olderEpoch := prevEpoch - 1
@@ -1311,8 +1325,7 @@ func createStateSetup(t *testing.T, head types.Epoch, mockgen *mockstategen.Mock
 			ProposerIndex:  10,
 		}
 		assert.NoError(t, os.AppendCurrentEpochAttestations(pendingAtt))
-
 	}
-	mockgen.StatesBySlot[olderSlot] = os
-	return hs, ps, os, keys
+	rb.SetMockState(os)
+	return hs, ps, os, keys, rb
 }

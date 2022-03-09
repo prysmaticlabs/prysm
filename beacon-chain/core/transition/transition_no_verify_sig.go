@@ -137,16 +137,6 @@ func CalculateStateRoot(
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
-	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix {
-		sa, err := signed.Block().Body().SyncAggregate()
-		if err != nil {
-			return [32]byte{}, err
-		}
-		state, err = altair.ProcessSyncAggregate(ctx, state, sa)
-		if err != nil {
-			return [32]byte{}, err
-		}
-	}
 
 	return state.HashTreeRoot(ctx)
 }
@@ -182,16 +172,6 @@ func ProcessBlockNoVerifyAnySig(
 	state, err := ProcessBlockForStateRoot(ctx, state, signed)
 	if err != nil {
 		return nil, nil, err
-	}
-	if signed.Version() == version.Altair || signed.Version() == version.Bellatrix {
-		sa, err := signed.Block().Body().SyncAggregate()
-		if err != nil {
-			return nil, nil, err
-		}
-		state, err = altair.ProcessSyncAggregate(ctx, state, sa)
-		if err != nil {
-			return nil, nil, err
-		}
 	}
 
 	bSet, err := b.BlockSignatureBatch(state, blk.ProposerIndex(), signed.Signature(), blk.HashTreeRoot)
@@ -338,6 +318,19 @@ func ProcessBlockForStateRoot(
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
+	}
+
+	if signed.Block().Version() == version.Phase0 {
+		return state, nil
+	}
+
+	sa, err := signed.Block().Body().SyncAggregate()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get sync aggregate from block")
+	}
+	state, err = altair.ProcessSyncAggregate(ctx, state, sa)
+	if err != nil {
+		return nil, errors.Wrap(err, "process_sync_aggregate failed")
 	}
 
 	return state, nil

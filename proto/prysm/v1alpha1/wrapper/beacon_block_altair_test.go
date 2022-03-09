@@ -6,6 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -303,4 +304,27 @@ func TestAltairBeaconBlockBody_Proto(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, body, wbb.Proto())
+}
+
+func TestAltairBeaconBlock_PbGenericBlock(t *testing.T) {
+	abb := &ethpb.SignedBeaconBlockAltair{
+		Block: util.HydrateBeaconBlockAltair(&ethpb.BeaconBlockAltair{}),
+	}
+	wsb, err := wrapper.WrappedSignedBeaconBlock(abb)
+	require.NoError(t, err)
+
+	got, err := wsb.PbGenericBlock()
+	require.NoError(t, err)
+	assert.Equal(t, abb, got.GetAltair())
+}
+
+func TestAltairBeaconBlock_AsSignRequestObject(t *testing.T) {
+	abb := util.HydrateBeaconBlockAltair(&ethpb.BeaconBlockAltair{})
+	wsb, err := wrapper.WrappedBeaconBlock(abb)
+	require.NoError(t, err)
+
+	sro := wsb.AsSignRequestObject()
+	got, ok := sro.(*validatorpb.SignRequest_BlockV2)
+	require.Equal(t, true, ok, "Not a SignRequest_BlockV2")
+	assert.Equal(t, abb, got.BlockV2)
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -23,6 +22,7 @@ import (
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
+var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
 var nonExistentIndex = types.ValidatorIndex(^uint64(0))
 
 const numStatesToCheck = 2
@@ -237,6 +237,29 @@ func (vs *Server) activationStatus(
 	return activeValidatorExists, statusResponses, nil
 }
 
+// optimisticStatus returns an error if the node is currently optimistic with respect to head.
+// by definition, an optimistic node is not a full node. It is unable to produce blocks,
+// since an execution engine cannot produce a payload upon an unknown parent.
+// It cannot faithfully attest to the head block of the chain, since it has not fully verified that block.
+//
+// Spec:
+// https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md
+func (vs *Server) optimisticStatus(ctx context.Context) error {
+	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil
+	}
+	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if !optimistic {
+		return nil
+	}
+
+	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
+
+}
+
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
 func (vs *Server) validatorStatus(
 	ctx context.Context,
@@ -338,11 +361,8 @@ func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.
 	if err != nil {
 		return nil, err
 	}
-	retState, err := vs.StateGen.StateBySlot(ctx, endSlot)
-	if err != nil {
-		return nil, err
-	}
-	return transition.ProcessSlots(ctx, retState, retState.Slot()+1)
+	// replay to first slot of following epoch
+	return vs.ReplayerBuilder.ForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
 }
 
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {

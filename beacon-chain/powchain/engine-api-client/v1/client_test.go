@@ -13,7 +13,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -22,7 +24,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var _ = EngineCaller(&Client{})
+var (
+	_ = Caller(&Client{})
+	_ = Caller(&mocks.EngineClient{})
+)
 
 func TestClient_IPC(t *testing.T) {
 	server := newTestIPCServer(t)
@@ -62,9 +67,8 @@ func TestClient_IPC(t *testing.T) {
 	t.Run(ExchangeTransitionConfigurationMethod, func(t *testing.T) {
 		want, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
 		require.Equal(t, true, ok)
-		resp, err := client.ExchangeTransitionConfiguration(ctx, want)
+		err := client.ExchangeTransitionConfiguration(ctx, want)
 		require.NoError(t, err)
-		require.DeepEqual(t, want, resp)
 	})
 	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
@@ -137,7 +141,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
@@ -158,7 +162,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedSyncingResponse"].(*ForkchoiceUpdatedResponse)
@@ -179,7 +183,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedInvalidResponse"].(*ForkchoiceUpdatedResponse)
@@ -200,7 +204,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedAcceptedResponse"].(*ForkchoiceUpdatedResponse)
@@ -221,7 +225,7 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		payloadAttributes := &pb.PayloadAttributes{
 			Timestamp:             1,
-			Random:                []byte("random"),
+			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
 		want, ok := fix["ForkchoiceUpdatedInvalidTerminalBlockResponse"].(*ForkchoiceUpdatedResponse)
@@ -371,9 +375,8 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpc = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.ExchangeTransitionConfiguration(ctx, want)
+		err = client.ExchangeTransitionConfiguration(ctx, want)
 		require.NoError(t, err)
-		require.DeepEqual(t, want, resp)
 	})
 	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
 		arg := common.BytesToHash([]byte("foo"))
@@ -449,8 +452,8 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		client := &Client{}
 		client.rpc = rpcClient
 
-		_, err = client.ExchangeTransitionConfiguration(ctx, request)
-		require.Equal(t, true, errors.Is(err, ErrMismatchTerminalBlockHash))
+		err = client.ExchangeTransitionConfiguration(ctx, request)
+		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
 	})
 	t.Run("wrong terminal total difficulty", func(t *testing.T) {
 		request, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
@@ -465,7 +468,7 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 			}()
 
 			// Change the terminal block hash.
-			resp.TerminalTotalDifficulty = "bar"
+			resp.TerminalTotalDifficulty = "0x1"
 			respJSON := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      1,
@@ -482,8 +485,8 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		client := &Client{}
 		client.rpc = rpcClient
 
-		_, err = client.ExchangeTransitionConfiguration(ctx, request)
-		require.Equal(t, true, errors.Is(err, ErrMismatchTerminalTotalDiff))
+		err = client.ExchangeTransitionConfiguration(ctx, request)
+		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
 	})
 }
 
@@ -600,7 +603,7 @@ func fixtures() map[string]interface{} {
 		StateRoot:     foo[:],
 		ReceiptsRoot:  foo[:],
 		LogsBloom:     baz,
-		Random:        foo[:],
+		PrevRandao:    foo[:],
 		BlockNumber:   1,
 		GasLimit:      1,
 		GasUsed:       1,
@@ -678,9 +681,11 @@ func fixtures() map[string]interface{} {
 		},
 		PayloadId: &id,
 	}
+	b, _ := new(big.Int).SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	ttd, _ := uint256.FromBig(b)
 	transitionCfg := &pb.TransitionConfiguration{
 		TerminalBlockHash:       params.BeaconConfig().TerminalBlockHash[:],
-		TerminalTotalDifficulty: params.BeaconConfig().TerminalTotalDifficulty,
+		TerminalTotalDifficulty: ttd.Hex(),
 		TerminalBlockNumber:     big.NewInt(0).Bytes(),
 	}
 	validStatus := &pb.PayloadStatus{
