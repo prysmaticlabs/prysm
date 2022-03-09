@@ -13,7 +13,7 @@ type test struct {
 }
 
 func TestUnmarshalFromFileOrURL(t *testing.T) {
-
+	ts := &test{}
 	ctx := context.Background()
 	type args struct {
 		FileOrURL string
@@ -26,10 +26,10 @@ func TestUnmarshalFromFileOrURL(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "AGGREGATION_SLOT",
+			name: "Happy Path File",
 			args: args{
-				FileOrURL: "../../../../testdata/aggregation_slot.json",
-				To:        &test{},
+				FileOrURL: "./testassets/test.json",
+				To:        ts,
 			},
 			want: &test{
 				Foo: "foo",

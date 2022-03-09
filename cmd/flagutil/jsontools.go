@@ -41,9 +41,10 @@ func UnmarshalFromURL(ctx context.Context, from *url.URL, to interface{}) error 
 }
 
 func UnmarshalFromFile(from string, to interface{}) error {
-	fileExtension := filepath.Ext(filepath.Clean(from))
-	if fileExtension == "json" {
-		jsonFile, jsonerr := os.Open(from)
+	cleanpath := filepath.Clean(from)
+	fileExtension := filepath.Ext(cleanpath)
+	if fileExtension == ".json" {
+		jsonFile, jsonerr := os.Open(cleanpath)
 		if jsonerr != nil {
 			return errors.Wrap(jsonerr, "failed to open json file")
 		}
@@ -58,6 +59,6 @@ func UnmarshalFromFile(from string, to interface{}) error {
 		}
 		return nil
 	} else {
-		return errors.Errorf("unsupported file extension %s", fileExtension)
+		return errors.Errorf("unsupported file extension %s , (ex. '.json')", fileExtension)
 	}
 }
