@@ -7,6 +7,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
@@ -84,6 +85,13 @@ func (w altairSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 // interface.
 func (w altairSignedBeaconBlock) Proto() proto.Message {
 	return w.b
+}
+
+// PbGenericBlock returns a generic signed beacon block.
+func (w altairSignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
+	return &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Altair{Altair: w.b},
+	}, nil
 }
 
 // PbAltairBlock returns the underlying protobuf object.
@@ -213,6 +221,12 @@ func (w altairBeaconBlock) Proto() proto.Message {
 // Version of the underlying protobuf object.
 func (altairBeaconBlock) Version() int {
 	return version.Altair
+}
+
+func (w altairBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+	return &validatorpb.SignRequest_BlockV2{
+		BlockV2: w.b,
+	}
 }
 
 // altairBeaconBlockBody is a wrapper of a beacon block body.
