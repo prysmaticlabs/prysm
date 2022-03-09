@@ -146,7 +146,7 @@ func Run(t *testing.T, config string, fork int) {
 						}
 						if c.ProposerBoostRoot != nil {
 							want := common.FromHex(*c.ProposerBoostRoot)
-							require.DeepEqual(t, bytesutil.ToBytes32(want), service.ProtoArrayStore().ProposerBoost())
+							require.DeepEqual(t, bytesutil.ToBytes32(want), service.ForkChoiceStore().ProposerBoost())
 						}
 					}
 				}
