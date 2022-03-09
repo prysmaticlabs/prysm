@@ -192,7 +192,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 		t.Errorf("Received %d state notifications, expected at least 1", recvd)
 	}
 	// Verify fork choice has processed the block. (Genesis block and the new block)
-	assert.Equal(t, 2, len(s.cfg.ForkChoiceStore.Nodes()))
+	assert.Equal(t, 2, s.cfg.ForkChoiceStore.NodeCount())
 }
 
 func TestService_ReceiveBlockBatch(t *testing.T) {

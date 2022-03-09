@@ -199,9 +199,20 @@ func TestHydrateV1SignedBeaconBlock_NoError(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestHydrateV2SignedBeaconBlock_NoError(t *testing.T) {
+func TestHydrateV2AltairSignedBeaconBlock_NoError(t *testing.T) {
 	b := &ethpbv2.SignedBeaconBlockAltair{}
-	b = HydrateV2SignedBeaconBlock(b)
+	b = HydrateV2AltairSignedBeaconBlock(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Message.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Message.Body.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestHydrateV2BellatrixSignedBeaconBlock_NoError(t *testing.T) {
+	b := &ethpbv2.SignedBeaconBlockBellatrix{}
+	b = HydrateV2BellatrixSignedBeaconBlock(b)
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	_, err = b.Message.HashTreeRoot()

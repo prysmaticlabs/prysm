@@ -41,6 +41,7 @@ go_library(
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/core/transition/interop:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
+        "//beacon-chain/db:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/operations/synccommittee:go_default_library",

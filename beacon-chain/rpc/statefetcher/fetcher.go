@@ -15,7 +15,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"go.opencensus.io/trace"
 )
+
+var ErrNoAncestorForBlock = errors.New("could not find an ancestor state for block")
+var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
+var ErrInvalidDBBlock = errors.New("invalid block found in database")
 
 // StateIdParseError represents an error scenario where a state ID could not be parsed.
 type StateIdParseError struct {
@@ -72,6 +77,7 @@ func (e *StateRootNotFoundError) Error() string {
 type Fetcher interface {
 	State(ctx context.Context, stateId []byte) (state.BeaconState, error)
 	StateRoot(ctx context.Context, stateId []byte) ([]byte, error)
+	StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error)
 }
 
 // StateProvider is a real implementation of Fetcher.
@@ -80,6 +86,7 @@ type StateProvider struct {
 	ChainInfoFetcher   blockchain.ChainInfoFetcher
 	GenesisTimeFetcher blockchain.TimeFetcher
 	StateGenService    stategen.StateManager
+	ReplayerBuilder    stategen.ReplayerBuilder
 }
 
 // State returns the BeaconState for a given identifier. The identifier can be one of:
@@ -129,7 +136,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 				e := NewStateIdParseError(parseErr)
 				return nil, &e
 			}
-			s, err = p.stateBySlot(ctx, types.Slot(slotNumber))
+			s, err = p.StateBySlot(ctx, types.Slot(slotNumber))
 		}
 	}
 
@@ -187,16 +194,21 @@ func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.B
 	return nil, &stateNotFoundErr
 }
 
-func (p *StateProvider) stateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
-	currentSlot := p.GenesisTimeFetcher.CurrentSlot()
-	if slot > currentSlot {
-		return nil, errors.New("slot cannot be in the future")
-	}
-	state, err := p.StateGenService.StateBySlot(ctx, slot)
+// StateBySlot returns the post-state for the requested slot. To generate the state, it uses the
+// most recent canonical state prior to the target slot, and all canonical blocks
+// between the found state's slot and the target slot.
+// process_blocks is applied for all canonical blocks, and process_slots is called for any skipped
+// slots, or slots following the most recent canonical block up to and including the target slot.
+func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
+	defer span.End()
+
+	st, err := p.ReplayerBuilder.ForSlot(target).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get state")
+		msg := fmt.Sprintf("error while replaying history to slot=%d", target)
+		return nil, errors.Wrap(err, msg)
 	}
-	return state, nil
+	return st, nil
 }
 
 func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
@@ -204,7 +216,7 @@ func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head block")
 	}
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err = helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil

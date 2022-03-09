@@ -39,7 +39,7 @@ tests carefully and thoughtfully to ensure you have tested all of your new funci
 coverage on the existing functionality. This is considered an opt-in feature flag. Example usage:
 ```go
 func someExistingMethod(ctx context.Context) error {
-    if featureconfig.Get().MyNewFeature {
+    if features.Get().MyNewFeature {
        return newMethod(ctx)
     }
     // Otherwise continue with the existing code path.
