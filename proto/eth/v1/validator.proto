@@ -213,7 +213,7 @@ message BeaconCommitteeSubscribe {
 message PrepareBeaconProposerRequest {
     message FeeRecipientContainer {
         // The address of the fee recipient.
-        bytes fee_recipient = 1;
+        bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
 
         // The proposer validator index.
         uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
