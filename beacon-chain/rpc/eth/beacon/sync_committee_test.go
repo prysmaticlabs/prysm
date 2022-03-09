@@ -212,6 +212,10 @@ func (m *futureSyncMockFetcher) StateRoot(context.Context, []byte) ([]byte, erro
 	return m.BeaconStateRoot, nil
 }
 
+func (m *futureSyncMockFetcher) StateBySlot(context.Context, types.Slot) (state.BeaconState, error) {
+	return m.BeaconState, nil
+}
+
 func TestListSyncCommitteesFuture(t *testing.T) {
 	ctx := context.Background()
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
