@@ -201,8 +201,8 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 	return nil
 }
 
-// UpdateSyncedTipsWithInvalidRoot updates the synced_tips map when the block with the given root becomes INVALID.
-func (f *ForkChoice) UpdateSyncedTipsWithInvalidRoot(ctx context.Context, root [32]byte) error {
+//  SetOptimisticToInvalid updates the synced_tips map when the block with the given root becomes INVALID.
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	idx, ok := f.store.nodesIndices[root]
