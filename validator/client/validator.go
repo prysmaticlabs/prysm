@@ -978,26 +978,28 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 		hexKey := hexutil.Encode(key[:])
 		feeRecipient := fieldparams.Eth1BurnAddressHex
 		validatorIndex := v.pubkeyHexToValidatorIndex[hexKey]
-		if v.prepareBeaconProposalConfig.ProposeConfig != nil {
-			option := v.prepareBeaconProposalConfig.ProposeConfig[hexKey]
-			if option != nil && option.FeeRecipient != "" {
-				feeRecipient = option.FeeRecipient
-			} else {
-				feeRecipient = v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient
-			}
-		}
+		// ignore updating fee recipient if validator index is not found
 		if validatorIndex == 0 {
 			resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: key[:]})
 			if err != nil {
 				// do a strings contains? to see if the error is a not found error
 				if strings.Contains(err.Error(), "Could not find validator index for public key ") {
-					log.Infoln("Could not find validator index for public key %#x not found. Perhaps the validator is not yet active.", pubkey)
+					log.Infoln("Could not find validator index for public key %#x not found. "+
+						"Perhaps the validator is not yet active.", hexKey)
 					continue
 				} else {
 					return nil, err
 				}
 			} else {
 				validatorIndex = resp.Index
+			}
+		}
+		if v.prepareBeaconProposalConfig.ProposeConfig != nil {
+			option := v.prepareBeaconProposalConfig.ProposeConfig[hexKey]
+			if option != nil && option.FeeRecipient != "" {
+				feeRecipient = option.FeeRecipient
+			} else {
+				feeRecipient = v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient
 			}
 		}
 		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &validator_service_config.ValidatorFeeRecipient{
