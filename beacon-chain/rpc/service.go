@@ -174,7 +174,6 @@ func (s *Service) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	var stateCache stategen.CachedGetter
-	// s.cfg.StateGen is often nil in tests...
 	if s.cfg.StateGen != nil {
 		stateCache = s.cfg.StateGen.CombinedCache()
 	}
