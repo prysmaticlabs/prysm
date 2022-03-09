@@ -5,7 +5,7 @@ go_library(
     srcs = [
         "doc.go",
         "errors.go",
-        "helpers.go",
+        "forkchoice.go",
         "metrics.go",
         "node.go",
         "optimistic_sync.go",
@@ -13,7 +13,7 @@ go_library(
         "store.go",
         "types.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
@@ -35,7 +35,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "ffg_update_test.go",
-        "helpers_test.go",
+        "forkchoice_test.go",
         "no_vote_test.go",
         "node_test.go",
         "optimistic_sync_test.go",
