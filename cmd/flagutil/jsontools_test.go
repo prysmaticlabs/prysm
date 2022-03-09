@@ -23,7 +23,6 @@ func TestUnmarshalFromFileOrURL(t *testing.T) {
 		require.NoError(t, err)
 	}))
 	defer srv.Close()
-	ts := &test{}
 	ctx := context.Background()
 	type args struct {
 		FileOrURL string
@@ -39,8 +38,8 @@ func TestUnmarshalFromFileOrURL(t *testing.T) {
 		{
 			name: "Happy Path File",
 			args: args{
-				FileOrURL: "./testassets/test.json",
-				To:        ts,
+				FileOrURL: "./testassets/test-good.json",
+				To:        &test{},
 			},
 			want: &test{
 				Foo: "foo",
@@ -52,13 +51,40 @@ func TestUnmarshalFromFileOrURL(t *testing.T) {
 			name: "Happy Path URL",
 			args: args{
 				FileOrURL: srv.URL,
-				To:        ts,
+				To:        &test{},
 			},
 			want: &test{
 				Foo: "foo",
 				Bar: 1,
 			},
 			wantErr: false,
+		},
+		{
+			name: "Bad File Path, not json",
+			args: args{
+				FileOrURL: "./jsontools.go",
+				To:        &test{},
+			},
+			want:    &test{},
+			wantErr: true,
+		},
+		{
+			name: "Bad File Path",
+			args: args{
+				FileOrURL: "./test-bad.json",
+				To:        &test{},
+			},
+			want:    &test{},
+			wantErr: true,
+		},
+		{
+			name: "Bad File Path, not found",
+			args: args{
+				FileOrURL: "./test-notfound.json",
+				To:        &test{},
+			},
+			want:    &test{},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -67,7 +93,7 @@ func TestUnmarshalFromFileOrURL(t *testing.T) {
 				t.Errorf(" error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			require.DeepEqual(t, tt.args.To, tt.want)
+			require.DeepEqual(t, tt.want, tt.args.To)
 		})
 	}
 }

@@ -32,7 +32,7 @@ func UnmarshalFromURL(ctx context.Context, from *url.URL, to interface{}) error 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return errors.Errorf("http request failed with status code %d", resp.StatusCode)
+		return errors.Errorf("http request to %v failed with status code %d", from.String(), resp.StatusCode)
 	}
 	if decodeerr := json.NewDecoder(resp.Body).Decode(&to); decodeerr != nil {
 		return errors.Wrap(decodeerr, "failed to decode http response")
