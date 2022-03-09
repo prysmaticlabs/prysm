@@ -224,6 +224,21 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 	return &emptypb.Empty{}, nil
 }
 
+// SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
+// and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
+// The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
+// to be included in the beacon chain. The beacon node is not required to validate the signed
+// `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
+// successful. The beacon node is expected to integrate the new block into its state, and
+// therefore validate the block internally, however blocks which fail the validation are still
+// broadcast but a different status code is returned (202).
+func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBlindedBeaconBlockContainer) (*emptypb.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlock")
+	defer span.End()
+
+	return &emptypb.Empty{}, nil
+}
+
 // GetBlock retrieves block details for given block ID.
 func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlock")
