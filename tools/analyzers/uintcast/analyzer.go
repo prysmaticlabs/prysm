@@ -56,7 +56,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			case *ast.Ident:
 				typ, ok = basicType(pass.TypesInfo.Types[arg].Type)
 			case *ast.CallExpr:
-				// Check if the call is a conversion
+				// Check if the call is a builtin conversion/anon identifier.
 				typ, ok = basicType(pass.TypesInfo.Types[arg].Type)
 				if !ok {
 					// Otherwise, it might be a declared function call with a return type.

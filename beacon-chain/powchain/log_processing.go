@@ -109,7 +109,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// This can happen sometimes when we receive the same log twice from the
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
-	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex))
+	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex)) // lint:ignore uintcast -- MerkleTreeIndex should not exceed int64 in your lifetime.
 	if index <= s.lastReceivedMerkleIndex {
 		return nil
 	}
@@ -391,7 +391,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
-		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
+		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
 	}
 	return nil
 }

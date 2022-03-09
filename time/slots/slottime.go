@@ -153,7 +153,7 @@ func ToTime(genesisTimeSec uint64, slot types.Slot) (time.Time, error) {
 	if err != nil {
 		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
-	return time.Unix(int64(sTime), 0), nil
+	return time.Unix(int64(sTime), 0), nil // lint:ignore uintcast -- A timestamp will not exceed int64 in your lifetime.
 }
 
 // Since computes the number of time slots that have occurred since the given timestamp.

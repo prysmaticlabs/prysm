@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -47,7 +48,7 @@ func main() {
 	}
 	fmt.Printf("Next period starts at epoch %d (%s)\n", nextStart, time.Until(nextStartTime))
 
-	for i := 0; i < int(current.Sub(uint64(start))); i++ {
+	for i := types.Epoch(0); i < current.Sub(uint64(start)); i++ {
 		j := i
 		g.Go(func() error {
 			resp, err := c.ListBeaconBlocks(ctx, &v1alpha1.ListBlocksRequest{

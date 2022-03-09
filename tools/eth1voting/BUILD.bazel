@@ -16,6 +16,7 @@ go_library(
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
         "//time/slots:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_x_sync//errgroup:go_default_library",
     ],
