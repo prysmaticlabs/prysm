@@ -300,3 +300,7 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 	ret := make([]*pbrpc.ForkChoiceNode, len(f.store.nodeByRoot))
 	return f.store.treeRootNode.rpcNodes(ret)
 }
+
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [fieldparams.RootLength]byte) error {
+	return f.store.setOptimisticToInvalid(ctx)
+}
