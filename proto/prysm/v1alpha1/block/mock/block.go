@@ -14,7 +14,7 @@ type SignedBeaconBlock struct {
 	BeaconBlock block.BeaconBlock
 }
 
-func (m SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
+func (SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
 	panic("implement me")
 }
 
@@ -81,7 +81,7 @@ type BeaconBlock struct {
 	BlockSlot       types.Slot
 }
 
-func (m BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+func (BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
 	panic("implement me")
 }
 
