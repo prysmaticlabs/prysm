@@ -23,6 +23,8 @@ import (
 // Spec code:
 // def is_merge_transition_complete(state: BeaconState) -> bool:
 //    return state.latest_execution_payload_header != ExecutionPayloadHeader()
+//
+// Deprecated: Use `IsMergeTransitionBlockUsingPayloadHeader` instead.
 func MergeTransitionComplete(st state.BeaconState) (bool, error) {
 	h, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
@@ -48,6 +50,16 @@ func MergeTransitionBlock(st state.BeaconState, body block.BeaconBlockBody) (boo
 		return false, err
 	}
 
+	return ExecutionBlock(body)
+}
+
+// IsMergeTransitionBlockUsingPayloadHeader returns true if the input block is the terminal merge block.
+// Terminal merge block must be associated with an empty payload header.
+// This is an optimized version of MergeTransitionComplete where beacon state is not required as an argument.
+func IsMergeTransitionBlockUsingPayloadHeader(h *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
+	if !isEmptyHeader(h) {
+		return false, nil
+	}
 	return ExecutionBlock(body)
 }
 
