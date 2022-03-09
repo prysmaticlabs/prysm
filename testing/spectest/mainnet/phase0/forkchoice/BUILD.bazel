@@ -8,6 +8,7 @@ go_test(
     ],
     tags = ["spectest"],
     deps = [
+        "//config/features:go_default_library",
         "//runtime/version:go_default_library",
         "//testing/spectest/shared/common/forkchoice:go_default_library",
     ],

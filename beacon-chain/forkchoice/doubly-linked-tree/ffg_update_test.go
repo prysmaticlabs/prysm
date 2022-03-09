@@ -1,4 +1,4 @@
-package protoarray
+package doublylinkedtree
 
 import (
 	"context"
@@ -183,18 +183,11 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 }
 
 func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
-	f := New(justifiedEpoch, finalizedEpoch, params.BeaconConfig().ZeroHash)
-	f.store.nodesIndices[params.BeaconConfig().ZeroHash] = 0
-	f.store.nodes = append(f.store.nodes, &Node{
-		slot:           0,
-		root:           params.BeaconConfig().ZeroHash,
-		parent:         NonExistentNode,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		bestChild:      NonExistentNode,
-		bestDescendant: NonExistentNode,
-		weight:         0,
-	})
-
+	ctx := context.Background()
+	f := New(justifiedEpoch, finalizedEpoch)
+	err := f.ProcessBlock(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, justifiedEpoch, finalizedEpoch, false)
+	if err != nil {
+		return nil
+	}
 	return f
 }
