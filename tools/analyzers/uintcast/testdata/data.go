@@ -32,6 +32,24 @@ func BaseTypes() {
 	_ = bad
 }
 
+func Uint64CastInStruct() {
+	type S struct {
+		a int
+	}
+	s := S{
+		a: int(uint64(5)), // want "Unsafe cast from uint64 to int."
+	}
+	_ = s
+}
+
+func Uint64CastFunctionReturn() {
+	fn := func() uint64 {
+		return 5
+	}
+	a := int(fn()) // want "Unsafe cast from uint64 to int."
+	_ = a
+}
+
 // IgnoredResult should not report an error.
 func IgnoredResult() {
 	a := uint64(math.MaxUint64)
