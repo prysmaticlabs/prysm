@@ -24,7 +24,7 @@ import (
 // def is_merge_transition_complete(state: BeaconState) -> bool:
 //    return state.latest_execution_payload_header != ExecutionPayloadHeader()
 //
-// DEPRECATED: Use `IsMergeTransitionBlockUsingPayloadHeader` instead.
+// Deprecated: Use `IsMergeTransitionBlockUsingPayloadHeader` instead.
 func MergeTransitionComplete(st state.BeaconState) (bool, error) {
 	h, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
