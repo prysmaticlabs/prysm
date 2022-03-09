@@ -21,7 +21,7 @@ func UnmarshalFromFileOrURL(ctx context.Context, from string, to interface{}) er
 }
 
 func UnmarshalFromURL(ctx context.Context, from *url.URL, to interface{}) error {
-	req, reqerr := http.NewRequestWithContext(ctx, http.MethodGet, from.RequestURI(), nil)
+	req, reqerr := http.NewRequestWithContext(ctx, http.MethodGet, from.String(), nil)
 	if reqerr != nil {
 		return errors.Wrap(reqerr, "failed to create http request")
 	}

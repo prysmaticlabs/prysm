@@ -2,6 +2,9 @@ package flagutil
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -13,6 +16,13 @@ type test struct {
 }
 
 func TestUnmarshalFromFileOrURL(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Header().Set("Content-Type", "application/json")
+		_, err := fmt.Fprintf(w, `{ "foo": "foo", "bar": 1}`)
+		require.NoError(t, err)
+	}))
+	defer srv.Close()
 	ts := &test{}
 	ctx := context.Background()
 	type args struct {
@@ -20,15 +30,28 @@ func TestUnmarshalFromFileOrURL(t *testing.T) {
 		To        interface{}
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    interface{}
-		wantErr bool
+		name        string
+		args        args
+		want        interface{}
+		urlResponse string
+		wantErr     bool
 	}{
 		{
 			name: "Happy Path File",
 			args: args{
 				FileOrURL: "./testassets/test.json",
+				To:        ts,
+			},
+			want: &test{
+				Foo: "foo",
+				Bar: 1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Happy Path URL",
+			args: args{
+				FileOrURL: srv.URL,
 				To:        ts,
 			},
 			want: &test{
