@@ -216,7 +216,7 @@ func TestOptimistic(t *testing.T) {
 // And every block in the Fork choice is optimistic. Synced_Tips contains a
 // single block that is outside of Fork choice
 //
-func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
+func TestSetOptimisticToValid(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
@@ -348,7 +348,7 @@ func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 // single block that is outside of Fork choice. The numbers in parentheses are
 // the weights of the nodes before removal
 //
-func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
+func TestSetOptimisticToInvalid(t *testing.T) {
 	tests := []struct {
 		root              [32]byte                // the root of the new INVALID block
 		tips              map[[32]byte]types.Slot // the old synced tips
@@ -439,7 +439,7 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 		require.NotEqual(t, NonExistentNode, parentIndex)
 		parent := f.store.nodes[parentIndex]
 		f.store.nodesLock.Unlock()
-		err := f.UpdateSyncedTipsWithInvalidRoot(context.Background(), tc.root)
+		err := f.SetOptimisticToInvalid(context.Background(), tc.root)
 		require.NoError(t, err)
 		f.syncedTips.RLock()
 		_, parentSyncedTip := f.syncedTips.validatedTips[parent.root]

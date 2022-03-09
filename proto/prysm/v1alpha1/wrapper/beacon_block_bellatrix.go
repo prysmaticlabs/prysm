@@ -101,7 +101,7 @@ func (bellatrixSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error
 
 // PbAltairBlock returns the underlying protobuf object.
 func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
-	return nil, errors.New("unsupported altair block")
+	return nil, ErrUnsupportedAltairBlock
 }
 
 // Version of the underlying protobuf object.
