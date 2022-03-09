@@ -51,22 +51,57 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				return
 			}
 
-			if arg, ok := node.Args[0].(*ast.Ident); ok {
-				if typ, ok := pass.TypesInfo.Types[arg].Type.(*types.Basic); ok {
-					// Ignore types that are not uint variants.
-					if typ.Kind() < types.Uint || typ.Kind() > types.Uint64 {
-						return
-					}
-					if fnTyp, ok := pass.TypesInfo.Types[node.Fun].Type.(*types.Basic); ok {
-						if fnTyp.Kind() >= types.Int && fnTyp.Kind() <= types.Int64 {
-							pass.Reportf(arg.Pos(), "Unsafe cast from %s to %s.", typ, fnTyp)
-						}
-					}
+			var typ *types.Basic
+			switch arg := node.Args[0].(type) {
+			case *ast.Ident:
+				typ, ok = basicType(pass.TypesInfo.Types[arg].Type)
+			case *ast.CallExpr:
+				// Check if the call is a conversion
+				typ, ok = basicType(pass.TypesInfo.Types[arg].Type)
+				if !ok {
+					// Otherwise, it might be a declared function call with a return type.
+					typ, ok = funcReturnType(pass.TypesInfo.Types[arg.Fun].Type)
 				}
+			}
+			if typ == nil || !ok {
+				return
+			}
 
+			// Ignore types that are not uint variants.
+			if typ.Kind() < types.Uint || typ.Kind() > types.Uint64 {
+				return
+			}
+
+			if fnTyp, ok := pass.TypesInfo.Types[node.Fun].Type.(*types.Basic); ok {
+				if fnTyp.Kind() >= types.Int && fnTyp.Kind() <= types.Int64 {
+					pass.Reportf(node.Args[0].Pos(), "Unsafe cast from %s to %s.", typ, fnTyp)
+				}
 			}
 		}
 	})
 
 	return nil, nil
+}
+
+func basicType(obj types.Type) (*types.Basic, bool) {
+	if obj == nil {
+		return nil, false
+	}
+	fromTyp, ok := obj.(*types.Basic)
+	if !ok && obj.Underlying() != nil {
+		// Try to get the underlying type
+		fromTyp, ok = obj.Underlying().(*types.Basic)
+	}
+	return fromTyp, ok
+}
+
+func funcReturnType(obj types.Type) (*types.Basic, bool) {
+	if obj == nil {
+		return nil, false
+	}
+	fnTyp, ok := obj.(*types.Signature)
+	if !ok {
+		return nil, ok
+	}
+	return basicType(fnTyp.Results().At(0).Type())
 }
