@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -31,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -188,12 +190,13 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	}
 	s.store = store.New(justified, finalized)
 
-	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
-	s.cfg.ForkChoiceStore = store
-
-	if err := s.loadSyncedTips(originRoot, saved.Slot()); err != nil {
-		return err
+	var store f.ForkChoicer
+	if features.Get().EnableForkChoiceDoublyLinkedTree {
+		store = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
+	} else {
+		store = protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
 	}
+	s.cfg.ForkChoiceStore = store
 
 	ss, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
@@ -450,9 +453,8 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 		genesisBlk.Block().Slot(),
 		genesisBlkRoot,
 		params.BeaconConfig().ZeroHash,
-		[32]byte{},
 		genesisCheckpoint.Epoch,
-		genesisCheckpoint.Epoch); err != nil {
+		genesisCheckpoint.Epoch, false /* optimistic status */); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 
