@@ -40,7 +40,7 @@ type CurrentSlotter interface {
 	CurrentSlot() types.Slot
 }
 
-// Replayer encapsulates database query and replay logic. It can be constructed via a StateReplayerBuilder.
+// Replayer encapsulates database query and replay logic. It can be constructed via a ReplayerBuilder.
 type Replayer interface {
 	// ReplayBlocks replays the blocks the Replayer knows about based on Builder params
 	ReplayBlocks(ctx context.Context) (state.BeaconState, error)
