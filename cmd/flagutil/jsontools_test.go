@@ -1,0 +1,5 @@
+package flagutil
+
+func TestLoadFlagsFromConfig() {
+
+}
