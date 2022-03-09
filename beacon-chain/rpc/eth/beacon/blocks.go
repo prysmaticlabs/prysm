@@ -316,9 +316,6 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 
 	_, err = blk.PbPhase0Block()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-	}
 	if err == nil {
 		v1Blk, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
@@ -332,11 +329,12 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			},
 		}, nil
 	}
-
-	altairBlk, err := blk.PbAltairBlock()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
+	// ErrUnsupportedPhase0Block means that we have another block type
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
+
+	altairBlk, err := blk.PbAltairBlock()
 	if err == nil {
 		if altairBlk == nil {
 			return nil, status.Errorf(codes.Internal, "Nil block")
@@ -353,11 +351,12 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			},
 		}, nil
 	}
-
-	bellatrixBlk, err := blk.PbBellatrixBlock()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	// ErrUnsupportedAltairBlock means that we have another block type
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
+
+	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err == nil {
 		if bellatrixBlk == nil {
 			return nil, status.Errorf(codes.Internal, "Nil block")
@@ -374,8 +373,12 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			},
 		}, nil
 	}
+	// ErrUnsupportedBellatrixBlock means that we have another block type
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
 
-	return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
 }
 
 // GetBlockSSZV2 returns the SSZ-serialized version of the beacon block for given block ID.
@@ -390,9 +393,6 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	}
 
 	_, err = blk.PbPhase0Block()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-	}
 	if err == nil {
 		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
@@ -404,11 +404,12 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		}
 		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_PHASE0, Data: sszBlock}, nil
 	}
-
-	altairBlk, err := blk.PbAltairBlock()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
+	// ErrUnsupportedPhase0Block means that we have another block type
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
+
+	altairBlk, err := blk.PbAltairBlock()
 	if err == nil {
 		if altairBlk == nil {
 			return nil, status.Errorf(codes.Internal, "Nil block")
@@ -427,11 +428,12 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		}
 		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_ALTAIR, Data: sszData}, nil
 	}
-
-	bellatrixBlk, err := blk.PbBellatrixBlock()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	// ErrUnsupportedAltairBlock means that we have another block type
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
+
+	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err == nil {
 		if bellatrixBlk == nil {
 			return nil, status.Errorf(codes.Internal, "Nil block")
@@ -450,8 +452,12 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		}
 		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_BELLATRIX, Data: sszData}, nil
 	}
+	// ErrUnsupportedBellatrixBlock means that we have another block type
+	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
 
-	return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
 }
 
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
