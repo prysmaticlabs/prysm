@@ -41,7 +41,7 @@ func UnmarshalFromURL(ctx context.Context, from *url.URL, to interface{}) error 
 }
 
 func UnmarshalFromFile(from string, to interface{}) error {
-	fileExtension := filepath.Ext(from)
+	fileExtension := filepath.Ext(filepath.Clean(from))
 	if fileExtension == "json" {
 		jsonFile, jsonerr := os.Open(from)
 		if jsonerr != nil {
