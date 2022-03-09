@@ -1,4 +1,4 @@
-package protoarray
+package doublylinkedtree
 
 import (
 	"context"
