@@ -28,6 +28,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -1261,6 +1262,48 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.Equal(t, f.Epoch, service.FinalizedCheckpt().Epoch)
 }
 
+func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.AltairForkEpoch = 1
+	config.BellatrixForkEpoch = 2
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithDepositCache(depositCache),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	gs, keys := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	gBlk, err := service.cfg.BeaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+	gRoot, err := gBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
+
+	testState := gs.Copy()
+	for i := types.Slot(1); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
+		require.NoError(t, err)
+		r, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk), r))
+		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
+		require.NoError(t, err)
+	}
+}
+
 func TestInsertFinalizedDeposits(t *testing.T) {
 	ctx := context.Background()
 	opts := testServiceOptsWithDB(t)
@@ -1343,4 +1386,54 @@ func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
 	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
+}
+
+func Test_getStateVersionAndPayload(t *testing.T) {
+	tests := []struct {
+		name    string
+		st      state.BeaconState
+		version int
+		header  *ethpb.ExecutionPayloadHeader
+	}{
+		{
+			name: "phase 0 state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisState(t, 1)
+				return s
+			}(),
+			version: version.Phase0,
+			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+		},
+		{
+			name: "altair state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisStateAltair(t, 1)
+				return s
+			}(),
+			version: version.Altair,
+			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+		},
+		{
+			name: "bellatrix state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+				require.NoError(t, s.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{
+					BlockNumber: 1,
+				}))
+				return s
+			}(),
+			version: version.Bellatrix,
+			header: &ethpb.ExecutionPayloadHeader{
+				BlockNumber: 1,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			version, header, err := getStateVersionAndPayload(tt.st)
+			require.NoError(t, err)
+			require.Equal(t, tt.version, version)
+			require.DeepEqual(t, tt.header, header)
+		})
+	}
 }
