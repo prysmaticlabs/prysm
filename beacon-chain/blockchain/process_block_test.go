@@ -1345,3 +1345,53 @@ func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wrapper.WrappedPhase0SignedBeaconBlock(b)))
 	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
 }
+
+func Test_getStateVersionAndPayload(t *testing.T) {
+	tests := []struct {
+		name    string
+		st      state.BeaconState
+		version int
+		header  *ethpb.ExecutionPayloadHeader
+	}{
+		{
+			name: "phase 0 state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisState(t, 1)
+				return s
+			}(),
+			version: version.Phase0,
+			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+		},
+		{
+			name: "altair state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisStateAltair(t, 1)
+				return s
+			}(),
+			version: version.Altair,
+			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+		},
+		{
+			name: "bellatrix state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+				require.NoError(t, s.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{
+					BlockNumber: 1,
+				}))
+				return s
+			}(),
+			version: version.Bellatrix,
+			header: &ethpb.ExecutionPayloadHeader{
+				BlockNumber: 1,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			version, header, err := getStateVersionAndPayload(tt.st)
+			require.NoError(t, err)
+			require.Equal(t, tt.version, version)
+			require.DeepEqual(t, tt.header, header)
+		})
+	}
+}
