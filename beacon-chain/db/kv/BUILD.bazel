@@ -80,7 +80,6 @@ go_test(
         "checkpoint_test.go",
         "deposit_contract_test.go",
         "encoding_test.go",
-        "error_test.go",
         "finalized_block_roots_test.go",
         "genesis_test.go",
         "init_test.go",
