@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -162,74 +162,6 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	// The context should have been canceled.
 	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
 	require.LogsContain(t, hook, "data already exists")
-}
-
-func TestChainStart_SyncedTipsInDB(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	chainService := setupBeaconChain(t, beaconDB)
-
-	genesisBlk := util.NewBeaconBlock()
-	blkRoot, err := genesisBlk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
-	s, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, s.SetSlot(1))
-	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
-	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, blkRoot))
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
-	require.NoError(t, beaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
-	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
-	chainService.cfg.FinalizedStateAtStartUp = s
-
-	tips := make(map[[32]byte]types.Slot)
-	tips[bytesutil.ToBytes32([]byte{'a'})] = 1
-	tips[bytesutil.ToBytes32([]byte{'b'})] = 2
-	require.NoError(t, beaconDB.UpdateValidatedTips(ctx, tips))
-
-	// Test the start function.
-	chainService.Start()
-
-	// Test synced Tips in DB
-	tips2 := chainService.cfg.ForkChoiceStore.SyncedTips()
-	require.Equal(t, len(tips2), len(tips))
-	for k, v := range tips {
-		v2, ok := tips2[k]
-		require.Equal(t, true, ok)
-		require.Equal(t, v, v2)
-	}
-}
-
-func TestChainStart_SyncedTipsNotInDB(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	chainService := setupBeaconChain(t, beaconDB)
-
-	genesisBlk := util.NewBeaconBlock()
-	blkRoot, err := genesisBlk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
-	s, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, s.SetSlot(1))
-	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
-	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, blkRoot))
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
-	require.NoError(t, beaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
-	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
-	chainService.cfg.FinalizedStateAtStartUp = s
-	// Test the start function.
-	chainService.Start()
-
-	// Test synced Tips in DB
-	tips := chainService.cfg.ForkChoiceStore.SyncedTips()
-	require.Equal(t, 1, len(tips))
-	slot, ok := tips[blkRoot]
-	require.Equal(t, true, ok)
-	require.Equal(t, types.Slot(1), slot)
 }
 
 func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
@@ -515,7 +447,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	}
 }
 
-func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
+func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
@@ -528,7 +460,26 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState))
+	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState, false))
+
+	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
+	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
+}
+
+func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	s := &Service{
+		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(0, 0), BeaconDB: beaconDB},
+		store: &store.Store{},
+	}
+	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
+	block := util.NewBeaconBlock()
+	r, err := block.Block.HashTreeRoot()
+	require.NoError(t, err)
+	beaconState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState, false))
 
 	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
@@ -582,7 +533,7 @@ func BenchmarkHasBlockDB(b *testing.B) {
 	}
 }
 
-func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
+func BenchmarkHasBlockForkChoiceStore_ProtoArray(b *testing.B) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(b)
 	s := &Service{
@@ -596,7 +547,28 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	beaconState, err := v1.InitializeFromProto(bs)
 	require.NoError(b, err)
-	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState))
+	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState, false))
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		require.Equal(b, true, s.cfg.ForkChoiceStore.HasNode(r), "Block is not in fork choice store")
+	}
+}
+func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(b)
+	s := &Service{
+		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(0, 0), BeaconDB: beaconDB},
+		store: &store.Store{},
+	}
+	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
+	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
+	r, err := block.Block.HashTreeRoot()
+	require.NoError(b, err)
+	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
+	beaconState, err := v1.InitializeFromProto(bs)
+	require.NoError(b, err)
+	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block).Block(), r, beaconState, false))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -6,7 +6,7 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -53,12 +53,12 @@ type HeadFetcher interface {
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
-	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
 	IsOptimistic(ctx context.Context) (bool, error)
-	IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error)
+	IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
+	ForkChoicer() forkchoice.ForkChoicer
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
@@ -238,11 +238,6 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 	return s.head.state.Eth1Data()
 }
 
-// ProtoArrayStore returns the proto array store object.
-func (s *Service) ProtoArrayStore() *protoarray.Store {
-	return s.cfg.ForkChoiceStore.Store()
-}
-
 // GenesisTime returns the genesis time of beacon chain.
 func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
@@ -288,23 +283,7 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
-	nodes := s.ProtoArrayStore().Nodes()
-
-	// Deliberate choice to not preallocate space for below.
-	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
-	headsRoots := make([][32]byte, 0)
-	headsSlots := make([]types.Slot, 0)
-
-	nonExistentNode := ^uint64(0)
-	for _, node := range nodes {
-		// Possible heads have no children.
-		if node.BestDescendant() == nonExistentNode && node.BestChild() == nonExistentNode {
-			headsRoots = append(headsRoots, node.Root())
-			headsSlots = append(headsSlots, node.Slot())
-		}
-	}
-
-	return headsRoots, headsSlots
+	return s.cfg.ForkChoiceStore.Tips()
 }
 
 // HeadPublicKeyToValidatorIndex returns the validator index of the `pubkey` in current head state.
@@ -331,6 +310,11 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 	return v.PublicKey(), nil
 }
 
+// ForkChoicer returns the forkchoice interface
+func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
+	return s.cfg.ForkChoiceStore
+}
+
 // IsOptimistic returns true if the current head is optimistic.
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	s.headLock.RLock()
@@ -339,16 +323,21 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	return s.cfg.ForkChoiceStore.Optimistic(ctx, s.head.root, s.head.slot)
+	return s.cfg.ForkChoiceStore.IsOptimistic(ctx, s.head.root)
 }
 
 // IsOptimisticForRoot takes the root and slot as aguments instead of the current head
 // and returns true if it is optimistic.
-func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte, slot types.Slot) (bool, error) {
-	return s.cfg.ForkChoiceStore.Optimistic(ctx, root, slot)
+func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
+	return s.cfg.ForkChoiceStore.IsOptimistic(ctx, root)
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.
 func (s *Service) SetGenesisTime(t time.Time) {
 	s.genesisTime = t
+}
+
+// ForkChoiceStore returns the fork choice store in the service
+func (s *Service) ForkChoiceStore() forkchoice.ForkChoicer {
+	return s.cfg.ForkChoiceStore
 }
