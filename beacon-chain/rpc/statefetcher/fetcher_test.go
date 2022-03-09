@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -151,12 +153,14 @@ func TestGetState(t *testing.T) {
 	})
 
 	t.Run("slot", func(t *testing.T) {
-		stateGen := mockstategen.NewMockService()
-		stateGen.StatesBySlot[headSlot] = newBeaconState
-
 		p := StateProvider{
 			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
-			StateGenService:    stateGen,
+			ChainInfoFetcher: &chainMock.ChainService{
+				CanonicalRoots: map[[32]byte]bool{
+					bytesutil.ToBytes32(newBeaconState.LatestBlockHeader().ParentRoot): true,
+				},
+			},
+			ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(newBeaconState)),
 		}
 
 		s, err := p.State(ctx, []byte(strconv.FormatUint(uint64(headSlot), 10)))
@@ -166,14 +170,16 @@ func TestGetState(t *testing.T) {
 		assert.Equal(t, stateRoot, sRoot)
 	})
 
+	rb := mockstategen.NewMockReplayerBuilder(mockstategen.WithStateError(1, stategen.ErrFutureSlotRequested))
 	t.Run("slot_too_big", func(t *testing.T) {
 		p := StateProvider{
 			GenesisTimeFetcher: &chainMock.ChainService{
 				Genesis: time.Now(),
 			},
+			ReplayerBuilder: rb,
 		}
 		_, err := p.State(ctx, []byte(strconv.FormatUint(1, 10)))
-		assert.ErrorContains(t, "slot cannot be in the future", err)
+		assert.ErrorContains(t, "cannot replay to future slots", err)
 	})
 
 	t.Run("invalid_state", func(t *testing.T) {
