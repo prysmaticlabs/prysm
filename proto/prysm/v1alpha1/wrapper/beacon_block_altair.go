@@ -106,7 +106,7 @@ func (altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 
 // PbBellatrixBlock is a stub.
 func (altairSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
-	return nil, errors.New("unsupported bellatrix block")
+	return nil, ErrUnsupportedBellatrixBlock
 }
 
 // Version of the underlying protobuf object.
