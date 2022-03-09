@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/flagutil"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -52,10 +53,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
-)
-
-const (
-	eth1BurnAddress = "0x0000000000000000000000000000000000000000"
 )
 
 // ValidatorClient defines an instance of an Ethereum validator that manages
@@ -507,7 +504,7 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config
 		config = &validator_service_config.PrepareBeaconProposalFileConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
-				FeeRecipient: eth1BurnAddress,
+				FeeRecipient: fieldparams.Eth1BurnAddressHex,
 			},
 		}
 	}
