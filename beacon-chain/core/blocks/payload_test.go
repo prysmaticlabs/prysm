@@ -350,6 +350,185 @@ func Test_MergeBlock(t *testing.T) {
 	}
 }
 
+func Test_IsMergeTransitionBlockUsingPayloadHeader(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload *enginev1.ExecutionPayload
+		header  *ethpb.ExecutionPayloadHeader
+		want    bool
+	}{
+		{
+			name:    "empty header, empty payload",
+			payload: emptyPayload(),
+			header:  emptyPayloadHeader(),
+			want:    false,
+		},
+		{
+			name:    "non-empty header, empty payload",
+			payload: emptyPayload(),
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return h
+			}(),
+			want: false,
+		},
+		{
+			name: "empty header, payload has parent hash",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has fee recipient",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.FeeRecipientLength)
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has state root",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has receipt root",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has logs bloom",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has random",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has base fee",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has block hash",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has tx",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.Transactions = [][]byte{{'a'}}
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has extra data",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.ExtraData = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has block number",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.BlockNumber = 1
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has gas limit",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.GasLimit = 1
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has gas used",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.GasUsed = 1
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+		{
+			name: "empty header, payload has timestamp",
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.Timestamp = 1
+				return p
+			}(),
+			header: emptyPayloadHeader(),
+			want:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blk := util.NewBeaconBlockBellatrix()
+			blk.Block.Body.ExecutionPayload = tt.payload
+			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
+			require.NoError(t, err)
+			got, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(tt.header, body)
+			require.NoError(t, err)
+			if got != tt.want {
+				t.Errorf("MergeTransitionBlock() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func Test_IsExecutionBlock(t *testing.T) {
 	tests := []struct {
 		name    string

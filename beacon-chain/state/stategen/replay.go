@@ -10,11 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	prysmTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	prysmtime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
@@ -60,7 +61,7 @@ func (_ *State) ReplayBlocks(
 
 	// If there is skip slots at the end.
 	if targetSlot > state.Slot() {
-		state, err = processSlotsStateGen(ctx, state, targetSlot)
+		state, err = ReplayProcessSlots(ctx, state, targetSlot)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +152,7 @@ func executeStateTransitionStateGen(
 
 	// Execute per slots transition.
 	// Given this is for state gen, a node uses the version process slots without skip slots cache.
-	state, err = processSlotsStateGen(ctx, state, signed.Block().Slot())
+	state, err = ReplayProcessSlots(ctx, state, signed.Block().Slot())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slot")
 	}
@@ -163,22 +164,14 @@ func executeStateTransitionStateGen(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block")
 	}
-	if signed.Version() == version.Phase0 {
-		return state, nil
-	}
-
-	sa, err := signed.Block().Body().SyncAggregate()
-	if err != nil {
-		return nil, err
-	}
-	return altair.ProcessSyncAggregate(ctx, state, sa)
+	return state, nil
 }
 
-// processSlotsStateGen to process old slots for state gen usages.
+// ReplayProcessSlots to process old slots for state gen usages.
 // There's no skip slot cache involved given state gen only works with already stored block and state in DB.
 // WARNING: This method should not be used for future slot.
-func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stategen.ProcessSlotsStateGen")
+func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stategen.ReplayProcessSlots")
 	defer span.End()
 	if state == nil || state.IsNil() {
 		return nil, errUnknownState
@@ -199,35 +192,41 @@ func processSlotsStateGen(ctx context.Context, state state.BeaconState, slot typ
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process slot")
 		}
-		if prysmTime.CanProcessEpoch(state) {
+		if prysmtime.CanProcessEpoch(state) {
 			switch state.Version() {
 			case version.Phase0:
 				state, err = transition.ProcessEpochPrecompute(ctx, state)
 				if err != nil {
+					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
 			case version.Altair, version.Bellatrix:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
-					return nil, errors.Wrap(err, "could not process epoch with optimization")
+					tracing.AnnotateError(span, err)
+					return nil, errors.Wrap(err, "could not process epoch")
 				}
 			default:
 				return nil, errors.New("beacon state should have a version")
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
-			return nil, err
+			tracing.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "failed to increment state slot")
 		}
 
-		if prysmTime.CanUpgradeToAltair(state.Slot()) {
+		if prysmtime.CanUpgradeToAltair(state.Slot()) {
 			state, err = altair.UpgradeToAltair(ctx, state)
 			if err != nil {
+				tracing.AnnotateError(span, err)
 				return nil, err
 			}
 		}
-		if prysmTime.CanUpgradeToBellatrix(state.Slot()) {
+
+		if prysmtime.CanUpgradeToBellatrix(state.Slot()) {
 			state, err = execution.UpgradeToBellatrix(ctx, state)
 			if err != nil {
+				tracing.AnnotateError(span, err)
 				return nil, err
 			}
 		}

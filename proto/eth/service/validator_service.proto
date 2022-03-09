@@ -101,6 +101,20 @@ service BeaconValidator {
     option (google.api.http) = { get: "/internal/eth/v2/validator/blocks/{slot}" };
   }
 
+  // PrepareBeaconProposer submits fee recipient information to be used when preparing block
+  // proposal execution payloads.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid block production request
+  //  - 500: Beacon node internal error
+  rpc PrepareBeaconProposer(v1.PrepareBeaconProposerRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/validator/prepare_beacon_proposer"
+      body: "*"
+    };
+  }
+
   // ProduceAttestationData requests that the beacon node produces attestation data for
   // the requested committee index and slot based on the nodes current head.
   //
