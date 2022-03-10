@@ -410,6 +410,47 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
 	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genesis := util.NewBeaconBlockBellatrix()
+		wrapped, err := wrapper.WrappedBellatrixSignedBeaconBlock(genesis)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapped), "Could not save genesis block")
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		beaconChainServer := &Server{
+			BeaconDB:         beaconDB,
+			BlockReceiver:    c,
+			ChainInfoFetcher: c,
+			BlockNotifier:    c.BlockNotifier(),
+			Broadcaster:      mockp2p.NewTestP2P(t),
+		}
+		req := util.NewBeaconBlockBellatrix()
+		req.Block.Slot = 5
+		req.Block.ParentRoot = bsRoot[:]
+		v2Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(req.Block)
+		require.NoError(t, err)
+		wrapped, err = wrapper.WrappedBellatrixSignedBeaconBlock(req)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
+		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
+			Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Block},
+			Signature: req.Signature,
+		}
+		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
+		assert.NoError(t, err, "Could not propose block correctly")
+	})
 }
 
 func TestServer_GetBlock(t *testing.T) {
@@ -975,6 +1016,45 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		assert.DeepEqual(t, sszBlock, resp.Data)
 		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		_, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
+		headBlock := blkContainers[len(blkContainers)-1]
+
+		b2 := util.NewBeaconBlockBellatrix()
+		b2.Block.Slot = 30
+		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+		signedBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(b2)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(ctx, signedBlk))
+
+		chainBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(headBlock.GetBellatrixBlock())
+		require.NoError(t, err)
+		bs := &Server{
+			BeaconDB: beaconDB,
+			ChainInfoFetcher: &mock.ChainService{
+				DB:                  beaconDB,
+				Block:               chainBlk,
+				Root:                headBlock.BlockRoot,
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			},
+		}
+
+		ok, blocks, err := beaconDB.BlocksBySlot(ctx, 30)
+		require.Equal(t, true, ok)
+		require.NoError(t, err)
+		sszBlock, err := blocks[0].MarshalSSZ()
+		require.NoError(t, err)
+
+		resp, err := bs.GetBlockSSZV2(ctx, &ethpbv2.BlockRequestV2{BlockId: []byte("30")})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, sszBlock, resp.Data)
+		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
+	})
 }
 
 func TestServer_GetBlockRoot(t *testing.T) {
@@ -1267,6 +1347,106 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 				require.NoError(t, err)
 
 				v1Block, err := migration.V1Alpha1BeaconBlockAltairToV2(tt.want.Block)
+				require.NoError(t, err)
+
+				if !reflect.DeepEqual(blk.Data, v1Block.Body.Attestations) {
+					t.Error("Expected attestations to equal")
+				}
+			})
+		}
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		_, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
+		headBlock := blkContainers[len(blkContainers)-1]
+		blk, err := wrapper.WrappedBellatrixSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_BellatrixBlock).BellatrixBlock)
+		require.NoError(t, err)
+		bs := &Server{
+			BeaconDB: beaconDB,
+			ChainInfoFetcher: &mock.ChainService{
+				DB:                  beaconDB,
+				Block:               blk,
+				Root:                headBlock.BlockRoot,
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			},
+		}
+
+		genBlk, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
+		root, err := genBlk.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		tests := []struct {
+			name    string
+			blockID []byte
+			want    *ethpbalpha.SignedBeaconBlockBellatrix
+			wantErr bool
+		}{
+			{
+				name:    "slot",
+				blockID: []byte("30"),
+				want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_BellatrixBlock).BellatrixBlock,
+			},
+			{
+				name:    "bad formatting",
+				blockID: []byte("3bad0"),
+				wantErr: true,
+			},
+			{
+				name:    "head",
+				blockID: []byte("head"),
+				want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_BellatrixBlock).BellatrixBlock,
+			},
+			{
+				name:    "finalized",
+				blockID: []byte("finalized"),
+				want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_BellatrixBlock).BellatrixBlock,
+			},
+			{
+				name:    "genesis",
+				blockID: []byte("genesis"),
+				want:    genBlk,
+			},
+			{
+				name:    "genesis root",
+				blockID: root[:],
+				want:    genBlk,
+			},
+			{
+				name:    "root",
+				blockID: blkContainers[20].BlockRoot,
+				want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_BellatrixBlock).BellatrixBlock,
+			},
+			{
+				name:    "non-existent root",
+				blockID: bytesutil.PadTo([]byte("hi there"), 32),
+				wantErr: true,
+			},
+			{
+				name:    "slot",
+				blockID: []byte("40"),
+				want:    blkContainers[40].Block.(*ethpbalpha.BeaconBlockContainer_BellatrixBlock).BellatrixBlock,
+			},
+			{
+				name:    "no block",
+				blockID: []byte("105"),
+				wantErr: true,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				blk, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{
+					BlockId: tt.blockID,
+				})
+				if tt.wantErr {
+					require.NotEqual(t, err, nil)
+					return
+				}
+				require.NoError(t, err)
+
+				v1Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(tt.want.Block)
 				require.NoError(t, err)
 
 				if !reflect.DeepEqual(blk.Data, v1Block.Body.Attestations) {
