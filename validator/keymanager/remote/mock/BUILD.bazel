@@ -11,5 +11,6 @@ go_library(
         "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
+        "//validator/keymanager:go_default_library",
     ],
 )
