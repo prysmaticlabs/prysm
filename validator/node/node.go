@@ -5,7 +5,9 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -643,5 +645,57 @@ func clearDB(ctx context.Context, dataDir string, force bool) error {
 		}
 	}
 
+	return nil
+}
+
+func unmarshalFromURL(ctx context.Context, from string, to interface{}) error {
+	u, err := url.ParseRequestURI(from)
+	if err != nil {
+		return err
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return fmt.Errorf("invalid URL: %s", from)
+	}
+	req, reqerr := http.NewRequestWithContext(ctx, http.MethodGet, from, nil)
+	if reqerr != nil {
+		return errors.Wrap(reqerr, "failed to create http request")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, resperr := http.DefaultClient.Do(req)
+	if resperr != nil {
+		return errors.Wrap(resperr, "failed to send http request")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("http request to %v failed with status code %d", from, resp.StatusCode)
+	}
+	if decodeerr := json.NewDecoder(resp.Body).Decode(&to); decodeerr != nil {
+		return errors.Wrap(decodeerr, "failed to decode http response")
+	}
+	return nil
+}
+
+func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
+	if ctx == nil {
+		return errors.New("node: nil context passed to unmarshalFromFile")
+	}
+	cleanpath := filepath.Clean(from)
+	fileExtension := filepath.Ext(cleanpath)
+	if fileExtension != ".json" {
+		return errors.Errorf("unsupported file extension %s , (ex. '.json')", fileExtension)
+	}
+	jsonFile, jsonerr := os.Open(cleanpath)
+	if jsonerr != nil {
+		return errors.Wrap(jsonerr, "failed to open json file")
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+	byteValue, readerror := ioutil.ReadAll(jsonFile)
+	if readerror != nil {
+		return errors.Wrap(readerror, "failed to read json file")
+	}
+	if unmarshalerr := json.Unmarshal(byteValue, &to); unmarshalerr != nil {
+		return errors.Wrap(unmarshalerr, "failed to unmarshal json file")
+	}
 	return nil
 }
