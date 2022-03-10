@@ -126,26 +126,31 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo types.Slot) 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to ReplayBlocks")
 	}
-
-	if replayTo > s.Slot() {
-		start := time.Now()
-		log.WithFields(logrus.Fields{
-			"startSlot": s.Slot(),
-			"endSlot":   replayTo,
-			"diff":      replayTo - s.Slot(),
-		}).Debug("calling process_slots on remaining slots")
-
-		// err will be handled after the bookend log
-		s, err = ReplayProcessSlots(ctx, s, replayTo)
-
-		duration := time.Since(start)
-		log.WithFields(logrus.Fields{
-			"duration": duration,
-		}).Debug("time spent in process_slots")
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("ReplayToSlot failed to seek to slot %d after applying blocks", replayTo))
-		}
+	if replayTo < s.Slot() {
+		return nil, errors.Errorf("desired replay slot is less than state's slot. %d < %d", replayTo, s.Slot())
 	}
+	if replayTo == s.Slot() {
+		return s, nil
+	}
+
+	start := time.Now()
+	log.WithFields(logrus.Fields{
+		"startSlot": s.Slot(),
+		"endSlot":   replayTo,
+		"diff":      replayTo - s.Slot(),
+	}).Debug("calling process_slots on remaining slots")
+
+	// err will be handled after the bookend log
+	s, err = ReplayProcessSlots(ctx, s, replayTo)
+
+	duration := time.Since(start)
+	log.WithFields(logrus.Fields{
+		"duration": duration,
+	}).Debug("time spent in process_slots")
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("ReplayToSlot failed to seek to slot %d after applying blocks", replayTo))
+	}
+
 	return s, nil
 }
 
