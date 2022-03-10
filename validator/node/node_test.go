@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -305,6 +306,57 @@ func TestUnmarshalFromURL(t *testing.T) {
 				return
 			}
 			require.DeepEqual(t, tt.want, tt.args.To)
+		})
+	}
+}
+
+func TestPrepareBeaconProposalConfig(t *testing.T) {
+	type proposalFlag struct {
+		dir        string
+		url        string
+		defaultfee string
+	}
+	type args struct {
+		cli                *cli.Context
+		proposalFlagValues proposalFlag
+	}
+	tests := []struct {
+		name        string
+		args        args
+		want        *validator_service_config.PrepareBeaconProposalFileConfig
+		urlResponse string
+		wantErr     bool
+	}{
+		{
+			name:    "Happy Path File",
+			args:    args{},
+			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := cli.App{}
+			set := flag.NewFlagSet("test", 0)
+			if tt.args.proposalFlagValues.dir != "" {
+				set.String("validators-proposer-config-dir", tt.args.proposalFlagValues.dir, "")
+				require.NoError(t, set.Set(flags.ValidatorsProposerConfigDirFlag.Name, tt.args.proposalFlagValues.dir))
+			}
+			if tt.args.proposalFlagValues.url != "" {
+				set.String("validators-proposer-config-url", tt.args.proposalFlagValues.url, "")
+				require.NoError(t, set.Set(flags.ValidatorsProposerConfigURLFlag.Name, tt.args.proposalFlagValues.url))
+			}
+			if tt.args.proposalFlagValues.defaultfee != "" {
+				set.String("suggested-fee-recipient", tt.args.proposalFlagValues.defaultfee, "")
+				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposalFlagValues.defaultfee))
+			}
+			cliCtx := cli.NewContext(&app, set, nil)
+			got, err := prepareBeaconProposalConfig(cliCtx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf(" error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			require.DeepEqual(t, tt.want, got)
 		})
 	}
 }

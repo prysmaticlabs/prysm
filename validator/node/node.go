@@ -509,10 +509,11 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config
 			},
 		}
 	}
-	// add warning log...
+
 	if !cliCtx.IsSet(flags.ValidatorsProposerConfigDirFlag.Name) &&
 		!cliCtx.IsSet(flags.ValidatorsProposerConfigURLFlag.Name) &&
 		!cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+		log.Warnf("No validator proposer config or default fee specified!! validators will continue to propose with burn address")
 		config = &validator_service_config.PrepareBeaconProposalFileConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
