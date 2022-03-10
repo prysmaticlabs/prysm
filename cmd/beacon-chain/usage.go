@@ -2,6 +2,7 @@
 package main
 
 import (
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
 	"io"
 	"sort"
 
@@ -75,6 +76,9 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.BoltMMapInitialSizeFlag,
 			cmd.ValidatorMonitorIndicesFlag,
 			cmd.ApiTimeoutFlag,
+			checkpoint.BlockPath,
+			checkpoint.StatePath,
+			checkpoint.RemoteURL,
 		},
 	},
 	{
