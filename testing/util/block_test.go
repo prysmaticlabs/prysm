@@ -221,6 +221,17 @@ func TestHydrateV2BellatrixSignedBeaconBlock_NoError(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestHydrateBlindedBeaconBlockBellatrix_NoError(t *testing.T) {
+	b := &ethpbv2.SignedBlindedBeaconBlockBellatrix{}
+	b = HydrateSignedBlindedBeaconBlockBellatrix(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Message.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Message.Body.HashTreeRoot()
+	require.NoError(t, err)
+}
+
 func TestHydrateSignedBeaconBlockAltair_NoError(t *testing.T) {
 	b := &ethpbalpha.SignedBeaconBlockAltair{}
 	b = HydrateSignedBeaconBlockAltair(b)

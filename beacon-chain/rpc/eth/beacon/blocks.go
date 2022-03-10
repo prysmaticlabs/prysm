@@ -271,7 +271,57 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlock")
 	defer span.End()
 
-	return &emptypb.Empty{}, status.Error(codes.Unimplemented, "Unimplemented")
+	bellatrixBlkContainer, ok := req.Block.(*ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock)
+	if ok {
+		root, err := bellatrixBlkContainer.BellatrixBlock.Message.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not calculate block root: %v", err)
+		}
+		signedBlk, err := bs.BeaconDB.Block(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not calculate get non-blinded block from DB: %v", err)
+		}
+		if signedBlk == nil {
+			return nil, status.Error(codes.NotFound, "Could not find corresponding non-blinded block")
+		}
+		v1alpha1BellatrixSignedBlk, err := signedBlk.PbBellatrixBlock()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+		}
+		bellatrixBlk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(v1alpha1BellatrixSignedBlk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+		}
+		v1alpha1SignedBlk, err := migration.BellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockBellatrix{Message: bellatrixBlk, Signature: bellatrixBlkContainer.BellatrixBlock.Signature})
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+		}
+		wrappedBellatrixSignedBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(v1alpha1SignedBlk)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+		}
+
+		// Do not block proposal critical path with debug logging or block feed updates.
+		defer func() {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+				"Block proposal received via RPC")
+			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+				Type: blockfeed.ReceivedBlock,
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixSignedBlk},
+			})
+		}()
+
+		// Broadcast the new block to the network.
+		if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixSignedBlk.Proto()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		}
+
+		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixSignedBlk, root); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		}
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 // GetBlock retrieves block details for given block ID.
