@@ -98,8 +98,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
-	// TODO_MERGE: Optimize this copy.
-	copiedPreState := preState.Copy()
 
 	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
 	if err != nil {
@@ -113,10 +111,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return errors.Wrap(err, "could not verify new payload")
 	}
 
-	if err := s.notifyNewPayload(ctx, copiedPreState, postState, signed); err != nil {
-		return errors.Wrap(err, "could not verify new payload")
-	}
-
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
 	// running a successful state transition for the block.
 	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
@@ -127,18 +121,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 
 	// TODO(10261) Check optimistic status
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */, false /*optimistic sync*/); err != nil {
-		return err
-	}
-
-	// update forkchoice synced tips if the block is not optimistic
-	root, err := b.HashTreeRoot()
-	if err != nil {
-		return err
-	}
-	if err := s.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, root); err != nil {
-		return err
-	}
-	if err := s.saveSyncedTipsDB(ctx); err != nil {
 		return err
 	}
 
@@ -327,12 +309,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
-		preStateCopied := preState.Copy()
+		preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		if err := s.notifyNewPayload(ctx, preStateCopied, preState, b); err != nil {
+		if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, b); err != nil {
 			return nil, nil, nil, err
 		}
 
