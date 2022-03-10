@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -410,6 +411,44 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 	}
 
 	return []block.SignedBeaconBlock{blk}, nil
+}
+
+// FeeRecipientByValidatorID returns the fee recipient for a validator id.
+// `ErrNotFoundFeeRecipient` is returned if the validator id is not found.
+func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id uint64) (common.Address, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.FeeRecipientByValidatorID")
+	defer span.End()
+	var addr []byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(feeRecipientBucket)
+		addr = bkt.Get(bytesutil.Uint64ToBytesBigEndian(id))
+		if addr == nil {
+			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
+		}
+		return nil
+	})
+	return common.BytesToAddress(addr), err
+}
+
+// SaveFeeRecipientsByValidatorIDs saves the fee recipients for validator ids.
+// Error is returned if `ids` and `recipients` are not the same length.
+func (s *Store) SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []uint64, feeRecipients []common.Address) error {
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveFeeRecipientByValidatorID")
+	defer span.End()
+
+	if len(ids) != len(feeRecipients) {
+		return errors.New("validatorIDs and feeRecipients must be the same length")
+	}
+
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(feeRecipientBucket)
+		for i, id := range ids {
+			if err := bkt.Put(bytesutil.Uint64ToBytesBigEndian(id), feeRecipients[i].Bytes()); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // blockRootsByFilter retrieves the block roots given the filter criteria.

@@ -21,6 +21,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -98,8 +99,20 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
+	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+	if err != nil {
+		return err
+	}
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
+		return err
+	}
+	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, postState, signed); err != nil {
+		return errors.Wrap(err, "could not verify new payload")
+	}
+
+	// TODO(10261) Check optimistic status
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */, false /*optimistic sync*/); err != nil {
 		return err
 	}
 
@@ -108,11 +121,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
 		ctx, signed.Block().Slot(), blockRoot, s.genesisTime,
 	); err != nil {
-		return err
-	}
-
-	// TODO(10261) Check optimistic status
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */, false /*optimistic sync*/); err != nil {
 		return err
 	}
 
@@ -174,6 +182,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
+	}
+	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), bytesutil.ToBytes32(finalized.Root)); err != nil {
+		return err
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
@@ -245,6 +256,21 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	defer reportAttestationInclusion(b)
 
 	return s.handleEpochBoundary(ctx, postState)
+}
+
+func getStateVersionAndPayload(preState state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
+	var preStateHeader *ethpb.ExecutionPayloadHeader
+	var err error
+	preStateVersion := preState.Version()
+	switch preStateVersion {
+	case version.Phase0, version.Altair:
+	default:
+		preStateHeader, err = preState.LatestExecutionPayloadHeader()
+		if err != nil {
+			return 0, nil, err
+		}
+	}
+	return preStateVersion, preStateHeader, nil
 }
 
 func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock,
