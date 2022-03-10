@@ -64,11 +64,14 @@ message SignedBeaconBlockContainerV2 {
 }
 
 message SignedBlindedBeaconBlockContainer {
-  oneof block {
-    v1.SignedBeaconBlock phase0_block = 1;
-    SignedBeaconBlockAltair altair_block = 2;
-    SignedBlindedBeaconBlockBellatrix bellatrix_block = 3;
+  oneof message {
+    v1.BeaconBlock phase0_block = 1;
+    BeaconBlockAltair altair_block = 2;
+    BlindedBeaconBlockBellatrix bellatrix_block = 3;
   }
+
+  // 96 byte BLS signature from the validator that produced this block.
+  bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
 message SignedBeaconBlockBellatrix {
