@@ -30,6 +30,7 @@ type Server struct {
 	HeadFetcher        blockchain.HeadFetcher
 	PeerManager        p2p.PeerManager
 	PeersFetcher       p2p.PeersProvider
+	ReplayerBuilder    stategen.ReplayerBuilder
 }
 
 // SetLoggingLevel of a beacon node according to a request type,

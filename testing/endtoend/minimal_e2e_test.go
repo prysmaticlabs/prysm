@@ -94,6 +94,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ValidatorFlags:      []string{},
 		EpochsToRun:         uint64(epochsToRun),
 		TestSync:            true,
+		TestFeature:         true,
 		TestDeposits:        true,
 		UsePrysmShValidator: args.usePrysmSh,
 		UsePprof:            !longRunning,

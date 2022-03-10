@@ -25,6 +25,7 @@ func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 		ValidatorFlags: []string{},
 		EpochsToRun:    4,
 		TestSync:       false,
+		TestFeature:    false,
 		TestDeposits:   false,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
