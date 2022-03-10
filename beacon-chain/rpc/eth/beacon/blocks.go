@@ -236,7 +236,7 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlock")
 	defer span.End()
 
-	return &emptypb.Empty{}, nil
+	return &emptypb.Empty{}, status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // GetBlock retrieves block details for given block ID.
