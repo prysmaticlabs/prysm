@@ -54,11 +54,10 @@ type Replayer interface {
 var _ Replayer = &stateReplayer{}
 
 type stateReplayer struct {
-	s           state.BeaconState
-	descendants []block.SignedBeaconBlock
-	target      types.Slot
-	method      retrievalMethod
-	chainer     chainer
+	s       state.BeaconState
+	target  types.Slot
+	method  retrievalMethod
+	chainer chainer
 }
 
 // ReplayBlocks applies all the blocks that were accumulated when building the Replayer.
@@ -136,10 +135,8 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo types.Slot) 
 			"diff":      replayTo - s.Slot(),
 		}).Debug("calling process_slots on remaining slots")
 
-		if replayTo > s.Slot() {
-			// err will be handled after the bookend log
-			s, err = ReplayProcessSlots(ctx, s, replayTo)
-		}
+		// err will be handled after the bookend log
+		s, err = ReplayProcessSlots(ctx, s, replayTo)
 
 		duration := time.Since(start)
 		log.WithFields(logrus.Fields{
