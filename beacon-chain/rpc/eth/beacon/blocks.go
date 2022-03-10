@@ -150,112 +150,22 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 
 	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
 	if ok {
-		phase0Blk := phase0BlkContainer.Phase0Block
-		v1alpha1Blk, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: phase0Blk, Signature: req.Signature})
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
-		}
-		wrappedPhase0Blk := wrapper.WrappedPhase0SignedBeaconBlock(v1alpha1Blk)
-
-		root, err := phase0Blk.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-		}
-
-		// Do not block proposal critical path with debug logging or block feed updates.
-		defer func() {
-			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-				"Block proposal received via RPC")
-			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedPhase0Blk},
-			})
-		}()
-
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedPhase0Blk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedPhase0Blk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		if err := bs.submitPhase0Block(ctx, phase0BlkContainer.Phase0Block, req.Signature); err != nil {
+			return nil, err
 		}
 	}
-
 	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
 	if ok {
-		altairBlk := altairBlkContainer.AltairBlock
-		v1alpha1Blk, err := migration.AltairToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockAltair{Message: altairBlk, Signature: req.Signature})
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
-		}
-		wrappedAltairBlk, err := wrapper.WrappedAltairSignedBeaconBlock(v1alpha1Blk)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not prepare Altair block")
-		}
-
-		root, err := altairBlk.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-		}
-
-		// Do not block proposal critical path with debug logging or block feed updates.
-		defer func() {
-			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-				"Block proposal received via RPC")
-			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedAltairBlk},
-			})
-		}()
-
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedAltairBlk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedAltairBlk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		if err := bs.submitAltairBlock(ctx, altairBlkContainer.AltairBlock, req.Signature); err != nil {
+			return nil, err
 		}
 	}
-
 	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock)
 	if ok {
-		bellatrixBlk := bellatrixBlkContainer.BellatrixBlock
-		v1alpha1Blk, err := migration.BellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockBellatrix{Message: bellatrixBlk, Signature: req.Signature})
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
-		}
-		wrappedBellatrixBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(v1alpha1Blk)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not prepare bellatrix block")
-		}
-
-		root, err := bellatrixBlk.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-		}
-
-		// Do not block proposal critical path with debug logging or block feed updates.
-		defer func() {
-			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-				"Block proposal received via RPC")
-			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixBlk},
-			})
-		}()
-
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixBlk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixBlk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		if err := bs.submitBellatrixBlock(ctx, bellatrixBlkContainer.BellatrixBlock, req.Signature); err != nil {
+			return nil, err
 		}
 	}
-
 	return &emptypb.Empty{}, nil
 }
 
@@ -271,56 +181,24 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlock")
 	defer span.End()
 
-	bellatrixBlkContainer, ok := req.Block.(*ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock)
+	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block)
 	if ok {
-		root, err := bellatrixBlkContainer.BellatrixBlock.Message.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not calculate block root: %v", err)
-		}
-		signedBlk, err := bs.BeaconDB.Block(ctx, root)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not calculate get non-blinded block from DB: %v", err)
-		}
-		if signedBlk == nil {
-			return nil, status.Error(codes.NotFound, "Could not find corresponding non-blinded block")
-		}
-		v1alpha1BellatrixSignedBlk, err := signedBlk.PbBellatrixBlock()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
-		}
-		bellatrixBlk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(v1alpha1BellatrixSignedBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
-		}
-		v1alpha1SignedBlk, err := migration.BellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockBellatrix{Message: bellatrixBlk, Signature: bellatrixBlkContainer.BellatrixBlock.Signature})
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
-		}
-		wrappedBellatrixSignedBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(v1alpha1SignedBlk)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
-		}
-
-		// Do not block proposal critical path with debug logging or block feed updates.
-		defer func() {
-			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-				"Block proposal received via RPC")
-			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixSignedBlk},
-			})
-		}()
-
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixSignedBlk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixSignedBlk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		if err := bs.submitPhase0Block(ctx, phase0BlkContainer.Phase0Block, req.Signature); err != nil {
+			return nil, err
 		}
 	}
-
+	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock)
+	if ok {
+		if err := bs.submitAltairBlock(ctx, altairBlkContainer.AltairBlock, req.Signature); err != nil {
+			return nil, err
+		}
+	}
+	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock)
+	if ok {
+		if err := bs.submitBlindedBellatrixBlock(ctx, bellatrixBlkContainer.BellatrixBlock, req.Signature); err != nil {
+			return nil, err
+		}
+	}
 	return &emptypb.Empty{}, nil
 }
 
@@ -741,5 +619,164 @@ func handleGetBlockError(blk block.SignedBeaconBlock, err error) error {
 	if err := helpers.BeaconBlockIsNil(blk); err != nil {
 		return status.Errorf(codes.NotFound, "Could not find requested block: %v", err)
 	}
+	return nil
+}
+
+func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.BeaconBlock, sig []byte) error {
+	v1alpha1Blk, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: phase0Blk, Signature: sig})
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+	}
+	wrappedPhase0Blk := wrapper.WrappedPhase0SignedBeaconBlock(v1alpha1Blk)
+
+	root, err := phase0Blk.HashTreeRoot()
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+	}
+
+	// Do not block proposal critical path with debug logging or block feed updates.
+	defer func() {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+			"Block proposal received via RPC")
+		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedPhase0Blk},
+		})
+	}()
+
+	// Broadcast the new block to the network.
+	if err := bs.Broadcaster.Broadcast(ctx, wrappedPhase0Blk.Proto()); err != nil {
+		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+	}
+
+	if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedPhase0Blk, root); err != nil {
+		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+	}
+
+	return nil
+}
+
+func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.BeaconBlockAltair, sig []byte) error {
+	v1alpha1Blk, err := migration.AltairToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockAltair{Message: altairBlk, Signature: sig})
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+	}
+	wrappedAltairBlk, err := wrapper.WrappedAltairSignedBeaconBlock(v1alpha1Blk)
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not prepare Altair block")
+	}
+
+	root, err := altairBlk.HashTreeRoot()
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+	}
+
+	// Do not block proposal critical path with debug logging or block feed updates.
+	defer func() {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+			"Block proposal received via RPC")
+		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedAltairBlk},
+		})
+	}()
+
+	// Broadcast the new block to the network.
+	if err := bs.Broadcaster.Broadcast(ctx, wrappedAltairBlk.Proto()); err != nil {
+		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+	}
+
+	if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedAltairBlk, root); err != nil {
+		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+	}
+
+	return nil
+}
+
+func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv2.BeaconBlockBellatrix, sig []byte) error {
+	v1alpha1Blk, err := migration.BellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockBellatrix{Message: bellatrixBlk, Signature: sig})
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+	}
+	wrappedBellatrixBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(v1alpha1Blk)
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not prepare bellatrix block")
+	}
+
+	root, err := bellatrixBlk.HashTreeRoot()
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+	}
+
+	// Do not block proposal critical path with debug logging or block feed updates.
+	defer func() {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+			"Block proposal received via RPC")
+		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixBlk},
+		})
+	}()
+
+	// Broadcast the new block to the network.
+	if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixBlk.Proto()); err != nil {
+		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+	}
+
+	if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixBlk, root); err != nil {
+		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+	}
+
+	return nil
+}
+
+func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellatrixBlk *ethpbv2.BlindedBeaconBlockBellatrix, sig []byte) error {
+	root, err := blindedBellatrixBlk.HashTreeRoot()
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not calculate block root: %v", err)
+	}
+	signedBlk, err := bs.BeaconDB.Block(ctx, root)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not calculate get non-blinded block from DB: %v", err)
+	}
+	if signedBlk == nil {
+		return status.Error(codes.NotFound, "Could not find corresponding non-blinded block")
+	}
+	v1alpha1BellatrixSignedBlk, err := signedBlk.PbBellatrixBlock()
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+	}
+	bellatrixBlk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(v1alpha1BellatrixSignedBlk.Block)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+	}
+	v1alpha1SignedBlk, err := migration.BellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockBellatrix{Message: bellatrixBlk, Signature: sig})
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+	}
+	wrappedBellatrixSignedBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(v1alpha1SignedBlk)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+	}
+
+	// Do not block proposal critical path with debug logging or block feed updates.
+	defer func() {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+			"Block proposal received via RPC")
+		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixSignedBlk},
+		})
+	}()
+
+	// Broadcast the new block to the network.
+	if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixSignedBlk.Proto()); err != nil {
+		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+	}
+
+	if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixSignedBlk, root); err != nil {
+		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+	}
+
 	return nil
 }

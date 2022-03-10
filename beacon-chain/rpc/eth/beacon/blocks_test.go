@@ -455,6 +455,84 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 }
 
 func TestSubmitBlindedBlock(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genesis := util.NewBeaconBlock()
+		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		beaconChainServer := &Server{
+			BeaconDB:         beaconDB,
+			BlockReceiver:    c,
+			ChainInfoFetcher: c,
+			BlockNotifier:    c.BlockNotifier(),
+			Broadcaster:      mockp2p.NewTestP2P(t),
+		}
+		req := util.NewBeaconBlock()
+		req.Block.Slot = 5
+		req.Block.ParentRoot = bsRoot[:]
+		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(req)))
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block{Phase0Block: v1Block.Block},
+			Signature: v1Block.Signature,
+		}
+		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
+		assert.NoError(t, err, "Could not propose block correctly")
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genesis := util.NewBeaconBlockAltair()
+		wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(genesis)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapped), "Could not save genesis block")
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		beaconChainServer := &Server{
+			BeaconDB:         beaconDB,
+			BlockReceiver:    c,
+			ChainInfoFetcher: c,
+			BlockNotifier:    c.BlockNotifier(),
+			Broadcaster:      mockp2p.NewTestP2P(t),
+		}
+		req := util.NewBeaconBlockAltair()
+		req.Block.Slot = 5
+		req.Block.ParentRoot = bsRoot[:]
+		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
+		require.NoError(t, err)
+		wrapped, err = wrapper.WrappedAltairSignedBeaconBlock(req)
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock{AltairBlock: v2Block},
+			Signature: req.Signature,
+		}
+		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
+		assert.NoError(t, err, "Could not propose block correctly")
+	})
+
 	t.Run("Bellatrix - OK", func(t *testing.T) {
 		transactions := [][]byte{[]byte("transaction1"), []byte("transaction2")}
 		transactionsRoot, err := ssz.TransactionsRoot(transactions)
@@ -498,7 +576,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Block: &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blindedBlk},
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blindedBlk.Message},
+			Signature: blindedBlk.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -544,7 +623,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Block: &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blindedBlk},
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blindedBlk.Message},
+			Signature: blindedBlk.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.ErrorContains(t, "Could not find corresponding non-blinded block", err)
