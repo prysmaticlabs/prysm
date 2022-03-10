@@ -367,9 +367,9 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk block.B
 		b := pendingNodes[i]
 		r := pendingRoots[i]
 		if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
-			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()), bytesutil.ToBytes32(b.Body().Graffiti()),
+			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()),
 			jCheckpoint.Epoch,
-			fCheckpoint.Epoch); err != nil {
+			fCheckpoint.Epoch, false /* optimistic status */); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
 		}
 	}

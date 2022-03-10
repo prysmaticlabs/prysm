@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
@@ -80,8 +80,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload
-func (s *Service) notifyNewPayload(ctx context.Context, preState, postState state.BeaconState, blk block.SignedBeaconBlock) error {
-	if preState == nil || postState == nil {
+func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, header *ethpb.ExecutionPayloadHeader, postState state.BeaconState, blk block.SignedBeaconBlock) error {
+	if postState == nil {
 		return errors.New("pre and post states must not be nil")
 	}
 	// Execution payload is only supported in Bellatrix and beyond.
@@ -118,10 +118,10 @@ func (s *Service) notifyNewPayload(ctx context.Context, preState, postState stat
 	}
 
 	// During the transition event, the transition block should be verified for sanity.
-	if isPreBellatrix(preState.Version()) {
+	if isPreBellatrix(preStateVersion) {
 		return nil
 	}
-	atTransition, err := blocks.MergeTransitionBlock(preState, body)
+	atTransition, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(header, body)
 	if err != nil {
 		return errors.Wrap(err, "could not check if merge block is terminal")
 	}
@@ -157,22 +157,4 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 		return false, err
 	}
 	return blocks.ExecutionBlock(jBlock.Block().Body())
-}
-
-// loadSyncedTips loads a previously saved synced Tips from DB
-// if no synced tips are saved, then it creates one from the given
-// root and slot number.
-func (s *Service) loadSyncedTips(root [32]byte, slot types.Slot) error {
-	// Initialize synced tips
-	tips, err := s.cfg.BeaconDB.ValidatedTips(s.ctx)
-	if err != nil || len(tips) == 0 {
-		tips[root] = slot
-		if err != nil {
-			log.WithError(err).Warn("Could not read synced tips from DB, using finalized checkpoint as synced tip")
-		}
-	}
-	if err := s.cfg.ForkChoiceStore.SetSyncedTips(tips); err != nil {
-		return errors.Wrap(err, "could not set synced tips")
-	}
-	return nil
 }

@@ -22,6 +22,10 @@ var (
 	committeeIndex   = types.CommitteeIndex(1)
 	depositCount     = uint64(2)
 	attestingIndices = []uint64{1, 2}
+	blockNumber      = uint64(10)
+	gasLimit         = uint64(10)
+	gasUsed          = uint64(10)
+	timestamp        = uint64(10)
 	parentRoot       = bytesutil.PadTo([]byte("parentroot"), fieldparams.RootLength)
 	stateRoot        = bytesutil.PadTo([]byte("stateroot"), fieldparams.RootLength)
 	signature        = bytesutil.PadTo([]byte("signature"), 96)
@@ -33,6 +37,13 @@ var (
 	targetRoot       = bytesutil.PadTo([]byte("targetroot"), fieldparams.RootLength)
 	bodyRoot         = bytesutil.PadTo([]byte("bodyroot"), fieldparams.RootLength)
 	selectionProof   = bytesutil.PadTo([]byte("selectionproof"), 96)
+	parentHash       = bytesutil.PadTo([]byte("parenthash"), 32)
+	feeRecipient     = bytesutil.PadTo([]byte("feerecipient"), 20)
+	receiptsRoot     = bytesutil.PadTo([]byte("receiptsroot"), 32)
+	logsBloom        = bytesutil.PadTo([]byte("logsbloom"), 256)
+	prevRandao       = bytesutil.PadTo([]byte("prevrandao"), 32)
+	extraData        = bytesutil.PadTo([]byte("extradata"), 32)
+	baseFeePerGas    = bytesutil.PadTo([]byte("basefeepergas"), 32)
 	aggregationBits  = bitfield.Bitlist{0x01}
 )
 
@@ -436,7 +447,7 @@ func Test_V1AttestationToV1Alpha1(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, v1Root, v1Alpha1Root)
 }
-func TestBeaconStateToV1(t *testing.T) {
+func TestBeaconStateToProto(t *testing.T) {
 	source, err := util.NewBeaconState(util.FillRootsNaturalOpt, func(state *ethpbalpha.BeaconState) error {
 		state.GenesisTime = 1
 		state.GenesisValidatorsRoot = bytesutil.PadTo([]byte("genesisvalidatorsroot"), 32)
@@ -533,7 +544,7 @@ func TestBeaconStateToV1(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	result, err := BeaconStateToV1(source)
+	result, err := BeaconStateToProto(source)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, uint64(1), result.GenesisTime)

@@ -5,7 +5,8 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
@@ -15,19 +16,26 @@ type ForkChoicer interface {
 	AttestationProcessor // to track new attestation for fork choice.
 	Pruner               // to clean old data for fork choice.
 	Getter               // to retrieve fork choice information.
+	Setter               // to set fork choice information.
 	ProposerBooster      // ability to boost timely-proposed block roots.
-	SyncTipper           // to update and retrieve validated sync tips.
 }
 
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
 	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
-	Optimistic(ctx context.Context, root [32]byte, slot types.Slot) (bool, error)
+	Tips() ([][32]byte, []types.Slot)
+	IsOptimistic(ctx context.Context, root [32]byte) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	ProcessBlock(context.Context, types.Slot, [32]byte, [32]byte, [32]byte, types.Epoch, types.Epoch) error
+	ProcessBlock(ctx context.Context,
+		slot types.Slot,
+		root [32]byte,
+		parentRoot [32]byte,
+		justifiedEpoch types.Epoch,
+		finalizedEpoch types.Epoch,
+		optimisticStatus bool) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
@@ -48,19 +56,19 @@ type ProposerBooster interface {
 
 // Getter returns fork choice related information.
 type Getter interface {
-	Nodes() []*protoarray.Node
-	Node([32]byte) *protoarray.Node
 	HasNode([32]byte) bool
-	Store() *protoarray.Store
+	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
 	IsCanonical(root [32]byte) bool
+	FinalizedEpoch() types.Epoch
+	JustifiedEpoch() types.Epoch
+	ForkChoiceNodes() []*pbrpc.ForkChoiceNode
+	NodeCount() int
 }
 
-// SyncTipper returns sync tips related information.
-type SyncTipper interface {
-	SyncedTips() map[[32]byte]types.Slot
-	SetSyncedTips(tips map[[32]byte]types.Slot) error
-	UpdateSyncedTipsWithValidRoot(ctx context.Context, root [32]byte) error
-	UpdateSyncedTipsWithInvalidRoot(ctx context.Context, root [32]byte) error
+// Setter allows to set forkchoice information
+type Setter interface {
+	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
+	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte) error
 }

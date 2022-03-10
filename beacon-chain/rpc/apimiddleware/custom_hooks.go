@@ -342,8 +342,13 @@ type phase0StateResponseJson struct {
 }
 
 type altairStateResponseJson struct {
-	Version string             `json:"version"`
-	Data    *beaconStateV2Json `json:"data"`
+	Version string                 `json:"version"`
+	Data    *beaconStateAltairJson `json:"data"`
+}
+
+type bellatrixStateResponseJson struct {
+	Version string                    `json:"version"`
+	Data    *beaconStateBellatrixJson `json:"data"`
 }
 
 func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
@@ -353,17 +358,23 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 	}
 
 	var actualRespContainer interface{}
-	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
+	switch {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
 		actualRespContainer = &phase0StateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.Phase0State,
 		}
-	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairStateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.AltairState,
 		}
-	} else {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
+		actualRespContainer = &bellatrixStateResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.BellatrixState,
+		}
+	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported state version '%s'", respContainer.Version))
 	}
 
