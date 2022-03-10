@@ -12,3 +12,6 @@ var ErrNotFoundState = errors.Wrap(ErrNotFound, "state not found")
 
 // ErrNotFoundOriginBlockRoot is an error specifically for the origin block root getter
 var ErrNotFoundOriginBlockRoot = errors.Wrap(ErrNotFound, "OriginBlockRoot")
+
+// ErrNotFoundFeeRecipient is a not found error specifically for the fee recipient getter
+var ErrNotFoundFeeRecipient = errors.Wrap(ErrNotFound, "fee recipient")
