@@ -43,22 +43,21 @@ func UnmarshalFromURL(ctx context.Context, from *url.URL, to interface{}) error 
 func UnmarshalFromFile(from string, to interface{}) error {
 	cleanpath := filepath.Clean(from)
 	fileExtension := filepath.Ext(cleanpath)
-	if fileExtension == ".json" {
-		jsonFile, jsonerr := os.Open(cleanpath)
-		if jsonerr != nil {
-			return errors.Wrap(jsonerr, "failed to open json file")
-		}
-		// defer the closing of our jsonFile so that we can parse it later on
-		defer jsonFile.Close()
-		byteValue, readerror := ioutil.ReadAll(jsonFile)
-		if readerror != nil {
-			return errors.Wrap(readerror, "failed to read json file")
-		}
-		if unmarshalerr := json.Unmarshal(byteValue, &to); unmarshalerr != nil {
-			return errors.Wrap(unmarshalerr, "failed to unmarshal json file")
-		}
-		return nil
-	} else {
+	if fileExtension != ".json" {
 		return errors.Errorf("unsupported file extension %s , (ex. '.json')", fileExtension)
 	}
+	jsonFile, jsonerr := os.Open(cleanpath)
+	if jsonerr != nil {
+		return errors.Wrap(jsonerr, "failed to open json file")
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+	byteValue, readerror := ioutil.ReadAll(jsonFile)
+	if readerror != nil {
+		return errors.Wrap(readerror, "failed to read json file")
+	}
+	if unmarshalerr := json.Unmarshal(byteValue, &to); unmarshalerr != nil {
+		return errors.Wrap(unmarshalerr, "failed to unmarshal json file")
+	}
+	return nil
 }
