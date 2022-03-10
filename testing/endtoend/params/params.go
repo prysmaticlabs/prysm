@@ -42,8 +42,6 @@ type ports struct {
 	ValidatorMetricsPort            int
 	ValidatorGatewayPort            int
 	JaegerTracingPort               int
-	// TODO: update conflicting code to be consistent
-	BeaconNodeOAPIPort        int
 }
 
 // TestParams is the globally accessible var for getting config elements.
