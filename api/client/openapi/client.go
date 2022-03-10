@@ -269,7 +269,7 @@ type forkResponse struct {
 }
 
 func (f *forkResponse) Fork() (*ethpb.Fork, error) {
-	epoch, err := strconv.Atoi(f.Epoch)
+	epoch, err := strconv.ParseUint(f.Epoch, 10, 64)
 	if err != nil {
 		return nil, err
 	}
