@@ -369,11 +369,14 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk block.B
 		if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
 			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()),
 			jCheckpoint.Epoch,
-			fCheckpoint.Epoch, false /* optimistic status */); err != nil {
+			fCheckpoint.Epoch); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
 		}
+		// TODO(10261) send optimistic status
+		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, r); err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 

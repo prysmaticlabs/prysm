@@ -148,16 +148,12 @@ func (f *ForkChoice) ProcessBlock(
 	ctx context.Context,
 	slot types.Slot,
 	blockRoot, parentRoot [32]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch, optimistic bool) error {
+	justifiedEpoch, finalizedEpoch types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
 	defer span.End()
 
 	if err := f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch); err != nil {
 		return err
-	}
-
-	if !optimistic {
-		return f.SetOptimisticToValid(ctx, blockRoot)
 	}
 	return nil
 }

@@ -107,12 +107,12 @@ func (f *ForkChoice) ProcessBlock(
 	ctx context.Context,
 	slot types.Slot,
 	blockRoot, parentRoot [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch, optimistic bool,
+	justifiedEpoch, finalizedEpoch types.Epoch,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessBlock")
 	defer span.End()
 
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch, optimistic)
+	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input

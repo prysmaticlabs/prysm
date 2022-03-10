@@ -454,8 +454,11 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 		genesisBlkRoot,
 		params.BeaconConfig().ZeroHash,
 		genesisCheckpoint.Epoch,
-		genesisCheckpoint.Epoch, false /* optimistic status */); err != nil {
+		genesisCheckpoint.Epoch); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
+	}
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
+		log.Fatalf("Could not set optimistic status of genesis block to false: %v", err)
 	}
 
 	s.setHead(genesisBlkRoot, genesisBlk, genesisState)

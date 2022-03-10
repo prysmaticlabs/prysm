@@ -35,7 +35,7 @@ type BlockProcessor interface {
 		parentRoot [32]byte,
 		justifiedEpoch types.Epoch,
 		finalizedEpoch types.Epoch,
-		optimisticStatus bool) error
+	) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
