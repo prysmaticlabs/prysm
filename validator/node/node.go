@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/flagutil"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -480,8 +479,16 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 
 func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config.PrepareBeaconProposalFileConfig, error) {
 	var config *validator_service_config.PrepareBeaconProposalFileConfig
-	if cliCtx.IsSet(flags.ValidatorsProposerConfigFlag.Name) {
-		if err := flagutil.UnmarshalFromFileOrURL(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigFlag.Name), &config); err != nil {
+	if cliCtx.IsSet(flags.ValidatorsProposerConfigDirFlag.Name) && cliCtx.IsSet(flags.ValidatorsProposerConfigURLFlag.Name) {
+		return nil, errors.New("cannot specify both --validators-proposer-config-dir and --validators-proposer-config-url")
+	}
+	if cliCtx.IsSet(flags.ValidatorsProposerConfigDirFlag.Name) {
+		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigDirFlag.Name), &config); err != nil {
+			return nil, err
+		}
+	}
+	if cliCtx.IsSet(flags.ValidatorsProposerConfigURLFlag.Name) {
+		if err := unmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigURLFlag.Name), &config); err != nil {
 			return nil, err
 		}
 	}
@@ -503,7 +510,9 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config
 		}
 	}
 	// add warning log...
-	if !cliCtx.IsSet(flags.ValidatorsProposerConfigFlag.Name) && !cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+	if !cliCtx.IsSet(flags.ValidatorsProposerConfigDirFlag.Name) &&
+		!cliCtx.IsSet(flags.ValidatorsProposerConfigURLFlag.Name) &&
+		!cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		config = &validator_service_config.PrepareBeaconProposalFileConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.ValidatorProposerOptions{

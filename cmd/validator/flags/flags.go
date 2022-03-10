@@ -323,10 +323,16 @@ var (
 		Value: false,
 	}
 
+	// ValidatorsProposerConfigDirFlag defines the path or URL to a file with proposer config.
+	ValidatorsProposerConfigDirFlag = &cli.StringFlag{
+		Name:  "validators-proposer-config-dir",
+		Usage: "remote local file path to load proposer configuration from",
+		Value: "",
+	}
 	// ValidatorsProposerConfigFlag defines the path or URL to a file with proposer config.
-	ValidatorsProposerConfigFlag = &cli.StringFlag{
-		Name:  "validators-proposer-config",
-		Usage: "remote URL or local file path to load proposer configuration from",
+	ValidatorsProposerConfigURLFlag = &cli.StringFlag{
+		Name:  "validators-proposer-config-url",
+		Usage: "remote URL file path to load proposer configuration from",
 		Value: "",
 	}
 
