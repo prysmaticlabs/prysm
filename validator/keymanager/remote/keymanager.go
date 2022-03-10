@@ -267,3 +267,10 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return km.accountsChangedFeed.Subscribe(pubKeysChan)
 }
+
+// ExtractKeystores is not supported for the remote keymanager type.
+func (*Keymanager) ExtractKeystores(
+	ctx context.Context, publicKeys []bls.PublicKey, password string,
+) ([]*keymanager.Keystore, error) {
+	return nil, errors.New("extracting keys not supported for a remote keymanager")
+}
