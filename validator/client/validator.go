@@ -992,6 +992,8 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 				}
 			} else {
 				validatorIndex = resp.Index
+				// update the cache for the next time
+				v.pubkeyHexToValidatorIndex[hexKey] = validatorIndex
 			}
 		}
 		if v.prepareBeaconProposalConfig.ProposeConfig != nil {
