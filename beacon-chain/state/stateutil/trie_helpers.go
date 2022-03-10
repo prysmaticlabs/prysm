@@ -106,7 +106,16 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 
 // RecomputeFromLayer recomputes specific branches of a fixed sized trie depending on the provided changed indexes.
 func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
-	hasher := hash.CustomSHA256Hasher()
+	customHasher := hash.CustomSHA256Hasher()
+	hasher := func(inputRoots [][32]byte) [32]byte {
+		return customHasher(append(inputRoots[0][:], inputRoots[1][:]...))
+	}
+	if features.Get().EnableVectorizedHTR {
+		hasher = func(inputList [][32]byte) [32]byte {
+			htr.VectorizedSha256(inputList, inputList)
+			return inputList[0]
+		}
+	}
 	for i, idx := range changedIdx {
 		layer[0][idx] = &changedLeaves[i]
 	}
@@ -139,7 +148,16 @@ func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][
 
 // RecomputeFromLayerVariable recomputes specific branches of a variable sized trie depending on the provided changed indexes.
 func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
-	hasher := hash.CustomSHA256Hasher()
+	customHasher := hash.CustomSHA256Hasher()
+	hasher := func(inputRoots [][32]byte) [32]byte {
+		return customHasher(append(inputRoots[0][:], inputRoots[1][:]...))
+	}
+	if features.Get().EnableVectorizedHTR {
+		hasher = func(inputList [][32]byte) [32]byte {
+			htr.VectorizedSha256(inputList, inputList)
+			return inputList[0]
+		}
+	}
 	if len(changedIdx) == 0 {
 		return *layer[0][0], layer, nil
 	}
@@ -158,7 +176,7 @@ func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, l
 // this method assumes that the provided trie already has all its elements included
 // in the base depth.
 func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
-	hasher func([]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
+	hasher func([][32]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
 	root := *chunks[idx]
 	layers[0] = chunks
 	// The merkle tree structure looks as follows:
@@ -175,10 +193,10 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 			neighbor = *layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hasher(append(root[:], neighbor[:]...))
+			parentHash := hasher([][32]byte{root, neighbor})
 			root = parentHash
 		} else {
-			parentHash := hasher(append(neighbor[:], root[:]...))
+			parentHash := hasher([][32]byte{neighbor, root})
 			root = parentHash
 		}
 		parentIdx := currentIndex / 2
@@ -202,7 +220,7 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 // trie. Instead missing leaves are assumed to be zerohashes, following the structure
 // of a sparse merkle trie.
 func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte,
-	hasher func([]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
+	hasher func([][32]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
 	for idx >= len(layers[0]) {
 		zerohash := trie.ZeroHashes[0]
 		layers[0] = append(layers[0], &zerohash)
@@ -215,17 +233,17 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
 
-		neighbor := [32]byte{}
+		var neighbor [32]byte
 		if neighborIdx >= len(layers[i]) {
 			neighbor = trie.ZeroHashes[i]
 		} else {
 			neighbor = *layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hasher(append(root[:], neighbor[:]...))
+			parentHash := hasher([][32]byte{root, neighbor})
 			root = parentHash
 		} else {
-			parentHash := hasher(append(neighbor[:], root[:]...))
+			parentHash := hasher([][32]byte{neighbor, root})
 			root = parentHash
 		}
 		parentIdx := currentIndex / 2
