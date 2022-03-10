@@ -23,7 +23,7 @@ func configureTracing(cliCtx *cli.Context) error {
 func configureChainConfig(cliCtx *cli.Context) {
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
+		params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
 }
 

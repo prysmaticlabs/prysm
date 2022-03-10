@@ -12,19 +12,37 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+func isMinimal(lines []string) bool {
+	for _, l := range lines {
+		if strings.HasPrefix(l, "PRESET_BASE: 'minimal'") ||
+			strings.HasPrefix(l, `PRESET_BASE: "minimal"`) ||
+			strings.HasPrefix(l, "PRESET_BASE: minimal") ||
+			strings.HasPrefix(l, "# Minimal preset") {
+			return true
+		}
+	}
+	return false
+}
+
 // LoadChainConfigFile load, convert hex values into valid param yaml format,
 // unmarshal , and apply beacon chain config file.
-func LoadChainConfigFile(chainConfigFileName string) {
+func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
 	yamlFile, err := ioutil.ReadFile(chainConfigFileName) // #nosec G304
 	if err != nil {
 		log.WithError(err).Fatal("Failed to read chain config file.")
 	}
-	// Default to using mainnet.
-	conf := MainnetConfig().Copy()
 	// To track if config name is defined inside config file.
 	hasConfigName := false
 	// Convert 0x hex inputs to fixed bytes arrays
 	lines := strings.Split(string(yamlFile), "\n")
+	if conf == nil {
+		if isMinimal(lines) {
+			conf = MinimalSpecConfig().Copy()
+		} else {
+			// Default to using mainnet.
+			conf = MainnetConfig().Copy()
+		}
+	}
 	for i, line := range lines {
 		// No need to convert the deposit contract address to byte array (as config expects a string).
 		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
@@ -32,12 +50,6 @@ func LoadChainConfigFile(chainConfigFileName string) {
 		}
 		if strings.HasPrefix(line, "CONFIG_NAME") {
 			hasConfigName = true
-		}
-		if strings.HasPrefix(line, "PRESET_BASE: 'minimal'") ||
-			strings.HasPrefix(line, `PRESET_BASE: "minimal"`) ||
-			strings.HasPrefix(line, "PRESET_BASE: minimal") ||
-			strings.HasPrefix(line, "# Minimal preset") {
-			conf = MinimalSpecConfig().Copy()
 		}
 		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
 			parts := ReplaceHexStringWithYAMLFormat(line)
