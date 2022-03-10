@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -665,7 +666,12 @@ func unmarshalFromURL(ctx context.Context, from string, to interface{}) error {
 	if resperr != nil {
 		return errors.Wrap(resperr, "failed to send http request")
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+			log.WithError(err).Error("failed to close response body")
+		}
+	}(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return errors.Errorf("http request to %v failed with status code %d", from, resp.StatusCode)
 	}
@@ -689,7 +695,12 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 		return errors.Wrap(jsonerr, "failed to open json file")
 	}
 	// defer the closing of our jsonFile so that we can parse it later on
-	defer jsonFile.Close()
+	defer func(jsonFile *os.File) {
+		err := jsonFile.Close()
+		if err != nil {
+			log.WithError(err).Error("failed to close json file")
+		}
+	}(jsonFile)
 	byteValue, readerror := ioutil.ReadAll(jsonFile)
 	if readerror != nil {
 		return errors.Wrap(readerror, "failed to read json file")
