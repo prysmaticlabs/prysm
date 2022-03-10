@@ -65,7 +65,9 @@ message SignedBeaconBlockContainerV2 {
 
 message SignedBlindedBeaconBlockContainer {
   oneof block {
-    SignedBlindedBeaconBlockBellatrix bellatrix_block = 1;
+    v1.SignedBeaconBlock phase0_block = 1;
+    SignedBeaconBlockAltair altair_block = 2;
+    SignedBlindedBeaconBlockBellatrix bellatrix_block = 3;
   }
 }
 
