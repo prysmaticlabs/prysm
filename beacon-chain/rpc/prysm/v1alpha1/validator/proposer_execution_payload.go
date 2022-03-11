@@ -102,7 +102,10 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	case true:
 		feeRecipient = recipient
 	case errors.As(err, kv.ErrNotFoundFeeRecipient): // If fee recipient is not found, use the default fee recipient.
-		logrus.WithError(err).WithField("validatorIndex", vIdx).Error("Fee recipient not found. Using default fee recipient.")
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"validatorIndex":      vIdx,
+			"defaultFeeRecipient": feeRecipient,
+		}).Error("Fee recipient not found. Using default fee recipient.")
 	default:
 		return nil, errors.Wrap(err, "could not get fee recipient in db")
 	}
