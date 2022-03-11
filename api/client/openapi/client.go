@@ -26,34 +26,37 @@ import (
 )
 
 const (
-	GET_WEAK_SUBJECTIVITY_PATH = "/eth/v1/beacon/weak_subjectivity"
-	GET_SIGNED_BLOCK_PATH      = "/eth/v2/beacon/blocks"
-	GET_STATE_PATH             = "/eth/v2/debug/beacon/states"
-	GET_FORK_SCHEDULE_PATH     = "/eth/v1/config/fork_schedule"
-	GET_FORK_FOR_STATE         = "/eth/v1/beacon/states/{{.StateId}}/fork"
-	GET_BLOCK_ROOT             = "/eth/v1/beacon/blocks/{{.BlockId}}/root"
+	get_weak_subjectivity_path = "/eth/v1/beacon/weak_subjectivity"
+	get_signed_block_path  = "/eth/v2/beacon/blocks"
+	get_state_path         = "/eth/v2/debug/beacon/states"
+	get_fork_schedule_path  = "/eth/v1/config/fork_schedule"
+	get_fork_for_state_path = "/eth/v1/beacon/states/{{.StateId}}/fork"
+	get_block_root_path     = "/eth/v1/beacon/blocks/{{.BlockId}}/root"
 )
+
+type StateOrBlockId string
 
 const (
-	StateIdHead = "head"
+	IdHead      StateOrBlockId = "head"
+	IdGenesis   StateOrBlockId = "genesis"
+	IdFinalized StateOrBlockId = "finalized"
+	IdJustified StateOrBlockId = "finalized"
 )
 
-var ErrNotOK = errors.New("did not receive 2xx response from API")
-var ErrNotFound = errors.Wrap(ErrNotOK, "recv 404 NotFound response from API")
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
 
-// WithTimeout sets the .Timeout attribute of the wrapped http.Client
+// WithTimeout sets the .Timeout attribute of the wrapped http.Client.
 func WithTimeout(timeout time.Duration) ClientOpt {
 	return func(c *Client) {
-		c.c.Timeout = timeout
+		c.Client.Timeout = timeout
 	}
 }
 
-// Client provides a collection of helper methods for calling the beacon node OpenAPI endpoints
+// Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
 type Client struct {
-	c      *http.Client
+	Client *http.Client
 	host   string
 	scheme string
 }
@@ -68,7 +71,7 @@ func (c *Client) urlForPath(methodPath string) *url.URL {
 }
 
 // NewClient constructs a new client with the provided options (ex WithTimeout).
-// host is the base host + port used to construct request urls. This value can be
+// `host` is the base host + port used to construct request urls. This value can be
 // a URL string, or NewClient will assume an http endpoint if just `host:port` is used.
 func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 	host, err := validHostname(host)
@@ -76,7 +79,7 @@ func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 		return nil, err
 	}
 	c := &Client{
-		c:      &http.Client{},
+		Client: &http.Client{},
 		scheme: "http",
 		host:   host,
 	}
@@ -100,9 +103,10 @@ func validHostname(h string) (string, error) {
 	return fmt.Sprintf("%s:%s", host, port), nil
 }
 
-// GetBlockBySlot queries the beacon node API for the SignedBeaconBlockAltair for the given slot
-func (c *Client) GetBlockBySlot(slot types.Slot) (io.Reader, error) {
-	blockPath := path.Join(GET_SIGNED_BLOCK_PATH, strconv.FormatUint(uint64(slot), 10))
+// GetBlockByRoot retrieves a SignedBeaconBlock with the given root via the beacon node API.
+// The value is an io.Reader for the raw ssz-encoded bytes.
+func (c *Client) GetBlockByRoot(blockHex string) (io.Reader, error) {
+	blockPath := path.Join(get_signed_block_path, blockHex)
 	u := c.urlForPath(blockPath)
 	log.Printf("requesting %s", u.String())
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
@@ -110,7 +114,33 @@ func (c *Client) GetBlockBySlot(slot types.Slot) (io.Reader, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/octet-stream")
-	r, err := c.c.Do(req)
+	r, err := c.Client.Do(req)
+	defer func() {
+		err = r.Body.Close()
+	}()
+	if err != nil {
+		return nil, err
+	}
+	if r.StatusCode != http.StatusOK {
+		return nil, non200Err(r)
+	}
+	b := bytes.NewBuffer(nil)
+	_, err = io.Copy(b, r.Body)
+	return b, nil
+}
+
+// GetBlockBySlot queries the beacon node API for the SignedBeaconBlockAltair for the given slot.
+// The value is an io.Reader for the raw ssz-encoded bytes.
+func (c *Client) GetBlockBySlot(slot types.Slot) (io.Reader, error) {
+	blockPath := path.Join(get_signed_block_path, strconv.FormatUint(uint64(slot), 10))
+	u := c.urlForPath(blockPath)
+	log.Printf("requesting %s", u.String())
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/octet-stream")
+	r, err := c.Client.Do(req)
 	defer func() {
 		err = r.Body.Close()
 	}()
@@ -128,15 +158,10 @@ func (c *Client) GetBlockBySlot(slot types.Slot) (io.Reader, error) {
 	return b, nil
 }
 
-// blockId can be one of:
-// - "head" (canonical head in node's view)
-// - "genesis"
-// - "finalized"
-// - <slot>
-// - <hex encoded blockRoot with 0x prefix>. -- you could, but should you?
+// Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", <slot>, <hex encoded blockRoot with 0x prefix>.
 func (c *Client) GetBlockRoot(blockId string) ([32]byte, error) {
 	var root [32]byte
-	t := template.Must(template.New("get-block-root").Parse(GET_BLOCK_ROOT))
+	t := template.Must(template.New("get-block-root").Parse(get_block_root_path))
 	b := bytes.NewBuffer(nil)
 	err := t.Execute(b, struct{ BlockId string }{BlockId: blockId})
 	if err != nil {
@@ -149,7 +174,7 @@ func (c *Client) GetBlockRoot(blockId string) ([32]byte, error) {
 	if err != nil {
 		return root, err
 	}
-	r, err := c.c.Do(req)
+	r, err := c.Client.Do(req)
 	defer func() {
 		err = r.Body.Close()
 	}()
@@ -171,78 +196,16 @@ func (c *Client) GetBlockRoot(blockId string) ([32]byte, error) {
 	return bytesutil.ToBytes32(rs), nil
 }
 
-// GetBlockByRoot retrieves a SignedBeaconBlockAltair with the given root via the beacon node API
-func (c *Client) GetBlockByRoot(blockHex string) (io.Reader, error) {
-	blockPath := path.Join(GET_SIGNED_BLOCK_PATH, blockHex)
-	u := c.urlForPath(blockPath)
-	log.Printf("requesting %s", u.String())
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/octet-stream")
-	r, err := c.c.Do(req)
-	defer func() {
-		err = r.Body.Close()
-	}()
-	if err != nil {
-		return nil, err
-	}
-	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
-	}
-	b := bytes.NewBuffer(nil)
-	_, err = io.Copy(b, r.Body)
-	return b, nil
-}
-
-// GetStateByRoot retrieves a BeaconStateAltair with the given root via the beacon node API
-func (c *Client) GetStateByRoot(stateHex string) (io.Reader, error) {
-	return c.GetStateById(stateHex)
-}
-
-// GetStateBySlot retrieves a BeaconStateAltair at the given slot via the beacon node API
-func (c *Client) GetStateBySlot(slot uint64) (io.Reader, error) {
-	slotStr := strconv.FormatUint(slot, 10)
-	return c.GetStateById(slotStr)
-}
-
-func (c *Client) GetStateById(stateId string) (io.Reader, error) {
-	statePath := path.Join(GET_STATE_PATH, stateId)
-	u := c.urlForPath(statePath)
-	log.Printf("requesting %s", u.String())
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/octet-stream")
-	r, err := c.c.Do(req)
-	defer func() {
-		err = r.Body.Close()
-	}()
-	if err != nil {
-		return nil, err
-	}
-	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
-	}
-	b := bytes.NewBuffer(nil)
-	_, err = io.Copy(b, r.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "error reading http response body from GetStateById")
-	}
-	return b, nil
-}
-
+// GetForkForState queries the Beacon Node API for the Fork from the state identified by stateId.
 func (c *Client) GetForkForState(stateId string) (*ethpb.Fork, error) {
-	t := template.Must(template.New("get-for-for-state").Parse(GET_FORK_FOR_STATE))
+	t := template.Must(template.New("get-fork-for-state").Parse(get_fork_for_state_path))
 	b := bytes.NewBuffer(nil)
 	err := t.Execute(b, struct{ StateId string }{StateId: stateId})
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to generate path w/ stateId=%s", stateId))
 	}
 	u := c.urlForPath(b.String())
-	r, err := c.c.Get(u.String())
+	r, err := c.Client.Get(u.String())
 	defer func() {
 		err = r.Body.Close()
 	}()
@@ -260,6 +223,47 @@ func (c *Client) GetForkForState(stateId string) (*ethpb.Fork, error) {
 	}
 
 	return fr.Fork()
+}
+
+// GetStateByRoot retrieves a BeaconStateAltair with the given root via the beacon node API
+func (c *Client) GetStateByRoot(stateHex string) (io.Reader, error) {
+	return c.GetStateById(StateOrBlockId(stateHex))
+}
+
+// GetStateBySlot retrieves a BeaconStateAltair at the given slot via the beacon node API
+func (c *Client) GetStateBySlot(slot types.Slot) (io.Reader, error) {
+	return c.GetStateById(IdFromSlot(types.Slot(slot)))
+}
+
+func IdFromSlot(s types.Slot) StateOrBlockId {
+	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))
+}
+
+func (c *Client) GetStateById(stateId StateOrBlockId) (io.Reader, error) {
+	statePath := path.Join(get_state_path, string(stateId))
+	u := c.urlForPath(statePath)
+	log.Printf("requesting %s", u.String())
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/octet-stream")
+	r, err := c.Client.Do(req)
+	defer func() {
+		err = r.Body.Close()
+	}()
+	if err != nil {
+		return nil, err
+	}
+	if r.StatusCode != http.StatusOK {
+		return nil, non200Err(r)
+	}
+	b := bytes.NewBuffer(nil)
+	_, err = io.Copy(b, r.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading http response body from GetStateById")
+	}
+	return b, nil
 }
 
 type forkResponse struct {
@@ -322,10 +326,11 @@ func (fsr *forkScheduleResponse) OrderedForkSchedule() (params.OrderedForkSchedu
 	return ofs, nil
 }
 
+// GetForkSchedule retrieve all forks, past present and future, of which this node is aware.
 func (c *Client) GetForkSchedule() (params.OrderedForkSchedule, error) {
-	u := c.urlForPath(GET_FORK_SCHEDULE_PATH)
+	u := c.urlForPath(get_fork_schedule_path)
 	log.Printf("requesting %s", u.String())
-	r, err := c.c.Get(u.String())
+	r, err := c.Client.Get(u.String())
 	defer func() {
 		err = r.Body.Close()
 	}()
@@ -342,7 +347,7 @@ func (c *Client) GetForkSchedule() (params.OrderedForkSchedule, error) {
 	}
 	ofs, err := fsr.OrderedForkSchedule()
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("problem unmarshaling %s response", GET_FORK_SCHEDULE_PATH))
+		return nil, errors.Wrap(err, fmt.Sprintf("problem unmarshaling %s response", get_fork_schedule_path))
 	}
 	return ofs, nil
 }
@@ -353,8 +358,8 @@ func (c *Client) GetForkSchedule() (params.OrderedForkSchedule, error) {
 // - finds the highest non-skipped block preceding the epoch
 // - returns the htr of the found block and returns this + the value of state_root from the block
 func (c *Client) GetWeakSubjectivity() (*WeakSubjectivityData, error) {
-	u := c.urlForPath(GET_WEAK_SUBJECTIVITY_PATH)
-	r, err := c.c.Get(u.String())
+	u := c.urlForPath(get_weak_subjectivity_path)
+	r, err := c.Client.Get(u.String())
 	if err != nil {
 		return nil, err
 	}

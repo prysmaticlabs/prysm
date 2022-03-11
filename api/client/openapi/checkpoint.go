@@ -34,7 +34,7 @@ type OriginData struct {
 // this method downloads the head state, which can be used to find the correct chain config
 // and use prysm's helper methods to compute the latest weak subjectivity epoch.
 func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (types.Epoch, error) {
-	headReader, err := client.GetStateById(StateIdHead)
+	headReader, err := client.GetStateById(IdHead)
 	headBytes, err := io.ReadAll(headReader)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to read response body for get head state api call")
@@ -81,7 +81,7 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 
 	log.Printf("requesting checkpoint state at slot %d", slot)
 	// get the state at the first slot of the epoch
-	sReader, err := client.GetStateBySlot(uint64(slot))
+	sReader, err := client.GetStateBySlot(slot)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to request state by slot from api, slot=%d", slot))
 	}
@@ -176,7 +176,7 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	}
 	log.Printf("requesting checkpoint state at slot %d", slot)
 
-	sReader, err := client.GetStateBySlot(uint64(slot))
+	sReader, err := client.GetStateBySlot(slot)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to request state by slot from api, slot=%d", slot))
 	}
