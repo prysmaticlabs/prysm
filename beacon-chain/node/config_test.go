@@ -95,7 +95,7 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	configureExecutionSetting(cliCtx)
-	assert.Equal(t, common.HexToAddress("0xB"), params.BeaconConfig().FeeRecipient)
+	assert.Equal(t, common.HexToAddress("0xB"), params.BeaconConfig().DefaultFeeRecipient)
 }
 
 func TestConfigureNetwork(t *testing.T) {

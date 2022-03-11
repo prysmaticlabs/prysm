@@ -97,7 +97,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 	p := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
 		PrevRandao:            random,
-		SuggestedFeeRecipient: params.BeaconConfig().FeeRecipient.Bytes(),
+		SuggestedFeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
 	}
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
 	if err != nil {

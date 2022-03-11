@@ -108,7 +108,7 @@ func configureInteropConfig(cliCtx *cli.Context) {
 func configureExecutionSetting(cliCtx *cli.Context) {
 	if cliCtx.IsSet(flags.FeeRecipient.Name) {
 		c := params.BeaconConfig()
-		c.FeeRecipient = common.HexToAddress(cliCtx.String(flags.FeeRecipient.Name))
+		c.DefaultFeeRecipient = common.HexToAddress(cliCtx.String(flags.FeeRecipient.Name))
 		params.OverrideBeaconConfig(c)
 	}
 }
