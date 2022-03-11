@@ -20,6 +20,7 @@ var ErrFutureSlotRequested = errors.New("cannot replay to future slots")
 var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
 var ErrNoBlocksBelowSlot = errors.New("no blocks found in db below slot")
 var ErrInvalidDBBlock = errors.New("invalid block found in database")
+var ErrReplayTargetSlotExceeded = errors.New("desired replay slot is less than state's slot")
 
 // HistoryAccessor describes the minimum set of database methods needed to support the ReplayerBuilder.
 type HistoryAccessor interface {
@@ -54,11 +55,10 @@ type Replayer interface {
 var _ Replayer = &stateReplayer{}
 
 type stateReplayer struct {
-	s           state.BeaconState
-	descendants []block.SignedBeaconBlock
-	target      types.Slot
-	method      retrievalMethod
-	chainer     chainer
+	s       state.BeaconState
+	target  types.Slot
+	method  retrievalMethod
+	chainer chainer
 }
 
 // ReplayBlocks applies all the blocks that were accumulated when building the Replayer.
@@ -127,28 +127,31 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo types.Slot) 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to ReplayBlocks")
 	}
-
-	if replayTo > s.Slot() {
-		start := time.Now()
-		log.WithFields(logrus.Fields{
-			"startSlot": s.Slot(),
-			"endSlot":   replayTo,
-			"diff":      replayTo - s.Slot(),
-		}).Debug("calling process_slots on remaining slots")
-
-		if replayTo > s.Slot() {
-			// err will be handled after the bookend log
-			s, err = ReplayProcessSlots(ctx, s, replayTo)
-		}
-
-		duration := time.Since(start)
-		log.WithFields(logrus.Fields{
-			"duration": duration,
-		}).Debug("time spent in process_slots")
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("ReplayToSlot failed to seek to slot %d after applying blocks", replayTo))
-		}
+	if replayTo < s.Slot() {
+		return nil, errors.Wrapf(ErrReplayTargetSlotExceeded, "slot desired=%d, state.slot=%d", replayTo, s.Slot())
 	}
+	if replayTo == s.Slot() {
+		return s, nil
+	}
+
+	start := time.Now()
+	log.WithFields(logrus.Fields{
+		"startSlot": s.Slot(),
+		"endSlot":   replayTo,
+		"diff":      replayTo - s.Slot(),
+	}).Debug("calling process_slots on remaining slots")
+
+	// err will be handled after the bookend log
+	s, err = ReplayProcessSlots(ctx, s, replayTo)
+
+	duration := time.Since(start)
+	log.WithFields(logrus.Fields{
+		"duration": duration,
+	}).Debug("time spent in process_slots")
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("ReplayToSlot failed to seek to slot %d after applying blocks", replayTo))
+	}
+
 	return s, nil
 }
 
