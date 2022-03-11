@@ -317,8 +317,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		defaultfee string
 	}
 	type args struct {
-		cli                *cli.Context
-		proposalFlagValues proposalFlag
+		proposalFlagValues *proposalFlag
 	}
 	tests := []struct {
 		name        string
@@ -328,10 +327,77 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		wantErr     bool
 	}{
 		{
-			name:    "Happy Path File",
-			args:    args{},
+			name: "Happy Path Config file File",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "",
+				},
+			},
 			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
 			wantErr: false,
+		},
+
+		{
+			name: "Happy Path Config URL File",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
+			wantErr: false,
+		},
+		{
+			name: "Happy Path Suggested Fee File",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
+			wantErr: false,
+		},
+		{
+			name: "Suggested Fee Override Config",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
+			wantErr: false,
+		},
+		{
+			name: "Default Fee Recipient",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
+			wantErr: false,
+		},
+		{
+			name: "Both URL and Dir flags used resulting in error",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "./somepath/",
+					url:        "http:exmaple.com/api/config",
+					defaultfee: "",
+				},
+			},
+			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
