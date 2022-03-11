@@ -936,6 +936,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
+// SetPubKeyToValidatorIndexMap sets the pubKeyToValidatorIndexMap which caches the mapping of public keys to validator indices.
 func (v *validator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymanager.IKeymanager) error {
 	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -945,7 +946,7 @@ func (v *validator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymana
 		resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pk[:]})
 		if err != nil {
 			if strings.Contains(err.Error(), "Could not find validator index for public key ") {
-				log.Infoln("Could not find validator index for public key %#x not found. Perhaps the validator is not yet active.", pubkey)
+				log.Infoln("Could not find validator index for public key %#x not found. Perhaps the validator is not yet active.", pk)
 				continue
 			} else {
 				return err
@@ -956,20 +957,26 @@ func (v *validator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymana
 	return nil
 }
 
-func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) {
+// PrepareBeaconProposer calls the prepareBeaconProposer RPC to set the proposer information such as fee recipient.
+func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) error {
 	feeRecipients, err := v.feeRecipients(ctx, km)
 	if err != nil {
-		log.WithError(err).Error("Failed to get fee recipients")
+		return err
 	}
-	// call API to set beacon proposer
-
+	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
+		Recipients: feeRecipients,
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager) ([]*validator_service_config.ValidatorFeeRecipient, error) {
-	var validatorToFeeRecipientArray []*validator_service_config.ValidatorFeeRecipient
+func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
+	var validatorToFeeRecipientArray []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	if v.prepareBeaconProposalConfig == nil {
 		return nil, errors.New("no config was provided to set validator fee recipients")
 	}
+	// need to check for new keys
 	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, err
@@ -1004,9 +1011,13 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 				feeRecipient = v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient
 			}
 		}
-		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &validator_service_config.ValidatorFeeRecipient{
+		byteValue, err := hexutil.Decode(feeRecipient)
+		if err != nil {
+			return nil, err
+		}
+		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 			ValidatorIndex: validatorIndex,
-			FeeRecipient:   feeRecipient,
+			FeeRecipient:   byteValue,
 		})
 	}
 	return validatorToFeeRecipientArray, nil
