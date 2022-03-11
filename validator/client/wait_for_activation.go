@@ -133,7 +133,7 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 				if valActivated {
 					// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 					if err := v.PrepareBeaconProposer(ctx, remoteKm); err != nil {
-						log.Fatalf("PreparedBeaconProposer Failed: %v", err)
+						return err
 					}
 					logActiveValidatorStatus(statuses)
 				} else {
@@ -181,7 +181,7 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 				if valActivated {
 					// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 					if err := v.PrepareBeaconProposer(ctx, v.keyManager); err != nil {
-						log.Fatalf("PreparedBeaconProposer Failed: %v", err)
+						return err
 					}
 					logActiveValidatorStatus(statuses)
 				} else {
