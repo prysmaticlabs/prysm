@@ -152,10 +152,7 @@ func (f *ForkChoice) InsertOptimisticBlock(
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertOptimisticBlock")
 	defer span.End()
 
-	if err := f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch); err != nil {
-		return err
-	}
-	return nil
+	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
