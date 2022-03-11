@@ -69,7 +69,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		}
 
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
-		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+		span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 		s.pendingQueueLock.RLock()
 		bs := s.pendingBlocksInCache(slot)

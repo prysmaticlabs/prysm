@@ -32,7 +32,7 @@ build --sandbox_tmpfs_path=/tmp
 build --verbose_failures
 build --announce_rc
 build --show_progress_rate_limit=5
-build --curses=yes --color=no
+build --curses=no --color=no
 build --keep_going
 build --test_output=errors
 build --flaky_test_attempts=5
