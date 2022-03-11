@@ -20,8 +20,8 @@ func (s *Store) LastValidatedCheckpoint(ctx context.Context) ([32]byte, types.Sl
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(lastValidatedCheckpoint)
 		val := bkt.Get([]byte("lastChkPoint"))
-		if len(val) != 40 {
-			return errors.New("invalid checkpoint point")
+		if len(val) != 40 { // 32 for checkpoint root + 8 bytes for slot
+			return errInvalidCheckpointSize
 		}
 		lastChkPoint = bytesutil.ToBytes32(val[:32])
 		slot = types.Slot(binary.LittleEndian.Uint64(val[32:]))
@@ -30,7 +30,7 @@ func (s *Store) LastValidatedCheckpoint(ctx context.Context) ([32]byte, types.Sl
 	return lastChkPoint, slot, err
 }
 
-func (s *Store) saveLastValidatedCheckpoint(ctx context.Context, checkPoint [32]byte, slot types.Slot) error {
+func (s *Store) SaveLastValidatedCheckpoint(ctx context.Context, checkPoint [32]byte, slot types.Slot) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.saveLastValidatedCheckpoint")
 	defer span.End()
 

@@ -15,3 +15,6 @@ var ErrNotFoundOriginBlockRoot = errors.Wrap(ErrNotFound, "OriginBlockRoot")
 
 // ErrNotFoundFeeRecipient is a not found error specifically for the fee recipient getter
 var ErrNotFoundFeeRecipient = errors.Wrap(ErrNotFound, "fee recipient")
+
+// errInvalidCheckpoint is returned when the supplied checkoint size is not as expected
+var errInvalidCheckpointSize = errors.New("invalid checkpoint point size")
