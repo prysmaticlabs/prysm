@@ -6,7 +6,6 @@ load(":cc_toolchain_config_windows.bzl", "windows_cc_toolchain_config")
 
 cc_toolchain_suite(
     name = "multiarch_toolchain",
-    tags = ["manual"],
     toolchains = {
         "k8|osxcross": ":cc-clang-osx",
         "k8|clang": "cc-clang-amd64",
@@ -15,14 +14,15 @@ cc_toolchain_suite(
         "aarch64": ":cc-clang-arm64",
         "k8|mingw-w64": ":cc-mingw-amd64",
     },
+    tags = ["manual"],
 )
 
 cc_toolchain_suite(
     name = "hostonly_toolchain",
-    tags = ["manual"],
     toolchains = {
         "k8": "cc-clang-amd64",
     },
+    tags = ["manual"],
 )
 
 filegroup(
@@ -36,6 +36,15 @@ config_setting(
     constraint_values = [
         "@platforms//os:osx",
         "@platforms//cpu:x86_64",
+    ],
+    tags = ["manual"],
+)
+
+config_setting(
+    name = "osx_arm64",
+    constraint_values = [
+        "@platforms//os:osx",
+        "@platforms//cpu:arm64",
     ],
     tags = ["manual"],
 )
@@ -69,26 +78,26 @@ config_setting(
 
 arm64_cc_toolchain_config(
     name = "local-arm64",
-    tags = ["manual"],
     target = "aarch64-linux-gnu",
+    tags = ["manual"],
 )
 
 arm64_cc_toolchain_config(
     name = "local-amd64",
-    tags = ["manual"],
     target = "x86_64-unknown-linux-gnu",
+    tags = ["manual"],
 )
 
 osx_cc_toolchain_config(
     name = "local-osxcross",
-    tags = ["manual"],
     target = "darwin_x86_64",
+    tags = ["manual"],
 )
 
 windows_cc_toolchain_config(
     name = "local-windows",
-    tags = ["manual"],
     target = "x86_64-w64",
+    tags = ["manual"],
 )
 
 cc_toolchain(
@@ -102,8 +111,8 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 0,
-    tags = ["manual"],
     toolchain_config = ":local-windows",
+    tags = ["manual"],
 )
 
 cc_toolchain(
@@ -115,8 +124,8 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 1,
-    tags = ["manual"],
     toolchain_config = ":local-arm64",
+    tags = ["manual"],
 )
 
 cc_toolchain(
@@ -128,8 +137,8 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 1,
-    tags = ["manual"],
     toolchain_config = ":local-osxcross",
+    tags = ["manual"],
 )
 
 cc_toolchain(
@@ -141,8 +150,8 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 1,
-    tags = ["manual"],
     toolchain_config = ":local-amd64",
+    tags = ["manual"],
 )
 
 toolchain(
@@ -151,13 +160,14 @@ toolchain(
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",
     ],
-    tags = ["manual"],
     target_compatible_with = [],
     toolchain = select({
         ":linux_arm64": ":cc-clang-arm64",
         ":linux_amd64": ":cc-clang-amd64",
         ":osx_amd64": ":cc-clang-osx",
+        ":osx_arm64": ":cc-clang-osx",
         ":windows_amd64": ":cc-mingw-amd64",
     }),
     toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+    tags = ["manual"],
 )
