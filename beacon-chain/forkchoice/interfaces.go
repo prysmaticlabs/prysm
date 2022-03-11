@@ -29,7 +29,7 @@ type HeadRetriever interface {
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	ProcessBlock(ctx context.Context,
+	InsertOptimisticBlock(ctx context.Context,
 		slot types.Slot,
 		root [32]byte,
 		parentRoot [32]byte,

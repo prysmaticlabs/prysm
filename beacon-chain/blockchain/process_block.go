@@ -476,7 +476,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 		return err
 	}
 	// Feed in block to fork choice store.
-	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
+	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
 		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()),
 		jCheckpoint.Epoch,
 		fCheckpoint.Epoch); err != nil {

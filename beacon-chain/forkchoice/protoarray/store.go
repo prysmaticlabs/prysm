@@ -149,7 +149,7 @@ func (f *ForkChoice) ProcessBlock(
 	slot types.Slot,
 	blockRoot, parentRoot [32]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertOptimisticBlock")
 	defer span.End()
 
 	if err := f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch); err != nil {

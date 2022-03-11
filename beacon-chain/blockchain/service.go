@@ -449,7 +449,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
-	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
+	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
 		genesisBlk.Block().Slot(),
 		genesisBlkRoot,
 		params.BeaconConfig().ZeroHash,

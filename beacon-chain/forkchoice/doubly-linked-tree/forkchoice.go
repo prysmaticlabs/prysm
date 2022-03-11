@@ -109,7 +109,7 @@ func (f *ForkChoice) ProcessBlock(
 	blockRoot, parentRoot [fieldparams.RootLength]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertOptimisticBlock")
 	defer span.End()
 
 	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
