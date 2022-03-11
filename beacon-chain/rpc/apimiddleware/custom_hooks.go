@@ -181,6 +181,11 @@ type altairPublishBlockRequestJson struct {
 	Signature   string                 `json:"signature" hex:"true"`
 }
 
+type bellatrixPublishBlockRequestJson struct {
+	AltairBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
+	Signature   string                    `json:"signature" hex:"true"`
+}
+
 // setInitialPublishBlockPostRequest is triggered before we deserialize the request JSON into a struct.
 // We don't know which version of the block got posted, but we can determine it from the slot.
 // We know that both Phase 0 and Altair blocks have a Message field with a Slot field,
@@ -207,10 +212,13 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
-	if slots.ToEpoch(types.Slot(slot)) < params.BeaconConfig().AltairForkEpoch {
+	currentEpoch := slots.ToEpoch(types.Slot(slot))
+	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
 		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
-	} else {
+	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
 		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}
+	} else {
+		endpoint.PostRequest = &signedBeaconBlockBellatrixContainerJson{}
 	}
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
@@ -233,6 +241,15 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 	if block, ok := endpoint.PostRequest.(*signedBeaconBlockAltairContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &altairPublishBlockRequestJson{
+			AltairBlock: block.Message,
+			Signature:   block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	if block, ok := endpoint.PostRequest.(*signedBeaconBlockBellatrixContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &bellatrixPublishBlockRequestJson{
 			AltairBlock: block.Message,
 			Signature:   block.Signature,
 		}
