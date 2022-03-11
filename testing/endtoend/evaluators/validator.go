@@ -8,6 +8,8 @@ import (
 	ethtypes "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -141,11 +143,12 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get validator participation")
 	}
 	for _, ctr := range blockCtrs.BlockContainers {
-		if ctr.GetAltairBlock() == nil {
-			return errors.Errorf("Altair block type doesn't exist for block at epoch %d", lowestBound)
+		b, err := syncCompatibleBlockFromCtr(ctr)
+		if err != nil {
+			return errors.Wrapf(err, "block type doesn't exist for block at epoch %d", lowestBound)
 		}
-		blk := ctr.GetAltairBlock()
-		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
+
+		if b.IsNil() {
 			return errors.New("nil block provided")
 		}
 		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
@@ -153,13 +156,16 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 			return err
 		}
 		// Skip evaluation of the fork slot.
-		if blk.Block.Slot == forkSlot {
+		if b.Block().Slot() == forkSlot {
 			continue
 		}
-		syncAgg := blk.Block.Body.SyncAggregate
+		syncAgg, err := b.Block().Body().SyncAggregate()
+		if err != nil {
+			return err
+		}
 		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
 		if syncAgg.SyncCommitteeBits.Count() < threshold {
-			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, threshold, syncAgg.SyncCommitteeBits.Count())
+			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", b.Block().Slot(), threshold, syncAgg.SyncCommitteeBits.Count())
 		}
 	}
 	if lowestBound == currEpoch {
@@ -170,11 +176,12 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get validator participation")
 	}
 	for _, ctr := range blockCtrs.BlockContainers {
-		if ctr.GetAltairBlock() == nil {
-			return errors.Errorf("Altair block type doesn't exist for block at epoch %d", lowestBound)
+		b, err := syncCompatibleBlockFromCtr(ctr)
+		if err != nil {
+			return errors.Wrapf(err, "block type doesn't exist for block at epoch %d", lowestBound)
 		}
-		blk := ctr.GetAltairBlock()
-		if blk.Block == nil || blk.Block.Body == nil || blk.Block.Body.SyncAggregate == nil {
+
+		if b.IsNil() {
 			return errors.New("nil block provided")
 		}
 		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
@@ -182,14 +189,30 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 			return err
 		}
 		// Skip evaluation of the fork slot.
-		if blk.Block.Slot == forkSlot {
+		if b.Block().Slot() == forkSlot {
 			continue
 		}
-		syncAgg := blk.Block.Body.SyncAggregate
+		syncAgg, err := b.Block().Body().SyncAggregate()
+		if err != nil {
+			return err
+		}
 		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
 		if syncAgg.SyncCommitteeBits.Count() < threshold {
-			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", blk.Block.Slot, threshold, syncAgg.SyncCommitteeBits.Count())
+			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", b.Block().Slot(), threshold, syncAgg.SyncCommitteeBits.Count())
 		}
 	}
 	return nil
+}
+
+func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (block.SignedBeaconBlock, error) {
+	if container.GetPhase0Block() != nil {
+		return nil, errors.New("block doesn't support sync committees")
+	}
+	if container.GetAltairBlock() != nil {
+		return wrapper.WrappedSignedBeaconBlock(container.GetAltairBlock())
+	}
+	if container.GetBellatrixBlock() != nil {
+		return wrapper.WrappedSignedBeaconBlock(container.GetBellatrixBlock())
+	}
+	return nil, errors.New("no supported block type in container")
 }
