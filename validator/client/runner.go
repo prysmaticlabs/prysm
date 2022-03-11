@@ -118,7 +118,10 @@ func run(ctx context.Context, v iface.Validator) {
 	if err := v.SetPubKeyToValidatorIndexMap(ctx, km); err != nil {
 		log.Fatalf("Could not set pubkey to validator index map: %v", err)
 	}
-	v.PrepareBeaconProposer(ctx, km)
+	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
+	if err := v.PrepareBeaconProposer(ctx, km); err != nil {
+		log.Fatalf("PreparedBeaconProposer Failed: %v", err)
+	}
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -186,7 +189,6 @@ func run(ctx context.Context, v iface.Validator) {
 			// Start fetching domain data for the next epoch.
 			if slots.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
-				go v.PrepareBeaconProposer(ctx, km)
 			}
 
 			var wg sync.WaitGroup

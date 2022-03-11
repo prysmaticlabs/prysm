@@ -959,6 +959,9 @@ func (v *validator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymana
 
 // PrepareBeaconProposer calls the prepareBeaconProposer RPC to set the proposer information such as fee recipient.
 func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) error {
+	if km == nil {
+		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
+	}
 	feeRecipients, err := v.feeRecipients(ctx, km)
 	if err != nil {
 		return err
