@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/api/client/openapi"
+	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -37,22 +37,22 @@ var latestCmd = &cli.Command{
 	},
 }
 
-func setupClient() (*openapi.Client, error) {
+func setupClient() (*beacon.Client, error) {
 	f := latestFlags
 	log.Printf("--beacon-node-url=%s", f.BeaconNodeHost)
 
-	opts := make([]openapi.ClientOpt, 0)
+	opts := make([]beacon.ClientOpt, 0)
 	timeout, err := time.ParseDuration(f.Timeout)
 	if err != nil {
 		return nil, err
 	}
-	opts = append(opts, openapi.WithTimeout(timeout))
+	opts = append(opts, beacon.WithTimeout(timeout))
 	validatedHost, err := validHostname(latestFlags.BeaconNodeHost)
 	if err != nil {
 		return nil, err
 	}
 	log.Printf("host:port=%s", validatedHost)
-	client, err := openapi.NewClient(validatedHost, opts...)
+	client, err := beacon.NewClient(validatedHost, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func cliActionLatest(_ *cli.Context) error {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	od, err := openapi.DownloadOriginData(ctx, client)
+	od, err := beacon.DownloadOriginData(ctx, client)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}

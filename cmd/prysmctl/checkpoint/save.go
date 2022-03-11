@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/api/client/openapi"
+	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -37,14 +37,14 @@ var saveCmd = &cli.Command{
 
 func cliActionSave(_ *cli.Context) error {
 	f := saveFlags
-	opts := make([]openapi.ClientOpt, 0)
+	opts := make([]beacon.ClientOpt, 0)
 	log.Printf("--beacon-node-url=%s", f.BeaconNodeHost)
 	timeout, err := time.ParseDuration(f.Timeout)
 	if err != nil {
 		return err
 	}
-	opts = append(opts, openapi.WithTimeout(timeout))
-	client, err := openapi.NewClient(saveFlags.BeaconNodeHost, opts...)
+	opts = append(opts, beacon.WithTimeout(timeout))
+	client, err := beacon.NewClient(saveFlags.BeaconNodeHost, opts...)
 	if err != nil {
 		return err
 	}
@@ -52,14 +52,14 @@ func cliActionSave(_ *cli.Context) error {
 	return saveCheckpoint(client)
 }
 
-func saveCheckpoint(client *openapi.Client) error {
+func saveCheckpoint(client *beacon.Client) error {
 	ctx := context.Background()
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	od, err := openapi.DownloadOriginData(ctx, client)
+	od, err := beacon.DownloadOriginData(ctx, client)
 	if err != nil {
 		return err
 	}

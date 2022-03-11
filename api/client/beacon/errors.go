@@ -1,4 +1,4 @@
-package openapi
+package beacon
 
 import "github.com/pkg/errors"
 

@@ -6,16 +6,16 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/client/openapi"
+	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
 type APIInitializer struct {
-	c *openapi.Client
+	c *beacon.Client
 }
 
 func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
-	c, err := openapi.NewClient(beaconNodeHost)
+	c, err := beacon.NewClient(beaconNodeHost)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to parse beacon node url or hostname - %s", beaconNodeHost))
 	}
@@ -31,7 +31,7 @@ func (dl *APIInitializer) BlockReader(ctx context.Context) (io.Reader, error) {
 }
 
 func (dl *APIInitializer) Initialize(ctx context.Context, d db.Database) error {
-	od, err := openapi.DownloadOriginData(ctx, dl.c)
+	od, err := beacon.DownloadOriginData(ctx, dl.c)
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving checkpoint origin state and block")
 	}
