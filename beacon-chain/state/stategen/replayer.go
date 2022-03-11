@@ -20,6 +20,7 @@ var ErrFutureSlotRequested = errors.New("cannot replay to future slots")
 var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
 var ErrNoBlocksBelowSlot = errors.New("no blocks found in db below slot")
 var ErrInvalidDBBlock = errors.New("invalid block found in database")
+var ErrReplayTargetSlotExceeded = errors.New("desired replay slot is less than state's slot")
 
 // HistoryAccessor describes the minimum set of database methods needed to support the ReplayerBuilder.
 type HistoryAccessor interface {
@@ -127,7 +128,7 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo types.Slot) 
 		return nil, errors.Wrap(err, "failed to ReplayBlocks")
 	}
 	if replayTo < s.Slot() {
-		return nil, errors.Errorf("desired replay slot is less than state's slot. %d < %d", replayTo, s.Slot())
+		return nil, errors.Wrapf(ErrReplayTargetSlotExceeded, "slot desired=%d, state.slot=%d", replayTo, s.Slot())
 	}
 	if replayTo == s.Slot() {
 		return s, nil
