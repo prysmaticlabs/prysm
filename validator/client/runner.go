@@ -145,7 +145,7 @@ func run(ctx context.Context, v iface.Validator) {
 				}
 			}
 		case slot := <-v.NextSlot():
-			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 			remoteKm, ok := km.(remote.RemoteKeymanager)
 			if ok {

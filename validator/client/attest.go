@@ -165,7 +165,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot types.Slot, pubK
 	}
 
 	span.AddAttributes(
-		trace.Int64Attribute("slot", int64(slot)),
+		trace.Int64Attribute("slot", int64(slot)), // lint:ignore uintcast -- This conversion is OK for tracing.
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
 		trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
