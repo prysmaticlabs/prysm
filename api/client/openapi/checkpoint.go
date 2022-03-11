@@ -18,10 +18,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// WeakSubjectivityData represents the state root, block root and epoch of the BeaconState + SignedBeaconBlock
+// that falls at the beginning of the current weak subjectivity period. These values can be used to construct
+// a weak subjectivity checkpoint, or to download a BeaconState+SignedBeaconBlock pair that can be used to bootstrap
+// a new Beacon Node using Checkpoint Sync.
 type WeakSubjectivityData struct {
 	BlockRoot [32]byte
 	StateRoot [32]byte
 	Epoch     types.Epoch
+}
+
+// CheckpointString returns the standard string representation of a Checkpoint for the block root and epoch to which the
+// WeakSubjectivityData value refers.
+// The format is a a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
+// "0x1c35540cac127315fabb6bf29181f2ae0de1a3fc909d2e76ba771e61312cc49a:74888"
+func (wsd *WeakSubjectivityData) CheckpointString() string {
+	return fmt.Sprintf("%#x:%d", wsd.BlockRoot, wsd.Epoch)
 }
 
 // OriginData represents the BeaconState and SignedBeaconBlock necessary to start an empty Beacon Node

@@ -35,6 +35,12 @@ const (
 	get_state_path             = "/eth/v2/debug/beacon/states"
 )
 
+// StateOrBlockId represents the block_id / state_id parameters that several of the Eth Beacon API methods accept.
+// StateOrBlockId constants are defined for named identifiers, and helper methods are provided
+// for slot and root identifiers. Example text from the Eth Beacon Node API documentation:
+//
+// "Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
+// <slot>, <hex encoded blockRoot with 0x prefix>."
 type StateOrBlockId string
 
 const (
@@ -44,10 +50,14 @@ const (
 	IdJustified StateOrBlockId = "finalized"
 )
 
+// IdFromRoot encodes a block root in the format expected by the API in places where a root can be used to identify
+// a BeaconState or SignedBeaconBlock.
 func IdFromRoot(r [32]byte) StateOrBlockId {
 	return StateOrBlockId(fmt.Sprintf("%#x", r))
 }
 
+// IdFromRoot encodes a Slot in the format expected by the API in places where a slot can be used to identify
+// a BeaconState or SignedBeaconBlock.
 func IdFromSlot(s types.Slot) StateOrBlockId {
 	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))
 }

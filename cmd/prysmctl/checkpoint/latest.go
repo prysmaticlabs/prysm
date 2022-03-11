@@ -69,10 +69,9 @@ func cliActionLatest(_ *cli.Context) error {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	ws := od.WeakSubjectivity()
 	fmt.Println("\nUse the following flag when starting a prysm Beacon Node to ensure the chain history " +
-		"includes the Weak Subjectivity Checkpoint:")
-	fmt.Printf("--weak-subjectivity-checkpoint=%#x:%d\n\n", ws.BlockRoot, ws.Epoch)
+		"includes the Weak Subjectivity Checkpoint: ")
+	fmt.Printf("--weak-subjectivity-checkpoint=%s\n\n", od.WeakSubjectivity().CheckpointString())
 	return nil
 }
 
