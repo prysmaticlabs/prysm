@@ -11,7 +11,7 @@
     "istanbulBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
-    "mergeForkBlock": 1280,
+    "mergeForkBlock": 300,
     "terminalTotalDifficulty": 1000,
     "clique": {
       "period": 2,

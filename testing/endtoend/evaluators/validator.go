@@ -155,8 +155,12 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
+		nexForkSlot, err := slots.EpochStart(helpers.BellatrixE2EForkEpoch)
+		if err != nil {
+			return err
+		}
 		// Skip evaluation of the fork slot.
-		if b.Block().Slot() == forkSlot {
+		if b.Block().Slot() == forkSlot || b.Block().Slot() == nexForkSlot {
 			continue
 		}
 		syncAgg, err := b.Block().Body().SyncAggregate()
@@ -188,8 +192,12 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
+		nexForkSlot, err := slots.EpochStart(helpers.BellatrixE2EForkEpoch)
+		if err != nil {
+			return err
+		}
 		// Skip evaluation of the fork slot.
-		if b.Block().Slot() == forkSlot {
+		if b.Block().Slot() == forkSlot || b.Block().Slot() == nexForkSlot {
 			continue
 		}
 		syncAgg, err := b.Block().Body().SyncAggregate()

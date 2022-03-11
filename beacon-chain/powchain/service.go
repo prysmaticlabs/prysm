@@ -641,6 +641,7 @@ func (s *Service) processBlockHeader(header *gethTypes.Header) {
 	log.WithFields(logrus.Fields{
 		"blockNumber": s.latestEth1Data.BlockHeight,
 		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
+		"difficulty":  header.Difficulty.String(),
 	}).Debug("Latest eth1 chain event")
 }
 
