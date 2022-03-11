@@ -18,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -74,7 +73,7 @@ type validator struct {
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
-	pubkeyHexToValidatorIndex          map[string]github_com_prysmaticlabs_eth2_types.ValidatorIndex
+	pubkeyHexToValidatorIndex          map[string]types.ValidatorIndex
 	graffitiOrderedIndex               uint64
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	domainDataCache                    *ristretto.Cache
@@ -948,9 +947,8 @@ func (v *validator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymana
 			if strings.Contains(err.Error(), "Could not find validator index for public key ") {
 				log.Infoln("Could not find validator index for public key %#x not found. Perhaps the validator is not yet active.", pk)
 				continue
-			} else {
-				return err
 			}
+			return err
 		}
 		v.pubkeyHexToValidatorIndex[hexutil.Encode(pk[:])] = resp.Index
 	}
@@ -997,9 +995,8 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 					log.Infoln("Could not find validator index for public key %#x not found. "+
 						"Perhaps the validator is not yet active.", hexKey)
 					continue
-				} else {
-					return nil, err
 				}
+				return nil, err
 			} else {
 				validatorIndex = resp.Index
 				// update the cache for the next time

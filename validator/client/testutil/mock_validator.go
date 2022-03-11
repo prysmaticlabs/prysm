@@ -248,11 +248,11 @@ func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ ty
 }
 
 // PrepareBeaconProposer for mocking
-func (_ *FakeValidator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) error {
+func (_ *FakeValidator) PrepareBeaconProposer(_ context.Context, _ keymanager.IKeymanager) error {
 	return nil
 }
 
 // SetPubKeyToValidatorIndexMap for mocking
-func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymanager.IKeymanager) error {
+func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
 	return nil
 }
