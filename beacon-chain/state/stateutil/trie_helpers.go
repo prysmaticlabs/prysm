@@ -128,13 +128,13 @@ func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][
 	root := *layer[0][0]
 
 	for _, idx := range changedIdx {
-		if ii, err := math.Int(idx); err != nil {
+		ii, err := math.Int(idx)
+		if err != nil {
 			return [32]byte{}, nil, err
-		} else {
-			root, layer, err = recomputeRootFromLayer(ii, layer, leaves, hasher)
-			if err != nil {
-				return [32]byte{}, nil, err
-			}
+		}
+		root, layer, err = recomputeRootFromLayer(ii, layer, leaves, hasher)
+		if err != nil {
+			return [32]byte{}, nil, err
 		}
 	}
 	return root, layer, nil
