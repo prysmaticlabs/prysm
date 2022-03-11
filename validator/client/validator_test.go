@@ -1420,3 +1420,23 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, km)
 }
+
+func TestValidator_SetPubKeyToValidatorIndexMap(t *testing.T) {
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	v := validator{
+		db:     db,
+		useWeb: false,
+		interopKeysConfig: &local.InteropKeymanagerConfig{
+			NumValidatorKeys: 2,
+			Offset:           1,
+		},
+	}
+	err := v.WaitForKeymanagerInitialization(ctx)
+	require.NoError(t, err)
+	km, err := v.Keymanager()
+	require.NoError(t, err)
+	err = v.SetPubKeyToValidatorIndexMap(ctx, km)
+	require.NoError(t, err)
+	require.NotNil(t, v.pubkeyHexToValidatorIndex)
+}

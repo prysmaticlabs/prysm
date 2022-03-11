@@ -246,3 +246,13 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 // SubmitSignedContributionAndProof for mocking
 func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
+
+// PrepareBeaconProposer for mocking
+func (_ *FakeValidator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) error {
+	return nil
+}
+
+// SetPubKeyToValidatorIndexMap for mocking
+func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymanager.IKeymanager) error {
+	return nil
+}
