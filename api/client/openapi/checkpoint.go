@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -22,19 +24,54 @@ type WeakSubjectivityData struct {
 	Epoch     types.Epoch
 }
 
+// OriginData represents the BeaconState and SignedBeaconBlock necessary to start an empty Beacon Node
+// using Checkpoint Sync.
 type OriginData struct {
-	WeakSubjectivity *WeakSubjectivityData
-	StateBytes       []byte
-	BlockBytes       []byte
-	State            state.BeaconState
-	Block            block.SignedBeaconBlock
-	ConfigFork       *sniff.ConfigFork
+	wsd *WeakSubjectivityData
+	sb  []byte
+	bb  []byte
+	st  state.BeaconState
+	b   block.SignedBeaconBlock
+	cf  *sniff.ConfigFork
+}
+
+// WeakSubjectivity returns the WeakSubjectivityData determined by DownloadOriginData.
+func (od *OriginData) WeakSubjectivity() *WeakSubjectivityData {
+	return od.wsd
+}
+
+// SaveBlock saves the downloaded block to a unique file in the given path.
+// For readability and collision avoidance, the file name includes: type, config name, slot and root
+func (od *OriginData) SaveBlock(dir string) (string, error) {
+	statePath := path.Join(dir, fname("state", od.cf, od.st.Slot(), od.wsd.BlockRoot))
+	return statePath, os.WriteFile(statePath, od.sb, 0600)
+}
+
+// SaveState saves the downloaded state to a unique file in the given path.
+// For readability and collision avoidance, the file name includes: type, config name, slot and root
+func (od *OriginData) SaveState(dir string) (string, error) {
+	statePath := path.Join(dir, fname("state", od.cf, od.st.Slot(), od.wsd.StateRoot))
+	return statePath, os.WriteFile(statePath, od.sb, 0600)
+}
+
+// StateBytes returns the ssz-encoded bytes of the downloaded BeaconState value.
+func (od *OriginData) StateBytes() []byte {
+	return od.sb
+}
+
+// BlockBytes returns the ssz-encoded bytes of the downloaded SignedBeaconBlock value.
+func (od *OriginData) BlockBytes() []byte {
+	return od.bb
+}
+
+func fname(prefix string, cf *sniff.ConfigFork, slot types.Slot, root [32]byte) string {
+	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, cf.ConfigName.String(), cf.Fork.String(), slot, root)
 }
 
 // this method downloads the head state, which can be used to find the correct chain config
 // and use prysm's helper methods to compute the latest weak subjectivity epoch.
 func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (types.Epoch, error) {
-	headReader, err := client.GetStateById(IdHead)
+	headReader, err := client.GetState(ctx, IdHead)
 	headBytes, err := io.ReadAll(headReader)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to read response body for get head state api call")
@@ -81,7 +118,7 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 
 	log.Printf("requesting checkpoint state at slot %d", slot)
 	// get the state at the first slot of the epoch
-	sReader, err := client.GetStateBySlot(slot)
+	sReader, err := client.GetState(ctx, IdFromSlot(slot))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to request state by slot from api, slot=%d", slot))
 	}
@@ -116,13 +153,9 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 		return nil, errors.Wrap(err, "error while computing block root using state data")
 	}
 
-	bReader, err := client.GetBlockByRoot(fmt.Sprintf("%#x", computedBlockRoot))
+	blockBytes, err := client.GetBlock(IdFromRoot(computedBlockRoot))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by slot = %d", slot))
-	}
-	blockBytes, err := io.ReadAll(bReader)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read response body for get checkpoint block api call")
 	}
 	block, err := sniff.BlockForConfigFork(blockBytes, cf)
 	if err != nil {
@@ -138,16 +171,16 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 	log.Printf("BeaconBlock root computed from state=%#x, Block HTR=%#x", computedBlockRoot, blockRoot)
 
 	return &OriginData{
-		WeakSubjectivity: &WeakSubjectivityData{
+		wsd: &WeakSubjectivityData{
 			BlockRoot: blockRoot,
 			StateRoot: stateRoot,
 			Epoch:     epoch,
 		},
-		State:      st,
-		StateBytes: stateBytes,
-		Block:      block,
-		BlockBytes: blockBytes,
-		ConfigFork: cf,
+		st: st,
+		sb: stateBytes,
+		b:  block,
+		bb: blockBytes,
+		cf: cf,
 	}, nil
 }
 
@@ -176,7 +209,7 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	}
 	log.Printf("requesting checkpoint state at slot %d", slot)
 
-	sReader, err := client.GetStateBySlot(slot)
+	sReader, err := client.GetState(ctx, IdFromSlot(slot))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to request state by slot from api, slot=%d", slot))
 	}
@@ -204,15 +237,9 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing hash_tree_root of latest_block_header")
 	}
-
-	bReader, err := client.GetBlockByRoot(fmt.Sprintf("%#x", ws.BlockRoot))
-	//bReader, err := client.GetBlockBySlot(slot)
+	blockBytes, err := client.GetBlock(IdFromRoot(ws.BlockRoot))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by slot = %d", slot))
-	}
-	blockBytes, err := io.ReadAll(bReader)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read response body for get checkpoint block api call")
 	}
 	block, err := sniff.BlockForConfigFork(blockBytes, cf)
 	if err != nil {
@@ -226,11 +253,11 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	log.Printf("BeaconState htr=%#xd, Block state_root=%#x", stateRoot, block.Block().StateRoot())
 	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", blockRoot, realBlockRoot)
 	return &OriginData{
-		WeakSubjectivity: ws,
-		State:            state,
-		Block:            block,
-		StateBytes:       stateBytes,
-		BlockBytes:       blockBytes,
-		ConfigFork:       cf,
+		wsd: ws,
+		st:  state,
+		b:   block,
+		sb:  stateBytes,
+		bb:  blockBytes,
+		cf:  cf,
 	}, nil
 }

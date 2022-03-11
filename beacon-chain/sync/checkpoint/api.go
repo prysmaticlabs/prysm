@@ -35,5 +35,5 @@ func (dl *APIInitializer) Initialize(ctx context.Context, d db.Database) error {
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving checkpoint origin state and block")
 	}
-	return d.SaveOrigin(ctx, od.StateBytes, od.BlockBytes)
+	return d.SaveOrigin(ctx, od.StateBytes(), od.BlockBytes())
 }

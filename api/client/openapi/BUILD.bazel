@@ -5,6 +5,8 @@ go_library(
     srcs = [
         "checkpoint.go",
         "client.go",
+        "doc.go",
+        "errors.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/api/client/openapi",
     visibility = ["//visibility:public"],

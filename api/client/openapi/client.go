@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,22 +27,30 @@ import (
 )
 
 const (
-	get_weak_subjectivity_path = "/eth/v1/beacon/weak_subjectivity"
 	get_signed_block_path      = "/eth/v2/beacon/blocks"
-	get_state_path             = "/eth/v2/debug/beacon/states"
-	get_fork_schedule_path     = "/eth/v1/config/fork_schedule"
-	get_fork_for_state_path    = "/eth/v1/beacon/states/{{.StateId}}/fork"
 	get_block_root_path        = "/eth/v1/beacon/blocks/{{.BlockId}}/root"
+	get_fork_for_state_path    = "/eth/v1/beacon/states/{{.StateId}}/fork"
+	get_weak_subjectivity_path = "/eth/v1/beacon/weak_subjectivity"
+	get_fork_schedule_path     = "/eth/v1/config/fork_schedule"
+	get_state_path             = "/eth/v2/debug/beacon/states"
 )
 
 type StateOrBlockId string
 
 const (
-	IdHead      StateOrBlockId = "head"
-	IdGenesis   StateOrBlockId = "genesis"
 	IdFinalized StateOrBlockId = "finalized"
+	IdGenesis   StateOrBlockId = "genesis"
+	IdHead      StateOrBlockId = "head"
 	IdJustified StateOrBlockId = "finalized"
 )
+
+func IdFromRoot(r [32]byte) StateOrBlockId {
+	return StateOrBlockId(fmt.Sprintf("%#x", r))
+}
+
+func IdFromSlot(s types.Slot) StateOrBlockId {
+	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))
+}
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
@@ -49,24 +58,15 @@ type ClientOpt func(*Client)
 // WithTimeout sets the .Timeout attribute of the wrapped http.Client.
 func WithTimeout(timeout time.Duration) ClientOpt {
 	return func(c *Client) {
-		c.Client.Timeout = timeout
+		c.hc.Timeout = timeout
 	}
 }
 
 // Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
 type Client struct {
-	Client *http.Client
+	hc     *http.Client
 	host   string
 	scheme string
-}
-
-func (c *Client) urlForPath(methodPath string) *url.URL {
-	u := &url.URL{
-		Scheme: c.scheme,
-		Host:   c.host,
-	}
-	u.Path = path.Join(u.Path, methodPath)
-	return u
 }
 
 // NewClient constructs a new client with the provided options (ex WithTimeout).
@@ -78,7 +78,7 @@ func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 		return nil, err
 	}
 	c := &Client{
-		Client: &http.Client{},
+		hc:     &http.Client{},
 		scheme: "http",
 		host:   host,
 	}
@@ -102,10 +102,22 @@ func validHostname(h string) (string, error) {
 	return fmt.Sprintf("%s:%s", host, port), nil
 }
 
-// GetBlockByRoot retrieves a SignedBeaconBlock with the given root via the beacon node API.
-// The value is an io.Reader for the raw ssz-encoded bytes.
-func (c *Client) GetBlockByRoot(blockHex string) (io.Reader, error) {
-	blockPath := path.Join(get_signed_block_path, blockHex)
+func (c *Client) urlForPath(methodPath string) *url.URL {
+	u := &url.URL{
+		Scheme: c.scheme,
+		Host:   c.host,
+	}
+	u.Path = path.Join(u.Path, methodPath)
+	return u
+}
+
+// GetBlock retrieves the SignedBeaconBlock for the given block id.
+// Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
+// <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
+// for the named identifiers.
+// The return value contains the ssz-encoded bytes.
+func (c *Client) GetBlock(id StateOrBlockId) ([]byte, error) {
+	blockPath := path.Join(get_signed_block_path, string(id))
 	u := c.urlForPath(blockPath)
 	log.Printf("requesting %s", u.String())
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
@@ -113,7 +125,7 @@ func (c *Client) GetBlockByRoot(blockHex string) (io.Reader, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/octet-stream")
-	r, err := c.Client.Do(req)
+	r, err := c.hc.Do(req)
 	defer func() {
 		err = r.Body.Close()
 	}()
@@ -123,46 +135,22 @@ func (c *Client) GetBlockByRoot(blockHex string) (io.Reader, error) {
 	if r.StatusCode != http.StatusOK {
 		return nil, non200Err(r)
 	}
-	b := bytes.NewBuffer(nil)
-	_, err = io.Copy(b, r.Body)
-	return b, nil
+	bb, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading http response body from GetBlock")
+	}
+	return bb, nil
 }
 
-// GetBlockBySlot queries the beacon node API for the SignedBeaconBlockAltair for the given slot.
-// The value is an io.Reader for the raw ssz-encoded bytes.
-func (c *Client) GetBlockBySlot(slot types.Slot) (io.Reader, error) {
-	blockPath := path.Join(get_signed_block_path, strconv.FormatUint(uint64(slot), 10))
-	u := c.urlForPath(blockPath)
-	log.Printf("requesting %s", u.String())
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/octet-stream")
-	r, err := c.Client.Do(req)
-	defer func() {
-		err = r.Body.Close()
-	}()
-	if err != nil {
-		return nil, err
-	}
-	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
-	}
-	b := bytes.NewBuffer(nil)
-	_, err = io.Copy(b, r.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "error reading http response body from GetBlockBySlot")
-	}
-	return b, nil
-}
-
-// Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", <slot>, <hex encoded blockRoot with 0x prefix>.
-func (c *Client) GetBlockRoot(blockId string) ([32]byte, error) {
+// GetBlockRoot retrieves the hash_tree_root of the BeaconBlock for the given block id.
+// Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
+// <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
+// for the named identifiers.
+func (c *Client) GetBlockRoot(blockId StateOrBlockId) ([32]byte, error) {
 	var root [32]byte
 	t := template.Must(template.New("get-block-root").Parse(get_block_root_path))
 	b := bytes.NewBuffer(nil)
-	err := t.Execute(b, struct{ BlockId string }{BlockId: blockId})
+	err := t.Execute(b, struct{ BlockId string }{BlockId: string(blockId)})
 	if err != nil {
 		return root, errors.Wrap(err, fmt.Sprintf("unable to generate path w/ blockId=%s", blockId))
 	}
@@ -173,7 +161,7 @@ func (c *Client) GetBlockRoot(blockId string) ([32]byte, error) {
 	if err != nil {
 		return root, err
 	}
-	r, err := c.Client.Do(req)
+	r, err := c.hc.Do(req)
 	defer func() {
 		err = r.Body.Close()
 	}()
@@ -195,16 +183,23 @@ func (c *Client) GetBlockRoot(blockId string) ([32]byte, error) {
 	return bytesutil.ToBytes32(rs), nil
 }
 
-// GetForkForState queries the Beacon Node API for the Fork from the state identified by stateId.
-func (c *Client) GetForkForState(stateId string) (*ethpb.Fork, error) {
+// GetFork queries the Beacon Node API for the Fork from the state identified by stateId.
+// Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
+// <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
+// for the named identifiers.
+func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fork, error) {
 	t := template.Must(template.New("get-fork-for-state").Parse(get_fork_for_state_path))
 	b := bytes.NewBuffer(nil)
-	err := t.Execute(b, struct{ StateId string }{StateId: stateId})
+	err := t.Execute(b, struct{ StateId string }{StateId: string(stateId)})
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to generate path w/ stateId=%s", stateId))
 	}
 	u := c.urlForPath(b.String())
-	r, err := c.Client.Get(u.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	r, err := c.hc.Do(req)
 	defer func() {
 		err = r.Body.Close()
 	}()
@@ -218,36 +213,53 @@ func (c *Client) GetForkForState(stateId string) (*ethpb.Fork, error) {
 	dataWrapper := &struct{ Data *forkResponse }{Data: fr}
 	err = json.NewDecoder(r.Body).Decode(dataWrapper)
 	if err != nil {
-		return nil, errors.Wrap(err, "error decoding json response in GetForkForState")
+		return nil, errors.Wrap(err, "error decoding json response in GetFork")
 	}
 
 	return fr.Fork()
 }
 
-// GetStateByRoot retrieves a BeaconStateAltair with the given root via the beacon node API
-func (c *Client) GetStateByRoot(stateHex string) (io.Reader, error) {
-	return c.GetStateById(StateOrBlockId(stateHex))
+// GetForkSchedule retrieve all forks, past present and future, of which this node is aware.
+func (c *Client) GetForkSchedule() (params.OrderedForkSchedule, error) {
+	u := c.urlForPath(get_fork_schedule_path)
+	log.Printf("requesting %s", u.String())
+	r, err := c.hc.Get(u.String())
+	defer func() {
+		err = r.Body.Close()
+	}()
+	if err != nil {
+		return nil, err
+	}
+	if r.StatusCode != http.StatusOK {
+		return nil, non200Err(r)
+	}
+	fsr := &forkScheduleResponse{}
+	err = json.NewDecoder(r.Body).Decode(fsr)
+	if err != nil {
+		return nil, err
+	}
+	ofs, err := fsr.OrderedForkSchedule()
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("problem unmarshaling %s response", get_fork_schedule_path))
+	}
+	return ofs, nil
 }
 
-// GetStateBySlot retrieves a BeaconStateAltair at the given slot via the beacon node API
-func (c *Client) GetStateBySlot(slot types.Slot) (io.Reader, error) {
-	return c.GetStateById(IdFromSlot(types.Slot(slot)))
-}
-
-func IdFromSlot(s types.Slot) StateOrBlockId {
-	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))
-}
-
-func (c *Client) GetStateById(stateId StateOrBlockId) (io.Reader, error) {
+// GetState retrieves the BeaconState for the given state id.
+// State identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
+// <slot>, <hex encoded stateRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
+// for the named identifiers.
+// The return value contains the ssz-encoded bytes.
+func (c *Client) GetState(ctx context.Context, stateId StateOrBlockId) (io.Reader, error) {
 	statePath := path.Join(get_state_path, string(stateId))
 	u := c.urlForPath(statePath)
 	log.Printf("requesting %s", u.String())
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/octet-stream")
-	r, err := c.Client.Do(req)
+	r, err := c.hc.Do(req)
 	defer func() {
 		err = r.Body.Close()
 	}()
@@ -260,9 +272,64 @@ func (c *Client) GetStateById(stateId StateOrBlockId) (io.Reader, error) {
 	b := bytes.NewBuffer(nil)
 	_, err = io.Copy(b, r.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "error reading http response body from GetStateById")
+		return nil, errors.Wrap(err, "error reading http response body from GetState")
 	}
 	return b, nil
+}
+
+// GetWeakSubjectivity calls a proposed API endpoint that is unique to prysm
+// This api method does the following:
+// - computes weak subjectivity epoch
+// - finds the highest non-skipped block preceding the epoch
+// - returns the htr of the found block and returns this + the value of state_root from the block
+func (c *Client) GetWeakSubjectivity() (*WeakSubjectivityData, error) {
+	u := c.urlForPath(get_weak_subjectivity_path)
+	r, err := c.hc.Get(u.String())
+	if err != nil {
+		return nil, err
+	}
+	if r.StatusCode != http.StatusOK {
+		return nil, non200Err(r)
+	}
+	v := &apimiddleware.WeakSubjectivityResponse{}
+	err = json.NewDecoder(r.Body).Decode(v)
+	if err != nil {
+		return nil, err
+	}
+	epoch, err := strconv.ParseUint(v.Data.Checkpoint.Epoch, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	blockRoot, err := hexutil.Decode(v.Data.Checkpoint.Root)
+	if err != nil {
+		return nil, err
+	}
+	stateRoot, err := hexutil.Decode(v.Data.StateRoot)
+	if err != nil {
+		return nil, err
+	}
+	return &WeakSubjectivityData{
+		Epoch:     types.Epoch(epoch),
+		BlockRoot: bytesutil.ToBytes32(blockRoot),
+		StateRoot: bytesutil.ToBytes32(stateRoot),
+	}, nil
+}
+
+func non200Err(response *http.Response) error {
+	bodyBytes, err := ioutil.ReadAll(response.Body)
+	var body string
+	if err != nil {
+		body = "(Unable to read response body.)"
+	} else {
+		body = "response body:\n" + string(bodyBytes)
+	}
+	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
+	switch response.StatusCode {
+	case 404:
+		return errors.Wrap(ErrNotFound, msg)
+	default:
+		return errors.Wrap(ErrNotOK, msg)
+	}
 }
 
 type forkResponse struct {
@@ -323,85 +390,4 @@ func (fsr *forkScheduleResponse) OrderedForkSchedule() (params.OrderedForkSchedu
 	}
 	sort.Sort(ofs)
 	return ofs, nil
-}
-
-// GetForkSchedule retrieve all forks, past present and future, of which this node is aware.
-func (c *Client) GetForkSchedule() (params.OrderedForkSchedule, error) {
-	u := c.urlForPath(get_fork_schedule_path)
-	log.Printf("requesting %s", u.String())
-	r, err := c.Client.Get(u.String())
-	defer func() {
-		err = r.Body.Close()
-	}()
-	if err != nil {
-		return nil, err
-	}
-	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
-	}
-	fsr := &forkScheduleResponse{}
-	err = json.NewDecoder(r.Body).Decode(fsr)
-	if err != nil {
-		return nil, err
-	}
-	ofs, err := fsr.OrderedForkSchedule()
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("problem unmarshaling %s response", get_fork_schedule_path))
-	}
-	return ofs, nil
-}
-
-// GetWeakSubjectivity calls a proposed API endpoint that is unique to prysm
-// This api method does the following:
-// - computes weak subjectivity epoch
-// - finds the highest non-skipped block preceding the epoch
-// - returns the htr of the found block and returns this + the value of state_root from the block
-func (c *Client) GetWeakSubjectivity() (*WeakSubjectivityData, error) {
-	u := c.urlForPath(get_weak_subjectivity_path)
-	r, err := c.Client.Get(u.String())
-	if err != nil {
-		return nil, err
-	}
-	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
-	}
-	v := &apimiddleware.WeakSubjectivityResponse{}
-	err = json.NewDecoder(r.Body).Decode(v)
-	if err != nil {
-		return nil, err
-	}
-	epoch, err := strconv.ParseUint(v.Data.Checkpoint.Epoch, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	blockRoot, err := hexutil.Decode(v.Data.Checkpoint.Root)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := hexutil.Decode(v.Data.StateRoot)
-	if err != nil {
-		return nil, err
-	}
-	return &WeakSubjectivityData{
-		Epoch:     types.Epoch(epoch),
-		BlockRoot: bytesutil.ToBytes32(blockRoot),
-		StateRoot: bytesutil.ToBytes32(stateRoot),
-	}, nil
-}
-
-func non200Err(response *http.Response) error {
-	bodyBytes, err := ioutil.ReadAll(response.Body)
-	var body string
-	if err != nil {
-		body = "(Unable to read response body.)"
-	} else {
-		body = "response body:\n" + string(bodyBytes)
-	}
-	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
-	switch response.StatusCode {
-	case 404:
-		return errors.Wrap(ErrNotFound, msg)
-	default:
-		return errors.Wrap(ErrNotOK, msg)
-	}
 }

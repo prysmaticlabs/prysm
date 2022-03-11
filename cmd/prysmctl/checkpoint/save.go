@@ -2,14 +2,10 @@ package checkpoint
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
-	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/api/client/openapi"
-	"github.com/prysmaticlabs/prysm/proto/sniff"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -58,33 +54,27 @@ func cliActionSave(_ *cli.Context) error {
 
 func saveCheckpoint(client *openapi.Client) error {
 	ctx := context.Background()
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 
 	od, err := openapi.DownloadOriginData(ctx, client)
 	if err != nil {
-		log.Fatalf(err.Error())
-	}
-
-	blockPath := fname("block", od.ConfigFork, od.Block.Block().Slot(), od.WeakSubjectivity.BlockRoot)
-	log.Printf("saving ssz-encoded block to to %s", blockPath)
-	err = os.WriteFile(blockPath, od.BlockBytes, 0600)
-	if err != nil {
 		return err
 	}
 
-	stateRoot, err := od.State.HashTreeRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Could not compute HTR of state downloaded from remote beacon node")
-	}
-	statePath := fname("state", od.ConfigFork, od.State.Slot(), stateRoot)
-	log.Printf("saving ssz-encoded state to to %s", statePath)
-	err = os.WriteFile(statePath, od.StateBytes, 0600)
+	blockPath, err := od.SaveBlock(cwd)
 	if err != nil {
 		return err
 	}
+	log.Printf("saved ssz-encoded block to to %s", blockPath)
+
+	statePath, err := od.SaveState(cwd)
+	if err != nil {
+		return err
+	}
+	log.Printf("saved ssz-encoded state to to %s", statePath)
 
 	return nil
-}
-
-func fname(prefix string, cf *sniff.ConfigFork, slot types.Slot, root [32]byte) string {
-	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, cf.ConfigName.String(), cf.Fork.String(), slot, root)
 }
