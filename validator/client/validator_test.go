@@ -1385,12 +1385,12 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	}
 	wait := make(chan struct{})
 	go func() {
+		defer close(wait)
 		err = v.WaitForKeymanagerInitialization(ctx)
 		require.NoError(t, err)
 		km, err := v.Keymanager()
 		require.NoError(t, err)
 		require.NotNil(t, km)
-		close(wait)
 	}()
 
 	walletChan <- wallet.New(&wallet.Config{
