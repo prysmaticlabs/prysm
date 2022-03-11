@@ -14,6 +14,9 @@ build:remote-cache --remote_download_toplevel
 build:remote-cache --remote_cache=grpc://bazel-remote-cache:9092
 build:remote-cache --experimental_remote_downloader=grpc://bazel-remote-cache:9092
 build:remote-cache --remote_local_fallback
+build:remote-cache --experimental_remote_cache_async
+build:remote-cache --experimental_remote_merkle_tree_cache
+build:remote-cache --experimental_action_cache_store_output_metadata
 # Enforce stricter environment rules, which eliminates some non-hermetic
 # behavior and therefore improves both the remote cache hit rate and the
 # correctness and repeatability of the build.
