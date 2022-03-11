@@ -143,8 +143,8 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 	return f.store.proposerBoost()
 }
 
-// ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(
+// InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
+func (f *ForkChoice) InsertOptimisticBlock(
 	ctx context.Context,
 	slot types.Slot,
 	blockRoot, parentRoot [32]byte,
