@@ -241,7 +241,7 @@ func handleRPCError(err error) error {
 		if !ok {
 			return errors.Wrap(err, "got an unexpected error")
 		}
-		return errors.Wrapf(ErrServer, "%v", errWithData.ErrorData())
+		return errors.Wrapf(ErrServer, "%s", errWithData.Error())
 	default:
 		return err
 	}

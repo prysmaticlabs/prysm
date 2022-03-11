@@ -72,15 +72,18 @@ func (node *Node) Start(ctx context.Context) error {
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Ports.Eth1RPCPort+node.index),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Ports.Eth1WSPort+node.index),
+		fmt.Sprintf("--authrpc.port=%d", e2e.TestParams.Ports.Eth1AuthRPCPort+node.index),
 		fmt.Sprintf("--bootnodes=%s", node.enr),
 		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.Eth1Port+node.index),
 		fmt.Sprintf("--networkid=%d", NetworkId),
 		"--http",
+		"--http.api=engine,net,eth",
 		"--http.addr=127.0.0.1",
 		"--http.corsdomain=\"*\"",
 		"--http.vhosts=\"*\"",
 		"--rpc.allow-unprotected-txs",
 		"--ws",
+		"--ws.api=net,eth,engine",
 		"--ws.addr=127.0.0.1",
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
@@ -98,6 +101,9 @@ func (node *Node) Start(ctx context.Context) error {
 
 	if err = runCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start eth1 chain: %w", err)
+	}
+	if err = helpers.WaitForTextInFile(file, "Started P2P networking"); err != nil {
+		return fmt.Errorf("P2P log not found, this means the eth1 chain had issues starting: %w", err)
 	}
 
 	// Mark node as ready.

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -115,12 +116,19 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if node.config.TestSync {
 		expectedNumOfPeers += 1
 	}
+	jwtPath := path.Join(e2e.TestParams.TestPath, "eth1data/"+strconv.Itoa(node.index)+"/")
+	if index == 0 {
+		jwtPath = path.Join(e2e.TestParams.TestPath, "eth1data/miner/")
+	}
+	jwtPath = path.Join(jwtPath, "geth/jwtsecret")
 	args := []string{
 		fmt.Sprintf("--%s=%s/eth2-beacon-node-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, stdOutFile.Name()),
 		fmt.Sprintf("--%s=%s", flags.DepositContractFlag.Name, e2e.TestParams.ContractAddress.Hex()),
 		fmt.Sprintf("--%s=%d", flags.RPCPort.Name, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index),
 		fmt.Sprintf("--%s=http://127.0.0.1:%d", flags.HTTPWeb3ProviderFlag.Name, e2e.TestParams.Ports.Eth1RPCPort),
+		fmt.Sprintf("--%s=http://127.0.0.1:%d", flags.ExecutionProviderFlag.Name, e2e.TestParams.Ports.Eth1RPCPort),
+		fmt.Sprintf("--%s=%s", flags.ExecutionJWTSecretFlag.Name, jwtPath),
 		fmt.Sprintf("--%s=%d", flags.MinSyncPeers.Name, 1),
 		fmt.Sprintf("--%s=%d", cmdshared.P2PUDPPort.Name, e2e.TestParams.Ports.PrysmBeaconNodeUDPPort+index),
 		fmt.Sprintf("--%s=%d", cmdshared.P2PTCPPort.Name, e2e.TestParams.Ports.PrysmBeaconNodeTCPPort+index),
