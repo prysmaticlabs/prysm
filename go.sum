@@ -63,8 +63,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
-github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20220310105427-50db9572db86 h1:G4UDqAXzy3wElp6p51tYXyNia1AWb/7dsN1YoxpJl0g=
-github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20220310105427-50db9572db86/go.mod h1:CCsGXufQRqVL3+3t9zMPvzcwFwYlLdZ6enPluWYM64k=
+github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20220311140157-b951e9cbea24 h1:lk3QScfS9ueTshQBpLQ0mhrHKkr6Ky15ilQH4VXmP4U=
+github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20220311140157-b951e9cbea24/go.mod h1:CCsGXufQRqVL3+3t9zMPvzcwFwYlLdZ6enPluWYM64k=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
