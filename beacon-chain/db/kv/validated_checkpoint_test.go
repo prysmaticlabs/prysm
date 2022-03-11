@@ -20,7 +20,7 @@ func TestValidateCheckpoint(t *testing.T) {
 	slotB := types.Slot(2)
 
 	// add first checkpoint
-	require.NoError(t, db.saveLastValidatedCheckpoint(ctx, checkpointA, slotA))
+	require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, checkpointA, slotA))
 
 	rcvdRoot, rcvdSlot, err := db.LastValidatedCheckpoint(ctx)
 	require.NoError(t, err)
@@ -29,7 +29,7 @@ func TestValidateCheckpoint(t *testing.T) {
 	require.Equal(t, true, uint64(slotA) == uint64(rcvdSlot))
 
 	// update the checkpoint and slot
-	require.NoError(t, db.saveLastValidatedCheckpoint(ctx, checkpointB, slotB))
+	require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, checkpointB, slotB))
 
 	rcvdRoot, rcvdSlot, err = db.LastValidatedCheckpoint(ctx)
 	require.NoError(t, err)
