@@ -102,8 +102,8 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 	processedAttestationCount.Inc()
 }
 
-// ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(
+// InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
+func (f *ForkChoice) InsertOptimisticBlock(
 	ctx context.Context,
 	slot types.Slot,
 	blockRoot, parentRoot [fieldparams.RootLength]byte,

@@ -41,7 +41,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		slot := types.Slot(1)
 		newRoot := indexToHash(1)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				slot,
 				newRoot,
@@ -64,7 +64,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		slot = types.Slot(2)
 		newRoot = indexToHash(2)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				slot,
 				newRoot,
@@ -89,7 +89,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		slot = types.Slot(3)
 		newRoot = indexToHash(3)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				slot,
 				newRoot,
@@ -114,7 +114,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		slot = types.Slot(3)
 		newRoot = indexToHash(4)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				slot,
 				newRoot,
@@ -183,7 +183,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		honestBlockSlot := types.Slot(2)
 		honestBlock := indexToHash(2)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				honestBlockSlot,
 				honestBlock,
@@ -199,7 +199,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		maliciouslyWithheldBlockSlot := types.Slot(1)
 		maliciouslyWithheldBlock := indexToHash(1)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				maliciouslyWithheldBlockSlot,
 				maliciouslyWithheldBlock,
@@ -247,7 +247,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		honestBlockSlot := types.Slot(2)
 		honestBlock := indexToHash(2)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				honestBlockSlot,
 				honestBlock,
@@ -265,7 +265,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		maliciouslyWithheldBlockSlot := types.Slot(1)
 		maliciouslyWithheldBlock := indexToHash(1)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				maliciouslyWithheldBlockSlot,
 				maliciouslyWithheldBlock,
@@ -320,7 +320,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		cSlot := types.Slot(2)
 		c := indexToHash(2)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				cSlot,
 				c,
@@ -343,7 +343,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		bSlot := types.Slot(1)
 		b := indexToHash(1)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				bSlot,
 				b,
@@ -366,7 +366,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		dSlot := types.Slot(3)
 		d := indexToHash(3)
 		require.NoError(t,
-			f.ProcessBlock(
+			f.InsertOptimisticBlock(
 				ctx,
 				dSlot,
 				d,
