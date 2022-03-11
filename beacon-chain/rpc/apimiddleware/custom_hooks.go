@@ -182,8 +182,8 @@ type altairPublishBlockRequestJson struct {
 }
 
 type bellatrixPublishBlockRequestJson struct {
-	AltairBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
-	Signature   string                    `json:"signature" hex:"true"`
+	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
+	Signature      string                    `json:"signature" hex:"true"`
 }
 
 // setInitialPublishBlockPostRequest is triggered before we deserialize the request JSON into a struct.
@@ -250,8 +250,8 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 	if block, ok := endpoint.PostRequest.(*signedBeaconBlockBellatrixContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &bellatrixPublishBlockRequestJson{
-			AltairBlock: block.Message,
-			Signature:   block.Signature,
+			BellatrixBlock: block.Message,
+			Signature:      block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
