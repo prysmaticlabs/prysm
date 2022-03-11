@@ -181,6 +181,11 @@ type altairPublishBlockRequestJson struct {
 	Signature   string                 `json:"signature" hex:"true"`
 }
 
+type bellatrixPublishBlindedBlockRequestJson struct {
+	BellatrixBlock *blindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+	Signature      string                           `json:"signature" hex:"true"`
+}
+
 // setInitialPublishBlockPostRequest is triggered before we deserialize the request JSON into a struct.
 // We don't know which version of the block got posted, but we can determine it from the slot.
 // We know that both Phase 0 and Altair blocks have a Message field with a Slot field,
@@ -235,6 +240,79 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 		actualPostReq := &altairPublishBlockRequestJson{
 			AltairBlock: block.Message,
 			Signature:   block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
+}
+
+// setInitialPublishBlindedBlockPostRequest is triggered before we deserialize the request JSON into a struct.
+// We don't know which version of the block got posted, but we can determine it from the slot.
+// We know that blocks of all versions have a Message field with a Slot field,
+// so we deserialize the request into a struct s, which has the right fields, to obtain the slot.
+// Once we know the slot, we can determine what the PostRequest field of the endpoint should be, and we set it appropriately.
+func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
+	_ http.ResponseWriter,
+	req *http.Request,
+) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	s := struct {
+		Message struct {
+			Slot string
+		}
+	}{}
+
+	buf, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
+	}
+	if err := json.Unmarshal(buf, &s); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read slot from body")
+	}
+	slot, err := strconv.ParseUint(s.Message.Slot, 10, 64)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
+	}
+	currentEpoch := slots.ToEpoch(types.Slot(slot))
+	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
+		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
+	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
+		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}
+	} else {
+		endpoint.PostRequest = &signedBlindedBeaconBlockBellatrixContainerJson{}
+	}
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+	return true, nil
+}
+
+// In preparePublishedBlindedBlock we transform the PostRequest.
+// gRPC expects either an XXX_block field in the JSON object, but we have a message field at this point.
+// We do a simple conversion depending on the type of endpoint.PostRequest
+// (which was filled out previously in setInitialPublishBlockPostRequest).
+func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
+	if block, ok := endpoint.PostRequest.(*signedBeaconBlockContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &phase0PublishBlockRequestJson{
+			Phase0Block: block.Message,
+			Signature:   block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	if block, ok := endpoint.PostRequest.(*signedBeaconBlockAltairContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &altairPublishBlockRequestJson{
+			AltairBlock: block.Message,
+			Signature:   block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	if block, ok := endpoint.PostRequest.(*signedBlindedBeaconBlockBellatrixContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &bellatrixPublishBlindedBlockRequestJson{
+			BellatrixBlock: block.Message,
+			Signature:      block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
