@@ -50,6 +50,7 @@ func (f *ForkChoice) IsOptimistic(ctx context.Context, root [32]byte) (bool, err
 	_, ok = f.syncedTips.validatedTips[root]
 	if ok {
 		f.syncedTips.RUnlock()
+		f.store.nodesLock.RUnlock()
 		return false, nil
 	}
 	f.syncedTips.RUnlock()
@@ -57,11 +58,13 @@ func (f *ForkChoice) IsOptimistic(ctx context.Context, root [32]byte) (bool, err
 	// If the slot is higher than the max synced tip, it's optimistic
 	min, max := f.boundarySyncedTips()
 	if slot > max {
+		f.store.nodesLock.RUnlock()
 		return true, nil
 	}
 
 	// If the slot is lower than the min synced tip, it's fully validated
 	if slot <= min {
+		f.store.nodesLock.RUnlock()
 		return false, nil
 	}
 
@@ -69,6 +72,7 @@ func (f *ForkChoice) IsOptimistic(ctx context.Context, root [32]byte) (bool, err
 	// optimistic
 	childIndex := node.BestChild()
 	if childIndex == NonExistentNode {
+		f.store.nodesLock.RUnlock()
 		return true, nil
 	}
 

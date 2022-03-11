@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	pmath "github.com/prysmaticlabs/prysm/math"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -446,7 +447,11 @@ func (s *Store) applyWeightChanges(
 				s.proposerBoostLock.Unlock()
 				return err
 			}
-			nodeDelta = nodeDelta + int(proposerScore)
+			iProposerScore, err := pmath.Int(proposerScore)
+			if err != nil {
+				return err
+			}
+			nodeDelta = nodeDelta + iProposerScore
 		}
 		s.proposerBoostLock.Unlock()
 
