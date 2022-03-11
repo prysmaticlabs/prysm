@@ -116,11 +116,11 @@ func run(ctx context.Context, v iface.Validator) {
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// First time sets up the validator fees.
 	if err := v.SetPubKeyToValidatorIndexMap(ctx, km); err != nil {
-		log.Fatalf("Could not set pubkey to validator index map: %v", err)
+		log.Fatalf("Could not set pubkey to validator index map: %v", err) // allow fatal. skipcq
 	}
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if err := v.PrepareBeaconProposer(ctx, km); err != nil {
-		log.Fatalf("PreparedBeaconProposer Failed: %v", err)
+		log.Fatalf("PreparedBeaconProposer Failed: %v", err) // allow fatal. skipcq
 	}
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
