@@ -20,7 +20,7 @@ const MaxSlotBuffer = uint64(1 << 7)
 // value.
 func StartTime(genesis uint64, slot types.Slot) time.Time {
 	duration := time.Second * time.Duration(slot.Mul(params.BeaconConfig().SecondsPerSlot))
-	startTime := time.Unix(int64(genesis), 0).Add(duration)
+	startTime := time.Unix(int64(genesis), 0).Add(duration) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
 	return startTime
 }
 
@@ -153,7 +153,7 @@ func ToTime(genesisTimeSec uint64, slot types.Slot) (time.Time, error) {
 	if err != nil {
 		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future: %w", slot, err)
 	}
-	return time.Unix(int64(sTime), 0), nil
+	return time.Unix(int64(sTime), 0), nil // lint:ignore uintcast -- A timestamp will not exceed int64 in your lifetime.
 }
 
 // Since computes the number of time slots that have occurred since the given timestamp.
@@ -165,7 +165,7 @@ func Since(time time.Time) types.Slot {
 // provided genesis time.
 func CurrentSlot(genesisTimeSec uint64) types.Slot {
 	now := prysmTime.Now().Unix()
-	genesis := int64(genesisTimeSec)
+	genesis := int64(genesisTimeSec) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
 	if now < genesis {
 		return 0
 	}

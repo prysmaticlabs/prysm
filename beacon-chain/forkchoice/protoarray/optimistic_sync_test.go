@@ -548,3 +548,45 @@ func TestFindSyncedTip(t *testing.T) {
 		syncedTips.RUnlock()
 	}
 }
+
+// This is a regression test (10341)
+func TestIsOptimistic_DeadLock(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 90, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1, true))
+	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1, true))
+	tips := map[[32]byte]types.Slot{
+		[32]byte{'a'}: 100,
+		[32]byte{'d'}: 102,
+	}
+	f.syncedTips.validatedTips = tips
+	_, err := f.IsOptimistic(ctx, [32]byte{'a'})
+	require.NoError(t, err)
+
+	// Acquire a write lock, this should not hang
+	f.store.nodesLock.Lock()
+	f.store.nodesLock.Unlock()
+	_, err = f.IsOptimistic(ctx, [32]byte{'e'})
+	require.NoError(t, err)
+
+	// Acquire a write lock, this should not hang
+	f.store.nodesLock.Lock()
+	f.store.nodesLock.Unlock()
+	_, err = f.IsOptimistic(ctx, [32]byte{'b'})
+	require.NoError(t, err)
+
+	// Acquire a write lock, this should not hang
+	f.store.nodesLock.Lock()
+	f.store.nodesLock.Unlock()
+
+	_, err = f.IsOptimistic(ctx, [32]byte{'c'})
+	require.NoError(t, err)
+
+	// Acquire a write lock, this should not hang
+	f.store.nodesLock.Lock()
+	f.store.nodesLock.Unlock()
+
+}
