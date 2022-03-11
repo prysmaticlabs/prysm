@@ -188,7 +188,7 @@ type bellatrixPublishBlockRequestJson struct {
 
 // setInitialPublishBlockPostRequest is triggered before we deserialize the request JSON into a struct.
 // We don't know which version of the block got posted, but we can determine it from the slot.
-// We know that both Phase 0 and Altair blocks have a Message field with a Slot field,
+// We know that blocks of all versions have a Message field with a Slot field,
 // so we deserialize the request into a struct s, which has the right fields, to obtain the slot.
 // Once we know the slot, we can determine what the PostRequest field of the endpoint should be, and we set it appropriately.
 func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
@@ -225,7 +225,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 }
 
 // In preparePublishedBlock we transform the PostRequest.
-// gRPC expects either a phase0_block or an altair_block field in the JSON object, but we have a message field at this point.
+// gRPC expects an XXX_block field in the JSON object, but we have a message field at this point.
 // We do a simple conversion depending on the type of endpoint.PostRequest
 // (which was filled out previously in setInitialPublishBlockPostRequest).
 func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
