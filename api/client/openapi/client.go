@@ -116,11 +116,11 @@ func (c *Client) urlForPath(methodPath string) *url.URL {
 // <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
 // for the named identifiers.
 // The return value contains the ssz-encoded bytes.
-func (c *Client) GetBlock(id StateOrBlockId) ([]byte, error) {
+func (c *Client) GetBlock(ctx context.Context, id StateOrBlockId) ([]byte, error) {
 	blockPath := path.Join(get_signed_block_path, string(id))
 	u := c.urlForPath(blockPath)
 	log.Printf("requesting %s", u.String())
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -142,15 +142,16 @@ func (c *Client) GetBlock(id StateOrBlockId) ([]byte, error) {
 	return bb, nil
 }
 
+var getBlockRootTpl = template.Must(template.New("get-block-root").Parse(get_block_root_path))
+
 // GetBlockRoot retrieves the hash_tree_root of the BeaconBlock for the given block id.
 // Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
 // <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
 // for the named identifiers.
-func (c *Client) GetBlockRoot(blockId StateOrBlockId) ([32]byte, error) {
+func (c *Client) GetBlockRoot(ctx context.Context, blockId StateOrBlockId) ([32]byte, error) {
 	var root [32]byte
-	t := template.Must(template.New("get-block-root").Parse(get_block_root_path))
 	b := bytes.NewBuffer(nil)
-	err := t.Execute(b, struct{ BlockId string }{BlockId: string(blockId)})
+	err := getBlockRootTpl.Execute(b, struct{ BlockId string }{BlockId: string(blockId)})
 	if err != nil {
 		return root, errors.Wrap(err, fmt.Sprintf("unable to generate path w/ blockId=%s", blockId))
 	}
@@ -183,14 +184,15 @@ func (c *Client) GetBlockRoot(blockId StateOrBlockId) ([32]byte, error) {
 	return bytesutil.ToBytes32(rs), nil
 }
 
+var getForkTpl = template.Must(template.New("get-fork-for-state").Parse(get_fork_for_state_path))
+
 // GetFork queries the Beacon Node API for the Fork from the state identified by stateId.
 // Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
 // <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
 // for the named identifiers.
 func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fork, error) {
-	t := template.Must(template.New("get-fork-for-state").Parse(get_fork_for_state_path))
 	b := bytes.NewBuffer(nil)
-	err := t.Execute(b, struct{ StateId string }{StateId: string(stateId)})
+	err := getForkTpl.Execute(b, struct{ StateId string }{StateId: string(stateId)})
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to generate path w/ stateId=%s", stateId))
 	}
@@ -220,10 +222,14 @@ func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fo
 }
 
 // GetForkSchedule retrieve all forks, past present and future, of which this node is aware.
-func (c *Client) GetForkSchedule() (params.OrderedForkSchedule, error) {
+func (c *Client) GetForkSchedule(ctx context.Context) (params.OrderedForkSchedule, error) {
 	u := c.urlForPath(get_fork_schedule_path)
 	log.Printf("requesting %s", u.String())
-	r, err := c.hc.Get(u.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	r, err := c.hc.Do(req)
 	defer func() {
 		err = r.Body.Close()
 	}()
@@ -282,9 +288,13 @@ func (c *Client) GetState(ctx context.Context, stateId StateOrBlockId) (io.Reade
 // - computes weak subjectivity epoch
 // - finds the highest non-skipped block preceding the epoch
 // - returns the htr of the found block and returns this + the value of state_root from the block
-func (c *Client) GetWeakSubjectivity() (*WeakSubjectivityData, error) {
+func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData, error) {
 	u := c.urlForPath(get_weak_subjectivity_path)
-	r, err := c.hc.Get(u.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	r, err := c.hc.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -153,7 +153,7 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 		return nil, errors.Wrap(err, "error while computing block root using state data")
 	}
 
-	blockBytes, err := client.GetBlock(IdFromRoot(computedBlockRoot))
+	blockBytes, err := client.GetBlock(ctx, IdFromRoot(computedBlockRoot))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by slot = %d", slot))
 	}
@@ -191,7 +191,7 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 // different technique where we first download the head state which can be used to compute the
 // weak subjectivity epoch on the client side.
 func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error) {
-	ws, err := client.GetWeakSubjectivity()
+	ws, err := client.GetWeakSubjectivity(ctx)
 	if err != nil {
 		// a 404 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
 		if !errors.Is(err, ErrNotFound) {
@@ -237,7 +237,7 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing hash_tree_root of latest_block_header")
 	}
-	blockBytes, err := client.GetBlock(IdFromRoot(ws.BlockRoot))
+	blockBytes, err := client.GetBlock(ctx, IdFromRoot(ws.BlockRoot))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by slot = %d", slot))
 	}
