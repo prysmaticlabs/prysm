@@ -18,7 +18,7 @@ var (
 func DeterministicName(seed []byte, separator string) string {
 	rng := rand.NewDeterministicGenerator()
 	hashedValue := hash.FastSum64(seed)
-	rng.Seed(int64(hashedValue))
+	rng.Seed(int64(hashedValue)) // lint:ignore uintcast -- It's safe to do this for deterministic naming.
 	adverb := adverbs[rng.Intn(len(adverbs)-1)]
 	adjective := adjectives[rng.Intn(len(adjectives)-1)]
 	name := names[rng.Intn(len(names)-1)]

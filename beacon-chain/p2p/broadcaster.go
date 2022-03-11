@@ -104,8 +104,8 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 
 	span.AddAttributes(
 		trace.BoolAttribute("hasPeer", hasPeer),
-		trace.Int64Attribute("slot", int64(att.Data.Slot)),
-		trace.Int64Attribute("subnet", int64(subnet)),
+		trace.Int64Attribute("slot", int64(att.Data.Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
+		trace.Int64Attribute("subnet", int64(subnet)),      // lint:ignore uintcast -- It's safe to do this for tracing.
 	)
 
 	if !hasPeer {
@@ -160,8 +160,8 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 
 	span.AddAttributes(
 		trace.BoolAttribute("hasPeer", hasPeer),
-		trace.Int64Attribute("slot", int64(sMsg.Slot)),
-		trace.Int64Attribute("subnet", int64(subnet)),
+		trace.Int64Attribute("slot", int64(sMsg.Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
+		trace.Int64Attribute("subnet", int64(subnet)),  // lint:ignore uintcast -- It's safe to do this for tracing.
 	)
 
 	if !hasPeer {
@@ -213,7 +213,9 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 	if span.IsRecordingEvents() {
 		id := hash.FastSum64(buf.Bytes())
 		messageLen := int64(buf.Len())
-		span.AddMessageSendEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
+		// lint:ignore uintcast -- It's safe to do this for tracing.
+		iid := int64(id)
+		span.AddMessageSendEvent(iid, messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}
 	if err := s.PublishToTopic(ctx, topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
 		err := errors.Wrap(err, "could not publish message")

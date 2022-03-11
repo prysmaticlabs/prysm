@@ -83,7 +83,7 @@ func main() {
 
 		// Construct label of each node.
 		rStr := hex.EncodeToString(r[:2])
-		label := "slot: " + strconv.Itoa(int(b.Block().Slot())) + "\n root: " + rStr
+		label := "slot: " + strconv.Itoa(int(b.Block().Slot())) + "\n root: " + rStr // lint:ignore uintcast -- this is OK for logging.
 
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{
