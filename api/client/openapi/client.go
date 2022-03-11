@@ -27,11 +27,11 @@ import (
 
 const (
 	get_weak_subjectivity_path = "/eth/v1/beacon/weak_subjectivity"
-	get_signed_block_path  = "/eth/v2/beacon/blocks"
-	get_state_path         = "/eth/v2/debug/beacon/states"
-	get_fork_schedule_path  = "/eth/v1/config/fork_schedule"
-	get_fork_for_state_path = "/eth/v1/beacon/states/{{.StateId}}/fork"
-	get_block_root_path     = "/eth/v1/beacon/blocks/{{.BlockId}}/root"
+	get_signed_block_path      = "/eth/v2/beacon/blocks"
+	get_state_path             = "/eth/v2/debug/beacon/states"
+	get_fork_schedule_path     = "/eth/v1/config/fork_schedule"
+	get_fork_for_state_path    = "/eth/v1/beacon/states/{{.StateId}}/fork"
+	get_block_root_path        = "/eth/v1/beacon/blocks/{{.BlockId}}/root"
 )
 
 type StateOrBlockId string
@@ -42,7 +42,6 @@ const (
 	IdFinalized StateOrBlockId = "finalized"
 	IdJustified StateOrBlockId = "finalized"
 )
-
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)

@@ -74,9 +74,9 @@ func TestGetState(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, bs, r))
 
 		cc := &mockstategen.MockCanonicalChecker{Is: true}
-		cs := &mockstategen.MockCurrentSlotter{Slot: bs.Slot()+1}
+		cs := &mockstategen.MockCurrentSlotter{Slot: bs.Slot() + 1}
 		p := StateProvider{
-			BeaconDB: db,
+			BeaconDB:        db,
 			ReplayerBuilder: stategen.NewCanonicalBuilder(db, cc, cs),
 		}
 
