@@ -19,7 +19,7 @@ var (
 	powchainBucket          = []byte("powchain")
 	stateValidatorsBucket   = []byte("state-validators")
 	feeRecipientBucket      = []byte("fee-recipient")
-	validatedTips           = []byte("validated-synced-tips")
+	lastValidatedCheckpoint = []byte("last-validated-checkpoint")
 
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
 	slotsHasObjectBucket = []byte("slots-has-objects")
