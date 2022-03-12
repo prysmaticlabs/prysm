@@ -353,6 +353,10 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return true, nil
 	}
 
+	if slots.ToEpoch(slot)+1 < validatedCheckpoint.Epoch {
+		return false, nil
+	}
+
 	summary, err := s.cfg.BeaconDB.StateSummary(ctx, bytesutil.ToBytes32(validatedCheckpoint.Root))
 	if err != nil {
 		return false, err
