@@ -348,11 +348,16 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return false, err
 	}
 
+	slot := blk.Block().Slot()
+	if slots.ToEpoch(slot) > validatedCheckpoint.Epoch {
+		return true, nil
+	}
+
 	summary, err := s.cfg.BeaconDB.StateSummary(ctx, bytesutil.ToBytes32(validatedCheckpoint.Root))
 	if err != nil {
 		return false, err
 	}
-	return blk.Block().Slot() > summary.Slot, nil
+	return slot > summary.Slot, nil
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.
