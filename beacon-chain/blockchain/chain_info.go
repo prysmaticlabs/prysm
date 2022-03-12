@@ -7,6 +7,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -323,13 +325,34 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	return s.cfg.ForkChoiceStore.IsOptimistic(ctx, s.head.root)
+	return s.IsOptimisticForRoot(ctx, s.head.root)
 }
 
 // IsOptimisticForRoot takes the root and slot as aguments instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
-	return s.cfg.ForkChoiceStore.IsOptimistic(ctx, root)
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, root)
+	if err == nil {
+		return optimistic, nil
+	}
+	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+		return false, err
+	}
+	blk, err := s.cfg.BeaconDB.Block(ctx, root)
+	if err != nil {
+		return false, err
+	}
+
+	validatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	summary, err := s.cfg.BeaconDB.StateSummary(ctx, bytesutil.ToBytes32(validatedCheckpoint.Root))
+	if err != nil {
+		return false, err
+	}
+	return blk.Block().Slot() > summary.Slot, nil
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.

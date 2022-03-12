@@ -147,10 +147,10 @@ func TestOptimistic(t *testing.T) {
 
 	// We test first nodes outside the Fork Choice store
 	_, err := f.IsOptimistic(ctx, root0)
-	require.ErrorIs(t, errUnknownNodeRoot, err)
+	require.ErrorIs(t, ErrUnknownNodeRoot, err)
 
 	_, err = f.IsOptimistic(ctx, root1)
-	require.ErrorIs(t, errUnknownNodeRoot, err)
+	require.ErrorIs(t, ErrUnknownNodeRoot, err)
 
 	// We check all nodes in the Fork Choice store.
 	op, err := f.IsOptimistic(ctx, nodeA.root)
