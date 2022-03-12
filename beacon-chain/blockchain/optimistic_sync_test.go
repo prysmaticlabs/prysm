@@ -13,7 +13,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -482,7 +481,7 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 
 	params.BeaconConfig().SafeSlotsToImportOptimistically = 128
 	service.genesisTime = time.Now().Add(-time.Second * 12 * 2 * 128)
-	payload := &enginev1.ExecutionPayload{
+	payload := &v1.ExecutionPayload{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     make([]byte, 32),
