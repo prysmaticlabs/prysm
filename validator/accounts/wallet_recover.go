@@ -35,8 +35,8 @@ const (
 )
 
 var (
-	ErrIncorrectWords = errors.New("incorrect number of words provided")
-	ErrEmptyMnemonic  = errors.New("phrase cannot be empty")
+	ErrIncorrectWordNumber = errors.New("incorrect number of words provided")
+	ErrEmptyMnemonic       = errors.New("phrase cannot be empty")
 )
 
 // RecoverWalletConfig to run the recover wallet function.
@@ -244,7 +244,7 @@ func ValidateMnemonic(mnemonic string) error {
 		validWordCount += 1
 	}
 	if validWordCount != phraseWordCount {
-		return errors.Wrapf(ErrIncorrectWords, "phrase must be %d words, entered %d", phraseWordCount, validWordCount)
+		return errors.Wrapf(ErrIncorrectWordNumber, "phrase must be %d words, entered %d", phraseWordCount, validWordCount)
 	}
 	return nil
 }

@@ -124,13 +124,13 @@ func TestValidateMnemonic(t *testing.T) {
 			name:     "Invalid Mnemonic with too few words",
 			mnemonic: "bag wagon luxury iron swarm yellow course merge trumpet wide cash idea disagree deny teach canvas profit iron sting warfare slide",
 			wantErr:  true,
-			err:      ErrIncorrectWords,
+			err:      ErrIncorrectWordNumber,
 		},
 		{
 			name:     "Invalid Mnemonic with too many words",
 			mnemonic: "bag wagon luxury iron swarm yellow course merge trumpet cash wide decide profit cash idea disagree deny teach canvas profit slice beach iron sting warfare slide",
 			wantErr:  true,
-			err:      ErrIncorrectWords,
+			err:      ErrIncorrectWordNumber,
 		},
 		{
 			name:     "Empty Mnemonic",
@@ -142,13 +142,13 @@ func TestValidateMnemonic(t *testing.T) {
 			name:     "Junk Mnemonic",
 			mnemonic: "                         a      ",
 			wantErr:  true,
-			err:      ErrIncorrectWords,
+			err:      ErrIncorrectWordNumber,
 		},
 		{
 			name:     "Junk Mnemonic ",
 			mnemonic: " evilpacket ",
 			wantErr:  true,
-			err:      ErrIncorrectWords,
+			err:      ErrIncorrectWordNumber,
 		},
 	}
 	for _, tt := range tests {
