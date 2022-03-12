@@ -553,11 +553,11 @@ func TestFindSyncedTip(t *testing.T) {
 func TestIsOptimistic_DeadLock(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 90, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1, true))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 90, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1))
 	tips := map[[32]byte]types.Slot{
 		[32]byte{'a'}: 100,
 		[32]byte{'d'}: 102,
