@@ -34,6 +34,11 @@ const (
 	mnemonicPassphrasePromptText = "(Advanced) Enter the '25th word' passphrase for your mnemonic"
 )
 
+var (
+	ErrIncorrectWords = errors.New("incorrect number of words provided")
+	ErrEmptyMnemonic  = errors.New("phrase cannot be empty")
+)
+
 // RecoverWalletConfig to run the recover wallet function.
 type RecoverWalletConfig struct {
 	WalletDir        string
@@ -228,16 +233,18 @@ func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 // as specified(currently 24).
 func ValidateMnemonic(mnemonic string) error {
 	if strings.Trim(mnemonic, " ") == "" {
-		return errors.New("phrase cannot be empty")
+		return ErrEmptyMnemonic
 	}
 	words := strings.Split(mnemonic, " ")
-	for i, word := range words {
+	validWordCount := 0
+	for _, word := range words {
 		if strings.Trim(word, " ") == "" {
-			words = append(words[:i], words[i+1:]...)
+			continue
 		}
+		validWordCount += 1
 	}
-	if len(words) != phraseWordCount {
-		return fmt.Errorf("phrase must be %d words, entered %d", phraseWordCount, len(words))
+	if validWordCount != phraseWordCount {
+		return errors.Wrapf(ErrIncorrectWords, "phrase must be %d words, entered %d", phraseWordCount, validWordCount)
 	}
 	return nil
 }
