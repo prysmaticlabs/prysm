@@ -12,7 +12,7 @@
     "berlinBlock": 0,
     "londonBlock": 0,
     "mergeForkBlock": 300,
-    "terminalTotalDifficulty": 1000,
+    "terminalTotalDifficulty": 600,
     "clique": {
       "period": 2,
       "epoch": 30000
