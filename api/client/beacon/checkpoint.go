@@ -3,9 +3,10 @@ package beacon
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path"
+
+	"github.com/rogpeppe/go-internal/semver"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -83,10 +84,9 @@ func fname(prefix string, cf *sniff.ConfigFork, slot types.Slot, root [32]byte) 
 // this method downloads the head state, which can be used to find the correct chain config
 // and use prysm's helper methods to compute the latest weak subjectivity epoch.
 func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (types.Epoch, error) {
-	headReader, err := client.GetState(ctx, IdHead)
-	headBytes, err := io.ReadAll(headReader)
+	headBytes, err := client.GetState(ctx, IdHead)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to read response body for get head state api call")
+		return 0, err
 	}
 	headState, err := sniff.BeaconState(headBytes)
 	if err != nil {
@@ -109,6 +109,13 @@ func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (type
 	return epoch, nil
 }
 
+const (
+	prysmMinimumVersion     = "v2.0.7"
+	prysmImplementationName = "Prysm"
+)
+
+var ErrUnsupportedPrysmCheckpointVersion = errors.New("node does not meet minimum version requirements for checkpoint retrieval")
+
 // for older endpoints or clients that do not support the weak_subjectivity api method (only prysm at release time)
 // we gather the necessary data for a checkpoint sync by:
 // - inspecting the remote server's head state and computing the weak subjectivity epoch locally
@@ -117,6 +124,13 @@ func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (type
 // - requesting that block by its root
 func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginData, error) {
 	log.Print("falling back to generic checkpoint derivation, weak_subjectivity API not supported by server")
+	nv, err := client.GetNodeVersion(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to proceed with fallback method without confirming node version")
+	}
+	if nv.implementation == prysmImplementationName && semver.Compare(nv.semver, prysmMinimumVersion) < 0 {
+		return nil, errors.Wrapf(ErrUnsupportedPrysmCheckpointVersion, "%s < minimum (%s)", nv.semver, prysmMinimumVersion)
+	}
 	epoch, err := getWeakSubjectivityEpochFromHead(ctx, client)
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing weak subjectivity epoch via head state inspection")
@@ -130,13 +144,9 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 
 	log.Printf("requesting checkpoint state at slot %d", slot)
 	// get the state at the first slot of the epoch
-	sReader, err := client.GetState(ctx, IdFromSlot(slot))
+	stateBytes, err := client.GetState(ctx, IdFromSlot(slot))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to request state by slot from api, slot=%d", slot))
-	}
-	stateBytes, err := io.ReadAll(sReader)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read response body for get checkpoint state api call")
 	}
 
 	// ConfigFork is used to unmarshal the BeaconState so we can read the block root in latest_block_header
@@ -221,14 +231,9 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	}
 	log.Printf("requesting checkpoint state at slot %d", slot)
 
-	sReader, err := client.GetState(ctx, IdFromSlot(slot))
+	stateBytes, err := client.GetState(ctx, IdFromSlot(slot))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to request state by slot from api, slot=%d", slot))
-	}
-
-	stateBytes, err := io.ReadAll(sReader)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read response body for get checkpoint state api call")
 	}
 	cf, err := sniff.ConfigForkForState(stateBytes)
 	if err != nil {
