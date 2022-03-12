@@ -112,7 +112,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// TODO(10261) Check optimistic status
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */, false /*optimistic sync*/); err != nil {
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
 
@@ -350,11 +350,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 // handles a block after the block's batch has been verified, where we can save blocks
 // their state summaries and split them off to relative hot/cold storage.
 func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.SignedBeaconBlock,
-	blockRoot [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint, optimistic bool) error {
+	blockRoot [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	b := signed.Block()
 
 	s.saveInitSyncBlock(blockRoot, signed)
-	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint, optimistic); err != nil {
+	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
+		return err
+	}
+	// TODO(10261) send optimistic status
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
 		return err
 	}
 
@@ -442,13 +446,13 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 // This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
 func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk block.BeaconBlock, root [32]byte,
-	st state.BeaconState, optimistic bool) error {
+	st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockAndAttestationsToForkChoiceStore")
 	defer span.End()
 
 	fCheckpoint := st.FinalizedCheckpoint()
 	jCheckpoint := st.CurrentJustifiedCheckpoint()
-	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint, optimistic); err != nil {
+	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
 	// Feed in block's attestations to fork choice store.
@@ -467,24 +471,24 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 }
 
 func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.BeaconBlock,
-	root [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint, optimistic bool) error {
-	//TODO(10261) check if the blocks are optimistic or not when filling fork choice
+	root [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
 	// Feed in block to fork choice store.
-	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
+	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
 		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()),
 		jCheckpoint.Epoch,
-		fCheckpoint.Epoch, optimistic); err != nil {
+		fCheckpoint.Epoch); err != nil {
 		return errors.Wrap(err, "could not process block for proto array fork choice")
 	}
-	return nil
+	// TODO(10261) send optimistic status
+	return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
 }
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.SignedBeaconBlock, st state.BeaconState, initSync bool, optimistic bool) error {
+func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.SignedBeaconBlock, st state.BeaconState, initSync bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
 	if initSync {
@@ -495,7 +499,7 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
-	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st, optimistic); err != nil {
+	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
 	}
 	return nil
