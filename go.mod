@@ -30,7 +30,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.0.1
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
-	github.com/herumi/bls-eth-go-binary v0.0.0-20210917013441-d37c07cfda4e
+	github.com/herumi/bls-eth-go-binary v0.0.0-20220216073600-600054663ec1
 	github.com/holiman/uint256 v1.2.0
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/ipfs/go-log/v2 v2.4.0
@@ -107,6 +107,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
+	github.com/deckarep/golang-set v1.8.0 // indirect
 	github.com/deepmap/oapi-codegen v1.8.2 // indirect
 	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91 // indirect
 	github.com/dop251/goja v0.0.0-20211011172007-d99e4b8cbf48 // indirect
@@ -122,7 +123,7 @@ require (
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
-	github.com/graph-gophers/graphql-go v0.0.0-20201113091052-beb923fada29 // indirect
+	github.com/graph-gophers/graphql-go v1.3.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.10 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/huin/goupnp v1.0.2 // indirect
@@ -135,7 +136,8 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
-	github.com/karalabe/usb v0.0.0-20211005121534-4c5740d64559 // indirect
+	github.com/karalabe/usb v0.0.2 // indirect
+	github.com/kilic/bls12-381 v0.1.1-0.20210208205449-6045b0235e36 // indirect
 	github.com/klauspost/compress v1.11.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
@@ -206,6 +208,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/protolambda/go-kzg v0.0.0-20220220065500-36404333406f // indirect
+	github.com/protolambda/ztyp v0.2.1 // indirect
 	github.com/rjeczalik/notify v0.9.1 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
@@ -254,14 +258,14 @@ require (
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.1-alpha.0.20220303211031-f753e083138c
-	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
+	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	k8s.io/klog/v2 v2.3.0 // indirect
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20220214112821-d40107742729
+replace github.com/ethereum/go-ethereum => github.com/protolambda/go-ethereum v1.7.4-0.20220312001233-587a2127f54f
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 
