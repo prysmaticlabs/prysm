@@ -76,6 +76,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
 	}
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, s.headRoot()); err != nil {
+		return nil, errors.Wrap(err, "could not set block to valid")
+	}
 	return payloadID, nil
 }
 
@@ -115,6 +118,13 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 		default:
 			return errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
+	}
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return errors.Wrap(err, "could not compute block's HTR")
+	}
+	if err := s.ForkChoiceStore().SetOptimisticToValid(ctx, root); err != nil {
+		return errors.Wrap(err, "could not set block to validated")
 	}
 
 	// During the transition event, the transition block should be verified for sanity.
