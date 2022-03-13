@@ -62,7 +62,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	}
 
 	// payload attribute is only required when requesting payload, here we are just updating fork choice, so it is nil.
-	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /*payload attribute*/)
+	payloadID, validHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /*payload attribute*/)
 	if err != nil {
 		switch err {
 		case v1.ErrAcceptedSyncingPayloadStatus:
@@ -72,6 +72,11 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 				"finalizedHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
+		case v1.ErrInvalidPayloadStatus:
+			if err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, bytesutil.ToBytes32(validHash)); err != nil {
+				return nil, err
+			}
+			return nil, errors.Wrap(err, "Received invalid hash from execution engine")
 		default:
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
@@ -103,7 +108,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 	if err != nil {
 		return errors.Wrap(err, "could not get execution payload")
 	}
-	_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+	validHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	if err != nil {
 		switch err {
 		case v1.ErrAcceptedSyncingPayloadStatus:
@@ -112,6 +117,11 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 				"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 			}).Info("Called new payload with optimistic block")
 			return nil
+		case v1.ErrInvalidPayloadStatus:
+			if err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, bytesutil.ToBytes32(validHash)); err != nil {
+				return err
+			}
+			return errors.Wrap(err, "Received invalid hash from execution engine")
 		default:
 			return errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
