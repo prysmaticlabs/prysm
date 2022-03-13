@@ -119,13 +119,6 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 			return errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
 	}
-	root, err := blk.Block().HashTreeRoot()
-	if err != nil {
-		return errors.Wrap(err, "could not compute block's HTR")
-	}
-	if err := s.ForkChoiceStore().SetOptimisticToValid(ctx, root); err != nil {
-		return errors.Wrap(err, "could not set block to validated")
-	}
 
 	// During the transition event, the transition block should be verified for sanity.
 	if isPreBellatrix(preStateVersion) {
