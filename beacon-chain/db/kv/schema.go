@@ -19,6 +19,7 @@ var (
 	checkpointBucket        = []byte("check-point")
 	powchainBucket          = []byte("powchain")
 	stateValidatorsBucket   = []byte("state-validators")
+	feeRecipientBucket      = []byte("fee-recipient")
 	validatedTips           = []byte("validated-synced-tips")
 
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.

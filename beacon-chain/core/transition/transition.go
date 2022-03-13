@@ -92,7 +92,7 @@ func ExecuteStateTransition(
 func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlot")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot())))
+	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot()))) // lint:ignore uintcast -- This is OK for tracing.
 
 	prevStateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
@@ -190,7 +190,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
-	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))
+	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot()))) // lint:ignore uintcast -- This is OK for tracing.
 
 	// The block must have a higher slot than parent state.
 	if state.Slot() >= slot {
@@ -362,7 +362,7 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b block.
 func ProcessEpochPrecompute(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessEpochPrecompute")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("epoch", int64(time.CurrentEpoch(state))))
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(time.CurrentEpoch(state)))) // lint:ignore uintcast -- This is OK for tracing.
 
 	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")

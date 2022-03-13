@@ -49,6 +49,12 @@ func (_ *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][fieldparams.BLS
 	return nil
 }
 
+func (_ *mockRemoteKeymanager) ExtractKeystores(
+	ctx context.Context, publicKeys []bls.PublicKey, password string,
+) ([]*keymanager.Keystore, error) {
+	return nil, nil
+}
+
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 	encryptor := keystorev4.New()
 	id, err := uuid.NewRandom()

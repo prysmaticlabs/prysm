@@ -17,6 +17,7 @@ type IKeymanager interface {
 	PublicKeysFetcher
 	Signer
 	KeyChangeSubscriber
+	KeyStoreExtractor
 }
 
 // KeysFetcher for validating private and public keys.
@@ -50,6 +51,11 @@ type Deleter interface {
 // KeyChangeSubscriber allows subscribing to changes made to the underlying keys.
 type KeyChangeSubscriber interface {
 	SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription
+}
+
+// KeyStoreExtractor allows keys to be extracted from the keymanager.
+type KeyStoreExtractor interface {
+	ExtractKeystores(ctx context.Context, publicKeys []bls.PublicKey, password string) ([]*Keystore, error)
 }
 
 // Keystore json file representation as a Go struct.

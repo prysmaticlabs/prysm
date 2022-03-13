@@ -491,7 +491,7 @@ func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b3)))
 	require.NoError(t, service.beaconDB.SaveState(ctx, b1State, r1))
 
-	lastState, err := service.lastAncestorState(ctx, r3)
+	lastState, err := service.LastAncestorState(ctx, r3)
 	require.NoError(t, err)
 	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
 }
@@ -531,7 +531,7 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b3)))
 	service.hotStateCache.put(r1, b1State)
 
-	lastState, err := service.lastAncestorState(ctx, r3)
+	lastState, err := service.LastAncestorState(ctx, r3)
 	require.NoError(t, err)
 	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
 }

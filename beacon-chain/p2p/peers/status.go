@@ -40,6 +40,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
+	pmath "github.com/prysmaticlabs/prysm/math"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -749,12 +750,12 @@ func (p *Status) PeersToPrune() []peer.ID {
 		return p.deprecatedPeersToPrune()
 	}
 	connLimit := p.ConnectedPeerLimit()
-	inBoundLimit := p.InboundLimit()
+	inBoundLimit := uint64(p.InboundLimit())
 	activePeers := p.Active()
-	numInboundPeers := len(p.InboundConnected())
+	numInboundPeers := uint64(len(p.InboundConnected()))
 	// Exit early if we are still below our max
 	// limit.
-	if len(activePeers) <= int(connLimit) {
+	if uint64(len(activePeers)) <= connLimit {
 		return []peer.ID{}
 	}
 	p.store.Lock()
@@ -784,10 +785,15 @@ func (p *Status) PeersToPrune() []peer.ID {
 
 	// Determine amount of peers to prune using our
 	// max connection limit.
-	amountToPrune := len(activePeers) - int(connLimit)
+	amountToPrune, err := pmath.Sub64(uint64(len(activePeers)), connLimit)
+	if err != nil {
+		// This should never happen.
+		log.WithError(err).Error("Failed to determine amount of peers to prune")
+		return []peer.ID{}
+	}
 
 	// Also check for inbound peers above our limit.
-	excessInbound := 0
+	excessInbound := uint64(0)
 	if numInboundPeers > inBoundLimit {
 		excessInbound = numInboundPeers - inBoundLimit
 	}
@@ -796,7 +802,7 @@ func (p *Status) PeersToPrune() []peer.ID {
 	if excessInbound > amountToPrune {
 		amountToPrune = excessInbound
 	}
-	if amountToPrune < len(peersToPrune) {
+	if amountToPrune < uint64(len(peersToPrune)) {
 		peersToPrune = peersToPrune[:amountToPrune]
 	}
 	ids := make([]peer.ID, 0, len(peersToPrune))
@@ -815,7 +821,7 @@ func (p *Status) deprecatedPeersToPrune() []peer.ID {
 	numInboundPeers := len(p.InboundConnected())
 	// Exit early if we are still below our max
 	// limit.
-	if len(activePeers) <= int(connLimit) {
+	if uint64(len(activePeers)) <= connLimit {
 		return []peer.ID{}
 	}
 	p.store.Lock()
@@ -845,18 +851,23 @@ func (p *Status) deprecatedPeersToPrune() []peer.ID {
 
 	// Determine amount of peers to prune using our
 	// max connection limit.
-	amountToPrune := len(activePeers) - int(connLimit)
+	amountToPrune, err := pmath.Sub64(uint64(len(activePeers)), connLimit)
+	if err != nil {
+		// This should never happen
+		log.WithError(err).Error("Failed to determine amount of peers to prune")
+		return []peer.ID{}
+	}
 	// Also check for inbound peers above our limit.
-	excessInbound := 0
+	excessInbound := uint64(0)
 	if numInboundPeers > inBoundLimit {
-		excessInbound = numInboundPeers - inBoundLimit
+		excessInbound = uint64(numInboundPeers - inBoundLimit)
 	}
 	// Prune the largest amount between excess peers and
 	// excess inbound peers.
 	if excessInbound > amountToPrune {
 		amountToPrune = excessInbound
 	}
-	if amountToPrune < len(peersToPrune) {
+	if amountToPrune < uint64(len(peersToPrune)) {
 		peersToPrune = peersToPrune[:amountToPrune]
 	}
 	ids := make([]peer.ID, 0, len(peersToPrune))

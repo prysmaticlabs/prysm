@@ -13,10 +13,15 @@ var (
 	// ErrUnsupportedBeaconBlock is returned when the struct type is not a supported beacon block
 	// type.
 	ErrUnsupportedBeaconBlock = errors.New("unsupported beacon block")
-
-	// ErrUnsupportedPhase0Block is returned when accessing a phase0 block from an altair wrapped
+	// ErrUnsupportedPhase0Block is returned when accessing a phase0 block from a non-phase0 wrapped
 	// block.
 	ErrUnsupportedPhase0Block = errors.New("unsupported phase0 block")
+	// ErrUnsupportedAltairBlock is returned when accessing an altair block from non-altair wrapped
+	// block.
+	ErrUnsupportedAltairBlock = errors.New("unsupported altair block")
+	// ErrUnsupportedBellatrixBlock is returned when accessing a bellatrix block from a non-bellatrix wrapped
+	// block.
+	ErrUnsupportedBellatrixBlock = errors.New("unsupported bellatrix block")
 	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
 	ErrNilObjectWrapped = errors.New("attempted to wrap nil object")
 )
