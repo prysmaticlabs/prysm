@@ -200,7 +200,7 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix:
+			case version.Altair, version.Bellatrix, version.EIP4844:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
