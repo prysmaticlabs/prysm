@@ -102,17 +102,17 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 	processedAttestationCount.Inc()
 }
 
-// ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(
+// InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
+func (f *ForkChoice) InsertOptimisticBlock(
 	ctx context.Context,
 	slot types.Slot,
 	blockRoot, parentRoot [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch, optimistic bool,
+	justifiedEpoch, finalizedEpoch types.Epoch,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertOptimisticBlock")
 	defer span.End()
 
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch, optimistic)
+	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
