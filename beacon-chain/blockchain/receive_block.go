@@ -96,11 +96,8 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 			if err != nil {
 				return err
 			}
-			if err := s.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, root); err != nil {
+			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root); err != nil {
 				return err
-			}
-			if err := s.saveSyncedTipsDB(ctx); err != nil {
-				return errors.Wrap(err, "could not save synced tips")
 			}
 		}
 
