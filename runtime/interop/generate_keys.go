@@ -27,6 +27,7 @@ func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey,
 		secrets []bls.SecretKey
 		publics []bls.PublicKey
 	}
+	// lint:ignore uintcast -- this is safe because we can reasonably expect that the number of keys is less than max int64.
 	results, err := async.Scatter(int(numKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		secs, pubs, err := deterministicallyGenerateKeys(uint64(offset)+startIndex, uint64(entries))
 		return &keys{secrets: secs, publics: pubs}, err

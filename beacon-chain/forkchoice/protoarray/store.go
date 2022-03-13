@@ -9,6 +9,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	pmath "github.com/prysmaticlabs/prysm/math"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -143,23 +144,16 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 	return f.store.proposerBoost()
 }
 
-// ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(
+// InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
+func (f *ForkChoice) InsertOptimisticBlock(
 	ctx context.Context,
 	slot types.Slot,
 	blockRoot, parentRoot [32]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch, optimistic bool) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
+	justifiedEpoch, finalizedEpoch types.Epoch) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertOptimisticBlock")
 	defer span.End()
 
-	if err := f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch); err != nil {
-		return err
-	}
-
-	if !optimistic {
-		return f.SetOptimisticToValid(ctx, blockRoot)
-	}
-	return nil
+	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
@@ -446,7 +440,11 @@ func (s *Store) applyWeightChanges(
 				s.proposerBoostLock.Unlock()
 				return err
 			}
-			nodeDelta = nodeDelta + int(proposerScore)
+			iProposerScore, err := pmath.Int(proposerScore)
+			if err != nil {
+				return err
+			}
+			nodeDelta = nodeDelta + iProposerScore
 		}
 		s.proposerBoostLock.Unlock()
 
