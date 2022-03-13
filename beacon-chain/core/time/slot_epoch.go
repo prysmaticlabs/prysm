@@ -46,9 +46,8 @@ func NextEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 	return slots.ToEpoch(state.Slot()) + 1
 }
 
-// AltairCompatible returns if the input state `s` is altair compatible and input epoch `e` is higher equal than fork epoch.
-// This assumes that future versions of altair will be compatible with the fork epoch.
-func AltairCompatible(s state.BeaconState, e types.Epoch) bool {
+// HigherThanAltairVersionAndEpoch returns if the input state `s` has a higher version number than Altair state and input epoch `e` is higher equal than fork epoch.
+func HigherThanAltairVersionAndEpoch(s state.BeaconState, e types.Epoch) bool {
 	return s.Version() >= version.Altair && e >= params.BeaconConfig().AltairForkEpoch
 }
 
