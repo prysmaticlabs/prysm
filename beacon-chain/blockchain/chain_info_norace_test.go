@@ -22,7 +22,7 @@ func TestHeadSlot_DataRace(t *testing.T) {
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))
 	}()
 	s.HeadSlot()
-	<- wait
+	<-wait
 }
 
 func TestHeadRoot_DataRace(t *testing.T) {
@@ -38,7 +38,7 @@ func TestHeadRoot_DataRace(t *testing.T) {
 	}()
 	_, err := s.HeadRoot(context.Background())
 	require.NoError(t, err)
-	<- wait
+	<-wait
 }
 
 func TestHeadBlock_DataRace(t *testing.T) {
@@ -54,7 +54,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	}()
 	_, err := s.HeadBlock(context.Background())
 	require.NoError(t, err)
-	<- wait
+	<-wait
 }
 
 func TestHeadState_DataRace(t *testing.T) {
@@ -69,5 +69,5 @@ func TestHeadState_DataRace(t *testing.T) {
 	}()
 	_, err := s.HeadState(context.Background())
 	require.NoError(t, err)
-	<- wait
+	<-wait
 }
