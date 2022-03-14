@@ -257,8 +257,8 @@ func TestAltairCompatible(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := time.HigherThanAltairVersionAndEpoch(tt.args.s, tt.args.e); got != tt.want {
-				t.Errorf("HigherThanAltairVersionAndEpoch() = %v, want %v", got, tt.want)
+			if got := time.HigherEqualThanAltairVersionAndEpoch(tt.args.s, tt.args.e); got != tt.want {
+				t.Errorf("HigherEqualThanAltairVersionAndEpoch() = %v, want %v", got, tt.want)
 			}
 		})
 	}
