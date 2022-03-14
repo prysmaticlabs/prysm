@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -56,6 +57,7 @@ type Caller interface {
 	) error
 	LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error)
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
+	ExecutionBlockByNumber(ctx context.Context, number *big.Int) (*pb.ExecutionBlock, error)
 }
 
 // Client defines a new engine API client for the Prysm consensus node
@@ -199,9 +201,25 @@ func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, 
 		ctx,
 		result,
 		ExecutionBlockByNumberMethod,
-		"latest",
+		toBlockNumArg(nil),
 		false, /* no full transaction objects */
 	)
+	if err == nil && len(result.Number) == 0 {
+		err = ethereum.NotFound
+		return result, err
+	}
+	return result, handleRPCError(err)
+}
+
+// ExecutionBlockByHash fetches an execution engine block by hash by calling
+// eth_blockByHash via JSON-RPC.
+func (c *Client) ExecutionBlockByNumber(ctx context.Context, number *big.Int) (*pb.ExecutionBlock, error) {
+	result := &pb.ExecutionBlock{}
+	err := c.rpc.CallContext(ctx, &result, ExecutionBlockByNumberMethod, toBlockNumArg(number), false /* no full transaction objects */)
+	if err == nil && len(result.Number) == 0 {
+		err = ethereum.NotFound
+		return result, err
+	}
 	return result, handleRPCError(err)
 }
 
@@ -210,6 +228,10 @@ func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, 
 func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
 	result := &pb.ExecutionBlock{}
 	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
+	if err == nil && len(result.Number) == 0 {
+		err = ethereum.NotFound
+		return result, err
+	}
 	return result, handleRPCError(err)
 }
 
@@ -245,4 +267,15 @@ func handleRPCError(err error) error {
 	default:
 		return err
 	}
+}
+
+func toBlockNumArg(number *big.Int) string {
+	if number == nil {
+		return "latest"
+	}
+	pending := big.NewInt(-1)
+	if number.Cmp(pending) == 0 {
+		return "pending"
+	}
+	return hexutil.EncodeBig(number)
 }

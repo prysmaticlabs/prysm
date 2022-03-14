@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -18,8 +19,10 @@ type EngineClient struct {
 	Err                   error
 	ErrLatestExecBlock    error
 	ErrExecBlockByHash    error
+	ErrExecBlockByNum     error
 	ErrForkchoiceUpdated  error
 	BlockByHashMap        map[[32]byte]*pb.ExecutionBlock
+	BlockByNumMap         map[uint64]*pb.ExecutionBlock
 }
 
 // NewPayload --
@@ -56,4 +59,13 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash) (*
 		return nil, errors.New("block not found")
 	}
 	return b, e.ErrExecBlockByHash
+}
+
+// ExecutionBlockByNumber --
+func (e *EngineClient) ExecutionBlockByNumber(_ context.Context, num *big.Int) (*pb.ExecutionBlock, error) {
+	b, ok := e.BlockByNumMap[num.Uint64()]
+	if !ok {
+		return nil, errors.New("block not found")
+	}
+	return b, e.ErrExecBlockByNum
 }
