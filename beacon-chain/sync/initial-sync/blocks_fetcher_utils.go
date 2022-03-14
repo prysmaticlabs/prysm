@@ -108,7 +108,7 @@ func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
 		return 0, err
 	}
 	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
-		start := ind.Add(uint64(f.rand.Intn(int(slotsPerEpoch))))
+		start := ind.Add(uint64(f.rand.Intn(int(slotsPerEpoch)))) // lint:ignore uintcast -- Slots per epoch will never exceed int64.
 		nextSlot, err := fetch(peers[pidInd%len(peers)], start, uint64(slotsPerEpoch/2), uint64(slotsPerEpoch))
 		if err != nil {
 			return 0, err

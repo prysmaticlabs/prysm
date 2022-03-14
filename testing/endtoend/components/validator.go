@@ -252,7 +252,7 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 	if err != nil {
 		return err
 	}
-	txOps.Nonce = big.NewInt(int64(nonce))
+	txOps.Nonce = big.NewInt(0).SetUint64(nonce)
 
 	contract, err := contracts.NewDepositContract(e2e.TestParams.ContractAddress, web3)
 	if err != nil {
