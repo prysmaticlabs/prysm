@@ -13,9 +13,9 @@ import (
 func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 0, 0, false))
-	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(2), 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), indexToHash(1), 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, indexToHash(3), indexToHash(2), 0, 0))
 
 	// The updated balances of each node is 100
 	s := f.store
@@ -36,9 +36,9 @@ func TestNode_ApplyWeightChanges_PositiveChange(t *testing.T) {
 func TestNode_ApplyWeightChanges_NegativeChange(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 0, 0, false))
-	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(2), 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), indexToHash(1), 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, indexToHash(3), indexToHash(2), 0, 0))
 
 	// The updated balances of each node is 100
 	s := f.store
@@ -63,7 +63,7 @@ func TestNode_UpdateBestDescendant_NonViableChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
 	// Input child is not viable.
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 2, 3, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 2, 3))
 
 	// Verify parent's best child and best descendant are `none`.
 	s := f.store
@@ -76,7 +76,7 @@ func TestNode_UpdateBestDescendant_ViableChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
 	// Input child is best descendant
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
 
 	s := f.store
 	assert.Equal(t, 1, len(s.treeRootNode.children))
@@ -87,8 +87,8 @@ func TestNode_UpdateBestDescendant_HigherWeightChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
 	// Input child is best descendant
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1))
 
 	s := f.store
 	s.nodeByRoot[indexToHash(1)].weight = 100
@@ -103,8 +103,8 @@ func TestNode_UpdateBestDescendant_LowerWeightChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
 	// Input child is best descendant
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1))
 
 	s := f.store
 	s.nodeByRoot[indexToHash(1)].weight = 200
@@ -119,9 +119,9 @@ func TestNode_TestDepth(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
 	// Input child is best descendant
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, indexToHash(3), params.BeaconConfig().ZeroHash, 1, 1))
 
 	s := f.store
 	require.Equal(t, s.nodeByRoot[indexToHash(2)].depth(), uint64(2))
@@ -151,11 +151,11 @@ func TestNode_ViableForHead(t *testing.T) {
 func TestNode_LeadsToViableHead(t *testing.T) {
 	f := setup(4, 3)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(1), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(2), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(3), 4, 3, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, indexToHash(3), indexToHash(1), 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 4, indexToHash(4), indexToHash(2), 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 5, indexToHash(5), indexToHash(3), 4, 3))
 
 	require.Equal(t, true, f.store.treeRootNode.leadsToViableHead(4, 3))
 	require.Equal(t, true, f.store.nodeByRoot[indexToHash(5)].leadsToViableHead(4, 3))
@@ -172,11 +172,13 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	//               \
 	//                 -- 5 (true)
 	//
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(2), 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 4, indexToHash(4), indexToHash(3), 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 5, indexToHash(5), indexToHash(1), 1, 1, true))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.SetOptimisticToValid(ctx, params.BeaconConfig().ZeroHash))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1))
+	require.NoError(t, f.SetOptimisticToValid(ctx, indexToHash(1)))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, indexToHash(3), indexToHash(2), 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 4, indexToHash(4), indexToHash(3), 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 5, indexToHash(5), indexToHash(1), 1, 1))
 
 	opt, err := f.IsOptimistic(ctx, indexToHash(5))
 	require.NoError(t, err)

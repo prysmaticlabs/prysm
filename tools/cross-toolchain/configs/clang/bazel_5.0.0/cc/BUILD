@@ -14,11 +14,11 @@
 
 # This becomes the BUILD file for @local_config_cc// under non-BSD unixes.
 
-package(default_visibility = ["//visibility:public"])
-
 load(":cc_toolchain_config.bzl", "cc_toolchain_config")
 load(":armeabi_cc_toolchain_config.bzl", "armeabi_cc_toolchain_config")
 load("@rules_cc//cc:defs.bzl", "cc_toolchain", "cc_toolchain_suite")
+
+package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])  # Apache 2.0
 
@@ -108,12 +108,13 @@ cc_toolchain_config(
         "/usr/include/c++/8",
         "/usr/include/x86_64-linux-gnu/c++/8",
         "/usr/include/c++/8/backward",
+        "/usr/include/c++/v1",
     ],
     cxx_flags = ["-std=c++0x"],
     dbg_compile_flags = ["-g"],
     host_system_name = "local",
     link_flags = [
-        "-fuse-ld=/usr/bin/ld.gold",
+        "-fuse-ld=/usr/bin/ld.lld",
         "-Wl,-no-as-needed",
         "-Wl,-z,relro,-z,now",
         "-B/usr/bin",
@@ -139,7 +140,7 @@ cc_toolchain_config(
         "ld": "/usr/bin/ld",
         "llvm-cov": "/usr/bin/llvm-cov",
         "cpp": "/usr/bin/cpp",
-        "gcc": "/usr/bin/clang",
+        "gcc": "/usr/bin/clang-10",
         "dwp": "/usr/bin/dwp",
         "gcov": "/usr/bin/llvm-profdata",
         "nm": "/usr/bin/nm",
