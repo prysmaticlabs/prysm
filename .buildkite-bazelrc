@@ -23,6 +23,8 @@ build:remote-cache --experimental_remote_cache_compression
 # correctness and repeatability of the build.
 build:remote-cache --incompatible_strict_action_env=true
 
+build --experimental_use_hermetic_linux_sandbox
+
 # Import workspace options.
 import %workspace%/.bazelrc
 
