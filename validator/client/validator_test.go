@@ -1444,3 +1444,7 @@ func TestValidator_SetPubKeyToValidatorIndexMap(t *testing.T) {
 func TestValidator_PrepareBeaconProposer(t *testing.T) {
 
 }
+
+func TestValidator_feeRecipient(t *testing.T) {
+
+}

@@ -6,5 +6,5 @@ type PrepareBeaconProposalFileConfig struct {
 }
 
 type ValidatorProposerOptions struct {
-	FeeRecipient string `json:"fee_recipient" validate:"required,hexadecimal"`
+	FeeRecipient string `json:"fee_recipient"`
 }
