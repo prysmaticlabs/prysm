@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestValidateCheckpoint(t *testing.T) {
+func TestValidatedCheckpoint(t *testing.T) {
 	ctx := context.Background()
 	db := setupDB(t)
 
@@ -26,7 +26,7 @@ func TestValidateCheckpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, 0, bytes.Compare(checkpointA[:], rcvdRoot[:]))
-	require.Equal(t, true, uint64(slotA) == uint64(rcvdSlot))
+	require.Equal(t, uint64(slotA), uint64(rcvdSlot))
 
 	// update the checkpoint and slot
 	require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, checkpointB, slotB))
@@ -35,5 +35,5 @@ func TestValidateCheckpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, 0, bytes.Compare(checkpointB[:], rcvdRoot[:]))
-	require.Equal(t, true, uint64(slotB) == uint64(rcvdSlot))
+	require.Equal(t, uint64(slotB), uint64(rcvdSlot))
 }
