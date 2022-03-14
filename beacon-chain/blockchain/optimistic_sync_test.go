@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
@@ -154,7 +153,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			engine := &testing2.MockEngineService{ForkchoiceError: tt.newForkchoiceErr}
+			engine := &mockEngineService{forkchoiceError: tt.newForkchoiceErr}
 			service.cfg.ExecutionEngineCaller = engine
 			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, tt.finalizedRoot)
 			if tt.errString != "" {
@@ -305,12 +304,12 @@ func Test_NotifyNewPayload(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		engine := &testing2.MockEngineService{NewPayloadError: tt.newPayloadErr, Blks: map[[32]byte]*v1.ExecutionBlock{}}
-		engine.Blks[[32]byte{'a'}] = &v1.ExecutionBlock{
+		engine := &mockEngineService{newPayloadError: tt.newPayloadErr, blks: map[[32]byte]*v1.ExecutionBlock{}}
+		engine.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
 			ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 			TotalDifficulty: "0x2",
 		}
-		engine.Blks[[32]byte{'b'}] = &v1.ExecutionBlock{
+		engine.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
 			ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 			TotalDifficulty: "0x1",
 		}
