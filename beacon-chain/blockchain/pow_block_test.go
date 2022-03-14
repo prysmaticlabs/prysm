@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/holiman/uint256"
+	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -117,7 +118,7 @@ func Test_validateMergeBlock(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	engine := &MockEngineService{Blks: map[[32]byte]*enginev1.ExecutionBlock{}}
+	engine := &testing2.MockEngineService{Blks: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
 	engine.Blks[[32]byte{'a'}] = &enginev1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
@@ -158,7 +159,7 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	engine := &MockEngineService{Blks: map[[32]byte]*enginev1.ExecutionBlock{}}
+	engine := &testing2.MockEngineService{Blks: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
 	h := [32]byte{'a'}
 	p := [32]byte{'b'}

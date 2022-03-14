@@ -9,7 +9,6 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -901,7 +900,7 @@ func TestProduceBlockV2(t *testing.T) {
 		params.OverrideBeaconConfig(bc)
 
 		beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().SyncCommitteeSize)
-		beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
+		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
@@ -925,7 +924,7 @@ func TestProduceBlockV2(t *testing.T) {
 			TotalDifficulty: "0x1",
 		}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &blockchain.MockEngineService{
+			ExecutionEngineCaller: &mockChain.MockEngineService{
 				Blks: executionBlocks,
 			},
 			TimeFetcher:       &mockChain.ChainService{},

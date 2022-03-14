@@ -10,19 +10,19 @@ import (
 
 // MockEngineService is a mock implementation of the Caller interface.
 type MockEngineService struct {
-	newPayloadError error
-	forkchoiceError error
+	NewPayloadError error
+	ForkchoiceError error
 	Blks            map[[32]byte]*enginev1.ExecutionBlock
 }
 
 // NewPayload --
 func (m *MockEngineService) NewPayload(context.Context, *enginev1.ExecutionPayload) ([]byte, error) {
-	return nil, m.newPayloadError
+	return nil, m.NewPayloadError
 }
 
 // ForkchoiceUpdated --
 func (m *MockEngineService) ForkchoiceUpdated(context.Context, *enginev1.ForkchoiceState, *enginev1.PayloadAttributes) (*enginev1.PayloadIDBytes, []byte, error) {
-	return nil, nil, m.forkchoiceError
+	return nil, nil, m.ForkchoiceError
 }
 
 // GetPayloadV1 --
