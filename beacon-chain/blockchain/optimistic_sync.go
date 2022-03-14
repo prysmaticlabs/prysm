@@ -122,7 +122,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 
 	// During the transition event, the transition block should be verified for sanity.
 	if isPreBellatrix(preStateVersion) {
-		return s.validateMergeBlock(ctx, blk) // Handle case where pre-state is Altair but block contains payload.
+		// Handle case where pre-state is Altair but block contains payload.
+		// To reach here, the block must have contained a valid payload.
+		return s.validateMergeBlock(ctx, blk)
 	}
 	atTransition, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(header, body)
 	if err != nil {
