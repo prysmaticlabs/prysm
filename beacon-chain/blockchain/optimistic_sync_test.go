@@ -36,7 +36,6 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, altairBlk))
 	require.NoError(t, beaconDB.SaveBlock(ctx, bellatrixBlk))
-
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
 	opts := []Option{
 		WithDatabase(beaconDB),
@@ -45,6 +44,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, 0, 0))
 
 	tests := []struct {
 		name             string
