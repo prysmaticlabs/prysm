@@ -352,7 +352,8 @@ func SignedBeaconBlock(block block.SignedBeaconBlock) (*ethpbv1.SignedBeaconBloc
 	return v1Block, nil
 }
 
-func BeaconStateToV1(state state.BeaconState) (*ethpbv1.BeaconState, error) {
+// BeaconStateToProto converts a state.BeaconState object to its protobuf equivalent.
+func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 	sourceFork := state.Fork()
 	sourceLatestBlockHeader := state.LatestBlockHeader()
 	sourceEth1Data := state.Eth1Data()

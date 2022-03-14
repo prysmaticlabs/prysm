@@ -58,7 +58,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		// TODO(#9166): remove this block once v2 changes are live.
 		epochsToRun = helpers.AltairE2EForkEpoch - 1
 	}
-	tracingPort := 9411 + e2eParams.TestParams.TestShardIndex
+	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
 	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
 	evals := []types.Evaluator{
 		ev.PeersConnect,
@@ -93,6 +93,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ValidatorFlags:      []string{},
 		EpochsToRun:         uint64(epochsToRun),
 		TestSync:            true,
+		TestFeature:         true,
 		TestDeposits:        true,
 		UsePrysmShValidator: args.usePrysmSh,
 		UsePprof:            !longRunning,

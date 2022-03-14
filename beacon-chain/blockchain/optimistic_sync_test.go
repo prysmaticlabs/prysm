@@ -17,6 +17,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -211,7 +212,8 @@ func Test_NotifyNewPayload(t *testing.T) {
 			preState:  altairState,
 		},
 		{
-			name:      "nil states",
+			name:      "nil post state",
+			preState:  phase0State,
 			errString: "pre and post states must not be nil",
 		},
 		{
@@ -312,7 +314,12 @@ func Test_NotifyNewPayload(t *testing.T) {
 			TotalDifficulty: "0x1",
 		}
 		service.cfg.ExecutionEngineCaller = engine
-		err := service.notifyNewPayload(ctx, tt.preState, tt.postState, tt.blk)
+		var payload *ethpb.ExecutionPayloadHeader
+		if tt.preState.Version() == version.Bellatrix {
+			payload, err = tt.preState.LatestExecutionPayloadHeader()
+			require.NoError(t, err)
+		}
+		err := service.notifyNewPayload(ctx, tt.preState.Version(), payload, tt.postState, tt.blk)
 		if tt.errString != "" {
 			require.ErrorContains(t, tt.errString, err)
 		} else {

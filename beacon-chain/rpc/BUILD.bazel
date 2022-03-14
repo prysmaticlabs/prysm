@@ -22,6 +22,7 @@ go_library(
         "//beacon-chain/operations/voluntaryexits:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/powchain:go_default_library",
+        "//beacon-chain/powchain/engine-api-client/v1:go_default_library",
         "//beacon-chain/rpc/eth/beacon:go_default_library",
         "//beacon-chain/rpc/eth/debug:go_default_library",
         "//beacon-chain/rpc/eth/events:go_default_library",

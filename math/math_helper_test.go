@@ -1,6 +1,7 @@
 package math_test
 
 import (
+	"fmt"
 	stdmath "math"
 	"testing"
 
@@ -364,5 +365,89 @@ func TestMath_Sub64(t *testing.T) {
 		if tt.res != got {
 			t.Errorf("Sub64() %v, want %v", got, tt.res)
 		}
+	}
+}
+
+func TestInt(t *testing.T) {
+	tests := []struct {
+		arg     uint64
+		want    int
+		wantErr bool
+	}{
+		{
+			arg:  0,
+			want: 0,
+		},
+		{
+			arg:  10000000,
+			want: 10000000,
+		},
+		{
+			arg:  stdmath.MaxInt64,
+			want: stdmath.MaxInt64,
+		},
+		{
+			arg:     stdmath.MaxInt64 + 1,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprint(tt.arg), func(t *testing.T) {
+			got, err := math.Int(tt.arg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Int() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Int() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAddInt(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []int
+		want    int
+		wantErr bool
+	}{
+		{
+			name: "no overflow",
+			args: []int{1, 2, 3, 4, 5},
+			want: 15,
+		},
+		{
+			name:    "overflow",
+			args:    []int{1, stdmath.MaxInt},
+			wantErr: true,
+		},
+		{
+			name:    "underflow",
+			args:    []int{-1, stdmath.MinInt},
+			wantErr: true,
+		},
+		{
+			name: "max int",
+			args: []int{1, stdmath.MaxInt - 1},
+			want: stdmath.MaxInt,
+		},
+		{
+			name: "min int",
+			args: []int{-1, stdmath.MinInt + 1},
+			want: stdmath.MinInt,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := math.AddInt(tt.args...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AddInt() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("AddInt() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

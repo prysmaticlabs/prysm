@@ -117,13 +117,6 @@ http_archive(
     urls = ["https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.76/fuzzit_Linux_x86_64.zip"],
 )
 
-git_repository(
-    name = "graknlabs_bazel_distribution",
-    commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
-    remote = "https://github.com/graknlabs/bazel-distribution",
-    shallow_since = "1569509514 +0300",
-)
-
 load(
     "@io_bazel_rules_docker//repositories:repositories.bzl",
     container_repositories = "repositories",

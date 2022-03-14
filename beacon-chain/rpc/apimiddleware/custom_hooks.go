@@ -181,9 +181,14 @@ type altairPublishBlockRequestJson struct {
 	Signature   string                 `json:"signature" hex:"true"`
 }
 
+type bellatrixPublishBlockRequestJson struct {
+	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
+	Signature      string                    `json:"signature" hex:"true"`
+}
+
 // setInitialPublishBlockPostRequest is triggered before we deserialize the request JSON into a struct.
 // We don't know which version of the block got posted, but we can determine it from the slot.
-// We know that both Phase 0 and Altair blocks have a Message field with a Slot field,
+// We know that blocks of all versions have a Message field with a Slot field,
 // so we deserialize the request into a struct s, which has the right fields, to obtain the slot.
 // Once we know the slot, we can determine what the PostRequest field of the endpoint should be, and we set it appropriately.
 func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
@@ -207,17 +212,20 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
-	if slots.ToEpoch(types.Slot(slot)) < params.BeaconConfig().AltairForkEpoch {
+	currentEpoch := slots.ToEpoch(types.Slot(slot))
+	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
 		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
-	} else {
+	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
 		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}
+	} else {
+		endpoint.PostRequest = &signedBeaconBlockBellatrixContainerJson{}
 	}
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
 }
 
 // In preparePublishedBlock we transform the PostRequest.
-// gRPC expects either a phase0_block or an altair_block field in the JSON object, but we have a message field at this point.
+// gRPC expects an XXX_block field in the JSON object, but we have a message field at this point.
 // We do a simple conversion depending on the type of endpoint.PostRequest
 // (which was filled out previously in setInitialPublishBlockPostRequest).
 func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
@@ -235,6 +243,15 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 		actualPostReq := &altairPublishBlockRequestJson{
 			AltairBlock: block.Message,
 			Signature:   block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	if block, ok := endpoint.PostRequest.(*signedBeaconBlockBellatrixContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &bellatrixPublishBlockRequestJson{
+			BellatrixBlock: block.Message,
+			Signature:      block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -342,8 +359,13 @@ type phase0StateResponseJson struct {
 }
 
 type altairStateResponseJson struct {
-	Version string             `json:"version"`
-	Data    *beaconStateV2Json `json:"data"`
+	Version string                 `json:"version"`
+	Data    *beaconStateAltairJson `json:"data"`
+}
+
+type bellatrixStateResponseJson struct {
+	Version string                    `json:"version"`
+	Data    *beaconStateBellatrixJson `json:"data"`
 }
 
 func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
@@ -353,17 +375,23 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 	}
 
 	var actualRespContainer interface{}
-	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
+	switch {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
 		actualRespContainer = &phase0StateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.Phase0State,
 		}
-	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairStateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.AltairState,
 		}
-	} else {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
+		actualRespContainer = &bellatrixStateResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.BellatrixState,
+		}
+	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported state version '%s'", respContainer.Version))
 	}
 
