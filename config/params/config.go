@@ -2,7 +2,6 @@
 package params
 
 import (
-	"fmt"
 	"sort"
 	"time"
 
@@ -240,7 +239,7 @@ func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([4]byte, error)
 		}
 	}
 	var nope [4]byte
-	return nope, errors.Wrap(VersionForEpochNotFound, fmt.Sprintf("no epoch in list <= %d", epoch))
+	return nope, errors.Wrapf(VersionForEpochNotFound, "no epoch in list <= %d", epoch)
 }
 
 // Converts the ForkVersionSchedule map into a list of Version+Epoch values, ordered by Epoch from lowest to highest.

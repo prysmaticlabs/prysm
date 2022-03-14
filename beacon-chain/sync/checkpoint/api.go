@@ -2,7 +2,6 @@ package checkpoint
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
@@ -17,7 +16,7 @@ type APIInitializer struct {
 func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
 	c, err := beacon.NewClient(beaconNodeHost)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("unable to parse beacon node url or hostname - %s", beaconNodeHost))
+		return nil, errors.Wrapf(err, "unable to parse beacon node url or hostname - %s", beaconNodeHost)
 	}
 	return &APIInitializer{c: c}, nil
 }

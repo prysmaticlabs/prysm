@@ -139,14 +139,14 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 	// use first slot of the epoch for the state slot
 	slot, err := slots.EpochStart(epoch)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("Error computing first slot of epoch=%d", epoch))
+		return nil, errors.Wrapf(err, "Error computing first slot of epoch=%d", epoch)
 	}
 
 	log.Printf("requesting checkpoint state at slot %d", slot)
 	// get the state at the first slot of the epoch
 	stateBytes, err := client.GetState(ctx, IdFromSlot(slot))
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to request state by slot from api, slot=%d", slot))
+		return nil, errors.Wrapf(err, "failed to request state by slot from api, slot=%d", slot)
 	}
 
 	// ConfigFork is used to unmarshal the BeaconState so we can read the block root in latest_block_header
@@ -177,7 +177,7 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 
 	blockBytes, err := client.GetBlock(ctx, IdFromRoot(computedBlockRoot))
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by slot = %d", slot))
+		return nil, errors.Wrapf(err, "error requesting block by slot = %d", slot)
 	}
 	block, err := sniff.BlockForConfigFork(blockBytes, cf)
 	if err != nil {
@@ -227,13 +227,13 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	// use first slot of the epoch for the block slot
 	slot, err := slots.EpochStart(ws.Epoch)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("Error computing first slot of epoch=%d", ws.Epoch))
+		return nil, errors.Wrapf(err, "Error computing first slot of epoch=%d", ws.Epoch)
 	}
 	log.Printf("requesting checkpoint state at slot %d", slot)
 
 	stateBytes, err := client.GetState(ctx, IdFromSlot(slot))
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to request state by slot from api, slot=%d", slot))
+		return nil, errors.Wrapf(err, "failed to request state by slot from api, slot=%d", slot)
 	}
 	cf, err := sniff.ConfigForkForState(stateBytes)
 	if err != nil {
@@ -247,7 +247,7 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	}
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to compute htr for state at slot=%d", slot))
+		return nil, errors.Wrapf(err, "failed to compute htr for state at slot=%d", slot)
 	}
 
 	blockRoot, err := state.LatestBlockHeader().HashTreeRoot()
@@ -256,7 +256,7 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	}
 	blockBytes, err := client.GetBlock(ctx, IdFromRoot(ws.BlockRoot))
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error requesting block by slot = %d", slot))
+		return nil, errors.Wrapf(err, "error requesting block by slot = %d", slot)
 	}
 	block, err := sniff.BlockForConfigFork(blockBytes, cf)
 	if err != nil {

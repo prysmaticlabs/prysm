@@ -243,8 +243,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot types.Slot) ([32]byte, 
 	defer span.End()
 
 	if slot < s.MinimumSlot() {
-		msg := fmt.Sprintf("no data from before slot %d", s.MinimumSlot())
-		return [32]byte{}, 0, errors.Wrap(ErrSlotBeforeOrigin, msg)
+		return [32]byte{}, 0, errors.Wrapf(ErrSlotBeforeOrigin, "no data from before slot %d", s.MinimumSlot())
 	}
 
 	// Handle the genesis case where the input slot is 0.
@@ -288,8 +287,7 @@ func (s *State) lastSavedState(ctx context.Context, slot types.Slot) (state.Read
 	defer span.End()
 
 	if slot < s.MinimumSlot() {
-		msg := fmt.Sprintf("no data from before slot %d", s.MinimumSlot())
-		return nil, errors.Wrap(ErrSlotBeforeOrigin, msg)
+		return nil, errors.Wrapf(ErrSlotBeforeOrigin, "no data from before slot %d", s.MinimumSlot())
 	}
 
 	// Handle the genesis case where the input slot is 0.

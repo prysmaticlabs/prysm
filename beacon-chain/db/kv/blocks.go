@@ -80,8 +80,7 @@ func (s *Store) LowestSyncedBlockSlot(ctx context.Context) (types.Slot, error) {
 		c := bkt.Cursor()
 		k, _ := c.First()
 		if k == nil {
-			msg := fmt.Sprintf("'%s' bucket is empty", string(blockSlotIndicesBucket))
-			return errors.Wrap(errEmptyBucket, msg)
+			return errors.Wrapf(errEmptyBucket, "'%s' bucket is empty", string(blockSlotIndicesBucket))
 		}
 		slot = bytesutil.BytesToSlotBigEndian(k)
 		return nil

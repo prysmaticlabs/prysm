@@ -39,7 +39,7 @@ type FileInitializer struct {
 func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error {
 	blockFH, err := os.Open(fi.blockPath)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error opening block file %s for checkpoint sync initialization", fi.blockPath))
+		return errors.Wrapf(err, "error opening block file %s for checkpoint sync initialization", fi.blockPath)
 	}
 	defer func() {
 		err := blockFH.Close()
@@ -49,12 +49,12 @@ func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error 
 	}()
 	serBlock, err := ioutil.ReadAll(blockFH)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error reading block file %s for checkpoint sync initialization", fi.blockPath))
+		return errors.Wrapf(err, "error reading block file %s for checkpoint sync initialization", fi.blockPath)
 	}
 
 	stateFH, err := os.Open(fi.statePath)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error reading state file %s for checkpoint sync initialization", fi.statePath))
+		return errors.Wrapf(err, "error reading state file %s for checkpoint sync initialization", fi.statePath)
 	}
 	defer func() {
 		err := stateFH.Close()
@@ -64,7 +64,7 @@ func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error 
 	}()
 	serState, err := ioutil.ReadAll(stateFH)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error reading block file %s for checkpoint sync initialization", fi.statePath))
+		return errors.Wrapf(err, "error reading block file %s for checkpoint sync initialization", fi.statePath)
 	}
 
 	return d.SaveOrigin(ctx, serState, serBlock)
@@ -75,8 +75,7 @@ var _ Initializer = &FileInitializer{}
 func existsAndIsFile(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
-		msg := fmt.Sprintf("error checking existence of ssz-encoded file %s for checkpoint sync init", path)
-		return errors.Wrap(err, msg)
+		return errors.Wrapf(err, "error checking existence of ssz-encoded file %s for checkpoint sync init", path)
 	}
 	if info.IsDir() {
 		return fmt.Errorf("%s is a directory, please specify full path to file", path)

@@ -57,8 +57,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 	// Genesis case. If block root is zero hash, short circuit to use genesis cachedState stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		if s.MinimumSlot() > 0 {
-			msg := fmt.Sprintf("cannot retrieve genesis state, lowest block in db is slot %d", s.MinimumSlot())
-			return nil, errors.Wrap(ErrSlotBeforeOrigin, msg)
+			return nil, errors.Wrapf(ErrSlotBeforeOrigin, "cannot retrieve genesis state, lowest block in db is slot %d", s.MinimumSlot())
 		}
 		return s.beaconDB.GenesisState(ctx)
 	}
@@ -224,8 +223,7 @@ func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (state.Bea
 	defer span.End()
 
 	if slot < s.MinimumSlot() {
-		msg := fmt.Sprintf("no data from before slot %d", s.MinimumSlot())
-		return nil, errors.Wrap(ErrSlotBeforeOrigin, msg)
+		return nil, errors.Wrapf(ErrSlotBeforeOrigin, "no data from before slot %d", s.MinimumSlot())
 	}
 
 	// Return genesis state if slot is 0.
@@ -284,8 +282,7 @@ func (s *State) LastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 
 		// return an error if we have rewound to before the checkpoint sync slot
 		if (b.Block().Slot() - 1) < s.MinimumSlot() {
-			msg := fmt.Sprintf("no blocks in db prior to slot %d", s.MinimumSlot())
-			return nil, errors.Wrap(ErrSlotBeforeOrigin, msg)
+			return nil, errors.Wrapf(ErrSlotBeforeOrigin, "no blocks in db prior to slot %d", s.MinimumSlot())
 		}
 		// Is the state a genesis state.
 		parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
