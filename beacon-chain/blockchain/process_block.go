@@ -110,7 +110,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, postState, signed); err != nil {
 		return errors.Wrap(err, "could not verify new payload")
 	}
-	// TODO(10261) Check optimistic status
+
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
