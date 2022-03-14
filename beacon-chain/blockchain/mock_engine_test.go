@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -46,4 +47,8 @@ func (m *mockEngineService) ExecutionBlockByHash(_ context.Context, hash common.
 		return nil, errors.New("block not found")
 	}
 	return blk, nil
+}
+
+func (m *mockEngineService) ExecutionBlockByNumber(_ context.Context, num *big.Int) (*enginev1.ExecutionBlock, error) {
+	return nil, nil
 }
