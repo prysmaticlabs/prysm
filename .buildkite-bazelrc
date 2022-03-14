@@ -28,7 +28,7 @@ build --experimental_use_hermetic_linux_sandbox
 # Import workspace options.
 import %workspace%/.bazelrc
 
-startup --host_jvm_args=-Xmx2g --host_jvm_args=-Xms2g
+startup --host_jvm_args=-Xmx4g --host_jvm_args=-Xms2g
 build --experimental_strict_action_env
 build --sandbox_tmpfs_path=/tmp
 build --verbose_failures
