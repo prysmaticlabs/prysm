@@ -1440,3 +1440,7 @@ func TestValidator_SetPubKeyToValidatorIndexMap(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, v.pubkeyHexToValidatorIndex)
 }
+
+func TestValidator_PrepareBeaconProposer(t *testing.T) {
+
+}
