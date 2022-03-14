@@ -24,16 +24,19 @@ licenses(["notice"])  # Apache 2.0
 
 cc_library(
     name = "malloc",
+    tags = ["manual"],
 )
 
 filegroup(
     name = "empty",
     srcs = [],
+    tags = ["manual"],
 )
 
 filegroup(
     name = "cc_wrapper",
     srcs = ["cc_wrapper.sh"],
+    tags = ["manual"],
 )
 
 filegroup(
@@ -42,6 +45,7 @@ filegroup(
         ["extra_tools/**"],
         allow_empty = True,
     ) + [":builtin_include_directory_paths"],
+    tags = ["manual"],
 )
 
 # This is the entry point for --crosstool_top.  Toolchains are found
@@ -49,6 +53,7 @@ filegroup(
 # the "${CPU}" entry in the toolchains attribute.
 cc_toolchain_suite(
     name = "toolchain",
+    tags = ["manual"],
     toolchains = {
         "k8|clang": ":cc-compiler-k8",
         "k8": ":cc-compiler-k8",
@@ -69,6 +74,7 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 1,
+    tags = ["manual"],
     toolchain_config = ":local",
     toolchain_identifier = "local",
 )
@@ -126,6 +132,7 @@ cc_toolchain_config(
     ],
     opt_link_flags = ["-Wl,--gc-sections"],
     supports_start_end_lib = True,
+    tags = ["manual"],
     target_libc = "local",
     target_system_name = "local",
     tool_paths = {
@@ -163,8 +170,12 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 1,
+    tags = ["manual"],
     toolchain_config = ":stub_armeabi-v7a",
     toolchain_identifier = "stub_armeabi-v7a",
 )
 
-armeabi_cc_toolchain_config(name = "stub_armeabi-v7a")
+armeabi_cc_toolchain_config(
+    name = "stub_armeabi-v7a",
+    tags = ["manual"],
+)
