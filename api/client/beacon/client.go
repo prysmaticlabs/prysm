@@ -64,6 +64,23 @@ func IdFromSlot(s types.Slot) StateOrBlockId {
 	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))
 }
 
+// idTemplate is used to create template functions that can interpolate StateOrBlockId values.
+func idTemplate(ts string) func(StateOrBlockId) string {
+	t := template.Must(template.New("").Parse(ts))
+	f := func(id StateOrBlockId) string {
+		b := bytes.NewBuffer(nil)
+		err := t.Execute(b, struct{ Id string }{Id: string(id)})
+		if err != nil {
+			panic(fmt.Sprintf("invalid idTemplate: %s", ts))
+		}
+		return b.String()
+	}
+	// run the template to ensure that it is valid
+	// this should happen load time (using package scoped vars) to ensure runtime errors aren't possible
+	_ = f(IdGenesis)
+	return f
+}
+
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
 
@@ -131,6 +148,7 @@ func withSSZEncoding() reqOption {
 	}
 }
 
+// get is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
 func (c *Client) get(ctx context.Context, path string, opts ...reqOption) ([]byte, error) {
 	u := c.urlForPath(path)
 	log.Printf("requesting %s", u.String())
@@ -172,22 +190,6 @@ func (c *Client) GetBlock(ctx context.Context, blockId StateOrBlockId) ([]byte, 
 	return b, nil
 }
 
-func idTemplate(ts string) func(StateOrBlockId) string {
-	t := template.Must(template.New("").Parse(ts))
-	f := func(id StateOrBlockId) string {
-		b := bytes.NewBuffer(nil)
-		err := t.Execute(b, struct{ Id string }{Id: string(id)})
-		if err != nil {
-			panic(fmt.Sprintf("invalid idTemplate: %s", ts))
-		}
-		return b.String()
-	}
-	// run the template to ensure that it is valid
-	// this should happen load time (using package scoped vars) to ensure runtime errors aren't possible
-	_ = f(IdGenesis)
-	return f
-}
-
 var getBlockRootTpl = idTemplate(get_block_root_path)
 
 // GetBlockRoot retrieves the hash_tree_root of the BeaconBlock for the given block id.
@@ -212,7 +214,6 @@ func (c *Client) GetBlockRoot(ctx context.Context, blockId StateOrBlockId) ([32]
 	return bytesutil.ToBytes32(rs), nil
 }
 
-//var getForkTpl = template.Must(template.New("get-fork-for-state").Parse(get_fork_for_state_path))
 var getForkTpl = idTemplate(get_fork_for_state_path)
 
 // GetFork queries the Beacon Node API for the Fork from the state identified by stateId.

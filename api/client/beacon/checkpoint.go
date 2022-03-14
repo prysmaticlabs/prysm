@@ -113,6 +113,7 @@ const (
 	prysmImplementationName = "Prysm"
 )
 
+// ErrUnsupportedPrysmCheckpointVersion indicates remote beacon node can't be used for checkpoint retrieval.
 var ErrUnsupportedPrysmCheckpointVersion = errors.New("node does not meet minimum version requirements for checkpoint retrieval")
 
 // for older endpoints or clients that do not support the weak_subjectivity api method (only prysm at release time)
