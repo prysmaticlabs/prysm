@@ -24,7 +24,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//         0
 	//        /
 	//       2 <- head
-	require.NoError(t, f.ProcessBlock(context.Background(), 0, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1))
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head for with justified epoch at 1")
@@ -33,7 +33,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//            0
 	//           / \
 	//  head -> 2  1
-	require.NoError(t, f.ProcessBlock(context.Background(), 0, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head for with justified epoch at 1")
@@ -44,7 +44,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//  head -> 2  1
 	//             |
 	//             3
-	require.NoError(t, f.ProcessBlock(context.Background(), 0, indexToHash(3), indexToHash(1), 1, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(3), indexToHash(1), 1, 1))
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head for with justified epoch at 1")
@@ -55,7 +55,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//          2  1
 	//          |  |
 	//  head -> 4  3
-	require.NoError(t, f.ProcessBlock(context.Background(), 0, indexToHash(4), indexToHash(2), 1, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(4), indexToHash(2), 1, 1))
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(4), r, "Incorrect head for with justified epoch at 1")
@@ -68,7 +68,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//  head -> 4  3
 	//          |
 	//          5 <- justified epoch = 2
-	require.NoError(t, f.ProcessBlock(context.Background(), 0, indexToHash(5), indexToHash(4), 2, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(5), indexToHash(4), 2, 1))
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(4), r, "Incorrect head for with justified epoch at 1")
@@ -107,7 +107,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//          5
 	//          |
 	//          6 <- head
-	require.NoError(t, f.ProcessBlock(context.Background(), 0, indexToHash(6), indexToHash(5), 2, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(6), indexToHash(5), 2, 1))
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 1)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(6), r, "Incorrect head for with justified epoch at 2")
