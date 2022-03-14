@@ -611,6 +611,7 @@ func TestProduceBlock(t *testing.T) {
 	}
 
 	v1Server := &Server{
+		SyncChecker:    &mockSync.Sync{IsSyncing: false},
 		V1Alpha1Server: v1Alpha1Server,
 	}
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
