@@ -76,6 +76,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
 	}
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, s.headRoot()); err != nil {
+		return nil, errors.Wrap(err, "could not set block to valid")
+	}
 	return payloadID, nil
 }
 
