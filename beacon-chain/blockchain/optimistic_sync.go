@@ -161,7 +161,7 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 		return false, err
 	}
 	if parent == nil {
-		return false, errNilParentInStore
+		return false, errNilParentInDB
 	}
 
 	parentIsExecutionBlock, err := blocks.ExecutionBlock(parent.Block().Body())
