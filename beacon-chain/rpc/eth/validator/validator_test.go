@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	p2pmock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
@@ -920,13 +921,11 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
-		executionBlocks := make(map[[32]byte]*enginev1.ExecutionBlock)
-		executionBlocks[[32]byte{}] = &enginev1.ExecutionBlock{
-			TotalDifficulty: "0x1",
-		}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockChain.MockEngineService{
-				Blks: executionBlocks,
+			ExecutionEngineCaller: &mocks.EngineClient{
+				ExecutionBlock: &enginev1.ExecutionBlock{
+					TotalDifficulty: "0x1",
+				},
 			},
 			TimeFetcher:       &mockChain.ChainService{},
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},

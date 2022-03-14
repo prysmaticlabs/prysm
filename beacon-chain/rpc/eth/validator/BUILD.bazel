@@ -61,6 +61,7 @@ go_test(
         "//beacon-chain/operations/voluntaryexits:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
+        "//beacon-chain/powchain/engine-api-client/v1/mocks:go_default_library",
         "//beacon-chain/powchain/testing:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",
