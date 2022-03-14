@@ -619,11 +619,11 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 func TestStore_FeeRecipientByValidatorID(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	ids := []uint64{0, 0, 0}
+	ids := []types.ValidatorIndex{0, 0, 0}
 	feeRecipients := []common.Address{{}, {}, {}, {}}
 	require.ErrorContains(t, "validatorIDs and feeRecipients must be the same length", db.SaveFeeRecipientsByValidatorIDs(ctx, ids, feeRecipients))
 
-	ids = []uint64{0, 1, 2}
+	ids = []types.ValidatorIndex{0, 1, 2}
 	feeRecipients = []common.Address{{'a'}, {'b'}, {'c'}}
 	require.NoError(t, db.SaveFeeRecipientsByValidatorIDs(ctx, ids, feeRecipients))
 	f, err := db.FeeRecipientByValidatorID(ctx, 0)

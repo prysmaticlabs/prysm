@@ -189,7 +189,7 @@ type BeaconChainConfig struct {
 	TerminalBlockHash                common.Hash    `yaml:"TERMINAL_BLOCK_HASH" spec:"true"`                  // TerminalBlockHash of beacon chain.
 	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
 	TerminalTotalDifficulty          string         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of the experimental Bellatrix spec. This value is type is currently TBD.
-	FeeRecipient                     common.Address // FeeRecipient where the transaction fee goes to.
+	DefaultFeeRecipient              common.Address // DefaultFeeRecipient where the transaction fee goes to.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.

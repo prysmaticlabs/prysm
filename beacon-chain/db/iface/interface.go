@@ -50,7 +50,7 @@ type ReadOnlyDatabase interface {
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
 	// Fee reicipients operations.
-	FeeRecipientByValidatorID(ctx context.Context, id uint64) (common.Address, error)
+	FeeRecipientByValidatorID(ctx context.Context, id types.ValidatorIndex) (common.Address, error)
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	LowestSyncedBlockSlot(ctx context.Context) (types.Slot, error)
@@ -82,7 +82,7 @@ type NoHeadAccessDatabase interface {
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 	// Fee reicipients operations.
-	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []uint64, addrs []common.Address) error
+	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, addrs []common.Address) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error
 }
