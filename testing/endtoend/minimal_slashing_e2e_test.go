@@ -45,6 +45,9 @@ func TestEndToEnd_Slasher_MinimalConfig_Web3Signer(t *testing.T) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
+	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
+	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
+
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
 			"--slasher",
@@ -62,6 +65,7 @@ func TestEndToEnd_Slasher_MinimalConfig_Web3Signer(t *testing.T) {
 			ev.InjectDoubleBlockOnEpoch(2),
 		},
 		UseWeb3RemoteSigner: true,
+		TracingSinkEndpoint: tracingEndpoint,
 	}
 
 	newTestRunner(t, testConfig).run()
