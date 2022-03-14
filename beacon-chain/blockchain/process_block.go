@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -98,16 +99,24 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
-
-	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
-	if err != nil {
-		return err
+	preStateIsMerged, postStateIsMerged := false, false
+	if preState.Version() >= version.Bellatrix {
+		preStateIsMerged, err = blocks.MergeTransitionComplete(preState)
+		if err != nil {
+			return err
+		}
 	}
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return err
 	}
-	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, postState, signed); err != nil {
+	if postState.Version() >= version.Bellatrix {
+		postStateIsMerged, err = blocks.MergeTransitionComplete(postState)
+		if err != nil {
+			return err
+		}
+	}
+	if err := s.notifyNewPayload(ctx, preStateIsMerged, postStateIsMerged, postState, signed); err != nil {
 		return errors.Wrap(err, "could not verify new payload")
 	}
 	// TODO(10261) Check optimistic status
@@ -310,15 +319,24 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
-		preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
-		if err != nil {
-			return nil, nil, nil, err
+		preStateIsMerged, postStateIsMerged := false, false
+		if preState.Version() >= version.Bellatrix {
+			preStateIsMerged, err = blocks.MergeTransitionComplete(preState)
+			if err != nil {
+				return nil, nil, nil, err
+			}
 		}
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, b); err != nil {
+		if preState.Version() >= version.Bellatrix {
+			postStateIsMerged, err = blocks.MergeTransitionComplete(preState)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+		}
+		if err := s.notifyNewPayload(ctx, preStateIsMerged, postStateIsMerged, preState, b); err != nil {
 			return nil, nil, nil, err
 		}
 

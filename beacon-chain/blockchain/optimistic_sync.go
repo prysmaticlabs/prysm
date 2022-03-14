@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
@@ -80,7 +79,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload
-func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, header *ethpb.ExecutionPayloadHeader, postState state.BeaconState, blk block.SignedBeaconBlock) error {
+func (s *Service) notifyNewPayload(ctx context.Context, preStateIsMerged, postStateIsMerged bool, postState state.BeaconState, blk block.SignedBeaconBlock) error {
 	if postState == nil {
 		return errors.New("pre and post states must not be nil")
 	}
@@ -92,11 +91,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 		return err
 	}
 	body := blk.Block().Body()
-	enabled, err := blocks.ExecutionEnabled(postState, blk.Block().Body())
-	if err != nil {
-		return errors.Wrap(err, "could not determine if execution is enabled")
-	}
-	if !enabled {
+	if !postStateIsMerged {
 		return nil
 	}
 	payload, err := body.ExecutionPayload()
@@ -118,13 +113,10 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 	}
 
 	// During the transition event, the transition block should be verified for sanity.
-	if isPreBellatrix(preStateVersion) {
+	if isPreBellatrix(postState.Version()) {
 		return nil
 	}
-	atTransition, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(header, body)
-	if err != nil {
-		return errors.Wrap(err, "could not check if merge block is terminal")
-	}
+	atTransition := !preStateIsMerged && postStateIsMerged
 	if !atTransition {
 		return nil
 	}
