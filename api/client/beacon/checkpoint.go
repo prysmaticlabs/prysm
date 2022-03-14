@@ -6,8 +6,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/rogpeppe/go-internal/semver"
-
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/sniff"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/mod/semver"
 )
 
 // WeakSubjectivityData represents the state root, block root and epoch of the BeaconState + SignedBeaconBlock
