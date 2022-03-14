@@ -93,9 +93,20 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	set.String(flags.FeeRecipient.Name, "", "")
 	require.NoError(t, set.Set(flags.FeeRecipient.Name, "0xB"))
 	cliCtx := cli.NewContext(&app, set, nil)
+	err := configureExecutionSetting(cliCtx)
+	require.ErrorContains(t, "0xB is not a valid fee recipient address", err)
 
-	configureExecutionSetting(cliCtx)
-	assert.Equal(t, common.HexToAddress("0xB"), params.BeaconConfig().DefaultFeeRecipient)
+	require.NoError(t, set.Set(flags.FeeRecipient.Name, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+	cliCtx = cli.NewContext(&app, set, nil)
+	err = configureExecutionSetting(cliCtx)
+	require.NoError(t, err)
+	assert.Equal(t, common.HexToAddress("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), params.BeaconConfig().DefaultFeeRecipient)
+
+	require.NoError(t, set.Set(flags.FeeRecipient.Name, "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+	cliCtx = cli.NewContext(&app, set, nil)
+	err = configureExecutionSetting(cliCtx)
+	require.NoError(t, err)
+	assert.Equal(t, common.HexToAddress("0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), params.BeaconConfig().DefaultFeeRecipient)
 }
 
 func TestConfigureNetwork(t *testing.T) {
