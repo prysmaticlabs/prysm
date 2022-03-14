@@ -25,9 +25,6 @@ build:remote-cache --incompatible_strict_action_env=true
 
 build --experimental_use_hermetic_linux_sandbox
 
-# DEBUG !!! REVERT BEFORE MERGING !!!
-build --noremote_accept_cached
-
 # Import workspace options.
 import %workspace%/.bazelrc
 
