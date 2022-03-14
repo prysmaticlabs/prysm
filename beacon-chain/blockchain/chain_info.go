@@ -338,7 +338,7 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
 		return false, err
 	}
-	blk, err := s.cfg.BeaconDB.Block(ctx, root)
+	ss, err := s.cfg.BeaconDB.StateSummary(ctx, root)
 	if err != nil {
 		return false, err
 	}
@@ -347,21 +347,19 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if err != nil {
 		return false, err
 	}
-
-	slot := blk.Block().Slot()
-	if slots.ToEpoch(slot) > validatedCheckpoint.Epoch {
+	if slots.ToEpoch(ss.Slot) > validatedCheckpoint.Epoch {
 		return true, nil
 	}
 
-	if slots.ToEpoch(slot)+1 < validatedCheckpoint.Epoch {
+	if slots.ToEpoch(ss.Slot)+1 < validatedCheckpoint.Epoch {
 		return false, nil
 	}
 
-	summary, err := s.cfg.BeaconDB.StateSummary(ctx, bytesutil.ToBytes32(validatedCheckpoint.Root))
+	lastValidated, err := s.cfg.BeaconDB.StateSummary(ctx, bytesutil.ToBytes32(validatedCheckpoint.Root))
 	if err != nil {
 		return false, err
 	}
-	return slot > summary.Slot, nil
+	return ss.Slot > lastValidated.Slot, nil
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.
