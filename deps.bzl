@@ -3867,9 +3867,9 @@ def prysm_deps():
     # Note: go_repository is already wrapped with maybe!
     maybe(
         git_repository,
-        name = "graknlabs_bazel_distribution",
-        commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
-        remote = "https://github.com/graknlabs/bazel-distribution",
+        name = "vaticle_bazel_distribution",
+        commit = "96424c85195a97dad81f69fdbbef2e1574bf8801",
+        remote = "https://github.com/vaticle/bazel-distribution",
         shallow_since = "1569509514 +0300",
     )
 
