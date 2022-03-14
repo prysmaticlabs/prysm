@@ -505,33 +505,35 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config
 		}
 	}
 
-	//validate config
-	if config != nil {
-		// default config is mandatory
-		if config.DefaultConfig == nil {
-			return nil, errors.New("default config is required")
-		}
-		if !common.IsHexAddress(config.DefaultConfig.FeeRecipient) {
-			return nil, errors.New("default config fee recipient is not a valid eth1 address")
-		}
-		if config.ProposeConfig != nil {
-			for key, option := range config.ProposeConfig {
-				decodedKey, err := hexutil.Decode(key)
-				if err != nil {
-					return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
-				}
-				if len(decodedKey) != fieldparams.BLSPubkeyLength {
-					return nil, fmt.Errorf("%v  is not a bls public key", key)
-				}
-				if option == nil {
-					return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
-				}
-				if common.IsHexAddress(config.DefaultConfig.FeeRecipient) {
-					return nil, fmt.Errorf("fee recipient is not a valid eth1 address for proposer %s", key)
-				}
+	if config == nil {
+		return nil, errors.New("proposer config assignment encountered an issue")
+	}
+
+	// default config is mandatory
+	if config.DefaultConfig == nil {
+		return nil, errors.New("default config is required")
+	}
+	if !common.IsHexAddress(config.DefaultConfig.FeeRecipient) {
+		return nil, errors.New("default config fee recipient is not a valid eth1 address")
+	}
+	if config.ProposeConfig != nil {
+		for key, option := range config.ProposeConfig {
+			decodedKey, err := hexutil.Decode(key)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+			}
+			if len(decodedKey) != fieldparams.BLSPubkeyLength {
+				return nil, fmt.Errorf("%v  is not a bls public key", key)
+			}
+			if option == nil {
+				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
+			}
+			if common.IsHexAddress(config.DefaultConfig.FeeRecipient) {
+				return nil, fmt.Errorf("fee recipient is not a valid eth1 address for proposer %s", key)
 			}
 		}
 	}
+
 	// if no flags were set, use the burn address
 	if !cliCtx.IsSet(flags.ValidatorsProposerConfigDirFlag.Name) &&
 		!cliCtx.IsSet(flags.ValidatorsProposerConfigURLFlag.Name) &&
