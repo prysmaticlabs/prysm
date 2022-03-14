@@ -233,6 +233,20 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			wantExists:            true,
 			wantTerminalBlockHash: []byte{'a'},
 		},
+		{
+			name:     "ttd not reached",
+			paramsTd: "3",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'a'},
+				ParentHash:      []byte{'b'},
+				TotalDifficulty: "0x2",
+			},
+			parentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'b'},
+				ParentHash:      []byte{'c'},
+				TotalDifficulty: "0x1",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

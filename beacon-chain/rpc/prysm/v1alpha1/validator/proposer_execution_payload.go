@@ -219,6 +219,8 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 				}).Info("Retrieved terminal block hash")
 				return blk.Hash, true, nil
 			}
+		} else {
+			return nil, false, nil
 		}
 		blk = parentBlk
 	}
