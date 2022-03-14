@@ -85,6 +85,13 @@ func TestClient_IPC(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
+	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
+		require.Equal(t, true, ok)
+		resp, err := client.ExecutionBlockByNumber(ctx, big.NewInt(10))
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
 }
 
 func TestClient_HTTP(t *testing.T) {
@@ -416,6 +423,44 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
+	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
+		arg := big.NewInt(100)
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
+		require.Equal(t, true, ok)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			enc, err := ioutil.ReadAll(r.Body)
+			require.NoError(t, err)
+			jsonRequestString := string(enc)
+			// We expect the JSON string RPC request contains the right arguments.
+			require.Equal(t, true, strings.Contains(
+				jsonRequestString, fmt.Sprintf("%#x", arg),
+			))
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  want,
+			}
+			err = json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		client := &Client{}
+		client.rpc = rpcClient
+
+		// We call the RPC method via HTTP and expect a proper result.
+		resp, err := client.ExecutionBlockByNumber(ctx, arg)
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resp)
+	})
 }
 
 func TestExchangeTransitionConfiguration(t *testing.T) {
@@ -579,6 +624,42 @@ func Test_handleRPCError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := handleRPCError(tt.given)
 			require.ErrorContains(t, tt.expectedContains, got)
+		})
+	}
+}
+
+func TestBlockNumArg(t *testing.T) {
+	tests := []struct {
+		name   string
+		number *big.Int
+		want   string
+	}{
+		{
+			name:   "latest",
+			number: nil,
+			want:   "latest",
+		},
+		{
+			name:   "pending",
+			number: big.NewInt(-1),
+			want:   "pending",
+		},
+		{
+			name:   "normal number",
+			number: big.NewInt(100),
+			want:   "0x64",
+		},
+		{
+			name:   "large number",
+			number: big.NewInt(0).SetUint64(1<<64 - 1),
+			want:   "0xffffffffffffffff",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := toBlockNumArg(tt.number); got != tt.want {
+				t.Errorf("toBlockNumArg() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
