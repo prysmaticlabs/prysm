@@ -153,7 +153,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			engine := &mockEngineService{forkchoiceError: tt.newForkchoiceErr}
+			engine := &MockEngineService{forkchoiceError: tt.newForkchoiceErr}
 			service.cfg.ExecutionEngineCaller = engine
 			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, tt.finalizedRoot)
 			if tt.errString != "" {
@@ -304,12 +304,12 @@ func Test_NotifyNewPayload(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		engine := &mockEngineService{newPayloadError: tt.newPayloadErr, blks: map[[32]byte]*v1.ExecutionBlock{}}
-		engine.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
+		engine := &MockEngineService{newPayloadError: tt.newPayloadErr, Blks: map[[32]byte]*v1.ExecutionBlock{}}
+		engine.Blks[[32]byte{'a'}] = &v1.ExecutionBlock{
 			ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 			TotalDifficulty: "0x2",
 		}
-		engine.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
+		engine.Blks[[32]byte{'b'}] = &v1.ExecutionBlock{
 			ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 			TotalDifficulty: "0x1",
 		}
