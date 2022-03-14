@@ -360,11 +360,14 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	g.Go(func() error {
 		return ethNode.Start(ctx)
 	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
 	syncBeaconNode := components.NewBeaconNode(config, index, bootnodeEnr)
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})
-	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode, syncBeaconNode}); err != nil {
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{syncBeaconNode}); err != nil {
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index), grpc.WithInsecure())
