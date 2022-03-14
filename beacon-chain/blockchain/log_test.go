@@ -3,6 +3,7 @@ package blockchain
 import (
 	"testing"
 
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -11,6 +12,17 @@ import (
 )
 
 func Test_logStateTransitionData(t *testing.T) {
+	payloadBlk := &ethpb.BeaconBlockBellatrix{
+		Body: &ethpb.BeaconBlockBodyBellatrix{
+			SyncAggregate: &ethpb.SyncAggregate{},
+			ExecutionPayload: &enginev1.ExecutionPayload{
+				BlockHash:    []byte{1, 2, 3},
+				Transactions: [][]byte{{}, {}},
+			},
+		},
+	}
+	wrappedPayloadBlk, err := wrapper.WrappedBeaconBlock(payloadBlk)
+	require.NoError(t, err)
 	tests := []struct {
 		name string
 		b    block.BeaconBlock
@@ -55,11 +67,15 @@ func Test_logStateTransitionData(t *testing.T) {
 				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{{}}}}),
 			want: "\"Finished applying state transition\" attestations=1 attesterSlashings=1 deposits=1 prefix=blockchain proposerSlashings=1 slot=0 voluntaryExits=1",
 		},
+		{name: "has payload",
+			b:    wrappedPayloadBlk,
+			want: "\"Finished applying state transition\" payloadHash=0x010203 prefix=blockchain slot=0 syncBitsCount=0 txCount=2",
+		},
 	}
 	for _, tt := range tests {
 		hook := logTest.NewGlobal()
 		t.Run(tt.name, func(t *testing.T) {
-			logStateTransitionData(tt.b)
+			require.NoError(t, logStateTransitionData(tt.b))
 			require.LogsContain(t, hook, tt.want)
 		})
 	}
