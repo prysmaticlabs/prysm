@@ -42,6 +42,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -2233,6 +2234,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
+	hook := logTest.NewGlobal()
 
 	terminalBlockHash := bytesutil.PadTo([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 32)
@@ -2333,6 +2335,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 			PayloadIDBytes:   &enginev1.PayloadIDBytes{1},
 			ExecutionPayload: payload,
 		},
+		BeaconDB: db,
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -2346,6 +2349,10 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 		Graffiti:     graffiti[:],
 	}
 
+	proposerIndex := types.ValidatorIndex(40)
+	addr := common.Address{'a'}
+	require.NoError(t, proposerServer.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{proposerIndex}, []common.Address{addr}))
+
 	block, err := proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
 	bellatrixBlk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_Bellatrix)
@@ -2356,6 +2363,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	assert.DeepEqual(t, randaoReveal, bellatrixBlk.Bellatrix.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, bellatrixBlk.Bellatrix.Body.Graffiti, "Expected block to have correct Graffiti")
 
+	require.LogsDoNotContain(t, hook, "Fee recipient not found. Using default fee recipient.")
 	require.DeepEqual(t, payload, bellatrixBlk.Bellatrix.Body.ExecutionPayload) // Payload should equal.
 }
 
