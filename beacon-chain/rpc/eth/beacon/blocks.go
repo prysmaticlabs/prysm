@@ -156,19 +156,19 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 	case *ethpbv2.SignedBeaconBlockContainerV2_Phase0Block:
 		v1alpha1Blk, err = migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: blk.Phase0Block, Signature: req.Signature})
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block: %v", err)
 		}
 		wsb, err = wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
 	case *ethpbv2.SignedBeaconBlockContainerV2_AltairBlock:
 		v1alpha1Blk, err = migration.AltairToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockAltair{Message: blk.AltairBlock, Signature: req.Signature})
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block: %v", err)
 		}
 		wsb, err = wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
 	case *ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock:
 		v1alpha1Blk, err = migration.BellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockBellatrix{Message: blk.BellatrixBlock, Signature: req.Signature})
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block: %v", err)
 		}
 		wsb, err = wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
 	default:
@@ -176,7 +176,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 	}
 
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not wrap beacon block")
+		return nil, status.Errorf(codes.InvalidArgument, "Could not wrap beacon block: %v", err)
 	}
 
 	root, err := wsb.Block().HashTreeRoot()
