@@ -229,6 +229,24 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 	}
 }
 
+func TestStore_OnBlock_ProposerBoostEarly(t *testing.T) {
+	ctx := context.Background()
+
+	beaconDB := testDB.SetupDB(t)
+	fcs := doublylinkedtree.New(0, 0)
+	opts := []Option{
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+	}
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.BoostProposerRoot(ctx, 0, [32]byte{'A'}, time.Now()))
+	_, err = service.cfg.ForkChoiceStore.Head(ctx, 0,
+		params.BeaconConfig().ZeroHash, []uint64{}, 0)
+	require.ErrorContains(t, "could not apply proposer boost score: invalid proposer boost root", err)
+}
+
 func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
@@ -1017,7 +1035,7 @@ func TestAncestor_CanUseForkchoice(t *testing.T) {
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), 0, 0, false)) // Saves blocks to fork choice store.
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), 0, 0)) // Saves blocks to fork choice store.
 	}
 
 	r, err := service.ancestor(context.Background(), r200[:], 150)
@@ -1062,7 +1080,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock))) // Saves blocks to DB.
 	}
 
-	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(context.Background(), 200, r200, r200, 0, 0, false))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(context.Background(), 200, r200, r200, 0, 0))
 
 	r, err := service.ancestor(context.Background(), r200[:], 150)
 	require.NoError(t, err)

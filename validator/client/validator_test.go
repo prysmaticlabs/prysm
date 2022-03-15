@@ -102,6 +102,13 @@ func (m *mockKeymanager) SimulateAccountChanges(newKeys [][fieldparams.BLSPubkey
 	m.accountsChangedFeed.Send(newKeys)
 }
 
+// ExtractKeystores --
+func (*mockKeymanager) ExtractKeystores(
+	ctx context.Context, publicKeys []bls.PublicKey, password string,
+) ([]*keymanager.Keystore, error) {
+	return nil, errors.New("extracting keys not supported on mock keymanager")
+}
+
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
 	multipleStatus := make([]*ethpb.ValidatorActivationResponse_Status, len(pubkeys))
 	for i, key := range pubkeys {
@@ -1376,7 +1383,9 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 		walletInitializedFeed:   &event.Feed{},
 		walletIntializedChannel: walletChan,
 	}
+	wait := make(chan struct{})
 	go func() {
+		defer close(wait)
 		err = v.WaitForKeymanagerInitialization(ctx)
 		require.NoError(t, err)
 		km, err := v.Keymanager()
@@ -1387,6 +1396,7 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	walletChan <- wallet.New(&wallet.Config{
 		KeymanagerKind: keymanager.Local,
 	})
+	<-wait
 }
 
 func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {

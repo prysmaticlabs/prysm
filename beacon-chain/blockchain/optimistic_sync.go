@@ -76,6 +76,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
 	}
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, s.headRoot()); err != nil {
+		return nil, errors.Wrap(err, "could not set block to valid")
+	}
 	return payloadID, nil
 }
 
@@ -119,7 +122,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 
 	// During the transition event, the transition block should be verified for sanity.
 	if isPreBellatrix(preStateVersion) {
-		return nil
+		// Handle case where pre-state is Altair but block contains payload.
+		// To reach here, the block must have contained a valid payload.
+		return s.validateMergeBlock(ctx, blk)
 	}
 	atTransition, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(header, body)
 	if err != nil {

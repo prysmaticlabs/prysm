@@ -258,6 +258,7 @@ func TestDeterministicGenesisState_100Validators(t *testing.T) {
 	activeValidators, err := helpers.ActiveValidatorCount(context.Background(), beaconState, 0)
 	require.NoError(t, err)
 
+	// lint:ignore uintcast -- test code
 	if len(privKeys) != int(validatorCount) {
 		t.Fatalf("expected amount of private keys %d to match requested amount of validators %d", len(privKeys), validatorCount)
 	}
