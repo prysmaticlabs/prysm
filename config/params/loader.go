@@ -171,6 +171,8 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 	lines = append(lines, fmt.Sprintf("DEPOSIT_NETWORK_ID: %d", cfg.DepositNetworkID))
 	lines = append(lines, fmt.Sprintf("ALTAIR_FORK_EPOCH: %d", cfg.AltairForkEpoch))
 	lines = append(lines, fmt.Sprintf("ALTAIR_FORK_VERSION: %#x", cfg.AltairForkVersion))
+	lines = append(lines, fmt.Sprintf("BELLATRIX_FORK_EPOCH: %d", cfg.BellatrixForkEpoch))
+	lines = append(lines, fmt.Sprintf("BELLATRIX_FORK_VERSION: %#x", cfg.BellatrixForkVersion))
 	lines = append(lines, fmt.Sprintf("INACTIVITY_SCORE_BIAS: %d", cfg.InactivityScoreBias))
 	lines = append(lines, fmt.Sprintf("INACTIVITY_SCORE_RECOVERY_RATE: %d", cfg.InactivityScoreRecoveryRate))
 	lines = append(lines, fmt.Sprintf("TERMINAL_TOTAL_DIFFICULTY: %s", cfg.TerminalTotalDifficulty))

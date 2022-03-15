@@ -101,6 +101,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		return err
 	}
 
+	prysmNodeCount := e2e.TestParams.BeaconNodeCount
 	args := []string{
 		"beacon_node",
 		fmt.Sprintf("--datadir=%s/lighthouse-beacon-node-%d", e2e.TestParams.TestPath, index),
@@ -112,12 +113,15 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index),
 		fmt.Sprintf("--http-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort+index),
 		fmt.Sprintf("--target-peers=%d", 10),
-		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort),
+		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort+prysmNodeCount+index),
+		fmt.Sprintf("--execution-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort+prysmNodeCount+index),
 		fmt.Sprintf("--boot-nodes=%s", node.enr),
 		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeMetricsPort+index),
 		"--metrics",
 		"--http",
+		"--http-allow-sync-stalled",
 		"--debug-level=debug",
+		"--merge",
 	}
 	if node.config.UseFixedPeerIDs {
 		flagVal := strings.Join(node.config.PeerIDs, ",")

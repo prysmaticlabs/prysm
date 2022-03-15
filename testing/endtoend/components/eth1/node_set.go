@@ -33,8 +33,9 @@ func (s *NodeSet) Start(ctx context.Context) error {
 	// We want each beacon node to connect to its own Eth1 node.
 	// We start up one Eth1 node less than the beacon node count because the first
 	// beacon node will connect to the already existing Eth1 miner.
-	nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount-1)
-	for i := 0; i < e2e.TestParams.BeaconNodeCount-1; i++ {
+	totalNodeCount := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount - 1
+	nodes := make([]e2etypes.ComponentRunner, totalNodeCount)
+	for i := 0; i < totalNodeCount; i++ {
 		// We start indexing nodes from 1 because the miner has an implicit 0 index.
 		node := NewNode(i+1, s.enr)
 		nodes[i] = node
