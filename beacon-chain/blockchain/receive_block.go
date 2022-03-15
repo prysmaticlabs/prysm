@@ -79,7 +79,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 	defer span.End()
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	fCheckpoints, jCheckpoints, optimistic, err := s.onBlockBatch(ctx, blocks, blkRoots)
+	fCheckpoints, jCheckpoints, _, err := s.onBlockBatch(ctx, blocks, blkRoots)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
 		tracing.AnnotateError(span, err)
@@ -92,15 +92,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
-		}
-		if !optimistic[i] {
-			root, err := b.Block().HashTreeRoot()
-			if err != nil {
-				return err
-			}
-			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root); err != nil {
-				return err
-			}
 		}
 
 		// Send notification of the processed block to the state feed.

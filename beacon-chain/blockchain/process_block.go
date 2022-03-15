@@ -114,9 +114,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
-	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
-		return err
-	}
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
 	// running a successful state transition for the block.
 	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
@@ -368,10 +365,6 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	// TODO(10261) send optimistic status
-	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
-		return err
-	}
 	if _, err := s.notifyForkchoiceUpdate(ctx, b, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
 		return err
 	}
@@ -495,8 +488,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 		fCheckpoint.Epoch); err != nil {
 		return errors.Wrap(err, "could not process block for proto array fork choice")
 	}
-	// TODO(10261) send optimistic status
-	return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
+	return nil
 }
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
