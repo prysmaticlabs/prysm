@@ -2431,6 +2431,23 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 	require.DeepEqual(t, bitfield.NewBitvector512(), aggregate.SyncCommitteeBits)
 }
 
+func TestProposer_PrepareBeaconProposer(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+	request := ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{
+				FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
+				ValidatorIndex: 1,
+			},
+		},
+	}
+	proposerServer := &Server{BeaconDB: db}
+	_, err := proposerServer.PrepareBeaconProposer(ctx, &request)
+	require.NoError(t, err)
+
+}
+
 func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
 	slotStartTime := uint64(mockPOW.GenesisTime) + uint64((slot - (slot % (slots))).Mul(params.BeaconConfig().SecondsPerSlot))

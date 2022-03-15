@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
+	validator2 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -2010,4 +2011,27 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		}
 		require.DeepEqual(t, expectedContributions, savedMsgs)
 	})
+}
+
+func TestPrepareBeaconProposer(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+	v1Server := &validator2.Server{
+		BeaconDB: db,
+	}
+	server := &Server{
+		V1Alpha1Server: v1Server,
+	}
+
+	request := ethpbv1.PrepareBeaconProposerRequest{
+		Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{
+				FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
+				ValidatorIndex: 1,
+			},
+		},
+	}
+	_, err := server.PrepareBeaconProposer(ctx, &request)
+	require.NoError(t, err)
+
 }
