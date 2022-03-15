@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -127,6 +128,9 @@ func (vs *Server) PrepareBeaconProposer(
 	var FeeRecipients []common.Address
 	var ValidatorIndices []types.ValidatorIndex
 	for _, recipientContainer := range request.Recipients {
+		if len(recipientContainer.FeeRecipient) != fieldparams.FeeRecipientLength {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid fee recipient length")
+		}
 		FeeRecipients = append(FeeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
 		ValidatorIndices = append(ValidatorIndices, recipientContainer.ValidatorIndex)
 	}

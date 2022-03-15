@@ -335,6 +335,9 @@ func (vs *Server) PrepareBeaconProposer(
 	var FeeRecipients []common.Address
 	var ValidatorIndices []types.ValidatorIndex
 	for _, recipientContainer := range request.Recipients {
+		if len(recipientContainer.FeeRecipient) != fieldparams.FeeRecipientLength {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid fee recipient length")
+		}
 		FeeRecipients = append(FeeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
 		ValidatorIndices = append(ValidatorIndices, recipientContainer.ValidatorIndex)
 	}

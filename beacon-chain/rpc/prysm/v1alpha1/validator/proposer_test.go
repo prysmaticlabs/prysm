@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -2432,20 +2433,56 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 }
 
 func TestProposer_PrepareBeaconProposer(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-	request := ethpb.PrepareBeaconProposerRequest{
-		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			{
-				FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
-				ValidatorIndex: 1,
+	type args struct {
+		request *ethpb.PrepareBeaconProposerRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr error
+	}{
+		{
+			name: "Happy Path",
+			args: args{
+				request: &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
 			},
+			wantErr: nil,
+		},
+		{
+			name: "invalid fee recipient length",
+			args: args{
+				request: &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.BLSPubkeyLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
+			},
+			wantErr: status.Errorf(codes.InvalidArgument, "Invalid fee recipient length"),
 		},
 	}
-	proposerServer := &Server{BeaconDB: db}
-	_, err := proposerServer.PrepareBeaconProposer(ctx, &request)
-	require.NoError(t, err)
-
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			proposerServer := &Server{BeaconDB: db}
+			_, err := proposerServer.PrepareBeaconProposer(ctx, tt.args.request)
+			if tt.wantErr != nil {
+				require.Equal(t, fmt.Sprint(tt.wantErr), fmt.Sprint(err))
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }
 
 func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {

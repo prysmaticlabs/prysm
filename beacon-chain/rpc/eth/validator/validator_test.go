@@ -45,6 +45,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -2013,24 +2015,60 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 }
 
 func TestPrepareBeaconProposer(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-	v1Server := &v1alpha1validator.Server{
-		BeaconDB: db,
+	type args struct {
+		request *ethpbv1.PrepareBeaconProposerRequest
 	}
-	server := &Server{
-		V1Alpha1Server: v1Server,
-	}
-
-	request := ethpbv1.PrepareBeaconProposerRequest{
-		Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			{
-				FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
-				ValidatorIndex: 1,
+	tests := []struct {
+		name    string
+		args    args
+		wantErr error
+	}{
+		{
+			name: "Happy Path",
+			args: args{
+				request: &ethpbv1.PrepareBeaconProposerRequest{
+					Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
 			},
+			wantErr: nil,
+		},
+		{
+			name: "invalid fee recipient length",
+			args: args{
+				request: &ethpbv1.PrepareBeaconProposerRequest{
+					Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.BLSPubkeyLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
+			},
+			wantErr: status.Errorf(codes.InvalidArgument, "Invalid fee recipient length"),
 		},
 	}
-	_, err := server.PrepareBeaconProposer(ctx, &request)
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			v1Server := &v1alpha1validator.Server{
+				BeaconDB: db,
+			}
+			server := &Server{
+				V1Alpha1Server: v1Server,
+			}
+			_, err := server.PrepareBeaconProposer(ctx, tt.args.request)
+			if tt.wantErr != nil {
+				require.Equal(t, fmt.Sprint(tt.wantErr), fmt.Sprint(err))
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 
 }
