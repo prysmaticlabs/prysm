@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math/big"
@@ -98,14 +99,18 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
+	emptyFeeRecipient := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	switch err == nil {
 	case true:
 		feeRecipient = recipient
 	case errors.As(err, kv.ErrNotFoundFeeRecipient): // If fee recipient is not found, use the default fee recipient.
-		logrus.WithFields(logrus.Fields{
-			"validatorIndex":      vIdx,
-			"defaultFeeRecipient": feeRecipient,
-		}).Error("Fee recipient not found. Using default fee recipient")
+		if bytes.Equal(feeRecipient.Bytes(), emptyFeeRecipient) {
+			logrus.WithFields(logrus.Fields{
+				"validatorIndex":      vIdx,
+				"defaultFeeRecipient": feeRecipient,
+			}).Error("Fee recipient not found. Using default fee recipient")
+
+		}
 	default:
 		return nil, errors.Wrap(err, "could not get fee recipient in db")
 	}
