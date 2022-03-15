@@ -125,7 +125,7 @@ func TestForkChoice_AncestorRoot(t *testing.T) {
 	assert.Equal(t, bytesutil.ToBytes32(r), indexToHash(3))
 
 	_, err = f.AncestorRoot(ctx, indexToHash(3), 0)
-	assert.ErrorContains(t, errNilNode.Error(), err)
+	assert.ErrorContains(t, ErrNilNode.Error(), err)
 
 	root, err := f.AncestorRoot(ctx, indexToHash(3), 5)
 	require.NoError(t, err)
