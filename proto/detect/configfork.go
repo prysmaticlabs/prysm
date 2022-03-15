@@ -98,7 +98,7 @@ func ByVersion(cv [4]byte) (*ConfigFork, error) {
 				case altair:
 					cf.Fork = params.ForkAltair
 				case merge:
-					cf.Fork = params.ForkMerge
+					cf.Fork = params.ForkBellatrix
 				default:
 					return cf, fmt.Errorf("unrecognized fork for config name=%s, BeaconState.fork.current_version=%#x", name.String(), cv)
 				}
@@ -152,7 +152,7 @@ func (cf *ConfigFork) UnmarshalBeaconState(marshaled []byte) (s state.BeaconStat
 		if err != nil {
 			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkAltair failed")
 		}
-	case params.ForkMerge:
+	case params.ForkBellatrix:
 		s, err = v3.InitializeFromSSZBytes(marshaled)
 		if err != nil {
 			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkMerge failed")
@@ -208,7 +208,7 @@ func (cf *ConfigFork) UnmarshalBeaconBlock(marshaled []byte) (block.SignedBeacon
 		blk = &v1alpha1.SignedBeaconBlock{}
 	case params.ForkAltair:
 		blk = &v1alpha1.SignedBeaconBlockAltair{}
-	case params.ForkMerge:
+	case params.ForkBellatrix:
 		blk = &v1alpha1.SignedBeaconBlockBellatrix{}
 	default:
 		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", cf.Fork.String(), slot)

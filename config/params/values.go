@@ -56,7 +56,7 @@ type ForkName int
 const (
 	ForkGenesis ForkName = iota
 	ForkAltair
-	ForkMerge
+	ForkBellatrix
 )
 
 func (n ForkName) String() string {
@@ -65,6 +65,8 @@ func (n ForkName) String() string {
 		return "genesis"
 	case ForkAltair:
 		return "altair"
+	case ForkBellatrix:
+		return "bellatrix"
 	}
 
 	return "undefined"
