@@ -103,12 +103,12 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
+	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, signed); err != nil {
+		return errors.Wrap(err, "could not verify new payload")
+	}
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return err
-	}
-	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, postState, signed); err != nil {
-		return errors.Wrap(err, "could not verify new payload")
 	}
 
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {

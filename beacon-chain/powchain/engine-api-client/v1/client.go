@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -102,8 +103,17 @@ func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (
 		return nil, handleRPCError(err)
 	}
 
+	log.Info("Called new payload, received response", result)
+
 	switch result.Status {
 	case pb.PayloadStatus_INVALID_BLOCK_HASH:
+		log.WithFields(log.Fields{
+			"blockHash":    hexutil.Encode(payload.BlockHash),
+			"extraData":    payload.ExtraData,
+			"feeRecipient": hexutil.Encode(payload.FeeRecipient),
+			"receiptsRoot": hexutil.Encode(payload.ReceiptsRoot),
+			"txs":          len(payload.Transactions),
+		}).Error("invalid block hash")
 		return nil, fmt.Errorf("could not validate block hash: %v", result.ValidationError)
 	case pb.PayloadStatus_INVALID_TERMINAL_BLOCK:
 		return nil, fmt.Errorf("could not satisfy terminal block condition: %v", result.ValidationError)

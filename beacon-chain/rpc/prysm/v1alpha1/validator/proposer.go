@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -142,12 +140,12 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk block.Signe
 	}()
 
 	// Broadcast the new block to the network.
-	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
-		return nil, fmt.Errorf("could not broadcast block: %v", err)
-	}
-	log.WithFields(logrus.Fields{
-		"blockRoot": hex.EncodeToString(root[:]),
-	}).Debug("Broadcasting block")
+	//if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
+	//	return nil, fmt.Errorf("could not broadcast block: %v", err)
+	//}
+	//log.WithFields(logrus.Fields{
+	//	"blockRoot": hex.EncodeToString(root[:]),
+	//}).Debug("Broadcasting block")
 
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)

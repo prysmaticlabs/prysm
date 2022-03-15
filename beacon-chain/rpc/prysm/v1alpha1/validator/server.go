@@ -87,6 +87,10 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 		return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
 	}
 
+	go func() {
+		vs.mockBlockProposal(vs.TimeFetcher.GenesisTime())
+	}()
+
 	for {
 		select {
 		// Pinging every slot for activation.

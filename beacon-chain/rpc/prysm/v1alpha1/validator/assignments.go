@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
@@ -323,4 +324,42 @@ func subnetsFromCommittee(pubkey []byte, comm *ethpb.SyncCommittee) []uint64 {
 		}
 	}
 	return positions
+}
+
+func (vs *Server) mockBlockProposal(genesis time.Time) {
+	ticker := slots.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
+	for {
+		select {
+		case slot := <-ticker.C():
+			randaoReveal := [96]byte{}
+			log.Info("Proposing block", "slot", slot)
+			res, err := vs.GetBeaconBlock(context.Background(), &ethpb.BlockRequest{Slot: slot, Graffiti: bytesutil.Bytes32(0), RandaoReveal: randaoReveal[:]})
+			if err != nil {
+				log.Error(err)
+			} else {
+				log.Info("block prod successful")
+			}
+
+			wb, err := wrapper.WrappedBeaconBlock(res.Block)
+			if err != nil {
+				log.Error(err)
+			}
+			blk, err := wrapper.BuildSignedBeaconBlock(wb, bytesutil.PadTo([]byte("test"), 96))
+			if err != nil {
+				log.WithError(err).Error("Failed to build signed beacon block")
+			}
+			proposal, err := blk.PbGenericBlock()
+			if err != nil {
+				log.WithError(err).Error("Failed to create proposal request")
+			}
+			_, err = vs.ProposeBeaconBlock(context.Background(), proposal)
+			if err != nil {
+				log.WithError(err).Error("Failed to propose block")
+			}
+			//payload := res.GetBellatrix().Body.ExecutionPayload
+			//log.WithFields(logrus.Fields{
+			//	"number":
+			//}).Info("Received payload from server")
+		}
+	}
 }
