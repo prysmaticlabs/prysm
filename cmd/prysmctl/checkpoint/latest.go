@@ -3,8 +3,6 @@ package checkpoint
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/url"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
@@ -37,34 +35,20 @@ var latestCmd = &cli.Command{
 	},
 }
 
-func setupClient() (*beacon.Client, error) {
-	f := latestFlags
-	log.Printf("--beacon-node-url=%s", f.BeaconNodeHost)
-
-	opts := make([]beacon.ClientOpt, 0)
-	timeout, err := time.ParseDuration(f.Timeout)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, beacon.WithTimeout(timeout))
-	validatedHost, err := validHostname(latestFlags.BeaconNodeHost)
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("host:port=%s", validatedHost)
-	client, err := beacon.NewClient(validatedHost, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
-}
-
 func cliActionLatest(_ *cli.Context) error {
 	ctx := context.Background()
-	client, err := setupClient()
+	f := latestFlags
+
+	timeout, err := time.ParseDuration(f.Timeout)
 	if err != nil {
-		log.Fatalf(err.Error())
+		return err
 	}
+	opts := []beacon.ClientOpt{beacon.WithTimeout(timeout)}
+	client, err := beacon.NewClient(latestFlags.BeaconNodeHost, opts...)
+	if err != nil {
+		return err
+	}
+
 	od, err := beacon.DownloadOriginData(ctx, client)
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -73,18 +57,4 @@ func cliActionLatest(_ *cli.Context) error {
 		"includes the Weak Subjectivity Checkpoint: ")
 	fmt.Printf("--weak-subjectivity-checkpoint=%s\n\n", od.WeakSubjectivity().CheckpointString())
 	return nil
-}
-
-func validHostname(h string) (string, error) {
-	// try to parse as url (being permissive)
-	u, err := url.Parse(h)
-	if err == nil && u.Host != "" {
-		return u.Host, nil
-	}
-	// try to parse as host:port
-	host, port, err := net.SplitHostPort(h)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s:%s", host, port), nil
 }
