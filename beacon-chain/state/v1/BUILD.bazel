@@ -72,6 +72,7 @@ go_test(
     srcs = [
         "getters_attestation_test.go",
         "getters_block_test.go",
+        "getters_checkpoint_test.go",
         "getters_test.go",
         "getters_validator_test.go",
         "proofs_test.go",
