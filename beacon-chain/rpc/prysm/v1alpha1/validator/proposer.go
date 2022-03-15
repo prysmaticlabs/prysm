@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -116,11 +118,22 @@ func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBloc
 	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
 
-// PrepareBeaconProposer --
+// PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
 func (vs *Server) PrepareBeaconProposer(
-	_ context.Context, _ *ethpb.PrepareBeaconProposerRequest,
+	ctx context.Context, request *ethpb.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, status.Error(codes.Unimplemented, "Unimplemented")
+	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
+	defer span.End()
+	var FeeRecipients []common.Address
+	var ValidatorIndices []types.ValidatorIndex
+	for _, recipientContainer := range request.Recipients {
+		FeeRecipients = append(FeeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
+		ValidatorIndices = append(ValidatorIndices, recipientContainer.ValidatorIndex)
+	}
+	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, ValidatorIndices, FeeRecipients); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
+	}
+	return &emptypb.Empty{}, nil
 }
 
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {

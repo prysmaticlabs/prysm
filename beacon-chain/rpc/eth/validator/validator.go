@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -325,11 +326,22 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
-// PrepareBeaconProposer --
+// PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
 func (vs *Server) PrepareBeaconProposer(
-	_ context.Context, _ *ethpbv1.PrepareBeaconProposerRequest,
+	ctx context.Context, request *ethpbv1.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, status.Error(codes.Unimplemented, "Unimplemented")
+	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
+	defer span.End()
+	var FeeRecipients []common.Address
+	var ValidatorIndices []types.ValidatorIndex
+	for _, recipientContainer := range request.Recipients {
+		FeeRecipients = append(FeeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
+		ValidatorIndices = append(ValidatorIndices, recipientContainer.ValidatorIndex)
+	}
+	if err := vs.V1Alpha1Server.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, ValidatorIndices, FeeRecipients); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
+	}
+	return &emptypb.Empty{}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for

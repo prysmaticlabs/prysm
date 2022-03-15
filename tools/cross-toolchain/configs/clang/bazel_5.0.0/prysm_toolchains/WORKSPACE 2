@@ -1,0 +1,2 @@
+# DO NOT EDIT: automatically generated WORKSPACE file for prysm_toolchains rule
+workspace(name = "prysm_toolchains")
