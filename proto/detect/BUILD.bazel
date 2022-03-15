@@ -3,10 +3,10 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "configfork.go",
         "initialize.go",
-        "sniffer.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/proto/sniff",
+    importpath = "github.com/prysmaticlabs/prysm/proto/detect",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/state:go_default_library",
@@ -26,7 +26,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["sniffer_test.go"],
+    srcs = ["configfork_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//proto/engine/v1:go_default_library",

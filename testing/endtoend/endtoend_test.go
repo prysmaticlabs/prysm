@@ -23,7 +23,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/sniff"
+	"github.com/prysmaticlabs/prysm/proto/detect"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
@@ -409,7 +409,7 @@ func saveSSZBytes(filePath string, value saveable) (err error) {
 	return err
 }
 
-func saveBlock(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork, root [32]byte, basePath string) (string, error) {
+func saveBlock(ctx context.Context, conn *grpc.ClientConn, cf *detect.ConfigFork, root [32]byte, basePath string) (string, error) {
 	v1Client := service.NewBeaconChainClient(conn)
 	//blockId := fmt.Sprintf("%#x", root)
 	bResp, err := v1Client.GetBlockSSZV2(ctx, &eth2.BlockRequestV2{BlockId: root[:]})
@@ -417,7 +417,7 @@ func saveBlock(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork,
 		err = errors.Wrap(err, "saveBlock/GetBeaconBlock")
 		return "", err
 	}
-	sb, err := sniff.BlockForConfigFork(bResp.GetData(), cf)
+	sb, err := detect.BlockForConfigFork(bResp.GetData(), cf)
 	if err != nil {
 		err = errors.Wrap(err, "saveBlock/GetBeaconBlock")
 		return "", err
@@ -431,7 +431,7 @@ func saveBlock(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork,
 	return p, err
 }
 
-func getConfigFork(ctx context.Context, conn *grpc.ClientConn, slot types.Slot) (*sniff.ConfigFork, error) {
+func getConfigFork(ctx context.Context, conn *grpc.ClientConn, slot types.Slot) (*detect.ConfigFork, error) {
 	ofs, err := getOrderedForkSchedule(ctx, conn)
 	if err != nil {
 		err = errors.Wrap(err, "getConfigFork/getOrderedForkSchedule")
@@ -443,7 +443,7 @@ func getConfigFork(ctx context.Context, conn *grpc.ClientConn, slot types.Slot) 
 		err = errors.Wrap(err, "getConfigFork/VersionForEpoch")
 		return nil, err
 	}
-	cf, err := sniff.FindConfigFork(version)
+	cf, err := detect.FindConfigFork(version)
 	if err != nil {
 		err = errors.Wrap(err, "getConfigFork/FindConfigFork")
 		return nil, err
@@ -451,7 +451,7 @@ func getConfigFork(ctx context.Context, conn *grpc.ClientConn, slot types.Slot) 
 	return cf, nil
 }
 
-func saveState(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork, slot types.Slot, basePath string) (string, [32]byte, error) {
+func saveState(ctx context.Context, conn *grpc.ClientConn, cf *detect.ConfigFork, slot types.Slot, basePath string) (string, [32]byte, error) {
 	debugClient := service.NewBeaconDebugClient(conn)
 	stateId := []byte(fmt.Sprintf("%d", slot))
 	sResp, err := debugClient.GetBeaconStateSSZV2(ctx, &eth2.StateRequestV2{StateId: stateId})
@@ -459,7 +459,7 @@ func saveState(ctx context.Context, conn *grpc.ClientConn, cf *sniff.ConfigFork,
 		err = errors.Wrap(err, "saveState/GetBeaconState")
 		return "", [32]byte{}, err
 	}
-	state, err := sniff.BeaconStateForConfigFork(sResp.Data, cf)
+	state, err := detect.BeaconStateForConfigFork(sResp.Data, cf)
 	if err != nil {
 		return "", [32]byte{}, errors.Wrap(err, "saveState/BeaconStateForConfigFork")
 	}

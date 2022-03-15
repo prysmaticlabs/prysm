@@ -1,4 +1,4 @@
-package sniff
+package detect
 
 import (
 	"encoding/binary"
