@@ -2,6 +2,7 @@ package checkpoint
 
 import (
 	"context"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"

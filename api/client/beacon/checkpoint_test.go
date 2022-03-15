@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/testing/require"
 	"io"
 	"net/http"
 	"testing"
+
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 type testRT struct {

@@ -1,8 +1,9 @@
 package beacon
 
 import (
-	"github.com/prysmaticlabs/prysm/testing/require"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestParseNodeVersion(t *testing.T) {
