@@ -520,11 +520,11 @@ func getHeadBlockRoot(ctx context.Context, conn *grpc.ClientConn) ([32]byte, err
 	return bytesutil.ToBytes32(bResp.Data.Root), nil
 }
 
-func DownloadCheckpoint(ctx context.Context, conn *grpc.ClientConn) (*checkpoint, error) {
+func downloadCheckpoint(ctx context.Context, conn *grpc.ClientConn) (*checkpoint, error) {
 	v1Client := service.NewBeaconChainClient(conn)
 	resp, err := v1Client.GetWeakSubjectivity(ctx, &emptypb.Empty{})
 	if err != nil {
-		err = errors.Wrap(err, "DownloadCheckpoint:GetWeakSubjectivityCheckpointEpoch")
+		err = errors.Wrap(err, "downloadCheckpoint:GetWeakSubjectivityCheckpointEpoch")
 		return nil, err
 	}
 	ws := resp.Data
@@ -536,7 +536,7 @@ func DownloadCheckpoint(ctx context.Context, conn *grpc.ClientConn) (*checkpoint
 
 	headRoot, err := getHeadBlockRoot(ctx, conn)
 	if err != nil {
-		err = errors.Wrap(err, "DownloadCheckpoint:getHeadBlockRoot")
+		err = errors.Wrap(err, "downloadCheckpoint:getHeadBlockRoot")
 		return nil, err
 	}
 	cp.headRoot = headRoot
@@ -544,27 +544,27 @@ func DownloadCheckpoint(ctx context.Context, conn *grpc.ClientConn) (*checkpoint
 	// save the block at epoch start slot
 	wsSlot, err := slots.EpochStart(cp.epoch)
 	if err != nil {
-		err = errors.Wrap(err, "DownloadCheckpoint:EpochStart")
+		err = errors.Wrap(err, "downloadCheckpoint:EpochStart")
 		return nil, err
 	}
 
 	// fetch the state for the slot immediately following (and therefore integrating) the block
 	cf, err := getConfigFork(ctx, conn, wsSlot)
 	if err != nil {
-		err = errors.Wrap(err, "DownloadCheckpoint:getConfigFork")
+		err = errors.Wrap(err, "downloadCheckpoint:getConfigFork")
 		return nil, err
 	}
 
 	cp.blockPath, err = saveBlock(ctx, conn, cf, cp.blockRoot, e2e.TestParams.TestPath)
 	if err != nil {
-		err = errors.Wrap(err, "DownloadCheckpoint:saveBlock")
+		err = errors.Wrap(err, "downloadCheckpoint:saveBlock")
 		return nil, err
 	}
 
 	var sr [32]byte
 	cp.statePath, sr, err = saveState(ctx, conn, cf, wsSlot, e2e.TestParams.TestPath)
 	if err != nil {
-		err = errors.Wrap(err, "DownloadCheckpoint:saveState")
+		err = errors.Wrap(err, "downloadCheckpoint:saveState")
 		return nil, err
 	}
 	if sr != cp.stateRoot {
@@ -609,7 +609,7 @@ func (r *testRunner) waitForSentinelBlock(ctx context.Context, conn *grpc.Client
 
 func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, tickingStartTime time.Time, enr string) error {
 	conn := conns[0]
-	cp, err := DownloadCheckpoint(r.ctx, conn)
+	cp, err := downloadCheckpoint(r.ctx, conn)
 	if err != nil {
 		return err
 	}
