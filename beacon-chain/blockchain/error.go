@@ -9,4 +9,6 @@ var (
 	errNilBestJustifiedInStore = errors.New("nil best justified checkpoint returned from store")
 	// errNilFinalizedInStore is returned when a nil finalized checkpt is returned from store.
 	errNilFinalizedInStore = errors.New("nil finalized checkpoint returned from store")
+	// errNilParentInDB is returned when a nil parent block is returned from the DB.
+	errNilParentInDB = errors.New("nil parent block in DB")
 )
