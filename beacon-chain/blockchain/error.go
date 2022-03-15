@@ -11,4 +11,6 @@ var (
 	errNilFinalizedInStore = errors.New("nil finalized checkpoint returned from store")
 	// errInvalidNilSummary is returned when a nil summary is returned from the DB.
 	errInvalidNilSummary = errors.New("nil summary returned from the DB")
+	// errNilParentInDB is returned when a nil parent block is returned from the DB.
+	errNilParentInDB = errors.New("nil parent block in DB")
 )
