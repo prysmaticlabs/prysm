@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -641,31 +642,27 @@ func unmarshalBlock(_ context.Context, enc []byte) (block.SignedBeaconBlock, err
 	if err != nil {
 		return nil, err
 	}
+	var rawBlock ssz.Unmarshaler
 	switch {
 	case hasAltairKey(enc):
 		// Marshal block bytes to altair beacon block.
-		rawBlock := &ethpb.SignedBeaconBlockAltair{}
-		err := rawBlock.UnmarshalSSZ(enc[len(altairKey):])
-		if err != nil {
+		rawBlock = &ethpb.SignedBeaconBlockAltair{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
 			return nil, err
 		}
-		return wrapper.WrappedAltairSignedBeaconBlock(rawBlock)
 	case hasBellatrixKey(enc):
-		rawBlock := &ethpb.SignedBeaconBlockBellatrix{}
-		err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):])
-		if err != nil {
+		rawBlock = &ethpb.SignedBeaconBlockBellatrix{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
 			return nil, err
 		}
-		return wrapper.WrappedBellatrixSignedBeaconBlock(rawBlock)
 	default:
 		// Marshal block bytes to phase 0 beacon block.
-		rawBlock := &ethpb.SignedBeaconBlock{}
-		err = rawBlock.UnmarshalSSZ(enc)
-		if err != nil {
+		rawBlock = &ethpb.SignedBeaconBlock{}
+		if err := rawBlock.UnmarshalSSZ(enc); err != nil {
 			return nil, err
 		}
-		return wrapper.WrappedPhase0SignedBeaconBlock(rawBlock), nil
 	}
+	return wrapper.WrappedSignedBeaconBlock(rawBlock)
 }
 
 // marshal versioned beacon block from struct type down to bytes.

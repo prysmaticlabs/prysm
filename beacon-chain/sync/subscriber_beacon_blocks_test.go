@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -11,8 +10,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -107,68 +104,6 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			}
 			if tt.check != nil {
 				tt.check(t, s)
-			}
-		})
-	}
-}
-
-func TestBlockFromProto(t *testing.T) {
-	tests := []struct {
-		name       string
-		msgCreator func(t *testing.T) proto.Message
-		want       block.SignedBeaconBlock
-		wantErr    bool
-	}{
-		{
-			name: "invalid type provided",
-			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedAggregateAttestationAndProof{}
-			},
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name: "phase 0 type provided",
-			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
-			},
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}),
-			wantErr: false,
-		},
-		{
-			name: "altair type provided",
-			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Slot: 100}}
-			},
-			want: func() block.SignedBeaconBlock {
-				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Slot: 100}})
-				require.NoError(t, err)
-				return wsb
-			}(),
-			wantErr: false,
-		},
-		{
-			name: "bellatrix type provided",
-			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Slot: 100}}
-			},
-			want: func() block.SignedBeaconBlock {
-				wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Slot: 100}})
-				require.NoError(t, err)
-				return wsb
-			}(),
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := blockFromProto(tt.msgCreator(t))
-			if (err != nil) != tt.wantErr {
-				t.Errorf("blockFromProto() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("blockFromProto() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

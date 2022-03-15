@@ -21,7 +21,9 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 32
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	tests := []struct {

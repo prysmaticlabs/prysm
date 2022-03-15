@@ -82,7 +82,9 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	err = beaconDB.SaveBlock(context.Background(), wsb)
 	require.NoError(t, err)
 
 	st, err := util.NewBeaconState()
@@ -219,7 +221,9 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 
 		mChain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		for i := 0; i < len(ret); i++ {
-			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(ret[i])))
+			wsb, err := wrapper.WrappedSignedBeaconBlock(ret[i])
+			require.NoError(t, err)
+			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wsb))
 		}
 	})
 
@@ -289,7 +293,9 @@ func connectPeerHavingBlocks(
 				break
 			}
 			chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(blocks[i])))
+			wsb, err := wrapper.WrappedSignedBeaconBlock(blocks[i])
+			require.NoError(t, err)
+			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wsb))
 		}
 	})
 

@@ -68,7 +68,9 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
 	require.NoError(t, err)
 
-	_, err = blocks.ProcessBlockHeader(context.Background(), state, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	_, err = blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	assert.ErrorContains(t, "block.Slot 10 must be greater than state.LatestBlockHeader.Slot 10", err)
 }
 
@@ -94,7 +96,9 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	block.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx+1])
 	require.NoError(t, err)
 
-	_, err = blocks.ProcessBlockHeader(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	_, err = blocks.ProcessBlockHeader(context.Background(), beaconState, wsb)
 	want := "signature did not verify"
 	assert.ErrorContains(t, want, err)
 }
@@ -136,7 +140,9 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		Signature: blockSig,
 	})
 
-	_, err = blocks.ProcessBlockHeader(context.Background(), state, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	_, err = blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	want := "is different than block slot"
 	assert.ErrorContains(t, want, err)
 }
@@ -175,7 +181,9 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	block.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
 	block.Signature = blockSig
 
-	_, err = blocks.ProcessBlockHeader(context.Background(), state, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	_, err = blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	want := "does not match"
 	assert.ErrorContains(t, want, err)
 }
@@ -217,7 +225,9 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	block.Block.ParentRoot = parentRoot[:]
 	block.Signature = blockSig
 
-	_, err = blocks.ProcessBlockHeader(context.Background(), state, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	_, err = blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	want := "was previously slashed"
 	assert.ErrorContains(t, want, err)
 }
@@ -266,7 +276,9 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
 	require.NoError(t, err)
 
-	newState, err := blocks.ProcessBlockHeader(context.Background(), state, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	newState, err := blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	require.NoError(t, err, "Failed to process block header got")
 	var zeroHash [32]byte
 	nsh := newState.LatestBlockHeader()

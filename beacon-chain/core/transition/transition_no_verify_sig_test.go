@@ -52,7 +52,9 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	block.Block.Body.RandaoReveal = randaoReveal
 	block.Block.Body.Eth1Data = eth1Data
 
-	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 
 	block.Block.StateRoot = stateRoot[:]
@@ -61,7 +63,9 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	assert.NoError(t, err)
 	verified, err := set.Verify()
 	assert.NoError(t, err)
@@ -104,7 +108,9 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	block.Block.Body.RandaoReveal = randaoReveal
 	block.Block.Body.Eth1Data = eth1Data
 
-	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 
 	block.Block.StateRoot = stateRoot[:]
@@ -114,13 +120,17 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	block.Signature = sig.Marshal()
 
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "could not validate state root", err)
 }
 
 func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 	beaconState, block, _, _, _ := createFullBlockWithOperations(t)
-	set, _, err := transition.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, wrapper.WrappedPhase0SignedBeaconBlock(block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	set, _, err := transition.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	// Test Signature set verifies.
 	verified, err := set.Verify()
@@ -130,7 +140,7 @@ func TestProcessBlockNoVerify_PassesProcessingConditions(t *testing.T) {
 
 func TestProcessBlockNoVerifyAnySigAltair_OK(t *testing.T) {
 	beaconState, block := createFullAltairBlockWithOperations(t)
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	beaconState, err = transition.ProcessSlots(context.Background(), beaconState, wsb.Block().Slot())
 	require.NoError(t, err)
@@ -143,7 +153,7 @@ func TestProcessBlockNoVerifyAnySigAltair_OK(t *testing.T) {
 
 func TestProcessOperationsNoVerifyAttsSigs_OK(t *testing.T) {
 	beaconState, block := createFullAltairBlockWithOperations(t)
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	beaconState, err = transition.ProcessSlots(context.Background(), beaconState, wsb.Block().Slot())
 	require.NoError(t, err)
@@ -153,7 +163,7 @@ func TestProcessOperationsNoVerifyAttsSigs_OK(t *testing.T) {
 
 func TestProcessOperationsNoVerifyAttsSigsBellatrix_OK(t *testing.T) {
 	beaconState, block := createFullBellatrixBlockWithOperations(t)
-	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	beaconState, err = transition.ProcessSlots(context.Background(), beaconState, wsb.Block().Slot())
 	require.NoError(t, err)
@@ -163,7 +173,7 @@ func TestProcessOperationsNoVerifyAttsSigsBellatrix_OK(t *testing.T) {
 
 func TestCalculateStateRootAltair_OK(t *testing.T) {
 	beaconState, block := createFullAltairBlockWithOperations(t)
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	r, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -173,7 +183,7 @@ func TestCalculateStateRootAltair_OK(t *testing.T) {
 func TestProcessBlockDifferentVersion(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, 64) // Phase 0 state
 	_, block := createFullAltairBlockWithOperations(t)
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block) // Altair block
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block) // Altair block
 	require.NoError(t, err)
 	_, _, err = transition.ProcessBlockNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "state and block are different version. 0 != 1", err)

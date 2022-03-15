@@ -17,6 +17,7 @@ import (
 	p2ptesting "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -71,7 +72,11 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				},
 			},
 			wantErr: nil,
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
+			want: func() block.SignedBeaconBlock {
+				wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+				require.NoError(t, err)
+				return wsb
+			}(),
 		},
 	}
 	for _, tt := range tests {

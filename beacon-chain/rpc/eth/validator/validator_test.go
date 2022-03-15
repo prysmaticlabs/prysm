@@ -564,7 +564,9 @@ func TestProduceBlock(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -666,7 +668,9 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 
 		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+		wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
 		parentRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
@@ -769,7 +773,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedAltairBlock, err := wrapper.WrappedAltairSignedBeaconBlock(genesisBlock)
+		wrappedAltairBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrappedAltairBlock))
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
@@ -912,7 +916,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockBellatrix()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedBellatrixBlock, err := wrapper.WrappedBellatrixSignedBeaconBlock(genesisBlock)
+		wrappedBellatrixBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrappedBellatrixBlock))
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()

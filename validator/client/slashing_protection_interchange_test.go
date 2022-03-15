@@ -124,7 +124,9 @@ func TestEIP3076SpecTests(t *testing.T) {
 						copy(signingRoot[:], signingRootBytes)
 					}
 
-					err = validator.slashableProposalCheck(context.Background(), pk, wrapper.WrappedPhase0SignedBeaconBlock(b), signingRoot)
+					wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+					require.NoError(t, err)
+					err = validator.slashableProposalCheck(context.Background(), pk, wsb, signingRoot)
 					if sb.ShouldSucceed {
 						require.NoError(t, err)
 					} else {

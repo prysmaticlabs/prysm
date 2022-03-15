@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -59,14 +60,14 @@ func (vs *Server) getPhase0BeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 	}
 
 	// Compute state root with the newly constructed block.
-	stateRoot, err = vs.computeStateRoot(
-		ctx, wrapper.WrappedPhase0SignedBeaconBlock(
-			&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)},
-		),
-	)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)})
 	if err != nil {
-		interop.WriteBlockToDisk(wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
-		return nil, fmt.Errorf("could not compute state root: %v", err)
+		return nil, err
+	}
+	stateRoot, err = vs.computeStateRoot(ctx, wsb)
+	if err != nil {
+		interop.WriteBlockToDisk(wsb, true /*failed*/)
+		return nil, errors.Wrap(err, "could not compute state root")
 	}
 	blk.StateRoot = stateRoot
 	return blk, nil

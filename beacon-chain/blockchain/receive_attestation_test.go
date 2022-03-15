@@ -47,13 +47,17 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -74,13 +78,17 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 

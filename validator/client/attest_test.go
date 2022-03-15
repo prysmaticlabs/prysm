@@ -540,10 +540,12 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		v.blockFeed.Send(wrapper.WrappedPhase0SignedBeaconBlock(
+		wsb, err := wrapper.WrappedSignedBeaconBlock(
 			&ethpb.SignedBeaconBlock{
 				Block: &ethpb.BeaconBlock{Slot: currentSlot},
-			}))
+			})
+		require.NoError(t, err)
+		v.blockFeed.Send(wsb)
 		wg.Done()
 	}()
 

@@ -393,7 +393,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 			justified: func(tt *testing.T) block.SignedBeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
-				wr, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -411,7 +411,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 			justified: func(tt *testing.T) block.SignedBeaconBlock {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 32
-				wr, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
+				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -429,7 +429,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 			justified: func(tt *testing.T) block.SignedBeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
-				wr, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -455,7 +455,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk.Block.Body.ExecutionPayload.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				wr, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),

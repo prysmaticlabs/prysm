@@ -19,7 +19,9 @@ func TestResume(t *testing.T) {
 
 	service := New(beaconDB)
 	b := util.NewBeaconBlock()
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.beaconDB.SaveBlock(ctx, wsb))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	beaconState, _ := util.DeterministicGenesisState(t, 32)

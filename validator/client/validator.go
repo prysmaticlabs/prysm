@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -333,19 +332,10 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		if res == nil || res.Block == nil {
 			continue
 		}
-		if res.GetPhase0Block() == nil && res.GetAltairBlock() == nil {
+		blk, err := wrapper.WrappedSignedBeaconBlock(res.Block)
+		if err != nil {
+			log.WithError(err).Error("Failed to wrap altair signed block")
 			continue
-		}
-		var blk block.SignedBeaconBlock
-		switch {
-		case res.GetPhase0Block() != nil:
-			blk = wrapper.WrappedPhase0SignedBeaconBlock(res.GetPhase0Block())
-		case res.GetAltairBlock() != nil:
-			blk, err = wrapper.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
-			if err != nil {
-				log.WithError(err).Error("Failed to wrap altair signed block")
-				continue
-			}
 		}
 		if blk == nil || blk.IsNil() {
 			continue

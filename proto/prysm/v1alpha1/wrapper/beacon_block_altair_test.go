@@ -16,7 +16,7 @@ import (
 
 func TestAltairSignedBeaconBlock_Signature(t *testing.T) {
 	sig := []byte{0x11, 0x22}
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}, Signature: sig})
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}, Signature: sig})
 	require.NoError(t, err)
 
 	if !bytes.Equal(sig, wsb.Signature()) {
@@ -26,17 +26,17 @@ func TestAltairSignedBeaconBlock_Signature(t *testing.T) {
 
 func TestAltairSignedBeaconBlock_Block(t *testing.T) {
 	blk := &ethpb.BeaconBlockAltair{Slot: 54}
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: blk})
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: blk})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, blk, wsb.Block().Proto())
 }
 
 func TestAltairSignedBeaconBlock_IsNil(t *testing.T) {
-	_, err := wrapper.WrappedAltairSignedBeaconBlock(nil)
+	_, err := wrapper.WrappedSignedBeaconBlock(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wsb.IsNil())
@@ -51,14 +51,14 @@ func TestAltairSignedBeaconBlock_Proto(t *testing.T) {
 		Block:     &ethpb.BeaconBlockAltair{Slot: 66},
 		Signature: []byte{0x11, 0x22},
 	}
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(sb)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
 	assert.Equal(t, sb, wsb.Proto())
 }
 
 func TestAltairSignedBeaconBlock_PbPhase0Block(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 	require.NoError(t, err)
 
 	if _, err := wsb.PbPhase0Block(); err != wrapper.ErrUnsupportedPhase0Block {
@@ -71,7 +71,7 @@ func TestAltairSignedBeaconBlock_PbAltairBlock(t *testing.T) {
 		Block:     &ethpb.BeaconBlockAltair{Slot: 66},
 		Signature: []byte{0x11, 0x22},
 	}
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(sb)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
 	got, err := wsb.PbAltairBlock()
@@ -80,7 +80,7 @@ func TestAltairSignedBeaconBlock_PbAltairBlock(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(util.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
 	assert.NoError(t, err)
 
 	var b []byte
@@ -90,7 +90,7 @@ func TestAltairSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_SSZ(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(util.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockAltair(&ethpb.SignedBeaconBlockAltair{}))
 	assert.NoError(t, err)
 
 	b, err := wsb.MarshalSSZ()
@@ -103,7 +103,7 @@ func TestAltairSignedBeaconBlock_SSZ(t *testing.T) {
 }
 
 func TestAltairSignedBeaconBlock_Version(t *testing.T) {
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 	require.NoError(t, err)
 
 	assert.Equal(t, version.Altair, wsb.Version())

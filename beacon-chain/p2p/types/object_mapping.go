@@ -33,13 +33,13 @@ func InitializeDataMaps() {
 	// Reset our block map.
 	BlockMap = map[[4]byte]func() (block.SignedBeaconBlock, error){
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (block.SignedBeaconBlock, error) {
-			return wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{}), nil
+			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (block.SignedBeaconBlock, error) {
-			return wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (block.SignedBeaconBlock, error) {
-			return wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 		},
 	}
 

@@ -84,23 +84,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
-	var blk block.SignedBeaconBlock
-	var err error
-	switch b := req.Block.(type) {
-	case *ethpb.GenericSignedBeaconBlock_Phase0:
-		blk = wrapper.WrappedPhase0SignedBeaconBlock(b.Phase0)
-	case *ethpb.GenericSignedBeaconBlock_Altair:
-		blk, err = wrapper.WrappedAltairSignedBeaconBlock(b.Altair)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "could not wrap altair beacon block")
-		}
-	case *ethpb.GenericSignedBeaconBlock_Bellatrix:
-		blk, err = wrapper.WrappedBellatrixSignedBeaconBlock(b.Bellatrix)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
-		}
-	default:
-		return nil, status.Error(codes.Internal, "block version not supported")
+	blk, err := wrapper.WrappedSignedBeaconBlock(req.Block)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
 	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
@@ -112,7 +98,10 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBlock")
 	defer span.End()
-	blk := wrapper.WrappedPhase0SignedBeaconBlock(rBlk)
+	blk, err := wrapper.WrappedSignedBeaconBlock(rBlk)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
+	}
 	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
 

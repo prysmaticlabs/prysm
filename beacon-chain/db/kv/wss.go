@@ -28,7 +28,7 @@ func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Read
 	if err := blk.UnmarshalSSZ(bb); err != nil {
 		return errors.Wrap(err, "could not unmarshal checkpoint block")
 	}
-	wblk, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
+	wblk, err := wrapper.WrappedSignedBeaconBlock(blk)
 	if err != nil {
 		return errors.Wrap(err, "could not wrap checkpoint block")
 	}

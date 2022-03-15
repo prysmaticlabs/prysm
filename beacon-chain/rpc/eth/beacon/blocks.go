@@ -155,7 +155,10 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 		}
-		wrappedPhase0Blk := wrapper.WrappedPhase0SignedBeaconBlock(v1alpha1Blk)
+		wrappedPhase0Blk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not wrap block: %v", err)
+		}
 
 		root, err := phase0Blk.HashTreeRoot()
 		if err != nil {
@@ -189,7 +192,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 		}
-		wrappedAltairBlk, err := wrapper.WrappedAltairSignedBeaconBlock(v1alpha1Blk)
+		wrappedAltairBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Could not prepare Altair block")
 		}
@@ -226,7 +229,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 		}
-		wrappedBellatrixBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(v1alpha1Blk)
+		wrappedBellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Could not prepare bellatrix block")
 		}

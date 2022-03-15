@@ -66,7 +66,9 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 
 			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 				if processor != nil {
-					if processorErr := processor(wrapper.WrappedPhase0SignedBeaconBlock(knownBlocks[i])); processorErr != nil {
+					wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
+					require.NoError(t, err)
+					if processorErr := processor(wsb); processorErr != nil {
 						if errors.Is(processorErr, io.EOF) {
 							// Close stream, w/o any errors written.
 							return
@@ -83,7 +85,9 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 					break
 				}
 				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-				err = WriteBlockChunk(stream, chain, p2pProvider.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
+				wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
+				require.NoError(t, err)
+				err = WriteBlockChunk(stream, chain, p2pProvider.Encoding(), wsb)
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
@@ -236,7 +240,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 					break
 				}
 				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-				err = WriteBlockChunk(stream, chain, p2.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
+				wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
+				err = WriteBlockChunk(stream, chain, p2.Encoding(), wsb)
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
@@ -279,7 +284,9 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 					break
 				}
 				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-				err = WriteBlockChunk(stream, chain, p2.Encoding(), wrapper.WrappedPhase0SignedBeaconBlock(knownBlocks[i]))
+				wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
+				require.NoError(t, err)
+				err = WriteBlockChunk(stream, chain, p2.Encoding(), wsb)
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
 				}
@@ -340,7 +347,9 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 			for _, root := range *req {
 				if blk, ok := knownBlocks[root]; ok {
 					if processor != nil {
-						if processorErr := processor(wrapper.WrappedPhase0SignedBeaconBlock(blk)); processorErr != nil {
+						wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+						require.NoError(t, err)
+						if processorErr := processor(wsb); processorErr != nil {
 							if errors.Is(processorErr, io.EOF) {
 								// Close stream, w/o any errors written.
 								return

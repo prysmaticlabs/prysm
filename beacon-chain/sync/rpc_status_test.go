@@ -177,7 +177,9 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(finalized)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(finalized)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
@@ -267,7 +269,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	require.NoError(t, err)
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
@@ -479,7 +483,9 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = blkSlot
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
@@ -560,7 +566,9 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	genRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genRoot))
 	blocksTillHead := makeBlocks(t, 1, 1000, genRoot)
 	require.NoError(t, db.SaveBlocks(context.Background(), blocksTillHead))
@@ -939,7 +947,8 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-i] = wrapper.WrappedPhase0SignedBeaconBlock(blocks[j-i])
+		ifaceBlocks[j-i], err = wrapper.WrappedSignedBeaconBlock(blocks[j-i])
+		require.NoError(t, err)
 	}
 	return ifaceBlocks
 }

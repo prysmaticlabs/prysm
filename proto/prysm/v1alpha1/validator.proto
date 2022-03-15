@@ -353,6 +353,7 @@ message SyncSubcommitteeIndexResponse {
     repeated uint64 indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
 }
 
+// TODO: Should this use GenericSignedBeaconBlock?
 message StreamBlocksResponse {
     oneof block {
         // Representing a phase 0 block.

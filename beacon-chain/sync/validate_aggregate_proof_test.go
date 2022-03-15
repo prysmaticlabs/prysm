@@ -153,7 +153,9 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
@@ -240,7 +242,9 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -306,7 +310,9 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
@@ -401,7 +407,9 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
@@ -605,7 +613,9 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
