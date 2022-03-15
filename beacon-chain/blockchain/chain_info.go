@@ -342,6 +342,9 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if err != nil {
 		return false, err
 	}
+	if ss == nil {
+		return false, errInvalidNilSummary
+	}
 
 	validatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
 	if err != nil {
