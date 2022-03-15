@@ -42,6 +42,8 @@ func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
 		return wrappedBellatrixSignedBeaconBlock(b.Bellatrix)
 	case *eth.SignedBeaconBlockBellatrix:
 		return wrappedBellatrixSignedBeaconBlock(b)
+	case nil:
+		return nil, ErrNilObjectWrapped
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", i)
 	}
