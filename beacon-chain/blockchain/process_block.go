@@ -184,7 +184,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), bytesutil.ToBytes32(finalized.Root)); err != nil {
+	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), s.headRoot(), bytesutil.ToBytes32(finalized.Root)); err != nil {
 		return err
 	}
 
@@ -368,11 +368,8 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	// TODO(10261) send optimistic status
-	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
-		return err
-	}
-	if _, err := s.notifyForkchoiceUpdate(ctx, b, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
+
+	if _, err := s.notifyForkchoiceUpdate(ctx, b, blockRoot, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
 		return err
 	}
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
