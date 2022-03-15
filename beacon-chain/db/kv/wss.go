@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/detect"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // SaveOrigin loads an ssz serialized Block & BeaconState from an io.Reader
@@ -16,7 +16,7 @@ import (
 // syncing, using the provided values as their point of origin. This is an alternative
 // to syncing from genesis, and should only be run on an empty database.
 func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error {
-	cf, err := detect.ConfigForkForState(serState)
+	cf, err := detect.ByState(serState)
 	if err != nil {
 		return errors.Wrap(err, "could not sniff config+fork for origin state bytes")
 	}
@@ -26,12 +26,12 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 	}
 
 	log.Printf("detected supported config for state & block version detection, name=%s, fork=%s", cf.ConfigName.String(), cf.Fork)
-	state, err := detect.BeaconStateForConfigFork(serState, cf)
+	state, err := cf.UnmarshalBeaconState(serState)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize origin state w/ bytes + config+fork")
 	}
 
-	wblk, err := detect.BlockForConfigFork(serBlock, cf)
+	wblk, err := cf.UnmarshalBeaconBlock(serBlock)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize origin block w/ bytes + config+fork")
 	}

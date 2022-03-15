@@ -19,11 +19,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/proto/detect"
 	"github.com/prysmaticlabs/prysm/proto/eth/service"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/detect"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
@@ -417,7 +417,7 @@ func saveBlock(ctx context.Context, conn *grpc.ClientConn, cf *detect.ConfigFork
 		err = errors.Wrap(err, "saveBlock/GetBeaconBlock")
 		return "", err
 	}
-	sb, err := detect.BlockForConfigFork(bResp.GetData(), cf)
+	sb, err := cf.UnmarshalBeaconBlock(bResp.GetData())
 	if err != nil {
 		err = errors.Wrap(err, "saveBlock/GetBeaconBlock")
 		return "", err
@@ -443,9 +443,9 @@ func getConfigFork(ctx context.Context, conn *grpc.ClientConn, slot types.Slot) 
 		err = errors.Wrap(err, "getConfigFork/VersionForEpoch")
 		return nil, err
 	}
-	cf, err := detect.FindConfigFork(version)
+	cf, err := detect.ByVersion(version)
 	if err != nil {
-		err = errors.Wrap(err, "getConfigFork/FindConfigFork")
+		err = errors.Wrap(err, "getConfigFork/ByVersion")
 		return nil, err
 	}
 	return cf, nil
@@ -459,7 +459,7 @@ func saveState(ctx context.Context, conn *grpc.ClientConn, cf *detect.ConfigFork
 		err = errors.Wrap(err, "saveState/GetBeaconState")
 		return "", [32]byte{}, err
 	}
-	state, err := detect.BeaconStateForConfigFork(sResp.Data, cf)
+	state, err := cf.UnmarshalBeaconState(sResp.Data)
 	if err != nil {
 		return "", [32]byte{}, errors.Wrap(err, "saveState/BeaconStateForConfigFork")
 	}

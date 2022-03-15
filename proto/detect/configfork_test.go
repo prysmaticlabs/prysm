@@ -15,7 +15,7 @@ func TestSlotFromBlock(t *testing.T) {
 	b.Block.Slot = slot
 	bb, err := b.MarshalSSZ()
 	require.NoError(t, err)
-	sfb, err := SlotFromBlock(bb)
+	sfb, err := slotFromBlock(bb)
 	require.NoError(t, err)
 	require.Equal(t, slot, sfb)
 
@@ -23,7 +23,7 @@ func TestSlotFromBlock(t *testing.T) {
 	ba.Block.Slot = slot
 	bab, err := ba.MarshalSSZ()
 	require.NoError(t, err)
-	sfba, err := SlotFromBlock(bab)
+	sfba, err := slotFromBlock(bab)
 	require.NoError(t, err)
 	require.Equal(t, slot, sfba)
 
@@ -31,7 +31,7 @@ func TestSlotFromBlock(t *testing.T) {
 	bm.Block.Slot = slot
 	bmb, err := ba.MarshalSSZ()
 	require.NoError(t, err)
-	sfbm, err := SlotFromBlock(bmb)
+	sfbm, err := slotFromBlock(bmb)
 	require.NoError(t, err)
 	require.Equal(t, slot, sfbm)
 }

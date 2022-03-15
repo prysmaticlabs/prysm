@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/detect"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
@@ -87,15 +87,15 @@ func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (type
 	if err != nil {
 		return 0, err
 	}
-	headState, err := detect.BeaconState(headBytes)
-	if err != nil {
-		return 0, errors.Wrap(err, "error unmarshaling state to correct version")
-	}
-	cf, err := detect.ConfigForkForState(headBytes)
+	cf, err := detect.ByState(headBytes)
 	if err != nil {
 		return 0, errors.Wrap(err, "error detecting chain config for beacon state")
 	}
 	log.Printf("detected supported config in remote head state, name=%s, fork=%s", cf.ConfigName.String(), cf.Fork)
+	headState, err := cf.UnmarshalBeaconState(headBytes)
+	if err != nil {
+		return 0, errors.Wrap(err, "error unmarshaling state to correct version")
+	}
 
 	// LatestWeakSubjectivityEpoch uses package-level vars from the params package, so we need to override it
 	params.OverrideBeaconConfig(cf.Config)
@@ -150,17 +150,16 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 	}
 
 	// ConfigFork is used to unmarshal the BeaconState so we can read the block root in latest_block_header
-	cf, err := detect.ConfigForkForState(stateBytes)
+	cf, err := detect.ByState(stateBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "error detecting chain config for beacon state")
 	}
 	log.Printf("detected supported config in checkpoint state, name=%s, fork=%s", cf.ConfigName.String(), cf.Fork)
 
-	st, err := detect.BeaconStateForConfigFork(stateBytes, cf)
+	st, err := cf.UnmarshalBeaconState(stateBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "error using detected config fork to unmarshal state bytes")
 	}
-	//blockRoot := blockRootFromState(st)
 
 	// compute state and block roots
 	stateRoot, err := st.HashTreeRoot(ctx)
@@ -179,7 +178,7 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting block by slot = %d", slot)
 	}
-	block, err := detect.BlockForConfigFork(blockBytes, cf)
+	block, err := cf.UnmarshalBeaconBlock(blockBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to unmarshal block to a supported type using the detected fork schedule")
 	}
@@ -235,13 +234,13 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to request state by slot from api, slot=%d", slot)
 	}
-	cf, err := detect.ConfigForkForState(stateBytes)
+	cf, err := detect.ByState(stateBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "error detecting chain config for beacon state")
 	}
 	log.Printf("detected supported config in checkpoint state, name=%s, fork=%s", cf.ConfigName.String(), cf.Fork)
 
-	state, err := detect.BeaconStateForConfigFork(stateBytes, cf)
+	state, err := cf.UnmarshalBeaconState(stateBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "error using detected config fork to unmarshal state bytes")
 	}
@@ -258,7 +257,7 @@ func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting block by slot = %d", slot)
 	}
-	block, err := detect.BlockForConfigFork(blockBytes, cf)
+	block, err := cf.UnmarshalBeaconBlock(blockBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to unmarshal block to a supported type using the detected fork schedule")
 	}
