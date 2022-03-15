@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -51,7 +50,7 @@ func cliActionLatest(_ *cli.Context) error {
 
 	od, err := beacon.DownloadOriginData(ctx, client)
 	if err != nil {
-		log.Fatalf(err.Error())
+		return err
 	}
 	fmt.Println("\nUse the following flag when starting a prysm Beacon Node to ensure the chain history " +
 		"includes the Weak Subjectivity Checkpoint: ")

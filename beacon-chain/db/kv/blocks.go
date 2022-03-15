@@ -72,6 +72,8 @@ func (s *Store) OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 
 // LowestSyncedBlockSlot returns the lowest slot number in the block root index
 func (s *Store) LowestSyncedBlockSlot(ctx context.Context) (types.Slot, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LowestSyncedBlockSlot")
+	defer span.End()
 	// start scan at zero, which will yield the lowest key in the collection.
 	var slot types.Slot
 	err := s.db.View(func(tx *bolt.Tx) error {

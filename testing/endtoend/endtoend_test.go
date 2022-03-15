@@ -290,7 +290,7 @@ func (r *testRunner) run() {
 			return errors.Wrap(err, "beacon chain sync test failed")
 		}
 		index := e2e.TestParams.BeaconNodeCount
-		if err := r.testCheckpointSync(index+1, conns, tickingStartTime, bootNode.ENR()); err != nil {
+		if err := r.testCheckpointSync(index+1, conns, bootNode.ENR()); err != nil {
 			return errors.Wrap(err, "checkpoint sync test failed")
 		}
 		if err := r.testDoppelGangerProtection(ctx); err != nil {
@@ -607,7 +607,7 @@ func (r *testRunner) waitForSentinelBlock(ctx context.Context, conn *grpc.Client
 	}
 }
 
-func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, tickingStartTime time.Time, enr string) error {
+func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, enr string) error {
 	conn := conns[0]
 	cp, err := downloadCheckpoint(r.ctx, conn)
 	if err != nil {

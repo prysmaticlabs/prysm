@@ -42,6 +42,8 @@ func (e *blockIdParseError) Error() string {
 	return e.message
 }
 
+// GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
+// determines the best block root and state root to use for a Checkpoint Sync starting from that point.
 func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
 	hs, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {

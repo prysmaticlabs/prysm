@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "api.go",
-        "initialize.go",
+        "file.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync/checkpoint",
     visibility = ["//visibility:public"],

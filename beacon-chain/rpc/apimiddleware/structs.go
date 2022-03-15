@@ -19,6 +19,8 @@ type genesisResponse_GenesisJson struct {
 	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
 }
 
+// WeakSubjectivityResponse is used to marshal/unmarshal the response for the
+// /eth/v1/beacon/weak_subjectivity endpoint.
 type WeakSubjectivityResponse struct {
 	Data *struct {
 		Checkpoint *checkpointJson `json:"ws_checkpoint"`

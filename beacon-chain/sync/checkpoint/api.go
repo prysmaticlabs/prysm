@@ -2,8 +2,6 @@ package checkpoint
 
 import (
 	"context"
-	"io"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -19,14 +17,6 @@ func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
 		return nil, errors.Wrapf(err, "unable to parse beacon node url or hostname - %s", beaconNodeHost)
 	}
 	return &APIInitializer{c: c}, nil
-}
-
-func (dl *APIInitializer) StateReader(ctx context.Context) (io.Reader, error) {
-	return nil, nil
-}
-
-func (dl *APIInitializer) BlockReader(ctx context.Context) (io.Reader, error) {
-	return nil, nil
 }
 
 func (dl *APIInitializer) Initialize(ctx context.Context, d db.Database) error {
