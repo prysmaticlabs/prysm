@@ -1446,19 +1446,49 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
-	v := &validator{
-		validatorClient: client,
-		db:              db,
-	}
 	tests := []struct {
 		name            string
 		validatorSetter func(t *testing.T) *validator
 		err             string
-	}{}
+	}{
+		{
+			name: " Happy Path",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient: client,
+					db:              db,
+					useWeb:          false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				err = v.SetPubKeyToValidatorIndexMap(ctx, km)
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				fmt.Printf("%v\n", keys)
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(ethpb.ValidatorIndexResponse{
+					Index: 1,
+				}, nil)
+				return &v
+			},
+		},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := tt.validatorSetter(t)
-			if err := v.PrepareBeaconProposer(ctx); tt.err != "" {
+			km, err := v.Keymanager()
+			require.NoError(t, err)
+			if err := v.PrepareBeaconProposer(ctx, km); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
 		})

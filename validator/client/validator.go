@@ -945,7 +945,7 @@ func (v *validator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymana
 		resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pk[:]})
 		if err != nil {
 			if strings.Contains(err.Error(), "Could not find validator index for public key ") {
-				log.Infoln("Could not find validator index for public key %#x not found. Perhaps the validator is not yet active.", pk)
+				log.Infoln(fmt.Sprintf("Could not find validator index for public key %v not found. Perhaps the validator is not yet active.", pk))
 				continue
 			}
 			return err
@@ -969,6 +969,7 @@ func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKe
 	}); err != nil {
 		return err
 	}
+	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
 	return nil
 }
 
