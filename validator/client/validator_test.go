@@ -1442,9 +1442,25 @@ func TestValidator_SetPubKeyToValidatorIndexMap(t *testing.T) {
 }
 
 func TestValidator_PrepareBeaconProposer(t *testing.T) {
-
-}
-
-func TestValidator_feeRecipient(t *testing.T) {
-
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	v := &validator{
+		validatorClient: client,
+		db:              db,
+	}
+	tests := []struct {
+		name            string
+		validatorSetter func(t *testing.T) *validator
+		err             string
+	}{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := tt.validatorSetter(t)
+			if err := v.PrepareBeaconProposer(ctx); tt.err != "" {
+				assert.ErrorContains(t, tt.err, err)
+			}
+		})
+	}
 }
