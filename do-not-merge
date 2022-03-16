@@ -1,0 +1,6 @@
+This is a placeholder branch where all checkpoint sync branches will be combined together. Do not merge to develop until all 5 of the following branches are merged in:
+- 1-checkpoint-sync-detect
+- 2-checkpoint-sync-api
+- 3-checkpoint-sync-client
+- 4-checkpoint-sync-runtime
+- 5-checkpoint-sync-endtoend
