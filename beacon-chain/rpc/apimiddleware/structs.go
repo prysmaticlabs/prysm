@@ -19,6 +19,11 @@ type genesisResponse_GenesisJson struct {
 	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
 }
 
+// feeRecipientsRequestJson is used in /validator/prepare_beacon_proposers API endpoint.
+type feeRecipientsRequestJSON struct {
+	Recipients []*feeRecipientJson `json:"recipients"`
+}
+
 // stateRootResponseJson is used in /beacon/states/{state_id}/root API endpoint.
 type stateRootResponseJson struct {
 	Data *stateRootResponse_StateRootJson `json:"data"`
@@ -469,6 +474,11 @@ type indexedAttestationJson struct {
 	AttestingIndices []string             `json:"attesting_indices"`
 	Data             *attestationDataJson `json:"data"`
 	Signature        string               `json:"signature" hex:"true"`
+}
+
+type feeRecipientJson struct {
+	ValidatorIndex string `json:"validator_index"`
+	FeeRecipient   string `json:"fee_recipient" hex:"true"`
 }
 
 type attestationJson struct {
