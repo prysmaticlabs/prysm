@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -261,16 +263,20 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 }
 
 type payloadStatusJSON struct {
-	LatestValidHash *hexutil.Bytes `json:"latestValidHash"`
-	Status          string         `json:"status"`
-	ValidationError *string        `json:"validationError"`
+	LatestValidHash *common.Hash `json:"latestValidHash"`
+	Status          string       `json:"status"`
+	ValidationError *string      `json:"validationError"`
 }
 
 // MarshalJSON --
 func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
-	hash := p.LatestValidHash
+	var latestHash *common.Hash
+	if p.LatestValidHash != nil {
+		hash := common.Hash(bytesutil.ToBytes32(p.LatestValidHash))
+		latestHash = (*common.Hash)(&hash)
+	}
 	return json.Marshal(payloadStatusJSON{
-		LatestValidHash: (*hexutil.Bytes)(&hash),
+		LatestValidHash: latestHash,
 		Status:          p.Status.String(),
 		ValidationError: &p.ValidationError,
 	})
@@ -284,7 +290,7 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 	}
 	*p = PayloadStatus{}
 	if dec.LatestValidHash != nil {
-		p.LatestValidHash = *dec.LatestValidHash
+		p.LatestValidHash = dec.LatestValidHash[:]
 	}
 	p.Status = PayloadStatus_Status(PayloadStatus_Status_value[dec.Status])
 	if dec.ValidationError != nil {
