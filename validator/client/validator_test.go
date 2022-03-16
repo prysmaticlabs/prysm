@@ -1456,9 +1456,10 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
-					validatorClient: client,
-					db:              db,
-					useWeb:          false,
+					validatorClient:           client,
+					db:                        db,
+					pubkeyHexToValidatorIndex: make(map[string]types.ValidatorIndex),
+					useWeb:                    false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 1,
 						Offset:           1,
@@ -1468,17 +1469,17 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 				require.NoError(t, err)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
-				err = v.SetPubKeyToValidatorIndexMap(ctx, km)
-				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				fmt.Printf("%v\n", keys)
 				client.EXPECT().ValidatorIndex(
 					ctx, // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(ethpb.ValidatorIndexResponse{
+				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
+				err = v.SetPubKeyToValidatorIndexMap(ctx, km)
+				require.NoError(t, err)
+
 				return &v
 			},
 		},
