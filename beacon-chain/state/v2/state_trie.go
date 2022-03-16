@@ -37,9 +37,6 @@ func InitializeFromProto(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, 
 // is an io.Reader. This allows client code to remain agnostic about whether the data comes
 // from the network or a file without needing to read the entire state into mem as a large byte slice.
 func InitializeFromSSZReader(r io.Reader) (state.BeaconStateAltair, error) {
-	if features.Get().EnableNativeState {
-		return statenative.InitializeFromSSZReader(r)
-	}
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -50,9 +47,6 @@ func InitializeFromSSZReader(r io.Reader) (state.BeaconStateAltair, error) {
 // InitializeFromSSZBytes is a convenience method to obtain a BeaconState by unmarshaling
 // a slice of bytes containing the ssz-serialized representation of the state.
 func InitializeFromSSZBytes(marshaled []byte) (state.BeaconStateAltair, error) {
-	if features.Get().EnableNativeState {
-		return statenative.InitializeFromSSZBytes(marshaled)
-	}
 	st := &ethpb.BeaconStateAltair{}
 	if err := st.UnmarshalSSZ(marshaled); err != nil {
 		return nil, err
