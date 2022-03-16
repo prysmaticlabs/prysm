@@ -18,7 +18,7 @@ func FuzzForkChoiceResponse(f *testing.F) {
 	valErr := "asjajshjahsaj"
 	seed := &beacon.ForkChoiceResponse{
 		PayloadStatus: beacon.PayloadStatusV1{
-			Status:          "blahblahaskja",
+			Status:          "INVALID_TERMINAL_BLOCK",
 			LatestValidHash: &valHash,
 			ValidationError: &valErr,
 		},
@@ -37,10 +37,12 @@ func FuzzForkChoiceResponse(f *testing.F) {
 		if gethErr != nil {
 			return
 		}
-		gethBlob, gethErr := json.Marshal(gethResp)
+		_, gethErr = json.Marshal(gethResp)
 		prysmBlob, prysmErr := json.Marshal(prysmResp)
 		assert.Equal(t, gethErr != nil, prysmErr != nil, "geth and prysm unmarshaller return inconsistent errors")
-		assert.DeepEqual(t, jsonBlob, gethBlob, "geth blob doesn't match with input blob")
-		assert.DeepEqual(t, jsonBlob, prysmBlob, "prysm blob doesn't match with input blob")
+		newGethResp := &beacon.ForkChoiceResponse{}
+		newGethErr := json.Unmarshal(prysmBlob, newGethResp)
+		assert.NoError(t, newGethErr)
+		assert.DeepEqual(t, gethResp, newGethResp)
 	})
 }
