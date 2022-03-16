@@ -170,7 +170,7 @@ type executionPayloadJSON struct {
 	Timestamp     *hexutil.Uint64 `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
 	BaseFeePerGas string          `json:"baseFeePerGas"`
-	BlockHash     hexutil.Bytes   `json:"blockHash"`
+	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 }
 
@@ -186,6 +186,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	sRoot := common.BytesToHash(e.StateRoot)
 	recRoot := common.BytesToHash(e.ReceiptsRoot)
 	prevRan := common.BytesToHash(e.PrevRandao)
+	bHash := common.BytesToHash(e.BlockHash)
 	blockNum := hexutil.Uint64(e.BlockNumber)
 	gasLimit := hexutil.Uint64(e.GasLimit)
 	gasUsed := hexutil.Uint64(e.GasUsed)
@@ -203,7 +204,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		Timestamp:     &timeStamp,
 		ExtraData:     e.ExtraData,
 		BaseFeePerGas: baseFeeHex,
-		BlockHash:     e.BlockHash,
+		BlockHash:     &bHash,
 		Transactions:  transactions,
 	})
 }
@@ -272,7 +273,7 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
-	e.BlockHash = bytesutil.PadTo(dec.BlockHash, fieldparams.RootLength)
+	e.BlockHash = dec.BlockHash.Bytes()
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
 		transactions[i] = tx
