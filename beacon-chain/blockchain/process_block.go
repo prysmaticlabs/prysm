@@ -356,10 +356,6 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	// TODO(10261) send optimistic status
-	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
-		return err
-	}
 
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: signed.Block().Slot(),
@@ -475,14 +471,10 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 		return err
 	}
 	// Feed in block to fork choice store.
-	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
+	return s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
 		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()),
 		jCheckpoint.Epoch,
-		fCheckpoint.Epoch); err != nil {
-		return errors.Wrap(err, "could not process block for proto array fork choice")
-	}
-	// TODO(10261) send optimistic status
-	return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
+		fCheckpoint.Epoch)
 }
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
