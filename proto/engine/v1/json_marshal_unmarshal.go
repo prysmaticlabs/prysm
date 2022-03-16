@@ -2,6 +2,7 @@ package enginev1
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,19 +17,16 @@ import (
 type PayloadIDBytes [8]byte
 
 // MarshalJSON --
-func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
-	return json.Marshal(hexutil.Bytes(b[:]))
+
+func (b PayloadIDBytes) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(b[:]).MarshalText()
 }
 
-// UnmarshalJSON --
-func (b *PayloadIDBytes) UnmarshalJSON(enc []byte) error {
-	hexBytes := hexutil.Bytes(make([]byte, 0))
-	if err := json.Unmarshal(enc, &hexBytes); err != nil {
-		return err
+func (b *PayloadIDBytes) UnmarshalText(input []byte) error {
+	err := hexutil.UnmarshalFixedText("PayloadID", input, b[:])
+	if err != nil {
+		return fmt.Errorf("invalid payload id %q: %w", input, err)
 	}
-	res := [8]byte{}
-	copy(res[:], hexBytes)
-	*b = res
 	return nil
 }
 
@@ -207,6 +205,35 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	dec := executionPayloadJSON{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
+	}
+
+	if dec.ParentHash == nil {
+		return errors.New("missing required field 'parentHash' for ExecutableDataV1")
+	}
+	if dec.FeeRecipient == nil {
+		return errors.New("missing required field 'feeRecipient' for ExecutableDataV1")
+	}
+	if dec.StateRoot == nil {
+		return errors.New("missing required field 'stateRoot' for ExecutableDataV1")
+	}
+	if dec.ReceiptsRoot == nil {
+		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
+	}
+
+	if dec.LogsBloom == nil {
+		return errors.New("missing required field 'logsBloom' for ExecutableDataV1")
+	}
+	if dec.PrevRandao == nil {
+		return errors.New("missing required field 'prevRandao' for ExecutableDataV1")
+	}
+	if dec.ExtraData == nil {
+		return errors.New("missing required field 'extraData' for ExecutableDataV1")
+	}
+	if dec.BlockHash == nil {
+		return errors.New("missing required field 'blockHash' for ExecutableDataV1")
+	}
+	if dec.Transactions == nil {
+		return errors.New("missing required field 'transactions' for ExecutableDataV1")
 	}
 	*e = ExecutionPayload{}
 	e.ParentHash = bytesutil.PadTo(dec.ParentHash, fieldparams.RootLength)
