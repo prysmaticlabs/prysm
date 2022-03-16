@@ -234,6 +234,12 @@ type produceBlockResponseV2Json struct {
 	Data    *beaconBlockContainerV2Json `json:"data"`
 }
 
+// produceBlindedBlockResponseJson is used in /v1/validator/blinded_blocks/{slot} API endpoint.
+type produceBlindedBlockResponseJson struct {
+	Version string                           `json:"version"`
+	Data    *blindedBeaconBlockContainerJson `json:"data"`
+}
+
 // produceAttestationDataResponseJson is used in /validator/attestation_data API endpoint.
 type produceAttestationDataResponseJson struct {
 	Data *attestationDataJson `json:"data"`
@@ -333,6 +339,12 @@ type beaconBlockContainerV2Json struct {
 	Phase0Block    *beaconBlockJson          `json:"phase0_block"`
 	AltairBlock    *beaconBlockAltairJson    `json:"altair_block"`
 	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
+}
+
+type blindedBeaconBlockContainerJson struct {
+	Phase0Block    *beaconBlockJson                 `json:"phase0_block"`
+	AltairBlock    *beaconBlockAltairJson           `json:"altair_block"`
+	BellatrixBlock *blindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
 }
 
 type signedBeaconBlockAltairContainerJson struct {

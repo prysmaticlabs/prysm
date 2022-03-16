@@ -490,6 +490,11 @@ type altairProduceBlockResponseJson struct {
 	Data    *beaconBlockAltairJson `json:"data"`
 }
 
+type bellatrixProduceBlindedBlockResponseJson struct {
+	Version string                           `json:"version"`
+	Data    *blindedBeaconBlockBellatrixJson `json:"data"`
+}
+
 func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*produceBlockResponseV2Json)
 	if !ok {
@@ -506,6 +511,39 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 		actualRespContainer = &altairProduceBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.AltairBlock,
+		}
+	} else {
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
+	}
+
+	j, err := json.Marshal(actualRespContainer)
+	if err != nil {
+		return false, nil, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal response")
+	}
+	return false, j, nil
+}
+
+func serializeProducedBlindedBlock(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
+	respContainer, ok := response.(*produceBlindedBlockResponseJson)
+	if !ok {
+		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	var actualRespContainer interface{}
+	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
+		actualRespContainer = &phase0ProduceBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.Phase0Block,
+		}
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
+		actualRespContainer = &altairProduceBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.AltairBlock,
+		}
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())) {
+		actualRespContainer = &bellatrixProduceBlindedBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.BellatrixBlock,
 		}
 	} else {
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
