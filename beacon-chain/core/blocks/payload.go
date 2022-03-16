@@ -23,6 +23,8 @@ import (
 // Spec code:
 // def is_merge_transition_complete(state: BeaconState) -> bool:
 //    return state.latest_execution_payload_header != ExecutionPayloadHeader()
+//
+// Deprecated: Use `IsMergeTransitionBlockUsingPayloadHeader` instead.
 func MergeTransitionComplete(st state.BeaconState) (bool, error) {
 	h, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
@@ -48,6 +50,16 @@ func MergeTransitionBlock(st state.BeaconState, body block.BeaconBlockBody) (boo
 		return false, err
 	}
 
+	return ExecutionBlock(body)
+}
+
+// IsMergeTransitionBlockUsingPayloadHeader returns true if the input block is the terminal merge block.
+// Terminal merge block must be associated with an empty payload header.
+// This is an optimized version of MergeTransitionComplete where beacon state is not required as an argument.
+func IsMergeTransitionBlockUsingPayloadHeader(h *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
+	if !isEmptyHeader(h) {
+		return false, nil
+	}
 	return ExecutionBlock(body)
 }
 
@@ -124,8 +136,8 @@ func ValidatePayload(st state.BeaconState, payload *enginev1.ExecutionPayload) e
 		return err
 	}
 
-	if !bytes.Equal(payload.Random, random) {
-		return errors.New("incorrect random")
+	if !bytes.Equal(payload.PrevRandao, random) {
+		return errors.New("incorrect prev randao")
 	}
 	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	if err != nil {
@@ -201,7 +213,7 @@ func PayloadToHeader(payload *enginev1.ExecutionPayload) (*ethpb.ExecutionPayloa
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
 		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
 		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
-		Random:           bytesutil.SafeCopyBytes(payload.Random),
+		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
 		BlockNumber:      payload.BlockNumber,
 		GasLimit:         payload.GasLimit,
 		GasUsed:          payload.GasUsed,
@@ -229,7 +241,7 @@ func isEmptyPayload(p *enginev1.ExecutionPayload) bool {
 	if !bytes.Equal(p.LogsBloom, make([]byte, fieldparams.LogsBloomLength)) {
 		return false
 	}
-	if !bytes.Equal(p.Random, make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(p.PrevRandao, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
 	if !bytes.Equal(p.BaseFeePerGas, make([]byte, fieldparams.RootLength)) {
@@ -275,7 +287,7 @@ func isEmptyHeader(h *ethpb.ExecutionPayloadHeader) bool {
 	if !bytes.Equal(h.LogsBloom, make([]byte, fieldparams.LogsBloomLength)) {
 		return false
 	}
-	if !bytes.Equal(h.Random, make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(h.PrevRandao, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
 	if !bytes.Equal(h.BaseFeePerGas, make([]byte, fieldparams.RootLength)) {

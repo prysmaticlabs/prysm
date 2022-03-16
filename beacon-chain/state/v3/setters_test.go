@@ -38,8 +38,8 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 		StateRoot:        make([]byte, 32),
 		ReceiptRoot:      make([]byte, 32),
 		LogsBloom:        make([]byte, 256),
-		Random:           make([]byte, 32),
-		BaseFeePerGas:    make([]byte, 32),
+		PrevRandao:       make([]byte, 32),
+		BaseFeePerGas:    bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 	}
@@ -122,8 +122,8 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		StateRoot:        make([]byte, 32),
 		ReceiptRoot:      make([]byte, 32),
 		LogsBloom:        make([]byte, 256),
-		Random:           make([]byte, 32),
-		BaseFeePerGas:    make([]byte, 32),
+		PrevRandao:       make([]byte, 32),
+		BaseFeePerGas:    bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 	}

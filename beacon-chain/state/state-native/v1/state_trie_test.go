@@ -258,3 +258,21 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 	_, ok := st1.ValidatorIndexByPubkey(bytesutil.ToBytes48(val.PublicKey))
 	assert.Equal(t, false, ok, "Expected no validator index to be present in st1 for the newly inserted pubkey")
 }
+
+func BenchmarkBeaconState(b *testing.B) {
+	testState, _ := util.DeterministicGenesisState(b, 16000)
+	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	require.NoError(b, err)
+
+	b.Run("Vectorized SHA256", func(b *testing.B) {
+		st, err := v1.InitializeFromProtoUnsafe(pbState)
+		require.NoError(b, err)
+		_, err = st.HashTreeRoot(context.Background())
+		assert.NoError(b, err)
+	})
+
+	b.Run("Current SHA256", func(b *testing.B) {
+		_, err := pbState.HashTreeRoot()
+		require.NoError(b, err)
+	})
+}

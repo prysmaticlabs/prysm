@@ -18,7 +18,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -41,7 +41,6 @@ type ChainService struct {
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
 	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
 	Balance                     *precompute.Balance
-	ForkChoiceStore             *protoarray.Store
 	CanonicalRoots              map[[32]byte]bool
 	Fork                        *ethpb.Fork
 	ETH1Data                    *ethpb.Eth1Data
@@ -61,6 +60,12 @@ type ChainService struct {
 	SyncContributionProofDomain []byte
 	SyncCommitteePubkeys        [][]byte
 	Genesis                     time.Time
+	ForkChoiceStore             forkchoice.ForkChoicer
+}
+
+// ForkChoicer mocks the same method in the chain service
+func (s *ChainService) ForkChoicer() forkchoice.ForkChoicer {
+	return s.ForkChoiceStore
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -320,11 +325,6 @@ func (s *ChainService) HeadETH1Data() *ethpb.Eth1Data {
 	return s.ETH1Data
 }
 
-// ProtoArrayStore mocks the same method in the chain service.
-func (s *ChainService) ProtoArrayStore() *protoarray.Store {
-	return s.ForkChoiceStore
-}
-
 // GenesisTime mocks the same method in the chain service.
 func (s *ChainService) GenesisTime() time.Time {
 	return s.Genesis
@@ -447,6 +447,6 @@ func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 }
 
 // IsOptimisticForRoot mocks the same method in the chain service.
-func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte, _ types.Slot) (bool, error) {
-	return false, nil
+func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool, error) {
+	return s.Optimistic, nil
 }

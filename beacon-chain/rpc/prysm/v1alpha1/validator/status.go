@@ -5,11 +5,9 @@ import (
 	"errors"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -24,6 +22,7 @@ import (
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
+var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
 var nonExistentIndex = types.ValidatorIndex(^uint64(0))
 
 const numStatesToCheck = 2
@@ -246,25 +245,9 @@ func (vs *Server) activationStatus(
 // Spec:
 // https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md
 func (vs *Server) optimisticStatus(ctx context.Context) error {
-	blk, err := vs.HeadFetcher.HeadBlock(ctx)
-	if err != nil {
-		return err
-	}
-	if slots.ToEpoch(blk.Block().Slot()) < params.BeaconConfig().BellatrixForkEpoch {
+	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
-	st, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-	enabled, err := blocks.ExecutionEnabled(st, blk.Block().Body())
-	if err != nil {
-		return err
-	}
-	if !enabled {
-		return nil
-	}
-
 	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
@@ -273,11 +256,7 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 		return nil
 	}
 
-	root, err := vs.HeadFetcher.HeadRoot(ctx)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get head root: %v", err)
-	}
-	return status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators. Head root: %#x", root)
+	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
 
 }
 
@@ -382,11 +361,8 @@ func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.
 	if err != nil {
 		return nil, err
 	}
-	retState, err := vs.StateGen.StateBySlot(ctx, endSlot)
-	if err != nil {
-		return nil, err
-	}
-	return transition.ProcessSlots(ctx, retState, retState.Slot()+1)
+	// replay to first slot of following epoch
+	return vs.ReplayerBuilder.ForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
 }
 
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {

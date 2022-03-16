@@ -51,12 +51,12 @@ func (e *ExecutionPayload) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 	dst = append(dst, e.LogsBloom...)
 
-	// Field (5) 'Random'
-	if len(e.Random) != 32 {
+	// Field (5) 'PrevRandao'
+	if len(e.PrevRandao) != 32 {
 		err = ssz.ErrBytesLength
 		return
 	}
-	dst = append(dst, e.Random...)
+	dst = append(dst, e.PrevRandao...)
 
 	// Field (6) 'BlockNumber'
 	dst = ssz.MarshalUint64(dst, e.BlockNumber)
@@ -166,11 +166,11 @@ func (e *ExecutionPayload) UnmarshalSSZ(buf []byte) error {
 	}
 	e.LogsBloom = append(e.LogsBloom, buf[116:372]...)
 
-	// Field (5) 'Random'
-	if cap(e.Random) == 0 {
-		e.Random = make([]byte, 0, len(buf[372:404]))
+	// Field (5) 'PrevRandao'
+	if cap(e.PrevRandao) == 0 {
+		e.PrevRandao = make([]byte, 0, len(buf[372:404]))
 	}
-	e.Random = append(e.Random, buf[372:404]...)
+	e.PrevRandao = append(e.PrevRandao, buf[372:404]...)
 
 	// Field (6) 'BlockNumber'
 	e.BlockNumber = ssz.UnmarshallUint64(buf[404:412])
@@ -307,12 +307,12 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 	hh.PutBytes(e.LogsBloom)
 
-	// Field (5) 'Random'
-	if len(e.Random) != 32 {
+	// Field (5) 'PrevRandao'
+	if len(e.PrevRandao) != 32 {
 		err = ssz.ErrBytesLength
 		return
 	}
-	hh.PutBytes(e.Random)
+	hh.PutBytes(e.PrevRandao)
 
 	// Field (6) 'BlockNumber'
 	hh.PutUint64(e.BlockNumber)

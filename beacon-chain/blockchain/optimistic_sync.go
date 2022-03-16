@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
@@ -21,10 +21,12 @@ import (
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
-func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.BeaconBlock, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.BeaconBlock, headBlkRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
+		return nil, errors.New("nil head block")
+	}
 	// Must not call fork choice updated until the transition conditions are met on the Pow network.
-	switch headBlk.Version() {
-	case version.Phase0, version.Altair:
+	if isPreBellatrix(headBlk.Version()) {
 		return nil, nil
 	}
 	isExecutionBlk, err := blocks.ExecutionBlock(headBlk.Body())
@@ -38,16 +40,14 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, s.ensureRootNotZeros(finalizedRoot))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
 	var finalizedHash []byte
-	switch finalizedBlock.Version() {
-	case version.Phase0, version.Altair:
-		// Before a post-transition block is finalized, finalized hash field must be Hash32().
+	if isPreBellatrix(finalizedBlock.Block().Version()) {
 		finalizedHash = params.BeaconConfig().ZeroHash[:]
-	default:
+	} else {
 		payload, err := finalizedBlock.Block().Body().ExecutionPayload()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized block execution payload")
@@ -61,6 +61,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		FinalizedBlockHash: finalizedHash,
 	}
 
+	// payload attribute is only required when requesting payload, here we are just updating fork choice, so it is nil.
 	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /*payload attribute*/)
 	if err != nil {
 		switch err {
@@ -75,14 +76,19 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
 	}
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headBlkRoot); err != nil {
+		return nil, errors.Wrap(err, "could not set block to valid")
+	}
 	return payloadID, nil
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload
-func (s *Service) notifyNewPayload(ctx context.Context, preState, postState state.BeaconState, blk block.SignedBeaconBlock) error {
+func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, header *ethpb.ExecutionPayloadHeader, postState state.BeaconState, blk block.SignedBeaconBlock) error {
+	if postState == nil {
+		return errors.New("pre and post states must not be nil")
+	}
 	// Execution payload is only supported in Bellatrix and beyond.
-	switch postState.Version() {
-	case version.Phase0, version.Altair:
+	if isPreBellatrix(postState.Version()) {
 		return nil
 	}
 	if err := helpers.BeaconBlockIsNil(blk); err != nil {
@@ -115,11 +121,12 @@ func (s *Service) notifyNewPayload(ctx context.Context, preState, postState stat
 	}
 
 	// During the transition event, the transition block should be verified for sanity.
-	switch preState.Version() {
-	case version.Phase0, version.Altair:
-		return nil
+	if isPreBellatrix(preStateVersion) {
+		// Handle case where pre-state is Altair but block contains payload.
+		// To reach here, the block must have contained a valid payload.
+		return s.validateMergeBlock(ctx, blk)
 	}
-	atTransition, err := blocks.MergeTransitionBlock(preState, body)
+	atTransition, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(header, body)
 	if err != nil {
 		return errors.Wrap(err, "could not check if merge block is terminal")
 	}
@@ -129,18 +136,47 @@ func (s *Service) notifyNewPayload(ctx context.Context, preState, postState stat
 	return s.validateMergeBlock(ctx, blk)
 }
 
+// isPreBellatrix returns true if input version is before bellatrix fork.
+func isPreBellatrix(v int) bool {
+	return v == version.Phase0 || v == version.Altair
+}
+
 // optimisticCandidateBlock returns true if this block can be optimistically synced.
 //
 // Spec pseudocode definition:
 // def is_optimistic_candidate_block(opt_store: OptimisticStore, current_slot: Slot, block: BeaconBlock) -> bool:
-//     justified_root = opt_store.block_states[opt_store.head_block_root].current_justified_checkpoint.root
-//     justified_is_execution_block = is_execution_block(opt_store.blocks[justified_root])
-//     block_is_deep = block.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY <= current_slot
-//     return justified_is_execution_block or block_is_deep
+//    if is_execution_block(opt_store.blocks[block.parent_root]):
+//        return True
+//
+//    justified_root = opt_store.block_states[opt_store.head_block_root].current_justified_checkpoint.root
+//    if is_execution_block(opt_store.blocks[justified_root]):
+//        return True
+//
+//    if block.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY <= current_slot:
+//        return True
+//
+//    return False
 func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.BeaconBlock) (bool, error) {
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
 		return true, nil
 	}
+
+	parent, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
+	if err != nil {
+		return false, err
+	}
+	if parent == nil {
+		return false, errNilParentInDB
+	}
+
+	parentIsExecutionBlock, err := blocks.ExecutionBlock(parent.Block().Body())
+	if err != nil {
+		return false, err
+	}
+	if parentIsExecutionBlock {
+		return true, nil
+	}
+
 	j := s.store.JustifiedCheckpt()
 	if j == nil {
 		return false, errNilJustifiedInStore
@@ -150,22 +186,4 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 		return false, err
 	}
 	return blocks.ExecutionBlock(jBlock.Block().Body())
-}
-
-// loadSyncedTips loads a previously saved synced Tips from DB
-// if no synced tips are saved, then it creates one from the given
-// root and slot number.
-func (s *Service) loadSyncedTips(root [32]byte, slot types.Slot) error {
-	// Initialize synced tips
-	tips, err := s.cfg.BeaconDB.ValidatedTips(s.ctx)
-	if err != nil || len(tips) == 0 {
-		tips[root] = slot
-		if err != nil {
-			log.WithError(err).Warn("Could not read synced tips from DB, using finalized checkpoint as synced tip")
-		}
-	}
-	if err := s.cfg.ForkChoiceStore.SetSyncedTips(tips); err != nil {
-		return errors.Wrap(err, "could not set synced tips")
-	}
-	return nil
 }

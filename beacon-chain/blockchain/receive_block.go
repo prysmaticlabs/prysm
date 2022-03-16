@@ -64,7 +64,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBloc
 		return err
 	}
 	// Log state transition data.
-	logStateTransitionData(blockCopy.Block())
+	if err := logStateTransitionData(blockCopy.Block()); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -77,7 +79,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 	defer span.End()
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	fCheckpoints, jCheckpoints, optimistic, err := s.onBlockBatch(ctx, blocks, blkRoots)
+	fCheckpoints, jCheckpoints, _, err := s.onBlockBatch(ctx, blocks, blkRoots)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
 		tracing.AnnotateError(span, err)
@@ -86,21 +88,10 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 
 	for i, b := range blocks {
 		blockCopy := b.Copy()
+		// TODO(10261) check optimistic status
 		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
-		}
-		if !optimistic[i] {
-			root, err := b.Block().HashTreeRoot()
-			if err != nil {
-				return err
-			}
-			if err := s.cfg.ForkChoiceStore.UpdateSyncedTipsWithValidRoot(ctx, root); err != nil {
-				return err
-			}
-			if err := s.saveSyncedTipsDB(ctx); err != nil {
-				return errors.Wrap(err, "could not save synced tips")
-			}
 		}
 
 		// Send notification of the processed block to the state feed.

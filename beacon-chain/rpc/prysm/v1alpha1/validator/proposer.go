@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -49,9 +53,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
-	//if err := vs.optimisticStatus(ctx); err != nil {
-	//	return nil, err
-	//}
+	if err := vs.optimisticStatus(ctx); err != nil {
+		return nil, err
+	}
 
 	blk, err := vs.getBellatrixBeaconBlock(ctx, req)
 	if err != nil {
@@ -65,12 +69,17 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 // by passing in the slot and the signed randao reveal of the slot.
 //
 // DEPRECATED: Use GetBeaconBlock instead to handle blocks pre and post-Altair hard fork. This endpoint
-// cannot handle blocks after the Altair fork epoch.
+// cannot handle blocks after the Altair fork epoch. If requesting a block after Altair, nothing will
+// be returned.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	return vs.getPhase0BeaconBlock(ctx, req)
+	blk, err := vs.GetBeaconBlock(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return blk.GetPhase0(), nil
 }
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
@@ -108,6 +117,31 @@ func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBloc
 	defer span.End()
 	blk := wrapper.WrappedPhase0SignedBeaconBlock(rBlk)
 	return vs.proposeGenericBeaconBlock(ctx, blk)
+}
+
+// PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
+func (vs *Server) PrepareBeaconProposer(
+	ctx context.Context, request *ethpb.PrepareBeaconProposerRequest,
+) (*emptypb.Empty, error) {
+	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
+	defer span.End()
+	var feeRecipients []common.Address
+	var validatorIndices []types.ValidatorIndex
+	for _, recipientContainer := range request.Recipients {
+		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
+		if !common.IsHexAddress(recipient) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
+		}
+		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
+		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
+	}
+	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"validatorIndices": validatorIndices,
+	}).Info("Updated fee recipient addresses for validator indices")
+	return &emptypb.Empty{}, nil
 }
 
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {

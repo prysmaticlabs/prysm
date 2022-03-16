@@ -138,7 +138,7 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]by
 	numOfVals := len(b.state.Validators)
 
 	idx, ok := b.valMapHandler.Get(key)
-	if ok && numOfVals <= int(idx) {
+	if ok && types.ValidatorIndex(numOfVals) <= idx {
 		return types.ValidatorIndex(0), false
 	}
 	return idx, ok

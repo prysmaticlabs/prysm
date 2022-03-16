@@ -19,6 +19,11 @@ type genesisResponse_GenesisJson struct {
 	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
 }
 
+// feeRecipientsRequestJson is used in /validator/prepare_beacon_proposers API endpoint.
+type feeRecipientsRequestJSON struct {
+	Recipients []*feeRecipientJson `json:"recipients"`
+}
+
 // stateRootResponseJson is used in /beacon/states/{state_id}/root API endpoint.
 type stateRootResponseJson struct {
 	Data *stateRootResponse_StateRootJson `json:"data"`
@@ -403,6 +408,23 @@ type executionPayloadJson struct {
 	Transactions  []string `json:"transactions" hex:"true"`
 }
 
+type executionPayloadHeaderJson struct {
+	ParentHash       string `json:"parent_hash" hex:"true"`
+	CoinBase         string `json:"coinbase" hex:"true"`
+	StateRoot        string `json:"state_root" hex:"true"`
+	ReceiptRoot      string `json:"receipt_root" hex:"true"`
+	LogsBloom        string `json:"logs_bloom" hex:"true"`
+	Random           string `json:"random" hex:"true"`
+	BlockNumber      string `json:"block_number"`
+	GasLimit         string `json:"gas_limit"`
+	GasUsed          string `json:"gas_used"`
+	TimeStamp        string `json:"timestamp"`
+	ExtraData        string `json:"extra_data" hex:"true"`
+	BaseFeePerGas    string `json:"base_fee_per_gas" hex:"true"`
+	BlockHash        string `json:"block_hash" hex:"true"`
+	TransactionsRoot string `json:"transactions_root" hex:"true"`
+}
+
 type syncAggregateJson struct {
 	SyncCommitteeBits      string `json:"sync_committee_bits" hex:"true"`
 	SyncCommitteeSignature string `json:"sync_committee_signature" hex:"true"`
@@ -452,6 +474,11 @@ type indexedAttestationJson struct {
 	AttestingIndices []string             `json:"attesting_indices"`
 	Data             *attestationDataJson `json:"data"`
 	Signature        string               `json:"signature" hex:"true"`
+}
+
+type feeRecipientJson struct {
+	ValidatorIndex uint64 `json:"validator_index"`
+	FeeRecipient   string `json:"fee_recipient" hex:"true"`
 }
 
 type attestationJson struct {
@@ -546,7 +573,7 @@ type beaconStateJson struct {
 	FinalizedCheckpoint         *checkpointJson           `json:"finalized_checkpoint"`
 }
 
-type beaconStateV2Json struct {
+type beaconStateAltairJson struct {
 	GenesisTime                 string                 `json:"genesis_time"`
 	GenesisValidatorsRoot       string                 `json:"genesis_validators_root" hex:"true"`
 	Slot                        string                 `json:"slot"`
@@ -573,9 +600,38 @@ type beaconStateV2Json struct {
 	NextSyncCommittee           *syncCommitteeJson     `json:"next_sync_committee"`
 }
 
+type beaconStateBellatrixJson struct {
+	GenesisTime                  string                      `json:"genesis_time"`
+	GenesisValidatorsRoot        string                      `json:"genesis_validators_root" hex:"true"`
+	Slot                         string                      `json:"slot"`
+	Fork                         *forkJson                   `json:"fork"`
+	LatestBlockHeader            *beaconBlockHeaderJson      `json:"latest_block_header"`
+	BlockRoots                   []string                    `json:"block_roots" hex:"true"`
+	StateRoots                   []string                    `json:"state_roots" hex:"true"`
+	HistoricalRoots              []string                    `json:"historical_roots" hex:"true"`
+	Eth1Data                     *eth1DataJson               `json:"eth1_data"`
+	Eth1DataVotes                []*eth1DataJson             `json:"eth1_data_votes"`
+	Eth1DepositIndex             string                      `json:"eth1_deposit_index"`
+	Validators                   []*validatorJson            `json:"validators"`
+	Balances                     []string                    `json:"balances"`
+	RandaoMixes                  []string                    `json:"randao_mixes" hex:"true"`
+	Slashings                    []string                    `json:"slashings"`
+	PreviousEpochParticipation   EpochParticipation          `json:"previous_epoch_participation"`
+	CurrentEpochParticipation    EpochParticipation          `json:"current_epoch_participation"`
+	JustificationBits            string                      `json:"justification_bits" hex:"true"`
+	PreviousJustifiedCheckpoint  *checkpointJson             `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint   *checkpointJson             `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint          *checkpointJson             `json:"finalized_checkpoint"`
+	InactivityScores             []string                    `json:"inactivity_scores"`
+	CurrentSyncCommittee         *syncCommitteeJson          `json:"current_sync_committee"`
+	NextSyncCommittee            *syncCommitteeJson          `json:"next_sync_committee"`
+	LatestExecutionPayloadHeader *executionPayloadHeaderJson `json:"latest_execution_payload_header"`
+}
+
 type beaconStateContainerV2Json struct {
-	Phase0State *beaconStateJson   `json:"phase0_state"`
-	AltairState *beaconStateV2Json `json:"altair_state"`
+	Phase0State    *beaconStateJson          `json:"phase0_state"`
+	AltairState    *beaconStateAltairJson    `json:"altair_state"`
+	BellatrixState *beaconStateBellatrixJson `json:"bellatrix_state"`
 }
 
 type forkJson struct {

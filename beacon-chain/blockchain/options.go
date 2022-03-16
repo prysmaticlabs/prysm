@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -52,7 +52,7 @@ func WithChainStartFetcher(f powchain.ChainStartFetcher) Option {
 }
 
 // WithExecutionEngineCaller to call execution engine.
-func WithExecutionEngineCaller(c v1.EngineCaller) Option {
+func WithExecutionEngineCaller(c enginev1.Caller) Option {
 	return func(s *Service) error {
 		s.cfg.ExecutionEngineCaller = c
 		return nil
