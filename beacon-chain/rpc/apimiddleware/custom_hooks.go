@@ -17,6 +17,29 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
+// https://ethereum.github.io/beacon-apis/#/Validator/prepareBeaconProposer expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct.
+func wrapFeeRecipientsArray(
+	endpoint *apimiddleware.Endpoint,
+	_ http.ResponseWriter,
+	req *http.Request,
+) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	if _, ok := endpoint.PostRequest.(*feeRecipientsRequestJSON); !ok {
+		return true, nil
+	}
+	recipients := make([]*feeRecipientJson, 0)
+	if err := json.NewDecoder(req.Body).Decode(&recipients); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
+	}
+	j := &feeRecipientsRequestJSON{Recipients: recipients}
+	b, err := json.Marshal(j)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+	}
+	req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	return true, nil
+}
+
 // https://ethereum.github.io/beacon-apis/#/Beacon/submitPoolAttestations expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapAttestationsArray(
