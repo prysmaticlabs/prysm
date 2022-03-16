@@ -114,7 +114,7 @@ service BeaconValidator {
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
   rpc ProduceBlindedBlock(v1.ProduceBlockRequest) returns (v2.ProduceBlindedBlockResponse) {
-    option (google.api.http) = { get: "/internal/eth/v2/validator/blinded_blocks/{slot}" };
+    option (google.api.http) = { get: "/internal/eth/v1/validator/blinded_blocks/{slot}" };
   }
 
   // PrepareBeaconProposer submits fee recipient information to be used when preparing block
