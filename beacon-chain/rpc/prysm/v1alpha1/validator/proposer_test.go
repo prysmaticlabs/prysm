@@ -2359,7 +2359,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	assert.DeepEqual(t, randaoReveal, bellatrixBlk.Bellatrix.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, bellatrixBlk.Bellatrix.Body.Graffiti, "Expected block to have correct Graffiti")
 
-	require.LogsContain(t, hook, "Fee recipient not found. Using default fee recipient")
+	require.LogsContain(t, hook, "Fee recipient not set. Using burn address")
 	require.DeepEqual(t, payload, bellatrixBlk.Bellatrix.Body.ExecutionPayload) // Payload should equal.
 
 	// Operator sets default fee recipient to not be burned through beacon node cli.
@@ -2370,7 +2370,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	_, err = proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
-	require.LogsDoNotContain(t, newHook, "Fee recipient not found. Using default fee recipient")
+	require.LogsDoNotContain(t, newHook, "Fee recipient not set. Using burn address")
 }
 
 func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
