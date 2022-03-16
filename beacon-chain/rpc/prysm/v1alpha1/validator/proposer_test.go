@@ -2437,6 +2437,63 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 	require.DeepEqual(t, bitfield.NewBitvector512(), aggregate.SyncCommitteeBits)
 }
 
+func TestProposer_PrepareBeaconProposer(t *testing.T) {
+	type args struct {
+		request *ethpb.PrepareBeaconProposerRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "Happy Path",
+			args: args{
+				request: &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "invalid fee recipient length",
+			args: args{
+				request: &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.BLSPubkeyLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
+			},
+			wantErr: "Invalid fee recipient address",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			proposerServer := &Server{BeaconDB: db}
+			_, err := proposerServer.PrepareBeaconProposer(ctx, tt.args.request)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			require.NoError(t, err)
+			address, err := proposerServer.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
+			require.NoError(t, err)
+			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
+
+		})
+	}
+}
+
 func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
 	slotStartTime := uint64(mockPOW.GenesisTime) + uint64((slot - (slot % (slots))).Mul(params.BeaconConfig().SecondsPerSlot))
