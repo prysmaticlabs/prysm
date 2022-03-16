@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -24,7 +25,7 @@ import (
 
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*enginev1.ExecutionPayload, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex) (*enginev1.ExecutionPayload, error) {
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err
@@ -94,10 +95,24 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot) (*en
 		SafeBlockHash:      parentHash,
 		FinalizedBlockHash: finalizedBlockHash,
 	}
+
+	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
+	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
+	switch err == nil {
+	case true:
+		feeRecipient = recipient
+	case errors.As(err, kv.ErrNotFoundFeeRecipient): // If fee recipient is not found, use the default fee recipient.
+		logrus.WithFields(logrus.Fields{
+			"validatorIndex":      vIdx,
+			"defaultFeeRecipient": feeRecipient,
+		}).Error("Fee recipient not found. Using default fee recipient")
+	default:
+		return nil, errors.Wrap(err, "could not get fee recipient in db")
+	}
 	p := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
 		PrevRandao:            random,
-		SuggestedFeeRecipient: params.BeaconConfig().FeeRecipient.Bytes(),
+		SuggestedFeeRecipient: feeRecipient.Bytes(),
 	}
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
 	if err != nil {
@@ -204,6 +219,8 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 				}).Info("Retrieved terminal block hash")
 				return blk.Hash, true, nil
 			}
+		} else {
+			return nil, false, nil
 		}
 		blk = parentBlk
 	}

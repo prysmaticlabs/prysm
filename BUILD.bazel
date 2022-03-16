@@ -3,7 +3,7 @@ load("@com_github_atlassian_bazel_tools//gometalinter:def.bzl", "gometalinter")
 load("@com_github_atlassian_bazel_tools//goimports:def.bzl", "goimports")
 load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 load("@io_bazel_rules_go//go:def.bzl", "nogo")
-load("@graknlabs_bazel_distribution//common:rules.bzl", "assemble_targz", "assemble_versioned")
+load("@vaticle_bazel_distribution//common:rules.bzl", "assemble_targz", "assemble_versioned")
 load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
 
 prefix = "github.com/prysmaticlabs/prysm"
@@ -16,6 +16,8 @@ exports_files([
 # gazelle:map_kind go_library go_library @prysm//tools/go:def.bzl
 # gazelle:map_kind go_test go_test @prysm//tools/go:def.bzl
 # gazelle:map_kind go_repository go_repository @prysm//tools/go:def.bzl
+# gazelle:build_tags bazel
+# gazelle:exclude tools/analyzers/**/testdata/**
 gazelle(
     name = "gazelle",
     prefix = prefix,
@@ -125,6 +127,7 @@ nogo(
         "//tools/analyzers/ineffassign:go_default_library",
         "//tools/analyzers/properpermissions:go_default_library",
         "//tools/analyzers/recursivelock:go_default_library",
+        "//tools/analyzers/uintcast:go_default_library",
     ] + select({
         # nogo checks that fail with coverage enabled.
         ":coverage_enabled": [],

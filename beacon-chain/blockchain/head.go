@@ -83,8 +83,12 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 		} else {
 			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
 		}
+		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
+			return err
+		}
+
 		// TODO(10261) send optimistic status
-		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j, false /* optimistic status */); err != nil {
+		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headStartRoot); err != nil {
 			return err
 		}
 	}

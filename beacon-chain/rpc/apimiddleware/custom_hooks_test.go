@@ -363,6 +363,11 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 }
 
 func TestSetInitialPublishBlockPostRequest(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = params.BeaconConfig().AltairForkEpoch + 1
+	params.OverrideBeaconConfig(cfg)
+
 	endpoint := &apimiddleware.Endpoint{}
 	s := struct {
 		Message struct {
@@ -397,6 +402,21 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		assert.Equal(t, reflect.TypeOf(signedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+		require.NoError(t, err)
+		s.Message = struct{ Slot string }{Slot: strconv.FormatUint(uint64(slot), 10)}
+		j, err := json.Marshal(s)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(signedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
 }
 
 func TestPreparePublishedBlock(t *testing.T) {
@@ -425,6 +445,20 @@ func TestPreparePublishedBlock(t *testing.T) {
 		errJson := preparePublishedBlock(endpoint, nil, nil)
 		require.Equal(t, true, errJson == nil)
 		_, ok := endpoint.PostRequest.(*altairPublishBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &signedBeaconBlockBellatrixContainerJson{
+				Message: &beaconBlockBellatrixJson{
+					Body: &beaconBlockBodyBellatrixJson{},
+				},
+			},
+		}
+		errJson := preparePublishedBlock(endpoint, nil, nil)
+		require.Equal(t, true, errJson == nil)
+		_, ok := endpoint.PostRequest.(*bellatrixPublishBlockRequestJson)
 		assert.Equal(t, true, ok)
 	})
 
@@ -577,8 +611,7 @@ func TestSerializeV2Block(t *testing.T) {
 					StateRoot:     "root",
 					Body:          &beaconBlockBodyJson{},
 				},
-				AltairBlock: nil,
-				Signature:   "sig",
+				Signature: "sig",
 			},
 		}
 		runDefault, j, errJson := serializeV2Block(response)
@@ -601,7 +634,6 @@ func TestSerializeV2Block(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &signedBeaconBlockContainerV2Json{
-				Phase0Block: nil,
 				AltairBlock: &beaconBlockAltairJson{
 					Slot:          "1",
 					ProposerIndex: "1",
@@ -617,6 +649,36 @@ func TestSerializeV2Block(t *testing.T) {
 		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
 		resp := &altairBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		response := &blockV2ResponseJson{
+			Version: ethpbv2.Version_BELLATRIX.String(),
+			Data: &signedBeaconBlockContainerV2Json{
+				BellatrixBlock: &beaconBlockBellatrixJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyBellatrixJson{},
+				},
+				Signature: "sig",
+			},
+		}
+		runDefault, j, errJson := serializeV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &bellatrixBlockResponseJson{}
 		require.NoError(t, json.Unmarshal(j, resp))
 		require.NotNil(t, resp.Data)
 		require.NotNil(t, resp.Data.Message)
