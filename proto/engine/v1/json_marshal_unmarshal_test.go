@@ -164,7 +164,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, uint64(3), payloadPb.GasLimit)
 		require.DeepEqual(t, uint64(4), payloadPb.GasUsed)
 		require.DeepEqual(t, uint64(5), payloadPb.Timestamp)
-		require.DeepEqual(t, []byte("6"), payloadPb.BaseFeePerGas)
+		require.DeepEqual(t, bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength), payloadPb.BaseFeePerGas)
 		require.DeepEqual(t, []byte("7"), payloadPb.Size)
 		require.DeepEqual(t, []byte("extraData"), payloadPb.ExtraData)
 		require.DeepEqual(t, []byte("mixHash"), payloadPb.MixHash)
