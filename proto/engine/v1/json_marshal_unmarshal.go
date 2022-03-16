@@ -158,12 +158,12 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 }
 
 type executionPayloadJSON struct {
-	ParentHash    hexutil.Bytes   `json:"parentHash"`
+	ParentHash    *common.Hash    `json:"parentHash"`
 	FeeRecipient  hexutil.Bytes   `json:"feeRecipient"`
-	StateRoot     hexutil.Bytes   `json:"stateRoot"`
-	ReceiptsRoot  hexutil.Bytes   `json:"receiptsRoot"`
+	StateRoot     *common.Hash    `json:"stateRoot"`
+	ReceiptsRoot  *common.Hash    `json:"receiptsRoot"`
 	LogsBloom     hexutil.Bytes   `json:"logsBloom"`
-	PrevRandao    hexutil.Bytes   `json:"prevRandao"`
+	PrevRandao    *common.Hash    `json:"prevRandao"`
 	BlockNumber   hexutil.Uint64  `json:"blockNumber"`
 	GasLimit      hexutil.Uint64  `json:"gasLimit"`
 	GasUsed       hexutil.Uint64  `json:"gasUsed"`
@@ -182,13 +182,17 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	}
 	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
+	pHash := common.BytesToHash(e.ParentHash)
+	sRoot := common.BytesToHash(e.StateRoot)
+	recRoot := common.BytesToHash(e.ReceiptsRoot)
+	prevRan := common.BytesToHash(e.PrevRandao)
 	return json.Marshal(executionPayloadJSON{
-		ParentHash:    e.ParentHash,
+		ParentHash:    &pHash,
 		FeeRecipient:  e.FeeRecipient,
-		StateRoot:     e.StateRoot,
-		ReceiptsRoot:  e.ReceiptsRoot,
+		StateRoot:     &sRoot,
+		ReceiptsRoot:  &recRoot,
 		LogsBloom:     e.LogsBloom,
-		PrevRandao:    e.PrevRandao,
+		PrevRandao:    &prevRan,
 		BlockNumber:   hexutil.Uint64(e.BlockNumber),
 		GasLimit:      hexutil.Uint64(e.GasLimit),
 		GasUsed:       hexutil.Uint64(e.GasUsed),
@@ -236,12 +240,12 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 		return errors.New("missing required field 'transactions' for ExecutableDataV1")
 	}
 	*e = ExecutionPayload{}
-	e.ParentHash = bytesutil.PadTo(dec.ParentHash, fieldparams.RootLength)
+	e.ParentHash = dec.ParentHash.Bytes()
 	e.FeeRecipient = bytesutil.PadTo(dec.FeeRecipient, fieldparams.FeeRecipientLength)
-	e.StateRoot = bytesutil.PadTo(dec.StateRoot, fieldparams.RootLength)
-	e.ReceiptsRoot = bytesutil.PadTo(dec.ReceiptsRoot, fieldparams.RootLength)
+	e.StateRoot = dec.StateRoot.Bytes()
+	e.ReceiptsRoot = dec.ReceiptsRoot.Bytes()
 	e.LogsBloom = bytesutil.PadTo(dec.LogsBloom, fieldparams.LogsBloomLength)
-	e.PrevRandao = bytesutil.PadTo(dec.PrevRandao, fieldparams.RootLength)
+	e.PrevRandao = dec.PrevRandao.Bytes()
 	e.BlockNumber = uint64(dec.BlockNumber)
 	e.GasLimit = uint64(dec.GasLimit)
 	e.GasUsed = uint64(dec.GasUsed)
