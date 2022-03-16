@@ -462,11 +462,11 @@ func BeaconStateBellatrixToProto(st state.BeaconStateBellatrix) (*ethpbv2.Beacon
 			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceNextSyncCommittee.Pubkeys),
 			AggregatePubkey: bytesutil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
 		},
-		LatestExecutionPayloadHeader: &ethpbv2.ExecutionPayloadHeader{
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
 			ParentHash:       bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.ParentHash),
 			FeeRecipient:     bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.FeeRecipient),
 			StateRoot:        bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.StateRoot),
-			ReceiptRoot:      bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.ReceiptRoot),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.ReceiptRoot),
 			LogsBloom:        bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.LogsBloom),
 			PrevRandao:       bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.PrevRandao),
 			BlockNumber:      sourceLatestExecutionPaylodHeader.BlockNumber,

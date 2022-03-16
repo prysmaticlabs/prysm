@@ -22,6 +22,7 @@ import "proto/eth/v1/beacon_state.proto";
 import "proto/eth/v1/validator.proto";
 import "proto/eth/v2/sync_committee.proto";
 import "proto/eth/v2/version.proto";
+import "proto/engine/v1/execution_engine.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2;eth";
@@ -120,24 +121,7 @@ message BeaconStateBellatrix {
   SyncCommittee next_sync_committee = 9003; // [New in Altair]
 
   // Bellatrix fields [10001-11000]
-  ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Bellatrix]
-}
-
-message ExecutionPayloadHeader {
-  bytes parent_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes fee_recipient = 2 [(ethereum.eth.ext.ssz_size) = "20"];
-  bytes state_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes receipt_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes logs_bloom = 5 [(ethereum.eth.ext.ssz_size) = "256"];
-  bytes prev_randao = 6 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 block_number = 7;
-  uint64 gas_limit = 8;
-  uint64 gas_used = 9;
-  uint64 timestamp = 10;
-  bytes extra_data = 11 [(ethereum.eth.ext.ssz_max) = "32"];
-  bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
+  engine.v1.ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Bellatrix]
 }
 
 message StateRequestV2 {
