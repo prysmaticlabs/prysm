@@ -2480,6 +2480,10 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+			address, err := proposerServer.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
+			require.NoError(t, err)
+			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
+
 		})
 	}
 }
