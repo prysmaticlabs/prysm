@@ -50,14 +50,6 @@ func logStateTransitionData(b block.BeaconBlock) error {
 		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)))
 		log = log.WithField("txCount", len(p.Transactions))
 	}
-	if b.Version() == version.Bellatrix {
-		p, err := b.Body().ExecutionPayload()
-		if err != nil {
-			return err
-		}
-		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)))
-		log = log.WithField("txCount", len(p.Transactions))
-	}
 	log.Info("Finished applying state transition")
 	return nil
 }
