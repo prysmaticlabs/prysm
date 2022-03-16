@@ -4,6 +4,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -59,6 +61,178 @@ func V1Alpha1BeaconBlockBellatrixToV2(v1alpha1Block *ethpbalpha.BeaconBlockBella
 	v2Block := &ethpbv2.BeaconBlockBellatrix{}
 	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2Block, nil
+}
+
+// V1Alpha1BeaconBlockBellatrixToV2Blinded converts a v1alpha1 Bellatrix beacon block to a v2
+// blinded Bellatrix block.
+func V1Alpha1BeaconBlockBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BeaconBlockBellatrix) (*ethpbv2.BlindedBeaconBlockBellatrix, error) {
+	sourceProposerSlashings := v1alpha1Block.Body.ProposerSlashings
+	resultProposerSlashings := make([]*ethpbv1.ProposerSlashing, len(sourceProposerSlashings))
+	for i, s := range sourceProposerSlashings {
+		resultProposerSlashings[i] = &ethpbv1.ProposerSlashing{
+			SignedHeader_1: &ethpbv1.SignedBeaconBlockHeader{
+				Message: &ethpbv1.BeaconBlockHeader{
+					Slot:          s.Header_1.Header.Slot,
+					ProposerIndex: s.Header_1.Header.ProposerIndex,
+					ParentRoot:    bytesutil.SafeCopyBytes(s.Header_1.Header.ParentRoot),
+					StateRoot:     bytesutil.SafeCopyBytes(s.Header_1.Header.StateRoot),
+					BodyRoot:      bytesutil.SafeCopyBytes(s.Header_1.Header.BodyRoot),
+				},
+				Signature: bytesutil.SafeCopyBytes(s.Header_1.Signature),
+			},
+			SignedHeader_2: &ethpbv1.SignedBeaconBlockHeader{
+				Message: &ethpbv1.BeaconBlockHeader{
+					Slot:          s.Header_2.Header.Slot,
+					ProposerIndex: s.Header_2.Header.ProposerIndex,
+					ParentRoot:    bytesutil.SafeCopyBytes(s.Header_2.Header.ParentRoot),
+					StateRoot:     bytesutil.SafeCopyBytes(s.Header_2.Header.StateRoot),
+					BodyRoot:      bytesutil.SafeCopyBytes(s.Header_2.Header.BodyRoot),
+				},
+				Signature: bytesutil.SafeCopyBytes(s.Header_2.Signature),
+			},
+		}
+	}
+
+	sourceAttesterSlashings := v1alpha1Block.Body.AttesterSlashings
+	resultAttesterSlashings := make([]*ethpbv1.AttesterSlashing, len(sourceAttesterSlashings))
+	for i, s := range sourceAttesterSlashings {
+		att1Indices := make([]uint64, len(s.Attestation_1.AttestingIndices))
+		copy(att1Indices, s.Attestation_1.AttestingIndices)
+		att2Indices := make([]uint64, len(s.Attestation_2.AttestingIndices))
+		copy(att2Indices, s.Attestation_2.AttestingIndices)
+		resultAttesterSlashings[i] = &ethpbv1.AttesterSlashing{
+			Attestation_1: &ethpbv1.IndexedAttestation{
+				AttestingIndices: att1Indices,
+				Data: &ethpbv1.AttestationData{
+					Slot:            s.Attestation_1.Data.Slot,
+					Index:           s.Attestation_1.Data.CommitteeIndex,
+					BeaconBlockRoot: bytesutil.SafeCopyBytes(s.Attestation_1.Data.BeaconBlockRoot),
+					Source: &ethpbv1.Checkpoint{
+						Epoch: s.Attestation_1.Data.Source.Epoch,
+						Root:  bytesutil.SafeCopyBytes(s.Attestation_1.Data.Source.Root),
+					},
+					Target: &ethpbv1.Checkpoint{
+						Epoch: s.Attestation_1.Data.Target.Epoch,
+						Root:  bytesutil.SafeCopyBytes(s.Attestation_1.Data.Target.Root),
+					},
+				},
+				Signature: bytesutil.SafeCopyBytes(s.Attestation_1.Signature),
+			},
+			Attestation_2: &ethpbv1.IndexedAttestation{
+				AttestingIndices: att2Indices,
+				Data: &ethpbv1.AttestationData{
+					Slot:            s.Attestation_2.Data.Slot,
+					Index:           s.Attestation_2.Data.CommitteeIndex,
+					BeaconBlockRoot: bytesutil.SafeCopyBytes(s.Attestation_2.Data.BeaconBlockRoot),
+					Source: &ethpbv1.Checkpoint{
+						Epoch: s.Attestation_2.Data.Source.Epoch,
+						Root:  bytesutil.SafeCopyBytes(s.Attestation_2.Data.Source.Root),
+					},
+					Target: &ethpbv1.Checkpoint{
+						Epoch: s.Attestation_2.Data.Target.Epoch,
+						Root:  bytesutil.SafeCopyBytes(s.Attestation_2.Data.Target.Root),
+					},
+				},
+				Signature: bytesutil.SafeCopyBytes(s.Attestation_2.Signature),
+			},
+		}
+	}
+
+	sourceAttestations := v1alpha1Block.Body.Attestations
+	resultAttestations := make([]*ethpbv1.Attestation, len(sourceAttestations))
+	for i, a := range sourceAttestations {
+		resultAttestations[i] = &ethpbv1.Attestation{
+			AggregationBits: bytesutil.SafeCopyBytes(a.AggregationBits),
+			Data: &ethpbv1.AttestationData{
+				Slot:            a.Data.Slot,
+				Index:           a.Data.CommitteeIndex,
+				BeaconBlockRoot: bytesutil.SafeCopyBytes(a.Data.BeaconBlockRoot),
+				Source: &ethpbv1.Checkpoint{
+					Epoch: a.Data.Source.Epoch,
+					Root:  bytesutil.SafeCopyBytes(a.Data.Source.Root),
+				},
+				Target: &ethpbv1.Checkpoint{
+					Epoch: a.Data.Target.Epoch,
+					Root:  bytesutil.SafeCopyBytes(a.Data.Target.Root),
+				},
+			},
+			Signature: bytesutil.SafeCopyBytes(a.Signature),
+		}
+	}
+
+	sourceDeposits := v1alpha1Block.Body.Deposits
+	resultDeposits := make([]*ethpbv1.Deposit, len(sourceDeposits))
+	for i, d := range sourceDeposits {
+		resultDeposits[i] = &ethpbv1.Deposit{
+			Proof: bytesutil.SafeCopy2dBytes(d.Proof),
+			Data: &ethpbv1.Deposit_Data{
+				Pubkey:                bytesutil.SafeCopyBytes(d.Data.PublicKey),
+				WithdrawalCredentials: bytesutil.SafeCopyBytes(d.Data.WithdrawalCredentials),
+				Amount:                d.Data.Amount,
+				Signature:             bytesutil.SafeCopyBytes(d.Data.Signature),
+			},
+		}
+	}
+
+	sourceExits := v1alpha1Block.Body.VoluntaryExits
+	resultExits := make([]*ethpbv1.SignedVoluntaryExit, len(sourceExits))
+	for i, e := range sourceExits {
+		resultExits[i] = &ethpbv1.SignedVoluntaryExit{
+			Message: &ethpbv1.VoluntaryExit{
+				Epoch:          e.Exit.Epoch,
+				ValidatorIndex: e.Exit.ValidatorIndex,
+			},
+			Signature: bytesutil.SafeCopyBytes(e.Signature),
+		}
+	}
+
+	transactionsRoot, err := ssz.TransactionsRoot(v1alpha1Block.Body.ExecutionPayload.Transactions)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not calculate transactions root")
+	}
+
+	resultBlockBody := &ethpbv2.BlindedBeaconBlockBodyBellatrix{
+		RandaoReveal: bytesutil.SafeCopyBytes(v1alpha1Block.Body.RandaoReveal),
+		Eth1Data: &ethpbv1.Eth1Data{
+			DepositRoot:  bytesutil.SafeCopyBytes(v1alpha1Block.Body.Eth1Data.DepositRoot),
+			DepositCount: v1alpha1Block.Body.Eth1Data.DepositCount,
+			BlockHash:    bytesutil.SafeCopyBytes(v1alpha1Block.Body.Eth1Data.BlockHash),
+		},
+		Graffiti:          bytesutil.SafeCopyBytes(v1alpha1Block.Body.Graffiti),
+		ProposerSlashings: resultProposerSlashings,
+		AttesterSlashings: resultAttesterSlashings,
+		Attestations:      resultAttestations,
+		Deposits:          resultDeposits,
+		VoluntaryExits:    resultExits,
+		SyncAggregate: &ethpbv1.SyncAggregate{
+			SyncCommitteeBits:      bytesutil.SafeCopyBytes(v1alpha1Block.Body.SyncAggregate.SyncCommitteeBits),
+			SyncCommitteeSignature: bytesutil.SafeCopyBytes(v1alpha1Block.Body.SyncAggregate.SyncCommitteeSignature),
+		},
+		ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
+			ParentHash:       bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.ParentHash),
+			FeeRecipient:     bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.FeeRecipient),
+			StateRoot:        bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.StateRoot),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.ReceiptsRoot),
+			LogsBloom:        bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.LogsBloom),
+			PrevRandao:       bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.PrevRandao),
+			BlockNumber:      v1alpha1Block.Body.ExecutionPayload.BlockNumber,
+			GasLimit:         v1alpha1Block.Body.ExecutionPayload.GasLimit,
+			GasUsed:          v1alpha1Block.Body.ExecutionPayload.GasUsed,
+			Timestamp:        v1alpha1Block.Body.ExecutionPayload.Timestamp,
+			ExtraData:        bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.ExtraData),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.BaseFeePerGas),
+			BlockHash:        bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.BlockHash),
+			TransactionsRoot: transactionsRoot[:],
+		},
+	}
+	v2Block := &ethpbv2.BlindedBeaconBlockBellatrix{
+		Slot:          v1alpha1Block.Slot,
+		ProposerIndex: v1alpha1Block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(v1alpha1Block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(v1alpha1Block.StateRoot),
+		Body:          resultBlockBody,
 	}
 	return v2Block, nil
 }
