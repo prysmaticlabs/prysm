@@ -36,6 +36,7 @@ message SyncCommitteeDutiesRequest {
 
 message SyncCommitteeDutiesResponse {
   repeated SyncCommitteeDuty data = 1;
+  bool execution_optimistic = 2;
 }
 
 message SyncCommitteeDuty {

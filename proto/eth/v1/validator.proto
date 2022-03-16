@@ -99,6 +99,7 @@ message AttesterDutiesRequest {
 message AttesterDutiesResponse {
     bytes dependent_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
     repeated AttesterDuty data = 2;
+    bool execution_optimistic = 3;
 }
 
 message AttesterDuty {
@@ -132,6 +133,7 @@ message ProposerDutiesRequest {
 message ProposerDutiesResponse {
     bytes dependent_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
     repeated ProposerDuty data = 2;
+    bool execution_optimistic = 3;
 }
 
 message ProposerDuty {

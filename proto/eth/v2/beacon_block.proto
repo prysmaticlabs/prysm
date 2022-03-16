@@ -37,6 +37,7 @@ message BlockRequestV2 {
 message BlockResponseV2 {
   v2.Version version = 1;
   SignedBeaconBlockContainerV2 data = 2;
+  bool execution_optimistic = 3;
 }
 
 message BlockSSZResponseV2 {
