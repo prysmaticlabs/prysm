@@ -70,10 +70,13 @@ go_test(
         "proofs_test.go",
         "references_test.go",
         "setters_test.go",
+        "state_fuzz_test.go",
         "state_trie_test.go",
     ],
+    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/testing:go_default_library",
