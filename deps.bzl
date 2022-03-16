@@ -856,6 +856,7 @@ def prysm_deps():
         sum = "h1:FtmdgXiUlNeRsoNMFlKLDt+S+6hbjVMEW6RGQ7aUf7c=",
         version = "v0.0.0-20190710130421-bcb5799ab5e5",
     )
+
     go_repository(
         name = "com_github_flynn_go_shlex",
         importpath = "github.com/flynn/go-shlex",
@@ -2328,8 +2329,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_lucas_clemente_quic_go",
         importpath = "github.com/lucas-clemente/quic-go",
-        sum = "h1:ToR7SIIEdrgOhgVTHvPgdVRJfgVy+N0wQAagH7L4d5g=",
-        version = "v0.24.0",
+        sum = "h1:K+X9Gvd7JXsOHtU0N2icZ2Nw3rx82uBej3mP4CLgibc=",
+        version = "v0.25.0",
     )
 
     go_repository(
@@ -2388,6 +2389,12 @@ def prysm_deps():
         importpath = "github.com/marten-seemann/qtls-go1-17",
         sum = "h1:P9ggrs5xtwiqXv/FHNwntmuLMNq3KaSIG93AtAZ48xk=",
         version = "v0.1.0",
+    )
+    go_repository(
+        name = "com_github_marten_seemann_qtls_go1_18",
+        importpath = "github.com/marten-seemann/qtls-go1-18",
+        sum = "h1:EnzzN9fPUkUck/1CuY1FlzBaIYMoiBsdwTNmNGkwUUM=",
+        version = "v0.1.0-beta.1",
     )
 
     go_repository(
@@ -3864,15 +3871,6 @@ def prysm_deps():
         version = "v0.0.0-20180604144634-d3ebe8f20ae4",
     )
 
-    # Note: go_repository is already wrapped with maybe!
-    maybe(
-        git_repository,
-        name = "vaticle_bazel_distribution",
-        commit = "96424c85195a97dad81f69fdbbef2e1574bf8801",
-        remote = "https://github.com/vaticle/bazel-distribution",
-        shallow_since = "1569509514 +0300",
-    )
-
     go_repository(
         name = "in_gopkg_alecthomas_kingpin_v2",
         importpath = "gopkg.in/alecthomas/kingpin.v2",
@@ -4405,4 +4403,13 @@ def prysm_deps():
         importpath = "gotest.tools",
         sum = "h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=",
         version = "v2.2.0+incompatible",
+    )
+
+    # Note: go_repository is already wrapped with maybe!
+    maybe(
+        git_repository,
+        name = "vaticle_bazel_distribution",
+        commit = "96424c85195a97dad81f69fdbbef2e1574bf8801",
+        remote = "https://github.com/vaticle/bazel-distribution",
+        shallow_since = "1569509514 +0300",
     )
