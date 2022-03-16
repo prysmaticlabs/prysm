@@ -3,11 +3,13 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -335,8 +337,9 @@ func (vs *Server) PrepareBeaconProposer(
 	var FeeRecipients []common.Address
 	var ValidatorIndices []types.ValidatorIndex
 	for _, recipientContainer := range request.Recipients {
-		if len(recipientContainer.FeeRecipient) != fieldparams.FeeRecipientLength {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid fee recipient length")
+		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
+		if !common.IsHexAddress(recipient) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
 		}
 		FeeRecipients = append(FeeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
 		ValidatorIndices = append(ValidatorIndices, recipientContainer.ValidatorIndex)

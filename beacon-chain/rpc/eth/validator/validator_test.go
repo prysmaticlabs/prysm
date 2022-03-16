@@ -45,8 +45,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -2021,7 +2019,7 @@ func TestPrepareBeaconProposer(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wantErr error
+		wantErr string
 	}{
 		{
 			name: "Happy Path",
@@ -2035,7 +2033,7 @@ func TestPrepareBeaconProposer(t *testing.T) {
 					},
 				},
 			},
-			wantErr: nil,
+			wantErr: "",
 		},
 		{
 			name: "invalid fee recipient length",
@@ -2049,7 +2047,7 @@ func TestPrepareBeaconProposer(t *testing.T) {
 					},
 				},
 			},
-			wantErr: status.Errorf(codes.InvalidArgument, "Invalid fee recipient length"),
+			wantErr: "Invalid fee recipient address",
 		},
 	}
 	for _, tt := range tests {
@@ -2063,8 +2061,8 @@ func TestPrepareBeaconProposer(t *testing.T) {
 				V1Alpha1Server: v1Server,
 			}
 			_, err := server.PrepareBeaconProposer(ctx, tt.args.request)
-			if tt.wantErr != nil {
-				require.Equal(t, fmt.Sprint(tt.wantErr), fmt.Sprint(err))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
 				return
 			}
 			require.NoError(t, err)

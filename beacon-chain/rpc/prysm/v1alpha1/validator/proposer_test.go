@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -2439,7 +2438,7 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wantErr error
+		wantErr string
 	}{
 		{
 			name: "Happy Path",
@@ -2453,7 +2452,7 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 					},
 				},
 			},
-			wantErr: nil,
+			wantErr: "",
 		},
 		{
 			name: "invalid fee recipient length",
@@ -2467,7 +2466,7 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 					},
 				},
 			},
-			wantErr: status.Errorf(codes.InvalidArgument, "Invalid fee recipient length"),
+			wantErr: "Invalid fee recipient address",
 		},
 	}
 	for _, tt := range tests {
@@ -2476,8 +2475,8 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 			ctx := context.Background()
 			proposerServer := &Server{BeaconDB: db}
 			_, err := proposerServer.PrepareBeaconProposer(ctx, tt.args.request)
-			if tt.wantErr != nil {
-				require.Equal(t, fmt.Sprint(tt.wantErr), fmt.Sprint(err))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
 				return
 			}
 			require.NoError(t, err)
