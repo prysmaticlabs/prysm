@@ -334,19 +334,22 @@ func (vs *Server) PrepareBeaconProposer(
 ) (*emptypb.Empty, error) {
 	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
 	defer span.End()
-	var FeeRecipients []common.Address
-	var ValidatorIndices []types.ValidatorIndex
+	var feeRecipients []common.Address
+	var validatorIndices []types.ValidatorIndex
 	for _, recipientContainer := range request.Recipients {
 		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
 		}
-		FeeRecipients = append(FeeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
-		ValidatorIndices = append(ValidatorIndices, recipientContainer.ValidatorIndex)
+		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
+		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
 	}
-	if err := vs.V1Alpha1Server.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, ValidatorIndices, FeeRecipients); err != nil {
+	if err := vs.V1Alpha1Server.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
 	}
+	log.WithFields(log.Fields{
+		"validatorIndices": validatorIndices,
+	}).Info("Updated fee recipient addresses for validator indices")
 	return &emptypb.Empty{}, nil
 }
 
