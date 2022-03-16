@@ -40,7 +40,7 @@ func (f *ForkChoice) IsOptimistic(ctx context.Context, root [32]byte) (bool, err
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
 		f.store.nodesLock.RUnlock()
-		return false, errUnknownNodeRoot
+		return false, ErrUnknownNodeRoot
 	}
 	node := f.store.nodes[index]
 	slot := node.slot

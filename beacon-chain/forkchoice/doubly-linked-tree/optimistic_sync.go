@@ -12,7 +12,7 @@ func (s *Store) removeNode(ctx context.Context, root [32]byte) error {
 
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
-		return errNilNode
+		return ErrNilNode
 	}
 	if !node.optimistic || node.parent == nil {
 		return errInvalidOptimisticStatus

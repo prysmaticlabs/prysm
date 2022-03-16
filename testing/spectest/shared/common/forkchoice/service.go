@@ -53,6 +53,6 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
-	service.Start()
+	require.NoError(t, service.StartFromSavedState(st))
 	return service
 }
