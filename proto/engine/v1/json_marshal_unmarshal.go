@@ -159,7 +159,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 
 type executionPayloadJSON struct {
 	ParentHash    *common.Hash    `json:"parentHash"`
-	FeeRecipient  hexutil.Bytes   `json:"feeRecipient"`
+	FeeRecipient  *common.Address `json:"feeRecipient"`
 	StateRoot     *common.Hash    `json:"stateRoot"`
 	ReceiptsRoot  *common.Hash    `json:"receiptsRoot"`
 	LogsBloom     hexutil.Bytes   `json:"logsBloom"`
@@ -191,9 +191,10 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	gasLimit := hexutil.Uint64(e.GasLimit)
 	gasUsed := hexutil.Uint64(e.GasUsed)
 	timeStamp := hexutil.Uint64(e.Timestamp)
+	recipient := common.BytesToAddress(e.FeeRecipient)
 	return json.Marshal(executionPayloadJSON{
 		ParentHash:    &pHash,
-		FeeRecipient:  e.FeeRecipient,
+		FeeRecipient:  &recipient,
 		StateRoot:     &sRoot,
 		ReceiptsRoot:  &recRoot,
 		LogsBloom:     e.LogsBloom,
@@ -258,7 +259,7 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	}
 	*e = ExecutionPayload{}
 	e.ParentHash = dec.ParentHash.Bytes()
-	e.FeeRecipient = bytesutil.PadTo(dec.FeeRecipient, fieldparams.FeeRecipientLength)
+	e.FeeRecipient = dec.FeeRecipient.Bytes()
 	e.StateRoot = dec.StateRoot.Bytes()
 	e.ReceiptsRoot = dec.ReceiptsRoot.Bytes()
 	e.LogsBloom = bytesutil.PadTo(dec.LogsBloom, fieldparams.LogsBloomLength)
