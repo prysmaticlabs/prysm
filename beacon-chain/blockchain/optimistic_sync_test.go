@@ -516,7 +516,7 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 		ReceiptsRoot:  make([]byte, 32),
 		LogsBloom:     make([]byte, 256),
 		PrevRandao:    make([]byte, 32),
-		BaseFeePerGas: make([]byte, 32),
+		BaseFeePerGas: bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
 		BlockHash:     make([]byte, 32),
 		BlockNumber:   100,
 	}

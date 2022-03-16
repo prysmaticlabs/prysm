@@ -78,7 +78,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, big.NewInt(0).Bytes(), payloadPb.TerminalBlockNumber)
 	})
 	t.Run("execution payload", func(t *testing.T) {
-		baseFeePerGas := big.NewInt(6)
+		baseFeePerGas := big.NewInt(1770307273)
 		parentHash := bytesutil.PadTo([]byte("parent"), fieldparams.RootLength)
 		feeRecipient := bytesutil.PadTo([]byte("feeRecipient"), fieldparams.FeeRecipientLength)
 		stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
@@ -138,7 +138,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			GasLimit:         3,
 			GasUsed:          4,
 			Timestamp:        5,
-			BaseFeePerGas:    []byte("6"),
+			BaseFeePerGas:    bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
 			Size:             []byte("7"),
 			ExtraData:        []byte("extraData"),
 			MixHash:          []byte("mixHash"),
