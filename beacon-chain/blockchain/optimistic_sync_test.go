@@ -155,7 +155,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			engine := &mockEngineService{forkchoiceError: tt.newForkchoiceErr}
 			service.cfg.ExecutionEngineCaller = engine
-			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, service.headRoot(), tt.finalizedRoot)
+			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, tt.finalizedRoot)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
