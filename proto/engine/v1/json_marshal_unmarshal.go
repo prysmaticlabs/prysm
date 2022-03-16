@@ -180,7 +180,8 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	for i, tx := range e.Transactions {
 		transactions[i] = tx
 	}
-	baseFeeHex := hexutil.Encode(e.BaseFeePerGas)
+	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
+	baseFeeHex := hexutil.EncodeBig(baseFee)
 	pHash := common.BytesToHash(e.ParentHash)
 	sRoot := common.BytesToHash(e.StateRoot)
 	recRoot := common.BytesToHash(e.ReceiptsRoot)
@@ -268,11 +269,11 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	e.GasUsed = uint64(*dec.GasUsed)
 	e.Timestamp = uint64(*dec.Timestamp)
 	e.ExtraData = dec.ExtraData
-	val, err := hexutil.Decode(dec.BaseFeePerGas)
+	baseFee, err := hexutil.DecodeBig(dec.BaseFeePerGas)
 	if err != nil {
 		return err
 	}
-	e.BaseFeePerGas = val
+	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
 	e.BlockHash = dec.BlockHash.Bytes()
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
