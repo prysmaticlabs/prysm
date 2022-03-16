@@ -164,10 +164,10 @@ type executionPayloadJSON struct {
 	ReceiptsRoot  *common.Hash    `json:"receiptsRoot"`
 	LogsBloom     hexutil.Bytes   `json:"logsBloom"`
 	PrevRandao    *common.Hash    `json:"prevRandao"`
-	BlockNumber   hexutil.Uint64  `json:"blockNumber"`
-	GasLimit      hexutil.Uint64  `json:"gasLimit"`
-	GasUsed       hexutil.Uint64  `json:"gasUsed"`
-	Timestamp     hexutil.Uint64  `json:"timestamp"`
+	BlockNumber   *hexutil.Uint64 `json:"blockNumber"`
+	GasLimit      *hexutil.Uint64 `json:"gasLimit"`
+	GasUsed       *hexutil.Uint64 `json:"gasUsed"`
+	Timestamp     *hexutil.Uint64 `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
 	BaseFeePerGas string          `json:"baseFeePerGas"`
 	BlockHash     hexutil.Bytes   `json:"blockHash"`
@@ -186,6 +186,10 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	sRoot := common.BytesToHash(e.StateRoot)
 	recRoot := common.BytesToHash(e.ReceiptsRoot)
 	prevRan := common.BytesToHash(e.PrevRandao)
+	blockNum := hexutil.Uint64(e.BlockNumber)
+	gasLimit := hexutil.Uint64(e.GasLimit)
+	gasUsed := hexutil.Uint64(e.GasUsed)
+	timeStamp := hexutil.Uint64(e.Timestamp)
 	return json.Marshal(executionPayloadJSON{
 		ParentHash:    &pHash,
 		FeeRecipient:  e.FeeRecipient,
@@ -193,10 +197,10 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		ReceiptsRoot:  &recRoot,
 		LogsBloom:     e.LogsBloom,
 		PrevRandao:    &prevRan,
-		BlockNumber:   hexutil.Uint64(e.BlockNumber),
-		GasLimit:      hexutil.Uint64(e.GasLimit),
-		GasUsed:       hexutil.Uint64(e.GasUsed),
-		Timestamp:     hexutil.Uint64(e.Timestamp),
+		BlockNumber:   &blockNum,
+		GasLimit:      &gasLimit,
+		GasUsed:       &gasUsed,
+		Timestamp:     &timeStamp,
 		ExtraData:     e.ExtraData,
 		BaseFeePerGas: baseFeeHex,
 		BlockHash:     e.BlockHash,
@@ -212,32 +216,44 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	}
 
 	if dec.ParentHash == nil {
-		return errors.New("missing required field 'parentHash' for ExecutableDataV1")
+		return errors.New("missing required field 'parentHash' for ExecutionPayload")
 	}
 	if dec.FeeRecipient == nil {
-		return errors.New("missing required field 'feeRecipient' for ExecutableDataV1")
+		return errors.New("missing required field 'feeRecipient' for ExecutionPayload")
 	}
 	if dec.StateRoot == nil {
-		return errors.New("missing required field 'stateRoot' for ExecutableDataV1")
+		return errors.New("missing required field 'stateRoot' for ExecutionPayload")
 	}
 	if dec.ReceiptsRoot == nil {
 		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
 	}
 
 	if dec.LogsBloom == nil {
-		return errors.New("missing required field 'logsBloom' for ExecutableDataV1")
+		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
 	}
 	if dec.PrevRandao == nil {
-		return errors.New("missing required field 'prevRandao' for ExecutableDataV1")
+		return errors.New("missing required field 'prevRandao' for ExecutionPayload")
 	}
 	if dec.ExtraData == nil {
-		return errors.New("missing required field 'extraData' for ExecutableDataV1")
+		return errors.New("missing required field 'extraData' for ExecutionPayload")
 	}
 	if dec.BlockHash == nil {
-		return errors.New("missing required field 'blockHash' for ExecutableDataV1")
+		return errors.New("missing required field 'blockHash' for ExecutionPayload")
 	}
 	if dec.Transactions == nil {
-		return errors.New("missing required field 'transactions' for ExecutableDataV1")
+		return errors.New("missing required field 'transactions' for ExecutionPayload")
+	}
+	if dec.BlockNumber == nil {
+		return errors.New("missing required field 'blockNumber' for ExecutionPayload")
+	}
+	if dec.Timestamp == nil {
+		return errors.New("missing required field 'timestamp' for ExecutionPayload")
+	}
+	if dec.GasUsed == nil {
+		return errors.New("missing required field 'gasUsed' for ExecutionPayload")
+	}
+	if dec.GasLimit == nil {
+		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
 	}
 	*e = ExecutionPayload{}
 	e.ParentHash = dec.ParentHash.Bytes()
@@ -246,10 +262,10 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	e.ReceiptsRoot = dec.ReceiptsRoot.Bytes()
 	e.LogsBloom = bytesutil.PadTo(dec.LogsBloom, fieldparams.LogsBloomLength)
 	e.PrevRandao = dec.PrevRandao.Bytes()
-	e.BlockNumber = uint64(dec.BlockNumber)
-	e.GasLimit = uint64(dec.GasLimit)
-	e.GasUsed = uint64(dec.GasUsed)
-	e.Timestamp = uint64(dec.Timestamp)
+	e.BlockNumber = uint64(*dec.BlockNumber)
+	e.GasLimit = uint64(*dec.GasLimit)
+	e.GasUsed = uint64(*dec.GasUsed)
+	e.Timestamp = uint64(*dec.Timestamp)
 	e.ExtraData = dec.ExtraData
 	baseFee, err := hexutil.DecodeBig(dec.BaseFeePerGas)
 	if err != nil {
