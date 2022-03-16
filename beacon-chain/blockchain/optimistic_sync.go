@@ -145,14 +145,38 @@ func isPreBellatrix(v int) bool {
 //
 // Spec pseudocode definition:
 // def is_optimistic_candidate_block(opt_store: OptimisticStore, current_slot: Slot, block: BeaconBlock) -> bool:
-//     justified_root = opt_store.block_states[opt_store.head_block_root].current_justified_checkpoint.root
-//     justified_is_execution_block = is_execution_block(opt_store.blocks[justified_root])
-//     block_is_deep = block.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY <= current_slot
-//     return justified_is_execution_block or block_is_deep
+//    if is_execution_block(opt_store.blocks[block.parent_root]):
+//        return True
+//
+//    justified_root = opt_store.block_states[opt_store.head_block_root].current_justified_checkpoint.root
+//    if is_execution_block(opt_store.blocks[justified_root]):
+//        return True
+//
+//    if block.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY <= current_slot:
+//        return True
+//
+//    return False
 func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.BeaconBlock) (bool, error) {
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
 		return true, nil
 	}
+
+	parent, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
+	if err != nil {
+		return false, err
+	}
+	if parent == nil {
+		return false, errNilParentInDB
+	}
+
+	parentIsExecutionBlock, err := blocks.ExecutionBlock(parent.Block().Body())
+	if err != nil {
+		return false, err
+	}
+	if parentIsExecutionBlock {
+		return true, nil
+	}
+
 	j := s.store.JustifiedCheckpt()
 	if j == nil {
 		return false, errNilJustifiedInStore

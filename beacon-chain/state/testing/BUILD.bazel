@@ -5,6 +5,7 @@ go_library(
     testonly = True,
     srcs = [
         "getters.go",
+        "getters_block.go",
         "getters_validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/testing",
@@ -12,6 +13,7 @@ go_library(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//config/fieldparams:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
