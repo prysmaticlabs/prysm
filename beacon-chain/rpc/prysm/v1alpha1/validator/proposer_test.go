@@ -2349,10 +2349,6 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 		Graffiti:     graffiti[:],
 	}
 
-	proposerIndex := types.ValidatorIndex(40)
-	addr := common.Address{'a'}
-	require.NoError(t, proposerServer.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{proposerIndex}, []common.Address{addr}))
-
 	block, err := proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
 	bellatrixBlk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_Bellatrix)
@@ -2363,8 +2359,18 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	assert.DeepEqual(t, randaoReveal, bellatrixBlk.Bellatrix.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, bellatrixBlk.Bellatrix.Body.Graffiti, "Expected block to have correct Graffiti")
 
-	require.LogsDoNotContain(t, hook, "Fee recipient not found. Using default fee recipient.")
+	require.LogsContain(t, hook, "Fee recipient not found. Using default fee recipient")
 	require.DeepEqual(t, payload, bellatrixBlk.Bellatrix.Body.ExecutionPayload) // Payload should equal.
+
+	// Operator sets default fee recipient to not be burned through beacon node cli.
+	newHook := logTest.NewGlobal()
+	params.SetupTestConfigCleanup(t)
+	cfg = params.MainnetConfig().Copy()
+	cfg.DefaultFeeRecipient = common.Address{'b'}
+	params.OverrideBeaconConfig(cfg)
+	_, err = proposerServer.GetBeaconBlock(ctx, req)
+	require.NoError(t, err)
+	require.LogsDoNotContain(t, newHook, "Fee recipient not found. Using default fee recipient")
 }
 
 func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
