@@ -37,9 +37,18 @@ func logStateTransitionData(b block.BeaconBlock) error {
 	}
 	if b.Version() == version.Altair || b.Version() == version.Bellatrix {
 		agg, err := b.Body().SyncAggregate()
-		if err == nil {
-			log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
+		if err != nil {
+			return err
 		}
+		log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
+	}
+	if b.Version() == version.Bellatrix {
+		p, err := b.Body().ExecutionPayload()
+		if err != nil {
+			return err
+		}
+		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)))
+		log = log.WithField("txCount", len(p.Transactions))
 	}
 	if b.Version() == version.Bellatrix {
 		p, err := b.Body().ExecutionPayload()

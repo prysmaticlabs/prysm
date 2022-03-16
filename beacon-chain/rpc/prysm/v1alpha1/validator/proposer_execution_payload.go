@@ -99,17 +99,18 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
-	emptyFeeRecipient := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
+	burnAddr := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	switch err == nil {
 	case true:
 		feeRecipient = recipient
-	case errors.As(err, kv.ErrNotFoundFeeRecipient): // If fee recipient is not found, use the default fee recipient.
-		if bytes.Equal(feeRecipient.Bytes(), emptyFeeRecipient) {
+	case errors.As(err, kv.ErrNotFoundFeeRecipient):
+		// If fee recipient is not found in DB and not set from beacon node CLI,
+		// use the burn address.
+		if bytes.Equal(feeRecipient.Bytes(), burnAddr) {
 			logrus.WithFields(logrus.Fields{
-				"validatorIndex":      vIdx,
-				"defaultFeeRecipient": feeRecipient,
-			}).Error("Fee recipient not found. Using default fee recipient")
-
+				"validatorIndex": vIdx,
+				"burnAddress":    burnAddr,
+			}).Error("Fee recipient not set. Using burn address")
 		}
 	default:
 		return nil, errors.Wrap(err, "could not get fee recipient in db")
