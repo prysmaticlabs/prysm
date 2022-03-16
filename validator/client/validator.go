@@ -964,6 +964,10 @@ func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKe
 	if err != nil {
 		return err
 	}
+	if len(feeRecipients) == 0 {
+		log.Warnf("no valid validator indices were found, prepare beacon proposer request fee recipients array is empty")
+		return nil
+	}
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: feeRecipients,
 	}); err != nil {
@@ -992,7 +996,7 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 			resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: key[:]})
 			if err != nil {
 				// do a strings contains? to see if the error is a not found error
-				if strings.Contains(err.Error(), "Could not find validator index for public key ") {
+				if strings.Contains(err.Error(), "Could not find validator index") {
 					log.Infoln("Could not find validator index for public key %#x not found. "+
 						"Perhaps the validator is not yet active.", hexKey)
 					continue
