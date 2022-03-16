@@ -435,6 +435,11 @@ type altairProduceBlockResponseJson struct {
 	Data    *beaconBlockAltairJson `json:"data"`
 }
 
+type bellatrixProduceBlockResponseJson struct {
+	Version string                    `json:"version"`
+	Data    *beaconBlockBellatrixJson `json:"data"`
+}
+
 func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*produceBlockResponseV2Json)
 	if !ok {
@@ -451,6 +456,11 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 		actualRespContainer = &altairProduceBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.AltairBlock,
+		}
+	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())) {
+		actualRespContainer = &bellatrixProduceBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.BellatrixBlock,
 		}
 	} else {
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
