@@ -22,16 +22,18 @@ func FuzzV2StateHashTreeRoot(f *testing.F) {
 	assert.NoError(f, err)
 	f.Add(output[:100], uint64(10))
 	f.Fuzz(func(t *testing.T, diffBuffer []byte, slotsToTransition uint64) {
+		stateSSZ := bytesutil.SafeCopyBytes(output)
 		for i := 0; i < len(diffBuffer); i += 9 {
 			if i+8 >= len(diffBuffer) {
 				return
 			}
 			num := bytesutil.BytesToUint64BigEndian(diffBuffer[i : i+8])
 			num %= uint64(len(diffBuffer))
-			output[num] ^= diffBuffer[i+8]
+			// Perform a XOR on the byte of the selected index.
+			stateSSZ[num] ^= diffBuffer[i+8]
 		}
 		pbState := &ethpb.BeaconStateAltair{}
-		err := pbState.UnmarshalSSZ(output)
+		err := pbState.UnmarshalSSZ(stateSSZ)
 		if err != nil {
 			return
 		}
