@@ -44,10 +44,14 @@ func FuzzV2StateHashTreeRoot(f *testing.F) {
 			stateObj.Copy()
 		}
 		assert.NoError(t, err)
+		// Perform a cold HTR calculation by initializing a new state.
 		innerState := stateObj.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
-		rt, pbErr := innerState.HashTreeRoot()
-		newRt, err := stateObj.HashTreeRoot(context.Background())
-		assert.Equal(t, pbErr != nil, err != nil)
+		newState, err := v2.InitializeFromProtoUnsafe(innerState)
+		assert.NoError(t, err)
+
+		newRt, newErr := newState.HashTreeRoot(context.Background())
+		rt, err := stateObj.HashTreeRoot(context.Background())
+		assert.Equal(t, newErr != nil, err != nil)
 		if err == nil {
 			assert.Equal(t, rt, newRt)
 		}
