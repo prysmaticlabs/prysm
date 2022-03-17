@@ -223,7 +223,7 @@ func (o OrderedForkSchedule) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
 // Less implements the Less method of sort.Interface
 func (o OrderedForkSchedule) Less(i, j int) bool { return o[i].Epoch < o[j].Epoch }
 
-// VersionForEpoch finds the Version of the last entry in the last that comes before the given epoch
+// VersionForEpoch finds the Version with the highest epoch <= the given epoch
 func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([4]byte, error) {
 	for i := range o {
 		// moving from lowest to highest, only consider epochs that start at or before the requested epoch
