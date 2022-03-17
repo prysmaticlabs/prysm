@@ -332,7 +332,7 @@ var (
 	// ValidatorsProposerConfigFlag defines the path or URL to a file with proposer config.
 	ValidatorsProposerConfigURLFlag = &cli.StringFlag{
 		Name:  "validators-proposer-config-url",
-		Usage: "remote URL file path to load proposer configuration from",
+		Usage: "remote URL to load proposer configuration from",
 		Value: "",
 	}
 
