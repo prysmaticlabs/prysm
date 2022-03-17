@@ -49,6 +49,9 @@ message EventHead {
 
   // The current dependent root.
   bytes current_duty_dependent_root = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+
+  // Information about optimistic sync.
+  bool execution_optimistic = 7;
 }
 
 message EventBlock {
@@ -57,6 +60,9 @@ message EventBlock {
 
   // The root of the observed block.
   bytes block = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+
+  // Information about optimistic sync.
+  bool execution_optimistic = 3;
 }
 
 message EventChainReorg {
@@ -80,6 +86,9 @@ message EventChainReorg {
 
   // Epoch of the observed reorg.
   uint64 epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+
+  // Information about optimistic sync.
+  bool execution_optimistic = 8;
 }
 
 message EventFinalizedCheckpoint {
@@ -91,4 +100,7 @@ message EventFinalizedCheckpoint {
 
   // Epoch the checkpoint references.
   uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+
+  // Information about optimistic sync.
+  bool execution_optimistic = 4;
 }
