@@ -252,6 +252,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		StateFetcher: &futureSyncMockFetcher{
 			BeaconState: st,
 		},
+		HeadFetcher: &mock.ChainService{},
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{}
 	epoch := 2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod
