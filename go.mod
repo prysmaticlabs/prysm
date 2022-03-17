@@ -77,6 +77,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.6.3
+	//github.com/MariusVanDerWijden/tx-fuzz v0.0.0-20220222104514-79320b80893a
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
@@ -103,6 +104,8 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cheekybits/genny v1.0.0 // indirect
+	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220304110512-764253afa8c2 // indirect
+    github.com/holiman/goevmlab v0.0.0-20211215113238-06157bc85f7d // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

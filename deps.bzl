@@ -942,6 +942,19 @@ def prysm_deps():
         version = "v0.0.0-20191108122812-4678299bea08",
     )
     go_repository(
+        name = "com_github_gdamore_encoding",
+        importpath = "github.com/gdamore/encoding",
+        sum = "h1:+7OoQ1Bc6eTm5niUzBa0Ctsh6JbMW6Ra+YNuAtDBdko=",
+        version = "v1.0.0",
+    )
+    go_repository(
+        name = "com_github_gdamore_tcell",
+        importpath = "github.com/gdamore/tcell",
+        sum = "h1:r35w0JBADPZCVQijYebl6YMWWtHRqVEGt7kL2eBADRM=",
+        version = "v1.3.0",
+    )
+
+    go_repository(
         name = "com_github_getkin_kin_openapi",
         importpath = "github.com/getkin/kin-openapi",
         sum = "h1:6awGqF5nG5zkVpMsAih1QH4VgzS8phTxECUWIFo7zko=",
@@ -1542,6 +1555,13 @@ def prysm_deps():
         version = "v2.0.3",
     )
     go_repository(
+        name = "com_github_holiman_goevmlab",
+        importpath = "github.com/holiman/goevmlab",
+        sum = "h1:VwUWx8Yz53Ch/vYauEr4PM//bFWSeivjP5HVgPQuz00=",
+        version = "v0.0.0-20211215113238-06157bc85f7d",
+    )
+
+    go_repository(
         name = "com_github_holiman_uint256",
         importpath = "github.com/holiman/uint256",
         sum = "h1:gpSYcPLWGv4sG43I2mVLiDZCNDh/EpGjSk8tmtxitHM=",
@@ -1979,6 +1999,13 @@ def prysm_deps():
         version = "v0.0.2",
     )
     go_repository(
+        name = "com_github_korovkin_limiter",
+        importpath = "github.com/korovkin/limiter",
+        sum = "h1:QwKnpk6xFW80HVFKqiIHTzK19UF62mRWejcUr/q6z4I=",
+        version = "v0.0.0-20190919045942-dac5a6b2a536",
+    )
+
+    go_repository(
         name = "com_github_kr_logfmt",
         importpath = "github.com/kr/logfmt",
         sum = "h1:T+h1c/A9Gawja4Y9mFVWj2vyii2bbUNDw3kt9VxK2EY=",
@@ -2345,6 +2372,12 @@ def prysm_deps():
         sum = "h1:ToR7SIIEdrgOhgVTHvPgdVRJfgVy+N0wQAagH7L4d5g=",
         version = "v0.24.0",
     )
+    go_repository(
+        name = "com_github_lucasb_eyer_go_colorful",
+        importpath = "github.com/lucasb-eyer/go-colorful",
+        sum = "h1:QIbQXiugsb+q10B+MI+7DI1oQLdmnep86tWFlaaUAac=",
+        version = "v1.0.3",
+    )
 
     go_repository(
         name = "com_github_lunixbochs_vtclean",
@@ -2378,6 +2411,20 @@ def prysm_deps():
         sum = "h1:3l11YT8tm9MnwGFQ4kETwkzpAwY2Jt9lCrumCUW4+z4=",
         version = "v0.7.0",
     )
+    go_repository(
+        name = "com_github_mariusvanderwijden_fuzzyvm",
+        importpath = "github.com/MariusVanDerWijden/FuzzyVM",
+        sum = "h1:HKOeocqWNWitsHPVPdCUJRalFmDNVHs2xTKmse4svwU=",
+        version = "v0.0.0-20220304110512-764253afa8c2",
+    )
+
+    go_repository(
+        name = "com_github_mariusvanderwijden_tx_fuzz",
+        importpath = "github.com/MariusVanDerWijden/tx-fuzz",
+        sum = "h1:dGA/6CiQdB5Sq+ENWc7ofqu9+v8bGw0/1aTf2r/AAiQ=",
+        version = "v0.0.0-20220222104514-79320b80893a",
+    )
+
     go_repository(
         name = "com_github_marten_seemann_qpack",
         importpath = "github.com/marten-seemann/qpack",
@@ -3080,6 +3127,19 @@ def prysm_deps():
         sum = "h1:RnWNS9Hlm8BIkjr6wx8li5abe0fr73jljLycdfemTp0=",
         version = "v1.0.1-0.20180308014038-101a6d2f8b52",
     )
+    go_repository(
+        name = "com_github_rivo_tview",
+        importpath = "github.com/rivo/tview",
+        sum = "h1:rqaqSUdaW+OBbjnsrOoiaJv43mSRARuvsAuirmdxu7E=",
+        version = "v0.0.0-20200712113419-c65badfc3d92",
+    )
+    go_repository(
+        name = "com_github_rivo_uniseg",
+        importpath = "github.com/rivo/uniseg",
+        sum = "h1:+2KBaVoUmb9XzDsrx/Ct0W/EYOSFf/nWTauy++DprtY=",
+        version = "v0.1.0",
+    )
+
     go_repository(
         name = "com_github_rjeczalik_notify",
         importpath = "github.com/rjeczalik/notify",
@@ -3879,15 +3939,6 @@ def prysm_deps():
         version = "v0.0.0-20180604144634-d3ebe8f20ae4",
     )
 
-    # Note: go_repository is already wrapped with maybe!
-    maybe(
-        git_repository,
-        name = "vaticle_bazel_distribution",
-        commit = "96424c85195a97dad81f69fdbbef2e1574bf8801",
-        remote = "https://github.com/vaticle/bazel-distribution",
-        shallow_since = "1569509514 +0300",
-    )
-
     go_repository(
         name = "in_gopkg_alecthomas_kingpin_v2",
         importpath = "gopkg.in/alecthomas/kingpin.v2",
@@ -4255,8 +4306,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_crypto",
         importpath = "golang.org/x/crypto",
-        sum = "h1:/pEO3GD/ABYAjuakUS6xSEmmlyVS4kxBNkeA9tLJiTI=",
-        version = "v0.0.0-20211117183948-ae814b36b871",
+        sum = "h1:QAqMVf3pSa6eeTsuklijukjXBlj7Es2QQplab+/RbQ4=",
+        version = "v0.0.0-20211209193657-4570a0811e8b",
     )
     go_repository(
         name = "org_golang_x_exp",
@@ -4319,8 +4370,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_sys",
         importpath = "golang.org/x/sys",
-        sum = "h1:TyHqChC80pFkXWraUUf6RuB5IqFdQieMLwwCJokV2pc=",
-        version = "v0.0.0-20211124211545-fe61309f8881",
+        sum = "h1:1oIt9o40TWWI9FUaveVpUvBe13FNqBNVXy3ue2fcfkw=",
+        version = "v0.0.0-20211214234402-4825e8c3871d",
     )
     go_repository(
         name = "org_golang_x_term",
@@ -4420,4 +4471,13 @@ def prysm_deps():
         importpath = "gotest.tools",
         sum = "h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=",
         version = "v2.2.0+incompatible",
+    )
+
+    # Note: go_repository is already wrapped with maybe!
+    maybe(
+        git_repository,
+        name = "vaticle_bazel_distribution",
+        commit = "96424c85195a97dad81f69fdbbef2e1574bf8801",
+        remote = "https://github.com/vaticle/bazel-distribution",
+        shallow_since = "1569509514 +0300",
     )

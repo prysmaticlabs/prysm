@@ -346,6 +346,9 @@ func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
 			if err != nil {
 				r.t.Fatal(err)
 			}
+			if err = eth1.StartTransactionCreater(keystorePath); err != nil {
+				r.t.Fatal(err)
+			}
 		}()
 		return depositCheckValidator.Start(ctx)
 	})
