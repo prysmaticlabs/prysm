@@ -19,6 +19,8 @@ go_library(
         "//crypto/bls:go_default_library",
         "//proto/eth/service:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
+        "//validator/accounts/petnames:go_default_library",
+        "@com_github_logrusorgru_aurora//:go_default_library",
     ],
 )
 
