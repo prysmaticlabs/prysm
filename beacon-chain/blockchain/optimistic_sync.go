@@ -34,7 +34,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		return nil, errors.Wrap(err, "could not determine if block is execution block")
 	}
 	if !isExecutionBlk {
-		return nil, nil
+		return nil, s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot)
 	}
 	headPayload, err := headBlk.Body().ExecutionPayload()
 	if err != nil {
