@@ -225,19 +225,12 @@ func (o OrderedForkSchedule) Less(i, j int) bool { return o[i].Epoch < o[j].Epoc
 
 // VersionForEpoch finds the Version with the highest epoch <= the given epoch
 func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([4]byte, error) {
-	for i := range o {
-		// moving from lowest to highest, only consider epochs that start at or before the requested epoch
-		if epoch < o[i].Epoch {
-			continue
-		}
-		// `i+1 == len(o)`: at last element, don't need to check if there is another fork schedule entry in between
-		// `o[i+1].Epoch > fse.Epoch`: next version's epoch is past the epoch in question, so `i` is correct
-		if i+1 == len(o) || epoch < o[i+1].Epoch {
+	for i := len(o)-1; i >= 0; i-- {
+		if o[i].Epoch <= epoch {
 			return o[i].Version, nil
 		}
 	}
-	var nope [4]byte
-	return nope, errors.Wrapf(ErrVersionNotFound, "no epoch in list <= %d", epoch)
+	return [4]byte{}, errors.Wrapf(ErrVersionNotFound, "no epoch in list <= %d", epoch)
 }
 
 // Converts the ForkVersionSchedule map into a list of Version+Epoch values, ordered by Epoch from lowest to highest.
