@@ -360,7 +360,7 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		return err
 	}
 
-  if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
+	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: signed.Block().Slot(),
 		Root: blockRoot[:],
 	}); err != nil {
