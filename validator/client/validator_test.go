@@ -340,6 +340,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 }
 
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
+	ctx := context.Background()
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -354,9 +355,16 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		},
 	}
 	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-		genesisTime:     1,
+		validatorClient:           client,
+		keyManager:                km,
+		genesisTime:               1,
+		pubkeyHexToValidatorIndex: map[string]types.ValidatorIndex{hexutil.Encode(pubKey[:]): 1},
+		prepareBeaconProposalConfig: &validator_service_config.PrepareBeaconProposalFileConfig{
+			ProposeConfig: nil,
+			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+				FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+			},
+		},
 	}
 
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
@@ -372,7 +380,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	require.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
+	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
 
@@ -391,9 +399,16 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		},
 	}
 	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-		genesisTime:     1,
+		validatorClient:           client,
+		keyManager:                km,
+		genesisTime:               1,
+		pubkeyHexToValidatorIndex: map[string]types.ValidatorIndex{hexutil.Encode(pubKey[:]): 1},
+		prepareBeaconProposalConfig: &validator_service_config.PrepareBeaconProposalFileConfig{
+			ProposeConfig: nil,
+			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+				FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+			},
+		},
 	}
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -978,7 +993,11 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	keysMap[pubKey1] = secretKey
 
 	// If AllValidatorsAreExited does not create the expected request, this test will fail
-	v := validator{keyManager: &mockKeymanager{keysMap: keysMap}, validatorClient: client}
+	v := validator{
+		keyManager:                &mockKeymanager{keysMap: keysMap},
+		validatorClient:           client,
+		pubkeyHexToValidatorIndex: make(map[string]types.ValidatorIndex),
+	}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)
@@ -1420,26 +1439,6 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	km, err := v.Keymanager()
 	require.NoError(t, err)
 	require.NotNil(t, km)
-}
-
-func TestValidator_SetPubKeyToValidatorIndexMap(t *testing.T) {
-	ctx := context.Background()
-	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
-	v := validator{
-		db:     db,
-		useWeb: false,
-		interopKeysConfig: &local.InteropKeymanagerConfig{
-			NumValidatorKeys: 2,
-			Offset:           1,
-		},
-	}
-	err := v.WaitForKeymanagerInitialization(ctx)
-	require.NoError(t, err)
-	km, err := v.Keymanager()
-	require.NoError(t, err)
-	err = v.SetPubKeyToValidatorIndexMap(ctx, km)
-	require.NoError(t, err)
-	require.NotNil(t, v.pubkeyHexToValidatorIndex)
 }
 
 func TestValidator_PrepareBeaconProposer(t *testing.T) {
