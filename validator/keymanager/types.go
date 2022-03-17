@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/logrusorgru/aurora"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
 )
 
 // IKeymanager defines a general keymanager interface for Prysm wallets.
@@ -18,6 +20,7 @@ type IKeymanager interface {
 	Signer
 	KeyChangeSubscriber
 	KeyStoreExtractor
+	AccountLister
 }
 
 // KeysFetcher for validating private and public keys.
@@ -56,6 +59,17 @@ type KeyChangeSubscriber interface {
 // KeyStoreExtractor allows keys to be extracted from the keymanager.
 type KeyStoreExtractor interface {
 	ExtractKeystores(ctx context.Context, publicKeys []bls.PublicKey, password string) ([]*Keystore, error)
+}
+
+type ListKeymanagerAccountConfig struct {
+	ShowDepositData          bool
+	ShowPrivateKeys          bool
+	WalletAccountsDir        string
+	KeymanagerConfigFileName string
+}
+
+type AccountLister interface {
+	ListKeymanagerAccounts(ctx context.Context, cfg ListKeymanagerAccountConfig) error
 }
 
 // Keystore json file representation as a Go struct.
@@ -120,5 +134,19 @@ func ParseKind(k string) (Kind, error) {
 		return Web3Signer, nil
 	default:
 		return 0, fmt.Errorf("%s is not an allowed keymanager", k)
+	}
+}
+
+// DisplayRemotePublicKeys prints remote public keys to stdout.
+func DisplayRemotePublicKeys(validatingPubKeys [][48]byte) {
+	au := aurora.NewAurora(true)
+	for i := 0; i < len(validatingPubKeys); i++ {
+		fmt.Println("")
+		fmt.Printf(
+			"%s\n", au.BrightGreen(petnames.DeterministicName(validatingPubKeys[i][:], "-")).Bold(),
+		)
+		// Retrieve the validating key account metadata.
+		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
+		fmt.Println(" ")
 	}
 }

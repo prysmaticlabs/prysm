@@ -21,36 +21,32 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open wallet")
 	}
-	switch w.KeymanagerKind() {
-	case keymanager.Local:
-		return errors.New("not possible to edit local keymanager configuration")
-	case keymanager.Derived:
-		return errors.New("derived keymanager is not yet supported")
-	case keymanager.Remote:
-		enc, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
-		if err != nil {
-			return errors.Wrap(err, "could not read config")
-		}
-		opts, err := remote.UnmarshalOptionsFile(enc)
-		if err != nil {
-			return errors.Wrap(err, "could not unmarshal config")
-		}
-		log.Info("Current configuration")
-		// Prints the current configuration to stdout.
-		fmt.Println(opts)
-		newCfg, err := userprompt.InputRemoteKeymanagerConfig(cliCtx)
-		if err != nil {
-			return errors.Wrap(err, "could not get keymanager config")
-		}
-		encodedCfg, err := remote.MarshalOptionsFile(cliCtx.Context, newCfg)
-		if err != nil {
-			return errors.Wrap(err, "could not marshal config file")
-		}
-		if err := w.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg); err != nil {
-			return errors.Wrap(err, "could not write config to disk")
-		}
-	default:
-		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
+	if w.KeymanagerKind() != keymanager.Remote {
+		return errors.New(
+			fmt.Sprintf("Keymanager type: %s doesn't support configuration editing",
+				w.KeymanagerKind().String()))
+	}
+	enc, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
+	if err != nil {
+		return errors.Wrap(err, "could not read config")
+	}
+	opts, err := remote.UnmarshalOptionsFile(enc)
+	if err != nil {
+		return errors.Wrap(err, "could not unmarshal config")
+	}
+	log.Info("Current configuration")
+	// Prints the current configuration to stdout.
+	fmt.Println(opts)
+	newCfg, err := userprompt.InputRemoteKeymanagerConfig(cliCtx)
+	if err != nil {
+		return errors.Wrap(err, "could not get keymanager config")
+	}
+	encodedCfg, err := remote.MarshalOptionsFile(cliCtx.Context, newCfg)
+	if err != nil {
+		return errors.Wrap(err, "could not marshal config file")
+	}
+	if err := w.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg); err != nil {
+		return errors.Wrap(err, "could not write config to disk")
 	}
 	return nil
 }

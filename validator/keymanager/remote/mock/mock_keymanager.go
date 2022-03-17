@@ -54,3 +54,9 @@ func (*MockKeymanager) ExtractKeystores(
 ) ([]*keymanager.Keystore, error) {
 	return nil, errors.New("extracting keys not supported for a remote keymanager")
 }
+
+// ListKeymanagerAccounts --
+func (*MockKeymanager) ListKeymanagerAccounts(
+	ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
+	return nil
+}
