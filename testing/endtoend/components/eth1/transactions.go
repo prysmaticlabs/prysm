@@ -17,24 +17,35 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
-type
-// SendAndMineDeposits sends the requested amount of deposits and mines the chain after to ensure the deposits are seen.
-func StartTransactionCreater(keystorePath string) error {
+type TransactionGenerator struct {
+	keystore string
+	started chan struct{}
+}
+
+func NewTransactionGenerator(keystore string) *TransactionGenerator {
+	return &TransactionGenerator{keystore:keystore}
+}
+
+func(t *TransactionGenerator) Start(ctx context.Context) error {
 	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort))
 	if err != nil {
 		return err
 	}
 	seed := rand.NewDeterministicGenerator().Int63()
+	logrus.Infof("Seed for transaction generator is: %d",seed)
+	// Set seed so that all
 	mathRand.Seed(seed)
 
 	defer client.Close()
 
-	keystoreBytes, err := ioutil.ReadFile(keystorePath) // #nosec G304
+	keystoreBytes, err := ioutil.ReadFile(t.keystore) // #nosec G304
 	if err != nil {
 		return err
 	}
@@ -48,10 +59,29 @@ func StartTransactionCreater(keystorePath string) error {
 		return err
 	}
 	f := filler.NewFiller(rnd)
-	return SendTransaction(client,mineKey.PrivateKey,f,mineKey.Address.String(),10,false)
+	// Broadcast Transactions every 3 blocks
+	txPeriod := time.Duration(params.BeaconConfig().SecondsPerETH1Block * 3) * time.Second
+	ticker := time.NewTicker(txPeriod)
+	gasPrice := big.NewInt(100000000000)
+	for{
+		select {
+		case <- ctx.Done() :
+			return nil
+			case <- ticker.C:
+				err := SendTransaction(client,mineKey.PrivateKey,f,gasPrice,mineKey.Address.String(),30,false)
+				if err != nil {
+					return err
+				}
+		}
+	}
 }
 
-func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler, addr string, N uint64, al bool) error {
+// Started checks whether beacon node set is started and all nodes are ready to be queried.
+func (s *TransactionGenerator) Started() <-chan struct{} {
+	return s.started
+}
+
+func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler, gasPrice *big.Int,addr string, N uint64, al bool) error {
 	backend := ethclient.NewClient(client)
 
 	sender := common.HexToAddress(addr)
@@ -59,31 +89,33 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 	if err != nil {
 		return err
 	}
-
-	for i := uint64(0); i < N; i++ {
-		nonce, err := backend.NonceAt(context.Background(), sender, big.NewInt(-1))
-		if err != nil {
-			return err
-		}
-		tx, err := txfuzz.RandomValidTx(client, f, sender, nonce, nil, nil, al)
-		if err != nil {
-			fmt.Print(err)
-			continue
-		}
-		signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), key)
-		if err != nil {
-			return err
-		}
-		err = backend.SendTransaction(context.Background(), signedTx)
-		if err == nil {
-			nonce++
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-		defer cancel()
-		if _, err := bind.WaitMined(ctx, backend, signedTx); err != nil {
-			fmt.Printf("Wait mined failed: %v\n", err.Error())
-		}
-		logrus.Infof("Tx sent succesfully: %#x",signedTx.Hash())
+	nonce, err := backend.NonceAt(context.Background(), sender, big.NewInt(-1))
+	if err != nil {
+		return err
 	}
-	return nil
+
+	g, _ := errgroup.WithContext(context.Background())
+	for i := uint64(0); i < N; i++ {
+		index := i
+		g.Go( func() error {
+			tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, gasPrice, nil, al)
+			if err != nil {
+				return err
+			}
+			signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), key)
+			if err != nil {
+				return err
+			}
+			err = backend.SendTransaction(context.Background(), signedTx)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+			defer cancel()
+			if _, err := bind.WaitMined(ctx, backend, signedTx); err != nil {
+				fmt.Printf("Wait mined failed: %v\n", err.Error())
+			}
+			return nil
+		} )
+
+	}
+	return g.Wait()
 }

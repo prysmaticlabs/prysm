@@ -346,11 +346,20 @@ func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
 			if err != nil {
 				r.t.Fatal(err)
 			}
-			if err = eth1.StartTransactionCreater(keystorePath); err != nil {
-				r.t.Fatal(err)
-			}
+			r.testTxGeneration(ctx, g, keystorePath, []e2etypes.ComponentRunner{})
 		}()
 		return depositCheckValidator.Start(ctx)
+	})
+
+}
+
+func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
+	txGenerator := eth1.NewTransactionGenerator(keystorePath)
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
+			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
+		}
+		return txGenerator.Start(ctx)
 	})
 }
 
