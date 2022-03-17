@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"time"
 
+	field_params "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/urfave/cli/v2"
 )
@@ -326,21 +327,21 @@ var (
 	// ValidatorsProposerConfigDirFlag defines the path or URL to a file with proposer config.
 	ValidatorsProposerConfigDirFlag = &cli.StringFlag{
 		Name:  "validators-proposer-config-dir",
-		Usage: "remote local file path to load proposer configuration from",
+		Usage: "Set local directory path to proposer config(.json) for per validator mapping to an eth address to receive gas fees when proposing block (i.e. --validators-proposer-config-dir=/path/to/proposer.json). File format found in docs",
 		Value: "",
 	}
 	// ValidatorsProposerConfigFlag defines the path or URL to a file with proposer config.
 	ValidatorsProposerConfigURLFlag = &cli.StringFlag{
 		Name:  "validators-proposer-config-url",
-		Usage: "remote URL to load proposer configuration from",
+		Usage: "Set URL to load proposer config (.json) for per validator mapping to an eth address to receive gas fees when proposing block (i.e. --validators-proposer-config-url=https://example.com/api/getConfig). File format found in docs",
 		Value: "",
 	}
 
 	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
 		Name:  "suggested-fee-recipient",
-		Usage: "The suggested eth1 address to receive fees from ALL validator proposers",
-		Value: "0x0",
+		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block. Overrides the ProposerConfigFlag(s) if set",
+		Value: field_params.Eth1BurnAddressHex,
 	}
 )
 
