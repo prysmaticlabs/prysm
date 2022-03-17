@@ -229,14 +229,19 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
+		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, s.headRoot())
+		if err != nil {
+			return errors.Wrap(err, "could not check if node is optimistically synced")
+		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
 			s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 				Type: statefeed.FinalizedCheckpoint,
 				Data: &ethpbv1.EventFinalizedCheckpoint{
-					Epoch: postState.FinalizedCheckpoint().Epoch,
-					Block: postState.FinalizedCheckpoint().Root,
-					State: signed.Block().StateRoot(),
+					Epoch:               postState.FinalizedCheckpoint().Epoch,
+					Block:               postState.FinalizedCheckpoint().Root,
+					State:               signed.Block().StateRoot(),
+					ExecutionOptimistic: isOptimistic,
 				},
 			})
 

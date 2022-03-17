@@ -153,16 +153,21 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
 		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
+		isOptimistic, err := s.IsOptimistic(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not check if node is optimistically synced")
+		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
 			Data: &ethpbv1.EventChainReorg{
-				Slot:         newHeadSlot,
-				Depth:        absoluteSlotDifference,
-				OldHeadBlock: oldHeadRoot[:],
-				NewHeadBlock: headRoot[:],
-				OldHeadState: oldStateRoot,
-				NewHeadState: newStateRoot,
-				Epoch:        slots.ToEpoch(newHeadSlot),
+				Slot:                newHeadSlot,
+				Depth:               absoluteSlotDifference,
+				OldHeadBlock:        oldHeadRoot[:],
+				NewHeadBlock:        headRoot[:],
+				OldHeadState:        oldStateRoot,
+				NewHeadState:        newStateRoot,
+				Epoch:               slots.ToEpoch(newHeadSlot),
+				ExecutionOptimistic: isOptimistic,
 			},
 		})
 
@@ -184,7 +189,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
 	go func() {
-		if err := s.notifyNewHeadEvent(newHeadSlot, newHeadState, newStateRoot, headRoot[:]); err != nil {
+		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, newHeadState, newStateRoot, headRoot[:]); err != nil {
 			log.WithError(err).Error("Could not notify event feed of new chain head")
 		}
 	}()
@@ -304,6 +309,7 @@ func (s *Service) hasHeadState() bool {
 // Notifies a common event feed of a new chain head event. Called right after a new
 // chain head is determined, set, and saved to disk.
 func (s *Service) notifyNewHeadEvent(
+	ctx context.Context,
 	newHeadSlot types.Slot,
 	newHeadState state.BeaconState,
 	newHeadStateRoot,
@@ -337,6 +343,10 @@ func (s *Service) notifyNewHeadEvent(
 			return errors.Wrap(err, "could not get duty dependent root")
 		}
 	}
+	isOptimistic, err := s.IsOptimistic(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not check if node is optimistically synced")
+	}
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.NewHead,
 		Data: &ethpbv1.EventHead{
@@ -346,6 +356,7 @@ func (s *Service) notifyNewHeadEvent(
 			EpochTransition:           slots.IsEpochStart(newHeadSlot),
 			PreviousDutyDependentRoot: previousDutyDependentRoot,
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
+			ExecutionOptimistic:       isOptimistic,
 		},
 	})
 	return nil

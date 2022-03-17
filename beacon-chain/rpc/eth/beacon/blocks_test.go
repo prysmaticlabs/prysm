@@ -398,6 +398,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 			ChainInfoFetcher: c,
 			BlockNotifier:    c.BlockNotifier(),
 			Broadcaster:      mockp2p.NewTestP2P(t),
+			HeadFetcher:      c,
 		}
 		req := util.NewBeaconBlock()
 		req.Block.Slot = 5
@@ -437,6 +438,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 			ChainInfoFetcher: c,
 			BlockNotifier:    c.BlockNotifier(),
 			Broadcaster:      mockp2p.NewTestP2P(t),
+			HeadFetcher:      c,
 		}
 		req := util.NewBeaconBlockAltair()
 		req.Block.Slot = 5
@@ -478,6 +480,7 @@ func TestServer_ProposeBlock_OK(t *testing.T) {
 			ChainInfoFetcher: c,
 			BlockNotifier:    c.BlockNotifier(),
 			Broadcaster:      mockp2p.NewTestP2P(t),
+			HeadFetcher:      c,
 		}
 		req := util.NewBeaconBlockBellatrix()
 		req.Block.Slot = 5

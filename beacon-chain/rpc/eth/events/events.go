@@ -124,8 +124,9 @@ func handleBlockEvents(
 			return errors.Wrap(err, "could not hash tree root block")
 		}
 		eventBlock := &ethpb.EventBlock{
-			Slot:  v1Data.Message.Slot,
-			Block: item[:],
+			Slot:                v1Data.Message.Slot,
+			Block:               item[:],
+			ExecutionOptimistic: blkData.IsOptimistic,
 		}
 		return streamData(stream, BlockTopic, eventBlock)
 	default:

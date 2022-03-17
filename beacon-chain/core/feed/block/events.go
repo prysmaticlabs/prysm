@@ -13,5 +13,6 @@ const (
 
 // ReceivedBlockData is the data sent with ReceivedBlock events.
 type ReceivedBlockData struct {
-	SignedBlock block.SignedBeaconBlock
+	SignedBlock  block.SignedBeaconBlock
+	IsOptimistic bool
 }

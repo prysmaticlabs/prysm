@@ -158,6 +158,11 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
+	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+	}
+
 	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
 	if ok {
 		phase0Blk := phase0BlkContainer.Phase0Block
@@ -178,7 +183,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 				"Block proposal received via RPC")
 			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedPhase0Blk},
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedPhase0Blk, IsOptimistic: isOptimistic},
 			})
 		}()
 
@@ -215,7 +220,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 				"Block proposal received via RPC")
 			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedAltairBlk},
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedAltairBlk, IsOptimistic: isOptimistic},
 			})
 		}()
 
@@ -252,7 +257,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 				"Block proposal received via RPC")
 			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixBlk},
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixBlk, IsOptimistic: isOptimistic},
 			})
 		}()
 
