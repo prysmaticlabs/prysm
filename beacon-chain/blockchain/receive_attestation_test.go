@@ -111,7 +111,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, 1, 1, false))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, tRoot, tRoot, 1, 1))
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
 	service.processAttestations(ctx)
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations()))

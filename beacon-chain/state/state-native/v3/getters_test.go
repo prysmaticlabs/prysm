@@ -9,13 +9,13 @@ import (
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
-	testtmpl.VerifyBeaconState_SlotDataRace(t, func() (state.BeaconState, error) {
+	testtmpl.VerifyBeaconStateSlotDataRace(t, func() (state.BeaconState, error) {
 		return InitializeFromProto(&ethpb.BeaconStateBellatrix{Slot: 1})
 	})
 }
 
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
-	testtmpl.VerifyBeaconState_MatchCurrentJustifiedCheckptNative(
+	testtmpl.VerifyBeaconStateMatchCurrentJustifiedCheckptNative(
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
 			return InitializeFromProto(&ethpb.BeaconStateBellatrix{CurrentJustifiedCheckpoint: cp})
@@ -24,7 +24,7 @@ func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 }
 
 func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
-	testtmpl.VerifyBeaconState_MatchPreviousJustifiedCheckptNative(
+	testtmpl.VerifyBeaconStateMatchPreviousJustifiedCheckptNative(
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
 			return InitializeFromProto(&ethpb.BeaconStateBellatrix{PreviousJustifiedCheckpoint: cp})
