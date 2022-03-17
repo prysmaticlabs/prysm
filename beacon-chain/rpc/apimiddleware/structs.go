@@ -21,7 +21,8 @@ type genesisResponse_GenesisJson struct {
 
 // stateRootResponseJson is used in /beacon/states/{state_id}/root API endpoint.
 type stateRootResponseJson struct {
-	Data *stateRootResponse_StateRootJson `json:"data"`
+	Data                *stateRootResponse_StateRootJson `json:"data"`
+	ExecutionOptimistic bool                             `json:"execution_optimistic"`
 }
 
 // stateRootResponse_StateRootJson is used in /beacon/states/{state_id}/root API endpoint.
@@ -31,12 +32,14 @@ type stateRootResponse_StateRootJson struct {
 
 // stateForkResponseJson is used in /beacon/states/{state_id}/fork API endpoint.
 type stateForkResponseJson struct {
-	Data *forkJson `json:"data"`
+	Data                *forkJson `json:"data"`
+	ExecutionOptimistic bool      `json:"execution_optimistic"`
 }
 
 // stateFinalityCheckpointResponseJson is used in /beacon/states/{state_id}/finality_checkpoints API endpoint.
 type stateFinalityCheckpointResponseJson struct {
-	Data *stateFinalityCheckpointResponse_StateFinalityCheckpointJson `json:"data"`
+	Data                *stateFinalityCheckpointResponse_StateFinalityCheckpointJson `json:"data"`
+	ExecutionOptimistic bool                                                         `json:"execution_optimistic"`
 }
 
 // stateFinalityCheckpointResponse_StateFinalityCheckpointJson is used in /beacon/states/{state_id}/finality_checkpoints API endpoint.
@@ -48,37 +51,44 @@ type stateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
 
 // stateValidatorResponseJson is used in /beacon/states/{state_id}/validators API endpoint.
 type stateValidatorsResponseJson struct {
-	Data []*validatorContainerJson `json:"data"`
+	Data                []*validatorContainerJson `json:"data"`
+	ExecutionOptimistic bool                      `json:"execution_optimistic"`
 }
 
 // stateValidatorResponseJson is used in /beacon/states/{state_id}/validators/{validator_id} API endpoint.
 type stateValidatorResponseJson struct {
-	Data *validatorContainerJson `json:"data"`
+	Data                *validatorContainerJson `json:"data"`
+	ExecutionOptimistic bool                    `json:"execution_optimistic"`
 }
 
 // validatorBalancesResponseJson is used in /beacon/states/{state_id}/validator_balances API endpoint.
 type validatorBalancesResponseJson struct {
-	Data []*validatorBalanceJson `json:"data"`
+	Data                []*validatorBalanceJson `json:"data"`
+	ExecutionOptimistic bool                    `json:"execution_optimistic"`
 }
 
 // stateCommitteesResponseJson is used in /beacon/states/{state_id}/committees API endpoint.
 type stateCommitteesResponseJson struct {
-	Data []*committeeJson `json:"data"`
+	Data                []*committeeJson `json:"data"`
+	ExecutionOptimistic bool             `json:"execution_optimistic"`
 }
 
 // syncCommitteesResponseJson is used in /beacon/states/{state_id}/sync_committees API endpoint.
 type syncCommitteesResponseJson struct {
-	Data *syncCommitteeValidatorsJson `json:"data"`
+	Data                *syncCommitteeValidatorsJson `json:"data"`
+	ExecutionOptimistic bool                         `json:"execution_optimistic"`
 }
 
 // blockHeadersResponseJson is used in /beacon/headers API endpoint.
 type blockHeadersResponseJson struct {
-	Data []*blockHeaderContainerJson `json:"data"`
+	Data                []*blockHeaderContainerJson `json:"data"`
+	ExecutionOptimistic bool                        `json:"execution_optimistic"`
 }
 
 // blockHeaderResponseJson is used in /beacon/headers/{block_id} API endpoint.
 type blockHeaderResponseJson struct {
-	Data *blockHeaderContainerJson `json:"data"`
+	Data                *blockHeaderContainerJson `json:"data"`
+	ExecutionOptimistic bool                      `json:"execution_optimistic"`
 }
 
 // blockResponseJson is used in /beacon/blocks/{block_id} API endpoint.
@@ -88,18 +98,21 @@ type blockResponseJson struct {
 
 // blockV2ResponseJson is used in /v2/beacon/blocks/{block_id} API endpoint.
 type blockV2ResponseJson struct {
-	Version string                            `json:"version" enum:"true"`
-	Data    *signedBeaconBlockContainerV2Json `json:"data"`
+	Version             string                            `json:"version" enum:"true"`
+	Data                *signedBeaconBlockContainerV2Json `json:"data"`
+	ExecutionOptimistic bool                              `json:"execution_optimistic"`
 }
 
 // blockRootResponseJson is used in /beacon/blocks/{block_id}/root API endpoint.
 type blockRootResponseJson struct {
-	Data *blockRootContainerJson `json:"data"`
+	Data                *blockRootContainerJson `json:"data"`
+	ExecutionOptimistic bool                    `json:"execution_optimistic"`
 }
 
 // blockAttestationsResponseJson is used in /beacon/blocks/{block_id}/attestations API endpoint.
 type blockAttestationsResponseJson struct {
-	Data []*attestationJson `json:"data"`
+	Data                []*attestationJson `json:"data"`
+	ExecutionOptimistic bool               `json:"execution_optimistic"`
 }
 
 // attestationsPoolResponseJson is used in /beacon/pool/attestations GET API endpoint.
@@ -177,8 +190,9 @@ type beaconStateResponseJson struct {
 
 // beaconStateV2ResponseJson is used in /v2/debug/beacon/states/{state_id} API endpoint.
 type beaconStateV2ResponseJson struct {
-	Version string                      `json:"version" enum:"true"`
-	Data    *beaconStateContainerV2Json `json:"data"`
+	Version             string                      `json:"version" enum:"true"`
+	Data                *beaconStateContainerV2Json `json:"data"`
+	ExecutionOptimistic bool                        `json:"execution_optimistic"`
 }
 
 // forkChoiceHeadsResponseJson is used in /debug/beacon/heads API endpoint.
@@ -208,19 +222,22 @@ type dutiesRequestJson struct {
 
 // attesterDutiesResponseJson is used in /validator/duties/attester/{epoch} API endpoint.
 type attesterDutiesResponseJson struct {
-	DependentRoot string              `json:"dependent_root" hex:"true"`
-	Data          []*attesterDutyJson `json:"data"`
+	DependentRoot       string              `json:"dependent_root" hex:"true"`
+	Data                []*attesterDutyJson `json:"data"`
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
 }
 
 // proposerDutiesResponseJson is used in /validator/duties/proposer/{epoch} API endpoint.
 type proposerDutiesResponseJson struct {
-	DependentRoot string              `json:"dependent_root" hex:"true"`
-	Data          []*proposerDutyJson `json:"data"`
+	DependentRoot       string              `json:"dependent_root" hex:"true"`
+	Data                []*proposerDutyJson `json:"data"`
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
 }
 
 // syncCommitteeDutiesResponseJson is used in /validator/duties/sync/{epoch} API endpoint.
 type syncCommitteeDutiesResponseJson struct {
-	Data []*syncCommitteeDuty `json:"data"`
+	Data                []*syncCommitteeDuty `json:"data"`
+	ExecutionOptimistic bool                 `json:"execution_optimistic"`
 }
 
 // produceBlockResponseJson is used in /validator/blocks/{slot} API endpoint.
