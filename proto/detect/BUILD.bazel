@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["configfork.go"],
+    srcs = [
+        "configfork.go",
+        "fieldspec.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/proto/detect",
     visibility = ["//visibility:public"],
     deps = [
@@ -26,7 +29,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["configfork_test.go"],
+    srcs = [
+        "configfork_test.go",
+        "fieldspec_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/engine/v1:go_default_library",

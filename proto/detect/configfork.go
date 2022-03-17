@@ -1,8 +1,8 @@
 package detect
 
 import (
-	"encoding/binary"
 	"fmt"
+
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 
@@ -22,52 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
-type fieldType int
-
-const (
-	TypeUint64 fieldType = iota
-	TypeBytes4
-)
-
-type fieldSpec struct {
-	offset int
-	size   int
-	t      fieldType
-}
-
-func (f *fieldSpec) uint64(state []byte) (uint64, error) {
-	if f.t != TypeUint64 {
-		return 0, fmt.Errorf("uint64() called on non-uint64 field: %v", f)
-	}
-	s, err := f.slice(state)
-	if err != nil {
-		return 0, err
-	}
-	return binary.LittleEndian.Uint64(s), nil
-}
-
-func (f *fieldSpec) bytes4(state []byte) ([4]byte, error) {
-	var b4 [4]byte
-	if f.t != TypeBytes4 {
-		return b4, fmt.Errorf("bytes4() called on non-bytes4 field %v", f)
-	}
-	if f.size != 4 {
-		return b4, fmt.Errorf("bytes4() types must have a size of 4, invalid fieldSpec %v", f)
-	}
-	val, err := f.slice(state)
-	if err != nil {
-		return b4, err
-	}
-	return bytesutil.ToBytes4(val), nil
-}
-
-func (f *fieldSpec) slice(value []byte) ([]byte, error) {
-	if len(value) < f.offset+f.size {
-		return nil, fmt.Errorf("cannot pull bytes from value; offset=%d, size=%d, so value must be at least %d bytes (actual=%d)", f.offset, f.size, f.offset+f.size, len(value))
-	}
-	return value[f.offset : f.offset+f.size], nil
-}
-
 // ConfigFork represents the intersection of Configuration (eg mainnet, testnet) and Fork (eg phase0, altair).
 // Using a detected ConfigFork, a BeaconState or SignedBeaconBlock can be correctly unmarshaled without the need to
 // hard code a concrete type in paths where only the marshaled bytes, or marshaled bytes and a version, are available.
@@ -78,6 +32,23 @@ type ConfigFork struct {
 	Fork    int
 	Version [fieldparams.VersionLength]byte
 	Epoch   types.Epoch
+}
+
+var beaconStateCurrentVersion = fieldSpec{
+	// 52 = 8 (genesis_time) + 32 (genesis_validators_root) + 8 (slot) + 4 (previous_version)
+	offset: 52,
+	t:      typeBytes4,
+}
+
+// ByState exploits the fixed-size lower-order bytes in a BeaconState as a heuristic to obtain the value of the
+// state.version field without first unmarshaling the BeaconState. The Version is then internally used to lookup
+// the correct ConfigVersion.
+func ByState(marshaled []byte) (*ConfigFork, error) {
+	cv, err := beaconStateCurrentVersion.bytes4(marshaled)
+	if err != nil {
+		return nil, err
+	}
+	return ByVersion(cv)
 }
 
 // ByVersion uses a lookup table to resolve a Version (from a beacon node api for instance, or obtained by peeking at
@@ -110,35 +81,6 @@ func ByVersion(cv [fieldparams.VersionLength]byte) (*ConfigFork, error) {
 		}
 	}
 	return cf, fmt.Errorf("could not find a config+fork match with version=%#x", cv)
-}
-
-var beaconStateCurrentVersion = fieldSpec{
-	// 52 = 8 (genesis_time) + 32 (genesis_validators_root) + 8 (slot) + 4 (previous_version)
-	offset: 52,
-	size:   4,
-	t:      TypeBytes4,
-}
-
-var beaconStateEpoch = fieldSpec{
-	// 52 = 8 (genesis_time) + 32 (genesis_validators_root) + 8 (slot) + 4 (previous_version) + 4 (current_version)
-	offset: 56,
-	size:   8,
-	t:      TypeUint64,
-}
-
-func currentVersionFromState(marshaled []byte) ([fieldparams.VersionLength]byte, error) {
-	return beaconStateCurrentVersion.bytes4(marshaled)
-}
-
-// ByState exploits the fixed-size lower-order bytes in a BeaconState as a heuristic to obtain the value of the
-// state.version field without first unmarshaling the BeaconState. The Version is then internally used to lookup
-// the correct ConfigVersion.
-func ByState(marshaled []byte) (*ConfigFork, error) {
-	cv, err := currentVersionFromState(marshaled)
-	if err != nil {
-		return nil, err
-	}
-	return ByVersion(cv)
 }
 
 // UnmarshalBeaconState uses internal knowledge in the ConfigFork to pick the right concrete BeaconState type,
@@ -188,8 +130,7 @@ var beaconBlockSlot = fieldSpec{
 	// variable length. Offsets come before fixed length data, so that's 4 bytes at the beginning
 	// then signature is 96 bytes, 4+96 = 100
 	offset: 100,
-	size:   8,
-	t:      TypeUint64,
+	t:      typeUint64,
 }
 
 func slotFromBlock(marshaled []byte) (types.Slot, error) {
