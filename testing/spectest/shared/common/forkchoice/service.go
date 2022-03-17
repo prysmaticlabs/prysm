@@ -2,8 +2,12 @@ package forkchoice
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/holiman/uint256"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -14,12 +18,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func startChainService(t *testing.T, st state.BeaconState, block block.SignedBeaconBlock, engineMock *ExecutionEngineMock) *blockchain.Service {
+func startChainService(t *testing.T, st state.BeaconState, block block.SignedBeaconBlock, engineMock *engineMock) *blockchain.Service {
 	db := testDB.SetupDB(t)
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlock(ctx, block))
@@ -56,4 +62,46 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 	require.NoError(t, err)
 	require.NoError(t, service.StartFromSavedState(st))
 	return service
+}
+
+type engineMock struct {
+	powBlocks map[[32]byte]*ethpb.PowBlock
+}
+
+func (m *engineMock) GetPayload(context.Context, [8]byte) (*pb.ExecutionPayload, error) {
+	return nil, nil
+}
+func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, *pb.PayloadAttributes) (*pb.PayloadIDBytes, []byte, error) {
+	return nil, nil, nil
+}
+func (m *engineMock) NewPayload(context.Context, *pb.ExecutionPayload) ([]byte, error) {
+	return nil, nil
+}
+
+func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
+	return nil, nil
+}
+
+func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.TransitionConfiguration) error {
+	return nil
+}
+
+func (m *engineMock) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+	b, ok := m.powBlocks[bytesutil.ToBytes32(hash.Bytes())]
+	if !ok {
+		return nil, nil
+	}
+	tdInBigEndian := bytesutil.ReverseByteOrder(b.TotalDifficulty)
+	tdBigint := new(big.Int)
+	tdBigint.SetBytes(tdInBigEndian)
+	td256, of := uint256.FromBig(tdBigint)
+	if of {
+		return nil, errors.New("could not convert big.Int to uint256")
+	}
+
+	return &pb.ExecutionBlock{
+		ParentHash:      b.ParentHash,
+		TotalDifficulty: td256.String(),
+		Hash:            b.BlockHash,
+	}, nil
 }

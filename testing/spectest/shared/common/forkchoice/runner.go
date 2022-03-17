@@ -74,7 +74,7 @@ func Run(t *testing.T, config string, fork int) {
 					t.Fatalf("unknown fork version: %v", fork)
 				}
 
-				execMock := &ExecutionEngineMock{
+				execMock := &engineMock{
 					powBlocks: make(map[[32]byte]*ethpb.PowBlock),
 				}
 				service := startChainService(t, beaconState, beaconBlock, execMock)
@@ -166,7 +166,7 @@ func Run(t *testing.T, config string, fork int) {
 						}
 						if c.ProposerBoostRoot != nil {
 							want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
-							got := fmt.Sprintf("%#x", service.ProtoArrayStore().ProposerBoost())
+							got := fmt.Sprintf("%#x", service.ForkChoiceStore().ProposerBoost())
 							require.DeepEqual(t, want, got)
 						}
 					}
