@@ -104,6 +104,8 @@ func (s *Store) findSyncedTip(ctx context.Context, node *Node, syncedTips *optim
 // SetOptimisticToValid is called with the root of a block that was returned as
 // VALID by the EL. This routine recomputes and updates the synced_tips map to
 // account for this new tip.
+// WARNING: This method returns an error if the root is not found in forkchoice or
+// if the root is not a leaf of the fork choice tree.
 func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()

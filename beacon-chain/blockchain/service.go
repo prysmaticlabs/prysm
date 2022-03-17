@@ -3,6 +3,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"runtime"
@@ -191,21 +192,39 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	s.store = store.New(justified, finalized)
 
 	var store f.ForkChoicer
+	fRoot := bytesutil.ToBytes32(finalized.Root)
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
 		store = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
 	} else {
-		store = protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
+		store = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
 	}
 	s.cfg.ForkChoiceStore = store
-
-	ss, err := slots.EpochStart(finalized.Epoch)
+	fs, err := s.cfg.BeaconDB.StateSummary(s.ctx, fRoot)
 	if err != nil {
-		return errors.Wrap(err, "could not get start slot of finalized epoch")
+		return errors.Wrap(err, "could not get summary of finalized checkpoint")
 	}
+	if fs == nil {
+		return errInvalidNilSummary
+	}
+
+	if err := store.InsertOptimisticBlock(s.ctx, fs.Slot, fRoot, params.BeaconConfig().ZeroHash, justified.Epoch, finalized.Epoch); err != nil {
+		return errors.Wrap(err, "could not insert finalized block to forkchoice")
+	}
+
+	lastValidatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get last validated checkpoint")
+	}
+	if bytes.Equal(finalized.Root, lastValidatedCheckpoint.Root) {
+		if err := store.SetOptimisticToValid(s.ctx, fRoot); err != nil {
+			return errors.Wrap(err, "could not set finalized block as validated")
+		}
+	}
+
 	h := s.headBlock().Block()
-	if h.Slot() > ss {
+	if h.Slot() > fs.Slot {
 		log.WithFields(logrus.Fields{
-			"startSlot": ss,
+			"startSlot": fs.Slot,
 			"endSlot":   h.Slot(),
 		}).Info("Loading blocks to fork choice store, this may take a while.")
 		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, finalized, justified); err != nil {
