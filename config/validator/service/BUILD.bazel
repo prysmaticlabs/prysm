@@ -1,0 +1,8 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["prepare_beacon_proposer_config.go"],
+    importpath = "github.com/prysmaticlabs/prysm/config/validator/service",
+    visibility = ["//visibility:public"],
+)
