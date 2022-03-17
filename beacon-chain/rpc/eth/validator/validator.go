@@ -105,10 +105,15 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
+	isOptimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+	}
 
 	return &ethpbv1.AttesterDutiesResponse{
-		DependentRoot: root,
-		Data:          duties,
+		DependentRoot:       root,
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -167,10 +172,15 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
+	isOptimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+	}
 
 	return &ethpbv1.ProposerDutiesResponse{
-		DependentRoot: root,
-		Data:          duties,
+		DependentRoot:       root,
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -242,8 +252,14 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	} else if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get duties: %v", err)
 	}
+	isOptimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+	}
+
 	return &ethpbv2.SyncCommitteeDutiesResponse{
-		Data: duties,
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 

@@ -91,11 +91,17 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		return nil, status.Errorf(codes.Internal, "Could not extract sync subcommittees: %v", err)
 	}
 
+	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+	}
+
 	return &ethpbv2.StateSyncCommitteesResponse{
 		Data: &ethpbv2.SyncCommitteeValidators{
 			Validators:          committeeIndices,
 			ValidatorAggregates: subcommittees,
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 

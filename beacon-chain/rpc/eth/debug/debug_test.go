@@ -39,6 +39,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
+			HeadFetcher: &blockchainmock.ChainService{},
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -53,6 +54,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
+			HeadFetcher: &blockchainmock.ChainService{},
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -60,6 +62,21 @@ func TestGetBeaconStateV2(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
+	})
+	t.Run("execution optimistic", func(t *testing.T) {
+		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+			HeadFetcher: &blockchainmock.ChainService{Optimistic: true},
+		}
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 }
 

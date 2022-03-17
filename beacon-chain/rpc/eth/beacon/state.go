@@ -71,11 +71,16 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
+	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+	}
 
 	return &ethpb.StateRootResponse{
 		Data: &ethpb.StateRootResponse_StateRoot{
 			Root: root,
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -93,14 +98,19 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
-
 	fork := st.Fork()
+	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+	}
+
 	return &ethpb.StateForkResponse{
 		Data: &ethpb.Fork{
 			PreviousVersion: fork.PreviousVersion,
 			CurrentVersion:  fork.CurrentVersion,
 			Epoch:           fork.Epoch,
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -124,6 +134,10 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
+	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+	}
 
 	return &ethpb.StateFinalityCheckpointResponse{
 		Data: &ethpb.StateFinalityCheckpointResponse_StateFinalityCheckpoint{
@@ -131,6 +145,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 			CurrentJustified:  checkpoint(st.CurrentJustifiedCheckpoint()),
 			Finalized:         checkpoint(st.FinalizedCheckpoint()),
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 

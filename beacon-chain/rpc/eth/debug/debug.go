@@ -61,6 +61,11 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateV2")
 	defer span.End()
 
+	isOptimistic, err := ds.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+	}
+
 	beaconSt, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
@@ -76,6 +81,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_Phase0State{Phase0State: protoSt},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Altair:
 		altairState, ok := beaconSt.(state.BeaconStateAltair)
@@ -91,6 +97,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_AltairState{AltairState: protoState},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Bellatrix:
 		bellatrixState, ok := beaconSt.(state.BeaconStateBellatrix)
@@ -106,6 +113,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_BellatrixState{BellatrixState: protoState},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	default:
 		return nil, status.Error(codes.Internal, "Unsupported state version")

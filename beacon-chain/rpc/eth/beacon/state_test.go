@@ -80,6 +80,7 @@ func TestGetStateRoot(t *testing.T) {
 		StateFetcher: &testutil.MockFetcher{
 			BeaconStateRoot: stateRoot[:],
 		},
+		HeadFetcher: &chainMock.ChainService{},
 	}
 
 	resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
@@ -88,6 +89,21 @@ func TestGetStateRoot(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.DeepEqual(t, stateRoot[:], resp.Data.Root)
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconStateRoot: stateRoot[:],
+			},
+			HeadFetcher: &chainMock.ChainService{Optimistic: true},
+		}
+		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
 }
 
 func TestGetStateFork(t *testing.T) {
@@ -105,6 +121,7 @@ func TestGetStateFork(t *testing.T) {
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
 		},
+		HeadFetcher: &chainMock.ChainService{},
 	}
 
 	resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
@@ -116,6 +133,21 @@ func TestGetStateFork(t *testing.T) {
 	assert.Equal(t, expectedFork.Epoch, resp.Data.Epoch)
 	assert.DeepEqual(t, expectedFork.CurrentVersion, resp.Data.CurrentVersion)
 	assert.DeepEqual(t, expectedFork.PreviousVersion, resp.Data.PreviousVersion)
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+			HeadFetcher: &chainMock.ChainService{Optimistic: true},
+		}
+		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
 }
 
 func TestGetFinalityCheckpoints(t *testing.T) {
@@ -140,6 +172,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
 		},
+		HeadFetcher: &chainMock.ChainService{},
 	}
 
 	resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
@@ -153,4 +186,19 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	assert.DeepEqual(t, fakeState.CurrentJustifiedCheckpoint().Root, resp.Data.CurrentJustified.Root)
 	assert.Equal(t, fakeState.PreviousJustifiedCheckpoint().Epoch, resp.Data.PreviousJustified.Epoch)
 	assert.DeepEqual(t, fakeState.PreviousJustifiedCheckpoint().Root, resp.Data.PreviousJustified.Root)
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+			HeadFetcher: &chainMock.ChainService{Optimistic: true},
+		}
+		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
 }

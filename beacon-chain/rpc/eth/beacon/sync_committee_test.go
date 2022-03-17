@@ -166,6 +166,7 @@ func TestListSyncCommittees(t *testing.T) {
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: st,
 		},
+		HeadFetcher: &mock.ChainService{},
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{StateId: stRoot[:]}
 	resp, err := s.ListSyncCommittees(ctx, req)
@@ -188,6 +189,21 @@ func TestListSyncCommittees(t *testing.T) {
 			j++
 		}
 	}
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		s := &Server{
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher: &mock.ChainService{Optimistic: true},
+		}
+		resp, err := s.ListSyncCommittees(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
 }
 
 type futureSyncMockFetcher struct {
