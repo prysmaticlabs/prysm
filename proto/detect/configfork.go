@@ -10,7 +10,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -141,25 +141,41 @@ func ByState(marshaled []byte) (*ConfigFork, error) {
 // UnmarshalBeaconState uses internal knowledge in the ConfigFork to pick the right concrete BeaconState type,
 // then Unmarshal()s the type and returns an instance of state.BeaconState if successful.
 func (cf *ConfigFork) UnmarshalBeaconState(marshaled []byte) (s state.BeaconState, err error) {
-	switch cf.ForkName {
+	switch forkName := cf.ForkName; forkName {
 	case params.ForkGenesis:
-		s, err = v1.InitializeFromSSZBytes(marshaled)
+		st := &ethpb.BeaconState{}
+		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
-			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkGenesis failed")
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+		}
+		s, err = v1.InitializeFromProtoUnsafe(st)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
 	case params.ForkAltair:
-		s, err = v2.InitializeFromSSZBytes(marshaled)
+		st := &ethpb.BeaconStateAltair{}
+		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
-			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkAltair failed")
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+		}
+		s, err = v2.InitializeFromProtoUnsafe(st)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
 	case params.ForkBellatrix:
-		s, err = v3.InitializeFromSSZBytes(marshaled)
+		st := &ethpb.BeaconStateBellatrix{}
+		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
-			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkMerge failed")
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+		}
+		s, err = v3.InitializeFromProtoUnsafe(st)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
 	default:
-		return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", cf.ForkName.String())
+		return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", forkName)
 	}
+
 	return s, nil
 }
 
@@ -205,11 +221,11 @@ func (cf *ConfigFork) UnmarshalBeaconBlock(marshaled []byte) (block.SignedBeacon
 	var blk ssz.Unmarshaler
 	switch cf.ForkName {
 	case params.ForkGenesis:
-		blk = &v1alpha1.SignedBeaconBlock{}
+		blk = &ethpb.SignedBeaconBlock{}
 	case params.ForkAltair:
-		blk = &v1alpha1.SignedBeaconBlockAltair{}
+		blk = &ethpb.SignedBeaconBlockAltair{}
 	case params.ForkBellatrix:
-		blk = &v1alpha1.SignedBeaconBlockBellatrix{}
+		blk = &ethpb.SignedBeaconBlockBellatrix{}
 	default:
 		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", cf.ForkName.String(), slot)
 	}

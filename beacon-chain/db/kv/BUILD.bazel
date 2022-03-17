@@ -50,6 +50,7 @@ go_library(
         "//io/file:go_default_library",
         "//monitoring/progress:go_default_library",
         "//monitoring/tracing:go_default_library",
+        "//proto/detect:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/wrapper:go_default_library",
