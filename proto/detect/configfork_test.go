@@ -90,7 +90,7 @@ func testBlockAltair() *ethpb.SignedBeaconBlockAltair {
 	}
 }
 
-func testBlockMerge() *ethpb.SignedBeaconBlockBellatrix {
+func testBlockBellatrix() *ethpb.SignedBeaconBlockBellatrix {
 	return &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
 			ProposerIndex: types.ValidatorIndex(0),
