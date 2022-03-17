@@ -2,6 +2,7 @@
 package params
 
 import (
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"sort"
 	"time"
 
@@ -137,14 +138,14 @@ type BeaconChainConfig struct {
 	SlashingProtectionPruningEpochs types.Epoch // SlashingProtectionPruningEpochs defines a period after which all prior epochs are pruned in the validator database.
 
 	// Fork-related values.
-	GenesisForkVersion   []byte                  `yaml:"GENESIS_FORK_VERSION" spec:"true"`   // GenesisForkVersion is used to track fork version between state transitions.
-	AltairForkVersion    []byte                  `yaml:"ALTAIR_FORK_VERSION" spec:"true"`    // AltairForkVersion is used to represent the fork version for altair.
-	AltairForkEpoch      types.Epoch             `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`      // AltairForkEpoch is used to represent the assigned fork epoch for altair.
-	BellatrixForkVersion []byte                  `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
-	BellatrixForkEpoch   types.Epoch             `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
-	ShardingForkVersion  []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
-	ShardingForkEpoch    types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
-	ForkVersionSchedule  map[[4]byte]types.Epoch // Schedule of fork epochs by version.
+	GenesisForkVersion   []byte                                          `yaml:"GENESIS_FORK_VERSION" spec:"true"`   // GenesisForkVersion is used to track fork version between state transitions.
+	AltairForkVersion    []byte                                          `yaml:"ALTAIR_FORK_VERSION" spec:"true"`    // AltairForkVersion is used to represent the fork version for altair.
+	AltairForkEpoch      types.Epoch                                     `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`      // AltairForkEpoch is used to represent the assigned fork epoch for altair.
+	BellatrixForkVersion []byte                                          `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
+	BellatrixForkEpoch   types.Epoch                                     `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
+	ShardingForkVersion  []byte                                          `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
+	ShardingForkEpoch    types.Epoch                                     `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
+	ForkVersionSchedule  map[[fieldparams.VersionLength]byte]types.Epoch // Schedule of fork epochs by version.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
@@ -195,7 +196,7 @@ type BeaconChainConfig struct {
 // InitializeForkSchedule initializes the schedules forks baked into the config.
 func (b *BeaconChainConfig) InitializeForkSchedule() {
 	// Reset Fork Version Schedule.
-	b.ForkVersionSchedule = map[[4]byte]types.Epoch{}
+	b.ForkVersionSchedule = map[[fieldparams.VersionLength]byte]types.Epoch{}
 	// Set Genesis fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
 	// Set Altair fork data.
@@ -206,7 +207,7 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 
 // ForkScheduleEntry is a Version+Epoch tuple for sorted storage in an OrderedForkSchedule
 type ForkScheduleEntry struct {
-	Version [4]byte
+	Version [fieldparams.VersionLength]byte
 	Epoch   types.Epoch
 }
 
@@ -224,13 +225,13 @@ func (o OrderedForkSchedule) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
 func (o OrderedForkSchedule) Less(i, j int) bool { return o[i].Epoch < o[j].Epoch }
 
 // VersionForEpoch finds the Version with the highest epoch <= the given epoch
-func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([4]byte, error) {
+func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([fieldparams.VersionLength]byte, error) {
 	for i := len(o) - 1; i >= 0; i-- {
 		if o[i].Epoch <= epoch {
 			return o[i].Version, nil
 		}
 	}
-	return [4]byte{}, errors.Wrapf(ErrVersionNotFound, "no epoch in list <= %d", epoch)
+	return [fieldparams.VersionLength]byte{}, errors.Wrapf(ErrVersionNotFound, "no epoch in list <= %d", epoch)
 }
 
 // Converts the ForkVersionSchedule map into a list of Version+Epoch values, ordered by Epoch from lowest to highest.

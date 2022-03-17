@@ -22,4 +22,5 @@ const (
 	MaxBytesPerTxLength             = 1073741824    // MaxBytesPerTxLength defines the maximum number of bytes that can be included in a transaction.
 	FeeRecipientLength              = 20            // FeeRecipientLength defines the byte length of a fee recipient.
 	LogsBloomLength                 = 256           // LogsBloomLength defines the byte length of a logs bloom.
+	VersionLength                   = 4             // VersionLength defines the byte length of a fork version number.
 )
