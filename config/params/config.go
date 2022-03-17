@@ -223,8 +223,6 @@ func (o OrderedForkSchedule) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
 // Less implements the Less method of sort.Interface
 func (o OrderedForkSchedule) Less(i, j int) bool { return o[i].Epoch < o[j].Epoch }
 
-var VersionForEpochNotFound = errors.New("could not find an entry in the ForkVersionSchedule")
-
 // VersionForEpoch finds the Version of the last entry in the last that comes before the given epoch
 func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([4]byte, error) {
 	for i := range o {
@@ -239,7 +237,7 @@ func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([4]byte, error)
 		}
 	}
 	var nope [4]byte
-	return nope, errors.Wrapf(VersionForEpochNotFound, "no epoch in list <= %d", epoch)
+	return nope, errors.Wrapf(ErrVersionNotFound, "no epoch in list <= %d", epoch)
 }
 
 // Converts the ForkVersionSchedule map into a list of Version+Epoch values, ordered by Epoch from lowest to highest.

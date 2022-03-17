@@ -24,10 +24,3 @@ config_setting(
         "@prysm//proto:network": "minimal",
     },
 )
-
-go_library(
-    name = "go_default_library",
-    srcs = ["doc.go"],
-    importpath = "github.com/prysmaticlabs/prysm/proto",
-    visibility = ["//visibility:public"],
-)

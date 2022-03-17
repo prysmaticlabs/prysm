@@ -6,6 +6,7 @@ go_library(
         "config.go",
         "config_utils_develop.go",  # keep
         "config_utils_prod.go",
+        "errors.go",
         "io_config.go",
         "loader.go",
         "mainnet_config.go",

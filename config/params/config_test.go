@@ -114,7 +114,7 @@ func TestVersionForEpoch(t *testing.T) {
 		{
 			name:  "not found before",
 			epoch: types.Epoch(0),
-			err:   params.VersionForEpochNotFound,
+			err:   params.ErrVersionNotFound,
 		},
 	}
 	for _, tc := range testCases {

@@ -66,13 +66,13 @@ func (f *fieldSpec) slice(value []byte) ([]byte, error) {
 	return value[f.offset : f.offset+f.size], nil
 }
 
-// ConfigFork represents the intersection of Configuration (eg mainnet, testnet) and Fork (eg phase0, altair).
+// ConfigFork represents the intersection of Configuration (eg mainnet, testnet) and ForkName (eg phase0, altair).
 // Using a detected ConfigFork, a BeaconState or SignedBeaconBlock can be correctly unmarshaled without the need to
 // hard code a concrete type in paths where only the marshaled bytes, or marshaled bytes and a version, are available.
 type ConfigFork struct {
 	ConfigName params.ConfigName
 	Config     *params.BeaconChainConfig
-	Fork       params.ForkName
+	ForkName   params.ForkName
 	Version    [4]byte
 	Epoch      types.Epoch
 }
@@ -94,11 +94,11 @@ func ByVersion(cv [4]byte) (*ConfigFork, error) {
 				cf.Epoch = e
 				switch v {
 				case genesis:
-					cf.Fork = params.ForkGenesis
+					cf.ForkName = params.ForkGenesis
 				case altair:
-					cf.Fork = params.ForkAltair
+					cf.ForkName = params.ForkAltair
 				case merge:
-					cf.Fork = params.ForkBellatrix
+					cf.ForkName = params.ForkBellatrix
 				default:
 					return cf, fmt.Errorf("unrecognized fork for config name=%s, BeaconState.fork.current_version=%#x", name.String(), cv)
 				}
@@ -141,7 +141,7 @@ func ByState(marshaled []byte) (*ConfigFork, error) {
 // UnmarshalBeaconState uses internal knowledge in the ConfigFork to pick the right concrete BeaconState type,
 // then Unmarshal()s the type and returns an instance of state.BeaconState if successful.
 func (cf *ConfigFork) UnmarshalBeaconState(marshaled []byte) (s state.BeaconState, err error) {
-	switch cf.Fork {
+	switch cf.ForkName {
 	case params.ForkGenesis:
 		s, err = v1.InitializeFromSSZBytes(marshaled)
 		if err != nil {
@@ -158,7 +158,7 @@ func (cf *ConfigFork) UnmarshalBeaconState(marshaled []byte) (s state.BeaconStat
 			return nil, errors.Wrap(err, "InitializeFromSSZBytes for ForkMerge failed")
 		}
 	default:
-		return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", cf.Fork.String())
+		return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", cf.ForkName.String())
 	}
 	return s, nil
 }
@@ -203,7 +203,7 @@ func (cf *ConfigFork) UnmarshalBeaconBlock(marshaled []byte) (block.SignedBeacon
 	}
 
 	var blk ssz.Unmarshaler
-	switch cf.Fork {
+	switch cf.ForkName {
 	case params.ForkGenesis:
 		blk = &v1alpha1.SignedBeaconBlock{}
 	case params.ForkAltair:
@@ -211,7 +211,7 @@ func (cf *ConfigFork) UnmarshalBeaconBlock(marshaled []byte) (block.SignedBeacon
 	case params.ForkBellatrix:
 		blk = &v1alpha1.SignedBeaconBlockBellatrix{}
 	default:
-		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", cf.Fork.String(), slot)
+		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", cf.ForkName.String(), slot)
 	}
 	err = blk.UnmarshalSSZ(marshaled)
 	if err != nil {
