@@ -86,11 +86,6 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
 			return err
 		}
-
-		// TODO(10261) send optimistic status
-		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headStartRoot); err != nil {
-			return err
-		}
 	}
 
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
