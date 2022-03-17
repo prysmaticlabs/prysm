@@ -834,13 +834,15 @@ type eventHeadJson struct {
 	Block                     string `json:"block" hex:"true"`
 	State                     string `json:"state" hex:"true"`
 	EpochTransition           bool   `json:"epoch_transition"`
+	ExecutionOptimistic       bool   `json:"execution_optimistic"`
 	PreviousDutyDependentRoot string `json:"previous_duty_dependent_root" hex:"true"`
 	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root" hex:"true"`
 }
 
 type receivedBlockDataJson struct {
-	Slot  string `json:"slot"`
-	Block string `json:"block" hex:"true"`
+	Slot                string `json:"slot"`
+	Block               string `json:"block" hex:"true"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
 type aggregatedAttReceivedDataJson struct {
@@ -848,19 +850,21 @@ type aggregatedAttReceivedDataJson struct {
 }
 
 type eventFinalizedCheckpointJson struct {
-	Block string `json:"block" hex:"true"`
-	State string `json:"state" hex:"true"`
-	Epoch string `json:"epoch"`
+	Block               string `json:"block" hex:"true"`
+	State               string `json:"state" hex:"true"`
+	Epoch               string `json:"epoch"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
 type eventChainReorgJson struct {
-	Slot         string `json:"slot"`
-	Depth        string `json:"depth"`
-	OldHeadBlock string `json:"old_head_block" hex:"true"`
-	NewHeadBlock string `json:"old_head_state" hex:"true"`
-	OldHeadState string `json:"new_head_block" hex:"true"`
-	NewHeadState string `json:"new_head_state" hex:"true"`
-	Epoch        string `json:"epoch"`
+	Slot                string `json:"slot"`
+	Depth               string `json:"depth"`
+	OldHeadBlock        string `json:"old_head_block" hex:"true"`
+	NewHeadBlock        string `json:"old_head_state" hex:"true"`
+	OldHeadState        string `json:"new_head_block" hex:"true"`
+	NewHeadState        string `json:"new_head_state" hex:"true"`
+	Epoch               string `json:"epoch"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
 // ---------------
