@@ -1483,8 +1483,6 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
-				err = v.SetPubKeyToValidatorIndexMap(ctx, km)
-				require.NoError(t, err)
 
 				return &v
 			},

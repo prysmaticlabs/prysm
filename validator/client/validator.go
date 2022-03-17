@@ -935,26 +935,6 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
-// SetPubKeyToValidatorIndexMap sets the pubKeyToValidatorIndexMap which caches the mapping of public keys to validator indices.
-func (v *validator) SetPubKeyToValidatorIndexMap(ctx context.Context, km keymanager.IKeymanager) error {
-	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return err
-	}
-	for _, pk := range pubkeys {
-		resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pk[:]})
-		if err != nil {
-			if strings.Contains(err.Error(), "Could not find validator index for public key ") {
-				log.Infoln(fmt.Sprintf("Could not find validator index for public key %v not found. Perhaps the validator is not yet active.", pk))
-				continue
-			}
-			return err
-		}
-		v.pubkeyHexToValidatorIndex[hexutil.Encode(pk[:])] = resp.Index
-	}
-	return nil
-}
-
 // PrepareBeaconProposer calls the prepareBeaconProposer RPC to set the proposer information such as fee recipient.
 func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) error {
 	if km == nil {
