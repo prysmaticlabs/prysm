@@ -182,7 +182,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), bytesutil.ToBytes32(finalized.Root)); err != nil {
+	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), s.headRoot(), bytesutil.ToBytes32(finalized.Root)); err != nil {
 		return err
 	}
 
@@ -354,6 +354,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 
 	s.saveInitSyncBlock(blockRoot, signed)
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
+		return err
+	}
+	if _, err := s.notifyForkchoiceUpdate(ctx, b, blockRoot, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
 		return err
 	}
 
