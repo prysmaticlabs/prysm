@@ -11,7 +11,6 @@ import (
 
 	"github.com/MariusVanDerWijden/FuzzyVM/filler"
 	"github.com/MariusVanDerWijden/tx-fuzz"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -68,7 +67,7 @@ func(t *TransactionGenerator) Start(ctx context.Context) error {
 		case <- ctx.Done() :
 			return nil
 			case <- ticker.C:
-				err := SendTransaction(client,mineKey.PrivateKey,f,gasPrice,mineKey.Address.String(),30,false)
+				err := SendTransaction(client,mineKey.PrivateKey,f,gasPrice,mineKey.Address.String(),200,false)
 				if err != nil {
 					return err
 				}
@@ -100,19 +99,13 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 		g.Go( func() error {
 			tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, gasPrice, nil, al)
 			if err != nil {
-				return err
+				return nil
 			}
 			signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), key)
 			if err != nil {
-				return err
+				return nil
 			}
 			err = backend.SendTransaction(context.Background(), signedTx)
-
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-			defer cancel()
-			if _, err := bind.WaitMined(ctx, backend, signedTx); err != nil {
-				fmt.Printf("Wait mined failed: %v\n", err.Error())
-			}
 			return nil
 		} )
 
