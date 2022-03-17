@@ -228,7 +228,7 @@ var VersionForEpochNotFound = errors.New("could not find an entry in the ForkVer
 // VersionForEpoch finds the Version of the last entry in the last that comes before the given epoch
 func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([4]byte, error) {
 	for i := range o {
-		// moving from lowest to highest, only consider epochs that start at or before the slot
+		// moving from lowest to highest, only consider epochs that start at or before the requested epoch
 		if epoch < o[i].Epoch {
 			continue
 		}
