@@ -6,8 +6,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/holiman/uint256"
-	"github.com/pkg/errors"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -91,17 +90,12 @@ func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash) (
 	if !ok {
 		return nil, nil
 	}
-	tdInBigEndian := bytesutil.ReverseByteOrder(b.TotalDifficulty)
-	tdBigint := new(big.Int)
-	tdBigint.SetBytes(tdInBigEndian)
-	td256, of := uint256.FromBig(tdBigint)
-	if of {
-		return nil, errors.New("could not convert big.Int to uint256")
-	}
 
+	td := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(b.TotalDifficulty))
+	tdHex := hexutil.EncodeBig(td)
 	return &pb.ExecutionBlock{
 		ParentHash:      b.ParentHash,
-		TotalDifficulty: td256.String(),
+		TotalDifficulty: tdHex,
 		Hash:            b.BlockHash,
 	}, nil
 }
