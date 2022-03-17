@@ -35,9 +35,9 @@ type fieldSpec struct {
 	t      fieldType
 }
 
-func (f *fieldSpec) Uint64(state []byte) (uint64, error) {
+func (f *fieldSpec) uint64(state []byte) (uint64, error) {
 	if f.t != TypeUint64 {
-		return 0, fmt.Errorf("Uint64 called on non-uint64 field: %v", f)
+		return 0, fmt.Errorf("uint64() called on non-uint64 field: %v", f)
 	}
 	s, err := f.slice(state)
 	if err != nil {
@@ -46,13 +46,13 @@ func (f *fieldSpec) Uint64(state []byte) (uint64, error) {
 	return binary.LittleEndian.Uint64(s), nil
 }
 
-func (f *fieldSpec) Bytes4(state []byte) ([4]byte, error) {
+func (f *fieldSpec) bytes4(state []byte) ([4]byte, error) {
 	var b4 [4]byte
 	if f.t != TypeBytes4 {
-		return b4, fmt.Errorf("Bytes4 called on non-bytes4 field %v", f)
+		return b4, fmt.Errorf("bytes4() called on non-bytes4 field %v", f)
 	}
 	if f.size != 4 {
-		return b4, fmt.Errorf("Bytes4 types must have a size of 4, invalid fieldSpec %v", f)
+		return b4, fmt.Errorf("bytes4() types must have a size of 4, invalid fieldSpec %v", f)
 	}
 	val, err := f.slice(state)
 	if err != nil {
@@ -127,7 +127,7 @@ var beaconStateEpoch = fieldSpec{
 }
 
 func currentVersionFromState(marshaled []byte) ([fieldparams.VersionLength]byte, error) {
-	return beaconStateCurrentVersion.Bytes4(marshaled)
+	return beaconStateCurrentVersion.bytes4(marshaled)
 }
 
 // ByState exploits the fixed-size lower-order bytes in a BeaconState as a heuristic to obtain the value of the
@@ -193,7 +193,7 @@ var beaconBlockSlot = fieldSpec{
 }
 
 func slotFromBlock(marshaled []byte) (types.Slot, error) {
-	slot, err := beaconBlockSlot.Uint64(marshaled)
+	slot, err := beaconBlockSlot.uint64(marshaled)
 	if err != nil {
 		return 0, err
 	}

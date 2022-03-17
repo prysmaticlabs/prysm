@@ -27,7 +27,7 @@ func TestSlotFromBlock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, slot, sfba)
 
-	bm := testBlockMerge()
+	bm := testBlockBellatrix()
 	bm.Block.Slot = slot
 	bmb, err := ba.MarshalSSZ()
 	require.NoError(t, err)
