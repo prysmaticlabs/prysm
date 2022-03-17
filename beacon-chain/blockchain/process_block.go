@@ -365,6 +365,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
+	if _, err := s.notifyForkchoiceUpdate(ctx, b, blockRoot, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
+		return err
+	}
 
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: signed.Block().Slot(),
