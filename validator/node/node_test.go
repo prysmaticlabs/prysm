@@ -324,32 +324,49 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		args        args
 		want        *validator_service_config.PrepareBeaconProposalFileConfig
 		urlResponse string
-		wantErr     bool
+		wantErr     string
 	}{
 		{
 			name: "Happy Path Config file File",
 			args: args{
 				proposalFlagValues: &proposalFlag{
-					dir:        "",
+					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
 					defaultfee: "",
 				},
 			},
-			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
-			wantErr: false,
+			want: &validator_service_config.PrepareBeaconProposalFileConfig{
+				ProposeConfig: map[string]*validator_service_config.ValidatorProposerOptions{
+					"0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a": &validator_service_config.ValidatorProposerOptions{
+						FeeRecipient: "0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3",
+					},
+				},
+				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+				},
+			},
+			wantErr: "",
 		},
-
 		{
 			name: "Happy Path Config URL File",
 			args: args{
 				proposalFlagValues: &proposalFlag{
 					dir:        "",
-					url:        "",
+					url:        "./testdata/good-prepare-beacon-proposer-config.json",
 					defaultfee: "",
 				},
 			},
-			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
-			wantErr: false,
+			want: &validator_service_config.PrepareBeaconProposalFileConfig{
+				ProposeConfig: map[string]*validator_service_config.ValidatorProposerOptions{
+					"0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a": &validator_service_config.ValidatorProposerOptions{
+						FeeRecipient: "0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3",
+					},
+				},
+				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+				},
+			},
+			wantErr: "",
 		},
 		{
 			name: "Happy Path Suggested Fee File",
@@ -357,23 +374,33 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 				proposalFlagValues: &proposalFlag{
 					dir:        "",
 					url:        "",
-					defaultfee: "",
+					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
 				},
 			},
-			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
-			wantErr: false,
+			want: &validator_service_config.PrepareBeaconProposalFileConfig{
+				ProposeConfig: nil,
+				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+				},
+			},
+			wantErr: "",
 		},
 		{
 			name: "Suggested Fee Override Config",
 			args: args{
 				proposalFlagValues: &proposalFlag{
-					dir:        "",
+					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
-					defaultfee: "",
+					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
 				},
 			},
-			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
-			wantErr: false,
+			want: &validator_service_config.PrepareBeaconProposalFileConfig{
+				ProposeConfig: nil,
+				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
+				},
+			},
+			wantErr: "",
 		},
 		{
 			name: "Default Fee Recipient",
@@ -384,20 +411,25 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
-			wantErr: false,
+			want: &validator_service_config.PrepareBeaconProposalFileConfig{
+				ProposeConfig: nil,
+				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					FeeRecipient: "0x0000000000000000000000000000000000000000",
+				},
+			},
+			wantErr: "",
 		},
 		{
 			name: "Both URL and Dir flags used resulting in error",
 			args: args{
 				proposalFlagValues: &proposalFlag{
-					dir:        "./somepath/",
-					url:        "http:exmaple.com/api/config",
+					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
+					url:        "./testdata/good-prepare-beacon-proposer-config.json",
 					defaultfee: "",
 				},
 			},
 			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
-			wantErr: true,
+			wantErr: "cannot specify both",
 		},
 	}
 	for _, tt := range tests {
@@ -409,8 +441,18 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 				require.NoError(t, set.Set(flags.ValidatorsProposerConfigDirFlag.Name, tt.args.proposalFlagValues.dir))
 			}
 			if tt.args.proposalFlagValues.url != "" {
+				content, err := ioutil.ReadFile(tt.args.proposalFlagValues.url)
+				require.NoError(t, err)
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(200)
+					w.Header().Set("Content-Type", "application/json")
+					_, err := fmt.Fprintf(w, string(content))
+					require.NoError(t, err)
+				}))
+				defer srv.Close()
+
 				set.String("validators-proposer-config-url", tt.args.proposalFlagValues.url, "")
-				require.NoError(t, set.Set(flags.ValidatorsProposerConfigURLFlag.Name, tt.args.proposalFlagValues.url))
+				require.NoError(t, set.Set(flags.ValidatorsProposerConfigURLFlag.Name, srv.URL))
 			}
 			if tt.args.proposalFlagValues.defaultfee != "" {
 				set.String("suggested-fee-recipient", tt.args.proposalFlagValues.defaultfee, "")
@@ -418,8 +460,8 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
 			got, err := prepareBeaconProposalConfig(cliCtx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf(" error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
 				return
 			}
 			require.DeepEqual(t, tt.want, got)
