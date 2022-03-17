@@ -3,6 +3,8 @@ package detect
 import (
 	"encoding/binary"
 	"fmt"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
@@ -66,20 +68,21 @@ func (f *fieldSpec) slice(value []byte) ([]byte, error) {
 	return value[f.offset : f.offset+f.size], nil
 }
 
-// ConfigFork represents the intersection of Configuration (eg mainnet, testnet) and ForkName (eg phase0, altair).
+// ConfigFork represents the intersection of Configuration (eg mainnet, testnet) and Fork (eg phase0, altair).
 // Using a detected ConfigFork, a BeaconState or SignedBeaconBlock can be correctly unmarshaled without the need to
 // hard code a concrete type in paths where only the marshaled bytes, or marshaled bytes and a version, are available.
 type ConfigFork struct {
 	ConfigName params.ConfigName
 	Config     *params.BeaconChainConfig
-	ForkName   params.ForkName
-	Version    [4]byte
-	Epoch      types.Epoch
+	// Fork aligns with the fork names in config/params/values.go
+	Fork    int
+	Version [fieldparams.VersionLength]byte
+	Epoch   types.Epoch
 }
 
 // ByVersion uses a lookup table to resolve a Version (from a beacon node api for instance, or obtained by peeking at
 // the bytes of a marshaled BeaconState) to a ConfigFork.
-func ByVersion(cv [4]byte) (*ConfigFork, error) {
+func ByVersion(cv [fieldparams.VersionLength]byte) (*ConfigFork, error) {
 	cf := &ConfigFork{
 		Version: cv,
 	}
@@ -94,11 +97,11 @@ func ByVersion(cv [4]byte) (*ConfigFork, error) {
 				cf.Epoch = e
 				switch v {
 				case genesis:
-					cf.ForkName = params.ForkGenesis
+					cf.Fork = version.Phase0
 				case altair:
-					cf.ForkName = params.ForkAltair
+					cf.Fork = version.Altair
 				case merge:
-					cf.ForkName = params.ForkBellatrix
+					cf.Fork = version.Bellatrix
 				default:
 					return cf, fmt.Errorf("unrecognized fork for config name=%s, BeaconState.fork.current_version=%#x", name.String(), cv)
 				}
@@ -123,7 +126,7 @@ var beaconStateEpoch = fieldSpec{
 	t:      TypeUint64,
 }
 
-func currentVersionFromState(marshaled []byte) ([4]byte, error) {
+func currentVersionFromState(marshaled []byte) ([fieldparams.VersionLength]byte, error) {
 	return beaconStateCurrentVersion.Bytes4(marshaled)
 }
 
@@ -141,8 +144,9 @@ func ByState(marshaled []byte) (*ConfigFork, error) {
 // UnmarshalBeaconState uses internal knowledge in the ConfigFork to pick the right concrete BeaconState type,
 // then Unmarshal()s the type and returns an instance of state.BeaconState if successful.
 func (cf *ConfigFork) UnmarshalBeaconState(marshaled []byte) (s state.BeaconState, err error) {
-	switch forkName := cf.ForkName; forkName {
-	case params.ForkGenesis:
+	forkName := version.String(cf.Fork)
+	switch fork := cf.Fork; fork {
+	case version.Phase0:
 		st := &ethpb.BeaconState{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
@@ -152,7 +156,7 @@ func (cf *ConfigFork) UnmarshalBeaconState(marshaled []byte) (s state.BeaconStat
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
-	case params.ForkAltair:
+	case version.Altair:
 		st := &ethpb.BeaconStateAltair{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
@@ -162,7 +166,7 @@ func (cf *ConfigFork) UnmarshalBeaconState(marshaled []byte) (s state.BeaconStat
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
-	case params.ForkBellatrix:
+	case version.Bellatrix:
 		st := &ethpb.BeaconStateBellatrix{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
@@ -219,15 +223,16 @@ func (cf *ConfigFork) UnmarshalBeaconBlock(marshaled []byte) (block.SignedBeacon
 	}
 
 	var blk ssz.Unmarshaler
-	switch cf.ForkName {
-	case params.ForkGenesis:
+	switch cf.Fork {
+	case version.Phase0:
 		blk = &ethpb.SignedBeaconBlock{}
-	case params.ForkAltair:
+	case version.Altair:
 		blk = &ethpb.SignedBeaconBlockAltair{}
-	case params.ForkBellatrix:
+	case version.Bellatrix:
 		blk = &ethpb.SignedBeaconBlockBellatrix{}
 	default:
-		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", cf.ForkName.String(), slot)
+		forkName := version.String(cf.Fork)
+		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", forkName, slot)
 	}
 	err = blk.UnmarshalSSZ(marshaled)
 	if err != nil {

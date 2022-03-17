@@ -33,27 +33,6 @@ func (n ConfigName) String() string {
 	return s
 }
 
-type ForkName int
-
-const (
-	ForkGenesis ForkName = iota
-	ForkAltair
-	ForkBellatrix
-)
-
-func (n ForkName) String() string {
-	switch n {
-	case ForkGenesis:
-		return "genesis"
-	case ForkAltair:
-		return "altair"
-	case ForkBellatrix:
-		return "bellatrix"
-	}
-
-	return "undefined"
-}
-
 func init() {
 	AllConfigs = make(map[ConfigName]*BeaconChainConfig)
 	for name := range ConfigNames {
