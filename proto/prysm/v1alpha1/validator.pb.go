@@ -8,6 +8,9 @@ package eth
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	empty "github.com/golang/protobuf/ptypes/empty"
 	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
@@ -17,8 +20,6 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
