@@ -83,7 +83,7 @@ func ByVersion(cv [4]byte) (*ConfigFork, error) {
 	cf := &ConfigFork{
 		Version: cv,
 	}
-	for name, cfg := range params.AllConfigs() {
+	for name, cfg := range params.AllConfigs {
 		genesis := bytesutil.ToBytes4(cfg.GenesisForkVersion)
 		altair := bytesutil.ToBytes4(cfg.AltairForkVersion)
 		merge := bytesutil.ToBytes4(cfg.BellatrixForkVersion)

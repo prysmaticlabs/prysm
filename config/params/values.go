@@ -1,5 +1,7 @@
 package params
 
+import "fmt"
+
 const (
 	Mainnet ConfigName = iota
 	Minimal
@@ -7,6 +9,9 @@ const (
 	Pyrmont
 	Prater
 )
+
+// AllConfigs is a map of all BeaconChainConfig values, allowing a BeaconChainConfig to be looked up by its ConfigName
+var AllConfigs map[ConfigName]*BeaconChainConfig
 
 // ConfigNames provides network configuration names.
 var ConfigNames = map[ConfigName]string{
@@ -28,29 +33,6 @@ func (n ConfigName) String() string {
 	return s
 }
 
-func AllConfigs() map[ConfigName]*BeaconChainConfig {
-	all := make(map[ConfigName]*BeaconChainConfig)
-	for name := range ConfigNames {
-		var cfg *BeaconChainConfig
-		switch name {
-		case Mainnet:
-			cfg = MainnetConfig()
-		case Prater:
-			cfg = PraterConfig()
-		case Pyrmont:
-			cfg = PyrmontConfig()
-		case Minimal:
-			cfg = MinimalSpecConfig()
-		case EndToEnd:
-			cfg = E2ETestConfig()
-		}
-		cfg = cfg.Copy()
-		cfg.InitializeForkSchedule()
-		all[name] = cfg
-	}
-	return all
-}
-
 type ForkName int
 
 const (
@@ -70,4 +52,30 @@ func (n ForkName) String() string {
 	}
 
 	return "undefined"
+}
+
+func init() {
+	AllConfigs = make(map[ConfigName]*BeaconChainConfig)
+	for name := range ConfigNames {
+		var cfg *BeaconChainConfig
+		switch name {
+		case Mainnet:
+			cfg = MainnetConfig()
+		case Prater:
+			cfg = PraterConfig()
+		case Pyrmont:
+			cfg = PyrmontConfig()
+		case Minimal:
+			cfg = MinimalSpecConfig()
+		case EndToEnd:
+			cfg = E2ETestConfig()
+		default:
+			msg := fmt.Sprintf("unknown config '%s' added to ConfigNames, "+
+				"please update init() to keep AllConfigs in sync", name)
+			panic(msg)
+		}
+		cfg = cfg.Copy()
+		cfg.InitializeForkSchedule()
+		AllConfigs[name] = cfg
+	}
 }
