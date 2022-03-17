@@ -60,7 +60,7 @@ func ByVersion(cv [fieldparams.VersionLength]byte) (*ConfigFork, error) {
 	for name, cfg := range params.AllConfigs {
 		genesis := bytesutil.ToBytes4(cfg.GenesisForkVersion)
 		altair := bytesutil.ToBytes4(cfg.AltairForkVersion)
-		merge := bytesutil.ToBytes4(cfg.BellatrixForkVersion)
+		bellatrix := bytesutil.ToBytes4(cfg.BellatrixForkVersion)
 		for v, e := range cfg.ForkVersionSchedule {
 			if v == cv {
 				cf.ConfigName = name
