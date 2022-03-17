@@ -71,7 +71,7 @@ func ByVersion(cv [fieldparams.VersionLength]byte) (*ConfigFork, error) {
 					cf.Fork = version.Phase0
 				case altair:
 					cf.Fork = version.Altair
-				case merge:
+				case bellatrix:
 					cf.Fork = version.Bellatrix
 				default:
 					return cf, fmt.Errorf("unrecognized fork for config name=%s, BeaconState.fork.current_version=%#x", name.String(), cv)
