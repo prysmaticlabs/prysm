@@ -11,21 +11,21 @@ const vIdLength = 8
 const pIdLength = 8
 const vpIdsLength = vIdLength + pIdLength
 
-type ValidatorPayloadIDsCache struct {
-	slotToValidatorAndPayloadIDs map[types.Slot][vpIdsLength]byte
+type ProposerPayloadIDsCache struct {
+	slotToProposerAndPayloadIDs map[types.Slot][vpIdsLength]byte
 	sync.RWMutex
 }
 
-func NewValidatorPayloadIDsCache() *ValidatorPayloadIDsCache {
-	return &ValidatorPayloadIDsCache{
-		slotToValidatorAndPayloadIDs: make(map[types.Slot][vpIdsLength]byte),
+func NewProposerPayloadIDsCache() *ProposerPayloadIDsCache {
+	return &ProposerPayloadIDsCache{
+		slotToProposerAndPayloadIDs: make(map[types.Slot][vpIdsLength]byte),
 	}
 }
 
-func (f *ValidatorPayloadIDsCache) GetValidatorPayloadIDs(slot types.Slot) (types.ValidatorIndex, uint64, bool) {
+func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot) (types.ValidatorIndex, uint64, bool) {
 	f.RLock()
 	defer f.RUnlock()
-	ids, ok := f.slotToValidatorAndPayloadIDs[slot]
+	ids, ok := f.slotToProposerAndPayloadIDs[slot]
 	if !ok {
 		return 0, 0, false
 	}
@@ -34,7 +34,7 @@ func (f *ValidatorPayloadIDsCache) GetValidatorPayloadIDs(slot types.Slot) (type
 	return types.ValidatorIndex(bytesutil.BytesToUint64BigEndian(vId)), bytesutil.BytesToUint64BigEndian(pId), true
 }
 
-func (f *ValidatorPayloadIDsCache) SetValidatorAndPayloadIDs(slot types.Slot, vId types.ValidatorIndex, pId uint64) {
+func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId types.ValidatorIndex, pId uint64) {
 	f.Lock()
 	defer f.Unlock()
 	var vIdBytes [vIdLength]byte
@@ -45,5 +45,5 @@ func (f *ValidatorPayloadIDsCache) SetValidatorAndPayloadIDs(slot types.Slot, vI
 	var bytes [vpIdsLength]byte
 	copy(bytes[:], append(vIdBytes[:], pIdBytes[:]...))
 
-	f.slotToValidatorAndPayloadIDs[slot] = bytes
+	f.slotToProposerAndPayloadIDs[slot] = bytes
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -42,6 +43,7 @@ import (
 type Server struct {
 	Ctx                    context.Context
 	AttestationCache       *cache.AttestationCache
+	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
@@ -200,4 +202,13 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 			return status.Error(codes.Canceled, "Context canceled")
 		}
 	}
+}
+
+func (vs *Server) cacheProposerIndexToSlots(slot types.Slot, indexToSlots map[types.ValidatorIndex][]types.Slot) error {
+	for index, slots := range indexToSlots {
+		for _, slot := range slots {
+			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, index, 0 /* payloadID */)
+		}
+	}
+	return nil
 }

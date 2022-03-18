@@ -97,6 +97,13 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		FinalizedBlockHash: finalizedBlockHash,
 	}
 
+	vId, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
+	if ok && vId == vIdx {
+		var vIdBytes [8]byte
+		copy(vIdBytes[:], bytesutil.Uint64ToBytesBigEndian(payloadId))
+		return vs.ExecutionEngineCaller.GetPayload(ctx, vIdBytes)
+	}
+
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
 	burnAddr := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)

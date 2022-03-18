@@ -1,20 +1,26 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -61,8 +67,48 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		FinalizedBlockHash: finalizedHash,
 	}
 
+	var attr *enginev1.PayloadAttributes
+	nextSlot := s.CurrentSlot() + 1
+	vId, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot() + 1)
+	if ok {
+		t, err := slots.ToTime(uint64(s.genesisTime.Unix()), nextSlot)
+		if err != nil {
+			return nil, err
+		}
+		st := s.head.state.Copy()
+		st, err = transition.ProcessSlotsIfPossible(ctx, st, nextSlot)
+		if err != nil {
+			return nil, err
+		}
+		random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+		if err != nil {
+			return nil, err
+		}
+		feeRecipient := params.BeaconConfig().DefaultFeeRecipient
+		recipient, err := s.cfg.BeaconDB.FeeRecipientByValidatorID(ctx, vId)
+		switch err == nil {
+		case true:
+			feeRecipient = recipient
+		case errors.As(err, kv.ErrNotFoundFeeRecipient):
+			burnAddr := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
+			if bytes.Equal(feeRecipient.Bytes(), burnAddr) {
+				logrus.WithFields(logrus.Fields{
+					"validatorIndex": vId,
+					"burnAddress":    burnAddr,
+				}).Error("Fee recipient not set. Using burn address")
+			}
+		default:
+			return nil, errors.Wrap(err, "could not get fee recipient in db")
+		}
+		attr = &enginev1.PayloadAttributes{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+		}
+	}
+
 	// payload attribute is only required when requesting payload, here we are just updating fork choice, so it is nil.
-	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /*payload attribute*/)
+	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
 		case v1.ErrAcceptedSyncingPayloadStatus:
@@ -79,6 +125,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headBlkRoot); err != nil {
 		return nil, errors.Wrap(err, "could not set block to valid")
 	}
+	s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, vId, bytesutil.BytesToUint64BigEndian(payloadID[:]))
 	return payloadID, nil
 }
 

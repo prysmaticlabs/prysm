@@ -137,6 +137,9 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
+	if err := vs.cacheProposerIndexToSlots(epochStartSlot, proposerIndexToSlots); err != nil {
+		return nil, err
+	}
 	// Query the next epoch assignments for committee subnet subscriptions.
 	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch+1)
 	if err != nil {
