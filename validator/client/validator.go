@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -24,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -73,7 +73,7 @@ type validator struct {
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
-	pubkeyHexToValidatorIndex          map[string]types.ValidatorIndex
+	pubkeyHexToValidatorIndex          map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex
 	graffitiOrderedIndex               uint64
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	domainDataCache                    *ristretto.Cache
@@ -93,7 +93,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	prepareBeaconProposalConfig        *validator_service_config.PrepareBeaconProposalFileConfig
+	prepareBeaconProposalConfig        *PrepareBeaconProposalConfig
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -101,6 +101,15 @@ type validatorStatus struct {
 	publicKey []byte
 	status    *ethpb.ValidatorStatusResponse
 	index     types.ValidatorIndex
+}
+
+type PrepareBeaconProposalConfig struct {
+	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ValidatorProposerOptions
+	DefaultConfig *ValidatorProposerOptions
+}
+
+type ValidatorProposerOptions struct {
+	FeeRecipient common.Address
 }
 
 // Done cleans up the validator.
@@ -968,13 +977,13 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 		return nil, err
 	}
 	for _, key := range pubkeys {
-		hexKey := hexutil.Encode(key[:])
-		feeRecipient := fieldparams.Eth1BurnAddressHex
-		validatorIndex := v.pubkeyHexToValidatorIndex[hexKey]
+		feeRecipient := common.HexToAddress(fieldparams.Eth1BurnAddressHex)
+		validatorIndex := v.pubkeyHexToValidatorIndex[key]
 		// ignore updating fee recipient if validator index is not found
 		if validatorIndex == 0 {
 			resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: key[:]})
 			if err != nil {
+				hexKey := hexutil.Encode(key[:])
 				// do a strings contains? to see if the error is a not found error
 				if strings.Contains(err.Error(), "Could not find validator index") {
 					log.Infoln("Could not find validator index for public key %#x not found. "+
@@ -985,24 +994,21 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 			} else {
 				validatorIndex = resp.Index
 				// update the cache for the next time
-				v.pubkeyHexToValidatorIndex[hexKey] = validatorIndex
+				v.pubkeyHexToValidatorIndex[key] = validatorIndex
 			}
 		}
 		if v.prepareBeaconProposalConfig.ProposeConfig != nil {
-			option := v.prepareBeaconProposalConfig.ProposeConfig[hexKey]
-			if option != nil && option.FeeRecipient != "" {
+			option := v.prepareBeaconProposalConfig.ProposeConfig[key]
+			if option != nil {
 				feeRecipient = option.FeeRecipient
 			} else {
 				feeRecipient = v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient
 			}
 		}
-		byteValue, err := hexutil.Decode(feeRecipient)
-		if err != nil {
-			return nil, err
-		}
+		//TODO: change fee recipeint to use common.Address instead of []byte type
 		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 			ValidatorIndex: validatorIndex,
-			FeeRecipient:   byteValue,
+			FeeRecipient:   feeRecipient[:],
 		})
 	}
 	return validatorToFeeRecipientArray, nil

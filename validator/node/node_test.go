@@ -11,13 +11,15 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -322,7 +324,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        args
-		want        *validator_service_config.PrepareBeaconProposalFileConfig
+		want        func() *client.PrepareBeaconProposalConfig
 		urlResponse string
 		wantErr     string
 	}{
@@ -335,15 +337,19 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want: &validator_service_config.PrepareBeaconProposalFileConfig{
-				ProposeConfig: map[string]*validator_service_config.ValidatorProposerOptions{
-					"0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a": &validator_service_config.ValidatorProposerOptions{
-						FeeRecipient: "0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3",
+			want: func() *client.PrepareBeaconProposalConfig {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &client.PrepareBeaconProposalConfig{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*client.ValidatorProposerOptions{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+						},
 					},
-				},
-				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
-					FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
-				},
+					DefaultConfig: &client.ValidatorProposerOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+					},
+				}
 			},
 			wantErr: "",
 		},
@@ -356,15 +362,19 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want: &validator_service_config.PrepareBeaconProposalFileConfig{
-				ProposeConfig: map[string]*validator_service_config.ValidatorProposerOptions{
-					"0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a": &validator_service_config.ValidatorProposerOptions{
-						FeeRecipient: "0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3",
+			want: func() *client.PrepareBeaconProposalConfig {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &client.PrepareBeaconProposalConfig{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*client.ValidatorProposerOptions{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+						},
 					},
-				},
-				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
-					FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
-				},
+					DefaultConfig: &client.ValidatorProposerOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+					},
+				}
 			},
 			wantErr: "",
 		},
@@ -377,11 +387,13 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
 				},
 			},
-			want: &validator_service_config.PrepareBeaconProposalFileConfig{
-				ProposeConfig: nil,
-				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
-					FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
-				},
+			want: func() *client.PrepareBeaconProposalConfig {
+				return &client.PrepareBeaconProposalConfig{
+					ProposeConfig: nil,
+					DefaultConfig: &client.ValidatorProposerOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+					},
+				}
 			},
 			wantErr: "",
 		},
@@ -394,11 +406,13 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
 				},
 			},
-			want: &validator_service_config.PrepareBeaconProposalFileConfig{
-				ProposeConfig: nil,
-				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
-					FeeRecipient: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
-				},
+			want: func() *client.PrepareBeaconProposalConfig {
+				return &client.PrepareBeaconProposalConfig{
+					ProposeConfig: nil,
+					DefaultConfig: &client.ValidatorProposerOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89B"),
+					},
+				}
 			},
 			wantErr: "",
 		},
@@ -411,11 +425,13 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want: &validator_service_config.PrepareBeaconProposalFileConfig{
-				ProposeConfig: nil,
-				DefaultConfig: &validator_service_config.ValidatorProposerOptions{
-					FeeRecipient: "0x0000000000000000000000000000000000000000",
-				},
+			want: func() *client.PrepareBeaconProposalConfig {
+				return &client.PrepareBeaconProposalConfig{
+					ProposeConfig: nil,
+					DefaultConfig: &client.ValidatorProposerOptions{
+						FeeRecipient: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+					},
+				}
 			},
 			wantErr: "",
 		},
@@ -428,7 +444,9 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want:    &validator_service_config.PrepareBeaconProposalFileConfig{},
+			want: func() *client.PrepareBeaconProposalConfig {
+				return &client.PrepareBeaconProposalConfig{}
+			},
 			wantErr: "cannot specify both",
 		},
 	}
@@ -464,7 +482,8 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 				require.ErrorContains(t, tt.wantErr, err)
 				return
 			}
-			require.DeepEqual(t, tt.want, got)
+			w := tt.want()
+			require.DeepEqual(t, w, got)
 		})
 	}
 }

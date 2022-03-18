@@ -17,7 +17,6 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -70,7 +69,7 @@ type ValidatorService struct {
 	grpcHeaders                 []string
 	graffiti                    []byte
 	web3SignerConfig            *remote_web3signer.SetupConfig
-	prepareBeaconProposalConfig *validator_service_config.PrepareBeaconProposalFileConfig
+	prepareBeaconProposalConfig *PrepareBeaconProposalConfig
 }
 
 // Config for the validator service.
@@ -94,7 +93,7 @@ type Config struct {
 	GraffitiFlag                string
 	Endpoint                    string
 	Web3SignerConfig            *remote_web3signer.SetupConfig
-	PrepareBeaconProposalConfig *validator_service_config.PrepareBeaconProposalFileConfig
+	PrepareBeaconProposalConfig *PrepareBeaconProposalConfig
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -190,7 +189,7 @@ func (v *ValidatorService) Start() {
 		emitAccountMetrics:             v.emitAccountMetrics,
 		startBalances:                  make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
-		pubkeyHexToValidatorIndex:      make(map[string]types.ValidatorIndex),
+		pubkeyHexToValidatorIndex:      make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,

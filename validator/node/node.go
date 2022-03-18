@@ -31,7 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	validatorServiceConfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
@@ -478,68 +478,87 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 	return web3signerConfig, nil
 }
 
-func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validator_service_config.PrepareBeaconProposalFileConfig, error) {
-	var config *validator_service_config.PrepareBeaconProposalFileConfig
+func prepareBeaconProposalConfig(cliCtx *cli.Context) (*client.PrepareBeaconProposalConfig, error) {
+	var fileConfig *validatorServiceConfig.PrepareBeaconProposalFileConfig
 	if cliCtx.IsSet(flags.ValidatorsProposerConfigDirFlag.Name) && cliCtx.IsSet(flags.ValidatorsProposerConfigURLFlag.Name) {
-		return nil, errors.New("cannot specify both --validators-proposer-config-dir and --validators-proposer-config-url")
+		return nil, errors.New("cannot specify both --validators-proposer-fileConfig-dir and --validators-proposer-fileConfig-url")
 	}
 	if cliCtx.IsSet(flags.ValidatorsProposerConfigDirFlag.Name) {
-		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigDirFlag.Name), &config); err != nil {
+		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigDirFlag.Name), &fileConfig); err != nil {
 			return nil, err
 		}
 	}
 	if cliCtx.IsSet(flags.ValidatorsProposerConfigURLFlag.Name) {
-		if err := unmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigURLFlag.Name), &config); err != nil {
+		if err := unmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigURLFlag.Name), &fileConfig); err != nil {
 			return nil, err
 		}
 	}
-
-	// override the default config with the config from the command line
+	// override the default fileConfig with the fileConfig from the command line
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		config = &validator_service_config.PrepareBeaconProposalFileConfig{
+		fileConfig = &validatorServiceConfig.PrepareBeaconProposalFileConfig{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+			DefaultConfig: &validatorServiceConfig.ValidatorProposerOptions{
 				FeeRecipient: suggestedFee,
 			},
 		}
 	}
-	if config != nil {
-		// default config is mandatory
-		if config.DefaultConfig == nil {
-			return nil, errors.New("default config is required")
-		}
-		if !common.IsHexAddress(config.DefaultConfig.FeeRecipient) {
-			return nil, errors.New("default config fee recipient is not a valid eth1 address")
-		}
-		if config.ProposeConfig != nil {
-			for key, option := range config.ProposeConfig {
-				decodedKey, err := hexutil.Decode(key)
-				if err != nil {
-					return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
-				}
-				if len(decodedKey) != fieldparams.BLSPubkeyLength {
-					return nil, fmt.Errorf("%v  is not a bls public key", key)
-				}
-				if option == nil {
-					return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
-				}
-				if !common.IsHexAddress(config.DefaultConfig.FeeRecipient) {
-					return nil, fmt.Errorf("fee recipient is not a valid eth1 address for proposer %s", key)
-				}
-			}
-		}
-	} else {
+
+	if fileConfig == nil {
 		// if no flags were set, use the burn address
-		log.Warnf("No validator proposer config or default fee specified!! validators will continue to propose with burn address")
-		config = &validator_service_config.PrepareBeaconProposalFileConfig{
+		log.Warnf("No validator proposer fileConfig or default fee specified!! validators will continue to propose with burn address")
+		fileConfig = &validatorServiceConfig.PrepareBeaconProposalFileConfig{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+			DefaultConfig: &validatorServiceConfig.ValidatorProposerOptions{
 				FeeRecipient: fieldparams.Eth1BurnAddressHex,
 			},
 		}
 	}
-	return config, nil
+	//convert file config to proposer config for internal use
+	proposerConfig := &client.PrepareBeaconProposalConfig{}
+
+	// default fileConfig is mandatory
+	if fileConfig.DefaultConfig == nil {
+		return nil, errors.New("default fileConfig is required")
+	}
+	bytes, err := hexutil.Decode(fileConfig.DefaultConfig.FeeRecipient)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not decode fee recipient %s", fileConfig.DefaultConfig.FeeRecipient)
+	}
+	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
+		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
+	}
+	proposerConfig.DefaultConfig = &client.ValidatorProposerOptions{
+		FeeRecipient: common.BytesToAddress(bytes),
+	}
+
+	if fileConfig.ProposeConfig != nil {
+		proposerConfig.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*client.ValidatorProposerOptions)
+		for key, option := range fileConfig.ProposeConfig {
+			decodedKey, err := hexutil.Decode(key)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+			}
+			if len(decodedKey) != fieldparams.BLSPubkeyLength {
+				return nil, fmt.Errorf("%v  is not a bls public key", key)
+			}
+			if option == nil {
+				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
+			}
+			feebytes, err := hexutil.Decode(option.FeeRecipient)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
+			}
+			if !common.IsHexAddress(option.FeeRecipient) {
+				return nil, errors.New("fee recipient is not a valid eth1 address")
+			}
+			proposerConfig.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &client.ValidatorProposerOptions{
+				FeeRecipient: common.BytesToAddress(feebytes),
+			}
+		}
+	}
+
+	return proposerConfig, nil
 }
 
 func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
