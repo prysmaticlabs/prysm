@@ -949,7 +949,14 @@ func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKe
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
-	feeRecipients, err := v.feeRecipients(ctx, km)
+	if v.prepareBeaconProposalConfig == nil {
+		return errors.New("no config was provided to set validator fee recipients")
+	}
+	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return err
+	}
+	feeRecipients, err := v.feeRecipients(ctx, pubkeys)
 	if err != nil {
 		return err
 	}
@@ -966,36 +973,25 @@ func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKe
 	return nil
 }
 
-func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
+func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
 	var validatorToFeeRecipientArray []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
-	if v.prepareBeaconProposalConfig == nil {
-		return nil, errors.New("no config was provided to set validator fee recipients")
-	}
-	// need to check for new keys
-	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return nil, err
-	}
+	// need to check for pubkey to validator index mappings
 	for _, key := range pubkeys {
 		feeRecipient := common.HexToAddress(fieldparams.Eth1BurnAddressHex)
 		validatorIndex := v.pubkeyHexToValidatorIndex[key]
 		// ignore updating fee recipient if validator index is not found
 		if validatorIndex == 0 {
-			resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: key[:]})
+			ind, err := v.cacheValidatorPubkeyHexToValidatorIndex(ctx, key)
 			if err != nil {
-				hexKey := hexutil.Encode(key[:])
-				// do a strings contains? to see if the error is a not found error
-				if strings.Contains(err.Error(), "Could not find validator index") {
-					log.Infoln("Could not find validator index for public key %#x not found. "+
-						"Perhaps the validator is not yet active.", hexKey)
-					continue
-				}
 				return nil, err
-			} else {
-				validatorIndex = resp.Index
-				// update the cache for the next time
-				v.pubkeyHexToValidatorIndex[key] = validatorIndex
 			}
+			if ind == 0 {
+				//continue if it's still 0
+				continue
+			}
+			validatorIndex = ind
+			// update the cache for the next time if it's not 0
+			v.pubkeyHexToValidatorIndex[key] = validatorIndex
 		}
 		if v.prepareBeaconProposalConfig.ProposeConfig != nil {
 			option := v.prepareBeaconProposalConfig.ProposeConfig[key]
@@ -1012,6 +1008,21 @@ func (v *validator) feeRecipients(ctx context.Context, km keymanager.IKeymanager
 		})
 	}
 	return validatorToFeeRecipientArray, nil
+}
+
+func (v *validator) cacheValidatorPubkeyHexToValidatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, error) {
+	resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey[:]})
+	if err != nil {
+		hexKey := hexutil.Encode(pubkey[:])
+		// do a strings contains? to see if the error is a not found error
+		if strings.Contains(err.Error(), "Could not find validator index") {
+			log.Warnf("Could not find validator index for public key %#x not found. "+
+				"Perhaps the validator is not yet active.", hexKey)
+			return 0, nil
+		}
+		return 0, err
+	}
+	return resp.Index, nil
 }
 
 // This constructs a validator subscribed key, it's used to track
