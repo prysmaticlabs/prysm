@@ -21,8 +21,10 @@ func (f fieldType) String() string {
 		return "uint64"
 	case typeBytes4:
 		return "bytes4"
-	default:
+	case typeUndefined:
 		return "undefined"
+	default:
+		return "invalid"
 	}
 }
 
