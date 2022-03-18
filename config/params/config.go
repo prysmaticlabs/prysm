@@ -3,11 +3,9 @@ package params
 
 import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -203,48 +201,4 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 	// Set Bellatrix fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
-}
-
-// ForkScheduleEntry is a Version+Epoch tuple for sorted storage in an OrderedForkSchedule
-type ForkScheduleEntry struct {
-	Version [fieldparams.VersionLength]byte
-	Epoch   types.Epoch
-}
-
-// OrderedForkSchedule provides a type that can be used to sort the fork schedule and find the Version
-// the chain should be at for a given epoch (via VersionForEpoch).
-type OrderedForkSchedule []ForkScheduleEntry
-
-// Len implements the Len method of sort.Interface
-func (o OrderedForkSchedule) Len() int { return len(o) }
-
-// Swap implements the Swap method of sort.Interface
-func (o OrderedForkSchedule) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
-
-// Less implements the Less method of sort.Interface
-func (o OrderedForkSchedule) Less(i, j int) bool { return o[i].Epoch < o[j].Epoch }
-
-// VersionForEpoch finds the Version with the highest epoch <= the given epoch
-func (o OrderedForkSchedule) VersionForEpoch(epoch types.Epoch) ([fieldparams.VersionLength]byte, error) {
-	for i := len(o) - 1; i >= 0; i-- {
-		if o[i].Epoch <= epoch {
-			return o[i].Version, nil
-		}
-	}
-	return [fieldparams.VersionLength]byte{}, errors.Wrapf(ErrVersionNotFound, "no epoch in list <= %d", epoch)
-}
-
-// Converts the ForkVersionSchedule map into a list of Version+Epoch values, ordered by Epoch from lowest to highest.
-// See docs for OrderedForkSchedule for more detail on what you can do with this type.
-func (b *BeaconChainConfig) OrderedForkSchedule() OrderedForkSchedule {
-	ofs := make(OrderedForkSchedule, 0)
-	for version, epoch := range b.ForkVersionSchedule {
-		fse := ForkScheduleEntry{
-			Version: version,
-			Epoch:   epoch,
-		}
-		ofs = append(ofs, fse)
-	}
-	sort.Sort(ofs)
-	return ofs
 }

@@ -3,6 +3,7 @@ package detect
 import (
 	"fmt"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/network/forks"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
@@ -147,7 +148,7 @@ func (cf *ConfigFork) UnmarshalBeaconBlock(marshaled []byte) (block.SignedBeacon
 	// get the version that corresponds to the epoch the block is from according to the fork choice schedule
 	// and make sure that the version is the same one that was pulled from the state
 	epoch := slots.ToEpoch(slot)
-	fs := cf.Config.OrderedForkSchedule()
+	fs := forks.NewOrderedSchedule(cf.Config)
 	ver, err := fs.VersionForEpoch(epoch)
 	if err != nil {
 		return nil, err

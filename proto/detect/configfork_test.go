@@ -53,28 +53,28 @@ func TestByState(t *testing.T) {
 	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
 	bellaSlot, err := slots.EpochStart(bc.BellatrixForkEpoch)
 	require.NoError(t, err)
-	cases := []struct{
-		name string
-		version int
-		slot types.Slot
+	cases := []struct {
+		name        string
+		version     int
+		slot        types.Slot
 		forkversion [4]byte
 	}{
 		{
-			name: "genesis",
-			version: version.Phase0,
-			slot: 0,
+			name:        "genesis",
+			version:     version.Phase0,
+			slot:        0,
 			forkversion: bytesutil.ToBytes4(bc.GenesisForkVersion),
 		},
 		{
-			name: "altair",
-			version: version.Altair,
-			slot: altairSlot,
+			name:        "altair",
+			version:     version.Altair,
+			slot:        altairSlot,
 			forkversion: bytesutil.ToBytes4(bc.AltairForkVersion),
 		},
 		{
-			name: "bellatrix",
-			version: version.Bellatrix,
-			slot: bellaSlot,
+			name:        "bellatrix",
+			version:     version.Bellatrix,
+			slot:        bellaSlot,
 			forkversion: bytesutil.ToBytes4(bc.BellatrixForkVersion),
 		},
 	}
@@ -83,8 +83,8 @@ func TestByState(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, st.SetFork(&ethpb.Fork{
 			PreviousVersion: make([]byte, 4),
-			CurrentVersion: c.forkversion[:],
-			Epoch:          0,
+			CurrentVersion:  c.forkversion[:],
+			Epoch:           0,
 		}))
 		require.NoError(t, st.SetSlot(c.slot))
 		m, err := st.MarshalSSZ()
@@ -117,28 +117,28 @@ func TestUnmarshalState(t *testing.T) {
 	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
 	bellaSlot, err := slots.EpochStart(bc.BellatrixForkEpoch)
 	require.NoError(t, err)
-	cases := []struct{
-		name string
-		version int
-		slot types.Slot
+	cases := []struct {
+		name        string
+		version     int
+		slot        types.Slot
 		forkversion [4]byte
 	}{
 		{
-			name: "genesis",
-			version: version.Phase0,
-			slot: 0,
+			name:        "genesis",
+			version:     version.Phase0,
+			slot:        0,
 			forkversion: bytesutil.ToBytes4(bc.GenesisForkVersion),
 		},
 		{
-			name: "altair",
-			version: version.Altair,
-			slot: altairSlot,
+			name:        "altair",
+			version:     version.Altair,
+			slot:        altairSlot,
 			forkversion: bytesutil.ToBytes4(bc.AltairForkVersion),
 		},
 		{
-			name: "bellatrix",
-			version: version.Bellatrix,
-			slot: bellaSlot,
+			name:        "bellatrix",
+			version:     version.Bellatrix,
+			slot:        bellaSlot,
 			forkversion: bytesutil.ToBytes4(bc.BellatrixForkVersion),
 		},
 	}
@@ -147,8 +147,8 @@ func TestUnmarshalState(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, st.SetFork(&ethpb.Fork{
 			PreviousVersion: make([]byte, 4),
-			CurrentVersion: c.forkversion[:],
-			Epoch:          0,
+			CurrentVersion:  c.forkversion[:],
+			Epoch:           0,
 		}))
 		require.NoError(t, st.SetSlot(c.slot))
 		m, err := st.MarshalSSZ()

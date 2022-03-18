@@ -1,4 +1,4 @@
-package params
+package forks
 
 import "github.com/pkg/errors"
 
