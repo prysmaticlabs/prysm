@@ -173,20 +173,21 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 
 // This calls notify Forkchoice Update in the event that the head has changed
 func (s *Service) notifyEngineIfChangedHead(prevHead [32]byte) {
-	if s.headRoot() != prevHead {
-		finalized := s.store.FinalizedCheckpt()
-		if finalized == nil {
-			log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
-			return
-		}
-		_, err := s.notifyForkchoiceUpdate(s.ctx,
-			s.headBlock().Block(),
-			s.headRoot(),
-			bytesutil.ToBytes32(finalized.Root),
-		)
-		if err != nil {
-			log.WithError(err).Error("could not notify forkchoice update")
-		}
+	if s.headRoot() == prevHead {
+		return
+	}
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
+		return
+	}
+	_, err := s.notifyForkchoiceUpdate(s.ctx,
+		s.headBlock().Block(),
+		s.headRoot(),
+		bytesutil.ToBytes32(finalized.Root),
+	)
+	if err != nil {
+		log.WithError(err).Error("could not notify forkchoice update")
 	}
 }
 
