@@ -396,7 +396,8 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 	}
 
 	var actualRespContainer interface{}
-	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
+	switch {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
 		actualRespContainer = &phase0BlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockContainerJson{
@@ -404,7 +405,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
-	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockAltairContainerJson{
@@ -412,7 +413,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
-	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())) {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
 		actualRespContainer = &bellatrixBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockBellatrixContainerJson{
@@ -420,7 +421,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
-	} else {
+	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
 
