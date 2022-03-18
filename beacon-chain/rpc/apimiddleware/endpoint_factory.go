@@ -65,6 +65,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/aggregate_and_proofs",
 		"/eth/v1/validator/sync_committee_contribution",
 		"/eth/v1/validator/contribution_and_proofs",
+		"/eth/v1/validator/prepare_beacon_proposer",
 	}
 }
 
@@ -251,6 +252,11 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.PostRequest = &submitContributionAndProofsRequestJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSignedContributionAndProofsArray,
+		}
+	case "/eth/v1/validator/prepare_beacon_proposer":
+		endpoint.PostRequest = &feeRecipientsRequestJSON{}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: wrapFeeRecipientsArray,
 		}
 	default:
 		return nil, errors.New("invalid path")

@@ -777,7 +777,7 @@ func TestSerializeV2State(t *testing.T) {
 	})
 }
 
-func TestSerializeProduceV2Block(t *testing.T) {
+func TestSerializeProducedV2Block(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_PHASE0.String(),
@@ -789,7 +789,6 @@ func TestSerializeProduceV2Block(t *testing.T) {
 					StateRoot:     "root",
 					Body:          &beaconBlockBodyJson{},
 				},
-				AltairBlock: nil,
 			},
 		}
 		runDefault, j, errJson := serializeProducedV2Block(response)
@@ -812,7 +811,6 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &beaconBlockContainerV2Json{
-				Phase0Block: nil,
 				AltairBlock: &beaconBlockAltairJson{
 					Slot:          "1",
 					ProposerIndex: "1",
@@ -827,6 +825,35 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
 		resp := &altairProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		response := &produceBlockResponseV2Json{
+			Version: ethpbv2.Version_BELLATRIX.String(),
+			Data: &beaconBlockContainerV2Json{
+				BellatrixBlock: &beaconBlockBellatrixJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyBellatrixJson{},
+				},
+			},
+		}
+		runDefault, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &bellatrixProduceBlockResponseJson{}
 		require.NoError(t, json.Unmarshal(j, resp))
 		require.NotNil(t, resp.Data)
 		require.NotNil(t, resp.Data)

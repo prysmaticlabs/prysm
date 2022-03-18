@@ -155,7 +155,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			engine := &mockEngineService{forkchoiceError: tt.newForkchoiceErr}
 			service.cfg.ExecutionEngineCaller = engine
-			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, tt.finalizedRoot)
+			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, service.headRoot(), tt.finalizedRoot)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -516,7 +516,7 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 		ReceiptsRoot:  make([]byte, 32),
 		LogsBloom:     make([]byte, 256),
 		PrevRandao:    make([]byte, 32),
-		BaseFeePerGas: make([]byte, 32),
+		BaseFeePerGas: bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
 		BlockHash:     make([]byte, 32),
 		BlockNumber:   100,
 	}

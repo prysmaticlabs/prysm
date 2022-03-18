@@ -3,10 +3,13 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -391,11 +394,29 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
-// PrepareBeaconProposer --
+// PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
 func (vs *Server) PrepareBeaconProposer(
-	_ context.Context, _ *ethpbv1.PrepareBeaconProposerRequest,
+	ctx context.Context, request *ethpbv1.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, status.Error(codes.Unimplemented, "Unimplemented")
+	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
+	defer span.End()
+	var feeRecipients []common.Address
+	var validatorIndices []types.ValidatorIndex
+	for _, recipientContainer := range request.Recipients {
+		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
+		if !common.IsHexAddress(recipient) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
+		}
+		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
+		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
+	}
+	if err := vs.V1Alpha1Server.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
+	}
+	log.WithFields(log.Fields{
+		"validatorIndices": validatorIndices,
+	}).Info("Updated fee recipient addresses for validator indices")
+	return &emptypb.Empty{}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for
