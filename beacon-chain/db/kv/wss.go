@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/proto/detect"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -26,7 +26,7 @@ func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Read
 		return errors.Wrap(err, "error reading block given to SaveOrigin")
 	}
 
-	cf, err := detect.ByState(sb)
+	cf, err := detect.FromState(sb)
 	if err != nil {
 		return errors.Wrap(err, "failed to detect config and fork for origin state")
 	}
