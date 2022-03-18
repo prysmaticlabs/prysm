@@ -64,7 +64,7 @@ func init() {
 		// ensure that fork schedule is consistent w/ struct fields for all known configurations
 		cfg.InitializeForkSchedule()
 		// ensure that all fork versions are unique
-		for v, _ := range cfg.ForkVersionSchedule {
+		for v := range cfg.ForkVersionSchedule {
 			pn, exists := knownForkVersions[v]
 			if exists {
 				previous := KnownConfigs[pn]()
