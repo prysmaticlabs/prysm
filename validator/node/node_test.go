@@ -485,7 +485,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
 			if tt.args.proposalFlagValues.dir != "" {
-				set.String("validators-proposer-config-dir", tt.args.proposalFlagValues.dir, "")
+				set.String(flags.ValidatorsProposerConfigFilepathFlag.Name, tt.args.proposalFlagValues.dir, "")
 				require.NoError(t, set.Set(flags.ValidatorsProposerConfigFilepathFlag.Name, tt.args.proposalFlagValues.dir))
 			}
 			if tt.args.proposalFlagValues.url != "" {
@@ -499,11 +499,11 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 				}))
 				defer srv.Close()
 
-				set.String("validators-proposer-config-url", tt.args.proposalFlagValues.url, "")
+				set.String(flags.ValidatorsProposerConfigURLFlag.Name, tt.args.proposalFlagValues.url, "")
 				require.NoError(t, set.Set(flags.ValidatorsProposerConfigURLFlag.Name, srv.URL))
 			}
 			if tt.args.proposalFlagValues.defaultfee != "" {
-				set.String("suggested-fee-recipient", tt.args.proposalFlagValues.defaultfee, "")
+				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposalFlagValues.defaultfee, "")
 				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposalFlagValues.defaultfee))
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
