@@ -1014,7 +1014,6 @@ func (v *validator) cacheValidatorPubkeyHexToValidatorIndex(ctx context.Context,
 	resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey[:]})
 	if err != nil {
 		hexKey := hexutil.Encode(pubkey[:])
-		// do a strings contains? to see if the error is a not found error
 		if strings.Contains(err.Error(), "Could not find validator index") {
 			log.Warnf("Could not find validator index for public key %#x not found. "+
 				"Perhaps the validator is not yet active", hexKey)
