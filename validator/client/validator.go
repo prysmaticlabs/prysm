@@ -949,9 +949,6 @@ func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKe
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
-	if v.prepareBeaconProposalConfig == nil {
-		return errors.New("no config was provided to set validator fee recipients")
-	}
 	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
@@ -978,15 +975,15 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 	// need to check for pubkey to validator index mappings
 	for _, key := range pubkeys {
 		feeRecipient := common.HexToAddress(fieldparams.EthBurnAddressHex)
-		validatorIndex := v.pubkeyHexToValidatorIndex[key]
+		validatorIndex, found := v.pubkeyHexToValidatorIndex[key]
 		// ignore updating fee recipient if validator index is not found
-		if validatorIndex == 0 {
-			ind, err := v.cacheValidatorPubkeyHexToValidatorIndex(ctx, key)
+		if !found {
+			ind, foundIndex, err := v.cacheValidatorPubkeyHexToValidatorIndex(ctx, key)
 			if err != nil {
 				return nil, err
 			}
-			if ind == 0 {
-				//continue if it's still 0
+			if !foundIndex {
+				//if still not found, skip this validator
 				continue
 			}
 			validatorIndex = ind
@@ -1009,18 +1006,18 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 	return validatorToFeeRecipientArray, nil
 }
 
-func (v *validator) cacheValidatorPubkeyHexToValidatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, error) {
+func (v *validator) cacheValidatorPubkeyHexToValidatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool, error) {
 	resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey[:]})
 	if err != nil {
 		hexKey := hexutil.Encode(pubkey[:])
 		if strings.Contains(err.Error(), "Could not find validator index") {
 			log.Warnf("Could not find validator index for public key %#x not found. "+
-				"Perhaps the validator is not yet active", hexKey)
-			return 0, nil
+				"Perhaps the validator is not yet active.", hexKey)
+			return 0, false, nil
 		}
-		return 0, err
+		return 0, false, err
 	}
-	return resp.Index, nil
+	return resp.Index, true, nil
 }
 
 // This constructs a validator subscribed key, it's used to track
