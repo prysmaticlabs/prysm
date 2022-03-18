@@ -33,14 +33,14 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	}
 	// Must not call fork choice updated until the transition conditions are met on the Pow network.
 	if isPreBellatrix(headBlk.Version()) {
-		return nil, nil
+		return nil, s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot)
 	}
 	isExecutionBlk, err := blocks.ExecutionBlock(headBlk.Body())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not determine if block is execution block")
 	}
 	if !isExecutionBlk {
-		return nil, nil
+		return nil, s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot)
 	}
 	headPayload, err := headBlk.Body().ExecutionPayload()
 	if err != nil {
