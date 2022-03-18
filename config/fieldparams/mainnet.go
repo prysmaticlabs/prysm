@@ -22,5 +22,5 @@ const (
 	MaxBytesPerTxLength             = 1073741824                                   // MaxBytesPerTxLength defines the maximum number of bytes that can be included in a transaction.
 	FeeRecipientLength              = 20                                           // FeeRecipientLength defines the byte length of a fee recipient.
 	LogsBloomLength                 = 256                                          // LogsBloomLength defines the byte length of a logs bloom.
-	Eth1BurnAddressHex              = "0x0000000000000000000000000000000000000000" // Eth1BurnAddressHex defines the hex encoded address of the eth1.0 burn contract.
+	EthBurnAddressHex               = "0x0000000000000000000000000000000000000000" // EthBurnAddressHex defines the hex encoded address of the eth1.0 burn contract.
 )

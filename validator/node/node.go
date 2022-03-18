@@ -510,7 +510,7 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*client.PrepareBeaconProp
 		fileConfig = &validatorServiceConfig.PrepareBeaconProposalFileConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ValidatorProposerOptions{
-				FeeRecipient: fieldparams.Eth1BurnAddressHex,
+				FeeRecipient: fieldparams.EthBurnAddressHex,
 			},
 		}
 	}

@@ -341,7 +341,7 @@ var (
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
 		Name:  "suggested-fee-recipient",
 		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block. Overrides the ProposerConfigFlag(s) if set",
-		Value: field_params.Eth1BurnAddressHex,
+		Value: field_params.EthBurnAddressHex,
 	}
 )
 

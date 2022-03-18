@@ -977,7 +977,7 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 	var validatorToFeeRecipientArray []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	// need to check for pubkey to validator index mappings
 	for _, key := range pubkeys {
-		feeRecipient := common.HexToAddress(fieldparams.Eth1BurnAddressHex)
+		feeRecipient := common.HexToAddress(fieldparams.EthBurnAddressHex)
 		validatorIndex := v.pubkeyHexToValidatorIndex[key]
 		// ignore updating fee recipient if validator index is not found
 		if validatorIndex == 0 {
