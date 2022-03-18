@@ -98,7 +98,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	}
 
 	vId, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
-	if ok && vId == vIdx {
+	if ok && vId == vIdx && payloadId != 0 {
 		var vIdBytes [8]byte
 		copy(vIdBytes[:], bytesutil.Uint64ToBytesBigEndian(payloadId))
 		return vs.ExecutionEngineCaller.GetPayload(ctx, vIdBytes)

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -94,7 +95,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 			if bytes.Equal(feeRecipient.Bytes(), burnAddr) {
 				logrus.WithFields(logrus.Fields{
 					"validatorIndex": vId,
-					"burnAddress":    burnAddr,
+					"burnAddress":    common.BytesToAddress(burnAddr).String(),
 				}).Error("Fee recipient not set. Using burn address")
 			}
 		default:
@@ -125,7 +126,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot); err != nil {
 		return nil, errors.Wrap(err, "could not set block to valid")
 	}
-	s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, vId, bytesutil.BytesToUint64BigEndian(payloadID[:]))
+	if ok {
+		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, vId, bytesutil.BytesToUint64BigEndian(payloadID[:]))
+	}
 	return payloadID, nil
 }
 
