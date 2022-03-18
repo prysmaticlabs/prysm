@@ -1,6 +1,7 @@
 package detect
 
 import (
+	"context"
 	"fmt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -49,19 +50,8 @@ func TestSlotFromBlock(t *testing.T) {
 func TestByState(t *testing.T) {
 	bc, cleanup := hackBellatrixMaxuint()
 	defer cleanup()
-	stForVersion := func(v int) (state.BeaconState, error) {
-		switch v {
-		case version.Phase0:
-			return util.NewBeaconState()
-		case version.Altair:
-			return util.NewBeaconStateAltair()
-		case version.Bellatrix:
-			return util.NewBeaconStateBellatrix()
-		default:
-			return nil, fmt.Errorf("unrecognoized version %d", v)
-		}
-	}
 	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
+	bellaSlot, err := slots.EpochStart(bc.BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct{
 		name string
@@ -84,12 +74,12 @@ func TestByState(t *testing.T) {
 		{
 			name: "bellatrix",
 			version: version.Bellatrix,
-			slot: altairSlot,
+			slot: bellaSlot,
 			forkversion: bytesutil.ToBytes4(bc.BellatrixForkVersion),
 		},
 	}
 	for _, c := range cases {
-		st, err := stForVersion(c.version)
+		st, err := stateForVersion(c.version)
 		require.NoError(t, err)
 		require.NoError(t, st.SetFork(&ethpb.Fork{
 			PreviousVersion: make([]byte, 4),
@@ -104,6 +94,74 @@ func TestByState(t *testing.T) {
 		require.Equal(t, c.version, cf.Fork)
 		require.Equal(t, c.forkversion, cf.Version)
 		require.Equal(t, bc.ConfigName, cf.Config.ConfigName)
+	}
+}
+
+func stateForVersion(v int) (state.BeaconState, error) {
+	switch v {
+	case version.Phase0:
+		return util.NewBeaconState()
+	case version.Altair:
+		return util.NewBeaconStateAltair()
+	case version.Bellatrix:
+		return util.NewBeaconStateBellatrix()
+	default:
+		return nil, fmt.Errorf("unrecognoized version %d", v)
+	}
+}
+
+func TestUnmarshalState(t *testing.T) {
+	ctx := context.Background()
+	bc, cleanup := hackBellatrixMaxuint()
+	defer cleanup()
+	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
+	bellaSlot, err := slots.EpochStart(bc.BellatrixForkEpoch)
+	require.NoError(t, err)
+	cases := []struct{
+		name string
+		version int
+		slot types.Slot
+		forkversion [4]byte
+	}{
+		{
+			name: "genesis",
+			version: version.Phase0,
+			slot: 0,
+			forkversion: bytesutil.ToBytes4(bc.GenesisForkVersion),
+		},
+		{
+			name: "altair",
+			version: version.Altair,
+			slot: altairSlot,
+			forkversion: bytesutil.ToBytes4(bc.AltairForkVersion),
+		},
+		{
+			name: "bellatrix",
+			version: version.Bellatrix,
+			slot: bellaSlot,
+			forkversion: bytesutil.ToBytes4(bc.BellatrixForkVersion),
+		},
+	}
+	for _, c := range cases {
+		st, err := stateForVersion(c.version)
+		require.NoError(t, err)
+		require.NoError(t, st.SetFork(&ethpb.Fork{
+			PreviousVersion: make([]byte, 4),
+			CurrentVersion: c.forkversion[:],
+			Epoch:          0,
+		}))
+		require.NoError(t, st.SetSlot(c.slot))
+		m, err := st.MarshalSSZ()
+		require.NoError(t, err)
+		cf, err := ByState(m)
+		require.NoError(t, err)
+		s, err := cf.UnmarshalBeaconState(m)
+		require.NoError(t, err)
+		expected, err := st.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		actual, err := s.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		require.DeepEqual(t, expected, actual)
 	}
 }
 
