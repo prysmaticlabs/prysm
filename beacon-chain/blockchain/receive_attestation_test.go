@@ -117,3 +117,26 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	require.LogsDoNotContain(t, hook, "Could not process attestation for fork choice")
 }
+
+func TestNotifyEngineIfChangedHead(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	opts := testServiceOptsWithDB(t)
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	service.notifyEngineIfChangedHead(service.headRoot())
+	hookErr := "could not notify forkchoice update"
+	finalizedErr := "could not get finalized checkpoint"
+	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, hookErr)
+	service.notifyEngineIfChangedHead([32]byte{'a'})
+	require.LogsContain(t, hook, finalizedErr)
+
+	hook.Reset()
+	finalized := &ethpb.Checkpoint{Root: []byte{'f'}, Epoch: 0}
+	service.store.SetFinalizedCheckpt(finalized)
+	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, hookErr)
+}
