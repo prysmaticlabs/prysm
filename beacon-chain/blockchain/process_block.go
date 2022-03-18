@@ -317,7 +317,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, b); err != nil {
 			return nil, nil, err
 		}
-
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
