@@ -295,7 +295,7 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 	rBlock.Block.ParentRoot = gRoot[:]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), blks[0]))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, blkRoots[0], firstState))
-	_, _, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
+	_, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
 	require.NoError(t, err)
 }
 
@@ -349,6 +349,56 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, blkRoots[0], firstState))
 	_, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
 	require.NoError(t, err)
+}
+
+func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	genesis := blocks.NewGenesisBlock(params.BeaconConfig().ZeroHash[:])
+	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)))
+	gRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
+	service.cfg.ForkChoiceStore = doublylinkedtree.New(0, 0)
+	service.saveInitSyncBlock(gRoot, wrapper.WrappedPhase0SignedBeaconBlock(genesis))
+	st, keys := util.DeterministicGenesisState(t, 64)
+	bState := st.Copy()
+
+	var blks []block.SignedBeaconBlock
+	var blkRoots [][32]byte
+	var firstState state.BeaconState
+	blkCount := 4
+	for i := 1; i <= blkCount; i++ {
+		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		bState, err = transition.ExecuteStateTransition(ctx, bState, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		require.NoError(t, err)
+		if i == 1 {
+			firstState = bState.Copy()
+		}
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		service.saveInitSyncBlock(root, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		blks = append(blks, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		blkRoots = append(blkRoots, root)
+	}
+
+	rBlock, err := blks[0].PbPhase0Block()
+	assert.NoError(t, err)
+	rBlock.Block.ParentRoot = gRoot[:]
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), blks[0]))
+	require.NoError(t, service.cfg.StateGen.SaveState(ctx, blkRoots[0], firstState))
+	cp1, cp2, err := service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
+	require.NoError(t, err)
+	require.Equal(t, blkCount-1, len(cp1))
+	require.Equal(t, blkCount-1, len(cp2))
 }
 
 func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
