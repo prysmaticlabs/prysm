@@ -35,10 +35,10 @@ var ConfigNames = map[ConfigName]string{
 
 // KnownConfigs provides an index of all known BeaconChainConfig values.
 var KnownConfigs = map[ConfigName]func() *BeaconChainConfig{
-	Mainnet: MainnetConfig,
-	Prater: PraterConfig,
-	Pyrmont: PyrmontConfig,
-	Minimal: MinimalSpecConfig,
+	Mainnet:  MainnetConfig,
+	Prater:   PraterConfig,
+	Pyrmont:  PyrmontConfig,
+	Minimal:  MinimalSpecConfig,
 	EndToEnd: E2ETestConfig,
 }
 

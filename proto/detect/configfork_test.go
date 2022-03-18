@@ -5,6 +5,8 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"math"
 	"testing"
@@ -42,8 +44,28 @@ func TestSlotFromBlock(t *testing.T) {
 	require.Equal(t, slot, sfbm)
 }
 
-func TestUnmarshalBlock(t *testing.T) {
-	// We start off by monkey patching the config to use a smaller value for the bellatrix fork epoch.
+func TestByState(t *testing.T) {
+	bc, cleanup := hackBellatrixMaxuint()
+	defer cleanup()
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetFork(&ethpb.Fork{
+		PreviousVersion: make([]byte, 4),
+		CurrentVersion: bc.GenesisForkVersion,
+		Epoch:          0,
+	}))
+	require.NoError(t, st.SetSlot(0))
+	genM, err := st.MarshalSSZ()
+	require.NoError(t, err)
+	cf, err := ByState(genM)
+	require.NoError(t, err)
+	require.Equal(t, version.Phase0, cf.Fork)
+	require.Equal(t, bytesutil.ToBytes4(bc.GenesisForkVersion), cf.Version)
+	require.Equal(t, bc.ConfigName, cf.Config.ConfigName)
+}
+
+func hackBellatrixMaxuint() (*params.BeaconChainConfig, func()) {
+	// We monkey patch the config to use a smaller value for the bellatrix fork epoch.
 	// Upstream configs use MaxUint64, which leads to a multiplication overflow when converting epoch->slot.
 	// Unfortunately we have unit tests that assert our config matches the upstream config, so we have to choose between
 	// breaking conformance, adding a special case to the conformance unit test, or patch it here.
@@ -56,13 +78,17 @@ func TestUnmarshalBlock(t *testing.T) {
 	params.KnownConfigs[params.Mainnet] = func() *params.BeaconChainConfig {
 		return bc
 	}
-	// put the previous BeaconChainConfig back in place at the end of the test
-	defer params.OverrideBeaconConfig(previous)
-	// restore the normal MainnetConfig func in the KnownConfigs mapping
-	defer func() {
+	return bc, func() {
+		// put the previous BeaconChainConfig back in place at the end of the test
+		params.OverrideBeaconConfig(previous)
+		// restore the normal MainnetConfig func in the KnownConfigs mapping
 		params.KnownConfigs[params.Mainnet] = params.MainnetConfig
-	}()
+	}
+}
 
+func TestUnmarshalBlock(t *testing.T) {
+	bc, cleanup := hackBellatrixMaxuint()
+	defer cleanup()
 	require.Equal(t, types.Epoch(math.MaxUint32), params.KnownConfigs[params.Mainnet]().BellatrixForkEpoch)
 	genv := bytesutil.ToBytes4(bc.GenesisForkVersion)
 	altairv := bytesutil.ToBytes4(bc.AltairForkVersion)
@@ -70,12 +96,12 @@ func TestUnmarshalBlock(t *testing.T) {
 	altairS, err := slots.EpochStart(bc.AltairForkEpoch)
 	bellaS, err := slots.EpochStart(bc.BellatrixForkEpoch)
 	require.NoError(t, err)
-	cases := []struct{
-		b func(*testing.T, types.Slot) block.SignedBeaconBlock
-		name string
+	cases := []struct {
+		b       func(*testing.T, types.Slot) block.SignedBeaconBlock
+		name    string
 		version [4]byte
-		slot types.Slot
-		err error
+		slot    types.Slot
+		err     error
 	}{
 		{
 			name:    "genesis - slot 0",
@@ -86,45 +112,45 @@ func TestUnmarshalBlock(t *testing.T) {
 			name:    "last slot of phase 0",
 			b:       signedTestBlockGenesis,
 			version: genv,
-			slot:    altairS-1,
+			slot:    altairS - 1,
 		},
 		{
-			name: "first slot of altair",
-			b: signedTestBlockAltair,
+			name:    "first slot of altair",
+			b:       signedTestBlockAltair,
 			version: altairv,
-			slot: altairS,
+			slot:    altairS,
 		},
 		{
-			name: "last slot of altair",
-			b: signedTestBlockAltair,
+			name:    "last slot of altair",
+			b:       signedTestBlockAltair,
 			version: altairv,
-			slot: bellaS-1,
+			slot:    bellaS - 1,
 		},
 		{
-			name: "first slot of bellatrix",
-			b: signedTestBlockBellatrix,
+			name:    "first slot of bellatrix",
+			b:       signedTestBlockBellatrix,
 			version: bellav,
-			slot: bellaS,
+			slot:    bellaS,
 		},
 		{
-			name: "bellatrix block in altair slot",
-			b: signedTestBlockBellatrix,
+			name:    "bellatrix block in altair slot",
+			b:       signedTestBlockBellatrix,
 			version: bellav,
-			slot: bellaS-1,
-			err: errBlockForkMismatch,
+			slot:    bellaS - 1,
+			err:     errBlockForkMismatch,
 		},
 		{
 			name:    "genesis block in altair slot",
 			b:       signedTestBlockGenesis,
 			version: genv,
-			slot:    bellaS-1,
+			slot:    bellaS - 1,
 			err:     errBlockForkMismatch,
 		},
 		{
-			name: "altair block in genesis slot",
-			b: signedTestBlockAltair,
+			name:    "altair block in genesis slot",
+			b:       signedTestBlockAltair,
 			version: altairv,
-			err: errBlockForkMismatch,
+			err:     errBlockForkMismatch,
 		},
 	}
 	for _, c := range cases {
@@ -264,7 +290,7 @@ func testBlockBellatrix() *ethpb.SignedBeaconBlockBellatrix {
 					BaseFeePerGas: make([]byte, 32),
 					BlockHash:     make([]byte, 32),
 					Transactions:  make([][]byte, 0),
-					PrevRandao: make([]byte, 32),
+					PrevRandao:    make([]byte, 32),
 				},
 			},
 		},

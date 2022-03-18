@@ -35,9 +35,16 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//config/params:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/block:go_default_library",
+        "//proto/prysm/v1alpha1/wrapper:go_default_library",
+        "//runtime/version:go_default_library",
         "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )

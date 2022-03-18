@@ -24,7 +24,7 @@ import (
 // Using a detected ConfigFork, a BeaconState or SignedBeaconBlock can be correctly unmarshaled without the need to
 // hard code a concrete type in paths where only the marshaled bytes, or marshaled bytes and a version, are available.
 type ConfigFork struct {
-	Config     *params.BeaconChainConfig
+	Config *params.BeaconChainConfig
 	// Fork aligns with the fork names in config/params/values.go
 	Fork    int
 	Version [fieldparams.VersionLength]byte
@@ -68,8 +68,8 @@ func ByVersion(cv [fieldparams.VersionLength]byte) (*ConfigFork, error) {
 		return nil, errors.Wrapf(ErrForkNotFound, "version=%#x", cv)
 	}
 	return &ConfigFork{
-		Config: cfg,
-		Fork: fork,
+		Config:  cfg,
+		Fork:    fork,
 		Version: cv,
 	}, nil
 }
