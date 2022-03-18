@@ -6,10 +6,12 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -32,6 +34,9 @@ func TestGetBeaconState(t *testing.T) {
 }
 
 func TestGetBeaconStateV2(t *testing.T) {
+	ctx := context.Background()
+	db := dbTest.SetupDB(t)
+
 	t.Run("Phase 0", func(t *testing.T) {
 		fakeState, err := util.NewBeaconState()
 		require.NoError(t, err)
@@ -40,6 +45,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 				BeaconState: fakeState,
 			},
 			HeadFetcher: &blockchainmock.ChainService{},
+			BeaconDB:    db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -55,6 +61,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 				BeaconState: fakeState,
 			},
 			HeadFetcher: &blockchainmock.ChainService{},
+			BeaconDB:    db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -70,6 +77,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 				BeaconState: fakeState,
 			},
 			HeadFetcher: &blockchainmock.ChainService{},
+			BeaconDB:    db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -79,12 +87,21 @@ func TestGetBeaconStateV2(t *testing.T) {
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
 		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
 			HeadFetcher: &blockchainmock.ChainService{Optimistic: true},
+			BeaconDB:    db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),

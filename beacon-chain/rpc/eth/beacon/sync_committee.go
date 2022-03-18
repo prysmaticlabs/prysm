@@ -91,9 +91,13 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		return nil, status.Errorf(codes.Internal, "Could not extract sync subcommittees: %v", err)
 	}
 
-	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	_, blocks, err := bs.BeaconDB.BlocksBySlot(ctx, st.Slot())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
+	}
+	isOptimistic, err := bs.blocksAreOptimistic(ctx, blocks)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
 	}
 
 	return &ethpbv2.StateSyncCommitteesResponse{

@@ -229,7 +229,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
-		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, s.headRoot())
+		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, fRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
 		}

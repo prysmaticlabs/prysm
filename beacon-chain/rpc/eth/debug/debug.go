@@ -3,11 +3,13 @@ package debug
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -61,15 +63,19 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateV2")
 	defer span.End()
 
-	isOptimistic, err := ds.HeadFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
-	}
-
 	beaconSt, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
+	_, blocks, err := ds.BeaconDB.BlocksBySlot(ctx, beaconSt.Slot())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
+	}
+	isOptimistic, err := ds.blocksAreOptimistic(ctx, blocks)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
+	}
+
 	switch beaconSt.Version() {
 	case version.Phase0:
 		protoSt, err := migration.BeaconStateToProto(beaconSt)
@@ -155,4 +161,23 @@ func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*e
 	}
 
 	return resp, nil
+}
+
+func (ds *Server) blocksAreOptimistic(ctx context.Context, blocks []block.SignedBeaconBlock) (bool, error) {
+	isOptimistic := false
+	for _, b := range blocks {
+		if isOptimistic {
+			break
+		}
+		blockRoot, err := b.Block().HashTreeRoot()
+		if err != nil {
+			return false, errors.Wrap(err, "could not get block root")
+		}
+		isOptimistic, err = ds.HeadFetcher.IsOptimisticForRoot(ctx, blockRoot)
+		if err != nil {
+			return false, errors.Wrap(err, "could not check if block is optimistic")
+		}
+
+	}
+	return isOptimistic, nil
 }

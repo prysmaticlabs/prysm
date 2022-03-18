@@ -67,9 +67,9 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 	}
-	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, blkRoot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
 
 	return &ethpbv1.BlockHeaderResponse{
@@ -116,6 +116,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 		return nil, status.Error(codes.NotFound, "Could not find requested blocks")
 	}
 
+	isOptimistic := false
 	blkHdrs := make([]*ethpbv1.BlockHeaderContainer, len(blks))
 	for i, bl := range blks {
 		v1alpha1Header, err := bl.Header()
@@ -131,6 +132,12 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 		}
+		if !isOptimistic {
+			isOptimistic, err = bs.HeadFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+			}
+		}
 		blkHdrs[i] = &ethpbv1.BlockHeaderContainer{
 			Root:      headerRoot[:],
 			Canonical: canonical,
@@ -139,11 +146,6 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 				Signature: header.Signature,
 			},
 		}
-	}
-
-	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
 	}
 
 	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs, ExecutionOptimistic: isOptimistic}, nil
@@ -157,11 +159,6 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBlockContainerV2) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
-
-	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
-	}
 
 	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
 	if ok {
@@ -177,6 +174,21 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 		}
 
+		// Broadcast the new block to the network.
+		if err := bs.Broadcaster.Broadcast(ctx, wrappedPhase0Blk.Proto()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		}
+
+		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedPhase0Blk, root); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		}
+		// IsOptimisticForRoot has to be called after ReceiveBlock because the latter saves the block,
+		// and optimistic checks are performed against saved blocks.
+		isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if block is optimistic")
+		}
+
 		// Do not block proposal critical path with debug logging or block feed updates.
 		defer func() {
 			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
@@ -186,15 +198,6 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedPhase0Blk, IsOptimistic: isOptimistic},
 			})
 		}()
-
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedPhase0Blk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedPhase0Blk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-		}
 	}
 
 	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
@@ -214,6 +217,21 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 		}
 
+		// Broadcast the new block to the network.
+		if err := bs.Broadcaster.Broadcast(ctx, wrappedAltairBlk.Proto()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		}
+
+		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedAltairBlk, root); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		}
+		// IsOptimisticForRoot has to be called after ReceiveBlock because the latter saves the block,
+		// and optimistic checks are performed against saved blocks.
+		isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if block is optimistic")
+		}
+
 		// Do not block proposal critical path with debug logging or block feed updates.
 		defer func() {
 			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
@@ -223,15 +241,6 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedAltairBlk, IsOptimistic: isOptimistic},
 			})
 		}()
-
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedAltairBlk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedAltairBlk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-		}
 	}
 
 	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock)
@@ -251,6 +260,21 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 		}
 
+		// Broadcast the new block to the network.
+		if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixBlk.Proto()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		}
+
+		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixBlk, root); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+		}
+		// IsOptimisticForRoot has to be called after ReceiveBlock because the latter saves the block,
+		// and optimistic checks are performed against saved blocks.
+		isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not check if block is optimistic")
+		}
+
 		// Do not block proposal critical path with debug logging or block feed updates.
 		defer func() {
 			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
@@ -260,15 +284,6 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixBlk, IsOptimistic: isOptimistic},
 			})
 		}()
-
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixBlk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixBlk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-		}
 	}
 
 	return &emptypb.Empty{}, nil
@@ -330,9 +345,13 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		return nil, err
 	}
 
-	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+	}
+	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
 
 	_, err = blk.PbPhase0Block()
@@ -555,9 +574,9 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		}
 	}
 
-	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
 
 	return &ethpbv1.BlockRootResponse{
@@ -579,9 +598,13 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 		return nil, err
 	}
 
-	isOptimistic, err := bs.HeadFetcher.IsOptimistic(ctx)
+	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+	}
+	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
 
 	_, err = blk.PbPhase0Block()

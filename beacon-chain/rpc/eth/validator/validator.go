@@ -26,6 +26,7 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -108,9 +109,14 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
-	isOptimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+
+	_, blocks, err := vs.BeaconDB.BlocksBySlot(ctx, s.Slot())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
+	}
+	isOptimistic, err := vs.blocksAreOptimistic(ctx, blocks)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
 	}
 
 	return &ethpbv1.AttesterDutiesResponse{
@@ -175,9 +181,14 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
-	isOptimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+
+	_, blocks, err := vs.BeaconDB.BlocksBySlot(ctx, s.Slot())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
+	}
+	isOptimistic, err := vs.blocksAreOptimistic(ctx, blocks)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
 	}
 
 	return &ethpbv1.ProposerDutiesResponse{
@@ -255,9 +266,14 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	} else if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get duties: %v", err)
 	}
-	isOptimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+
+	_, blocks, err := vs.BeaconDB.BlocksBySlot(ctx, st.Slot())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if node is optimistically synced: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
+	}
+	isOptimistic, err := vs.blocksAreOptimistic(ctx, blocks)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
 	}
 
 	return &ethpbv2.SyncCommitteeDutiesResponse{
@@ -798,4 +814,23 @@ func syncCommitteeDuties(
 		}
 	}
 	return duties, nil
+}
+
+func (vs *Server) blocksAreOptimistic(ctx context.Context, blocks []block.SignedBeaconBlock) (bool, error) {
+	isOptimistic := false
+	for _, b := range blocks {
+		if isOptimistic {
+			break
+		}
+		blockRoot, err := b.Block().HashTreeRoot()
+		if err != nil {
+			return false, errors.Wrap(err, "could not get block root")
+		}
+		isOptimistic, err = vs.HeadFetcher.IsOptimisticForRoot(ctx, blockRoot)
+		if err != nil {
+			return false, errors.Wrap(err, "could not check if block is optimistic")
+		}
+
+	}
+	return isOptimistic, nil
 }
