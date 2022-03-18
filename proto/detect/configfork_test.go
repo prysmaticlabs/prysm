@@ -1,6 +1,8 @@
 package detect
 
 import (
+	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -47,21 +49,62 @@ func TestSlotFromBlock(t *testing.T) {
 func TestByState(t *testing.T) {
 	bc, cleanup := hackBellatrixMaxuint()
 	defer cleanup()
-	st, err := util.NewBeaconState()
+	stForVersion := func(v int) (state.BeaconState, error) {
+		switch v {
+		case version.Phase0:
+			return util.NewBeaconState()
+		case version.Altair:
+			return util.NewBeaconStateAltair()
+		case version.Bellatrix:
+			return util.NewBeaconStateBellatrix()
+		default:
+			return nil, fmt.Errorf("unrecognoized version %d", v)
+		}
+	}
+	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
 	require.NoError(t, err)
-	require.NoError(t, st.SetFork(&ethpb.Fork{
-		PreviousVersion: make([]byte, 4),
-		CurrentVersion: bc.GenesisForkVersion,
-		Epoch:          0,
-	}))
-	require.NoError(t, st.SetSlot(0))
-	genM, err := st.MarshalSSZ()
-	require.NoError(t, err)
-	cf, err := ByState(genM)
-	require.NoError(t, err)
-	require.Equal(t, version.Phase0, cf.Fork)
-	require.Equal(t, bytesutil.ToBytes4(bc.GenesisForkVersion), cf.Version)
-	require.Equal(t, bc.ConfigName, cf.Config.ConfigName)
+	cases := []struct{
+		name string
+		version int
+		slot types.Slot
+		forkversion [4]byte
+	}{
+		{
+			name: "genesis",
+			version: version.Phase0,
+			slot: 0,
+			forkversion: bytesutil.ToBytes4(bc.GenesisForkVersion),
+		},
+		{
+			name: "altair",
+			version: version.Altair,
+			slot: altairSlot,
+			forkversion: bytesutil.ToBytes4(bc.AltairForkVersion),
+		},
+		{
+			name: "bellatrix",
+			version: version.Bellatrix,
+			slot: altairSlot,
+			forkversion: bytesutil.ToBytes4(bc.BellatrixForkVersion),
+		},
+	}
+	for _, c := range cases {
+		st, err := stForVersion(c.version)
+		require.NoError(t, err)
+		require.NoError(t, st.SetFork(&ethpb.Fork{
+			PreviousVersion: make([]byte, 4),
+			CurrentVersion: c.forkversion[:],
+			Epoch:          0,
+		}))
+		require.NoError(t, st.SetSlot(c.slot))
+		m, err := st.MarshalSSZ()
+		require.NoError(t, err)
+		cf, err := ByState(m)
+		require.NoError(t, err)
+		require.Equal(t, c.version, cf.Fork)
+		require.Equal(t, c.forkversion, cf.Version)
+		require.Equal(t, bc.ConfigName, cf.Config.ConfigName)
+	}
 }
 
 func hackBellatrixMaxuint() (*params.BeaconChainConfig, func()) {
