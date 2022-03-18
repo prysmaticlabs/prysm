@@ -324,16 +324,16 @@ var (
 		Value: false,
 	}
 
-	// ValidatorsProposerConfigDirFlag defines the path or URL to a file with proposer config.
-	ValidatorsProposerConfigDirFlag = &cli.StringFlag{
-		Name:  "validators-proposer-config-dir",
-		Usage: "Set local directory path to proposer config(.json) for per validator mapping to an eth address to receive gas fees when proposing block (i.e. --validators-proposer-config-dir=/path/to/proposer.json). File format found in docs",
+	// ValidatorsProposerConfigFilepathFlag defines the path or URL to a file with proposer config.
+	ValidatorsProposerConfigFilepathFlag = &cli.StringFlag{
+		Name:  "validators-proposer-config-filepath",
+		Usage: "Set path to a JSON file containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --validators-proposer-config-dir=/path/to/proposer.json). File format found in docs",
 		Value: "",
 	}
 	// ValidatorsProposerConfigFlag defines the path or URL to a file with proposer config.
 	ValidatorsProposerConfigURLFlag = &cli.StringFlag{
 		Name:  "validators-proposer-config-url",
-		Usage: "Set URL to load proposer config (.json) for per validator mapping to an eth address to receive gas fees when proposing block (i.e. --validators-proposer-config-url=https://example.com/api/getConfig). File format found in docs",
+		Usage: "Set URL to a REST endpoint containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --validators-proposer-config-url=https://example.com/api/getConfig). File format found in docs",
 		Value: "",
 	}
 

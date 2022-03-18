@@ -480,11 +480,11 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 
 func prepareBeaconProposalConfig(cliCtx *cli.Context) (*client.PrepareBeaconProposalConfig, error) {
 	var fileConfig *validatorServiceConfig.PrepareBeaconProposalFileConfig
-	if cliCtx.IsSet(flags.ValidatorsProposerConfigDirFlag.Name) && cliCtx.IsSet(flags.ValidatorsProposerConfigURLFlag.Name) {
+	if cliCtx.IsSet(flags.ValidatorsProposerConfigFilepathFlag.Name) && cliCtx.IsSet(flags.ValidatorsProposerConfigURLFlag.Name) {
 		return nil, errors.New("cannot specify both --validators-proposer-fileConfig-dir and --validators-proposer-fileConfig-url")
 	}
-	if cliCtx.IsSet(flags.ValidatorsProposerConfigDirFlag.Name) {
-		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigDirFlag.Name), &fileConfig); err != nil {
+	if cliCtx.IsSet(flags.ValidatorsProposerConfigFilepathFlag.Name) {
+		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ValidatorsProposerConfigFilepathFlag.Name), &fileConfig); err != nil {
 			return nil, err
 		}
 	}

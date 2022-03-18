@@ -486,7 +486,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 			set := flag.NewFlagSet("test", 0)
 			if tt.args.proposalFlagValues.dir != "" {
 				set.String("validators-proposer-config-dir", tt.args.proposalFlagValues.dir, "")
-				require.NoError(t, set.Set(flags.ValidatorsProposerConfigDirFlag.Name, tt.args.proposalFlagValues.dir))
+				require.NoError(t, set.Set(flags.ValidatorsProposerConfigFilepathFlag.Name, tt.args.proposalFlagValues.dir))
 			}
 			if tt.args.proposalFlagValues.url != "" {
 				content, err := ioutil.ReadFile(tt.args.proposalFlagValues.url)
