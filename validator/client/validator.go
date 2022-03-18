@@ -1001,7 +1001,6 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 				feeRecipient = v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient
 			}
 		}
-		//TODO: change fee recipeint to use common.Address instead of []byte type
 		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 			ValidatorIndex: validatorIndex,
 			FeeRecipient:   feeRecipient[:],
