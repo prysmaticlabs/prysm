@@ -28,6 +28,6 @@ func TestE2EConfigParity(t *testing.T) {
 	yamlObj := params.E2EMainnetConfigYaml()
 	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
 
-	params.LoadChainConfigFile(yamlDir)
+	params.LoadChainConfigFile(yamlDir, nil)
 	assert.DeepEqual(t, params.BeaconConfig(), testCfg)
 }
