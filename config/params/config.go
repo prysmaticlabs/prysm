@@ -2,11 +2,11 @@
 package params
 
 import (
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 

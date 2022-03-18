@@ -2,8 +2,9 @@ package detect
 
 import (
 	"encoding/binary"
-	"github.com/prysmaticlabs/prysm/testing/require"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestTypeMismatch(t *testing.T) {

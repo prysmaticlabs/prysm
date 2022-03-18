@@ -2,6 +2,7 @@ package detect
 
 import (
 	"encoding/binary"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
