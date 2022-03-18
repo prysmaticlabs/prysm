@@ -4,7 +4,6 @@ import (
 	"math"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -203,12 +202,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkEpoch:   math.MaxUint64,
 	ShardingForkVersion:  []byte{3, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
-	ForkVersionSchedule: map[[4]byte]types.Epoch{
-		{0, 0, 0, 0}: genesisForkEpoch,
-		{1, 0, 0, 0}: mainnetAltairForkEpoch,
-		{2, 0, 0, 0}: mainnetBellatrixForkEpoch,
-		// Any further forks must be specified here by their epoch number.
-	},
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.

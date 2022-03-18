@@ -50,7 +50,8 @@ func TestConfig_DataRace(t *testing.T) {
 
 func TestOrderedConfigSchedule(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	for name, cfg := range params.AllConfigs {
+	for name, getCfg := range params.KnownConfigs {
+		cfg := getCfg()
 		t.Run(name.String(), func(t *testing.T) {
 			prevVersion := [4]byte{0, 0, 0, 0}
 			// epoch 0 is genesis, and it's a uint so can't make it -1

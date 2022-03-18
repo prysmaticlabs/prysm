@@ -2,36 +2,32 @@ package detect
 
 import (
 	"fmt"
-
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
-
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // ConfigFork represents the intersection of Configuration (eg mainnet, testnet) and Fork (eg phase0, altair).
 // Using a detected ConfigFork, a BeaconState or SignedBeaconBlock can be correctly unmarshaled without the need to
 // hard code a concrete type in paths where only the marshaled bytes, or marshaled bytes and a version, are available.
 type ConfigFork struct {
-	ConfigName params.ConfigName
 	Config     *params.BeaconChainConfig
 	// Fork aligns with the fork names in config/params/values.go
 	Fork    int
 	Version [fieldparams.VersionLength]byte
-	Epoch   types.Epoch
 }
 
 var beaconStateCurrentVersion = fieldSpec{
@@ -51,36 +47,31 @@ func ByState(marshaled []byte) (*ConfigFork, error) {
 	return ByVersion(cv)
 }
 
+var ErrForkNotFound = errors.New("version found in fork schedule but can't be matched to a named fork")
+
 // ByVersion uses a lookup table to resolve a Version (from a beacon node api for instance, or obtained by peeking at
 // the bytes of a marshaled BeaconState) to a ConfigFork.
 func ByVersion(cv [fieldparams.VersionLength]byte) (*ConfigFork, error) {
-	cf := &ConfigFork{
+	cfg, err := params.ConfigForVersion(cv)
+	if err != nil {
+		return nil, err
+	}
+	var fork int
+	switch cv {
+	case bytesutil.ToBytes4(cfg.GenesisForkVersion):
+		fork = version.Phase0
+	case bytesutil.ToBytes4(cfg.AltairForkVersion):
+		fork = version.Altair
+	case bytesutil.ToBytes4(cfg.BellatrixForkVersion):
+		fork = version.Bellatrix
+	default:
+		return nil, errors.Wrapf(ErrForkNotFound, "version=%#x", cv)
+	}
+	return &ConfigFork{
+		Config: cfg,
+		Fork: fork,
 		Version: cv,
-	}
-	for name, cfg := range params.AllConfigs {
-		genesis := bytesutil.ToBytes4(cfg.GenesisForkVersion)
-		altair := bytesutil.ToBytes4(cfg.AltairForkVersion)
-		bellatrix := bytesutil.ToBytes4(cfg.BellatrixForkVersion)
-		for v, e := range cfg.ForkVersionSchedule {
-			if v == cv {
-				cf.ConfigName = name
-				cf.Config = cfg
-				cf.Epoch = e
-				switch v {
-				case genesis:
-					cf.Fork = version.Phase0
-				case altair:
-					cf.Fork = version.Altair
-				case bellatrix:
-					cf.Fork = version.Bellatrix
-				default:
-					return cf, fmt.Errorf("unrecognized fork for config name=%s, BeaconState.fork.current_version=%#x", name.String(), cv)
-				}
-				return cf, nil
-			}
-		}
-	}
-	return cf, fmt.Errorf("could not find a config+fork match with version=%#x", cv)
+	}, nil
 }
 
 // UnmarshalBeaconState uses internal knowledge in the ConfigFork to pick the right concrete BeaconState type,
@@ -141,6 +132,8 @@ func slotFromBlock(marshaled []byte) (types.Slot, error) {
 	return types.Slot(slot), nil
 }
 
+var errBlockForkMismatch = errors.New("fork or config detected from state is different than block")
+
 // UnmarshalBeaconBlock uses internal knowledge in the ConfigFork to pick the right concrete SignedBeaconBlock type,
 // then Unmarshal()s the type and returns an instance of block.SignedBeaconBlock if successful.
 func (cf *ConfigFork) UnmarshalBeaconBlock(marshaled []byte) (block.SignedBeaconBlock, error) {
@@ -160,7 +153,7 @@ func (cf *ConfigFork) UnmarshalBeaconBlock(marshaled []byte) (block.SignedBeacon
 		return nil, err
 	}
 	if ver != cf.Version {
-		return nil, fmt.Errorf("cannot sniff block schema, block (slot=%d, epoch=%d) is on a different fork", slot, epoch)
+		return nil, errors.Wrapf(errBlockForkMismatch, "slot=%d, epoch=%d, version=%#x", slot, epoch, ver)
 	}
 
 	var blk ssz.Unmarshaler
