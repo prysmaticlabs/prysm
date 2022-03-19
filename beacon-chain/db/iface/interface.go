@@ -48,12 +48,13 @@ type ReadOnlyDatabase interface {
 	HasArchivedPoint(ctx context.Context, slot types.Slot) bool
 	LastArchivedRoot(ctx context.Context) [32]byte
 	LastArchivedSlot(ctx context.Context) (types.Slot, error)
+	LastValidatedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
 	// Fee reicipients operations.
-	FeeRecipientByValidatorID(ctx context.Context, id uint64) (common.Address, error)
+	FeeRecipientByValidatorID(ctx context.Context, id types.ValidatorIndex) (common.Address, error)
 	// origin checkpoint sync support
 	OriginBlockRoot(ctx context.Context) ([32]byte, error)
 }
@@ -80,6 +81,7 @@ type NoHeadAccessDatabase interface {
 	// Checkpoint operations.
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
+	SaveLastValidatedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
@@ -87,7 +89,7 @@ type NoHeadAccessDatabase interface {
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
 	// Fee reicipients operations.
-	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []uint64, addrs []common.Address) error
+	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, addrs []common.Address) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error
 }

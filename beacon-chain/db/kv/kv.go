@@ -176,7 +176,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			powchainBucket,
 			stateSummaryBucket,
 			stateValidatorsBucket,
-			validatedTips,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
