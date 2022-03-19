@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
@@ -268,6 +269,6 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 	} else {
 		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
 	}
-	keymanager.DisplayRemotePublicKeys(validatingPubKeys)
+	remote_utils.DisplayRemotePublicKeys(validatingPubKeys)
 	return nil
 }

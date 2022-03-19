@@ -26,6 +26,10 @@ func EditWalletConfigurationCli(cliCtx *cli.Context) error {
 			fmt.Sprintf("Keymanager type: %s doesn't support configuration editing",
 				w.KeymanagerKind().String()))
 	}
+	return editRemoteWallet(cliCtx, w)
+}
+
+func editRemoteWallet(cliCtx *cli.Context, w *wallet.Wallet) error {
 	enc, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 	if err != nil {
 		return errors.Wrap(err, "could not read config")

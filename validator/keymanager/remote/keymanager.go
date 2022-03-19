@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -302,6 +303,6 @@ func ListKeymanagerAccountsImpl(ctx context.Context, cfg keymanager.ListKeymanag
 	} else {
 		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
 	}
-	keymanager.DisplayRemotePublicKeys(validatingPubKeys)
+	remote_utils.DisplayRemotePublicKeys(validatingPubKeys)
 	return nil
 }

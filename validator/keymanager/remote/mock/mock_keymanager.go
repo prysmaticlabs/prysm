@@ -57,6 +57,6 @@ func (*MockKeymanager) ExtractKeystores(
 
 // ListKeymanagerAccounts --
 func (*MockKeymanager) ListKeymanagerAccounts(
-	ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
+	context.Context, keymanager.ListKeymanagerAccountConfig) error {
 	return nil
 }
