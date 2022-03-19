@@ -34,7 +34,7 @@ func (s *Store) LastValidatedCheckpoint(ctx context.Context) ([32]byte, types.Sl
 }
 
 func (s *Store) SaveLastValidatedCheckpoint(ctx context.Context, root [32]byte, slot types.Slot) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.saveLastValidatedCheckpoint")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastValidatedCheckpoint")
 	defer span.End()
 
 	updateErr := s.db.Update(func(tx *bolt.Tx) error {

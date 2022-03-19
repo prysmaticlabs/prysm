@@ -64,7 +64,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBloc
 		return err
 	}
 	// Log state transition data.
-	logStateTransitionData(blockCopy.Block())
+	if err := logStateTransitionData(blockCopy.Block()); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -87,7 +89,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 	for i, b := range blocks {
 		blockCopy := b.Copy()
 		// TODO(10261) check optimistic status
-		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i], false /*optimistic status*/); err != nil {
+		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}

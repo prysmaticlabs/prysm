@@ -70,8 +70,10 @@ go_test(
         "accounts_list_test.go",
         "wallet_create_test.go",
         "wallet_edit_test.go",
+        "wallet_recover_fuzz_test.go",
         "wallet_recover_test.go",
     ],
+    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
         "//async/event:go_default_library",
