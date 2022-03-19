@@ -89,6 +89,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
+	startOnBlock := time.Now()
 	if err := helpers.BeaconBlockIsNil(signed); err != nil {
 		return err
 	}
@@ -103,17 +104,25 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
+	startStateTransition := time.Now()
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
+
 		return err
 	}
+	log.WithField("elapsed", time.Since(startStateTransition)).Info("Done running state transition")
+
+	startNotifyNewPayload := time.Now()
 	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, postState, signed); err != nil {
 		return errors.Wrap(err, "could not verify new payload")
 	}
+	log.WithField("elapsed", time.Since(startNotifyNewPayload)).Info("Done running notify new payload")
 
+	startSavePostData := time.Now()
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
+	log.WithField("elapsed", time.Since(startSavePostData)).Info("Done saving post state data")
 
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
 	// running a successful state transition for the block.
@@ -179,12 +188,18 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
 	}
+
+	startUpdateHead := time.Now()
 	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
+	log.WithField("elapsed", time.Since(startUpdateHead)).Info("Done updating head")
+
+	startNotifyFCU := time.Now()
 	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), s.headRoot(), bytesutil.ToBytes32(finalized.Root)); err != nil {
 		return err
 	}
+	log.WithField("elapsed", time.Since(startNotifyFCU)).Info("Done notifying forkchoice update")
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
 		return err
@@ -253,7 +268,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	defer reportAttestationInclusion(b)
-
+	log.WithField("elapsed", time.Since(startOnBlock)).Info("Done running on block method")
 	return s.handleEpochBoundary(ctx, postState)
 }
 
