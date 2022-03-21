@@ -11,6 +11,8 @@ set -eu
 # Downloaded binaries are saved to ./dist.
 # Use USE_PRYSM_VERSION to specify a specific release version.
 #   Example: USE_PRYSM_VERSION=v0.3.3 ./prysm.sh beacon-chain
+# Use USE_PRYSM_MODERN to specify a non-portable version of BLST
+#   Example: USE_PRYSM_MODERN=true ./prysm.sh beacon-chain
 
 readonly PRYLABS_SIGNING_KEY=0AE0051D647BA3C1A917AF4072E33E4DF1A5036E
 
@@ -173,14 +175,22 @@ get_prysm_version
 
 color "37" "Latest Prysm version is $prysm_version."
 
-BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}"
+if [ "${USE_PRYSM_MODERN:=false}" = "true" ]; then
+	BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-modern-${system}-${arch}"
+else
+	BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}"
+fi
 VALIDATOR_REAL="${wrapper_dir}/validator-${prysm_version}-${system}-${arch}"
 CLIENT_STATS_REAL="${wrapper_dir}/client-stats-${prysm_version}-${system}-${arch}"
 
 if [[ $1 == beacon-chain ]]; then
     if [[ ! -x $BEACON_CHAIN_REAL ]]; then
         color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
-        file=beacon-chain-${prysm_version}-${system}-${arch}
+	if [ "${USE_PRYSM_MODERN}" = "true" ]; then
+		file=beacon-chain-${prysm_version}-modern-${system}-${arch}
+	else
+		file=beacon-chain-${prysm_version}-${system}-${arch}
+	fi
         res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}"  -o "$BEACON_CHAIN_REAL" | ( grep 404 || true ) )
         if [[ $res == 404 ]];then
           echo "No prysm beacon chain found for ${prysm_version},(${file}) exit"

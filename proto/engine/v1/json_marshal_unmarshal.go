@@ -163,7 +163,7 @@ type executionPayloadJSON struct {
 	StateRoot     hexutil.Bytes   `json:"stateRoot"`
 	ReceiptsRoot  hexutil.Bytes   `json:"receiptsRoot"`
 	LogsBloom     hexutil.Bytes   `json:"logsBloom"`
-	Random        hexutil.Bytes   `json:"random"`
+	PrevRandao    hexutil.Bytes   `json:"prevRandao"`
 	BlockNumber   hexutil.Uint64  `json:"blockNumber"`
 	GasLimit      hexutil.Uint64  `json:"gasLimit"`
 	GasUsed       hexutil.Uint64  `json:"gasUsed"`
@@ -188,7 +188,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		StateRoot:     e.StateRoot,
 		ReceiptsRoot:  e.ReceiptsRoot,
 		LogsBloom:     e.LogsBloom,
-		Random:        e.Random,
+		PrevRandao:    e.PrevRandao,
 		BlockNumber:   hexutil.Uint64(e.BlockNumber),
 		GasLimit:      hexutil.Uint64(e.GasLimit),
 		GasUsed:       hexutil.Uint64(e.GasUsed),
@@ -212,7 +212,7 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	e.StateRoot = bytesutil.PadTo(dec.StateRoot, fieldparams.RootLength)
 	e.ReceiptsRoot = bytesutil.PadTo(dec.ReceiptsRoot, fieldparams.RootLength)
 	e.LogsBloom = bytesutil.PadTo(dec.LogsBloom, fieldparams.LogsBloomLength)
-	e.Random = bytesutil.PadTo(dec.Random, fieldparams.RootLength)
+	e.PrevRandao = bytesutil.PadTo(dec.PrevRandao, fieldparams.RootLength)
 	e.BlockNumber = uint64(dec.BlockNumber)
 	e.GasLimit = uint64(dec.GasLimit)
 	e.GasUsed = uint64(dec.GasUsed)
@@ -222,7 +222,7 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	if err != nil {
 		return err
 	}
-	e.BaseFeePerGas = bytesutil.PadTo(baseFee.Bytes(), fieldparams.RootLength)
+	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
 	e.BlockHash = bytesutil.PadTo(dec.BlockHash, fieldparams.RootLength)
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
@@ -234,7 +234,7 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 
 type payloadAttributesJSON struct {
 	Timestamp             hexutil.Uint64 `json:"timestamp"`
-	Random                hexutil.Bytes  `json:"random"`
+	PrevRandao            hexutil.Bytes  `json:"prevRandao"`
 	SuggestedFeeRecipient hexutil.Bytes  `json:"suggestedFeeRecipient"`
 }
 
@@ -242,7 +242,7 @@ type payloadAttributesJSON struct {
 func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(payloadAttributesJSON{
 		Timestamp:             hexutil.Uint64(p.Timestamp),
-		Random:                p.Random,
+		PrevRandao:            p.PrevRandao,
 		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
 	})
 }
@@ -255,7 +255,7 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 	}
 	*p = PayloadAttributes{}
 	p.Timestamp = uint64(dec.Timestamp)
-	p.Random = dec.Random
+	p.PrevRandao = dec.PrevRandao
 	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
 	return nil
 }

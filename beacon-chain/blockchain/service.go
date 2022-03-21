@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -31,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -83,8 +85,9 @@ type config struct {
 	StateGen                *stategen.State
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
+	BlockFetcher            powchain.POWBlockFetcher
 	FinalizedStateAtStartUp state.BeaconState
-	ExecutionEngineCaller   enginev1.EngineCaller
+	ExecutionEngineCaller   enginev1.Caller
 }
 
 // NewService instantiates a new block service instance that will
@@ -124,7 +127,7 @@ func (s *Service) Start() {
 	saved := s.cfg.FinalizedStateAtStartUp
 
 	if saved != nil && !saved.IsNil() {
-		if err := s.startFromSavedState(saved); err != nil {
+		if err := s.StartFromSavedState(saved); err != nil {
 			log.Fatal(err)
 		}
 	} else {
@@ -132,6 +135,7 @@ func (s *Service) Start() {
 			log.Fatal(err)
 		}
 	}
+	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -160,9 +164,9 @@ func (s *Service) Status() error {
 	return nil
 }
 
-func (s *Service) startFromSavedState(saved state.BeaconState) error {
+func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	log.Info("Blockchain data already exists in DB, initializing...")
-	s.genesisTime = time.Unix(int64(saved.GenesisTime()), 0)
+	s.genesisTime = time.Unix(int64(saved.GenesisTime()), 0) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
 	s.cfg.AttService.SetGenesisTime(saved.GenesisTime())
 
 	originRoot, err := s.originRootFromSavedState(s.ctx)
@@ -186,12 +190,13 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	}
 	s.store = store.New(justified, finalized)
 
-	store := protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
-	s.cfg.ForkChoiceStore = store
-
-	if err := s.loadSyncedTips(originRoot, saved.Slot()); err != nil {
-		return err
+	var store f.ForkChoicer
+	if features.Get().EnableForkChoiceDoublyLinkedTree {
+		store = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
+	} else {
+		store = protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
 	}
+	s.cfg.ForkChoiceStore = store
 
 	ss, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
@@ -222,8 +227,6 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
 		},
 	})
-
-	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 
 	return nil
 }
@@ -333,7 +336,6 @@ func (s *Service) startFromPOWChain() error {
 		stateChannel := make(chan *feed.Event, 1)
 		stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 		defer stateSub.Unsubscribe()
-		s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
 		for {
 			select {
 			case event := <-stateChannel:
@@ -447,14 +449,16 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
-	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
+	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
 		genesisBlk.Block().Slot(),
 		genesisBlkRoot,
 		params.BeaconConfig().ZeroHash,
-		[32]byte{},
 		genesisCheckpoint.Epoch,
 		genesisCheckpoint.Epoch); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
+	}
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
+		log.Fatalf("Could not set optimistic status of genesis block to false: %v", err)
 	}
 
 	s.setHead(genesisBlkRoot, genesisBlk, genesisState)

@@ -7,6 +7,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
@@ -81,6 +82,13 @@ func (w bellatrixSignedBeaconBlock) Proto() proto.Message {
 	return w.b
 }
 
+// PbGenericBlock returns a generic signed beacon block.
+func (w bellatrixSignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
+	return &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: w.b},
+	}, nil
+}
+
 // PbBellatrixBlock returns the underlying protobuf object.
 func (w bellatrixSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return w.b, nil
@@ -93,7 +101,7 @@ func (bellatrixSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error
 
 // PbAltairBlock returns the underlying protobuf object.
 func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
-	return nil, errors.New("unsupported altair block")
+	return nil, ErrUnsupportedAltairBlock
 }
 
 // Version of the underlying protobuf object.
@@ -208,6 +216,12 @@ func (w bellatrixBeaconBlock) Proto() proto.Message {
 // Version of the underlying protobuf object.
 func (bellatrixBeaconBlock) Version() int {
 	return version.Bellatrix
+}
+
+func (w bellatrixBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+	return &validatorpb.SignRequest_BlockV3{
+		BlockV3: w.b,
+	}
 }
 
 // bellatrixBeaconBlockBody is a wrapper of a beacon block body.

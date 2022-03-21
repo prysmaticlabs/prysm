@@ -177,6 +177,24 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 	}
 }
 
+func BenchmarkBeaconState(b *testing.B) {
+	testState, _ := util.DeterministicGenesisState(b, 16000)
+	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	require.NoError(b, err)
+
+	b.Run("Vectorized SHA256", func(b *testing.B) {
+		st, err := v1.InitializeFromProtoUnsafe(pbState)
+		require.NoError(b, err)
+		_, err = st.HashTreeRoot(context.Background())
+		assert.NoError(b, err)
+	})
+
+	b.Run("Current SHA256", func(b *testing.B) {
+		_, err := pbState.HashTreeRoot()
+		require.NoError(b, err)
+	})
+}
+
 func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
 

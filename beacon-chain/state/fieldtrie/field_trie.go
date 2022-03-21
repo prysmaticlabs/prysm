@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	pmath "github.com/prysmaticlabs/prysm/math"
 )
 
 // FieldTrie is the representation of the representative
@@ -110,11 +111,15 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
+		iNumOfElems, err := pmath.Int(numOfElems)
+		if err != nil {
+			return [32]byte{}, err
+		}
 		// We remove the duplicates here in order to prevent
 		// duplicated insertions into the trie.
 		newIndices := []uint64{}
 		indexExists := make(map[uint64]bool)
-		newRoots := make([][32]byte, 0, len(fieldRoots)/int(numOfElems))
+		newRoots := make([][32]byte, 0, len(fieldRoots)/iNumOfElems)
 		for i, idx := range indices {
 			startIdx := idx / numOfElems
 			if indexExists[startIdx] {

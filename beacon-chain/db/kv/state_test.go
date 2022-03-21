@@ -21,6 +21,12 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+func TestStateNil(t *testing.T) {
+	db := setupDB(t)
+	_, err := db.StateOrError(context.Background(), [32]byte{})
+	require.ErrorIs(t, err, ErrNotFoundState)
+}
+
 func TestState_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 

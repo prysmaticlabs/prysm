@@ -30,9 +30,9 @@ type ReadOnlyDatabase interface {
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error)
 	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]block.SignedBeaconBlock, error)
-	ValidatedTips(ctx context.Context) (map[[32]byte]types.Slot, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
+	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	GenesisState(ctx context.Context) (state.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
@@ -45,11 +45,13 @@ type ReadOnlyDatabase interface {
 	HasArchivedPoint(ctx context.Context, slot types.Slot) bool
 	LastArchivedRoot(ctx context.Context) [32]byte
 	LastArchivedSlot(ctx context.Context) (types.Slot, error)
+	LastValidatedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
 	PowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
-
+	// Fee reicipients operations.
+	FeeRecipientByValidatorID(ctx context.Context, id types.ValidatorIndex) (common.Address, error)
 	// origin checkpoint sync support
 	OriginBlockRoot(ctx context.Context) ([32]byte, error)
 }
@@ -63,7 +65,6 @@ type NoHeadAccessDatabase interface {
 	SaveBlock(ctx context.Context, block block.SignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []block.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
-	UpdateValidatedTips(ctx context.Context, newVals map[[32]byte]types.Slot) error
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
 	SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error
@@ -74,12 +75,15 @@ type NoHeadAccessDatabase interface {
 	// Checkpoint operations.
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
+	SaveLastValidatedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *ethpb.ETH1ChainData) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
+	// Fee reicipients operations.
+	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, addrs []common.Address) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error
 }

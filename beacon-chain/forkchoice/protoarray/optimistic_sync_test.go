@@ -28,9 +28,7 @@ import (
 
 func TestOptimistic(t *testing.T) {
 	root0 := bytesutil.ToBytes32([]byte("hello0"))
-	slot0 := types.Slot(98)
 	root1 := bytesutil.ToBytes32([]byte("hello1"))
-	slot1 := types.Slot(99)
 
 	nodeA := &Node{
 		slot:      types.Slot(100),
@@ -148,58 +146,60 @@ func TestOptimistic(t *testing.T) {
 	require.Equal(t, max, types.Slot(103), "maximum tip slot is different")
 
 	// We test first nodes outside the Fork Choice store
-	op, err := f.Optimistic(ctx, root0, slot0)
-	require.NoError(t, err)
-	require.Equal(t, op, false)
+	_, err := f.IsOptimistic(ctx, root0)
+	require.ErrorIs(t, ErrUnknownNodeRoot, err)
 
-	op, err = f.Optimistic(ctx, root1, slot1)
-	require.NoError(t, err)
-	require.Equal(t, op, false)
+	_, err = f.IsOptimistic(ctx, root1)
+	require.ErrorIs(t, ErrUnknownNodeRoot, err)
 
 	// We check all nodes in the Fork Choice store.
-	op, err = f.Optimistic(ctx, nodeA.root, nodeA.slot)
+	op, err := f.IsOptimistic(ctx, nodeA.root)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
-	op, err = f.Optimistic(ctx, nodeB.root, nodeB.slot)
+	op, err = f.IsOptimistic(ctx, nodeB.root)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
-	op, err = f.Optimistic(ctx, nodeC.root, nodeC.slot)
+	op, err = f.IsOptimistic(ctx, nodeC.root)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
-	op, err = f.Optimistic(ctx, nodeD.root, nodeD.slot)
+	op, err = f.IsOptimistic(ctx, nodeD.root)
 	require.NoError(t, err)
 	require.Equal(t, op, false)
 
-	op, err = f.Optimistic(ctx, nodeE.root, nodeE.slot)
+	op, err = f.IsOptimistic(ctx, nodeE.root)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(ctx, nodeF.root, nodeF.slot)
+	op, err = f.IsOptimistic(ctx, nodeF.root)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(ctx, nodeG.root, nodeG.slot)
+	op, err = f.IsOptimistic(ctx, nodeG.root)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(ctx, nodeH.root, nodeH.slot)
+	op, err = f.IsOptimistic(ctx, nodeH.root)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(ctx, nodeI.root, nodeI.slot)
+	op, err = f.IsOptimistic(ctx, nodeI.root)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(ctx, nodeJ.root, nodeJ.slot)
+	op, err = f.IsOptimistic(ctx, nodeJ.root)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
 
-	op, err = f.Optimistic(ctx, nodeK.root, nodeK.slot)
+	op, err = f.IsOptimistic(ctx, nodeK.root)
 	require.NoError(t, err)
 	require.Equal(t, op, true)
+
+	// request a write Lock to synced Tips regression #10289
+	f.syncedTips.Lock()
+	defer f.syncedTips.Unlock()
 }
 
 // This tests the algorithm to update syncedTips
@@ -216,22 +216,22 @@ func TestOptimistic(t *testing.T) {
 // And every block in the Fork choice is optimistic. Synced_Tips contains a
 // single block that is outside of Fork choice
 //
-func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
+func TestSetOptimisticToValid(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1))
 	tests := []struct {
 		root      [32]byte                // the root of the new VALID block
 		tips      map[[32]byte]types.Slot // the old synced tips
@@ -321,7 +321,7 @@ func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 		f.syncedTips.Lock()
 		f.syncedTips.validatedTips = tc.tips
 		f.syncedTips.Unlock()
-		err := f.UpdateSyncedTipsWithValidRoot(context.Background(), tc.root)
+		err := f.SetOptimisticToValid(context.Background(), tc.root)
 		if tc.wantedErr != nil {
 			require.ErrorIs(t, err, tc.wantedErr)
 		} else {
@@ -348,7 +348,7 @@ func TestUpdateSyncTipsWithValidRoots(t *testing.T) {
 // single block that is outside of Fork choice. The numbers in parentheses are
 // the weights of the nodes before removal
 //
-func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
+func TestSetOptimisticToInvalid(t *testing.T) {
 	tests := []struct {
 		root              [32]byte                // the root of the new INVALID block
 		tips              map[[32]byte]types.Slot // the old synced tips
@@ -409,18 +409,18 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 		ctx := context.Background()
 		f := setup(1, 1)
 
-		require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1))
 		weights := []uint64{10, 10, 9, 7, 1, 6, 2, 3, 1, 1, 1, 0, 0}
 		f.syncedTips.Lock()
 		f.syncedTips.validatedTips = tc.tips
@@ -439,7 +439,7 @@ func TestUpdateSyncTipsWithInvalidRoot(t *testing.T) {
 		require.NotEqual(t, NonExistentNode, parentIndex)
 		parent := f.store.nodes[parentIndex]
 		f.store.nodesLock.Unlock()
-		err := f.UpdateSyncedTipsWithInvalidRoot(context.Background(), tc.root)
+		err := f.SetOptimisticToInvalid(context.Background(), tc.root)
 		require.NoError(t, err)
 		f.syncedTips.RLock()
 		_, parentSyncedTip := f.syncedTips.validatedTips[parent.root]
@@ -467,18 +467,18 @@ func TestFindSyncedTip(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1))
 	tests := []struct {
 		root   [32]byte                // the root of the block
 		tips   map[[32]byte]types.Slot // the synced tips
@@ -547,4 +547,46 @@ func TestFindSyncedTip(t *testing.T) {
 		f.store.nodesLock.RUnlock()
 		syncedTips.RUnlock()
 	}
+}
+
+// This is a regression test (10341)
+func TestIsOptimistic_DeadLock(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 90, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1))
+	tips := map[[32]byte]types.Slot{
+		[32]byte{'a'}: 100,
+		[32]byte{'d'}: 102,
+	}
+	f.syncedTips.validatedTips = tips
+	_, err := f.IsOptimistic(ctx, [32]byte{'a'})
+	require.NoError(t, err)
+
+	// Acquire a write lock, this should not hang
+	f.store.nodesLock.Lock()
+	f.store.nodesLock.Unlock()
+	_, err = f.IsOptimistic(ctx, [32]byte{'e'})
+	require.NoError(t, err)
+
+	// Acquire a write lock, this should not hang
+	f.store.nodesLock.Lock()
+	f.store.nodesLock.Unlock()
+	_, err = f.IsOptimistic(ctx, [32]byte{'b'})
+	require.NoError(t, err)
+
+	// Acquire a write lock, this should not hang
+	f.store.nodesLock.Lock()
+	f.store.nodesLock.Unlock()
+
+	_, err = f.IsOptimistic(ctx, [32]byte{'c'})
+	require.NoError(t, err)
+
+	// Acquire a write lock, this should not hang
+	f.store.nodesLock.Lock()
+	f.store.nodesLock.Unlock()
+
 }

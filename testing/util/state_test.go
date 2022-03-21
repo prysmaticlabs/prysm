@@ -21,6 +21,30 @@ func TestNewBeaconState(t *testing.T) {
 	}
 }
 
+func TestNewBeaconStateAltair(t *testing.T) {
+	st, err := NewBeaconStateAltair()
+	require.NoError(t, err)
+	b, err := st.MarshalSSZ()
+	require.NoError(t, err)
+	got := &ethpb.BeaconStateAltair{}
+	require.NoError(t, got.UnmarshalSSZ(b))
+	if !reflect.DeepEqual(st.InnerStateUnsafe(), got) {
+		t.Fatal("State did not match after round trip marshal")
+	}
+}
+
+func TestNewBeaconStateBellatrix(t *testing.T) {
+	st, err := NewBeaconStateBellatrix()
+	require.NoError(t, err)
+	b, err := st.MarshalSSZ()
+	require.NoError(t, err)
+	got := &ethpb.BeaconStateBellatrix{}
+	require.NoError(t, got.UnmarshalSSZ(b))
+	if !reflect.DeepEqual(st.InnerStateUnsafe(), got) {
+		t.Fatal("State did not match after round trip marshal")
+	}
+}
+
 func TestNewBeaconState_HashTreeRoot(t *testing.T) {
 	st, err := NewBeaconState()
 	require.NoError(t, err)

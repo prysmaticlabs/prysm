@@ -2,18 +2,31 @@ package debug
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
+
+func addReplayerBuilder(s *Server, h stategen.HistoryAccessor, is bool, canonErr error, currSlot types.Slot) {
+	cc := &mockstategen.MockCanonicalChecker{Is: is, Err: canonErr}
+	cs := &mockstategen.MockCurrentSlotter{Slot: currSlot}
+	s.ReplayerBuilder = stategen.NewCanonicalBuilder(h, cc, cs)
+}
+
+func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
+	addReplayerBuilder(s, h, true, nil, math.MaxUint64-1)
+}
 
 func TestServer_GetBeaconState(t *testing.T) {
 	db := dbTest.SetupDB(t)
@@ -34,6 +47,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 		StateGen:           gen,
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
+	addDefaultReplayerBuilder(bs, db)
 	_, err = bs.GetBeaconState(ctx, &pbrpc.BeaconStateRequest{})
 	assert.ErrorContains(t, "Need to specify either a block root or slot to request state", err)
 	req := &pbrpc.BeaconStateRequest{
@@ -46,16 +60,44 @@ func TestServer_GetBeaconState(t *testing.T) {
 	wanted, err := st.MarshalSSZ()
 	require.NoError(t, err)
 	assert.DeepEqual(t, wanted, res.Encoded)
+
+	req = &pbrpc.BeaconStateRequest{
+		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
+			Slot: st.Slot(),
+		},
+	}
+	wanted, err = st.MarshalSSZ()
+	require.NoError(t, err)
+	res, err = bs.GetBeaconState(ctx, req)
+	require.NoError(t, err)
+	resState := &pbrpc.BeaconState{}
+	err = resState.UnmarshalSSZ(res.Encoded)
+	require.NoError(t, err)
+	assert.Equal(t, resState.Slot, st.Slot())
+	assert.DeepEqual(t, wanted, res.Encoded)
+
+	// request a slot after the state
+	// note that if the current slot were <= slot+1, this would fail
+	// but the mock stategen.CurrentSlotter gives a current slot far in the future
+	// so this acts like requesting a state at a skipped slot
 	req = &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
 			Slot: slot + 1,
 		},
 	}
-	require.NoError(t, st.SetSlot(slot+1))
-	wanted, err = st.MarshalSSZ()
+	state := state.BeaconState(st)
+	// since we are requesting a state at a skipped slot, use the same method as stategen
+	// to advance to the pre-state for the subsequent slot
+	state, err = stategen.ReplayProcessSlots(ctx, state, slot+1)
+	require.NoError(t, err)
+	wanted, err = state.MarshalSSZ()
 	require.NoError(t, err)
 	res, err = bs.GetBeaconState(ctx, req)
 	require.NoError(t, err)
+	resState = &pbrpc.BeaconState{}
+	err = resState.UnmarshalSSZ(res.Encoded)
+	require.NoError(t, err)
+	assert.Equal(t, resState.Slot, state.Slot())
 	assert.DeepEqual(t, wanted, res.Encoded)
 }
 

@@ -40,7 +40,7 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
-	span.AddAttributes(trace.Int64Attribute("index", int64(index)))
+	span.AddAttributes(trace.Int64Attribute("index", int64(index))) // lint:ignore uintcast -- It's safe to do this for tracing.
 
 	if s.dv5Listener == nil {
 		// return if discovery isn't set
@@ -62,7 +62,8 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 	wg := new(sync.WaitGroup)
 	for {
 		if err := ctx.Err(); err != nil {
-			return false, err
+			return false, errors.Errorf("unable to find requisite number of peers for topic %s - "+
+				"only %d out of %d peers were able to be found", topic, currNum, threshold)
 		}
 		if currNum >= threshold {
 			break
@@ -137,7 +138,7 @@ func (s *Service) hasPeerWithSubnet(topic string) bool {
 	// In the event peer threshold is lower, we will choose the lower
 	// threshold.
 	minPeers := mathutil.Min(1, uint64(flags.Get().MinimumPeersPerSubnet))
-	return len(s.pubsub.ListPeers(topic+s.Encoding().ProtocolSuffix())) >= int(minPeers)
+	return len(s.pubsub.ListPeers(topic+s.Encoding().ProtocolSuffix())) >= int(minPeers) // lint:ignore uintcast -- Min peers can be safely cast to int.
 }
 
 // Updates the service's discv5 listener record's attestation subnet
@@ -194,6 +195,7 @@ func attSubnets(record *enr.Record) ([]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
+	// lint:ignore uintcast -- subnet count can be safely cast to int.
 	if len(bitV) != byteCount(int(attestationSubnetCount)) {
 		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
 	}
@@ -213,6 +215,7 @@ func syncSubnets(record *enr.Record) ([]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
+	// lint:ignore uintcast -- subnet count can be safely cast to int.
 	if len(bitV) != byteCount(int(syncCommsSubnetCount)) {
 		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
 	}
