@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -93,7 +94,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	prepareBeaconProposalConfig        *PrepareBeaconProposalConfig
+	prepareBeaconProposalConfig        *validator_service_config.FeeRecipientConfig
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -101,15 +102,6 @@ type validatorStatus struct {
 	publicKey []byte
 	status    *ethpb.ValidatorStatusResponse
 	index     types.ValidatorIndex
-}
-
-type PrepareBeaconProposalConfig struct {
-	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ValidatorProposerOptions
-	DefaultConfig *ValidatorProposerOptions
-}
-
-type ValidatorProposerOptions struct {
-	FeeRecipient common.Address
 }
 
 // Done cleans up the validator.
@@ -944,8 +936,8 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
-// PrepareBeaconProposer calls the prepareBeaconProposer RPC to set the proposer information such as fee recipient.
-func (v *validator) PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) error {
+// UpdateFeeRecipient calls the prepareBeaconProposer RPC to set the fee recipient.
+func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error {
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}

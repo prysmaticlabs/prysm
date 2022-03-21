@@ -57,5 +57,5 @@ type Validator interface {
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
-	PrepareBeaconProposer(ctx context.Context, km keymanager.IKeymanager) error
+	UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error
 }

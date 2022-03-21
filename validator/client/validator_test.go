@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -359,9 +360,9 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
-		prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
+		prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
 			ProposeConfig: nil,
-			DefaultConfig: &ValidatorProposerOptions{
+			DefaultConfig: &validator_service_config.FeeRecipientOptions{
 				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 			},
 		},
@@ -403,9 +404,9 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
-		prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
+		prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
 			ProposeConfig: nil,
-			DefaultConfig: &ValidatorProposerOptions{
+			DefaultConfig: &validator_service_config.FeeRecipientOptions{
 				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 			},
 		},
@@ -1472,9 +1473,9 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				v.prepareBeaconProposalConfig = &PrepareBeaconProposalConfig{
+				v.prepareBeaconProposalConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: nil,
-					DefaultConfig: &ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
@@ -1504,9 +1505,9 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				v.prepareBeaconProposalConfig = &PrepareBeaconProposalConfig{
+				v.prepareBeaconProposalConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: nil,
-					DefaultConfig: &ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
@@ -1539,7 +1540,7 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*ValidatorProposerOptions)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1550,12 +1551,12 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
-				config[keys[0]] = &ValidatorProposerOptions{
+				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				}
-				v.prepareBeaconProposalConfig = &PrepareBeaconProposalConfig{
+				v.prepareBeaconProposalConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: config,
-					DefaultConfig: &ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
@@ -1578,7 +1579,7 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*ValidatorProposerOptions)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1589,12 +1590,12 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
-				config[keys[0]] = &ValidatorProposerOptions{
+				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
 					FeeRecipient: common.Address{},
 				}
-				v.prepareBeaconProposalConfig = &PrepareBeaconProposalConfig{
+				v.prepareBeaconProposalConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: config,
-					DefaultConfig: &ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
@@ -1617,7 +1618,7 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*ValidatorProposerOptions)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1626,12 +1627,12 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 					ctx, // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
 				).Return(nil, errors.New("Could not find validator index for public key"))
-				config[keys[0]] = &ValidatorProposerOptions{
+				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				}
-				v.prepareBeaconProposalConfig = &PrepareBeaconProposalConfig{
+				v.prepareBeaconProposalConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: config,
-					DefaultConfig: &ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
@@ -1644,7 +1645,7 @@ func TestValidator_PrepareBeaconProposer(t *testing.T) {
 			v := tt.validatorSetter(t)
 			km, err := v.Keymanager()
 			require.NoError(t, err)
-			if err := v.PrepareBeaconProposer(ctx, km); tt.err != "" {
+			if err := v.UpdateFeeRecipient(ctx, km); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
 		})

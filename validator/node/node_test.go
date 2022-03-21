@@ -15,11 +15,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -324,7 +324,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        args
-		want        func() *client.PrepareBeaconProposalConfig
+		want        func() *validator_service_config.FeeRecipientConfig
 		urlResponse string
 		wantErr     string
 	}{
@@ -337,16 +337,16 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want: func() *client.PrepareBeaconProposalConfig {
+			want: func() *validator_service_config.FeeRecipientConfig {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
-				return &client.PrepareBeaconProposalConfig{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*client.ValidatorProposerOptions{
+				return &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 						},
 					},
-					DefaultConfig: &client.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 					},
 				}
@@ -362,13 +362,13 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want: func() *client.PrepareBeaconProposalConfig {
+			want: func() *validator_service_config.FeeRecipientConfig {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
 				key2, err := hexutil.Decode("0xb057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7b")
 				require.NoError(t, err)
-				return &client.PrepareBeaconProposalConfig{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*client.ValidatorProposerOptions{
+				return &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 						},
@@ -376,7 +376,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 							FeeRecipient: common.HexToAddress("0x60155530FCE8a85ec7055A5F8b2bE214B3DaeFd4"),
 						},
 					},
-					DefaultConfig: &client.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 					},
 				}
@@ -392,16 +392,16 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want: func() *client.PrepareBeaconProposalConfig {
+			want: func() *validator_service_config.FeeRecipientConfig {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
-				return &client.PrepareBeaconProposalConfig{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*client.ValidatorProposerOptions{
+				return &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 						},
 					},
-					DefaultConfig: &client.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 					},
 				}
@@ -417,10 +417,10 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
 				},
 			},
-			want: func() *client.PrepareBeaconProposalConfig {
-				return &client.PrepareBeaconProposalConfig{
+			want: func() *validator_service_config.FeeRecipientConfig {
+				return &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: nil,
-					DefaultConfig: &client.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 					},
 				}
@@ -436,10 +436,10 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
 				},
 			},
-			want: func() *client.PrepareBeaconProposalConfig {
-				return &client.PrepareBeaconProposalConfig{
+			want: func() *validator_service_config.FeeRecipientConfig {
+				return &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: nil,
-					DefaultConfig: &client.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89B"),
 					},
 				}
@@ -455,10 +455,10 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want: func() *client.PrepareBeaconProposalConfig {
-				return &client.PrepareBeaconProposalConfig{
+			want: func() *validator_service_config.FeeRecipientConfig {
+				return &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: nil,
-					DefaultConfig: &client.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
 						FeeRecipient: common.HexToAddress("0x0000000000000000000000000000000000000000"),
 					},
 				}
@@ -474,8 +474,8 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 					defaultfee: "",
 				},
 			},
-			want: func() *client.PrepareBeaconProposalConfig {
-				return &client.PrepareBeaconProposalConfig{}
+			want: func() *validator_service_config.FeeRecipientConfig {
+				return &validator_service_config.FeeRecipientConfig{}
 			},
 			wantErr: "cannot specify both",
 		},

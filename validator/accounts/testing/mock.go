@@ -180,7 +180,7 @@ func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
 }
 
 // PrepareBeaconProposer for mocking
-func (_ MockValidator) PrepareBeaconProposer(_ context.Context, _ keymanager.IKeymanager) error {
+func (_ MockValidator) UpdateFeeRecipient(_ context.Context, _ keymanager.IKeymanager) error {
 	panic("implement me")
 }
 

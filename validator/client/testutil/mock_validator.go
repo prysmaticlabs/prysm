@@ -248,7 +248,7 @@ func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ ty
 }
 
 // PrepareBeaconProposer for mocking
-func (_ *FakeValidator) PrepareBeaconProposer(_ context.Context, _ keymanager.IKeymanager) error {
+func (_ *FakeValidator) UpdateFeeRecipient(_ context.Context, _ keymanager.IKeymanager) error {
 	return nil
 }
 

@@ -116,7 +116,7 @@ func run(ctx context.Context, v iface.Validator) {
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-	if err := v.PrepareBeaconProposer(ctx, km); err != nil {
+	if err := v.UpdateFeeRecipient(ctx, km); err != nil {
 		log.Fatalf("PreparedBeaconProposer Failed: %v", err) // allow fatal. skipcq
 	}
 	for {

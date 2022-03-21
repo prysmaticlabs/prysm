@@ -17,6 +17,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -69,7 +70,7 @@ type ValidatorService struct {
 	grpcHeaders                 []string
 	graffiti                    []byte
 	web3SignerConfig            *remote_web3signer.SetupConfig
-	prepareBeaconProposalConfig *PrepareBeaconProposalConfig
+	prepareBeaconProposalConfig *validator_service_config.FeeRecipientConfig
 }
 
 // Config for the validator service.
@@ -93,7 +94,7 @@ type Config struct {
 	GraffitiFlag                string
 	Endpoint                    string
 	Web3SignerConfig            *remote_web3signer.SetupConfig
-	PrepareBeaconProposalConfig *PrepareBeaconProposalConfig
+	PrepareBeaconProposalConfig *validator_service_config.FeeRecipientConfig
 }
 
 // NewValidatorService creates a new validator service for the service

@@ -20,7 +20,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/go-playground/validator/v10"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/gateway"
@@ -372,7 +371,6 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
-	jsonValidator := validator.New()
 
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
@@ -409,11 +407,6 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	bpc, err := prepareBeaconProposalConfig(c.cliCtx)
 	if err != nil {
 		return err
-	}
-	if bpc.ProposeConfig != nil {
-		if err := jsonValidator.StructCtx(c.cliCtx.Context, bpc.ProposeConfig); err != nil {
-			return err
-		}
 	}
 
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
@@ -478,8 +471,8 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 	return web3signerConfig, nil
 }
 
-func prepareBeaconProposalConfig(cliCtx *cli.Context) (*client.PrepareBeaconProposalConfig, error) {
-	var fileConfig *validatorServiceConfig.PrepareBeaconProposalFileConfig
+func prepareBeaconProposalConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipientConfig, error) {
+	var fileConfig *validatorServiceConfig.FeeRecipientFileConfig
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
 		return nil, errors.New("cannot specify both --validators-proposer-fileConfig-dir and --validators-proposer-fileConfig-url")
 	}
@@ -496,9 +489,9 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*client.PrepareBeaconProp
 	// override the default fileConfig with the fileConfig from the command line
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		fileConfig = &validatorServiceConfig.PrepareBeaconProposalFileConfig{
+		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
 			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.ValidatorProposerOptions{
+			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
 				FeeRecipient: suggestedFee,
 			},
 		}
@@ -507,15 +500,15 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*client.PrepareBeaconProp
 	if fileConfig == nil {
 		// if no flags were set, use the burn address
 		log.Warnf("No validator proposer fileConfig or default fee specified!! validators will continue to propose with burn address")
-		fileConfig = &validatorServiceConfig.PrepareBeaconProposalFileConfig{
+		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
 			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.ValidatorProposerOptions{
+			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
 				FeeRecipient: fieldparams.EthBurnAddressHex,
 			},
 		}
 	}
 	//convert file config to proposer config for internal use
-	proposerConfig := &client.PrepareBeaconProposalConfig{}
+	proposerConfig := &validatorServiceConfig.FeeRecipientConfig{}
 
 	// default fileConfig is mandatory
 	if fileConfig.DefaultConfig == nil {
@@ -528,12 +521,12 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*client.PrepareBeaconProp
 	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
 	}
-	proposerConfig.DefaultConfig = &client.ValidatorProposerOptions{
+	proposerConfig.DefaultConfig = &validatorServiceConfig.FeeRecipientOptions{
 		FeeRecipient: common.BytesToAddress(bytes),
 	}
 
 	if fileConfig.ProposeConfig != nil {
-		proposerConfig.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*client.ValidatorProposerOptions)
+		proposerConfig.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.FeeRecipientOptions)
 		for key, option := range fileConfig.ProposeConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
@@ -552,7 +545,7 @@ func prepareBeaconProposalConfig(cliCtx *cli.Context) (*client.PrepareBeaconProp
 			if !common.IsHexAddress(option.FeeRecipient) {
 				return nil, errors.New("fee recipient is not a valid eth1 address")
 			}
-			proposerConfig.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &client.ValidatorProposerOptions{
+			proposerConfig.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.FeeRecipientOptions{
 				FeeRecipient: common.BytesToAddress(feebytes),
 			}
 		}
