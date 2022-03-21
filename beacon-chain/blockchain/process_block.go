@@ -481,10 +481,27 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 		return err
 	}
 	// Feed in block to fork choice store.
+
+	payloadHash, err := getBlockPayloadHash(blk)
+	if err != nil {
+		return err
+	}
 	return s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
-		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()),
+		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()), payloadHash,
 		jCheckpoint.Epoch,
 		fCheckpoint.Epoch)
+}
+
+func getBlockPayloadHash(blk block.BeaconBlock) ([32]byte, error) {
+	payloadHash := [32]byte{}
+	if isPreBellatrix(blk.Version()) {
+		return payloadHash, nil
+	}
+	payload, err := blk.Body().ExecutionPayload()
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return bytesutil.ToBytes32(payload.BlockHash), nil
 }
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
