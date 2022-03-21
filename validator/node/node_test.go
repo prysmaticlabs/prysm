@@ -11,8 +11,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -305,6 +308,212 @@ func TestUnmarshalFromURL(t *testing.T) {
 				return
 			}
 			require.DeepEqual(t, tt.want, tt.args.To)
+		})
+	}
+}
+
+func TestPrepareBeaconProposalConfig(t *testing.T) {
+	type proposalFlag struct {
+		dir        string
+		url        string
+		defaultfee string
+	}
+	type args struct {
+		proposalFlagValues *proposalFlag
+	}
+	tests := []struct {
+		name        string
+		args        args
+		want        func() *validator_service_config.FeeRecipientConfig
+		urlResponse string
+		wantErr     string
+	}{
+		{
+			name: "Happy Path Config file File",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validator_service_config.FeeRecipientConfig {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+						},
+					},
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+					},
+				}
+			},
+			wantErr: "",
+		},
+		{
+			name: "Happy Path Config file File multiple fee recipients",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config-multiple.json",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validator_service_config.FeeRecipientConfig {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				key2, err := hexutil.Decode("0xb057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7b")
+				require.NoError(t, err)
+				return &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+						},
+						bytesutil.ToBytes48(key2): {
+							FeeRecipient: common.HexToAddress("0x60155530FCE8a85ec7055A5F8b2bE214B3DaeFd4"),
+						},
+					},
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+					},
+				}
+			},
+			wantErr: "",
+		},
+		{
+			name: "Happy Path Config URL File",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "",
+					url:        "./testdata/good-prepare-beacon-proposer-config.json",
+					defaultfee: "",
+				},
+			},
+			want: func() *validator_service_config.FeeRecipientConfig {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+						},
+					},
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+					},
+				}
+			},
+			wantErr: "",
+		},
+		{
+			name: "Happy Path Suggested Fee File",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+				},
+			},
+			want: func() *validator_service_config.FeeRecipientConfig {
+				return &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: nil,
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+					},
+				}
+			},
+			wantErr: "",
+		},
+		{
+			name: "Suggested Fee Override Config",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
+					url:        "",
+					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
+				},
+			},
+			want: func() *validator_service_config.FeeRecipientConfig {
+				return &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: nil,
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89B"),
+					},
+				}
+			},
+			wantErr: "",
+		},
+		{
+			name: "Default Fee Recipient",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validator_service_config.FeeRecipientConfig {
+				return &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: nil,
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+					},
+				}
+			},
+			wantErr: "",
+		},
+		{
+			name: "Both URL and Dir flags used resulting in error",
+			args: args{
+				proposalFlagValues: &proposalFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
+					url:        "./testdata/good-prepare-beacon-proposer-config.json",
+					defaultfee: "",
+				},
+			},
+			want: func() *validator_service_config.FeeRecipientConfig {
+				return &validator_service_config.FeeRecipientConfig{}
+			},
+			wantErr: "cannot specify both",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := cli.App{}
+			set := flag.NewFlagSet("test", 0)
+			if tt.args.proposalFlagValues.dir != "" {
+				set.String(flags.FeeRecipientConfigFileFlag.Name, tt.args.proposalFlagValues.dir, "")
+				require.NoError(t, set.Set(flags.FeeRecipientConfigFileFlag.Name, tt.args.proposalFlagValues.dir))
+			}
+			if tt.args.proposalFlagValues.url != "" {
+				content, err := ioutil.ReadFile(tt.args.proposalFlagValues.url)
+				require.NoError(t, err)
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(200)
+					w.Header().Set("Content-Type", "application/json")
+					_, err := fmt.Fprintf(w, string(content))
+					require.NoError(t, err)
+				}))
+				defer srv.Close()
+
+				set.String(flags.FeeRecipientConfigURLFlag.Name, tt.args.proposalFlagValues.url, "")
+				require.NoError(t, set.Set(flags.FeeRecipientConfigURLFlag.Name, srv.URL))
+			}
+			if tt.args.proposalFlagValues.defaultfee != "" {
+				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposalFlagValues.defaultfee, "")
+				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposalFlagValues.defaultfee))
+			}
+			cliCtx := cli.NewContext(&app, set, nil)
+			got, err := prepareBeaconProposalConfig(cliCtx)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			w := tt.want()
+			require.DeepEqual(t, w, got)
 		})
 	}
 }
