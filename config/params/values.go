@@ -91,7 +91,7 @@ func equalForkSchedules(a, b map[[fieldparams.VersionLength]byte]types.Epoch) er
 	for k, v := range a {
 		bv, ok := b[k]
 		if !ok {
-			return fmt.Errorf("fork version %#x in a not present in b")
+			return fmt.Errorf("fork version %#x from a, not present in b", k)
 		}
 		if v != bv {
 			return fmt.Errorf("fork version mismatch, epoch in a=%d, b=%d", v, bv)
