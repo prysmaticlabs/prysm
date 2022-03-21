@@ -7,10 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 // SaveOrigin loads an ssz serialized Block & BeaconState from an io.Reader
@@ -18,32 +17,35 @@ import (
 // syncing, using the provided values as their point of origin. This is an alternative
 // to syncing from genesis, and should only be run on an empty database.
 func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Reader) error {
-	// unmarshal both block and state before trying to save anything
-	// so that we fail early if there is any issue with the ssz data
-	blk := &ethpb.SignedBeaconBlockAltair{}
+	sb, err := ioutil.ReadAll(stateReader)
+	if err != nil {
+		return errors.Wrap(err, "failed to read origin state bytes")
+	}
 	bb, err := ioutil.ReadAll(blockReader)
 	if err != nil {
 		return errors.Wrap(err, "error reading block given to SaveOrigin")
 	}
-	if err := blk.UnmarshalSSZ(bb); err != nil {
-		return errors.Wrap(err, "could not unmarshal checkpoint block")
-	}
-	wblk, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
+
+	cf, err := detect.FromState(sb)
 	if err != nil {
-		return errors.Wrap(err, "could not wrap checkpoint block")
+		return errors.Wrap(err, "failed to detect config and fork for origin state")
 	}
-	bs, err := statev2.InitializeFromSSZReader(stateReader)
+	bs, err := cf.UnmarshalBeaconState(sb)
 	if err != nil {
-		return errors.Wrap(err, "could not initialize checkpoint state from reader")
+		return errors.Wrap(err, "could not unmarshal origin state")
+	}
+	wblk, err := cf.UnmarshalBeaconBlock(bb)
+	if err != nil {
+		return errors.Wrap(err, "unable to unmarshal origin SignedBeaconBlock")
 	}
 
+	blockRoot, err := wblk.Block().HashTreeRoot()
+	if err != nil {
+		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
+	}
 	// save block
 	if err := s.SaveBlock(ctx, wblk); err != nil {
 		return errors.Wrap(err, "could not save checkpoint block")
-	}
-	blockRoot, err := blk.Block.HashTreeRoot()
-	if err != nil {
-		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
 
 	// save state
@@ -70,7 +72,7 @@ func (s *Store) SaveOrigin(ctx context.Context, stateReader, blockReader io.Read
 
 	// rebuild the checkpoint from the block
 	// use it to mark the block as justified and finalized
-	slotEpoch, err := blk.Block.Slot.SafeDivSlot(params.BeaconConfig().SlotsPerEpoch)
+	slotEpoch, err := wblk.Block().Slot().SafeDivSlot(params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
 		return err
 	}
