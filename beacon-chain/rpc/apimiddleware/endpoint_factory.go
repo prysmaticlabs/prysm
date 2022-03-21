@@ -37,6 +37,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/voluntary_exits",
 		"/eth/v1/beacon/pool/sync_committees",
+		"/eth/v1/beacon/weak_subjectivity",
 		"/eth/v1/node/identity",
 		"/eth/v1/node/peers",
 		"/eth/v1/node/peers/{peer_id}",
@@ -142,6 +143,8 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSignaturesArray,
 		}
+	case "/eth/v1/beacon/weak_subjectivity":
+		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/node/identity":
 		endpoint.GetResponse = &identityResponseJson{}
 	case "/eth/v1/node/peers":
