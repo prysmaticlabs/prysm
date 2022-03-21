@@ -101,7 +101,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 		return errors.Wrap(err, "could not determine if execution is enabled")
 	}
 	if !enabled {
-		return nil
+		return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
 	}
 	payload, err := body.ExecutionPayload()
 	if err != nil {
