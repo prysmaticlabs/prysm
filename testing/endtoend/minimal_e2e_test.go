@@ -19,7 +19,7 @@ type testArgs struct {
 	useWeb3RemoteSigner bool
 }
 
-func TestEndToEnd_MinimalConfigV(t *testing.T) {
+func TestEndToEnd_MinimalConfig(t *testing.T) {
 	e2eMinimal(t, &testArgs{
 		usePrysmSh:          false,
 		useWeb3RemoteSigner: false,
