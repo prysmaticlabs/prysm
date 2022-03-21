@@ -86,7 +86,6 @@ func TestGetAttesterDuties(t *testing.T) {
 		HeadFetcher: chain,
 		TimeFetcher: chain,
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		BeaconDB:    db,
 	}
 
 	t.Run("Single validator", func(t *testing.T) {
@@ -165,7 +164,6 @@ func TestGetAttesterDuties(t *testing.T) {
 			HeadFetcher: chain,
 			TimeFetcher: chain,
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
-			BeaconDB:    db,
 		}
 
 		req := &ethpbv1.AttesterDutiesRequest{
@@ -235,7 +233,6 @@ func TestGetAttesterDuties(t *testing.T) {
 			HeadFetcher: chain,
 			TimeFetcher: chain,
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
-			BeaconDB:    db,
 		}
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: 0,
@@ -290,7 +287,6 @@ func TestGetProposerDuties(t *testing.T) {
 		HeadFetcher: chain,
 		TimeFetcher: chain,
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		BeaconDB:    db,
 	}
 
 	t.Run("Ok", func(t *testing.T) {
@@ -341,7 +337,6 @@ func TestGetProposerDuties(t *testing.T) {
 			HeadFetcher: chain,
 			TimeFetcher: chain,
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
-			BeaconDB:    db,
 		}
 
 		req := &ethpbv1.ProposerDutiesRequest{
@@ -391,7 +386,6 @@ func TestGetProposerDuties(t *testing.T) {
 			HeadFetcher: chain,
 			TimeFetcher: chain,
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
-			BeaconDB:    db,
 		}
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: 0,
@@ -440,7 +434,6 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		SyncChecker:  &mockSync.Sync{IsSyncing: false},
 		TimeFetcher:  mockChainService,
 		HeadFetcher:  mockChainService,
-		BeaconDB:     db,
 	}
 
 	t.Run("Single validator", func(t *testing.T) {
@@ -579,7 +572,6 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 			SyncChecker:  &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:  mockChainService,
 			HeadFetcher:  mockChainService,
-			BeaconDB:     db,
 		}
 
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
@@ -613,7 +605,6 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 			SyncChecker:  &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:  mockChainService,
 			HeadFetcher:  mockChainService,
-			BeaconDB:     db,
 		}
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,

@@ -51,3 +51,22 @@ func TestValidateSync(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestIsOptimistic(t *testing.T) {
+	ctx := context.Background()
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+
+	t.Run("optimistic", func(t *testing.T) {
+		mockHeadFetcher := &chainmock.ChainService{Optimistic: true}
+		o, err := IsOptimistic(ctx, st, mockHeadFetcher)
+		require.NoError(t, err)
+		assert.Equal(t, true, o)
+	})
+	t.Run("not optimistic", func(t *testing.T) {
+		mockHeadFetcher := &chainmock.ChainService{Optimistic: false}
+		o, err := IsOptimistic(ctx, st, mockHeadFetcher)
+		require.NoError(t, err)
+		assert.Equal(t, false, o)
+	})
+}

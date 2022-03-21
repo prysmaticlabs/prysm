@@ -57,13 +57,9 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 		return nil, status.Error(codes.NotFound, "Could not find validator")
 	}
 
-	_, blocks, err := bs.BeaconDB.BlocksBySlot(ctx, st.Slot())
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
-	}
-	isOptimistic, err := bs.blocksAreOptimistic(ctx, blocks)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	return &ethpb.StateValidatorResponse{Data: valContainer[0], ExecutionOptimistic: isOptimistic}, nil
@@ -84,13 +80,9 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		return nil, handleValContainerErr(err)
 	}
 
-	_, blocks, err := bs.BeaconDB.BlocksBySlot(ctx, st.Slot())
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
-	}
-	isOptimistic, err := bs.blocksAreOptimistic(ctx, blocks)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	// Exit early if no matching validators we found or we don't want to further filter validators by status.
@@ -151,13 +143,9 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 		}
 	}
 
-	_, blocks, err := bs.BeaconDB.BlocksBySlot(ctx, st.Slot())
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
-	}
-	isOptimistic, err := bs.blocksAreOptimistic(ctx, blocks)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	return &ethpb.ValidatorBalancesResponse{Data: valBalances, ExecutionOptimistic: isOptimistic}, nil
@@ -214,13 +202,9 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 		}
 	}
 
-	_, blocks, err := bs.BeaconDB.BlocksBySlot(ctx, st.Slot())
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
-	}
-	isOptimistic, err := bs.blocksAreOptimistic(ctx, blocks)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	return &ethpb.StateCommitteesResponse{Data: committees, ExecutionOptimistic: isOptimistic}, nil

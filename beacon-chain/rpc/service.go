@@ -209,7 +209,6 @@ func (s *Service) Start() {
 		BeaconDB:               s.cfg.BeaconDB,
 	}
 	validatorServerV1 := &validator.Server{
-		BeaconDB:         s.cfg.BeaconDB,
 		HeadFetcher:      s.cfg.HeadFetcher,
 		TimeFetcher:      s.cfg.GenesisTimeFetcher,
 		SyncChecker:      s.cfg.SyncService,

@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -77,13 +76,9 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
-	_, blocks, err := bs.BeaconDB.BlocksBySlot(ctx, st.Slot())
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
-	}
-	isOptimistic, err := bs.blocksAreOptimistic(ctx, blocks)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
+		return nil, errors.Wrap(err, "could not check if block is optimistic")
 	}
 
 	return &ethpb.StateRootResponse{
@@ -109,13 +104,9 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 	fork := st.Fork()
-	_, blocks, err := bs.BeaconDB.BlocksBySlot(ctx, st.Slot())
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
-	}
-	isOptimistic, err := bs.blocksAreOptimistic(ctx, blocks)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	return &ethpb.StateForkResponse{
@@ -148,13 +139,9 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
-	_, blocks, err := bs.BeaconDB.BlocksBySlot(ctx, st.Slot())
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get blocks for state slot: %v", err)
-	}
-	isOptimistic, err := bs.blocksAreOptimistic(ctx, blocks)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if blocks are optimistic: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	return &ethpb.StateFinalityCheckpointResponse{
@@ -203,23 +190,4 @@ func checkpoint(sourceCheckpoint *eth.Checkpoint) *ethpb.Checkpoint {
 		Epoch: 0,
 		Root:  params.BeaconConfig().ZeroHash[:],
 	}
-}
-
-func (bs *Server) blocksAreOptimistic(ctx context.Context, blocks []block.SignedBeaconBlock) (bool, error) {
-	isOptimistic := false
-	for _, b := range blocks {
-		if isOptimistic {
-			break
-		}
-		blockRoot, err := b.Block().HashTreeRoot()
-		if err != nil {
-			return false, errors.Wrap(err, "could not get block root")
-		}
-		isOptimistic, err = bs.HeadFetcher.IsOptimisticForRoot(ctx, blockRoot)
-		if err != nil {
-			return false, errors.Wrap(err, "could not check if block is optimistic")
-		}
-
-	}
-	return isOptimistic, nil
 }
