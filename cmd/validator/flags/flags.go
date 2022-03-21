@@ -327,7 +327,7 @@ var (
 	// FeeRecipientConfigFileFlag defines the path or URL to a file with proposer config.
 	FeeRecipientConfigFileFlag = &cli.StringFlag{
 		Name:  "fee-recipient-config-file",
-		Usage: "Set path to a JSON file containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --validators-proposer-config-dir=/path/to/proposer.json). File format found in docs",
+		Usage: "Set path to a JSON file containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --fee-recipient-config-file=/path/to/proposer.json). File format found in docs",
 		Value: "",
 	}
 	// FeeRecipientConfigURLFlag defines the path or URL to a file with proposer config.
