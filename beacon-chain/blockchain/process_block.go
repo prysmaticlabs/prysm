@@ -307,8 +307,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
+		preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+		if err != nil {
+			return nil, nil, err
+		}
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
+			return nil, nil, err
+		}
+		if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, b); err != nil {
 			return nil, nil, err
 		}
 		// Save potential boundary states.
