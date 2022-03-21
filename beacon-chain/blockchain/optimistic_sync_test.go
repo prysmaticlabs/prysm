@@ -346,7 +346,9 @@ func Test_NotifyNewPayload(t *testing.T) {
 				payload, err = tt.preState.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
 			}
-			err := service.notifyNewPayload(ctx, tt.preState.Version(), payload, tt.postState, tt.blk)
+			root := [32]byte{'a'}
+			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, 0, 0))
+			err = service.notifyNewPayload(ctx, tt.preState.Version(), payload, tt.postState, tt.blk, root)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {

@@ -347,6 +347,11 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 	rBlock.Block.ParentRoot = gRoot[:]
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), blks[0]))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, blkRoots[0], firstState))
+	/*
+		for _, root := range blkRoots[1:] {
+			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, [32]byte{}, 0, 0))
+		}
+	*/
 	_, _, err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
 	require.NoError(t, err)
 }
