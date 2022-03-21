@@ -61,6 +61,20 @@ func TestGetBeaconStateV2(t *testing.T) {
 		assert.NotNil(t, resp)
 		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
+	})
 }
 
 func TestGetBeaconStateSSZ(t *testing.T) {
@@ -105,6 +119,24 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 	})
 	t.Run("Altair", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateAltair(t, 1)
+		sszState, err := fakeState.MarshalSSZ()
+		require.NoError(t, err)
+
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		assert.DeepEqual(t, sszState, resp.Data)
+	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 		sszState, err := fakeState.MarshalSSZ()
 		require.NoError(t, err)
 

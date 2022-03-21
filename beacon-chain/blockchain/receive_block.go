@@ -93,7 +93,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 			tracing.AnnotateError(span, err)
 			return err
 		}
-
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
