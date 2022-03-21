@@ -109,7 +109,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// This can happen sometimes when we receive the same log twice from the
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
-	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex))
+	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex)) // lint:ignore uintcast -- MerkleTreeIndex should not exceed int64 in your lifetime.
 	if index <= s.lastReceivedMerkleIndex {
 		return nil
 	}
@@ -211,7 +211,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	s.chainStartData.Chainstarted = true
 	s.chainStartData.GenesisBlock = blockNumber.Uint64()
 
-	chainStartTime := time.Unix(int64(genesisTime), 0)
+	chainStartTime := time.Unix(int64(genesisTime), 0) // lint:ignore uintcast -- Genesis time wont exceed int64 in your lifetime.
 
 	for i := range s.chainStartData.ChainstartDeposits {
 		proof, err := s.depositTrie.MerkleProof(i)
@@ -303,8 +303,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			Addresses: []common.Address{
 				s.cfg.depositContractAddr,
 			},
-			FromBlock: big.NewInt(int64(start)),
-			ToBlock:   big.NewInt(int64(end)),
+			FromBlock: big.NewInt(0).SetUint64(start),
+			ToBlock:   big.NewInt(0).SetUint64(end),
 		}
 		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
 		// only change the end block if the remaining logs are below the required log limit.
@@ -312,7 +312,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		withinLimit := remainingLogs < depositlogRequestLimit
 		aboveFollowHeight := end >= latestFollowHeight
 		if withinLimit && aboveFollowHeight {
-			query.ToBlock = big.NewInt(int64(latestFollowHeight))
+			query.ToBlock = big.NewInt(0).SetUint64(latestFollowHeight)
 			end = latestFollowHeight
 		}
 		logs, err := s.httpLogger.FilterLogs(ctx, query)
@@ -391,7 +391,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
-		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
+		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
 	}
 	return nil
 }
@@ -413,11 +413,11 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		// Cache eth1 block header here.
-		_, err := s.BlockHashByHeight(ctx, big.NewInt(int64(i)))
+		_, err := s.BlockHashByHeight(ctx, big.NewInt(0).SetUint64(i))
 		if err != nil {
 			return err
 		}
-		err = s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
+		err = s.ProcessETH1Block(ctx, big.NewInt(0).SetUint64(i))
 		if err != nil {
 			return err
 		}

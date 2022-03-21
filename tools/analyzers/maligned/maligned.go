@@ -176,7 +176,7 @@ func (s *gcSizes) Sizeof(T types.Type) int64 {
 		k := t.Kind()
 		if int(k) < len(basicSizes) {
 			if s := basicSizes[k]; s > 0 {
-				return int64(s)
+				return int64(s) // lint:ignore uintcast -- a byte will never exceed int64
 			}
 		}
 		if k == types.String {

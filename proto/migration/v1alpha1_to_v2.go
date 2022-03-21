@@ -36,6 +36,19 @@ func AltairToV1Alpha1SignedBlock(altairBlk *ethpbv2.SignedBeaconBlockAltair) (*e
 	return v1alpha1Block, nil
 }
 
+// BellatrixToV1Alpha1SignedBlock converts a v2 SignedBeaconBlockBellatrix proto to a v1alpha1 proto.
+func BellatrixToV1Alpha1SignedBlock(bellatrixBlk *ethpbv2.SignedBeaconBlockBellatrix) (*ethpbalpha.SignedBeaconBlockBellatrix, error) {
+	marshaledBlk, err := proto.Marshal(bellatrixBlk)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v1alpha1Block := &ethpbalpha.SignedBeaconBlockBellatrix{}
+	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v1alpha1Block, nil
+}
+
 // V1Alpha1BeaconBlockBellatrixToV2 converts a v1alpha1 Bellatrix beacon block to a v2
 // Bellatrix block.
 func V1Alpha1BeaconBlockBellatrixToV2(v1alpha1Block *ethpbalpha.BeaconBlockBellatrix) (*ethpbv2.BeaconBlockBellatrix, error) {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -588,4 +590,28 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 			assert.Equal(t, true, hasBlockRoots, "Expected no block roots")
 		})
 	}
+}
+
+func TestStore_FeeRecipientByValidatorID(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	ids := []types.ValidatorIndex{0, 0, 0}
+	feeRecipients := []common.Address{{}, {}, {}, {}}
+	require.ErrorContains(t, "validatorIDs and feeRecipients must be the same length", db.SaveFeeRecipientsByValidatorIDs(ctx, ids, feeRecipients))
+
+	ids = []types.ValidatorIndex{0, 1, 2}
+	feeRecipients = []common.Address{{'a'}, {'b'}, {'c'}}
+	require.NoError(t, db.SaveFeeRecipientsByValidatorIDs(ctx, ids, feeRecipients))
+	f, err := db.FeeRecipientByValidatorID(ctx, 0)
+	require.NoError(t, err)
+	require.Equal(t, common.Address{'a'}, f)
+	f, err = db.FeeRecipientByValidatorID(ctx, 1)
+	require.NoError(t, err)
+	require.Equal(t, common.Address{'b'}, f)
+	f, err = db.FeeRecipientByValidatorID(ctx, 2)
+	require.NoError(t, err)
+	require.Equal(t, common.Address{'c'}, f)
+	_, err = db.FeeRecipientByValidatorID(ctx, 3)
+	want := errors.Wrap(ErrNotFoundFeeRecipient, "validator id 3")
+	require.Equal(t, want.Error(), err.Error())
 }

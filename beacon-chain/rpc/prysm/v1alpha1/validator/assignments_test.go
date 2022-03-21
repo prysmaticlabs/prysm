@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -132,6 +133,111 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	}
 	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)-1))
 	require.NoError(t, helpers.UpdateSyncCommitteeCache(bs))
+
+	pubkeysAs48ByteType := make([][fieldparams.BLSPubkeyLength]byte, len(pubKeys))
+	for i, pk := range pubKeys {
+		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+	}
+
+	slot := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * params.BeaconConfig().SecondsPerSlot
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Genesis: time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second),
+	}
+	vs := &Server{
+		HeadFetcher:     chain,
+		TimeFetcher:     chain,
+		Eth1InfoFetcher: &mockPOW.POWChain{},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
+	}
+
+	// Test the first validator in registry.
+	req := &ethpb.DutiesRequest{
+		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
+	}
+	res, err := vs.GetDuties(context.Background(), req)
+	require.NoError(t, err, "Could not call epoch committee assignment")
+	if res.CurrentEpochDuties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Assigned slot %d can't be higher than %d",
+			res.CurrentEpochDuties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
+	}
+
+	// Test the last validator in registry.
+	lastValidatorIndex := params.BeaconConfig().SyncCommitteeSize - 1
+	req = &ethpb.DutiesRequest{
+		PublicKeys: [][]byte{deposits[lastValidatorIndex].Data.PublicKey},
+	}
+	res, err = vs.GetDuties(context.Background(), req)
+	require.NoError(t, err, "Could not call epoch committee assignment")
+	if res.CurrentEpochDuties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Assigned slot %d can't be higher than %d",
+			res.CurrentEpochDuties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
+	}
+
+	// We request for duties for all validators.
+	req = &ethpb.DutiesRequest{
+		PublicKeys: pubKeys,
+		Epoch:      0,
+	}
+	res, err = vs.GetDuties(context.Background(), req)
+	require.NoError(t, err, "Could not call epoch committee assignment")
+	for i := 0; i < len(res.CurrentEpochDuties); i++ {
+		assert.Equal(t, types.ValidatorIndex(i), res.CurrentEpochDuties[i].ValidatorIndex)
+	}
+	for i := 0; i < len(res.CurrentEpochDuties); i++ {
+		assert.Equal(t, true, res.CurrentEpochDuties[i].IsSyncCommittee)
+		// Current epoch and next epoch duties should be equal before the sync period epoch boundary.
+		assert.Equal(t, res.CurrentEpochDuties[i].IsSyncCommittee, res.NextEpochDuties[i].IsSyncCommittee)
+	}
+
+	// Current epoch and next epoch duties should not be equal at the sync period epoch boundary.
+	req = &ethpb.DutiesRequest{
+		PublicKeys: pubKeys,
+		Epoch:      params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1,
+	}
+	res, err = vs.GetDuties(context.Background(), req)
+	require.NoError(t, err, "Could not call epoch committee assignment")
+	for i := 0; i < len(res.CurrentEpochDuties); i++ {
+		assert.NotEqual(t, res.CurrentEpochDuties[i].IsSyncCommittee, res.NextEpochDuties[i].IsSyncCommittee)
+	}
+}
+
+func TestGetBellatrixDuties_SyncCommitteeOK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig()
+	cfg.AltairForkEpoch = types.Epoch(0)
+	cfg.BellatrixForkEpoch = types.Epoch(1)
+	params.OverrideBeaconConfig(cfg)
+
+	genesis := util.NewBeaconBlock()
+	deposits, _, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().SyncCommitteeSize)
+	require.NoError(t, err)
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
+	require.NoError(t, err)
+	bs, err := util.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	h := &ethpb.BeaconBlockHeader{
+		StateRoot:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+		ParentRoot: bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		BodyRoot:   bytesutil.PadTo([]byte{'c'}, fieldparams.RootLength),
+	}
+	require.NoError(t, bs.SetLatestBlockHeader(h))
+	require.NoError(t, err, "Could not setup genesis bs")
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+
+	syncCommittee, err := altair.NextSyncCommittee(context.Background(), bs)
+	require.NoError(t, err)
+	require.NoError(t, bs.SetCurrentSyncCommittee(syncCommittee))
+	pubKeys := make([][]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+		indices[i] = uint64(i)
+	}
+	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)-1))
+	require.NoError(t, helpers.UpdateSyncCommitteeCache(bs))
+
+	bs, err = execution.UpgradeToBellatrix(context.Background(), bs)
+	require.NoError(t, err)
 
 	pubkeysAs48ByteType := make([][fieldparams.BLSPubkeyLength]byte, len(pubKeys))
 	for i, pk := range pubKeys {

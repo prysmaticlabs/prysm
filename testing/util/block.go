@@ -509,19 +509,19 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 	return b
 }
 
-// HydrateV2SignedBeaconBlock hydrates a signed beacon block with correct field length sizes
+// HydrateV2AltairSignedBeaconBlock hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateV2SignedBeaconBlock(b *v2.SignedBeaconBlockAltair) *v2.SignedBeaconBlockAltair {
+func HydrateV2AltairSignedBeaconBlock(b *v2.SignedBeaconBlockAltair) *v2.SignedBeaconBlockAltair {
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
-	b.Message = HydrateV2BeaconBlock(b.Message)
+	b.Message = HydrateV2AltairBeaconBlock(b.Message)
 	return b
 }
 
-// HydrateV2BeaconBlock hydrates a beacon block with correct field length sizes
+// HydrateV2AltairBeaconBlock hydrates a beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateV2BeaconBlock(b *v2.BeaconBlockAltair) *v2.BeaconBlockAltair {
+func HydrateV2AltairBeaconBlock(b *v2.BeaconBlockAltair) *v2.BeaconBlockAltair {
 	if b == nil {
 		b = &v2.BeaconBlockAltair{}
 	}
@@ -531,13 +531,13 @@ func HydrateV2BeaconBlock(b *v2.BeaconBlockAltair) *v2.BeaconBlockAltair {
 	if b.StateRoot == nil {
 		b.StateRoot = make([]byte, 32)
 	}
-	b.Body = HydrateV2BeaconBlockBody(b.Body)
+	b.Body = HydrateV2AltairBeaconBlockBody(b.Body)
 	return b
 }
 
-// HydrateV2BeaconBlockBody hydrates a beacon block body with correct field length sizes
+// HydrateV2AltairBeaconBlockBody hydrates a beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateV2BeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlockBodyAltair {
+func HydrateV2AltairBeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlockBodyAltair {
 	if b == nil {
 		b = &v2.BeaconBlockBodyAltair{}
 	}
@@ -557,6 +557,72 @@ func HydrateV2BeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlockBodyAl
 		b.SyncAggregate = &v1.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, 64),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	return b
+}
+
+// HydrateV2BellatrixSignedBeaconBlock hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BellatrixSignedBeaconBlock(b *v2.SignedBeaconBlockBellatrix) *v2.SignedBeaconBlockBellatrix {
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Message = HydrateV2BellatrixBeaconBlock(b.Message)
+	return b
+}
+
+// HydrateV2BellatrixBeaconBlock hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BellatrixBeaconBlock(b *v2.BeaconBlockBellatrix) *v2.BeaconBlockBellatrix {
+	if b == nil {
+		b = &v2.BeaconBlockBellatrix{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, 32)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, 32)
+	}
+	b.Body = HydrateV2BellatrixBeaconBlockBody(b.Body)
+	return b
+}
+
+// HydrateV2BellatrixBeaconBlockBody hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BellatrixBeaconBlockBody(b *v2.BeaconBlockBodyBellatrix) *v2.BeaconBlockBodyBellatrix {
+	if b == nil {
+		b = &v2.BeaconBlockBodyBellatrix{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &v1.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &v1.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	if b.ExecutionPayload == nil {
+		b.ExecutionPayload = &enginev1.ExecutionPayload{
+			ParentHash:    make([]byte, 32),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, 32),
+			ReceiptsRoot:  make([]byte, 32),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, 32),
+			ExtraData:     make([]byte, 32),
+			BaseFeePerGas: make([]byte, 32),
+			BlockHash:     make([]byte, 32),
 		}
 	}
 	return b
