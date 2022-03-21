@@ -3,9 +3,9 @@
 package flags
 
 import (
-	"encoding/hex"
 	"strings"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 )
@@ -219,7 +219,7 @@ var (
 	// SuggestedFeeRecipient specifies the fee recipient for the transaction fees.
 	SuggestedFeeRecipient = &cli.StringFlag{
 		Name:  "suggested-fee-recipient",
-		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state. Validator Client can override this value through the preparebeaconproposer api.",
-		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
+		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state. Validator client can override this value through the preparebeaconproposer api.",
+		Value: fieldparams.EthBurnAddressHex,
 	}
 )
