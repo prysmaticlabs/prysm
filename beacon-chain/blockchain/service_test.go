@@ -356,7 +356,6 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, ss))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: headRoot[:], Epoch: slots.ToEpoch(finalizedSlot)}))
 	stateGen := stategen.New(beaconDB)
-	require.NoError(t, stateGen.SaveState(ctx, headRoot, headState))
 	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stateGen), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
 	require.NoError(t, err)
 
@@ -365,7 +364,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
-	assert.DeepEqual(t, genesis, c.head.block.Proto())
+	assert.DeepEqual(t, headBlock, c.head.block.Proto())
 }
 
 func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
