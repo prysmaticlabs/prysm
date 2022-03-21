@@ -596,7 +596,7 @@ func fixtures() map[string]interface{} {
 	foo := bytesutil.ToBytes32([]byte("foo"))
 	bar := bytesutil.PadTo([]byte("bar"), 20)
 	baz := bytesutil.PadTo([]byte("baz"), 256)
-	baseFeePerGas := big.NewInt(6)
+	baseFeePerGas := big.NewInt(12345)
 	executionPayloadFixture := &pb.ExecutionPayload{
 		ParentHash:    foo[:],
 		FeeRecipient:  bar,

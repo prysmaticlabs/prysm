@@ -222,7 +222,7 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	if err != nil {
 		return err
 	}
-	e.BaseFeePerGas = bytesutil.PadTo(baseFee.Bytes(), fieldparams.RootLength)
+	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
 	e.BlockHash = bytesutil.PadTo(dec.BlockHash, fieldparams.RootLength)
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
