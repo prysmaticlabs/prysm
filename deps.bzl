@@ -134,8 +134,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_aristanetworks_goarista",
         importpath = "github.com/aristanetworks/goarista",
-        sum = "h1:cgk6xsRVshE29qzHDCQ+tqmu7ny8GnjPQhAw/RTk/Co=",
-        version = "v0.0.0-20200521140103-6c3304613b30",
+        sum = "h1:XJH0YfVFKbq782tlNThzN/Ud5qm/cx6LXOA/P6RkTxc=",
+        version = "v0.0.0-20200805130819-fd197cf57d96",
     )
     go_repository(
         name = "com_github_aristanetworks_splunk_hec_go",
@@ -2421,8 +2421,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_mariusvanderwijden_tx_fuzz",
         importpath = "github.com/MariusVanDerWijden/tx-fuzz",
-        sum = "h1:dGA/6CiQdB5Sq+ENWc7ofqu9+v8bGw0/1aTf2r/AAiQ=",
-        version = "v0.0.0-20220222104514-79320b80893a",
+        sum = "h1:sVb99a9AUxf26t06VNnDO5DReatE0lXCp6amDOaalXM=",
+        version = "v0.0.0-20220321065247-ebb195301a27",
     )
 
     go_repository(

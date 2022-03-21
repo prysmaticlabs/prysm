@@ -4,7 +4,9 @@ go 1.17
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
-	github.com/aristanetworks/goarista v0.0.0-20200521140103-6c3304613b30
+	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220304110512-764253afa8c2
+	github.com/MariusVanDerWijden/tx-fuzz v0.0.0-20220321065247-ebb195301a27
+	github.com/aristanetworks/goarista v0.0.0-20200805130819-fd197cf57d96
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/d4l3k/messagediff v1.2.1
 	github.com/dgraph-io/ristretto v0.0.4-0.20210318174700-74754f61e018
@@ -77,14 +79,13 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.6.3
-	//github.com/MariusVanDerWijden/tx-fuzz v0.0.0-20220222104514-79320b80893a
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.23.0
 	go.uber.org/automaxprocs v1.3.0
-	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
+	golang.org/x/crypto v0.0.0-20211209193657-4570a0811e8b
 	golang.org/x/exp v0.0.0-20200513190911-00229845015e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/tools v0.1.8
@@ -104,8 +105,6 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cheekybits/genny v1.0.0 // indirect
-	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220304110512-764253afa8c2 // indirect
-    github.com/holiman/goevmlab v0.0.0-20211215113238-06157bc85f7d // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -129,6 +128,7 @@ require (
 	github.com/graph-gophers/graphql-go v1.3.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.10 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
+	github.com/holiman/goevmlab v0.0.0-20211215113238-06157bc85f7d // indirect
 	github.com/huin/goupnp v1.0.2 // indirect
 	github.com/influxdata/influxdb v1.8.3 // indirect
 	github.com/influxdata/influxdb-client-go/v2 v2.4.0 // indirect
@@ -247,7 +247,6 @@ require (
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
-	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/fatih/color v1.9.0 // indirect
@@ -258,7 +257,7 @@ require (
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.1-alpha.0.20220303211031-f753e083138c
-	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
+	golang.org/x/sys v0.0.0-20211214234402-4825e8c3871d // indirect
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	k8s.io/klog/v2 v2.3.0 // indirect
