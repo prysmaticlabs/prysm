@@ -110,7 +110,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
+		params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
 
 	// If the --web flag is enabled to administer the validator
@@ -128,7 +128,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
+		params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
 
 	// Initializes any forks here.
