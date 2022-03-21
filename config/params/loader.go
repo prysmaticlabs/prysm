@@ -70,6 +70,7 @@ func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
 	// recompute SqrRootSlotsPerEpoch constant to handle non-standard values of SlotsPerEpoch
 	conf.SqrRootSlotsPerEpoch = types.Slot(math.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
 	log.Debugf("Config file values: %+v", conf)
+	conf.InitializeForkSchedule()
 	OverrideBeaconConfig(conf)
 }
 
