@@ -333,7 +333,7 @@ var (
 	// FeeRecipientConfigURLFlag defines the path or URL to a file with proposer config.
 	FeeRecipientConfigURLFlag = &cli.StringFlag{
 		Name:  "fee-recipient-config-url",
-		Usage: "Set URL to a REST endpoint containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --validators-proposer-config-url=https://example.com/api/getConfig). File format found in docs",
+		Usage: "Set URL to a REST endpoint containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --fee-recipient-config-url=https://example.com/api/getConfig). File format found in docs",
 		Value: "",
 	}
 
