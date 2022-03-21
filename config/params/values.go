@@ -30,21 +30,21 @@ func (n ConfigName) String() string {
 
 // ConfigNames provides network configuration names.
 var ConfigNames = map[ConfigName]string{
-	Mainnet:  "mainnet",
-	Minimal:  "minimal",
-	EndToEnd: "end-to-end",
-	Pyrmont:  "pyrmont",
-	Prater:   "prater",
+	Mainnet:         "mainnet",
+	Minimal:         "minimal",
+	EndToEnd:        "end-to-end",
+	Pyrmont:         "pyrmont",
+	Prater:          "prater",
 	EndToEndMainnet: "end-to-end-mainnet",
 }
 
 // KnownConfigs provides an index of all known BeaconChainConfig values.
 var KnownConfigs = map[ConfigName]func() *BeaconChainConfig{
-	Mainnet:  MainnetConfig,
-	Prater:   PraterConfig,
-	Pyrmont:  PyrmontConfig,
-	Minimal:  MinimalSpecConfig,
-	EndToEnd: E2ETestConfig,
+	Mainnet:         MainnetConfig,
+	Prater:          PraterConfig,
+	Pyrmont:         PyrmontConfig,
+	Minimal:         MinimalSpecConfig,
+	EndToEnd:        E2ETestConfig,
 	EndToEndMainnet: E2EMainnetTestConfig,
 }
 
