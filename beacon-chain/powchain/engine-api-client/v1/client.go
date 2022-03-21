@@ -16,9 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 const (
@@ -28,14 +26,14 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
-	// GetBlobsMethod v1 request string for JSON-RPC.
-	GetBlobsMethod = "engine_getBlobsV1"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
 	// ExecutionBlockByHashMethod request string for JSON-RPC.
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
+	// BlobsBundleMethod request string for JSON-RPC.
+	BlobsBundleMethod = "getBlobsBundleV1"
 	// DefaultTimeout for HTTP.
 	DefaultTimeout = time.Second * 5
 )
@@ -55,7 +53,7 @@ type Caller interface {
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*pb.PayloadIDBytes, []byte, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
-	GetBlobs(ctx context.Context, payloadId [8]byte) ([]*ethpb.Blob, error)
+	GetBlobsBundle(ctx context.Context, payloadId [8]byte) ([]*pb.BlobsBundle, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -158,6 +156,13 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 	return result, handleRPCError(err)
 }
 
+// GetBlobsBundle calls the getBlobsBundleV1 method via JSON-RPC.
+func (c *Client) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error) {
+	result := &pb.BlobsBundle{}
+	err := c.rpc.CallContext(ctx, result, BlobsBundleMethod, pb.PayloadIDBytes(payloadId))
+	return result, handleRPCError(err)
+}
+
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
 func (c *Client) ExchangeTransitionConfiguration(
 	ctx context.Context, cfg *pb.TransitionConfiguration,
@@ -216,21 +221,6 @@ func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*p
 	result := &pb.ExecutionBlock{}
 	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
-}
-
-// GetBlobs calls the engine_getBlobsV1 method via JSON-RPC.
-func (c *Client) GetBlobs(_ context.Context, _ [8]byte) ([]*ethpb.Blob, error) {
-	blobBytes := make([][]byte, 4096)
-	gen := rand.NewGenerator()
-	for i := 0; i < len(blobBytes); i++ {
-		item := make([]byte, 48)
-		_, err := gen.Read(item)
-		if err != nil {
-			return nil, err
-		}
-		blobBytes[i] = item
-	}
-	return []*ethpb.Blob{{Blob: blobBytes}}, nil
 }
 
 // Handles errors received from the RPC server according to the specification.

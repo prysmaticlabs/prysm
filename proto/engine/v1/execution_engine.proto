@@ -97,3 +97,13 @@ message ForkchoiceState {
 	bytes safe_block_hash      = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes finalized_block_hash = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 }
+
+message BlobsBundle {
+	bytes block_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+	repeated bytes kzg = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
+	repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
+}
+
+message Blob {
+	repeated bytes blob = 1 [(ethereum.eth.ext.ssz_size) = "4096,32"];
+}
