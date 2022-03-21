@@ -216,10 +216,10 @@ var (
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
 	}
-	// FeeRecipient specifies the fee recipient for the transaction fees.
-	FeeRecipient = &cli.StringFlag{
-		Name:  "fee-recipient",
-		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state.",
+	// SuggestedFeeRecipient specifies the fee recipient for the transaction fees.
+	SuggestedFeeRecipient = &cli.StringFlag{
+		Name:  "suggested-fee-recipient",
+		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state. Validator Client can override this value through the preparebeaconproposer api.",
 		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
 	}
 )
