@@ -130,7 +130,7 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "merge",
 		Flags: []cli.Flag{
-			flags.FeeRecipient,
+			flags.SuggestedFeeRecipient,
 		},
 	},
 	{
