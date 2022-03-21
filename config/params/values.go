@@ -2,6 +2,8 @@ package params
 
 import (
 	"fmt"
+	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 
 	"github.com/pkg/errors"
 )
@@ -12,6 +14,7 @@ const (
 	EndToEnd
 	Pyrmont
 	Prater
+	EndToEndMainnet
 )
 
 // ConfigName enum describes the type of known network in use.
@@ -32,6 +35,7 @@ var ConfigNames = map[ConfigName]string{
 	EndToEnd: "end-to-end",
 	Pyrmont:  "pyrmont",
 	Prater:   "prater",
+	EndToEndMainnet: "end-to-end-mainnet",
 }
 
 // KnownConfigs provides an index of all known BeaconChainConfig values.
@@ -41,6 +45,7 @@ var KnownConfigs = map[ConfigName]func() *BeaconChainConfig{
 	Pyrmont:  PyrmontConfig,
 	Minimal:  MinimalSpecConfig,
 	EndToEnd: E2ETestConfig,
+	EndToEndMainnet: E2EMainnetTestConfig,
 }
 
 var knownForkVersions map[[4]byte]ConfigName
@@ -62,7 +67,9 @@ func init() {
 	for n, cfunc := range KnownConfigs {
 		cfg := cfunc()
 		// ensure that fork schedule is consistent w/ struct fields for all known configurations
-		cfg.InitializeForkSchedule()
+		if err := equalForkSchedules(configForkSchedule(cfg), cfg.ForkVersionSchedule); err != nil {
+			panic(errors.Wrapf(err, "improperly initialized for schedule for config %s", n.String()))
+		}
 		// ensure that all fork versions are unique
 		for v := range cfg.ForkVersionSchedule {
 			pn, exists := knownForkVersions[v]
@@ -75,4 +82,20 @@ func init() {
 			knownForkVersions[v] = n
 		}
 	}
+}
+
+func equalForkSchedules(a, b map[[fieldparams.VersionLength]byte]types.Epoch) error {
+	if len(a) != len(b) {
+		return fmt.Errorf("different lengths, a=%d, b=%d", len(a), len(b))
+	}
+	for k, v := range a {
+		bv, ok := b[k]
+		if !ok {
+			return fmt.Errorf("fork version %#x in a not present in b")
+		}
+		if v != bv {
+			return fmt.Errorf("fork version mismatch, epoch in a=%d, b=%d", v, bv)
+		}
+	}
+	return nil
 }

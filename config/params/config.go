@@ -194,11 +194,16 @@ type BeaconChainConfig struct {
 // InitializeForkSchedule initializes the schedules forks baked into the config.
 func (b *BeaconChainConfig) InitializeForkSchedule() {
 	// Reset Fork Version Schedule.
-	b.ForkVersionSchedule = map[[fieldparams.VersionLength]byte]types.Epoch{}
+	b.ForkVersionSchedule = configForkSchedule(b)
+}
+
+func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]types.Epoch {
+	fvs := map[[fieldparams.VersionLength]byte]types.Epoch{}
 	// Set Genesis fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
 	// Set Altair fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 	// Set Bellatrix fork data.
 	b.ForkVersionSchedule[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
+	return fvs
 }

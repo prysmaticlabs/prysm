@@ -104,5 +104,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ConfigName = ConfigNames[Minimal]
 	minimalConfig.PresetBase = "minimal"
 
+	minimalConfig.InitializeForkSchedule()
 	return minimalConfig
 }
