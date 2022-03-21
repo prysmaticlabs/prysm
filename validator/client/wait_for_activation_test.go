@@ -76,9 +76,9 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 		},
 	}
 	v := validator{
-		validatorClient:           client,
-		keyManager:                km,
-		pubkeyHexToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		validatorClient:        client,
+		keyManager:             km,
+		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &ValidatorProposerOptions{
@@ -86,7 +86,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 			},
 		},
 	}
-	v.pubkeyHexToValidatorIndex[pubKey] = 1
+	v.pubkeyToValidatorIndex[pubKey] = 1
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
@@ -115,9 +115,9 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		},
 	}
 	v := validator{
-		validatorClient:           client,
-		keyManager:                km,
-		pubkeyHexToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		validatorClient:        client,
+		keyManager:             km,
+		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &ValidatorProposerOptions{
@@ -125,7 +125,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 			},
 		},
 	}
-	v.pubkeyHexToValidatorIndex[pubKey] = 1
+	v.pubkeyToValidatorIndex[pubKey] = 1
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
@@ -158,10 +158,10 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		},
 	}
 	v := validator{
-		validatorClient:           client,
-		keyManager:                km,
-		genesisTime:               1,
-		pubkeyHexToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		validatorClient:        client,
+		keyManager:             km,
+		genesisTime:            1,
+		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &ValidatorProposerOptions{
@@ -169,7 +169,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 			},
 		},
 	}
-	v.pubkeyHexToValidatorIndex[pubKey] = 1
+	v.pubkeyToValidatorIndex[pubKey] = 1
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
@@ -201,10 +201,10 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		},
 	}
 	v := validator{
-		validatorClient:           client,
-		keyManager:                km,
-		genesisTime:               1,
-		pubkeyHexToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		validatorClient:        client,
+		keyManager:             km,
+		genesisTime:            1,
+		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &ValidatorProposerOptions{
@@ -212,7 +212,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 			},
 		},
 	}
-	v.pubkeyHexToValidatorIndex[pubKey] = 1
+	v.pubkeyToValidatorIndex[pubKey] = 1
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_EXITING
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
@@ -251,10 +251,10 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		fetchNoKeys: true,
 	}
 	v := validator{
-		validatorClient:           client,
-		keyManager:                km,
-		genesisTime:               1,
-		pubkeyHexToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		validatorClient:        client,
+		keyManager:             km,
+		genesisTime:            1,
+		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &ValidatorProposerOptions{
@@ -262,7 +262,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 			},
 		},
 	}
-	v.pubkeyHexToValidatorIndex[pubKey] = 1
+	v.pubkeyToValidatorIndex[pubKey] = 1
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
@@ -303,10 +303,10 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		}
 		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 		v := validator{
-			validatorClient:           client,
-			keyManager:                km,
-			genesisTime:               1,
-			pubkeyHexToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+			validatorClient:        client,
+			keyManager:             km,
+			genesisTime:            1,
+			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 			prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
 				ProposeConfig: nil,
 				DefaultConfig: &ValidatorProposerOptions{
@@ -314,7 +314,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 				},
 			},
 		}
-		v.pubkeyHexToValidatorIndex[inactivePubKey] = 1
+		v.pubkeyToValidatorIndex[inactivePubKey] = 1
 		inactiveResp := generateMockStatusResponse([][]byte{inactivePubKey[:]})
 		inactiveResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		inactiveClientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
@@ -348,7 +348,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
 			km.keysMap[activePubKey] = activePrivKey
-			v.pubkeyHexToValidatorIndex[activePubKey] = 1
+			v.pubkeyToValidatorIndex[activePubKey] = 1
 			km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
 		}()
 
@@ -384,10 +384,10 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		require.NoError(t, err)
 		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 		v := validator{
-			validatorClient:           client,
-			keyManager:                km,
-			genesisTime:               1,
-			pubkeyHexToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+			validatorClient:        client,
+			keyManager:             km,
+			genesisTime:            1,
+			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 			prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
 				ProposeConfig: nil,
 				DefaultConfig: &ValidatorProposerOptions{
@@ -395,7 +395,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 				},
 			},
 		}
-		v.pubkeyHexToValidatorIndex[inactivePubKey] = 1
+		v.pubkeyToValidatorIndex[inactivePubKey] = 1
 
 		inactiveResp := generateMockStatusResponse([][]byte{inactivePubKey[:]})
 		inactiveResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
@@ -435,7 +435,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			keys, err := km.FetchValidatingPublicKeys(ctx)
 			require.NoError(t, err)
 			for _, key := range keys {
-				v.pubkeyHexToValidatorIndex[key] = 1
+				v.pubkeyToValidatorIndex[key] = 1
 			}
 			channel <- [][fieldparams.BLSPubkeyLength]byte{}
 		}()
@@ -472,10 +472,10 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			Channel: tickerChan,
 		}
 		v := validator{
-			validatorClient:           client,
-			keyManager:                &km,
-			ticker:                    ticker,
-			pubkeyHexToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+			validatorClient:        client,
+			keyManager:             &km,
+			ticker:                 ticker,
+			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 			prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
 				ProposeConfig: nil,
 				DefaultConfig: &ValidatorProposerOptions{
@@ -483,8 +483,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 				},
 			},
 		}
-		v.pubkeyHexToValidatorIndex[activeKey] = 1
-		v.pubkeyHexToValidatorIndex[inactiveKey] = 2
+		v.pubkeyToValidatorIndex[activeKey] = 1
+		v.pubkeyToValidatorIndex[inactiveKey] = 2
 		go func() {
 			tickerChan <- slot
 			// Cancel after timeout to avoid waiting on channel forever in case test goes wrong.
@@ -539,10 +539,10 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			Channel: tickerChan,
 		}
 		v := validator{
-			validatorClient:           client,
-			keyManager:                &remoteKm,
-			ticker:                    ticker,
-			pubkeyHexToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+			validatorClient:        client,
+			keyManager:             &remoteKm,
+			ticker:                 ticker,
+			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 			prepareBeaconProposalConfig: &PrepareBeaconProposalConfig{
 				ProposeConfig: nil,
 				DefaultConfig: &ValidatorProposerOptions{
@@ -550,8 +550,8 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 				},
 			},
 		}
-		v.pubkeyHexToValidatorIndex[activeKey] = 1
-		v.pubkeyHexToValidatorIndex[inactiveKey] = 2
+		v.pubkeyToValidatorIndex[activeKey] = 1
+		v.pubkeyToValidatorIndex[inactiveKey] = 2
 		go func() {
 			tickerChan <- slot
 			time.Sleep(time.Second)

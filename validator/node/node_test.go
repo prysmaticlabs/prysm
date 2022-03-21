@@ -485,8 +485,8 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
 			if tt.args.proposalFlagValues.dir != "" {
-				set.String(flags.ValidatorsProposerConfigFilepathFlag.Name, tt.args.proposalFlagValues.dir, "")
-				require.NoError(t, set.Set(flags.ValidatorsProposerConfigFilepathFlag.Name, tt.args.proposalFlagValues.dir))
+				set.String(flags.FeeRecipientConfigFileFlag.Name, tt.args.proposalFlagValues.dir, "")
+				require.NoError(t, set.Set(flags.FeeRecipientConfigFileFlag.Name, tt.args.proposalFlagValues.dir))
 			}
 			if tt.args.proposalFlagValues.url != "" {
 				content, err := ioutil.ReadFile(tt.args.proposalFlagValues.url)
@@ -499,8 +499,8 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 				}))
 				defer srv.Close()
 
-				set.String(flags.ValidatorsProposerConfigURLFlag.Name, tt.args.proposalFlagValues.url, "")
-				require.NoError(t, set.Set(flags.ValidatorsProposerConfigURLFlag.Name, srv.URL))
+				set.String(flags.FeeRecipientConfigURLFlag.Name, tt.args.proposalFlagValues.url, "")
+				require.NoError(t, set.Set(flags.FeeRecipientConfigURLFlag.Name, srv.URL))
 			}
 			if tt.args.proposalFlagValues.defaultfee != "" {
 				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposalFlagValues.defaultfee, "")

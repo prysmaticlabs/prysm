@@ -73,7 +73,7 @@ type validator struct {
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	duties                             *ethpb.DutiesResponse
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
-	pubkeyHexToValidatorIndex          map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex
+	pubkeyToValidatorIndex             map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex
 	graffitiOrderedIndex               uint64
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	domainDataCache                    *ristretto.Cache
@@ -975,7 +975,7 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 	// need to check for pubkey to validator index mappings
 	for _, key := range pubkeys {
 		feeRecipient := common.HexToAddress(fieldparams.EthBurnAddressHex)
-		validatorIndex, found := v.pubkeyHexToValidatorIndex[key]
+		validatorIndex, found := v.pubkeyToValidatorIndex[key]
 		// ignore updating fee recipient if validator index is not found
 		if !found {
 			ind, foundIndex, err := v.cacheValidatorPubkeyHexToValidatorIndex(ctx, key)
@@ -988,11 +988,11 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 			}
 			validatorIndex = ind
 			// update the cache for the next time if it's not 0
-			v.pubkeyHexToValidatorIndex[key] = validatorIndex
+			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
 		if v.prepareBeaconProposalConfig.ProposeConfig != nil {
-			option := v.prepareBeaconProposalConfig.ProposeConfig[key]
-			if option != nil {
+			option, ok := v.prepareBeaconProposalConfig.ProposeConfig[key]
+			if option != nil && ok {
 				feeRecipient = option.FeeRecipient
 			} else {
 				feeRecipient = v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient

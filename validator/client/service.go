@@ -189,7 +189,7 @@ func (v *ValidatorService) Start() {
 		emitAccountMetrics:             v.emitAccountMetrics,
 		startBalances:                  make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
-		pubkeyHexToValidatorIndex:      make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,

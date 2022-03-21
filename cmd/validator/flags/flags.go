@@ -324,15 +324,15 @@ var (
 		Value: false,
 	}
 
-	// ValidatorsProposerConfigFilepathFlag defines the path or URL to a file with proposer config.
-	ValidatorsProposerConfigFilepathFlag = &cli.StringFlag{
-		Name:  "validators-proposer-config-filepath",
+	// FeeRecipientConfigFileFlag defines the path or URL to a file with proposer config.
+	FeeRecipientConfigFileFlag = &cli.StringFlag{
+		Name:  "fee-recipient-config-file",
 		Usage: "Set path to a JSON file containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --validators-proposer-config-dir=/path/to/proposer.json). File format found in docs",
 		Value: "",
 	}
-	// ValidatorsProposerConfigFlag defines the path or URL to a file with proposer config.
-	ValidatorsProposerConfigURLFlag = &cli.StringFlag{
-		Name:  "validators-proposer-config-url",
+	// FeeRecipientConfigURLFlag defines the path or URL to a file with proposer config.
+	FeeRecipientConfigURLFlag = &cli.StringFlag{
+		Name:  "fee-recipient-config-url",
 		Usage: "Set URL to a REST endpoint containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --validators-proposer-config-url=https://example.com/api/getConfig). File format found in docs",
 		Value: "",
 	}

@@ -75,8 +75,8 @@ var appFlags = []cli.Flag{
 	// Consensys' Web3Signer flags
 	flags.Web3SignerURLFlag,
 	flags.Web3SignerPublicValidatorKeysFlag,
-	flags.ValidatorsProposerConfigFilepathFlag,
-	flags.ValidatorsProposerConfigURLFlag,
+	flags.FeeRecipientConfigFileFlag,
+	flags.FeeRecipientConfigURLFlag,
 	flags.SuggestedFeeRecipientFlag,
 	////////////////////
 	cmd.DisableMonitoringFlag,
