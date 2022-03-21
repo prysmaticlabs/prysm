@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/MariusVanDerWijden/FuzzyVM/filler"
-	"github.com/MariusVanDerWijden/tx-fuzz"
+	txfuzz "github.com/MariusVanDerWijden/tx-fuzz"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -25,20 +25,20 @@ import (
 
 type TransactionGenerator struct {
 	keystore string
-	started chan struct{}
+	started  chan struct{}
 }
 
 func NewTransactionGenerator(keystore string) *TransactionGenerator {
-	return &TransactionGenerator{keystore:keystore}
+	return &TransactionGenerator{keystore: keystore}
 }
 
-func(t *TransactionGenerator) Start(ctx context.Context) error {
+func (t *TransactionGenerator) Start(ctx context.Context) error {
 	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort))
 	if err != nil {
 		return err
 	}
 	seed := rand.NewDeterministicGenerator().Int63()
-	logrus.Infof("Seed for transaction generator is: %d",seed)
+	logrus.Infof("Seed for transaction generator is: %d", seed)
 	// Set seed so that all
 	mathRand.Seed(seed)
 
@@ -53,24 +53,24 @@ func(t *TransactionGenerator) Start(ctx context.Context) error {
 		return err
 	}
 	rnd := make([]byte, 10000)
-	_,err = mathRand.Read(rnd)
+	_, err = mathRand.Read(rnd)
 	if err != nil {
 		return err
 	}
 	f := filler.NewFiller(rnd)
 	// Broadcast Transactions every 3 blocks
-	txPeriod := time.Duration(params.BeaconConfig().SecondsPerETH1Block * 3) * time.Second
+	txPeriod := time.Duration(params.BeaconConfig().SecondsPerETH1Block*3) * time.Second
 	ticker := time.NewTicker(txPeriod)
 	gasPrice := big.NewInt(100000000000)
-	for{
+	for {
 		select {
-		case <- ctx.Done() :
+		case <-ctx.Done():
 			return nil
-			case <- ticker.C:
-				err := SendTransaction(client,mineKey.PrivateKey,f,gasPrice,mineKey.Address.String(),200,false)
-				if err != nil {
-					return err
-				}
+		case <-ticker.C:
+			err := SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 200, false)
+			if err != nil {
+				return err
+			}
 		}
 	}
 }
@@ -80,7 +80,7 @@ func (s *TransactionGenerator) Started() <-chan struct{} {
 	return s.started
 }
 
-func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler, gasPrice *big.Int,addr string, N uint64, al bool) error {
+func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler, gasPrice *big.Int, addr string, N uint64, al bool) error {
 	backend := ethclient.NewClient(client)
 
 	sender := common.HexToAddress(addr)
@@ -96,7 +96,7 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 	g, _ := errgroup.WithContext(context.Background())
 	for i := uint64(0); i < N; i++ {
 		index := i
-		g.Go( func() error {
+		g.Go(func() error {
 			tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, gasPrice, nil, al)
 			if err != nil {
 				return nil
@@ -107,7 +107,7 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 			}
 			err = backend.SendTransaction(context.Background(), signedTx)
 			return nil
-		} )
+		})
 
 	}
 	return g.Wait()
