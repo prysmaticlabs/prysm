@@ -36,7 +36,7 @@ func TestE2EConfigParity(t *testing.T) {
 	require.DeepEqual(t, params.BeaconConfig(), testCfg)
 }
 
-func compareConfigs(t *testing.T, expected *params.BeaconChainConfig, actual *params.BeaconChainConfig) {
+func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.GenesisEpoch, actual.GenesisEpoch)
 	require.DeepEqual(t, expected.FarFutureEpoch, actual.FarFutureEpoch)
 	require.DeepEqual(t, expected.FarFutureSlot, actual.FarFutureSlot)
