@@ -28,7 +28,9 @@ import (
 type VersionedUnmarshaler struct {
 	Config *params.BeaconChainConfig
 	// Fork aligns with the fork names in config/params/values.go
-	Fork    int
+	Fork int
+	// Version corresponds to the Version type defined in the beacon-chain spec, aka a "fork version number":
+	// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#custom-types
 	Version [fieldparams.VersionLength]byte
 }
 
@@ -144,10 +146,9 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (block.Si
 		return nil, err
 	}
 
-	// heuristic to make sure block is from the same version as the state
-	// based on the fork schedule for the Config detected from the state
-	// get the version that corresponds to the epoch the block is from according to the fork choice schedule
-	// and make sure that the version is the same one that was pulled from the state
+	// heuristic to make sure block is from the same version as the VersionedUnmarshaler.
+	// Look up the version for the epoch that the block is from, then ensure that it matches the Version in the
+	// VersionedUnmarshaler.
 	epoch := slots.ToEpoch(slot)
 	fs := forks.NewOrderedSchedule(cf.Config)
 	ver, err := fs.VersionForEpoch(epoch)
@@ -172,7 +173,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (block.Si
 	}
 	err = blk.UnmarshalSSZ(marshaled)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in BlockFromSSZReader")
+		return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in UnmarshalSSZ")
 	}
 	return wrapper.WrappedSignedBeaconBlock(blk)
 }

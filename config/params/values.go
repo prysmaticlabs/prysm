@@ -48,13 +48,13 @@ var KnownConfigs = map[ConfigName]func() *BeaconChainConfig{
 	EndToEndMainnet: E2EMainnetTestConfig,
 }
 
-var knownForkVersions map[[4]byte]ConfigName
+var knownForkVersions map[[fieldparams.VersionLength]byte]ConfigName
 
 var errUnknownForkVersion = errors.New("version not found in fork version schedule for any known config")
 
 // ConfigForVersion find the BeaconChainConfig corresponding to the version bytes.
 // Version bytes for BeaconChainConfig values in KnownConfigs are proven to be unique during package initialization.
-func ConfigForVersion(version [4]byte) (*BeaconChainConfig, error) {
+func ConfigForVersion(version [fieldparams.VersionLength]byte) (*BeaconChainConfig, error) {
 	cfg, ok := knownForkVersions[version]
 	if !ok {
 		return nil, errors.Wrapf(errUnknownForkVersion, "version=%#x", version)
@@ -63,7 +63,7 @@ func ConfigForVersion(version [4]byte) (*BeaconChainConfig, error) {
 }
 
 func init() {
-	knownForkVersions = make(map[[4]byte]ConfigName)
+	knownForkVersions = make(map[[fieldparams.VersionLength]byte]ConfigName)
 	for n, cfunc := range KnownConfigs {
 		cfg := cfunc()
 		// ensure that fork schedule is consistent w/ struct fields for all known configurations
@@ -91,7 +91,7 @@ func equalForkSchedules(a, b map[[fieldparams.VersionLength]byte]types.Epoch) er
 	for k, v := range a {
 		bv, ok := b[k]
 		if !ok {
-			return fmt.Errorf("fork version %#x from a, not present in b", k)
+			return fmt.Errorf("fork version %#x from 'a', not present in 'b'", k)
 		}
 		if v != bv {
 			return fmt.Errorf("fork version mismatch, epoch in a=%d, b=%d", v, bv)
