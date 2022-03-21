@@ -84,6 +84,43 @@ service KeyManagement {
       body: "*"
     };
   }
+  // List all remote(web3signer) validating pubkeys known to this validator client binary
+  // HTTP response status codes:
+  //  - 200: Successful response
+  //  - 401: Unauthorized
+  //  - 403: Forbidden from accessing the resource
+  //  - 500: Validator internal error
+  rpc ListRemoteKeys(google.protobuf.Empty) returns (ListRemoteKeysResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/remotekeys"
+    };
+  }
+  // Imports unique remote(web3signer) validating pubkeys to be used for the web3signer.
+  // HTTP response status codes:
+  //  - 200: Successful response
+  //  - 401: Unauthorized
+  //  - 403: Forbidden from accessing the resource
+  //  - 500: Validator internal error
+  rpc ImportRemoteKeys(ImportKeystoresRequest) returns (ImportRemoteKeysResponse) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/remotekeys",
+      body: "*"
+    };
+  }
+  // Deletes remote(web3signer) validating pubkeys from the keymanager so the remote signer does not sign with those keys.
+  // DELETE must delete all keys from `request.pubkeys` that are known to the validator client and exist in its persistent storage.
+  // DELETE should never return a 404 response, even if all pubkeys from request.pubkeys have no existing keystores.
+  // HTTP response status codes:
+  //  - 200: Successful response
+  //  - 401: Unauthorized
+  //  - 403: Forbidden from accessing the resource
+  //  - 500: Validator internal error
+  rpc DeleteRemoteKeys(DeleteKeystoresRequest) returns (DeleteRemoteKeysResponse) {
+    option (google.api.http) = {
+      delete: "/internal/eth/v1/remotekeys",
+      body: "*"
+    };
+  }
 }
 
 message ListKeystoresResponse {
@@ -129,6 +166,50 @@ message DeletedKeystoreStatus {
     NOT_FOUND = 1;
     NOT_ACTIVE = 2;
     ERROR = 3;
+  }
+  Status status = 1;
+  string message = 2;
+}
+
+
+message ListRemoteKeysRequest {
+}
+
+message ListRemoteKeysResponse {
+  repeated bytes pubkeys = 1;
+}
+
+message ImportRemoteKeysRequest {
+  repeated string pubkeys = 1;
+}
+
+message ImportRemoteKeysResponse {
+  repeated ImportedRemoteKeyStatus data = 1;
+}
+
+message DeleteRemoteKeysRequest {
+  repeated bytes pubkeys = 1;
+}
+
+message DeleteRemoteKeysResponse {
+  repeated DeletedRemoteKeyStatus data = 1;
+}
+
+message ImportedRemoteKeyStatus {
+  enum Status {
+    IMPORTED = 0;
+    DUPLICATE = 1;
+    ERROR = 2;
+  }
+  Status status = 1;
+  string message = 2;
+}
+
+message DeletedRemoteKeyStatus {
+  enum Status {
+    DELETED = 0;
+    NOT_FOUND = 1;
+    ERROR = 2;
   }
   Status status = 1;
   string message = 2;
