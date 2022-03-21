@@ -2,10 +2,10 @@ package params
 
 import (
 	"fmt"
-	types "github.com/prysmaticlabs/eth2-types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 const (
