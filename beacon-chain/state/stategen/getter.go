@@ -37,7 +37,7 @@ func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, 
 	return has, nil
 }
 
-// StateByRootIfCached retrieves a state using the input block root only if the state is already in the cache
+// StateByRootIfCachedNoCopy retrieves a state using the input block root only if the state is already in the cache
 func (s *State) StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState {
 	if !s.hotStateCache.has(blockRoot) {
 		return nil
@@ -150,6 +150,12 @@ func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*e
 		return summary, nil
 	}
 	return nil, errors.New("could not find block in DB")
+}
+
+// DeleteStateFromCaches deletes the state from the caches.
+func (s *State) DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error {
+	s.hotStateCache.delete(blockRoot)
+	return s.epochBoundaryStateCache.delete(blockRoot)
 }
 
 // This loads a beacon state from either the cache or DB then replay blocks up the requested block root.

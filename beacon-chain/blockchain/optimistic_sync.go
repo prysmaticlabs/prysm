@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -106,7 +107,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 	if err != nil {
 		return errors.Wrap(err, "could not get execution payload")
 	}
-	_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	if err != nil {
 		switch err {
 		case v1.ErrAcceptedSyncingPayloadStatus:
@@ -115,6 +116,8 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 				"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 			}).Info("Called new payload with optimistic block")
 			return nil
+		case v1.ErrInvalidPayloadStatus:
+			return s.rmInvalidBlockAndState(ctx, [32]byte{} /* Need #10398 */, bytesutil.ToBytes32(lastValidHash))
 		default:
 			return errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
@@ -139,6 +142,54 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 // isPreBellatrix returns true if input version is before bellatrix fork.
 func isPreBellatrix(v int) bool {
 	return v == version.Phase0 || v == version.Altair
+}
+
+func (s *Service) rmInvalidBlockAndState(ctx context.Context, blkRoot [32]byte, blkHash [32]byte) error {
+	invalidBlockRoots := make([][32]byte, 0)
+
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		invalidBlockRoots = append(invalidBlockRoots, blkRoot)
+
+		// Look up using fork choice store will always be faster than using the db.
+		// Let's add payload hash to forkchoice store.
+
+		b, err := s.cfg.BeaconDB.Block(ctx, blkRoot)
+		if err != nil {
+			return err
+		}
+		if isPreBellatrix(b.Version()) { // If the block is pre-bellatrix, we can stop.
+			break
+		}
+		payload, err := b.Block().Body().ExecutionPayload()
+		if err != nil {
+			return err
+		}
+		if bytesutil.ToBytes32(payload.BlockHash) == params.BeaconConfig().ZeroHash { // If the payload is before transition, we can stop.
+			break
+		}
+		if bytesutil.ToBytes32(payload.BlockHash) == blkHash { // If the payload is valid, we can stop.
+			break
+		}
+		blkRoot = bytesutil.ToBytes32(b.Block().ParentRoot())
+	}
+
+	for _, root := range invalidBlockRoots {
+		if err := s.cfg.BeaconDB.DeleteBlock(ctx, root); err != nil {
+			if err == kv.ErrDeleteJustifiedAndFinalized {
+				// This is bad. What should we do? Panic?
+				return err
+			}
+			return err
+		}
+		if err := s.cfg.StateGen.DeleteStateFromCaches(ctx, root); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // optimisticCandidateBlock returns true if this block can be optimistically synced.

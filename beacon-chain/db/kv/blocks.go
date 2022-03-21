@@ -213,13 +213,13 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 	defer span.End()
 
 	if err := s.DeleteState(ctx, root); err != nil {
-		return errDeleteFinalized
+		return err
 	}
 
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
 		if b := bkt.Get(root[:]); b != nil {
-			return errDeleteFinalized
+			return ErrDeleteJustifiedAndFinalized
 		}
 
 		if err := tx.Bucket(blocksBucket).Delete(root[:]); err != nil {

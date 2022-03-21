@@ -186,6 +186,22 @@ func (f *ForkChoice) HasParent(root [32]byte) bool {
 	return f.store.nodes[i].parent != NonExistentNode
 }
 
+// ParentRoot returns the parent root of the node.
+func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, bool) {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
+	i, ok := f.store.nodesIndices[root]
+	if !ok {
+		return [32]byte{}, false
+	}
+	n := f.store.nodes[i]
+	if n.parent == NonExistentNode {
+		return [32]byte{}, false
+	}
+	return f.store.nodes[n.parent].root, true
+}
+
 // IsCanonical returns true if the given root is part of the canonical chain.
 func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 	f.store.nodesLock.RLock()

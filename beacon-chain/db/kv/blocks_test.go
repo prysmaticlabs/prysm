@@ -200,7 +200,7 @@ func TestStore_DeleteBlock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, b, nil)
 
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), errDeleteFinalized)
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
 
 }
 

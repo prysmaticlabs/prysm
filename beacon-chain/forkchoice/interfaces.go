@@ -59,6 +59,7 @@ type Getter interface {
 	HasNode([32]byte) bool
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
+	ParentRoot(root [32]byte) ([32]byte, bool)
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedEpoch() types.Epoch

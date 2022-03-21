@@ -346,19 +346,25 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 
 		bkt = tx.Bucket(checkpointBucket)
 		enc := bkt.Get(finalizedCheckpointKey)
-		checkpoint := &ethpb.Checkpoint{}
+		finalized := &ethpb.Checkpoint{}
 		if enc == nil {
-			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(ctx, enc, checkpoint); err != nil {
+			finalized = &ethpb.Checkpoint{Root: genesisBlockRoot}
+		} else if err := decode(ctx, enc, finalized); err != nil {
 			return err
 		}
 
-		blockBkt := tx.Bucket(blocksBucket)
-		headBlkRoot := blockBkt.Get(headBlockRootKey)
+		enc = bkt.Get(justifiedCheckpointKey)
+		justified := &ethpb.Checkpoint{}
+		if enc == nil {
+			justified = &ethpb.Checkpoint{Root: genesisBlockRoot}
+		} else if err := decode(ctx, enc, justified); err != nil {
+			return err
+		}
+
 		bkt = tx.Bucket(stateBucket)
-		// Safe guard against deleting genesis, finalized, head state.
-		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-			return errors.New("cannot delete genesis, finalized, or head state")
+		// Safeguard against deleting genesis, finalized, head state.
+		if bytes.Equal(blockRoot[:], finalized.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], justified.Root) {
+			return ErrDeleteJustifiedAndFinalized
 		}
 
 		slot, err := s.slotByBlockRoot(ctx, tx, blockRoot[:])
