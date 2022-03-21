@@ -5,7 +5,6 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
@@ -78,7 +77,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	}
 	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not check if block is optimistic")
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	return &ethpb.StateRootResponse{
