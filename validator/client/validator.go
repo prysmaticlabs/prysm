@@ -987,7 +987,6 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 				continue
 			}
 			validatorIndex = ind
-			// update the cache for the next time if it's not 0
 			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
 		if v.prepareBeaconProposalConfig.ProposeConfig != nil {
