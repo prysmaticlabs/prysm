@@ -25,26 +25,33 @@ func TestPruneInvalid(t *testing.T) {
 	tests := []struct {
 		root             [32]byte // the root of the new INVALID block
 		wantedNodeNumber int
+		wantedRoots      [][32]byte
 	}{
 		{
 			[32]byte{'j'},
 			12,
+			[][32]byte{[32]byte{'j'}},
 		},
 		{
 			[32]byte{'c'},
 			4,
+			[][32]byte{[32]byte{'f'}, [32]byte{'e'}, [32]byte{'i'}, [32]byte{'h'}, [32]byte{'l'},
+				[32]byte{'k'}, [32]byte{'g'}, [32]byte{'d'}, [32]byte{'c'}},
 		},
 		{
 			[32]byte{'i'},
 			12,
+			[][32]byte{[32]byte{'i'}},
 		},
 		{
 			[32]byte{'h'},
 			11,
+			[][32]byte{[32]byte{'i'}, [32]byte{'h'}},
 		},
 		{
 			[32]byte{'g'},
 			8,
+			[][32]byte{[32]byte{'i'}, [32]byte{'h'}, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'g'}},
 		},
 	}
 	for _, tc := range tests {
@@ -64,7 +71,9 @@ func TestPruneInvalid(t *testing.T) {
 		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1))
 		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1))
 
-		require.NoError(t, f.store.removeNode(context.Background(), tc.root))
+		roots, err := f.store.removeNode(context.Background(), tc.root)
+		require.NoError(t, err)
+		require.DeepEqual(t, tc.wantedRoots, roots)
 		require.Equal(t, tc.wantedNodeNumber, f.NodeCount())
 	}
 }

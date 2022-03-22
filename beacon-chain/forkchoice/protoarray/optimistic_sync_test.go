@@ -356,6 +356,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		newBestChild      uint64
 		newBestDescendant uint64
 		newParentWeight   uint64
+		returnedRoots     [][32]byte
 	}{
 		{
 			[32]byte{'j'},
@@ -368,6 +369,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			4,
 			8,
+			[][32]byte{[32]byte{'j'}},
 		},
 		{
 			[32]byte{'j'},
@@ -378,6 +380,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			4,
 			8,
+			[][32]byte{[32]byte{'j'}},
 		},
 		{
 			[32]byte{'i'},
@@ -391,6 +394,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
+			[][32]byte{[32]byte{'i'}},
 		},
 		{
 			[32]byte{'i'},
@@ -403,6 +407,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
+			[][32]byte{[32]byte{'i'}},
 		},
 	}
 	for _, tc := range tests {
@@ -439,8 +444,9 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		require.NotEqual(t, NonExistentNode, parentIndex)
 		parent := f.store.nodes[parentIndex]
 		f.store.nodesLock.Unlock()
-		err := f.SetOptimisticToInvalid(context.Background(), tc.root)
+		roots, err := f.SetOptimisticToInvalid(context.Background(), tc.root)
 		require.NoError(t, err)
+		require.DeepEqual(t, tc.returnedRoots, roots)
 		f.syncedTips.RLock()
 		_, parentSyncedTip := f.syncedTips.validatedTips[parent.root]
 		f.syncedTips.RUnlock()
