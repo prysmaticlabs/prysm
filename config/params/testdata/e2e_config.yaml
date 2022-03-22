@@ -21,7 +21,7 @@ MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 256 # Override for e2e tests
 # Jan 3, 2020
 MIN_GENESIS_TIME: 1578009600
 # Highest byte set to 0x01 to avoid collisions with mainnet versioning
-GENESIS_FORK_VERSION: 0x00000001
+GENESIS_FORK_VERSION: 0x000000fd
 # [customized] Faster to spin up testnets, but does not give validator reasonable warning time for genesis
 GENESIS_DELAY: 10 # Override for e2e tests
 
@@ -32,13 +32,13 @@ GENESIS_DELAY: 10 # Override for e2e tests
 # Individual tests/testnets may set different values.
 
 # Altair
-ALTAIR_FORK_VERSION: 0x01000001
+ALTAIR_FORK_VERSION: 0x010000fd
 ALTAIR_FORK_EPOCH: 6 # Override for e2e
 # Bellatrix
-BELLATRIX_FORK_VERSION: 0x02000001
+BELLATRIX_FORK_VERSION: 0x020000fd
 BELLATRIX_FORK_EPOCH: 18446744073709551615
 # Sharding
-SHARDING_FORK_VERSION: 0x03000001
+SHARDING_FORK_VERSION: 0x030000fd
 SHARDING_FORK_EPOCH: 18446744073709551615
 
 
