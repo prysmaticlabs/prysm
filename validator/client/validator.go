@@ -939,7 +939,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 // UpdateFeeRecipient calls the prepareBeaconProposer RPC to set the fee recipient.
 func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error {
 	if v.feeRecipientConfig == nil {
-		log.Warnln("Fee recipient config not set, skipping fee recipient update. Beacon node will use its own configuration")
+		log.Warnln("Fee recipient config not set, skipping fee recipient update. Validator will continue proposing using beacon node specified fee recipient.")
 		return nil
 	}
 	if km == nil {
