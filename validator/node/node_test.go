@@ -312,14 +312,14 @@ func TestUnmarshalFromURL(t *testing.T) {
 	}
 }
 
-func TestPrepareBeaconProposalConfig(t *testing.T) {
-	type proposalFlag struct {
+func TestFeeRecipientConfig(t *testing.T) {
+	type feeRecipientFlag struct {
 		dir        string
 		url        string
 		defaultfee string
 	}
 	type args struct {
-		proposalFlagValues *proposalFlag
+		feeRecipientFlagValues *feeRecipientFlag
 	}
 	tests := []struct {
 		name        string
@@ -331,7 +331,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		{
 			name: "Happy Path Config file File",
 			args: args{
-				proposalFlagValues: &proposalFlag{
+				feeRecipientFlagValues: &feeRecipientFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
 					defaultfee: "",
@@ -356,7 +356,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		{
 			name: "Happy Path Config file File multiple fee recipients",
 			args: args{
-				proposalFlagValues: &proposalFlag{
+				feeRecipientFlagValues: &feeRecipientFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config-multiple.json",
 					url:        "",
 					defaultfee: "",
@@ -386,7 +386,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		{
 			name: "Happy Path Config URL File",
 			args: args{
-				proposalFlagValues: &proposalFlag{
+				feeRecipientFlagValues: &feeRecipientFlag{
 					dir:        "",
 					url:        "./testdata/good-prepare-beacon-proposer-config.json",
 					defaultfee: "",
@@ -411,7 +411,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		{
 			name: "Happy Path Suggested Fee File",
 			args: args{
-				proposalFlagValues: &proposalFlag{
+				feeRecipientFlagValues: &feeRecipientFlag{
 					dir:        "",
 					url:        "",
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
@@ -430,7 +430,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		{
 			name: "Suggested Fee Override Config",
 			args: args{
-				proposalFlagValues: &proposalFlag{
+				feeRecipientFlagValues: &feeRecipientFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
@@ -449,7 +449,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		{
 			name: "Default Fee Recipient",
 			args: args{
-				proposalFlagValues: &proposalFlag{
+				feeRecipientFlagValues: &feeRecipientFlag{
 					dir:        "",
 					url:        "",
 					defaultfee: "",
@@ -468,7 +468,7 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		{
 			name: "Both URL and Dir flags used resulting in error",
 			args: args{
-				proposalFlagValues: &proposalFlag{
+				feeRecipientFlagValues: &feeRecipientFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "./testdata/good-prepare-beacon-proposer-config.json",
 					defaultfee: "",
@@ -484,12 +484,12 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
-			if tt.args.proposalFlagValues.dir != "" {
-				set.String(flags.FeeRecipientConfigFileFlag.Name, tt.args.proposalFlagValues.dir, "")
-				require.NoError(t, set.Set(flags.FeeRecipientConfigFileFlag.Name, tt.args.proposalFlagValues.dir))
+			if tt.args.feeRecipientFlagValues.dir != "" {
+				set.String(flags.FeeRecipientConfigFileFlag.Name, tt.args.feeRecipientFlagValues.dir, "")
+				require.NoError(t, set.Set(flags.FeeRecipientConfigFileFlag.Name, tt.args.feeRecipientFlagValues.dir))
 			}
-			if tt.args.proposalFlagValues.url != "" {
-				content, err := ioutil.ReadFile(tt.args.proposalFlagValues.url)
+			if tt.args.feeRecipientFlagValues.url != "" {
+				content, err := ioutil.ReadFile(tt.args.feeRecipientFlagValues.url)
 				require.NoError(t, err)
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(200)
@@ -499,15 +499,15 @@ func TestPrepareBeaconProposalConfig(t *testing.T) {
 				}))
 				defer srv.Close()
 
-				set.String(flags.FeeRecipientConfigURLFlag.Name, tt.args.proposalFlagValues.url, "")
+				set.String(flags.FeeRecipientConfigURLFlag.Name, tt.args.feeRecipientFlagValues.url, "")
 				require.NoError(t, set.Set(flags.FeeRecipientConfigURLFlag.Name, srv.URL))
 			}
-			if tt.args.proposalFlagValues.defaultfee != "" {
-				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposalFlagValues.defaultfee, "")
-				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposalFlagValues.defaultfee))
+			if tt.args.feeRecipientFlagValues.defaultfee != "" {
+				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.feeRecipientFlagValues.defaultfee, "")
+				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.feeRecipientFlagValues.defaultfee))
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
-			got, err := prepareBeaconProposalConfig(cliCtx)
+			got, err := feeRecipientConfig(cliCtx)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, tt.wantErr, err)
 				return
