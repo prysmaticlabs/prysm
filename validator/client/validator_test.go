@@ -104,11 +104,15 @@ func (m *mockKeymanager) SimulateAccountChanges(newKeys [][fieldparams.BLSPubkey
 	m.accountsChangedFeed.Send(newKeys)
 }
 
-// ExtractKeystores --
 func (*mockKeymanager) ExtractKeystores(
 	ctx context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*keymanager.Keystore, error) {
 	return nil, errors.New("extracting keys not supported on mock keymanager")
+}
+
+func (*mockKeymanager) ListKeymanagerAccounts(
+	context.Context, keymanager.ListKeymanagerAccountConfig) error {
+	return nil
 }
 
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
