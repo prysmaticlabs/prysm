@@ -62,5 +62,5 @@ func (b *BeaconState) randaoMixesLength() int {
 		return 0
 	}
 
-	return int(b.randaoMixes.TotalLength())
+	return int(b.randaoMixes.TotalLength()) // lint:ignore uintcast- ajhdjhd
 }

@@ -1,6 +1,7 @@
 {
   "unsafeptr": {
     "exclude_files": {
+      "beacon-chain/state/state-native/custom-types/block_roots.go": "Needed for field management operations",
       "external/.*": "Unsafe third party code",
       "rules_go_work-.*": "Third party code"
     }

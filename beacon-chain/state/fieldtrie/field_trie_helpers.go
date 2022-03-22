@@ -59,7 +59,8 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 	}
 	elemLen := retrieveLength(elements)
 
-	if elemLen > int(length) {
+	castedLen := int(length) // lint:ignore uintcast- ajhdjhd
+	if elemLen > castedLen {
 		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), elemLen, length)
 	}
 	return nil
@@ -188,7 +189,7 @@ func handleIndexer(indexer customtypes.Indexer, indices []uint64, convertAll boo
 	length := len(indices)
 	totalLength := indexer.TotalLength()
 	if convertAll {
-		length = int(totalLength)
+		length = int(totalLength) // lint:ignore uintcast- ajhdjhd
 	}
 	roots := make([][32]byte, 0, length)
 	rootCreator := func(input [32]byte) {
@@ -384,7 +385,7 @@ func retrieveLength(elements interface{}) int {
 	if reflect.Indirect(elemVal).Kind() == reflect.Struct {
 		meth := elemVal.MethodByName("TotalLength")
 		ret := meth.Call([]reflect.Value{})
-		elemLen = int(ret[0].Uint())
+		elemLen = int(ret[0].Uint()) // lint:ignore uintcast- ajhdjhd
 	} else {
 		val := reflect.Indirect(elemVal)
 		elemLen = val.Len()

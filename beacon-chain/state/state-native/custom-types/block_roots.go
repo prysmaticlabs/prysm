@@ -2,7 +2,11 @@ package customtypes
 
 import (
 	"fmt"
+	"reflect"
+	"runtime"
+	"sort"
 	"sync"
+	"unsafe"
 
 	fssz "github.com/ferranbt/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -22,13 +26,33 @@ type Indexer interface {
 type BlockRoots struct {
 	baseArray    *baseArrayBlockRoots
 	fieldJournal map[uint64][32]byte
+	generation   uint64
 	*stateutil.Reference
 }
 
 type baseArrayBlockRoots struct {
-	baseArray *[fieldparams.BlockRootsLength][32]byte
+	baseArray     *[fieldparams.BlockRootsLength][32]byte
+	descendantMap map[uint64][]uintptr
 	*sync.RWMutex
 	*stateutil.Reference
+}
+
+type sorter struct {
+	objs        [][]uintptr
+	generations []uint64
+}
+
+func (s sorter) Len() int {
+	return len(s.generations)
+}
+
+func (s sorter) Swap(i, j int) {
+	s.objs[i], s.objs[j] = s.objs[j], s.objs[i]
+	s.generations[i], s.generations[j] = s.generations[j], s.generations[i]
+}
+
+func (s sorter) Less(i, j int) bool {
+	return s.generations[i] < s.generations[j]
 }
 
 func (b *baseArrayBlockRoots) RootAtIndex(idx uint64) [32]byte {
@@ -39,6 +63,83 @@ func (b *baseArrayBlockRoots) RootAtIndex(idx uint64) [32]byte {
 
 func (b *baseArrayBlockRoots) TotalLength() uint64 {
 	return fieldparams.BlockRootsLength
+}
+
+func (b *baseArrayBlockRoots) addGeneration(generation uint64, descendant uintptr) {
+	b.RWMutex.Lock()
+	defer b.RWMutex.Unlock()
+	b.descendantMap[generation] = append(b.descendantMap[generation], descendant)
+}
+
+func (b *baseArrayBlockRoots) removeGeneration(generation uint64, descendant uintptr) {
+	b.RWMutex.Lock()
+	defer b.RWMutex.Unlock()
+	ptrVals := b.descendantMap[generation]
+	newVals := []uintptr{}
+	for _, v := range ptrVals {
+		if v == descendant {
+			continue
+		}
+		newVals = append(newVals, v)
+	}
+	b.descendantMap[generation] = newVals
+}
+
+func (b *baseArrayBlockRoots) numOfDescendants() uint64 {
+	b.RWMutex.RLock()
+	defer b.RWMutex.RUnlock()
+	return uint64(len(b.descendantMap))
+}
+
+func (b *baseArrayBlockRoots) cleanUp() {
+	b.RWMutex.Lock()
+	defer b.RWMutex.Unlock()
+	fmt.Printf("\n cleaning up block roots %d \n ", len(b.descendantMap))
+	listOfObjs := [][]uintptr{}
+	generations := []uint64{}
+	for g, objs := range b.descendantMap {
+		generations = append(generations, g)
+		listOfObjs = append(listOfObjs, objs)
+	}
+	sortedObj := sorter{
+		objs:        listOfObjs,
+		generations: generations,
+	}
+	sort.Sort(sortedObj)
+	lastReferencedGen := 0
+	lastRefrencedIdx := 0
+	lastRefPointer := 0
+	for i, g := range sortedObj.generations {
+		for j, o := range sortedObj.objs[i] {
+
+			x := (*BlockRoots)(unsafe.Pointer(o))
+			if x == nil {
+				continue
+			}
+
+			lastReferencedGen = int(g) // lint:ignore uintcast- ajhdjhd
+			lastRefrencedIdx = i
+			lastRefPointer = j
+			break
+		}
+		if lastReferencedGen != 0 {
+			break
+		}
+	}
+	fmt.Printf("\n block root map %d, %d, %d \n ", lastReferencedGen, lastRefrencedIdx, lastRefPointer)
+
+	br := (*BlockRoots)(unsafe.Pointer(sortedObj.objs[lastRefrencedIdx][lastRefPointer]))
+	for k, v := range br.fieldJournal {
+		b.baseArray[k] = v
+	}
+	sortedObj.generations = sortedObj.generations[lastRefrencedIdx:]
+	sortedObj.objs = sortedObj.objs[lastRefrencedIdx:]
+
+	newMap := make(map[uint64][]uintptr)
+	for i, g := range sortedObj.generations {
+		newMap[g] = sortedObj.objs[i]
+	}
+	b.descendantMap = newMap
 }
 
 // HashTreeRoot returns calculated hash root.
@@ -142,9 +243,10 @@ func (r *BlockRoots) Array() [fieldparams.BlockRootsLength][32]byte {
 func SetFromSlice(slice [][]byte) *BlockRoots {
 	br := &BlockRoots{
 		baseArray: &baseArrayBlockRoots{
-			baseArray: new([fieldparams.BlockRootsLength][32]byte),
-			RWMutex:   new(sync.RWMutex),
-			Reference: stateutil.NewRef(1),
+			baseArray:     new([fieldparams.BlockRootsLength][32]byte),
+			descendantMap: map[uint64][]uintptr{},
+			RWMutex:       new(sync.RWMutex),
+			Reference:     stateutil.NewRef(1),
 		},
 		fieldJournal: map[uint64][32]byte{},
 		Reference:    stateutil.NewRef(1),
@@ -152,17 +254,21 @@ func SetFromSlice(slice [][]byte) *BlockRoots {
 	for i, rt := range slice {
 		copy(br.baseArray.baseArray[i][:], rt)
 	}
+	runtime.SetFinalizer(br, blockRootsFinalizer)
 	return br
 }
 
 func (r *BlockRoots) SetFromBaseField(field [fieldparams.BlockRootsLength][32]byte) {
 	r.baseArray = &baseArrayBlockRoots{
-		baseArray: &field,
-		RWMutex:   new(sync.RWMutex),
-		Reference: stateutil.NewRef(1),
+		baseArray:     &field,
+		descendantMap: map[uint64][]uintptr{},
+		RWMutex:       new(sync.RWMutex),
+		Reference:     stateutil.NewRef(1),
 	}
 	r.fieldJournal = map[uint64][32]byte{}
 	r.Reference = stateutil.NewRef(1)
+	r.baseArray.addGeneration(0, reflect.ValueOf(r).Pointer())
+	runtime.SetFinalizer(r, blockRootsFinalizer)
 }
 
 func (r *BlockRoots) RootAtIndex(idx uint64) [32]byte {
@@ -181,16 +287,23 @@ func (r *BlockRoots) SetRootAtIndex(idx uint64, val [32]byte) {
 	}
 	if r.Refs() <= 1 {
 		r.fieldJournal[idx] = val
+		r.baseArray.removeGeneration(r.generation, reflect.ValueOf(r).Pointer())
+		r.generation++
+		r.baseArray.addGeneration(r.generation, reflect.ValueOf(r).Pointer())
 		return
 	}
 	newJournal := make(map[uint64][32]byte)
 	for k, val := range r.fieldJournal {
 		newJournal[k] = val
 	}
+
 	r.fieldJournal = newJournal
 	r.MinusRef()
 	r.Reference = stateutil.NewRef(1)
 	r.fieldJournal[idx] = val
+	r.baseArray.removeGeneration(r.generation, reflect.ValueOf(r).Pointer())
+	r.generation++
+	r.baseArray.addGeneration(r.generation, reflect.ValueOf(r).Pointer())
 }
 
 func (r *BlockRoots) Copy() *BlockRoots {
@@ -200,7 +313,13 @@ func (r *BlockRoots) Copy() *BlockRoots {
 		baseArray:    r.baseArray,
 		fieldJournal: r.fieldJournal,
 		Reference:    r.Reference,
+		generation:   r.generation,
 	}
+	r.baseArray.addGeneration(r.generation, reflect.ValueOf(br).Pointer())
+	if r.baseArray.numOfDescendants() > 20 {
+		r.baseArray.cleanUp()
+	}
+	runtime.SetFinalizer(br, blockRootsFinalizer)
 	return br
 }
 
@@ -216,4 +335,28 @@ func (r *BlockRoots) IncreaseRef() {
 func (r *BlockRoots) DecreaseRef() {
 	r.Reference.MinusRef()
 	r.baseArray.Reference.MinusRef()
+}
+
+func blockRootsFinalizer(br *BlockRoots) {
+	br.baseArray.Lock()
+	defer br.baseArray.Unlock()
+	ptrVal := reflect.ValueOf(br).Pointer()
+	vals, ok := br.baseArray.descendantMap[br.generation]
+	if !ok {
+		return
+	}
+	exists := false
+	wantedVals := []uintptr{}
+	for _, v := range vals {
+		if v == ptrVal {
+			exists = true
+			continue
+		}
+		newV := v
+		wantedVals = append(wantedVals, newV)
+	}
+	if !exists {
+		return
+	}
+	br.baseArray.descendantMap[br.generation] = wantedVals
 }
