@@ -1446,7 +1446,7 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	require.NotNil(t, km)
 }
 
-func TestValidator_PrepareBeaconProposer(t *testing.T) {
+func TestValidator_UdpateFeeRecipient(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
