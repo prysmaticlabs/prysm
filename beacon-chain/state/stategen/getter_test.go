@@ -167,7 +167,7 @@ func TestDeleteStateFromCaches(t *testing.T) {
 	require.Equal(t, false, has)
 
 	service.hotStateCache.put(r, beaconState)
-	service.epochBoundaryStateCache.put(r, beaconState)
+	require.NoError(t, service.epochBoundaryStateCache.put(r, beaconState))
 
 	require.Equal(t, true, service.hotStateCache.has(r))
 	_, has, err = service.epochBoundaryStateCache.getByRoot(r)

@@ -648,5 +648,5 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 			t.Errorf("The code did not panic.")
 		}
 	}()
-	service.removeInvalidBlockAndState(ctx, [][32]byte{fRoot})
+	require.NoError(t, service.removeInvalidBlockAndState(ctx, [][32]byte{fRoot}))
 }

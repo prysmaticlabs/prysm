@@ -153,7 +153,7 @@ func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*e
 }
 
 // DeleteStateFromCaches deletes the state from the caches.
-func (s *State) DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error {
+func (s *State) DeleteStateFromCaches(_ context.Context, blockRoot [32]byte) error {
 	s.hotStateCache.delete(blockRoot)
 	return s.epochBoundaryStateCache.delete(blockRoot)
 }
