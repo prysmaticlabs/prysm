@@ -241,6 +241,21 @@ func TestServer_GetBlockHeader(t *testing.T) {
 				return
 			}
 
+			expectedBodyRoot, err := tt.want.Block.Body.HashTreeRoot()
+			require.NoError(t, err)
+			expectedHeader := &ethpbv1.BeaconBlockHeader{
+				Slot:          tt.want.Block.Slot,
+				ProposerIndex: tt.want.Block.ProposerIndex,
+				ParentRoot:    tt.want.Block.ParentRoot,
+				StateRoot:     make([]byte, 32),
+				BodyRoot:      expectedBodyRoot[:],
+			}
+			expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
+			require.NoError(t, err)
+			headerRoot, err := header.Data.Header.Message.HashTreeRoot()
+			require.NoError(t, err)
+			assert.DeepEqual(t, expectedHeaderRoot, headerRoot)
+
 			assert.Equal(t, tt.want.Block.Slot, header.Data.Header.Message.Slot)
 			assert.DeepEqual(t, tt.want.Block.StateRoot, header.Data.Header.Message.StateRoot)
 			assert.DeepEqual(t, tt.want.Block.ParentRoot, header.Data.Header.Message.ParentRoot)
@@ -342,6 +357,21 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 
 			require.Equal(t, len(tt.want), len(headers.Data))
 			for i, blk := range tt.want {
+				expectedBodyRoot, err := blk.Block.Body.HashTreeRoot()
+				require.NoError(t, err)
+				expectedHeader := &ethpbv1.BeaconBlockHeader{
+					Slot:          blk.Block.Slot,
+					ProposerIndex: blk.Block.ProposerIndex,
+					ParentRoot:    blk.Block.ParentRoot,
+					StateRoot:     make([]byte, 32),
+					BodyRoot:      expectedBodyRoot[:],
+				}
+				expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
+				require.NoError(t, err)
+				headerRoot, err := headers.Data[i].Header.Message.HashTreeRoot()
+				require.NoError(t, err)
+				assert.DeepEqual(t, expectedHeaderRoot, headerRoot)
+
 				assert.Equal(t, blk.Block.Slot, headers.Data[i].Header.Message.Slot)
 				assert.DeepEqual(t, blk.Block.StateRoot, headers.Data[i].Header.Message.StateRoot)
 				assert.DeepEqual(t, blk.Block.ParentRoot, headers.Data[i].Header.Message.ParentRoot)

@@ -55,7 +55,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 		return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
 	}
 	header := migration.V1Alpha1SignedHeaderToV1(v1alpha1Header)
-	headerRoot, err := header.HashTreeRoot()
+	headerRoot, err := header.Message.HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 	}
@@ -124,7 +124,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 			return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
 		}
 		header := migration.V1Alpha1SignedHeaderToV1(v1alpha1Header)
-		headerRoot, err := header.HashTreeRoot()
+		headerRoot, err := header.Message.HashTreeRoot()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 		}
