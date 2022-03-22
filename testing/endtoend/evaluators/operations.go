@@ -406,8 +406,14 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 var expectedEth1DataVote []byte
 
 func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (block.SignedBeaconBlock, error) {
-	if obj.Block == nil {
-		return nil, errors.New("container has no block")
+	if obj.GetPhase0Block() != nil {
+		return wrapper.WrappedSignedBeaconBlock(obj.GetPhase0Block())
 	}
-	return wrapper.WrappedSignedBeaconBlock(obj.Block)
+	if obj.GetAltairBlock() != nil {
+		return wrapper.WrappedSignedBeaconBlock(obj.GetAltairBlock())
+	}
+	if obj.GetBellatrixBlock() != nil {
+		return wrapper.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())
+	}
+	return nil, errors.New("container has no block")
 }
