@@ -161,12 +161,34 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 					log.WithError(err).Errorf("Unable to get justified balances for root %v", justified.Root)
 					continue
 				}
+				prevHead := s.headRoot()
 				if err := s.updateHead(s.ctx, balances); err != nil {
 					log.WithError(err).Warn("Resolving fork due to new attestation")
 				}
+				s.notifyEngineIfChangedHead(prevHead)
 			}
 		}
 	}()
+}
+
+// This calls notify Forkchoice Update in the event that the head has changed
+func (s *Service) notifyEngineIfChangedHead(prevHead [32]byte) {
+	if s.headRoot() == prevHead {
+		return
+	}
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
+		return
+	}
+	_, err := s.notifyForkchoiceUpdate(s.ctx,
+		s.headBlock().Block(),
+		s.headRoot(),
+		bytesutil.ToBytes32(finalized.Root),
+	)
+	if err != nil {
+		log.WithError(err).Error("could not notify forkchoice update")
+	}
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.

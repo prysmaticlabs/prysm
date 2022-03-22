@@ -21,7 +21,7 @@ import (
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
-func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.BeaconBlock, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.BeaconBlock, headRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
 	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
 		return nil, errors.New("nil head block")
 	}
@@ -76,20 +76,21 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
 	}
-	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, s.headRoot()); err != nil {
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot); err != nil {
 		return nil, errors.Wrap(err, "could not set block to valid")
 	}
 	return payloadID, nil
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload
-func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, header *ethpb.ExecutionPayloadHeader, postState state.BeaconState, blk block.SignedBeaconBlock) error {
+func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, header *ethpb.ExecutionPayloadHeader, postState state.BeaconState, blk block.SignedBeaconBlock, root [32]byte) error {
 	if postState == nil {
 		return errors.New("pre and post states must not be nil")
 	}
-	// Execution payload is only supported in Bellatrix and beyond.
+	// Execution payload is only supported in Bellatrix and beyond. Pre
+	// merge blocks are never optimistic
 	if isPreBellatrix(postState.Version()) {
-		return nil
+		return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
 	}
 	if err := helpers.BeaconBlockIsNil(blk); err != nil {
 		return err
@@ -100,7 +101,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 		return errors.Wrap(err, "could not determine if execution is enabled")
 	}
 	if !enabled {
-		return nil
+		return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
 	}
 	payload, err := body.ExecutionPayload()
 	if err != nil {
@@ -118,6 +119,10 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 		default:
 			return errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
+	}
+
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root); err != nil {
+		return errors.Wrap(err, "could not set optimistic status")
 	}
 
 	// During the transition event, the transition block should be verified for sanity.
