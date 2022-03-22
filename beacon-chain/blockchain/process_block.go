@@ -499,7 +499,7 @@ func getBlockPayloadHash(blk block.BeaconBlock) ([32]byte, error) {
 	}
 	payload, err := blk.Body().ExecutionPayload()
 	if err != nil {
-		return [32]byte{}, err
+		return payloadHash, err
 	}
 	return bytesutil.ToBytes32(payload.BlockHash), nil
 }
