@@ -447,7 +447,7 @@ func TestFeeRecipientConfig(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			name: "Default Fee Recipient",
+			name: "No flags set means empty config",
 			args: args{
 				feeRecipientFlagValues: &feeRecipientFlag{
 					dir:        "",
@@ -456,12 +456,7 @@ func TestFeeRecipientConfig(t *testing.T) {
 				},
 			},
 			want: func() *validator_service_config.FeeRecipientConfig {
-				return &validator_service_config.FeeRecipientConfig{
-					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x0000000000000000000000000000000000000000"),
-					},
-				}
+				return nil
 			},
 			wantErr: "",
 		},
