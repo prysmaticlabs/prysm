@@ -37,6 +37,7 @@ type Store struct {
 type Node struct {
 	slot           types.Slot                   // slot of the block converted to the node.
 	root           [fieldparams.RootLength]byte // root of the block converted to the node.
+	payloadHash    [fieldparams.RootLength]byte // payloadHash of the block converted to the node.
 	parent         uint64                       // parent index of this node.
 	justifiedEpoch types.Epoch                  // justifiedEpoch of this node.
 	finalizedEpoch types.Epoch                  // finalizedEpoch of this node.
