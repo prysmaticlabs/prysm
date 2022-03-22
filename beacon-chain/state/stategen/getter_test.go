@@ -153,6 +153,35 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
 }
 
+func TestDeleteStateFromCaches(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	service := New(beaconDB)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	r := [32]byte{'A'}
+	
+	require.Equal(t, false, service.hotStateCache.has(r))
+	_, has, err := service.epochBoundaryStateCache.getByRoot(r)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+
+	service.hotStateCache.put(r, beaconState)
+	service.epochBoundaryStateCache.put(r, beaconState)
+
+	require.Equal(t, true, service.hotStateCache.has(r))
+	_, has, err = service.epochBoundaryStateCache.getByRoot(r)
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+
+	require.NoError(t, service.DeleteStateFromCaches(ctx, r))
+
+	require.Equal(t, false, service.hotStateCache.has(r))
+	_, has, err = service.epochBoundaryStateCache.getByRoot(r)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+}
+
 func TestStateByRoot_StateByRootInitialSync(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)

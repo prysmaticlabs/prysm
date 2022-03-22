@@ -124,3 +124,8 @@ func (m *MockStateManager) AddStateForRoot(state state.BeaconState, blockRoot [3
 func (m *MockStateManager) AddStateForSlot(state state.BeaconState, slot types.Slot) {
 	m.StatesBySlot[slot] = state
 }
+
+// DeleteStateFromCaches --
+func (m *MockStateManager) DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error {
+	return nil
+}

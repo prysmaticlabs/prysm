@@ -201,9 +201,47 @@ func TestStore_DeleteBlock(t *testing.T) {
 	require.Equal(t, b, nil)
 
 	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
-
 }
 
+func TestStore_DeleteJustifiedBlock(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 1
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Root: root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+}
+
+func TestStore_DeleteFinalizedBlock(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	b := util.NewBeaconBlock()
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Root: root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+}
 func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()

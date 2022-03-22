@@ -590,3 +590,63 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, candidate)
 }
+
+func TestService_removeInvalidBlockAndState(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 1
+	blk1, err := wrapper.WrappedSignedBeaconBlock(b1)
+	require.NoError(t, err)
+	r1, err := blk1.Block().HashTreeRoot()
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, blk1))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, r1))
+
+	b2 := util.NewBeaconBlock()
+	b2.Block.Slot = 2
+	blk2, err := wrapper.WrappedSignedBeaconBlock(b2)
+	require.NoError(t, err)
+	r2, err := blk2.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, blk2))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, r2))
+
+	require.NoError(t, service.removeInvalidBlockAndState(ctx, [][32]byte{r1, r2}))
+
+	require.Equal(t, false, service.hasBlock(ctx, r1))
+	require.Equal(t, false, service.hasBlock(ctx, r2))
+	has, err := service.cfg.StateGen.HasState(ctx, r1)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	has, err = service.cfg.StateGen.HasState(ctx, r2)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+
+	// Delete finalized block
+	f := util.NewBeaconBlock()
+	fBlk, err := wrapper.WrappedSignedBeaconBlock(f)
+	require.NoError(t, err)
+	fRoot, err := fBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, fBlk))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, fRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, fRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: fRoot[:]}))
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic.")
+		}
+	}()
+	service.removeInvalidBlockAndState(ctx, [][32]byte{fRoot})
+}
