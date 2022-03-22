@@ -58,6 +58,11 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
@@ -109,11 +114,6 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
 
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.HeadFetcher)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
-	}
-
 	return &ethpbv1.AttesterDutiesResponse{
 		DependentRoot:       root,
 		Data:                duties,
@@ -140,6 +140,11 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
@@ -175,11 +180,6 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	root, err := proposalDependentRoot(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
-	}
-
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.HeadFetcher)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	return &ethpbv1.ProposerDutiesResponse{

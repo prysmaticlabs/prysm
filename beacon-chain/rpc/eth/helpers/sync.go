@@ -38,6 +38,7 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 }
 
+// IsOptimistic checks whether the latest block header of the passed in beacon state is the header of an optimistic block.
 func IsOptimistic(ctx context.Context, st state.BeaconState, headFetcher blockchain.HeadFetcher) (bool, error) {
 	root, err := st.HashTreeRoot(ctx)
 	if err != nil {
