@@ -449,10 +449,15 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
+	payloadHash, err := getBlockPayloadHash(genesisBlk.Block())
+	if err != nil {
+		return err
+	}
 	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
 		genesisBlk.Block().Slot(),
 		genesisBlkRoot,
 		params.BeaconConfig().ZeroHash,
+		payloadHash,
 		genesisCheckpoint.Epoch,
 		genesisCheckpoint.Epoch); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
