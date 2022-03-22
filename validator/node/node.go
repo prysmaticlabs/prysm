@@ -410,25 +410,25 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	}
 
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
-		Endpoint:                    endpoint,
-		DataDir:                     dataDir,
-		LogValidatorBalances:        logValidatorBalances,
-		EmitAccountMetrics:          emitAccountMetrics,
-		CertFlag:                    cert,
-		GraffitiFlag:                g.ParseHexGraffiti(graffiti),
-		GrpcMaxCallRecvMsgSizeFlag:  maxCallRecvMsgSize,
-		GrpcRetriesFlag:             grpcRetries,
-		GrpcRetryDelay:              grpcRetryDelay,
-		GrpcHeadersFlag:             c.cliCtx.String(flags.GrpcHeadersFlag.Name),
-		ValDB:                       c.db,
-		UseWeb:                      c.cliCtx.Bool(flags.EnableWebFlag.Name),
-		InteropKeysConfig:           interopKeysConfig,
-		Wallet:                      c.wallet,
-		WalletInitializedFeed:       c.walletInitialized,
-		GraffitiStruct:              gStruct,
-		LogDutyCountDown:            c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
-		Web3SignerConfig:            wsc,
-		PrepareBeaconProposalConfig: bpc,
+		Endpoint:                   endpoint,
+		DataDir:                    dataDir,
+		LogValidatorBalances:       logValidatorBalances,
+		EmitAccountMetrics:         emitAccountMetrics,
+		CertFlag:                   cert,
+		GraffitiFlag:               g.ParseHexGraffiti(graffiti),
+		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
+		GrpcRetriesFlag:            grpcRetries,
+		GrpcRetryDelay:             grpcRetryDelay,
+		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		ValDB:                      c.db,
+		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
+		InteropKeysConfig:          interopKeysConfig,
+		Wallet:                     c.wallet,
+		WalletInitializedFeed:      c.walletInitialized,
+		GraffitiStruct:             gStruct,
+		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
+		Web3SignerConfig:           wsc,
+		FeeRecipientConfig:         bpc,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -496,57 +496,52 @@ func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipie
 			},
 		}
 	}
-
-	if fileConfig == nil {
-		// if no flags were set, use the burn address
-		log.Warnf("No validator proposer fileConfig or default fee specified!! validators will continue to propose with burn address")
-		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
-			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
-				FeeRecipient: fieldparams.EthBurnAddressHex,
-			},
-		}
-	}
 	//convert file config to proposer config for internal use
 	frConfig := &validatorServiceConfig.FeeRecipientConfig{}
 
-	// default fileConfig is mandatory
-	if fileConfig.DefaultConfig == nil {
-		return nil, errors.New("default fileConfig is required")
-	}
-	bytes, err := hexutil.Decode(fileConfig.DefaultConfig.FeeRecipient)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not decode fee recipient %s", fileConfig.DefaultConfig.FeeRecipient)
-	}
-	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
-		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
-	}
-	frConfig.DefaultConfig = &validatorServiceConfig.FeeRecipientOptions{
-		FeeRecipient: common.BytesToAddress(bytes),
-	}
+	if fileConfig == nil {
+		// if no flags were set, use the burn address
+		log.Warnf("No fee recipient config or default fee address specified!! validators will continue to propose with burn address")
+		frConfig = nil
+	} else {
+		// default fileConfig is mandatory
+		if fileConfig.DefaultConfig == nil {
+			return nil, errors.New("default fileConfig is required")
+		}
+		bytes, err := hexutil.Decode(fileConfig.DefaultConfig.FeeRecipient)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decode fee recipient %s", fileConfig.DefaultConfig.FeeRecipient)
+		}
+		if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
+			return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
+		}
+		frConfig.DefaultConfig = &validatorServiceConfig.FeeRecipientOptions{
+			FeeRecipient: common.BytesToAddress(bytes),
+		}
 
-	if fileConfig.ProposeConfig != nil {
-		frConfig.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.FeeRecipientOptions)
-		for key, option := range fileConfig.ProposeConfig {
-			decodedKey, err := hexutil.Decode(key)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
-			}
-			if len(decodedKey) != fieldparams.BLSPubkeyLength {
-				return nil, fmt.Errorf("%v  is not a bls public key", key)
-			}
-			if option == nil {
-				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
-			}
-			feebytes, err := hexutil.Decode(option.FeeRecipient)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
-			}
-			if !common.IsHexAddress(option.FeeRecipient) {
-				return nil, errors.New("fee recipient is not a valid eth1 address")
-			}
-			frConfig.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.FeeRecipientOptions{
-				FeeRecipient: common.BytesToAddress(feebytes),
+		if fileConfig.ProposeConfig != nil {
+			frConfig.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.FeeRecipientOptions)
+			for key, option := range fileConfig.ProposeConfig {
+				decodedKey, err := hexutil.Decode(key)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+				}
+				if len(decodedKey) != fieldparams.BLSPubkeyLength {
+					return nil, fmt.Errorf("%v  is not a bls public key", key)
+				}
+				if option == nil {
+					return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
+				}
+				feebytes, err := hexutil.Decode(option.FeeRecipient)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
+				}
+				if !common.IsHexAddress(option.FeeRecipient) {
+					return nil, errors.New("fee recipient is not a valid eth1 address")
+				}
+				frConfig.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.FeeRecipientOptions{
+					FeeRecipient: common.BytesToAddress(feebytes),
+				}
 			}
 		}
 	}
