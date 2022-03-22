@@ -111,9 +111,44 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, tRoot, tRoot, 1, 1))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1))
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
 	service.processAttestations(ctx)
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	require.LogsDoNotContain(t, hook, "Could not process attestation for fork choice")
+}
+
+func TestNotifyEngineIfChangedHead(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	opts := testServiceOptsWithDB(t)
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	service.notifyEngineIfChangedHead(service.headRoot())
+	hookErr := "could not notify forkchoice update"
+	finalizedErr := "could not get finalized checkpoint"
+	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, hookErr)
+	service.notifyEngineIfChangedHead([32]byte{'a'})
+	require.LogsContain(t, hook, finalizedErr)
+
+	hook.Reset()
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 1
+	wr := wrapper.WrappedPhase0SignedBeaconBlock(b)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wr))
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	finalized := &ethpb.Checkpoint{Root: r[:], Epoch: 0}
+	service.head = &head{
+		slot:  1,
+		root:  r,
+		block: wr,
+	}
+	service.store.SetFinalizedCheckpt(finalized)
+	service.notifyEngineIfChangedHead([32]byte{'b'})
+	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, hookErr)
 }
