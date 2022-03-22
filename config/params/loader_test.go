@@ -133,10 +133,10 @@ func TestLoadConfigFile(t *testing.T) {
 	t.Run("e2e", func(t *testing.T) {
 		minimalPresetsFiles := presetsFilePath(t, "minimal")
 		for _, fp := range minimalPresetsFiles {
-			params.LoadChainConfigFile(fp)
+			params.LoadChainConfigFile(fp, nil)
 		}
 		configFile := "testdata/e2e_config.yaml"
-		params.LoadChainConfigFile(configFile)
+		params.LoadChainConfigFile(configFile, nil)
 		fields := fieldsFromYamls(t, append(minimalPresetsFiles, configFile))
 		assertVals("e2e", fields, params.E2ETestConfig(), params.BeaconConfig())
 	})
