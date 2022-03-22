@@ -347,7 +347,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 				require.NoError(t, err)
 			}
 			root := [32]byte{'a'}
-			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, 0, 0))
+			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0))
 			err = service.notifyNewPayload(ctx, tt.preState.Version(), payload, tt.postState, tt.blk, root)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
@@ -397,7 +397,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	payload, err := bellatrixState.LatestExecutionPayloadHeader()
 	require.NoError(t, err)
 	root := [32]byte{'c'}
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 1, root, [32]byte{'a'}, 0, 0))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 1, root, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 0, 0))
 	err = service.notifyNewPayload(ctx, bellatrixState.Version(), payload, bellatrixState, bellatrixBlk, root)
 	require.NoError(t, err)
 	optimistic, err := service.IsOptimisticForRoot(ctx, root)
