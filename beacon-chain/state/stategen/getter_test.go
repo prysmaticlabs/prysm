@@ -160,7 +160,7 @@ func TestDeleteStateFromCaches(t *testing.T) {
 	service := New(beaconDB)
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
-	
+
 	require.Equal(t, false, service.hotStateCache.has(r))
 	_, has, err := service.epochBoundaryStateCache.getByRoot(r)
 	require.NoError(t, err)
