@@ -178,3 +178,13 @@ func (_ MockValidator) HandleKeyReload(_ context.Context, _ [][48]byte) (bool, e
 func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
 	panic("implement me")
 }
+
+// PrepareBeaconProposer for mocking
+func (_ MockValidator) UpdateFeeRecipient(_ context.Context, _ keymanager.IKeymanager) error {
+	panic("implement me")
+}
+
+// SetPubKeyToValidatorIndexMap for mocking
+func (_ MockValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
+	panic("implement me")
+}

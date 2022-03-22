@@ -33,6 +33,7 @@ type BlockProcessor interface {
 		slot types.Slot,
 		root [32]byte,
 		parentRoot [32]byte,
+		payloadHash [32]byte,
 		justifiedEpoch types.Epoch,
 		finalizedEpoch types.Epoch,
 	) error
