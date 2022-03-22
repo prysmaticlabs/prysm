@@ -184,6 +184,7 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
 	require.NoError(t, beaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}))
 	chainService.cfg.FinalizedStateAtStartUp = s
 	ss := &ethpb.StateSummary{

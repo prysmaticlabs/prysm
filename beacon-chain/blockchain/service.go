@@ -199,15 +199,17 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		store = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
 	}
 	s.cfg.ForkChoiceStore = store
-	fs, err := s.cfg.BeaconDB.StateSummary(s.ctx, fRoot)
+	fb, err := s.cfg.BeaconDB.Block(s.ctx, fRoot)
 	if err != nil {
-		return errors.Wrap(err, "could not get summary of finalized checkpoint")
+		return errors.Wrap(err, "could not get finalized checkpoint block")
 	}
-	if fs == nil {
-		return errInvalidNilSummary
+	payloadHash, err := getBlockPayloadHash(fb.Block())
+	if err != nil {
+		return errors.Wrap(err, "could not get execution payload hash")
 	}
-
-	if err := store.InsertOptimisticBlock(s.ctx, fs.Slot, fRoot, params.BeaconConfig().ZeroHash, justified.Epoch, finalized.Epoch); err != nil {
+	fSlot := fb.Block().Slot()
+	if err := store.InsertOptimisticBlock(s.ctx, fSlot, fRoot, params.BeaconConfig().ZeroHash,
+		payloadHash, justified.Epoch, finalized.Epoch); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
 
@@ -222,9 +224,9 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 
 	h := s.headBlock().Block()
-	if h.Slot() > fs.Slot {
+	if h.Slot() > fSlot {
 		log.WithFields(logrus.Fields{
-			"startSlot": fs.Slot,
+			"startSlot": fSlot,
 			"endSlot":   h.Slot(),
 		}).Info("Loading blocks to fork choice store, this may take a while.")
 		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, finalized, justified); err != nil {
