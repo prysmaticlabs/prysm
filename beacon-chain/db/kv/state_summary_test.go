@@ -62,3 +62,17 @@ func TestStateSummary_CacheToDB(t *testing.T) {
 		require.Equal(t, true, db.HasStateSummary(context.Background(), bytesutil.ToBytes32(r)))
 	}
 }
+
+func TestStateSummary_CanDelete(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	r1 := bytesutil.ToBytes32([]byte{'A'})
+	s1 := &ethpb.StateSummary{Slot: 1, Root: r1[:]}
+
+	require.Equal(t, false, db.HasStateSummary(ctx, r1), "State summary should not be saved")
+	require.NoError(t, db.SaveStateSummary(ctx, s1))
+	require.Equal(t, true, db.HasStateSummary(ctx, r1), "State summary should be saved")
+
+	require.NoError(t, db.deleteStateSummary(r1))
+	require.Equal(t, false, db.HasStateSummary(ctx, r1), "State summary should not be saved")
+}

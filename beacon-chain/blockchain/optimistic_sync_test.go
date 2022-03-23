@@ -610,6 +610,10 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, blk1))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
+		Slot: 1,
+		Root: r1[:],
+	}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, r1))
 
 	b2 := util.NewBeaconBlock()
@@ -619,12 +623,18 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	r2, err := blk2.Block().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, blk2))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
+		Slot: 2,
+		Root: r2[:],
+	}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, r2))
 
 	require.NoError(t, service.removeInvalidBlockAndState(ctx, [][32]byte{r1, r2}))
 
 	require.Equal(t, false, service.hasBlock(ctx, r1))
 	require.Equal(t, false, service.hasBlock(ctx, r2))
+	require.Equal(t, false, service.cfg.BeaconDB.HasStateSummary(ctx, r1))
+	require.Equal(t, false, service.cfg.BeaconDB.HasStateSummary(ctx, r2))
 	has, err := service.cfg.StateGen.HasState(ctx, r1)
 	require.NoError(t, err)
 	require.Equal(t, false, has)

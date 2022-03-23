@@ -174,6 +174,16 @@ func TestStore_DeleteBlock(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
 	blks := makeBlocks(t, 0, slotsPerEpoch*4, genesisBlockRoot)
 	require.NoError(t, db.SaveBlocks(ctx, blks))
+	ss := make([]*ethpb.StateSummary, len(blks))
+	for i, blk := range blks {
+		r, err := blk.Block().HashTreeRoot()
+		require.NoError(t, err)
+		ss[i] = &ethpb.StateSummary{
+			Slot: blk.Block().Slot(),
+			Root: r[:],
+		}
+	}
+	require.NoError(t, db.SaveStateSummaries(ctx, ss))
 
 	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -199,6 +209,7 @@ func TestStore_DeleteBlock(t *testing.T) {
 	b, err = db.Block(ctx, root2)
 	require.NoError(t, err)
 	require.Equal(t, b, nil)
+	require.Equal(t, false, db.HasStateSummary(ctx, root2))
 
 	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
 }
