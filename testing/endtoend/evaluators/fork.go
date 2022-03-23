@@ -3,6 +3,7 @@ package evaluators
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	coreHelper "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -76,7 +77,7 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
