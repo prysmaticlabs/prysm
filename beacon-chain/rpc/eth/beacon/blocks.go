@@ -259,7 +259,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 				"Block proposal received via RPC")
 			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixBlk, IsOptimistic: false},
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixBlk, IsOptimistic: true},
 			})
 		}()
 
