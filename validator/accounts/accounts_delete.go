@@ -91,8 +91,7 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 			}
 		}
 	}
-	if err := DeleteAccount(cliCtx.Context, &Config{
-		Wallet:           w,
+	if err := DeleteAccount(cliCtx.Context, &DeleteConfig{
 		Keymanager:       kManager,
 		DeletePublicKeys: rawPublicKeys,
 	}); err != nil {
@@ -106,17 +105,13 @@ func DeleteAccountCli(cliCtx *cli.Context) error {
 }
 
 // DeleteAccount deletes the accounts that the user requests to be deleted from the wallet.
-func DeleteAccount(ctx context.Context, cfg *Config) error {
-	deleter, ok := cfg.Keymanager.(keymanager.Deleter)
-	if !ok {
-		return errors.New("keymanager does not implement Deleter interface")
-	}
+func DeleteAccount(ctx context.Context, cfg *DeleteConfig) error {
 	if len(cfg.DeletePublicKeys) == 1 {
 		log.Info("Deleting account...")
 	} else {
 		log.Info("Deleting accounts...")
 	}
-	statuses, err := deleter.DeleteKeystores(ctx, cfg.DeletePublicKeys)
+	statuses, err := cfg.Keymanager.DeleteKeystores(ctx, cfg.DeletePublicKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not delete accounts")
 	}

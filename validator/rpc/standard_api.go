@@ -152,15 +152,10 @@ func (s *Server) DeleteKeystores(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
 	}
-	deleter, ok := km.(keymanager.Deleter)
-	if !ok {
-		statuses := groupExportErrors(req, "Keymanager kind cannot delete keys")
-		return &ethpbservice.DeleteKeystoresResponse{Data: statuses}, nil
-	}
 	if len(req.Pubkeys) == 0 {
 		return &ethpbservice.DeleteKeystoresResponse{Data: make([]*ethpbservice.DeletedKeystoreStatus, 0)}, nil
 	}
-	statuses, err := deleter.DeleteKeystores(ctx, req.Pubkeys)
+	statuses, err := km.DeleteKeystores(ctx, req.Pubkeys)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete keys: %v", err)
 	}

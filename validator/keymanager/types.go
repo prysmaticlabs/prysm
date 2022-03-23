@@ -19,6 +19,7 @@ type IKeymanager interface {
 	KeyChangeSubscriber
 	KeyStoreExtractor
 	AccountLister
+	Deleter
 }
 
 // KeysFetcher for validating private and public keys.

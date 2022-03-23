@@ -17,6 +17,7 @@ go_library(
         "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//proto/eth/service:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/remote-utils:go_default_library",
@@ -25,7 +26,9 @@ go_library(
         "@com_github_sirupsen_logrus//:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//credentials:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
     ],
 )
 
