@@ -159,3 +159,15 @@ func areJsonPropertyNamesEqual(internal, proto interface{}) (bool, error) {
 	}
 	return true, nil
 }
+
+func TestListRemoteKeys_JSONisEqual(t *testing.T) {
+
+}
+
+func TestImportRemoteKeys_JSONisEqual(t *testing.T) {
+
+}
+
+func TestDeleteRemoteKeys_JSONisEqual(t *testing.T) {
+
+}
