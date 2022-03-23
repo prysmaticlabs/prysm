@@ -10,6 +10,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 var (
@@ -54,6 +55,11 @@ func (s *Service) checkTransitionConfiguration(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			epoch := slots.EpochsSinceGenesis(time.Unix(int64(s.chainStartData.GenesisTime), 0))
+			if epoch >= params.BeaconConfig().BellatrixForkEpoch {
+				log.Debug("Post-Bellatrix fork transition, thus no longer checking for configuration changes")
+				return
+			}
 			err = s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
 		}
