@@ -259,15 +259,69 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 
 // ListRemoteKeys returns a list of all public keys defined for web3signer keymanager type.
 func (s *Server) ListRemoteKeys(ctx context.Context, _ *empty.Empty) (*ethpbservice.ListRemoteKeysResponse, error) {
-	return nil, nil
+	if !s.walletInitialized {
+		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
+	}
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready. Please try again once validator is ready.")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager: %v", err)
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
+		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
+	}
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve keystores: %v", err)
+	}
+	keystoreResponse := make([]*ethpbservice.ListRemoteKeysResponse_Keystore, len(pubKeys))
+	for i := 0; i < len(pubKeys); i++ {
+		keystoreResponse[i] = &ethpbservice.ListRemoteKeysResponse_Keystore{
+			Pubkey:   pubKeys[i][:],
+			Url:      s.validatorService.Web3SignerConfig.BaseEndpoint,
+			Readonly: true,
+		}
+	}
+	return &ethpbservice.ListRemoteKeysResponse{
+		Data: keystoreResponse,
+	}, nil
 }
 
 // ImportRemoteKeys imports a list of public keys defined for web3signer keymanager type.
 func (s *Server) ImportRemoteKeys(ctx context.Context, request *ethpbservice.ImportRemoteKeysRequest) (*ethpbservice.ImportRemoteKeysResponse, error) {
+	if !s.walletInitialized {
+		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
+	}
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready. Please try again once validator is ready.")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager: %v", err)
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
+		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
+	}
+
 	return nil, nil
 }
 
 // DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
 func (s *Server) DeleteRemoteKeys(ctx context.Context, request *ethpbservice.DeleteRemoteKeysRequest) (*ethpbservice.DeleteRemoteKeysResponse, error) {
+	if !s.walletInitialized {
+		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
+	}
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready. Please try again once validator is ready.")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager: %v", err)
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
+		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
+	}
 	return nil, nil
 }

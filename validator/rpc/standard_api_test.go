@@ -526,3 +526,15 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 		Name:    encryptor.Name(),
 	}
 }
+
+func TestServer_ListRemoteKeys(t *testing.T) {
+	
+}
+
+func TestServer_ImportRemoteKeys(t *testing.T) {
+
+}
+
+func TestServer_DeleteRemoteKeys(t *testing.T) {
+
+}
