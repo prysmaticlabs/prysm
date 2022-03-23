@@ -94,7 +94,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	prepareBeaconProposalConfig        *validator_service_config.FeeRecipientConfig
+	feeRecipientConfig                 *validator_service_config.FeeRecipientConfig
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -938,6 +938,10 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 
 // UpdateFeeRecipient calls the prepareBeaconProposer RPC to set the fee recipient.
 func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error {
+	if v.feeRecipientConfig == nil {
+		log.Warnln("Fee recipient config not set, skipping fee recipient update. Validator will continue proposing using beacon node specified fee recipient.")
+		return nil
+	}
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
@@ -981,12 +985,12 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 			validatorIndex = ind
 			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
-		if v.prepareBeaconProposalConfig.ProposeConfig != nil {
-			option, ok := v.prepareBeaconProposalConfig.ProposeConfig[key]
+		if v.feeRecipientConfig.ProposeConfig != nil {
+			option, ok := v.feeRecipientConfig.ProposeConfig[key]
 			if option != nil && ok {
 				feeRecipient = option.FeeRecipient
 			} else {
-				feeRecipient = v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient
+				feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
 			}
 		}
 		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
