@@ -55,10 +55,12 @@ func (s *Service) checkTransitionConfiguration(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			epoch := slots.EpochsSinceGenesis(time.Unix(int64(s.chainStartData.GenesisTime), 0))
-			if epoch >= params.BeaconConfig().BellatrixForkEpoch {
-				log.Debug("Post-Bellatrix fork transition, thus no longer checking for configuration changes")
-				return
+			if s.chainStartData != nil {
+				epoch := slots.EpochsSinceGenesis(time.Unix(int64(s.chainStartData.GenesisTime), 0))
+				if epoch >= params.BeaconConfig().BellatrixForkEpoch {
+					log.Debug("Post-Bellatrix fork transition, thus no longer checking for configuration changes")
+					return
+				}
 			}
 			err = s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
