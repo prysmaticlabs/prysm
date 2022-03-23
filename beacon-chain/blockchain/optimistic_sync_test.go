@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -589,4 +591,97 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 	candidate, err := service.optimisticCandidateBlock(ctx, wrappedChild.Block())
 	require.NoError(t, err)
 	require.Equal(t, true, candidate)
+}
+
+func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	stateGen := stategen.New(beaconDB)
+	fcs := protoarray.New(0, 0, [32]byte{})
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stateGen),
+		WithForkChoiceStore(fcs),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	genesisStateRoot := [32]byte{}
+	genesisBlk := blocks.NewGenesisBlock(genesisStateRoot[:])
+	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
+	genesisRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, genesisRoot, params.BeaconConfig().ZeroHash,
+		params.BeaconConfig().ZeroHash, 0, 0))
+	genesisSummary := &ethpb.StateSummary{
+		Root: genesisStateRoot[:],
+		Slot: 0,
+	}
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, genesisSummary))
+
+	// Get last validated checkpoint
+	origCheckpoint, err := service.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, origCheckpoint))
+
+	// Optimistic finalized checkpoint
+	blk := util.NewBeaconBlock()
+	blk.Block.Slot = 320
+	blk.Block.ParentRoot = genesisRoot[:]
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	opRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	opCheckpoint := &ethpb.Checkpoint{
+		Root:  opRoot[:],
+		Epoch: 10,
+	}
+	opStateSummary := &ethpb.StateSummary{
+		Root: opRoot[:],
+		Slot: 320,
+	}
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, opStateSummary))
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 320, opRoot, genesisRoot,
+		params.BeaconConfig().ZeroHash, 10, 10))
+	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, opRoot))
+	require.NoError(t, service.updateFinalized(ctx, opCheckpoint))
+	cp, err := service.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, origCheckpoint.Root, cp.Root)
+	require.Equal(t, origCheckpoint.Epoch, cp.Epoch)
+
+	// Validated finalized checkpoint
+	blk = util.NewBeaconBlock()
+	blk.Block.Slot = 640
+	blk.Block.ParentRoot = opRoot[:]
+	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	validRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	validCheckpoint := &ethpb.Checkpoint{
+		Root:  validRoot[:],
+		Epoch: 20,
+	}
+	validSummary := &ethpb.StateSummary{
+		Root: validRoot[:],
+		Slot: 640,
+	}
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, validSummary))
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 640, validRoot, params.BeaconConfig().ZeroHash,
+		params.BeaconConfig().ZeroHash, 20, 20))
+	require.NoError(t, fcs.SetOptimisticToValid(ctx, validRoot))
+	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, validRoot))
+	require.NoError(t, service.updateFinalized(ctx, validCheckpoint))
+	cp, err = service.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
+	require.NoError(t, err)
+
+	optimistic, err := service.IsOptimisticForRoot(ctx, validRoot)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
+	require.DeepEqual(t, validCheckpoint.Root, cp.Root)
+	require.Equal(t, validCheckpoint.Epoch, cp.Epoch)
 }
