@@ -68,7 +68,6 @@ go_test(
         "setters_test.go",
         "state_trie_test.go",
     ],
-    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state:go_default_library",
