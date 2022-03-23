@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,6 +43,43 @@ func (e *blockIdParseError) Error() string {
 	return e.message
 }
 
+// GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
+// determines the best block root and state root to use for a Checkpoint Sync starting from that point.
+func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
+	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher); err != nil {
+		// This is already a grpc error, so we can't wrap it any further
+		return nil, err
+	}
+
+	hs, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "could not get head state")
+	}
+	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity epoch: %v", err)
+	}
+	wsSlot, err := slots.EpochStart(wsEpoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity slot: %v", err)
+	}
+	cbr, cb, err := bs.CanonicalHistory.BlockForSlot(ctx, wsSlot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("could not find highest block below slot %d", wsSlot))
+	}
+	stateRoot := bytesutil.ToBytes32(cb.Block().StateRoot())
+	log.Printf("weak subjectivity checkpoint reported as epoch=%d, block root=%#x, state root=%#x", wsEpoch, cbr, stateRoot)
+	return &ethpbv1.WeakSubjectivityResponse{
+		Data: &ethpbv1.WeakSubjectivityData{
+			WsCheckpoint: &ethpbv1.Checkpoint{
+				Epoch: wsEpoch,
+				Root:  cbr[:],
+			},
+			StateRoot: stateRoot[:],
+		},
+	}, nil
+}
+
 // GetBlockHeader retrieves block header for given block id.
 func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockHeaderResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockHeader")
@@ -48,7 +88,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockHeader")
 	}
 	v1alpha1Header, err := blk.Header()
 	if err != nil {
@@ -214,7 +254,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlock")
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -237,7 +277,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockSSZ")
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -259,7 +299,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockV2")
 	}
 
 	_, err = blk.PbPhase0Block()
@@ -336,7 +376,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockSSZV2")
 	}
 
 	_, err = blk.PbPhase0Block()
