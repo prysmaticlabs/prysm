@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/pkg/errors"
+	"github.com/golang/protobuf/ptypes/empty"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
@@ -242,8 +242,9 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) MultipleValidatorStatus(arg
 // ProposeBeaconBlock mocks base method
 func (m *MockBeaconNodeValidatorClient) PrepareBeaconProposer(
 	arg0 context.Context, arg1 *eth.PrepareBeaconProposerRequest, arg2 ...grpc.CallOption,
-) (*emptypb.Empty, error) {
-	return nil, errors.New("unimplemented")
+) (*empty.Empty, error) {
+	return &empty.Empty{}, nil
+
 }
 
 // ProposeAttestation mocks base method

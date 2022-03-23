@@ -54,7 +54,12 @@ func E2ETestConfig() *BeaconChainConfig {
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]
+	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 253}
+	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 253}
+	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 253}
+	e2eConfig.ShardingForkVersion = []byte{3, 0, 0, 253}
 
+	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
 }
 
@@ -86,7 +91,12 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]
+	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 254}
+	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 254}
+	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 254}
+	e2eConfig.ShardingForkVersion = []byte{3, 0, 0, 254}
 
+	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
 }
 
