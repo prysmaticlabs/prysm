@@ -14,6 +14,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
@@ -260,4 +261,14 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 	}
 	remote_utils.DisplayRemotePublicKeys(validatingPubKeys)
 	return nil
+}
+
+func addPublicKeys(ctx context.Context, pubKeys []bls.PublicKey) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
+
+	return nil, nil
+}
+
+func deletePublicKeys(ctx context.Context, pubKeys []bls.PublicKey) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
+
+	return nil, nil
 }

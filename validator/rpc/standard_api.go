@@ -290,7 +290,7 @@ func (s *Server) ListRemoteKeys(ctx context.Context, _ *empty.Empty) (*ethpbserv
 }
 
 // ImportRemoteKeys imports a list of public keys defined for web3signer keymanager type.
-func (s *Server) ImportRemoteKeys(ctx context.Context, request *ethpbservice.ImportRemoteKeysRequest) (*ethpbservice.ImportRemoteKeysResponse, error) {
+func (s *Server) ImportRemoteKeys(ctx context.Context, req *ethpbservice.ImportRemoteKeysRequest) (*ethpbservice.ImportRemoteKeysResponse, error) {
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
 	}
@@ -304,12 +304,25 @@ func (s *Server) ImportRemoteKeys(ctx context.Context, request *ethpbservice.Imp
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
 		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
 	}
+	adder, ok := km.(keymanager.PublicKeyAdder)
+	if !ok {
+		//statuses := groupImportErrors(req, "Keymanager kind cannot import keys")
+		//return &ethpbservice.ImportKeystoresResponse{Data: statuses}, nil
+	}
 
-	return nil, nil
+	remoteKeys := make([][fieldparams.BLSPubkeyLength]byte, len(req.RemoteKeys))
+	for i, obj := range req.RemoteKeys {
+		remoteKeys[i] = bytesutil.ToBytes48(obj.Pubkey)
+	}
+	statuses, err := adder.AddPublicKeys(ctx, remoteKeys)
+
+	return *ethpbservice.ImportRemoteKeysResponse{
+		Data: statuses,
+	}, nil
 }
 
 // DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
-func (s *Server) DeleteRemoteKeys(ctx context.Context, request *ethpbservice.DeleteRemoteKeysRequest) (*ethpbservice.DeleteRemoteKeysResponse, error) {
+func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteRemoteKeysRequest) (*ethpbservice.DeleteRemoteKeysResponse, error) {
 	if !s.walletInitialized {
 		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
 	}

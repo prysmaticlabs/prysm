@@ -174,7 +174,7 @@ message ImportRemoteKeysRequest {
 }
 
 message ImportRemoteKeysResponse {
-  repeated ImportedKeystoreStatus data = 1;
+  repeated ImportedRemoteKeysStatus data = 1;
 }
 
 message DeleteRemoteKeysRequest {
@@ -182,7 +182,7 @@ message DeleteRemoteKeysRequest {
 }
 
 message DeleteRemoteKeysResponse {
-  repeated DeletedKeystoreStatus data = 1;
+  repeated DeletedRemoteKeysStatus data = 1;
 }
 
 message ImportedRemoteKeysStatus {

@@ -59,6 +59,16 @@ type KeyStoreExtractor interface {
 	ExtractKeystores(ctx context.Context, publicKeys []bls.PublicKey, password string) ([]*Keystore, error)
 }
 
+// PublicKeyAdder allows adding public keys to the keymanager ( typically for remote signers like web3signer).
+type PublicKeyAdder interface {
+	AddPublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error)
+}
+
+// PublicKeyDeleter allows deleting public keys set in keymanager ( typically for remote signers like web3signer).
+type PublicKeyDeleter interface {
+	DeletePublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error)
+}
+
 type ListKeymanagerAccountConfig struct {
 	ShowDepositData          bool
 	ShowPrivateKeys          bool
