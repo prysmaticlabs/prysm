@@ -90,6 +90,22 @@ func (r *testRunner) run() {
 		})
 	}
 
+	// Web3 remote signer.
+	var web3RemoteSigner *components.Web3RemoteSigner
+	if config.UseWeb3RemoteSigner {
+		cfg, err := bazel.Runfile("config/params/testdata/e2e_config.yaml")
+		if err != nil {
+			t.Fatal(err)
+		}
+		web3RemoteSigner = components.NewWeb3RemoteSigner(cfg)
+		g.Go(func() error {
+			if err := web3RemoteSigner.Start(ctx); err != nil {
+				return errors.Wrap(err, "failed to start web3 remote signer")
+			}
+			return nil
+		})
+	}
+
 	// Boot node.
 	bootNode := components.NewBootNode()
 	g.Go(func() error {
@@ -146,22 +162,6 @@ func (r *testRunner) run() {
 		}
 		return nil
 	})
-
-	// Web3 remote signer.
-	var web3RemoteSigner *components.Web3RemoteSigner
-	if config.UseWeb3RemoteSigner {
-		cfg, err := bazel.Runfile("config/params/testdata/e2e_config.yaml")
-		if err != nil {
-			t.Fatal(err)
-		}
-		web3RemoteSigner = components.NewWeb3RemoteSigner(cfg)
-		g.Go(func() error {
-			if err := web3RemoteSigner.Start(ctx); err != nil {
-				return errors.Wrap(err, "failed to start web3 remote signer")
-			}
-			return nil
-		})
-	}
 
 	if multiClientActive {
 		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
