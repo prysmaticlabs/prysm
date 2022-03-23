@@ -212,13 +212,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 
-	if err := s.initializeEngineAPIClient(ctx); err != nil {
-		return nil, errors.Wrap(err, "unable to initialize engine API client")
-	}
-
-	// Check transition configuration for the engine API client in the background.
-	go s.checkTransitionConfiguration(ctx)
-
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
 	}
@@ -253,6 +246,14 @@ func (s *Service) Start() {
 	if s.cfg.currHttpEndpoint.Url == "" {
 		return
 	}
+
+	if err := s.initializeEngineAPIClient(s.ctx); err != nil {
+		log.WithError(err).Fatal("unable to initialize engine API client")
+	}
+
+	// Check transition configuration for the engine API client in the background.
+	go s.checkTransitionConfiguration(s.ctx)
+
 	go func() {
 		s.isRunning = true
 		s.waitForConnection()
