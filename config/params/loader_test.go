@@ -111,10 +111,10 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 	t.Run("mainnet", func(t *testing.T) {
 		mainnetPresetsFiles := presetsFilePath(t, "mainnet")
 		for _, fp := range mainnetPresetsFiles {
-			params.LoadChainConfigFile(fp)
+			params.LoadChainConfigFile(fp, nil)
 		}
 		mainnetConfigFile := configFilePath(t, "mainnet")
-		params.LoadChainConfigFile(mainnetConfigFile)
+		params.LoadChainConfigFile(mainnetConfigFile, nil)
 		fields := fieldsFromYamls(t, append(mainnetPresetsFiles, mainnetConfigFile))
 		assertVals("mainnet", fields, params.MainnetConfig(), params.BeaconConfig())
 	})
@@ -122,10 +122,10 @@ func TestLoadConfigFileMainnet(t *testing.T) {
 	t.Run("minimal", func(t *testing.T) {
 		minimalPresetsFiles := presetsFilePath(t, "minimal")
 		for _, fp := range minimalPresetsFiles {
-			params.LoadChainConfigFile(fp)
+			params.LoadChainConfigFile(fp, nil)
 		}
 		minimalConfigFile := configFilePath(t, "minimal")
-		params.LoadChainConfigFile(minimalConfigFile)
+		params.LoadChainConfigFile(minimalConfigFile, nil)
 		fields := fieldsFromYamls(t, append(minimalPresetsFiles, minimalConfigFile))
 		assertVals("minimal", fields, params.MinimalSpecConfig(), params.BeaconConfig())
 	})
@@ -138,7 +138,7 @@ func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	// load empty config file, so that it defaults to mainnet values
-	params.LoadChainConfigFile(file.Name())
+	params.LoadChainConfigFile(file.Name(), nil)
 	if params.BeaconConfig().MinGenesisTime != params.MainnetConfig().MinGenesisTime {
 		t.Errorf("Expected MinGenesisTime to be set to mainnet value: %d found: %d",
 			params.MainnetConfig().MinGenesisTime,
@@ -230,7 +230,7 @@ func TestConfigParityYaml(t *testing.T) {
 	yamlObj := params.ConfigToYaml(testCfg)
 	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
 
-	params.LoadChainConfigFile(yamlDir)
+	params.LoadChainConfigFile(yamlDir, params.E2ETestConfig().Copy())
 	assert.DeepEqual(t, params.BeaconConfig(), testCfg)
 }
 

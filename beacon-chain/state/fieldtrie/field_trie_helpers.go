@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	pmath "github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -57,7 +58,7 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 		length *= comLength
 	}
 	val := reflect.Indirect(reflect.ValueOf(elements))
-	if val.Len() > int(length) {
+	if uint64(val.Len()) > length {
 		return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(version.Phase0), val.Len(), length)
 	}
 	return nil
@@ -301,11 +302,11 @@ func handlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []ui
 // handleBalanceSlice returns the root of a slice of validator balances.
 func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, error) {
 	if convertAll {
-		balancesMarshaling := make([][]byte, 0)
-		for _, b := range val {
+		balancesMarshaling := make([][]byte, len(val))
+		for i, b := range val {
 			balanceBuf := make([]byte, 8)
 			binary.LittleEndian.PutUint64(balanceBuf, b)
-			balancesMarshaling = append(balancesMarshaling, balanceBuf)
+			balancesMarshaling[i] = balanceBuf
 		}
 		balancesChunks, err := ssz.PackByChunk(balancesMarshaling)
 		if err != nil {
@@ -318,6 +319,10 @@ func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, err
 		if err != nil {
 			return nil, err
 		}
+		iNumOfElems, err := pmath.Int(numOfElems)
+		if err != nil {
+			return nil, err
+		}
 		roots := [][32]byte{}
 		for _, idx := range indices {
 			// We split the indexes into their relevant groups. Balances
@@ -325,14 +330,14 @@ func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, err
 			startIdx := idx / numOfElems
 			startGroup := startIdx * numOfElems
 			chunk := [32]byte{}
-			sizeOfElem := len(chunk) / int(numOfElems)
+			sizeOfElem := len(chunk) / iNumOfElems
 			for i, j := 0, startGroup; j < startGroup+numOfElems; i, j = i+sizeOfElem, j+1 {
 				wantedVal := uint64(0)
 				// We are adding chunks in sets of 4, if the set is at the edge of the array
 				// then you will need to zero out the rest of the chunk. Ex : 41 indexes,
 				// so 41 % 4 = 1 . There are 3 indexes, which do not exist yet but we
 				// have to add in as a root. These 3 indexes are then given a 'zero' value.
-				if int(j) < len(val) {
+				if j < uint64(len(val)) {
 					wantedVal = val[j]
 				}
 				binary.LittleEndian.PutUint64(chunk[i:i+sizeOfElem], wantedVal)

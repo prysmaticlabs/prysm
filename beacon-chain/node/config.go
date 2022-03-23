@@ -1,6 +1,8 @@
 package node
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/cmd"
@@ -23,7 +25,7 @@ func configureTracing(cliCtx *cli.Context) error {
 func configureChainConfig(cliCtx *cli.Context) {
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
+		params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
 }
 
@@ -35,7 +37,7 @@ func configureHistoricalSlasher(cliCtx *cli.Context) {
 		params.OverrideBeaconConfig(c)
 		cmdConfig := cmd.Get()
 		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
-		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))
+		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)) // lint:ignore uintcast -- Page size should not exceed int64 with these constants.
 		cmd.Init(cmdConfig)
 		log.Warnf(
 			"Setting %d slots per archive point and %d max RPC page size for historical slasher usage. This requires additional storage",
@@ -105,10 +107,17 @@ func configureInteropConfig(cliCtx *cli.Context) {
 	}
 }
 
-func configureExecutionSetting(cliCtx *cli.Context) {
-	if cliCtx.IsSet(flags.FeeRecipient.Name) {
-		c := params.BeaconConfig()
-		c.FeeRecipient = common.HexToAddress(cliCtx.String(flags.FeeRecipient.Name))
-		params.OverrideBeaconConfig(c)
+func configureExecutionSetting(cliCtx *cli.Context) error {
+	if !cliCtx.IsSet(flags.SuggestedFeeRecipient.Name) {
+		return nil
 	}
+
+	c := params.BeaconConfig()
+	ha := cliCtx.String(flags.SuggestedFeeRecipient.Name)
+	if !common.IsHexAddress(ha) {
+		return fmt.Errorf("%s is not a valid fee recipient address", ha)
+	}
+	c.DefaultFeeRecipient = common.HexToAddress(ha)
+	params.OverrideBeaconConfig(c)
+	return nil
 }

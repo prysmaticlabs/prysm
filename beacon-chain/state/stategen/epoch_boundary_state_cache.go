@@ -66,6 +66,18 @@ func newBoundaryStateCache() *epochBoundaryState {
 	}
 }
 
+// ByRoot satisfies the CachedGetter interface
+func (e *epochBoundaryState) ByRoot(r [32]byte) (state.BeaconState, error) {
+	rsi, ok, err := e.getByRoot(r)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrNotInCache
+	}
+	return rsi.state, nil
+}
+
 // get epoch boundary state by its block root. Returns copied state in state info object if exists. Otherwise returns nil.
 func (e *epochBoundaryState) getByRoot(r [32]byte) (*rootStateInfo, bool, error) {
 	e.lock.RLock()

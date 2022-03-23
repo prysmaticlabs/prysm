@@ -175,7 +175,6 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			powchainBucket,
 			stateSummaryBucket,
 			stateValidatorsBucket,
-			validatedTips,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
@@ -191,6 +190,8 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			newStateServiceCompatibleBucket,
 			// Migrations
 			migrationsBucket,
+
+			feeRecipientBucket,
 		)
 	}); err != nil {
 		log.WithField("elapsed", time.Since(start)).Error("Failed to update db and create buckets")

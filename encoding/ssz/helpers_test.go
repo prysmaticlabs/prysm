@@ -23,24 +23,9 @@ func TestBitlistRoot(t *testing.T) {
 	assert.Equal(t, expected, result)
 }
 
-func TestBitwiseMerkleize(t *testing.T) {
-	hasher := hash.CustomSHA256Hasher()
-	chunks := [][]byte{
-		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
-		{11, 12, 13, 14, 15, 16, 17, 18, 19, 20},
-	}
-	count := uint64(2)
-	limit := uint64(2)
-	expected := [32]byte{194, 32, 213, 52, 220, 127, 18, 240, 43, 151, 19, 79, 188, 175, 142, 177, 208, 46, 96, 20, 18, 231, 208, 29, 120, 102, 122, 17, 46, 31, 155, 30}
-
-	result, err := ssz.BitwiseMerkleize(hasher, chunks, count, limit)
-	require.NoError(t, err)
-	assert.Equal(t, expected, result)
-}
-
 func TestBitwiseMerkleizeOverLimit(t *testing.T) {
 	hasher := hash.CustomSHA256Hasher()
-	chunks := [][]byte{
+	chunks := [][32]byte{
 		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 		{11, 12, 13, 14, 15, 16, 17, 18, 19, 20},
 	}
@@ -61,7 +46,19 @@ func TestBitwiseMerkleizeArrays(t *testing.T) {
 	limit := uint64(2)
 	expected := [32]byte{138, 81, 210, 194, 151, 231, 249, 241, 64, 118, 209, 58, 145, 109, 225, 89, 118, 110, 159, 220, 193, 183, 203, 124, 166, 24, 65, 26, 160, 215, 233, 219}
 
-	result, err := ssz.BitwiseMerkleizeArrays(hasher, chunks, count, limit)
+	result, err := ssz.BitwiseMerkleize(hasher, chunks, count, limit)
+	require.NoError(t, err)
+	assert.Equal(t, expected, result)
+
+	chunks = [][32]byte{
+		{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+		{11, 12, 13, 14, 15, 16, 17, 18, 19, 20},
+	}
+	count = uint64(2)
+	limit = uint64(2)
+	expected = [32]byte{194, 32, 213, 52, 220, 127, 18, 240, 43, 151, 19, 79, 188, 175, 142, 177, 208, 46, 96, 20, 18, 231, 208, 29, 120, 102, 122, 17, 46, 31, 155, 30}
+
+	result, err = ssz.BitwiseMerkleize(hasher, chunks, count, limit)
 	require.NoError(t, err)
 	assert.Equal(t, expected, result)
 }
@@ -75,23 +72,8 @@ func TestBitwiseMerkleizeArraysOverLimit(t *testing.T) {
 	count := uint64(2)
 	limit := uint64(1)
 
-	_, err := ssz.BitwiseMerkleizeArrays(hasher, chunks, count, limit)
+	_, err := ssz.BitwiseMerkleize(hasher, chunks, count, limit)
 	assert.ErrorContains(t, merkleizingListLimitError, err)
-}
-
-func TestPack(t *testing.T) {
-	byteSlice2D := [][]byte{
-		{1, 2, 3, 4, 5, 6, 7, 8, 9},
-		{1, 1, 2, 3, 5, 8, 13, 21, 34},
-	}
-	expected := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 1, 2, 3, 5, 8, 13, 21, 34, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-
-	result, err := ssz.Pack(byteSlice2D)
-	require.NoError(t, err)
-	assert.Equal(t, len(expected), len(result[0]))
-	for i, v := range expected {
-		assert.DeepEqual(t, v, result[0][i])
-	}
 }
 
 func TestPackByChunk(t *testing.T) {

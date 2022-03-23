@@ -1,4 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -14,4 +14,15 @@ go_library(
     ],
 )
 
-# gazelle:exclude analyzer_test.go
+go_test(
+    name = "go_default_test",
+    srcs = ["analyzer_test.go"],
+    data = glob(["testdata/**"]) + [
+        "@go_sdk//:files",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//build/bazel:go_default_library",
+        "@org_golang_x_tools//go/analysis/analysistest:go_default_library",
+    ],
+)

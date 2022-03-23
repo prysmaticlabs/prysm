@@ -114,6 +114,11 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Fatalf("Could not get keymanager: %v", err)
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
+
+	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
+	if err := v.UpdateFeeRecipient(ctx, km); err != nil {
+		log.Fatalf("PreparedBeaconProposer Failed: %v", err) // allow fatal. skipcq
+	}
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -145,7 +150,7 @@ func run(ctx context.Context, v iface.Validator) {
 				}
 			}
 		case slot := <-v.NextSlot():
-			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 			remoteKm, ok := km.(remote.RemoteKeymanager)
 			if ok {

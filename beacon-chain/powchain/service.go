@@ -157,7 +157,7 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
-	engineAPIClient         *engine.Client
+	engineAPIClient         engine.Caller
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -216,6 +216,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	if err := s.initializeEngineAPIClient(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to initialize engine API client")
 	}
+
+	// Check transition configuration for the engine API client in the background.
+	go s.checkTransitionConfiguration(ctx)
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
@@ -299,15 +302,12 @@ func (s *Service) Status() error {
 		return nil
 	}
 	// get error from run function
-	if s.runError != nil {
-		return s.runError
-	}
-	return nil
+	return s.runError
 }
 
 // EngineAPIClient returns the associated engine API client to interact
 // with an execution node via JSON-RPC.
-func (s *Service) EngineAPIClient() *engine.Client {
+func (s *Service) EngineAPIClient() engine.Caller {
 	return s.engineAPIClient
 }
 
@@ -613,8 +613,10 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 		// accumulates. we finalize them here before we are ready to receive a block.
 		// Otherwise, the first few blocks will be slower to compute as we will
 		// hold the lock and be busy finalizing the deposits.
-		s.cfg.depositCache.InsertFinalizedDeposits(ctx, int64(currIndex))
+		s.cfg.depositCache.InsertFinalizedDeposits(ctx, int64(currIndex)) // lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
 		// Deposit proofs are only used during state transition and can be safely removed to save space.
+
+		// lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
 		if err = s.cfg.depositCache.PruneProofs(ctx, int64(currIndex)); err != nil {
 			return errors.Wrap(err, "could not prune deposit proofs")
 		}
@@ -662,7 +664,7 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes
 		err := error(nil)
 		elems = append(elems, gethRPC.BatchElem{
 			Method: "eth_getBlockByNumber",
-			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), false},
+			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(0).SetUint64(i)), false},
 			Result: header,
 			Error:  err,
 		})
@@ -1088,7 +1090,7 @@ func dedupEndpoints(endpoints []string) []string {
 func eth1HeadIsBehind(timestamp uint64) bool {
 	timeout := prysmTime.Now().Add(-eth1Threshold)
 	// check that web3 client is syncing
-	return time.Unix(int64(timestamp), 0).Before(timeout)
+	return time.Unix(int64(timestamp), 0).Before(timeout) // lint:ignore uintcast -- timestamp will not exceed int64 in your lifetime.
 }
 
 func (s *Service) primaryConnected() bool {

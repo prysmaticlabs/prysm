@@ -22,44 +22,14 @@ func TestStore_PruneThreshold(t *testing.T) {
 
 func TestStore_JustifiedEpoch(t *testing.T) {
 	j := types.Epoch(100)
-	s := &Store{
-		justifiedEpoch: j,
-	}
-	if got := s.JustifiedEpoch(); got != j {
-		t.Errorf("JustifiedEpoch() = %v, want %v", got, j)
-	}
+	f := setup(j, j)
+	require.Equal(t, j, f.JustifiedEpoch())
 }
 
 func TestStore_FinalizedEpoch(t *testing.T) {
-	f := types.Epoch(50)
-	s := &Store{
-		finalizedEpoch: f,
-	}
-	if got := s.FinalizedEpoch(); got != f {
-		t.Errorf("FinalizedEpoch() = %v, want %v", got, f)
-	}
-}
-
-func TestStore_Nodes(t *testing.T) {
-	nodes := []*Node{
-		{slot: 100},
-		{slot: 101},
-	}
-	s := &Store{
-		nodes: nodes,
-	}
-	require.DeepEqual(t, nodes, s.Nodes())
-}
-
-func TestStore_NodesIndices(t *testing.T) {
-	nodeIndices := map[[32]byte]uint64{
-		{'a'}: 1,
-		{'b'}: 2,
-	}
-	s := &Store{
-		nodesIndices: nodeIndices,
-	}
-	require.DeepEqual(t, nodeIndices, s.NodesIndices())
+	j := types.Epoch(50)
+	f := setup(j, j)
+	require.Equal(t, j, f.FinalizedEpoch())
 }
 
 func TestForkChoice_HasNode(t *testing.T) {
@@ -72,30 +42,6 @@ func TestForkChoice_HasNode(t *testing.T) {
 	}
 	f := &ForkChoice{store: s}
 	require.Equal(t, true, f.HasNode([32]byte{'a'}))
-}
-
-func TestForkChoice_Store(t *testing.T) {
-	nodeIndices := map[[32]byte]uint64{
-		{'a'}: 1,
-		{'b'}: 2,
-	}
-	s := &Store{
-		nodesIndices: nodeIndices,
-	}
-	f := &ForkChoice{store: s}
-	require.DeepEqual(t, s, f.Store())
-}
-
-func TestForkChoice_Nodes(t *testing.T) {
-	nodes := []*Node{
-		{slot: 100},
-		{slot: 101},
-	}
-	s := &Store{
-		nodes: nodes,
-	}
-	f := &ForkChoice{store: s}
-	require.DeepEqual(t, s.nodes, f.Nodes())
 }
 
 func TestStore_Head_UnknownJustifiedRoot(t *testing.T) {
@@ -155,7 +101,7 @@ func TestStore_Head_ContextCancelled(t *testing.T) {
 func TestStore_Insert_UnknownParent(t *testing.T) {
 	// The new node does not have a parent.
 	s := &Store{nodesIndices: make(map[[32]byte]uint64)}
-	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, [32]byte{}, 1, 1))
+	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, params.BeaconConfig().ZeroHash, 1, 1))
 	assert.Equal(t, 1, len(s.nodes), "Did not insert block")
 	assert.Equal(t, 1, len(s.nodesIndices), "Did not insert block")
 	assert.Equal(t, NonExistentNode, s.nodes[0].parent, "Incorrect parent")
@@ -171,13 +117,15 @@ func TestStore_Insert_KnownParent(t *testing.T) {
 	s.nodes = []*Node{{}}
 	p := [32]byte{'B'}
 	s.nodesIndices[p] = 0
-	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, p, [32]byte{}, 1, 1))
+	payloadHash := [32]byte{'c'}
+	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, p, payloadHash, 1, 1))
 	assert.Equal(t, 2, len(s.nodes), "Did not insert block")
 	assert.Equal(t, 2, len(s.nodesIndices), "Did not insert block")
 	assert.Equal(t, uint64(0), s.nodes[1].parent, "Incorrect parent")
 	assert.Equal(t, types.Epoch(1), s.nodes[1].justifiedEpoch, "Incorrect justification")
 	assert.Equal(t, types.Epoch(1), s.nodes[1].finalizedEpoch, "Incorrect finalization")
 	assert.Equal(t, [32]byte{'A'}, s.nodes[1].root, "Incorrect root")
+	assert.Equal(t, payloadHash, s.nodes[1].payloadHash)
 }
 
 func TestStore_ApplyScoreChanges_InvalidDeltaLength(t *testing.T) {
@@ -545,18 +493,18 @@ func TestStore_PruneSyncedTips(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, params.BeaconConfig().ZeroHash, 1, 1))
 	syncedTips := &optimisticStore{
 		validatedTips: map[[32]byte]types.Slot{
 			[32]byte{'b'}: 101,
@@ -721,8 +669,10 @@ func TestStore_UpdateCanonicalNodes_WholeList(t *testing.T) {
 	require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
 	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
 	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
-	require.DeepEqual(t, f.Node([32]byte{'c'}), f.store.nodes[2])
-	require.Equal(t, f.Node([32]byte{'d'}), (*Node)(nil))
+	idxc := f.store.nodesIndices[[32]byte{'c'}]
+	_, ok := f.store.nodesIndices[[32]byte{'d'}]
+	require.Equal(t, idxc, uint64(2))
+	require.Equal(t, false, ok)
 }
 
 func TestStore_UpdateCanonicalNodes_ParentAlreadyIn(t *testing.T) {

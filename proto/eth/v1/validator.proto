@@ -209,3 +209,14 @@ message BeaconCommitteeSubscribe {
     // If subscribing for aggregator, the beacon node will aggregate all attestations received.
     bool is_aggregator = 5;
 }
+
+message PrepareBeaconProposerRequest {
+    message FeeRecipientContainer {
+        // The address of the fee recipient.
+        bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+
+        // The proposer validator index.
+        uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    }
+    repeated FeeRecipientContainer recipients = 1;
+}

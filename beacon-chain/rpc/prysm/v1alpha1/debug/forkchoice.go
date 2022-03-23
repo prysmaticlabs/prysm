@@ -2,43 +2,18 @@ package debug
 
 import (
 	"context"
-	"encoding/hex"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// GetProtoArrayForkChoice returns proto array fork choice store.
-func (ds *Server) GetProtoArrayForkChoice(_ context.Context, _ *empty.Empty) (*pbrpc.ProtoArrayForkChoiceResponse, error) {
-	store := ds.HeadFetcher.ProtoArrayStore()
+// GetForkChoice returns a fork choice store.
+func (ds *Server) GetForkChoice(_ context.Context, _ *empty.Empty) (*pbrpc.ForkChoiceResponse, error) {
+	store := ds.HeadFetcher.ForkChoicer()
 
-	nodes := store.Nodes()
-	returnedNodes := make([]*pbrpc.ProtoArrayNode, len(nodes))
-
-	for i := 0; i < len(returnedNodes); i++ {
-		r := nodes[i].Root()
-		returnedNodes[i] = &pbrpc.ProtoArrayNode{
-			Slot:           nodes[i].Slot(),
-			Root:           r[:],
-			Parent:         nodes[i].Parent(),
-			JustifiedEpoch: nodes[i].JustifiedEpoch(),
-			FinalizedEpoch: nodes[i].FinalizedEpoch(),
-			Weight:         nodes[i].Weight(),
-			BestChild:      nodes[i].BestChild(),
-			BestDescendant: nodes[i].BestDescendant(),
-		}
-	}
-
-	indices := make(map[string]uint64, len(store.NodesIndices()))
-	for k, v := range store.NodesIndices() {
-		indices[hex.EncodeToString(k[:])] = v
-	}
-
-	return &pbrpc.ProtoArrayForkChoiceResponse{
-		PruneThreshold:  store.PruneThreshold(),
+	return &pbrpc.ForkChoiceResponse{
 		JustifiedEpoch:  store.JustifiedEpoch(),
 		FinalizedEpoch:  store.FinalizedEpoch(),
-		ProtoArrayNodes: returnedNodes,
-		Indices:         indices,
+		ForkchoiceNodes: store.ForkChoiceNodes(),
 	}, nil
 }
