@@ -315,8 +315,10 @@ func (s *Server) ImportRemoteKeys(ctx context.Context, req *ethpbservice.ImportR
 		remoteKeys[i] = bytesutil.ToBytes48(obj.Pubkey)
 	}
 	statuses, err := adder.AddPublicKeys(ctx, remoteKeys)
-
-	return *ethpbservice.ImportRemoteKeysResponse{
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not add keys;error: %v", err)
+	}
+	return &ethpbservice.ImportRemoteKeysResponse{
 		Data: statuses,
 	}, nil
 }
@@ -336,5 +338,20 @@ func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteR
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
 		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
 	}
-	return nil, nil
+	deleter, ok := km.(keymanager.PublicKeyDeleter)
+	if !ok {
+		//statuses := groupImportErrors(req, "Keymanager kind cannot import keys")
+		//return &ethpbservice.ImportKeystoresResponse{Data: statuses}, nil
+	}
+	remoteKeys := make([][fieldparams.BLSPubkeyLength]byte, len(req.Pubkeys))
+	for i, key := range req.Pubkeys {
+		remoteKeys[i] = bytesutil.ToBytes48(key)
+	}
+	statuses, err := deleter.DeletePublicKeys(ctx, remoteKeys)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not delete keys;error: %v", err)
+	}
+	return &ethpbservice.DeleteRemoteKeysResponse{
+		Data: statuses,
+	}, nil
 }

@@ -66,7 +66,7 @@ type PublicKeyAdder interface {
 
 // PublicKeyDeleter allows deleting public keys set in keymanager ( typically for remote signers like web3signer).
 type PublicKeyDeleter interface {
-	DeletePublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error)
+	DeletePublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.DeletedRemoteKeysStatus, error)
 }
 
 type ListKeymanagerAccountConfig struct {
