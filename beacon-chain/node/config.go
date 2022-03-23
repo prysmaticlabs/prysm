@@ -25,7 +25,7 @@ func configureTracing(cliCtx *cli.Context) error {
 func configureChainConfig(cliCtx *cli.Context) {
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
+		params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
 }
 
@@ -108,12 +108,12 @@ func configureInteropConfig(cliCtx *cli.Context) {
 }
 
 func configureExecutionSetting(cliCtx *cli.Context) error {
-	if !cliCtx.IsSet(flags.FeeRecipient.Name) {
+	if !cliCtx.IsSet(flags.SuggestedFeeRecipient.Name) {
 		return nil
 	}
 
 	c := params.BeaconConfig()
-	ha := cliCtx.String(flags.FeeRecipient.Name)
+	ha := cliCtx.String(flags.SuggestedFeeRecipient.Name)
 	if !common.IsHexAddress(ha) {
 		return fmt.Errorf("%s is not a valid fee recipient address", ha)
 	}
