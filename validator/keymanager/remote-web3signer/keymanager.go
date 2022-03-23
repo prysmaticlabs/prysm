@@ -224,13 +224,8 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 }
 
 // SubscribeAccountChanges returns the event subscription for changes to public keys.
-func (*Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
-	// Not used right now.
-	// Returns a stub for the time being as there is a danger of being slashed if the apiClient reloads keys dynamically.
-	// Because there is no way to dynamically reload keys, add or remove remote keys we are returning a stub without any event updates for the time being.
-	return event.NewSubscription(func(i <-chan struct{}) error {
-		return nil
-	})
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
+	return km.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
 // ExtractKeystores is not supported for the remote keymanager type.
