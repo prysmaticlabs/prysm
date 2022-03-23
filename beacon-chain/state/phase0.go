@@ -221,6 +221,8 @@ type FutureForkStub interface {
 	SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error
 	SetPreviousParticipationBits(val []byte) error
 	SetCurrentParticipationBits(val []byte) error
+	ModifyCurrentParticipationBits(func(val []byte) ([]byte, error)) error
+	ModifyPreviousParticipationBits(func(val []byte) ([]byte, error)) error
 	NextSyncCommittee() (*ethpb.SyncCommittee, error)
 	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
 }
