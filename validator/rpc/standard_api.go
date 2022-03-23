@@ -258,16 +258,16 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 }
 
 // ListRemoteKeys returns a list of all public keys defined for web3signer keymanager type.
-func ListRemoteKeys(ctx context.Context) {
-
+func (s *Server) ListRemoteKeys(ctx context.Context, _ *empty.Empty) (*ethpbservice.ListRemoteKeysResponse, error) {
+	return nil, nil
 }
 
 // ImportRemoteKeys imports a list of public keys defined for web3signer keymanager type.
-func ImportRemoteKeys(ctx context.Context) {
-
+func (s *Server) ImportRemoteKeys(ctx context.Context, request *ethpbservice.ImportRemoteKeysRequest) (*ethpbservice.ImportRemoteKeysResponse, error) {
+	return nil, nil
 }
 
 // DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
-func DeleteRemoteKeys(ctx context.Context) {
-
+func (s *Server) DeleteRemoteKeys(ctx context.Context, request *ethpbservice.DeleteRemoteKeysRequest) (*ethpbservice.DeleteRemoteKeysResponse, error) {
+	return nil, nil
 }
