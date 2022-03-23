@@ -36,11 +36,6 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 		Epoch: coreTime.CurrentEpoch(st),
 		Root:  r[:],
 	}
-	ss := &ethpb.StateSummary{
-		Slot: st.Slot(),
-		Root: r[:],
-	}
-	require.NoError(t, db.SaveStateSummary(ctx, ss))
 
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))

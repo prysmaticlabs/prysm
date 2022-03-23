@@ -260,12 +260,6 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
 	chainService.cfg.FinalizedStateAtStartUp = s
 	// Test the start function.
-	ss := &ethpb.StateSummary{
-		Slot: 0,
-		Root: blkRoot[:],
-	}
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, ss))
-
 	chainService.Start()
 
 	require.DeepEqual(t, blkRoot[:], chainService.store.FinalizedCheckpt().Root, "Finalize Checkpoint root is incorrect")
@@ -416,11 +410,6 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	stateGen := stategen.New(beaconDB)
 	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stateGen), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
 	require.NoError(t, err)
-	ss := &ethpb.StateSummary{
-		Slot: finalizedBlock.Block.Slot,
-		Root: finalizedRoot[:],
-	}
-	require.NoError(t, beaconDB.SaveStateSummary(ctx, ss))
 	require.NoError(t, c.StartFromSavedState(headState))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
