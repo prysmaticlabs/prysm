@@ -117,13 +117,6 @@ http_archive(
     urls = ["https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.76/fuzzit_Linux_x86_64.zip"],
 )
 
-git_repository(
-    name = "graknlabs_bazel_distribution",
-    commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
-    remote = "https://github.com/graknlabs/bazel-distribution",
-    shallow_since = "1569509514 +0300",
-)
-
 load(
     "@io_bazel_rules_docker//repositories:repositories.bzl",
     container_repositories = "repositories",
@@ -222,7 +215,7 @@ filegroup(
     url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.1.9"
+consensus_spec_version = "v1.1.10"
 
 bls_test_version = "v0.1.1"
 
@@ -238,7 +231,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "207d9c326ba4fa1f34bab7b6169201c32f2611755db030909a3405873445e0ba",
+    sha256 = "28043009cc2f6fc9804e73c8c1fc2cb27062f1591e6884f3015ae1dd7a276883",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -254,7 +247,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "a3995b39f412db236b2f1db909f288218da53cb53b9923b71dda9d144d68f40a",
+    sha256 = "bc1a283ca068f310f04d70c4f6a8eaa0b8f7e9318073a8bdc2ee233111b4e339",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -270,7 +263,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "76cea7a4c8e32d458ad456b54bfbb30bc772481a91954a4cd97e229aa3023b1d",
+    sha256 = "bbabb482c229ff9d4e2c7b77c992edb452f9d0af7c6d8dd4f922f06a7b101e81",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -285,7 +278,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "0fc429684775f943250dce1f9c485ac25e26c6395d7f585c8d1317becec2ace7",
+    sha256 = "408a5524548ad3fcf387f65ac7ec52781d9ee899499720bb12451b48a15818d4",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )

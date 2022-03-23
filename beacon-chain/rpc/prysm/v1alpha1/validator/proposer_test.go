@@ -42,6 +42,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -2233,6 +2234,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
+	hook := logTest.NewGlobal()
 
 	terminalBlockHash := bytesutil.PadTo([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 32)
@@ -2333,6 +2335,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 			PayloadIDBytes:   &enginev1.PayloadIDBytes{1},
 			ExecutionPayload: payload,
 		},
+		BeaconDB: db,
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -2356,7 +2359,18 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	assert.DeepEqual(t, randaoReveal, bellatrixBlk.Bellatrix.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, bellatrixBlk.Bellatrix.Body.Graffiti, "Expected block to have correct Graffiti")
 
+	require.LogsContain(t, hook, "Fee recipient not set. Using burn address")
 	require.DeepEqual(t, payload, bellatrixBlk.Bellatrix.Body.ExecutionPayload) // Payload should equal.
+
+	// Operator sets default fee recipient to not be burned through beacon node cli.
+	newHook := logTest.NewGlobal()
+	params.SetupTestConfigCleanup(t)
+	cfg = params.MainnetConfig().Copy()
+	cfg.DefaultFeeRecipient = common.Address{'b'}
+	params.OverrideBeaconConfig(cfg)
+	_, err = proposerServer.GetBeaconBlock(ctx, req)
+	require.NoError(t, err)
+	require.LogsDoNotContain(t, newHook, "Fee recipient not set. Using burn address")
 }
 
 func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
@@ -2421,6 +2435,63 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 3, bytesutil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
 	require.DeepEqual(t, bitfield.NewBitvector512(), aggregate.SyncCommitteeBits)
+}
+
+func TestProposer_PrepareBeaconProposer(t *testing.T) {
+	type args struct {
+		request *ethpb.PrepareBeaconProposerRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "Happy Path",
+			args: args{
+				request: &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "invalid fee recipient length",
+			args: args{
+				request: &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.BLSPubkeyLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
+			},
+			wantErr: "Invalid fee recipient address",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			proposerServer := &Server{BeaconDB: db}
+			_, err := proposerServer.PrepareBeaconProposer(ctx, tt.args.request)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			require.NoError(t, err)
+			address, err := proposerServer.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
+			require.NoError(t, err)
+			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
+
+		})
+	}
 }
 
 func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {

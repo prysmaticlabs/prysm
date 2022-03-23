@@ -100,7 +100,7 @@ func TestGetSpec(t *testing.T) {
 	config.TerminalBlockHash = common.HexToHash("TerminalBlockHash")
 	config.TerminalBlockHashActivationEpoch = 72
 	config.TerminalTotalDifficulty = "73"
-	config.FeeRecipient = common.HexToAddress("FeeRecipient")
+	config.DefaultFeeRecipient = common.HexToAddress("DefaultFeeRecipient")
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -329,8 +329,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, common.HexToHash("TerminalBlockHash"), common.HexToHash(v))
 		case "TERMINAL_TOTAL_DIFFICULTY":
 			assert.Equal(t, "73", v)
-		case "FeeRecipient":
-			assert.Equal(t, common.HexToAddress("FeeRecipient"), v)
+		case "DefaultFeeRecipient":
+			assert.Equal(t, common.HexToAddress("DefaultFeeRecipient"), v)
 		case "PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX":
 			assert.Equal(t, "3", v)
 		case "MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX":

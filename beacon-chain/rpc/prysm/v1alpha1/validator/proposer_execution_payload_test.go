@@ -79,6 +79,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), b1))
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), b2))
+	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{{}}))
 
 	tests := []struct {
 		name              string
@@ -88,6 +89,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 		payloadID         *pb.PayloadIDBytes
 		terminalBlockHash common.Hash
 		activationEpoch   types.Epoch
+		validatorIndx     types.ValidatorIndex
 	}{
 		{
 			name:      "transition completed, nil payload id",
@@ -95,9 +97,15 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			errString: "nil payload id",
 		},
 		{
-			name:      "transition completed, happy case",
+			name:      "transition completed, happy case (has fee recipient in Db)",
 			st:        transitionSt,
 			payloadID: &pb.PayloadIDBytes{0x1},
+		},
+		{
+			name:          "transition completed, happy case (doesn't have fee recipient in Db)",
+			st:            transitionSt,
+			payloadID:     &pb.PayloadIDBytes{0x1},
+			validatorIndx: 1,
 		},
 		{
 			name:          "transition completed, could not prepare payload",
@@ -129,7 +137,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 				HeadFetcher:           &chainMock.ChainService{State: tt.st},
 				BeaconDB:              beaconDB,
 			}
-			_, err := vs.getExecutionPayload(context.Background(), tt.st.Slot())
+			_, err := vs.getExecutionPayload(context.Background(), tt.st.Slot(), tt.validatorIndx)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -224,6 +232,20 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			},
 			wantExists:            true,
 			wantTerminalBlockHash: []byte{'a'},
+		},
+		{
+			name:     "ttd not reached",
+			paramsTd: "3",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'a'},
+				ParentHash:      []byte{'b'},
+				TotalDifficulty: "0x2",
+			},
+			parentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'b'},
+				ParentHash:      []byte{'c'},
+				TotalDifficulty: "0x1",
+			},
 		},
 	}
 	for _, tt := range tests {
