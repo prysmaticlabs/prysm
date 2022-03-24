@@ -473,7 +473,6 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 		validatorService:  vs,
 	}
 	_, err = s.DeleteKeystores(ctx, &ethpbservice.DeleteKeystoresRequest{Pubkeys: [][]byte{[]byte("a")}})
-	fmt.Printf("   **** err: %v\n", err)
 	require.ErrorContains(t, "Wrong wallet type", err)
 	require.ErrorContains(t, "Only Imported or Derived wallets can delete accounts", err)
 }
