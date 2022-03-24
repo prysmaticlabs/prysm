@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -40,6 +41,7 @@ type Web3RemoteSigner struct {
 	ctx            context.Context
 	started        chan struct{}
 	configFilePath string
+	cmd            *exec.Cmd
 }
 
 func NewWeb3RemoteSigner(configFilePath string) *Web3RemoteSigner {
@@ -89,7 +91,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Test code is safe to do this.
-
+	w.cmd = cmd
 	// Write stdout and stderr to log files.
 	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stdout.log"))
 	if err != nil {
@@ -145,8 +147,10 @@ func (w *Web3RemoteSigner) monitorStart() {
 func (w *Web3RemoteSigner) wait(ctx context.Context) {
 	select {
 	case <-ctx.Done():
+		w.cmd.Process.Signal(syscall.SIGTERM)
 		return
 	case <-w.ctx.Done():
+		w.cmd.Process.Signal(syscall.SIGTERM)
 		return
 	case <-w.started:
 		return
