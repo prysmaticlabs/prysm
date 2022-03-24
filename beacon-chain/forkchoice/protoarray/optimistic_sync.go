@@ -40,7 +40,7 @@ func (f *ForkChoice) IsOptimistic(ctx context.Context, root [32]byte) (bool, err
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
 		f.store.nodesLock.RUnlock()
-		return false, errUnknownNodeRoot
+		return false, ErrUnknownNodeRoot
 	}
 	node := f.store.nodes[index]
 	slot := node.slot
@@ -104,6 +104,8 @@ func (s *Store) findSyncedTip(ctx context.Context, node *Node, syncedTips *optim
 // SetOptimisticToValid is called with the root of a block that was returned as
 // VALID by the EL. This routine recomputes and updates the synced_tips map to
 // account for this new tip.
+// WARNING: This method returns an error if the root is not found in forkchoice or
+// if the root is not a leaf of the fork choice tree.
 func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
@@ -206,30 +208,31 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 }
 
 //  SetOptimisticToInvalid updates the synced_tips map when the block with the given root becomes INVALID.
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [32]byte) error {
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [32]byte) ([][32]byte, error) {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
+	invalidRoots := make([][32]byte, 0)
 	idx, ok := f.store.nodesIndices[root]
 	if !ok {
-		return errInvalidNodeIndex
+		return invalidRoots, errInvalidNodeIndex
 	}
 	node := f.store.nodes[idx]
 	// We only support changing status for the tips in Fork Choice store.
 	if node.bestChild != NonExistentNode {
-		return errInvalidNodeIndex
+		return invalidRoots, errInvalidNodeIndex
 	}
 
 	parentIndex := node.parent
 	// This should not happen
 	if parentIndex == NonExistentNode {
-		return errInvalidNodeIndex
+		return invalidRoots, errInvalidNodeIndex
 	}
 	// Update the weights of the nodes subtracting the INVALID node's weight
 	weight := node.weight
 	node = f.store.nodes[parentIndex]
 	for {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return invalidRoots, ctx.Err()
 		}
 		node.weight -= weight
 		if node.parent == NonExistentNode {
@@ -242,6 +245,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [32]byte) 
 	// delete the invalid node, order is important
 	f.store.nodes = append(f.store.nodes[:idx], f.store.nodes[idx+1:]...)
 	delete(f.store.nodesIndices, root)
+	invalidRoots = append(invalidRoots, root)
 	// Fix parent and best child for each node
 	for _, node := range f.store.nodes {
 		if node.parent == NonExistentNode {
@@ -268,7 +272,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [32]byte) 
 				err := f.store.updateBestChildAndDescendant(
 					parentIndex, uint64(childIndex))
 				if err != nil {
-					return err
+					return invalidRoots, err
 				}
 				break
 			}
@@ -281,24 +285,24 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [32]byte) 
 	parentRoot := parent.root
 	_, ok = f.syncedTips.validatedTips[parentRoot]
 	if !ok {
-		return nil
+		return invalidRoots, nil
 	}
 
 	leaves, err := f.store.leaves()
 	if err != nil {
-		return err
+		return invalidRoots, err
 	}
 
 	for _, i := range leaves {
 		node = f.store.nodes[i]
 		for {
 			if ctx.Err() != nil {
-				return ctx.Err()
+				return invalidRoots, ctx.Err()
 			}
 
 			// Return early if the parent is still a synced tip
 			if node.root == parentRoot {
-				return nil
+				return invalidRoots, nil
 			}
 			_, ok = f.syncedTips.validatedTips[node.root]
 			if ok {
@@ -312,5 +316,5 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [32]byte) 
 	}
 	delete(f.syncedTips.validatedTips, parentRoot)
 	syncedTipsCount.Set(float64(len(f.syncedTips.validatedTips)))
-	return nil
+	return invalidRoots, nil
 }

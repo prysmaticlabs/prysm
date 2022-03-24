@@ -96,8 +96,8 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 // It then updates the new node's parent with best child and descendant node.
 func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
-	root, parentRoot [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch, optimistic bool) error {
+	root, parentRoot, payloadHash [fieldparams.RootLength]byte,
+	justifiedEpoch, finalizedEpoch types.Epoch) error {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
 	defer span.End()
 
@@ -117,7 +117,8 @@ func (s *Store) insert(ctx context.Context,
 		parent:         parent,
 		justifiedEpoch: justifiedEpoch,
 		finalizedEpoch: finalizedEpoch,
-		optimistic:     optimistic,
+		optimistic:     true,
+		payloadHash:    payloadHash,
 	}
 
 	s.nodeByRoot[root] = n
@@ -126,14 +127,6 @@ func (s *Store) insert(ctx context.Context,
 		if err := s.treeRootNode.updateBestDescendant(ctx, s.justifiedEpoch, s.finalizedEpoch); err != nil {
 			return err
 		}
-	}
-
-	if !optimistic {
-		if err := n.setNodeAndParentValidated(ctx); err != nil {
-			return err
-		}
-	} else {
-		optimisticCount.Inc()
 	}
 
 	// Set the node as root if the store was empty

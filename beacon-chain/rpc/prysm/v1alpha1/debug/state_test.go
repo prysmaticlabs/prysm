@@ -18,14 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
-func addReplayerBuilder(s *Server, h stategen.HistoryAccessor, is bool, canonErr error, currSlot types.Slot) {
-	cc := &mockstategen.MockCanonicalChecker{Is: is, Err: canonErr}
-	cs := &mockstategen.MockCurrentSlotter{Slot: currSlot}
-	s.ReplayerBuilder = stategen.NewCanonicalBuilder(h, cc, cs)
-}
-
 func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
-	addReplayerBuilder(s, h, true, nil, math.MaxUint64-1)
+	cc := &mockstategen.MockCanonicalChecker{Is: true}
+	cs := &mockstategen.MockCurrentSlotter{Slot: math.MaxUint64 - 1}
+	s.ReplayerBuilder = stategen.NewCanonicalHistory(h, cc, cs)
 }
 
 func TestServer_GetBeaconState(t *testing.T) {

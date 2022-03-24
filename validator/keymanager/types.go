@@ -18,6 +18,7 @@ type IKeymanager interface {
 	Signer
 	KeyChangeSubscriber
 	KeyStoreExtractor
+	AccountLister
 }
 
 // KeysFetcher for validating private and public keys.
@@ -56,6 +57,17 @@ type KeyChangeSubscriber interface {
 // KeyStoreExtractor allows keys to be extracted from the keymanager.
 type KeyStoreExtractor interface {
 	ExtractKeystores(ctx context.Context, publicKeys []bls.PublicKey, password string) ([]*Keystore, error)
+}
+
+type ListKeymanagerAccountConfig struct {
+	ShowDepositData          bool
+	ShowPrivateKeys          bool
+	WalletAccountsDir        string
+	KeymanagerConfigFileName string
+}
+
+type AccountLister interface {
+	ListKeymanagerAccounts(ctx context.Context, cfg ListKeymanagerAccountConfig) error
 }
 
 // Keystore json file representation as a Go struct.

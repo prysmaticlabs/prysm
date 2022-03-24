@@ -19,6 +19,20 @@ type genesisResponse_GenesisJson struct {
 	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
 }
 
+// WeakSubjectivityResponse is used to marshal/unmarshal the response for the
+// /eth/v1/beacon/weak_subjectivity endpoint.
+type WeakSubjectivityResponse struct {
+	Data *struct {
+		Checkpoint *checkpointJson `json:"ws_checkpoint"`
+		StateRoot  string          `json:"state_root" hex:"true"`
+	} `json:"data"`
+}
+
+// feeRecipientsRequestJson is used in /validator/prepare_beacon_proposers API endpoint.
+type feeRecipientsRequestJSON struct {
+	Recipients []*feeRecipientJson `json:"recipients"`
+}
+
 // stateRootResponseJson is used in /beacon/states/{state_id}/root API endpoint.
 type stateRootResponseJson struct {
 	Data *stateRootResponse_StateRootJson `json:"data"`
@@ -181,9 +195,14 @@ type beaconStateV2ResponseJson struct {
 	Data    *beaconStateContainerV2Json `json:"data"`
 }
 
-// forkChoiceHeadsResponseJson is used in /debug/beacon/heads API endpoint.
+// forkChoiceHeadsResponseJson is used in /v1/debug/beacon/heads API endpoint.
 type forkChoiceHeadsResponseJson struct {
 	Data []*forkChoiceHeadJson `json:"data"`
+}
+
+// v2ForkChoiceHeadsResponseJson is used in /v2/debug/beacon/heads API endpoint.
+type v2ForkChoiceHeadsResponseJson struct {
+	Data []*v2ForkChoiceHeadJson `json:"data"`
 }
 
 // forkScheduleResponseJson is used in /config/fork_schedule API endpoint.
@@ -471,6 +490,11 @@ type indexedAttestationJson struct {
 	Signature        string               `json:"signature" hex:"true"`
 }
 
+type feeRecipientJson struct {
+	ValidatorIndex uint64 `json:"validator_index"`
+	FeeRecipient   string `json:"fee_recipient" hex:"true"`
+}
+
 type attestationJson struct {
 	AggregationBits string               `json:"aggregation_bits" hex:"true"`
 	Data            *attestationDataJson `json:"data"`
@@ -679,6 +703,12 @@ type pendingAttestationJson struct {
 type forkChoiceHeadJson struct {
 	Root string `json:"root" hex:"true"`
 	Slot string `json:"slot"`
+}
+
+type v2ForkChoiceHeadJson struct {
+	Root                string `json:"root" hex:"true"`
+	Slot                string `json:"slot"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
 type depositContractJson struct {

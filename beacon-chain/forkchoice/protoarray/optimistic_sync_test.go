@@ -147,10 +147,10 @@ func TestOptimistic(t *testing.T) {
 
 	// We test first nodes outside the Fork Choice store
 	_, err := f.IsOptimistic(ctx, root0)
-	require.ErrorIs(t, errUnknownNodeRoot, err)
+	require.ErrorIs(t, ErrUnknownNodeRoot, err)
 
 	_, err = f.IsOptimistic(ctx, root1)
-	require.ErrorIs(t, errUnknownNodeRoot, err)
+	require.ErrorIs(t, ErrUnknownNodeRoot, err)
 
 	// We check all nodes in the Fork Choice store.
 	op, err := f.IsOptimistic(ctx, nodeA.root)
@@ -220,18 +220,18 @@ func TestSetOptimisticToValid(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1, true))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, params.BeaconConfig().ZeroHash, 1, 1))
 	tests := []struct {
 		root      [32]byte                // the root of the new VALID block
 		tips      map[[32]byte]types.Slot // the old synced tips
@@ -356,6 +356,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		newBestChild      uint64
 		newBestDescendant uint64
 		newParentWeight   uint64
+		returnedRoots     [][32]byte
 	}{
 		{
 			[32]byte{'j'},
@@ -368,6 +369,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			4,
 			8,
+			[][32]byte{[32]byte{'j'}},
 		},
 		{
 			[32]byte{'j'},
@@ -378,6 +380,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			4,
 			8,
+			[][32]byte{[32]byte{'j'}},
 		},
 		{
 			[32]byte{'i'},
@@ -391,6 +394,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
+			[][32]byte{[32]byte{'i'}},
 		},
 		{
 			[32]byte{'i'},
@@ -403,24 +407,25 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
+			[][32]byte{[32]byte{'i'}},
 		},
 	}
 	for _, tc := range tests {
 		ctx := context.Background()
 		f := setup(1, 1)
 
-		require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1, true))
-		require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1, true))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, params.BeaconConfig().ZeroHash, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, params.BeaconConfig().ZeroHash, 1, 1))
 		weights := []uint64{10, 10, 9, 7, 1, 6, 2, 3, 1, 1, 1, 0, 0}
 		f.syncedTips.Lock()
 		f.syncedTips.validatedTips = tc.tips
@@ -439,8 +444,9 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		require.NotEqual(t, NonExistentNode, parentIndex)
 		parent := f.store.nodes[parentIndex]
 		f.store.nodesLock.Unlock()
-		err := f.SetOptimisticToInvalid(context.Background(), tc.root)
+		roots, err := f.SetOptimisticToInvalid(context.Background(), tc.root)
 		require.NoError(t, err)
+		require.DeepEqual(t, tc.returnedRoots, roots)
 		f.syncedTips.RLock()
 		_, parentSyncedTip := f.syncedTips.validatedTips[parent.root]
 		f.syncedTips.RUnlock()
@@ -467,18 +473,18 @@ func TestFindSyncedTip(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1, true))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, params.BeaconConfig().ZeroHash, 1, 1))
 	tests := []struct {
 		root   [32]byte                // the root of the block
 		tips   map[[32]byte]types.Slot // the synced tips
@@ -553,11 +559,11 @@ func TestFindSyncedTip(t *testing.T) {
 func TestIsOptimistic_DeadLock(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 90, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1, true))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 90, [32]byte{'b'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'c'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'d'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'e'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
 	tips := map[[32]byte]types.Slot{
 		[32]byte{'a'}: 100,
 		[32]byte{'d'}: 102,

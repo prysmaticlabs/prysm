@@ -15,6 +15,7 @@ import (
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 )
 
 // Server defines a server implementation of the gRPC Beacon Chain service,
@@ -34,4 +35,6 @@ type Server struct {
 	StateFetcher            statefetcher.Fetcher
 	HeadFetcher             blockchain.HeadFetcher
 	V1Alpha1ValidatorServer *v1alpha1validator.Server
+	SyncChecker             sync.Checker
+	CanonicalHistory        *stategen.CanonicalHistory
 }

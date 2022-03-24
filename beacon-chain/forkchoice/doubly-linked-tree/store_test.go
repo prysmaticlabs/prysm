@@ -33,14 +33,14 @@ func TestStore_FinalizedEpoch(t *testing.T) {
 
 func TestStore_NodeCount(t *testing.T) {
 	f := setup(0, 0)
-	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
 	require.Equal(t, 2, f.NodeCount())
 }
 
 func TestStore_NodeByRoot(t *testing.T) {
 	f := setup(0, 0)
-	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
-	require.NoError(t, f.ProcessBlock(context.Background(), 2, indexToHash(2), indexToHash(1), 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0))
 	node0 := f.store.treeRootNode
 	node1 := node0.children[0]
 	node2 := node1.children[0]
@@ -61,7 +61,7 @@ func TestStore_NodeByRoot(t *testing.T) {
 
 func TestForkChoice_HasNode(t *testing.T) {
 	f := setup(0, 0)
-	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
 	require.Equal(t, true, f.HasNode(indexToHash(1)))
 }
 
@@ -74,7 +74,7 @@ func TestStore_Head_UnknownJustifiedRoot(t *testing.T) {
 
 func TestStore_Head_Itself(t *testing.T) {
 	f := setup(0, 0)
-	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
 
 	// Since the justified node does not have a best descendant so the best node
 	// is itself.
@@ -85,10 +85,10 @@ func TestStore_Head_Itself(t *testing.T) {
 
 func TestStore_Head_BestDescendant(t *testing.T) {
 	f := setup(0, 0)
-	require.NoError(t, f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
-	require.NoError(t, f.ProcessBlock(context.Background(), 2, indexToHash(2), indexToHash(1), 0, 0, false))
-	require.NoError(t, f.ProcessBlock(context.Background(), 3, indexToHash(3), indexToHash(1), 0, 0, false))
-	require.NoError(t, f.ProcessBlock(context.Background(), 4, indexToHash(4), indexToHash(2), 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(3), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(4), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0))
 	h, err := f.store.head(context.Background(), indexToHash(1))
 	require.NoError(t, err)
 	require.Equal(t, h, indexToHash(4))
@@ -97,9 +97,9 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 func TestStore_UpdateBestDescendant_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	f := setup(0, 0)
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
 	cancel()
-	err := f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 0, 0, false)
+	err := f.InsertOptimisticBlock(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0)
 	require.ErrorContains(t, "context canceled", err)
 }
 
@@ -108,10 +108,12 @@ func TestStore_Insert(t *testing.T) {
 	treeRootNode := &Node{slot: 0, root: indexToHash(0)}
 	nodeByRoot := map[[32]byte]*Node{indexToHash(0): treeRootNode}
 	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode}
-	require.NoError(t, s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), 1, 1, false))
+	payloadHash := [32]byte{'a'}
+	require.NoError(t, s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, 1, 1))
 	assert.Equal(t, 2, len(s.nodeByRoot), "Did not insert block")
 	assert.Equal(t, (*Node)(nil), treeRootNode.parent, "Incorrect parent")
 	assert.Equal(t, 1, len(treeRootNode.children), "Incorrect children number")
+	assert.Equal(t, payloadHash, treeRootNode.children[0].payloadHash, "Incorrect payload hash")
 	child := treeRootNode.children[0]
 	assert.Equal(t, types.Epoch(1), child.justifiedEpoch, "Incorrect justification")
 	assert.Equal(t, types.Epoch(1), child.finalizedEpoch, "Incorrect finalization")
@@ -132,9 +134,9 @@ func TestStore_Prune_LessThanThreshold(t *testing.T) {
 	numOfNodes := uint64(100)
 	f := setup(0, 0)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
 	for i := uint64(2); i < numOfNodes; i++ {
-		require.NoError(t, f.ProcessBlock(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), 0, 0, false))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), params.BeaconConfig().ZeroHash, 0, 0))
 	}
 
 	s := f.store
@@ -151,9 +153,9 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	numOfNodes := uint64(100)
 	f := setup(0, 0)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
 	for i := uint64(2); i < numOfNodes; i++ {
-		require.NoError(t, f.ProcessBlock(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), 0, 0, false))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), params.BeaconConfig().ZeroHash, 0, 0))
 	}
 
 	s := f.store
@@ -169,9 +171,9 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	numOfNodes := uint64(100)
 	f := setup(0, 0)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
 	for i := uint64(2); i < numOfNodes; i++ {
-		require.NoError(t, f.ProcessBlock(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), 0, 0, false))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), params.BeaconConfig().ZeroHash, 0, 0))
 	}
 
 	s := f.store
@@ -196,8 +198,8 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
 	f.store.pruneThreshold = 0
 
 	s := f.store
@@ -221,18 +223,18 @@ func TestStore_tips(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1, true))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, params.BeaconConfig().ZeroHash, 1, 1))
 	expectedMap := map[[32]byte]types.Slot{
 		[32]byte{'f'}: 105,
 		[32]byte{'i'}: 106,
@@ -250,8 +252,8 @@ func TestStore_tips(t *testing.T) {
 func TestStore_PruneMapsNodes(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
 
 	s := f.store
 	s.pruneThreshold = 0
@@ -263,9 +265,9 @@ func TestStore_PruneMapsNodes(t *testing.T) {
 func TestStore_HasParent(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	require.NoError(t, f.ProcessBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 2, indexToHash(2), indexToHash(1), 1, 1, false))
-	require.NoError(t, f.ProcessBlock(ctx, 3, indexToHash(3), indexToHash(2), 1, 1, false))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1))
 	require.Equal(t, false, f.HasParent(params.BeaconConfig().ZeroHash))
 	require.Equal(t, true, f.HasParent(indexToHash(1)))
 	require.Equal(t, true, f.HasParent(indexToHash(2)))

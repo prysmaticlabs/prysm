@@ -102,17 +102,17 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 	processedAttestationCount.Inc()
 }
 
-// ProcessBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(
+// InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
+func (f *ForkChoice) InsertOptimisticBlock(
 	ctx context.Context,
 	slot types.Slot,
-	blockRoot, parentRoot [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch, optimistic bool,
+	blockRoot, parentRoot, payloadHash [fieldparams.RootLength]byte,
+	justifiedEpoch, finalizedEpoch types.Epoch,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertOptimisticBlock")
 	defer span.End()
 
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch, optimistic)
+	return f.store.insert(ctx, slot, blockRoot, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
@@ -174,7 +174,7 @@ func (f *ForkChoice) IsOptimistic(_ context.Context, root [32]byte) (bool, error
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return false, errNilNode
+		return false, ErrNilNode
 	}
 
 	return node.optimistic, nil
@@ -190,7 +190,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return nil, errNilNode
+		return nil, ErrNilNode
 	}
 
 	n := node
@@ -202,7 +202,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	}
 
 	if n == nil {
-		return nil, errNilNode
+		return nil, ErrNilNode
 	}
 
 	return n.root[:], nil
@@ -237,7 +237,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 			if ok && vote.nextRoot != params.BeaconConfig().ZeroHash {
 				// Protection against nil node
 				if nextNode == nil {
-					return errNilNode
+					return ErrNilNode
 				}
 				nextNode.balance += newBalance
 			}
@@ -246,7 +246,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 			if ok && vote.currentRoot != params.BeaconConfig().ZeroHash {
 				// Protection against nil node
 				if currentNode == nil {
-					return errNilNode
+					return ErrNilNode
 				}
 				if currentNode.balance < oldBalance {
 					return errInvalidBalance
@@ -279,7 +279,7 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 	defer f.store.nodesLock.Unlock()
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return errNilNode
+		return ErrNilNode
 	}
 	return node.setNodeAndParentValidated(ctx)
 }
@@ -302,6 +302,6 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 }
 
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [fieldparams.RootLength]byte) error {
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [fieldparams.RootLength]byte) ([][32]byte, error) {
 	return f.store.removeNode(ctx, root)
 }

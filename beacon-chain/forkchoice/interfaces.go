@@ -29,13 +29,14 @@ type HeadRetriever interface {
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	ProcessBlock(ctx context.Context,
+	InsertOptimisticBlock(ctx context.Context,
 		slot types.Slot,
 		root [32]byte,
 		parentRoot [32]byte,
+		payloadHash [32]byte,
 		justifiedEpoch types.Epoch,
 		finalizedEpoch types.Epoch,
-		optimisticStatus bool) error
+	) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
@@ -70,5 +71,5 @@ type Getter interface {
 // Setter allows to set forkchoice information
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
-	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte) error
+	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte) ([][32]byte, error)
 }

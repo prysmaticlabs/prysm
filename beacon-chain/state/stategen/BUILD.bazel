@@ -7,6 +7,7 @@ go_library(
         "epoch_boundary_state_cache.go",
         "errors.go",
         "getter.go",
+        "history.go",
         "hot_state_cache.go",
         "log.go",
         "metrics.go",
@@ -51,6 +52,7 @@ go_test(
     srcs = [
         "epoch_boundary_state_cache_test.go",
         "getter_test.go",
+        "history_test.go",
         "hot_state_cache_test.go",
         "init_test.go",
         "migrate_test.go",

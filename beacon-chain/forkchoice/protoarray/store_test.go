@@ -101,7 +101,7 @@ func TestStore_Head_ContextCancelled(t *testing.T) {
 func TestStore_Insert_UnknownParent(t *testing.T) {
 	// The new node does not have a parent.
 	s := &Store{nodesIndices: make(map[[32]byte]uint64)}
-	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, 1, 1))
+	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, params.BeaconConfig().ZeroHash, 1, 1))
 	assert.Equal(t, 1, len(s.nodes), "Did not insert block")
 	assert.Equal(t, 1, len(s.nodesIndices), "Did not insert block")
 	assert.Equal(t, NonExistentNode, s.nodes[0].parent, "Incorrect parent")
@@ -117,13 +117,15 @@ func TestStore_Insert_KnownParent(t *testing.T) {
 	s.nodes = []*Node{{}}
 	p := [32]byte{'B'}
 	s.nodesIndices[p] = 0
-	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, p, 1, 1))
+	payloadHash := [32]byte{'c'}
+	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, p, payloadHash, 1, 1))
 	assert.Equal(t, 2, len(s.nodes), "Did not insert block")
 	assert.Equal(t, 2, len(s.nodesIndices), "Did not insert block")
 	assert.Equal(t, uint64(0), s.nodes[1].parent, "Incorrect parent")
 	assert.Equal(t, types.Epoch(1), s.nodes[1].justifiedEpoch, "Incorrect justification")
 	assert.Equal(t, types.Epoch(1), s.nodes[1].finalizedEpoch, "Incorrect finalization")
 	assert.Equal(t, [32]byte{'A'}, s.nodes[1].root, "Incorrect root")
+	assert.Equal(t, payloadHash, s.nodes[1].payloadHash)
 }
 
 func TestStore_ApplyScoreChanges_InvalidDeltaLength(t *testing.T) {
@@ -491,18 +493,18 @@ func TestStore_PruneSyncedTips(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
-	require.NoError(t, f.ProcessBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, 1, 1, true))
-	require.NoError(t, f.ProcessBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, 1, 1, true))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, params.BeaconConfig().ZeroHash, 1, 1))
 	syncedTips := &optimisticStore{
 		validatedTips: map[[32]byte]types.Slot{
 			[32]byte{'b'}: 101,
