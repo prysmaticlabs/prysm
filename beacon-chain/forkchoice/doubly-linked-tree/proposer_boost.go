@@ -17,7 +17,7 @@ import (
 //  is_before_attesting_interval = time_into_slot < SECONDS_PER_SLOT // INTERVALS_PER_SLOT
 //  if get_current_slot(store) == block.slot and is_before_attesting_interval:
 //      store.proposer_boost_root = hash_tree_root(block)
-func (f *ForkChoice) BoostProposerRoot(_ context.Context, args *forkchoicetypes.BoostProposerRootArgs) error {
+func (f *ForkChoice) BoostProposerRoot(_ context.Context, args *forkchoicetypes.ProposerBoostRootArgs) error {
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	isBeforeAttestingInterval := args.SecondsIntoSlot < secondsPerSlot/params.BeaconConfig().IntervalsPerSlot
 
