@@ -147,10 +147,14 @@ func (w *Web3RemoteSigner) monitorStart() {
 func (w *Web3RemoteSigner) wait(ctx context.Context) {
 	select {
 	case <-ctx.Done():
-		w.cmd.Process.Signal(syscall.SIGTERM)
+		if err := w.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			panic(err)
+		}
 		return
 	case <-w.ctx.Done():
-		w.cmd.Process.Signal(syscall.SIGTERM)
+		if err := w.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			panic(err)
+		}
 		return
 	case <-w.started:
 		return
