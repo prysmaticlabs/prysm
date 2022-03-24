@@ -324,6 +324,19 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
+
+		preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+		if err != nil {
+			return nil, nil, err
+		}
+		s.saveInitSyncBlock(blockRoots[i], b)
+		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+			return nil, nil, err
+		}
+		if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, b, blockRoots[i]); err != nil {
+			return nil, nil, err
+		}
+
 		sigSet.Join(set)
 	}
 	verify, err := sigSet.Verify()
@@ -336,18 +349,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 
 	// blocks have been verified, add them to forkchoice and call the engine
 	for i, b := range blks {
-		preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		s.saveInitSyncBlock(blockRoots[i], b)
-		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			return nil, nil, err
-		}
-		if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, b, blockRoots[i]); err != nil {
-			return nil, nil, err
-		}
 		if _, err := s.notifyForkchoiceUpdate(ctx, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
 			return nil, nil, err
 		}
