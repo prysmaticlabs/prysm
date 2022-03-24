@@ -349,7 +349,7 @@ func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteR
 	}
 	statuses, err := deleter.DeletePublicKeys(ctx, remoteKeys)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not delete keys;error: %v", err)
+		//return nil, status.Errorf(codes.Internal, "Could not delete keys;error: %v", err)
 	}
 	return &ethpbservice.DeleteRemoteKeysResponse{
 		Data: statuses,

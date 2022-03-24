@@ -49,6 +49,7 @@ type Keymanager struct {
 	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
+	publicKeysUrlCalled   bool
 }
 
 // NewKeymanager instantiates a new web3signer key manager.
@@ -67,6 +68,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		publicKeysURL:         cfg.PublicKeysURL,
 		providedPublicKeys:    cfg.ProvidedPublicKeys,
 		validator:             validator.New(),
+		publicKeysUrlCalled:   false,
 	}, nil
 }
 
@@ -74,12 +76,14 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 // from the remote server or from the provided keys if there are no existing public keys set
 // or provides the existing keys in the keymanager.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	if km.publicKeysURL != "" && len(km.providedPublicKeys) == 0 {
+	if km.publicKeysURL != "" && !km.publicKeysUrlCalled {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
 		if err != nil {
 			erroredResponsesTotal.Inc()
 			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", km.publicKeysURL))
 		}
+		// makes sure that if the public keys are deleted the validator does not call URL again.
+		km.publicKeysUrlCalled = true
 		km.providedPublicKeys = providedPublicKeys
 	}
 	return km.providedPublicKeys, nil
@@ -293,7 +297,33 @@ func (km *Keymanager) addPublicKeys(ctx context.Context, pubKeys [][fieldparams.
 	return importedRemoteKeysStatuses, nil
 }
 
-func (km *Keymanager) deletePublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
-
-	return nil, nil
+func (km *Keymanager) deletePublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.DeletedRemoteKeysStatus, error) {
+	if ctx == nil {
+		return nil, errors.New("context is nil")
+	}
+	deletedRemoteKeysStatuses := make([]*ethpbservice.DeletedRemoteKeysStatus, len(pubKeys))
+	for i, pubkey := range pubKeys {
+		if len(km.providedPublicKeys) == 0 {
+			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
+				Status:  ethpbservice.DeletedRemoteKeysStatus_ERROR,
+				Message: fmt.Sprintf("No pubkeys are set in validator"),
+			}
+			continue
+		}
+		for in, key := range km.providedPublicKeys {
+			if bytes.Equal(key[:], pubkey[:]) {
+				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
+				deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
+					Status:  ethpbservice.DeletedRemoteKeysStatus_DELETED,
+					Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(pubkey[:])),
+				}
+			} else {
+				deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
+					Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
+					Message: fmt.Sprintf("Pubkey: %v not found", hexutil.Encode(pubkey[:])),
+				}
+			}
+		}
+	}
+	return deletedRemoteKeysStatuses, nil
 }
