@@ -261,6 +261,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 }
 
 func getStateVersionAndPayload(st state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
+	if st == nil {
+		return 0, nil, errors.New("nil state")
+	}
 	var preStateHeader *ethpb.ExecutionPayloadHeader
 	var err error
 	preStateVersion := st.Version()

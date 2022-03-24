@@ -221,7 +221,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "nil post state",
 			preState:  phase0State,
-			errString: "pre and post states must not be nil",
+			errString: "nil state",
 		},
 		{
 			name:      "nil beacon block",
@@ -348,7 +348,9 @@ func Test_NotifyNewPayload(t *testing.T) {
 			}
 			root := [32]byte{'a'}
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0))
-			err = service.notifyNewPayload(ctx, tt.preState.Version(), payload, tt.postState, tt.blk, root)
+			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
+			require.NoError(t, err)
+			err = service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk, root)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -398,7 +400,9 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	root := [32]byte{'c'}
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 1, root, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 0, 0))
-	err = service.notifyNewPayload(ctx, bellatrixState.Version(), payload, bellatrixState, bellatrixBlk, root)
+	postVersion, postHeader, err := getStateVersionAndPayload(bellatrixState)
+	require.NoError(t, err)
+	err = service.notifyNewPayload(ctx, bellatrixState.Version(), postVersion, payload, postHeader, bellatrixBlk, root)
 	require.NoError(t, err)
 	optimistic, err := service.IsOptimisticForRoot(ctx, root)
 	require.NoError(t, err)
