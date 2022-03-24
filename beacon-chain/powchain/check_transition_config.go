@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/holiman/uint256"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -24,7 +26,9 @@ var (
 // there are no differences in terminal block difficulty and block hash.
 // If there are any discrepancies, we must log errors to ensure users can resolve
 //the problem and be ready for the merge transition.
-func (s *Service) checkTransitionConfiguration(ctx context.Context) {
+func (s *Service) checkTransitionConfiguration(
+	ctx context.Context, blockNotifications <-chan *statefeed.BlockProcessedData,
+) {
 	if s.engineAPIClient == nil {
 		return
 	}
@@ -50,10 +54,23 @@ func (s *Service) checkTransitionConfiguration(ctx context.Context) {
 	// Bellatrix hard-fork transition.
 	ticker := time.NewTicker(checkTransitionPollingInterval)
 	defer ticker.Stop()
+	sub := s.cfg.stateNotifier.StateFeed().Subscribe(blockNotifications)
+	defer sub.Unsubscribe()
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-sub.Err():
+			return
+		case ev := <-blockNotifications:
+			isExecutionBlock, err := blocks.ExecutionBlock(ev.SignedBlock.Block().Body())
+			if err != nil {
+				log.Debug(err)
+				continue
+			}
+			if isExecutionBlock {
+				return
+			}
 		case <-ticker.C:
 			if s.chainStartData != nil {
 				epoch := slots.EpochsSinceGenesis(time.Unix(int64(s.chainStartData.GenesisTime), 0))
