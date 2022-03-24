@@ -99,6 +99,9 @@ func (node *Node) Start(ctx context.Context) error {
 	if err = runCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start eth1 chain: %w", err)
 	}
+	if err = helpers.WaitForTextInFile(file, "Started P2P networking"); err != nil {
+		return fmt.Errorf("P2P log not found, this means the eth1 chain had issues starting: %w", err)
+	}
 
 	// Mark node as ready.
 	close(node.started)
