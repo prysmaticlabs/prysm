@@ -1,6 +1,7 @@
 package remote_web3signer
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -263,12 +264,36 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 	return nil
 }
 
-func addPublicKeys(ctx context.Context, pubKeys []bls.PublicKey) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
-
-	return nil, nil
+func (km *Keymanager) addPublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
+	if ctx == nil {
+		return nil, errors.New("context is nil")
+	}
+	importedRemoteKeysStatuses := make([]*ethpbservice.ImportedRemoteKeysStatus, len(pubKeys))
+	for i, pubKey := range pubKeys {
+		found := false
+		for _, key := range km.providedPublicKeys {
+			if bytes.Equal(key[:], pubKey[:]) {
+				found = true
+				break
+			}
+		}
+		if found {
+			importedRemoteKeysStatuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
+				Status:  ethpbservice.ImportedRemoteKeysStatus_DUPLICATE,
+				Message: fmt.Sprintf("Duplicate pubkey: %v, already in use", hexutil.Encode(pubKey[:])),
+			}
+			continue
+		}
+		importedRemoteKeysStatuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
+			Status:  ethpbservice.ImportedRemoteKeysStatus_IMPORTED,
+			Message: fmt.Sprintf("Successfully added pubkey: %v", hexutil.Encode(pubKey[:])),
+		}
+		km.accountsChangedFeed.Send(pubKey)
+	}
+	return importedRemoteKeysStatuses, nil
 }
 
-func deletePublicKeys(ctx context.Context, pubKeys []bls.PublicKey) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
+func (km *Keymanager) deletePublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
 
 	return nil, nil
 }
