@@ -18,7 +18,6 @@ var log = logrus.WithField("prefix", "cmd-powchain")
 // FlagOptions for powchain service flag configurations.
 func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	endpoints := parsePowchainEndpoints(c)
-	executionEndpoint := parseExecutionEndpoint(c)
 	jwtSecret, err := parseJWTSecretFromFile(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read JWT secret file for authenticating execution API")
@@ -26,9 +25,6 @@ func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 	opts := []powchain.Option{
 		powchain.WithHttpEndpoints(endpoints),
 		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
-	}
-	if executionEndpoint != "" {
-		opts = append(opts, powchain.WithExecutionEndpoint(executionEndpoint))
 	}
 	if len(jwtSecret) > 0 {
 		opts = append(opts, powchain.WithExecutionClientJWTSecret(jwtSecret))
@@ -84,8 +80,4 @@ func parsePowchainEndpoints(c *cli.Context) []string {
 	endpoints := []string{c.String(flags.HTTPWeb3ProviderFlag.Name)}
 	endpoints = append(endpoints, c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 	return endpoints
-}
-
-func parseExecutionEndpoint(c *cli.Context) string {
-	return c.String(flags.ExecutionProviderFlag.Name)
 }
