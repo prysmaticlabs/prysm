@@ -130,6 +130,7 @@ func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateReq
 	return &ethpbv2.BeaconStateSSZResponseV2{Data: sszState}, nil
 }
 
+// ListForkChoiceHeads retrieves the leaves of the current fork choice tree.
 func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ForkChoiceHeadsResponse, error) {
 	_, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeads")
 	defer span.End()
@@ -148,7 +149,7 @@ func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*e
 	return resp, nil
 }
 
-// ListForkChoiceHeadsV2 retrieves the fork choice leaves for the current head.
+// ListForkChoiceHeadsV2 retrieves the leaves of the current fork choice tree.
 func (ds *Server) ListForkChoiceHeadsV2(ctx context.Context, _ *emptypb.Empty) (*ethpbv2.ForkChoiceHeadsResponse, error) {
 	_, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeadsV2")
 	defer span.End()
