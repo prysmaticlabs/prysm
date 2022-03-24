@@ -97,9 +97,7 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
 func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error) {
 	start := time.Now()
-	defer func() {
-		newPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
-	}()
+	defer newPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	result := &pb.PayloadStatus{}
 	err := c.rpc.CallContext(ctx, result, NewPayloadMethod, payload)
 	if err != nil {
@@ -127,9 +125,7 @@ func (c *Client) ForkchoiceUpdated(
 	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 ) (*pb.PayloadIDBytes, []byte, error) {
 	start := time.Now()
-	defer func() {
-		forkchoiceUpdatedLatency.Observe(float64(time.Since(start).Milliseconds()))
-	}()
+	defer forkchoiceUpdatedLatency.Observe(float64(time.Since(start).Milliseconds()))
 	result := &ForkchoiceUpdatedResponse{}
 	err := c.rpc.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
 	if err != nil {
@@ -157,9 +153,7 @@ func (c *Client) ForkchoiceUpdated(
 // GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
 func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
 	start := time.Now()
-	defer func() {
-		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
-	}()
+	defer getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	result := &pb.ExecutionPayload{}
 	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
