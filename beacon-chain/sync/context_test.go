@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
@@ -106,7 +107,7 @@ func TestValidateVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stream := new(swarm.Stream)
-			stream.SetProtocol(protocol.ID(tt.protocol))
+			require.NoError(t, stream.SetProtocol(protocol.ID(tt.protocol)))
 			err := validateVersion(tt.version, stream)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateVersion() error = %v, wantErr %v", err, tt.wantErr)
