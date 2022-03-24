@@ -88,7 +88,7 @@ func ExecutionBlock(body block.BeaconBlockBody) (bool, error) {
 //    return is_merge_block(state, body) or is_merge_complete(state)
 // Deprecated: Use `IsExecutionEnabledUsingHeader` instead.
 func ExecutionEnabled(st state.BeaconState, body block.BeaconBlockBody) (bool, error) {
-	if st.Version() == version.Phase0 || st.Version() == version.Bellatrix {
+	if st.Version() == version.Phase0 || st.Version() == version.Altair {
 		return false, nil
 	}
 	header, err := st.LatestExecutionPayloadHeader()
