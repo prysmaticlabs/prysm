@@ -2,12 +2,10 @@ package protoarray
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // BoostProposerRoot sets the block root which should be boosted during
@@ -19,17 +17,15 @@ import (
 //  is_before_attesting_interval = time_into_slot < SECONDS_PER_SLOT // INTERVALS_PER_SLOT
 //  if get_current_slot(store) == block.slot and is_before_attesting_interval:
 //      store.proposer_boost_root = hash_tree_root(block)
-func (f *ForkChoice) BoostProposerRoot(_ context.Context, blockSlot types.Slot, blockRoot [32]byte, genesisTime time.Time) error {
+func (f *ForkChoice) BoostProposerRoot(_ context.Context, args *types.ProposerBoostRootArgs) error {
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-	timeIntoSlot := uint64(time.Since(genesisTime).Seconds()) % secondsPerSlot
-	isBeforeAttestingInterval := timeIntoSlot < secondsPerSlot/params.BeaconConfig().IntervalsPerSlot
-	currentSlot := slots.SinceGenesis(genesisTime)
+	isBeforeAttestingInterval := args.SecondsIntoSlot < secondsPerSlot/params.BeaconConfig().IntervalsPerSlot
 
 	// Only update the boosted proposer root to the incoming block root
 	// if the block is for the current, clock-based slot and the block was timely.
-	if currentSlot == blockSlot && isBeforeAttestingInterval {
+	if args.CurrentSlot == args.BlockSlot && isBeforeAttestingInterval {
 		f.store.proposerBoostLock.Lock()
-		f.store.proposerBoostRoot = blockRoot
+		f.store.proposerBoostRoot = args.BlockRoot
 		f.store.proposerBoostLock.Unlock()
 	}
 	return nil
