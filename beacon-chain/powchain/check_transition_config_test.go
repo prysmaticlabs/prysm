@@ -51,8 +51,8 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 		srv.engineAPIClient = m
 		checkTransitionPollingInterval = time.Millisecond
 		ctx, cancel := context.WithCancel(ctx)
-		exit := make(chan bool, 0)
-		notification := make(chan *statefeed.BlockProcessedData, 0)
+		exit := make(chan bool)
+		notification := make(chan *statefeed.BlockProcessedData)
 		go func() {
 			srv.checkTransitionConfiguration(ctx, notification)
 			exit <- true
