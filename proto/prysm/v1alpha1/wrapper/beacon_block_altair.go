@@ -306,6 +306,6 @@ func (w altairBeaconBlockBody) Proto() proto.Message {
 }
 
 // ExecutionPayload is a stub.
-func (altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	return nil, errors.New("ExecutionPayload is not supported in altair block body")
+func (w altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+	return nil, errors.Wrapf(ErrUnsupportedField, "%T", w)
 }

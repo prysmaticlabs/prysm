@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"bytes"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -14,6 +13,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -70,11 +70,12 @@ func IsMergeTransitionBlockUsingPayloadHeader(h *ethpb.ExecutionPayloadHeader, b
 //     return block.body.execution_payload != ExecutionPayload()
 func ExecutionBlock(body block.BeaconBlockBody) (bool, error) {
 	payload, err := body.ExecutionPayload()
-	if err != nil {
-		if strings.HasPrefix(err.Error(), "ExecutionPayload is not supported in") {
-			return false, nil
-		}
+	switch {
+	case errors.Is(err, wrapper.ErrUnsupportedField):
+		return false, nil
+	case err != nil:
 		return false, err
+	default:
 	}
 	return !isEmptyPayload(payload), nil
 }
