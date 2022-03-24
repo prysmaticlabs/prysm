@@ -303,12 +303,55 @@ func TestSetOptimisticToValid(t *testing.T) {
 				[32]byte{'i'}: 106,
 			},
 			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
 				[32]byte{'f'}: 105,
 				[32]byte{'g'}: 104,
 				[32]byte{'i'}: 106,
-				[32]byte{'j'}: 102,
 			},
-			errInvalidBestChildIndex,
+			nil,
+		},
+		{
+			[32]byte{'h'},
+			map[[32]byte]types.Slot{
+				[32]byte{'z'}: 90,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+				[32]byte{'h'}: 105,
+			},
+			nil,
+		},
+		{
+			[32]byte{'h'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			nil,
+		},
+		{
+			[32]byte{'g'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'e'}: 104,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'e'}: 104,
+				[32]byte{'g'}: 104,
+			},
+			nil,
 		},
 		{
 			[32]byte{'p'},
