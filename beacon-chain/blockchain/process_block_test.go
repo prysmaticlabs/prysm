@@ -18,6 +18,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -241,7 +242,13 @@ func TestStore_OnBlock_ProposerBoostEarly(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.BoostProposerRoot(ctx, 0, [32]byte{'A'}, time.Now()))
+	args := &forkchoicetypes.ProposerBoostRootArgs{
+		BlockRoot:       [32]byte{'A'},
+		BlockSlot:       types.Slot(0),
+		CurrentSlot:     0,
+		SecondsIntoSlot: 0,
+	}
+	require.NoError(t, service.cfg.ForkChoiceStore.BoostProposerRoot(ctx, args))
 	_, err = service.cfg.ForkChoiceStore.Head(ctx, 0,
 		params.BeaconConfig().ZeroHash, []uint64{}, 0)
 	require.ErrorContains(t, "could not apply proposer boost score: invalid proposer boost root", err)
