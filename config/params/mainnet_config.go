@@ -4,12 +4,14 @@ import (
 	"math"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
 func MainnetConfig() *BeaconChainConfig {
+	if mainnetBeaconConfig.ForkVersionSchedule == nil {
+		mainnetBeaconConfig.InitializeForkSchedule()
+	}
 	return mainnetBeaconConfig
 }
 
@@ -197,22 +199,16 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
+	GenesisEpoch:         genesisForkEpoch,
 	GenesisForkVersion:   []byte{0, 0, 0, 0},
 	AltairForkVersion:    []byte{1, 0, 0, 0},
 	AltairForkEpoch:      mainnetAltairForkEpoch,
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
-	BellatrixForkEpoch:   math.MaxUint64,
+	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	ShardingForkVersion:  []byte{3, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
 	Eip4844ForkVersion:   []byte{4, 0, 0, 0},
 	Eip4844ForkEpoch:     math.MaxUint64,
-	ForkVersionSchedule: map[[4]byte]types.Epoch{
-		{0, 0, 0, 0}: genesisForkEpoch,
-		{1, 0, 0, 0}: mainnetAltairForkEpoch,
-		{2, 0, 0, 0}: mainnetBellatrixForkEpoch,
-		{4, 0, 0, 0}: mainnetEip4844ForkEpoch,
-		// Any further forks must be specified here by their epoch number.
-	},
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.

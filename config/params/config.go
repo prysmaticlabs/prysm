@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -144,7 +145,7 @@ type BeaconChainConfig struct {
 	Eip4844ForkEpoch     types.Epoch             `yaml:"EIP4844_FORK_EPOCH" spec:"true"`    // Eip4844ForkEpoch is used to represent the assigned fork epoch for Eip4844.
 	ShardingForkVersion  []byte                  `yaml:"SHARDING_FORK_VERSION" spec:"true"` // ShardingForkVersion is used to represent the fork version for sharding.
 	ShardingForkEpoch    types.Epoch             `yaml:"SHARDING_FORK_EPOCH" spec:"true"`   // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
-	ForkVersionSchedule  map[[4]byte]types.Epoch // Schedule of fork epochs by version.
+	ForkVersionSchedule  map[[fieldparams.VersionLength]byte]types.Epoch // Schedule of fork epochs by version.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
@@ -195,12 +196,17 @@ type BeaconChainConfig struct {
 // InitializeForkSchedule initializes the schedules forks baked into the config.
 func (b *BeaconChainConfig) InitializeForkSchedule() {
 	// Reset Fork Version Schedule.
-	b.ForkVersionSchedule = map[[4]byte]types.Epoch{}
+	b.ForkVersionSchedule = configForkSchedule(b)
+}
+
+func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]types.Epoch {
+	fvs := map[[fieldparams.VersionLength]byte]types.Epoch{}
 	// Set Genesis fork data.
-	b.ForkVersionSchedule[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
+	fvs[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
 	// Set Altair fork data.
-	b.ForkVersionSchedule[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
+	fvs[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 	// Set Bellatrix fork data.
-	b.ForkVersionSchedule[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
-	b.ForkVersionSchedule[bytesutil.ToBytes4(b.Eip4844ForkVersion)] = b.Eip4844ForkEpoch
+	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
+	fvs[bytesutil.ToBytes4(b.Eip4844ForkVersion)] = b.Eip4844ForkEpoch
+	return fvs
 }

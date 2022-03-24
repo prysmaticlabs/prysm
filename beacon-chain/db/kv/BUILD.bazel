@@ -48,6 +48,7 @@ go_library(
         "//config/params:go_default_library",
         "//container/slice:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//encoding/ssz/detect:go_default_library",
         "//io/file:go_default_library",
         "//monitoring/progress:go_default_library",
         "//monitoring/tracing:go_default_library",

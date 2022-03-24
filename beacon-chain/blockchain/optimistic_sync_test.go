@@ -44,7 +44,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, 0, 0))
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 
 	tests := []struct {
 		name             string
@@ -346,7 +346,9 @@ func Test_NotifyNewPayload(t *testing.T) {
 				payload, err = tt.preState.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
 			}
-			err := service.notifyNewPayload(ctx, tt.preState.Version(), payload, tt.postState, tt.blk)
+			root := [32]byte{'a'}
+			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0))
+			err = service.notifyNewPayload(ctx, tt.preState.Version(), payload, tt.postState, tt.blk, root)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -354,6 +356,53 @@ func Test_NotifyNewPayload(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
+	cfg := params.BeaconConfig()
+	cfg.TerminalTotalDifficulty = "2"
+	params.OverrideBeaconConfig(cfg)
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+	}
+	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
+	blk := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{
+			Body: &ethpb.BeaconBlockBodyBellatrix{
+				ExecutionPayload: &v1.ExecutionPayload{
+					ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				},
+			},
+		},
+	}
+	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	engine := &mockEngineService{blks: map[[32]byte]*v1.ExecutionBlock{}}
+	engine.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
+		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		TotalDifficulty: "0x2",
+	}
+	engine.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
+		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+		TotalDifficulty: "0x1",
+	}
+	service.cfg.ExecutionEngineCaller = engine
+	payload, err := bellatrixState.LatestExecutionPayloadHeader()
+	require.NoError(t, err)
+	root := [32]byte{'c'}
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 1, root, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 0, 0))
+	err = service.notifyNewPayload(ctx, bellatrixState.Version(), payload, bellatrixState, bellatrixBlk, root)
+	require.NoError(t, err)
+	optimistic, err := service.IsOptimisticForRoot(ctx, root)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
 }
 
 func Test_IsOptimisticCandidateBlock(t *testing.T) {
