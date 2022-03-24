@@ -118,7 +118,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
 	// running a successful state transition for the block.
 	secondsIntoSlot := uint64(time.Since(s.genesisTime).Seconds()) % params.BeaconConfig().SecondsPerSlot
-	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(ctx, &forkchoicetypes.BoostProposerRootArgs{
+	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(ctx, &forkchoicetypes.ProposerBoostRootArgs{
 		BlockRoot:       blockRoot,
 		BlockSlot:       signed.Block().Slot(),
 		CurrentSlot:     slots.SinceGenesis(s.genesisTime),
