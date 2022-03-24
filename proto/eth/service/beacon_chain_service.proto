@@ -45,6 +45,12 @@ service BeaconChain {
     option (google.api.http) = { get: "/internal/eth/v1/beacon/genesis" };
   }
 
+  // GetWeakSubjectivity is a new proposed endpoint to retrieve the details necessary to download
+  // the ssz data needed to start a beacon node - checkpoint(epoch + block_root) and state_root
+  rpc GetWeakSubjectivity(google.protobuf.Empty) returns (v1.WeakSubjectivityResponse) {
+    option (google.api.http) = { get: "/internal/eth/v1/beacon/weak_subjectivity" };
+  }
+
   // GetStateRoot calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
   rpc GetStateRoot(v1.StateRequest) returns (v1.StateRootResponse) {
     option (google.api.http) = {

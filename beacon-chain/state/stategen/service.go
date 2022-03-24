@@ -33,7 +33,6 @@ type StateManager interface {
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
-	StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error)
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
@@ -49,6 +48,8 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
+	minSlot                 types.Slot
+	beaconDBInitType        BeaconDBInitType
 }
 
 // This tracks the config in the event of long non-finality,
@@ -70,9 +71,31 @@ type finalizedInfo struct {
 	lock  sync.RWMutex
 }
 
+func WithMinimumSlot(min types.Slot) StateGenOption {
+	return func(s *State) {
+		s.minSlot = min
+	}
+}
+
+type BeaconDBInitType uint
+
+const (
+	BeaconDBInitTypeGenesisState = iota
+	BeaconDBInitTypeCheckpoint
+)
+
+func WithInitType(t BeaconDBInitType) StateGenOption {
+	return func(s *State) {
+		s.beaconDBInitType = t
+	}
+}
+
+// StateGenOption is a functional option for controlling the initialization of a *State value
+type StateGenOption func(*State)
+
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase) *State {
-	return &State{
+func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
+	s := &State{
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
@@ -81,7 +104,13 @@ func New(beaconDB db.NoHeadAccessDatabase) *State {
 		saveHotStateDB: &saveHotStateDbConfig{
 			duration: defaultHotStateDBInterval,
 		},
+		// defaults to minimumSlot of zero (genesis), overridden by checkpoint sync
+		minSlot: params.BeaconConfig().GenesisSlot,
 	}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.
@@ -137,4 +166,8 @@ func (s *State) finalizedState() state.BeaconState {
 	s.finalizedInfo.lock.RLock()
 	defer s.finalizedInfo.lock.RUnlock()
 	return s.finalizedInfo.state.Copy()
+}
+
+func (s *State) minimumSlot() types.Slot {
+	return s.minSlot
 }

@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -316,4 +317,58 @@ func (km *Keymanager) CreateAccountsKeystore(
 		Version: encryptor.Version(),
 		Name:    encryptor.Name(),
 	}, nil
+}
+
+func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
+	au := aurora.NewAurora(true)
+	// We initialize the wallet's keymanager.
+	accountNames, err := km.ValidatingAccountNames()
+	if err != nil {
+		return errors.Wrap(err, "could not fetch account names")
+	}
+	numAccounts := au.BrightYellow(len(accountNames))
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("local wallet").Bold())
+	fmt.Println("")
+	if len(accountNames) == 1 {
+		fmt.Printf("Showing %d validator account\n", numAccounts)
+	} else {
+		fmt.Printf("Showing %d validator accounts\n", numAccounts)
+	}
+	fmt.Println(
+		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
+			"by running `validator accounts list --show-deposit-data`"),
+	)
+
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	var privateKeys [][32]byte
+	if cfg.ShowPrivateKeys {
+		privateKeys, err = km.FetchValidatingPrivateKeys(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not fetch private keys")
+		}
+	}
+	for i := 0; i < len(accountNames); i++ {
+		fmt.Println("")
+		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
+		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
+		if cfg.ShowPrivateKeys {
+			if len(privateKeys) > i {
+				fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), privateKeys[i])
+			}
+		}
+		if !cfg.ShowDepositData {
+			continue
+		}
+		fmt.Printf(
+			"%s\n",
+			au.BrightRed("If you imported your account coming from the eth2 launchpad, you will find your "+
+				"deposit_data.json in the eth2.0-deposit-cli's validator_keys folder"),
+		)
+		fmt.Println("")
+	}
+	fmt.Println("")
+	return nil
 }

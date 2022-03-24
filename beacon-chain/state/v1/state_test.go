@@ -196,3 +196,19 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
 }
+
+func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyPreviousParticipationBits is not supported for phase 0 beacon state", st.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
+}
+
+func TestBeaconState_ModifyCurrentParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyCurrentParticipationBits is not supported for phase 0 beacon state", st.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
+}

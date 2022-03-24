@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,6 +43,43 @@ func (e *blockIdParseError) Error() string {
 	return e.message
 }
 
+// GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
+// determines the best block root and state root to use for a Checkpoint Sync starting from that point.
+func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
+	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher); err != nil {
+		// This is already a grpc error, so we can't wrap it any further
+		return nil, err
+	}
+
+	hs, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "could not get head state")
+	}
+	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity epoch: %v", err)
+	}
+	wsSlot, err := slots.EpochStart(wsEpoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity slot: %v", err)
+	}
+	cbr, cb, err := bs.CanonicalHistory.BlockForSlot(ctx, wsSlot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("could not find highest block below slot %d", wsSlot))
+	}
+	stateRoot := bytesutil.ToBytes32(cb.Block().StateRoot())
+	log.Printf("weak subjectivity checkpoint reported as epoch=%d, block root=%#x, state root=%#x", wsEpoch, cbr, stateRoot)
+	return &ethpbv1.WeakSubjectivityResponse{
+		Data: &ethpbv1.WeakSubjectivityData{
+			WsCheckpoint: &ethpbv1.Checkpoint{
+				Epoch: wsEpoch,
+				Root:  cbr[:],
+			},
+			StateRoot: stateRoot[:],
+		},
+	}, nil
+}
+
 // GetBlockHeader retrieves block header for given block id.
 func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockHeaderResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockHeader")
@@ -48,14 +88,14 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockHeader")
 	}
 	v1alpha1Header, err := blk.Header()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
 	}
 	header := migration.V1Alpha1SignedHeaderToV1(v1alpha1Header)
-	headerRoot, err := header.HashTreeRoot()
+	headerRoot, err := header.Message.HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 	}
@@ -118,7 +158,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 			return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
 		}
 		header := migration.V1Alpha1SignedHeaderToV1(v1alpha1Header)
-		headerRoot, err := header.HashTreeRoot()
+		headerRoot, err := header.Message.HashTreeRoot()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
 		}
@@ -148,112 +188,59 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
-	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
-	if ok {
-		phase0Blk := phase0BlkContainer.Phase0Block
-		v1alpha1Blk, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: phase0Blk, Signature: req.Signature})
+	var wsb block.SignedBeaconBlock
+	var err error
+	var v1alpha1Blk interface{}
+
+	switch blk := req.Message.(type) {
+	case *ethpbv2.SignedBeaconBlockContainerV2_Phase0Block:
+		v1alpha1Blk, err = migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: blk.Phase0Block, Signature: req.Signature})
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block: %v", err)
 		}
-		wrappedPhase0Blk := wrapper.WrappedPhase0SignedBeaconBlock(v1alpha1Blk)
-
-		root, err := phase0Blk.HashTreeRoot()
+		wsb, err = wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
+	case *ethpbv2.SignedBeaconBlockContainerV2_AltairBlock:
+		v1alpha1Blk, err = migration.AltairToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockAltair{Message: blk.AltairBlock, Signature: req.Signature})
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block: %v", err)
 		}
-
-		// Do not block proposal critical path with debug logging or block feed updates.
-		defer func() {
-			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-				"Block proposal received via RPC")
-			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedPhase0Blk},
-			})
-		}()
-
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedPhase0Blk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+		wsb, err = wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
+	case *ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock:
+		v1alpha1Blk, err = migration.BellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockBellatrix{Message: blk.BellatrixBlock, Signature: req.Signature})
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block: %v", err)
 		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedPhase0Blk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-		}
+		wsb, err = wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unsupported block type %T", req.Message)
 	}
 
-	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
-	if ok {
-		altairBlk := altairBlkContainer.AltairBlock
-		v1alpha1Blk, err := migration.AltairToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockAltair{Message: altairBlk, Signature: req.Signature})
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
-		}
-		wrappedAltairBlk, err := wrapper.WrappedAltairSignedBeaconBlock(v1alpha1Blk)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not prepare Altair block")
-		}
-
-		root, err := altairBlk.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-		}
-
-		// Do not block proposal critical path with debug logging or block feed updates.
-		defer func() {
-			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-				"Block proposal received via RPC")
-			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedAltairBlk},
-			})
-		}()
-
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedAltairBlk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedAltairBlk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-		}
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not wrap beacon block: %v", err)
 	}
 
-	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock)
-	if ok {
-		bellatrixBlk := bellatrixBlkContainer.BellatrixBlock
-		v1alpha1Blk, err := migration.BellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockBellatrix{Message: bellatrixBlk, Signature: req.Signature})
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
-		}
-		wrappedBellatrixBlk, err := wrapper.WrappedBellatrixSignedBeaconBlock(v1alpha1Blk)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not prepare bellatrix block")
-		}
+	root, err := wsb.Block().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+	}
 
-		root, err := bellatrixBlk.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-		}
+	// Do not block proposal critical path with debug logging or block feed updates.
+	defer func() {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+			"Block proposal received via RPC")
+		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: wsb},
+		})
+	}()
 
-		// Do not block proposal critical path with debug logging or block feed updates.
-		defer func() {
-			log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-				"Block proposal received via RPC")
-			bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixBlk},
-			})
-		}()
+	// Broadcast the new block to the network.
+	if err := bs.Broadcaster.Broadcast(ctx, wsb.Proto()); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
+	}
 
-		// Broadcast the new block to the network.
-		if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixBlk.Proto()); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-		}
-
-		if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixBlk, root); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-		}
+	if err := bs.BlockReceiver.ReceiveBlock(ctx, wsb, root); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
 	return &emptypb.Empty{}, nil
@@ -267,7 +254,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlock")
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -290,7 +277,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockSSZ")
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -312,7 +299,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockV2")
 	}
 
 	_, err = blk.PbPhase0Block()
@@ -389,7 +376,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "GetBlockSSZV2")
 	}
 
 	_, err = blk.PbPhase0Block()
