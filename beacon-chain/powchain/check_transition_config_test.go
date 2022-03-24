@@ -26,7 +26,10 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 		m := &mocks.EngineClient{}
 		m.Err = errors.New("something went wrong")
 
-		srv := &Service{}
+		mockChain := &mockChain2.MockStateNotifier{}
+		srv := &Service{
+			cfg: &config{stateNotifier: mockChain},
+		}
 		srv.engineAPIClient = m
 		checkTransitionPollingInterval = time.Millisecond
 		ctx, cancel := context.WithCancel(ctx)
