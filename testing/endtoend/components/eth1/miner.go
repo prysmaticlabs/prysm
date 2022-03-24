@@ -158,7 +158,7 @@ func (m *Miner) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start eth1 chain: %w", err)
 	}
 
-	if err = helpers.WaitForTextInFile(file, "Commit new mining work"); err != nil {
+	if err = helpers.WaitForTextInFile(file, "Commit new sealing work"); err != nil {
 		return fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
 	}
 	if err = helpers.WaitForTextInFile(file, "Started P2P networking"); err != nil {
