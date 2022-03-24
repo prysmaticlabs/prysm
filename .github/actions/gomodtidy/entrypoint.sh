@@ -7,7 +7,7 @@ cd $GITHUB_WORKSPACE
 cp go.mod go.mod.orig
 cp go.sum go.sum.orig
 
-go mod tidy
+go mod tidy -compat=1.17
 
 echo "Checking go.mod and go.sum:"
 checks=0
