@@ -2357,7 +2357,7 @@ def prysm_deps():
         importpath = "github.com/lucas-clemente/quic-go",
         sum = "h1:ALBQXr9UJ8A1LyzvceX4jd9QFsHvlI0RR6BkV16o00A=",
         version = "v0.26.0",
-        build_directives = ["gazelle:exclude internal/qtls/go118.go"], # Remove this after go1.18 or later is supported in WORKSPACE.
+        build_directives = ["gazelle:exclude internal/qtls/go118.go"],  # Remove this after go1.18 or later is supported in WORKSPACE.
     )
 
     go_repository(
