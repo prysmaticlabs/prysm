@@ -115,6 +115,9 @@ func (vs *Server) canonicalEth1Data(
 		canonicalEth1Data = beaconState.Eth1Data()
 		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data().BlockHash)
 	}
+	if eth1BlockHash == [32]byte{} {
+		return canonicalEth1Data, big.NewInt(0), nil
+	}
 	_, canonicalEth1DataHeight, err := vs.Eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
