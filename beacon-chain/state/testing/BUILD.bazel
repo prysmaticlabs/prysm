@@ -6,7 +6,9 @@ go_library(
     srcs = [
         "getters.go",
         "getters_block.go",
+        "getters_checkpoint.go",
         "getters_validator.go",
+        "setters_participation.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/testing",
     visibility = ["//beacon-chain/state:__subpackages__"],
@@ -18,5 +20,6 @@ go_library(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )

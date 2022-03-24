@@ -172,6 +172,8 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 	// Using information about the index which changed, idx, we recompute
 	// only its branch up the tree.
 	currentIndex := idx
+	// Allocate only once.
+	combinedChunks := [64]byte{}
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
@@ -181,12 +183,16 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 			neighbor = *layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hasher(append(root[:], neighbor[:]...))
-			root = parentHash
+			copy(combinedChunks[:32], root[:])
+			copy(combinedChunks[32:], neighbor[:])
 		} else {
-			parentHash := hasher(append(neighbor[:], root[:]...))
-			root = parentHash
+			copy(combinedChunks[:32], neighbor[:])
+			copy(combinedChunks[32:], root[:])
 		}
+
+		parentHash := hasher(combinedChunks[:])
+		root = parentHash
+
 		parentIdx := currentIndex / 2
 		// Update the cached layers at the parent index.
 		rootVal := root
@@ -217,23 +223,30 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 
 	currentIndex := idx
 	root := item
+	// Allocate only once.
+	neighbor := [32]byte{}
+	combinedChunks := [64]byte{}
+
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
 
-		neighbor := [32]byte{}
 		if neighborIdx >= len(layers[i]) {
 			neighbor = trie.ZeroHashes[i]
 		} else {
 			neighbor = *layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hasher(append(root[:], neighbor[:]...))
-			root = parentHash
+			copy(combinedChunks[:32], root[:])
+			copy(combinedChunks[32:], neighbor[:])
 		} else {
-			parentHash := hasher(append(neighbor[:], root[:]...))
-			root = parentHash
+			copy(combinedChunks[:32], neighbor[:])
+			copy(combinedChunks[32:], root[:])
 		}
+
+		parentHash := hasher(combinedChunks[:])
+		root = parentHash
+
 		parentIdx := currentIndex / 2
 		if len(layers[i+1]) == 0 || parentIdx >= len(layers[i+1]) {
 			newItem := root

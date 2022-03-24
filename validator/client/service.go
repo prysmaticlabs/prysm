@@ -48,53 +48,53 @@ type GenesisFetcher interface {
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	useWeb                      bool
-	emitAccountMetrics          bool
-	logValidatorBalances        bool
-	logDutyCountDown            bool
-	interopKeysConfig           *local.InteropKeymanagerConfig
-	conn                        *grpc.ClientConn
-	grpcRetryDelay              time.Duration
-	grpcRetries                 uint
-	maxCallRecvMsgSize          int
-	cancel                      context.CancelFunc
-	walletInitializedFeed       *event.Feed
-	wallet                      *wallet.Wallet
-	graffitiStruct              *graffiti.Graffiti
-	dataDir                     string
-	withCert                    string
-	endpoint                    string
-	ctx                         context.Context
-	validator                   iface.Validator
-	db                          db.Database
-	grpcHeaders                 []string
-	graffiti                    []byte
-	web3SignerConfig            *remote_web3signer.SetupConfig
-	prepareBeaconProposalConfig *validator_service_config.FeeRecipientConfig
+	useWeb                bool
+	emitAccountMetrics    bool
+	logValidatorBalances  bool
+	logDutyCountDown      bool
+	interopKeysConfig     *local.InteropKeymanagerConfig
+	conn                  *grpc.ClientConn
+	grpcRetryDelay        time.Duration
+	grpcRetries           uint
+	maxCallRecvMsgSize    int
+	cancel                context.CancelFunc
+	walletInitializedFeed *event.Feed
+	wallet                *wallet.Wallet
+	graffitiStruct        *graffiti.Graffiti
+	dataDir               string
+	withCert              string
+	endpoint              string
+	ctx                   context.Context
+	validator             iface.Validator
+	db                    db.Database
+	grpcHeaders           []string
+	graffiti              []byte
+	web3SignerConfig      *remote_web3signer.SetupConfig
+	feeRecipientConfig    *validator_service_config.FeeRecipientConfig
 }
 
 // Config for the validator service.
 type Config struct {
-	UseWeb                      bool
-	LogValidatorBalances        bool
-	EmitAccountMetrics          bool
-	LogDutyCountDown            bool
-	InteropKeysConfig           *local.InteropKeymanagerConfig
-	Wallet                      *wallet.Wallet
-	WalletInitializedFeed       *event.Feed
-	GrpcRetriesFlag             uint
-	GrpcMaxCallRecvMsgSizeFlag  int
-	GrpcRetryDelay              time.Duration
-	GraffitiStruct              *graffiti.Graffiti
-	Validator                   iface.Validator
-	ValDB                       db.Database
-	CertFlag                    string
-	DataDir                     string
-	GrpcHeadersFlag             string
-	GraffitiFlag                string
-	Endpoint                    string
-	Web3SignerConfig            *remote_web3signer.SetupConfig
-	PrepareBeaconProposalConfig *validator_service_config.FeeRecipientConfig
+	UseWeb                     bool
+	LogValidatorBalances       bool
+	EmitAccountMetrics         bool
+	LogDutyCountDown           bool
+	InteropKeysConfig          *local.InteropKeymanagerConfig
+	Wallet                     *wallet.Wallet
+	WalletInitializedFeed      *event.Feed
+	GrpcRetriesFlag            uint
+	GrpcMaxCallRecvMsgSizeFlag int
+	GrpcRetryDelay             time.Duration
+	GraffitiStruct             *graffiti.Graffiti
+	Validator                  iface.Validator
+	ValDB                      db.Database
+	CertFlag                   string
+	DataDir                    string
+	GrpcHeadersFlag            string
+	GraffitiFlag               string
+	Endpoint                   string
+	Web3SignerConfig           *remote_web3signer.SetupConfig
+	FeeRecipientConfig         *validator_service_config.FeeRecipientConfig
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -102,28 +102,28 @@ type Config struct {
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ValidatorService{
-		ctx:                         ctx,
-		cancel:                      cancel,
-		endpoint:                    cfg.Endpoint,
-		withCert:                    cfg.CertFlag,
-		dataDir:                     cfg.DataDir,
-		graffiti:                    []byte(cfg.GraffitiFlag),
-		logValidatorBalances:        cfg.LogValidatorBalances,
-		emitAccountMetrics:          cfg.EmitAccountMetrics,
-		maxCallRecvMsgSize:          cfg.GrpcMaxCallRecvMsgSizeFlag,
-		grpcRetries:                 cfg.GrpcRetriesFlag,
-		grpcRetryDelay:              cfg.GrpcRetryDelay,
-		grpcHeaders:                 strings.Split(cfg.GrpcHeadersFlag, ","),
-		validator:                   cfg.Validator,
-		db:                          cfg.ValDB,
-		wallet:                      cfg.Wallet,
-		walletInitializedFeed:       cfg.WalletInitializedFeed,
-		useWeb:                      cfg.UseWeb,
-		interopKeysConfig:           cfg.InteropKeysConfig,
-		graffitiStruct:              cfg.GraffitiStruct,
-		logDutyCountDown:            cfg.LogDutyCountDown,
-		web3SignerConfig:            cfg.Web3SignerConfig,
-		prepareBeaconProposalConfig: cfg.PrepareBeaconProposalConfig,
+		ctx:                   ctx,
+		cancel:                cancel,
+		endpoint:              cfg.Endpoint,
+		withCert:              cfg.CertFlag,
+		dataDir:               cfg.DataDir,
+		graffiti:              []byte(cfg.GraffitiFlag),
+		logValidatorBalances:  cfg.LogValidatorBalances,
+		emitAccountMetrics:    cfg.EmitAccountMetrics,
+		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
+		grpcRetries:           cfg.GrpcRetriesFlag,
+		grpcRetryDelay:        cfg.GrpcRetryDelay,
+		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
+		validator:             cfg.Validator,
+		db:                    cfg.ValDB,
+		wallet:                cfg.Wallet,
+		walletInitializedFeed: cfg.WalletInitializedFeed,
+		useWeb:                cfg.UseWeb,
+		interopKeysConfig:     cfg.InteropKeysConfig,
+		graffitiStruct:        cfg.GraffitiStruct,
+		logDutyCountDown:      cfg.LogDutyCountDown,
+		web3SignerConfig:      cfg.Web3SignerConfig,
+		feeRecipientConfig:    cfg.FeeRecipientConfig,
 	}, nil
 }
 
@@ -205,7 +205,7 @@ func (v *ValidatorService) Start() {
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 		Web3SignerConfig:               v.web3SignerConfig,
-		prepareBeaconProposalConfig:    v.prepareBeaconProposalConfig,
+		feeRecipientConfig:             v.feeRecipientConfig,
 		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface

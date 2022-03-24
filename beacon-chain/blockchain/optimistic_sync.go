@@ -16,12 +16,16 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
 func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.BeaconBlock, headRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
+	defer span.End()
+
 	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
 		return nil, errors.New("nil head block")
 	}
@@ -84,6 +88,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 
 // notifyForkchoiceUpdate signals execution engine on a new payload
 func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, header *ethpb.ExecutionPayloadHeader, postState state.BeaconState, blk block.SignedBeaconBlock, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
+	defer span.End()
+
 	if postState == nil {
 		return errors.New("pre and post states must not be nil")
 	}
