@@ -12,6 +12,7 @@ go_library(
         "//testing/spectest:__subpackages__",
     ],
     deps = [
+        "//beacon-chain/forkchoice/types:go_default_library",
         "//config/fieldparams:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
