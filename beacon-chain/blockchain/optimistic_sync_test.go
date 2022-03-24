@@ -219,11 +219,6 @@ func Test_NotifyNewPayload(t *testing.T) {
 			preState:  altairState,
 		},
 		{
-			name:      "nil post state",
-			preState:  phase0State,
-			errString: "nil state",
-		},
-		{
 			name:      "nil beacon block",
 			postState: bellatrixState,
 			preState:  bellatrixState,
