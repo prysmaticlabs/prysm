@@ -295,5 +295,5 @@ func (w Phase0BeaconBlockBody) Proto() proto.Message {
 
 // ExecutionPayload is a stub.
 func (w Phase0BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	return nil, errors.Wrapf(ErrUnsupportedField, "%T", w)
+	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayload for %T", w)
 }
