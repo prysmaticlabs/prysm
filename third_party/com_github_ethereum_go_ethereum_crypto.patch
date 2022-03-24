@@ -1,0 +1,85 @@
+diff --git a/crypto/BUILD.bazel b/crypto/BUILD.bazel
+index 7db7a6b1a..7781ef9d6 100644
+--- a/crypto/BUILD.bazel
++++ b/crypto/BUILD.bazel
+@@ -6,7 +6,6 @@ go_library(
+     srcs = [
+         "crypto.go",
+         "signature_cgo.go",
+-        "signature_nocgo.go",
+     ],
+     importpath = "github.com/ethereum/go-ethereum/crypto",
+     visibility = ["//visibility:public"],
+@@ -18,72 +17,44 @@ go_library(
+     ] + select({
+         "@io_bazel_rules_go//go/platform:aix": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:android": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:darwin": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:dragonfly": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:freebsd": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:illumos": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:ios": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:js": [
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:linux": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:netbsd": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:openbsd": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:plan9": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:solaris": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "@io_bazel_rules_go//go/platform:windows": [
+             "//crypto/secp256k1",
+-            "@com_github_btcsuite_btcd//btcec/v2:btcec",
+-            "@com_github_btcsuite_btcd//btcec/v2/ecdsa",
+         ],
+         "//conditions:default": [],
+     }),
