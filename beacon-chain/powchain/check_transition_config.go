@@ -12,7 +12,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 var (
@@ -65,20 +64,14 @@ func (s *Service) checkTransitionConfiguration(
 		case ev := <-blockNotifications:
 			isExecutionBlock, err := blocks.ExecutionBlock(ev.SignedBlock.Block().Body())
 			if err != nil {
-				log.Debug(err)
+				log.WithError(err).Debug("Could not check whether signed block is execution block")
 				continue
 			}
 			if isExecutionBlock {
+				log.Debug("PoS transition is complete, no longer checking for configuration changes")
 				return
 			}
 		case <-ticker.C:
-			if s.chainStartData != nil {
-				epoch := slots.EpochsSinceGenesis(time.Unix(int64(s.chainStartData.GenesisTime), 0))
-				if epoch >= params.BeaconConfig().BellatrixForkEpoch {
-					log.Debug("Post-Bellatrix fork transition, thus no longer checking for configuration changes")
-					return
-				}
-			}
 			err = s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
 		}
