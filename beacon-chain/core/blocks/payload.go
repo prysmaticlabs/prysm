@@ -14,6 +14,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -85,15 +86,29 @@ func ExecutionBlock(body block.BeaconBlockBody) (bool, error) {
 // Spec code:
 // def is_execution_enabled(state: BeaconState, body: BeaconBlockBody) -> bool:
 //    return is_merge_block(state, body) or is_merge_complete(state)
+// Deprecated: Use `IsExecutionEnabledUsingHeader` instead.
 func ExecutionEnabled(st state.BeaconState, body block.BeaconBlockBody) (bool, error) {
-	mergeBlock, err := MergeTransitionBlock(st, body)
+	if st.Version() == version.Phase0 || st.Version() == version.Bellatrix {
+		return false, nil
+	}
+	header, err := st.LatestExecutionPayloadHeader()
+	if err != nil {
+		return false, err
+	}
+	return IsExecutionEnabledUsingHeader(header, body)
+}
+
+// IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
+// This is an optimized version of ExecutionEnabled where beacon state is not required as an argument.
+func IsExecutionEnabledUsingHeader(header *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
+	mergeBlock, err := IsMergeTransitionBlockUsingPayloadHeader(header, body)
 	if err != nil {
 		return false, err
 	}
 	if mergeBlock {
 		return true, nil
 	}
-	return MergeTransitionComplete(st)
+	return !isEmptyHeader(header), nil
 }
 
 // ValidatePayloadWhenMergeCompletes validates if payload is valid versus input beacon state.

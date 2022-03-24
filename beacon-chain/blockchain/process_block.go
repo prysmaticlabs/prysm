@@ -110,7 +110,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
-	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, postState, signed, blockRoot); err != nil {
+	postStateVersion, postStateHeader, err := getStateVersionAndPayload(postState)
+	if err != nil {
+		return err
+	}
+	if err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed, blockRoot); err != nil {
 		return errors.Wrap(err, "could not verify new payload")
 	}
 
@@ -256,14 +260,14 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	return s.handleEpochBoundary(ctx, postState)
 }
 
-func getStateVersionAndPayload(preState state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
+func getStateVersionAndPayload(st state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
 	var preStateHeader *ethpb.ExecutionPayloadHeader
 	var err error
-	preStateVersion := preState.Version()
+	preStateVersion := st.Version()
 	switch preStateVersion {
 	case version.Phase0, version.Altair:
 	default:
-		preStateHeader, err = preState.LatestExecutionPayloadHeader()
+		preStateHeader, err = st.LatestExecutionPayloadHeader()
 		if err != nil {
 			return 0, nil, err
 		}
@@ -308,9 +312,24 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		PublicKeys: []bls.PublicKey{},
 		Messages:   [][32]byte{},
 	}
+	type versionAndHeader struct {
+		version int
+		header  *ethpb.ExecutionPayloadHeader
+	}
+	preVersionAndHeaders := make([]*versionAndHeader, len(blks))
+	postVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
+		v, h, err := getStateVersionAndPayload(preState)
+		if err != nil {
+			return nil, nil, err
+		}
+		preVersionAndHeaders[i] = &versionAndHeader{
+			version: v,
+			header:  h,
+		}
+
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, err
@@ -325,18 +344,14 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
 
-		preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+		v, h, err = getStateVersionAndPayload(preState)
 		if err != nil {
 			return nil, nil, err
 		}
-		s.saveInitSyncBlock(blockRoots[i], b)
-		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			return nil, nil, err
+		postVersionAndHeaders[i] = &versionAndHeader{
+			version: v,
+			header:  h,
 		}
-		if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, b, blockRoots[i]); err != nil {
-			return nil, nil, err
-		}
-
 		sigSet.Join(set)
 	}
 	verify, err := sigSet.Verify()
@@ -349,6 +364,17 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 
 	// blocks have been verified, add them to forkchoice and call the engine
 	for i, b := range blks {
+		s.saveInitSyncBlock(blockRoots[i], b)
+		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+			return nil, nil, err
+		}
+		if err := s.notifyNewPayload(ctx,
+			preVersionAndHeaders[i].version,
+			postVersionAndHeaders[i].version,
+			preVersionAndHeaders[i].header,
+			postVersionAndHeaders[i].header, b, blockRoots[i]); err != nil {
+			return nil, nil, err
+		}
 		if _, err := s.notifyForkchoiceUpdate(ctx, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
 			return nil, nil, err
 		}

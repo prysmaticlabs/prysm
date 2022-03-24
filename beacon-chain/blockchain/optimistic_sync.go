@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -83,20 +82,19 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload
-func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, header *ethpb.ExecutionPayloadHeader, postState state.BeaconState, blk block.SignedBeaconBlock, root [32]byte) error {
-	if postState == nil {
-		return errors.New("pre and post states must not be nil")
-	}
+func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postStateVersion int,
+	preStateHeader, postStateHeader *ethpb.ExecutionPayloadHeader, blk block.SignedBeaconBlock, root [32]byte) error {
+
 	// Execution payload is only supported in Bellatrix and beyond. Pre
 	// merge blocks are never optimistic
-	if isPreBellatrix(postState.Version()) {
+	if isPreBellatrix(postStateVersion) {
 		return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
 	}
 	if err := helpers.BeaconBlockIsNil(blk); err != nil {
 		return err
 	}
 	body := blk.Block().Body()
-	enabled, err := blocks.ExecutionEnabled(postState, blk.Block().Body())
+	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
 	if err != nil {
 		return errors.Wrap(err, "could not determine if execution is enabled")
 	}
@@ -112,7 +110,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 		switch err {
 		case v1.ErrAcceptedSyncingPayloadStatus:
 			log.WithFields(logrus.Fields{
-				"slot":      postState.Slot(),
+				"slot":      blk.Block().Slot(),
 				"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 			}).Info("Called new payload with optimistic block")
 			return nil
@@ -131,7 +129,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int, hea
 		// To reach here, the block must have contained a valid payload.
 		return s.validateMergeBlock(ctx, blk)
 	}
-	atTransition, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(header, body)
+	atTransition, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(preStateHeader, body)
 	if err != nil {
 		return errors.Wrap(err, "could not check if merge block is terminal")
 	}
