@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -32,6 +33,7 @@ import (
 func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 
 	// Reset proposer boost root in fork choice.
+	fmt.Println("Resetting proposer boost root in fork choice")
 	if err := s.cfg.ForkChoiceStore.ResetBoostedProposerRoot(ctx); err != nil {
 		return errors.Wrap(err, "could not reset boosted proposer root in fork choice")
 	}

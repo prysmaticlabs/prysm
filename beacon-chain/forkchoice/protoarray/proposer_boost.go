@@ -2,6 +2,7 @@ package protoarray
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -27,6 +28,10 @@ func (f *ForkChoice) BoostProposerRoot(_ context.Context, blockSlot types.Slot, 
 
 	// Only update the boosted proposer root to the incoming block root
 	// if the block is for the current, clock-based slot and the block was timely.
+	fmt.Println(genesisTime.Unix())
+	fmt.Println(time.Now().Unix())
+	fmt.Println(timeIntoSlot, secondsPerSlot, params.BeaconConfig().IntervalsPerSlot, secondsPerSlot/params.BeaconConfig().IntervalsPerSlot)
+	fmt.Println(currentSlot == blockSlot, isBeforeAttestingInterval)
 	if currentSlot == blockSlot && isBeforeAttestingInterval {
 		f.store.proposerBoostLock.Lock()
 		f.store.proposerBoostRoot = blockRoot
@@ -38,6 +43,7 @@ func (f *ForkChoice) BoostProposerRoot(_ context.Context, blockSlot types.Slot, 
 // ResetBoostedProposerRoot sets the value of the proposer boosted root to zeros.
 func (f *ForkChoice) ResetBoostedProposerRoot(_ context.Context) error {
 	f.store.proposerBoostLock.Lock()
+	fmt.Println("Resetting boosted proposer root")
 	f.store.proposerBoostRoot = [32]byte{}
 	f.store.proposerBoostLock.Unlock()
 	return nil
