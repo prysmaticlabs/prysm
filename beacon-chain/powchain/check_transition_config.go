@@ -26,7 +26,7 @@ var (
 // If there are any discrepancies, we must log errors to ensure users can resolve
 //the problem and be ready for the merge transition.
 func (s *Service) checkTransitionConfiguration(
-	ctx context.Context, blockNotifications <-chan *statefeed.BlockProcessedData,
+	ctx context.Context, blockNotifications chan *statefeed.BlockProcessedData,
 ) {
 	if s.engineAPIClient == nil {
 		return

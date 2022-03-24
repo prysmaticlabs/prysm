@@ -536,6 +536,11 @@ func Test_IsExecutionBlock(t *testing.T) {
 		want    bool
 	}{
 		{
+			name:    "nil payload",
+			payload: nil,
+			want:    false,
+		},
+		{
 			name:    "empty payload",
 			payload: emptyPayload(),
 			want:    false,

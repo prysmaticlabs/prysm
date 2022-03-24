@@ -218,7 +218,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	}
 
 	// Check transition configuration for the engine API client in the background.
-	go s.checkTransitionConfiguration(ctx)
+	go s.checkTransitionConfiguration(ctx, make(chan *statefeed.BlockProcessedData, 1))
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")

@@ -6,27 +6,71 @@ import (
 	"testing"
 	"time"
 
+	mockChain2 "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func Test_checkTransitionConfiguration(t *testing.T) {
-	ctx := context.Background()
 	hook := logTest.NewGlobal()
 
-	m := &mocks.EngineClient{}
-	m.Err = errors.New("something went wrong")
+	t.Run("context canceled", func(t *testing.T) {
+		ctx := context.Background()
+		m := &mocks.EngineClient{}
+		m.Err = errors.New("something went wrong")
 
-	srv := &Service{}
-	srv.engineAPIClient = m
-	checkTransitionPollingInterval = time.Millisecond
-	ctx, cancel := context.WithCancel(ctx)
-	go srv.checkTransitionConfiguration(ctx)
-	<-time.After(100 * time.Millisecond)
-	cancel()
-	require.LogsContain(t, hook, "Could not check configuration values")
+		srv := &Service{}
+		srv.engineAPIClient = m
+		checkTransitionPollingInterval = time.Millisecond
+		ctx, cancel := context.WithCancel(ctx)
+		go srv.checkTransitionConfiguration(ctx, make(chan *statefeed.BlockProcessedData, 1))
+		<-time.After(100 * time.Millisecond)
+		cancel()
+		require.LogsContain(t, hook, "Could not check configuration values")
+	})
+
+	t.Run("block containing execution payload exits routine", func(t *testing.T) {
+		ctx := context.Background()
+		m := &mocks.EngineClient{}
+		m.Err = errors.New("something went wrong")
+
+		mockChain := &mockChain2.MockStateNotifier{}
+		srv := &Service{
+			cfg: &config{stateNotifier: mockChain},
+		}
+		srv.engineAPIClient = m
+		checkTransitionPollingInterval = time.Millisecond
+		ctx, cancel := context.WithCancel(ctx)
+		exit := make(chan bool, 0)
+		notification := make(chan *statefeed.BlockProcessedData, 0)
+		go func() {
+			srv.checkTransitionConfiguration(ctx, notification)
+			exit <- true
+		}()
+		payload := emptyPayload()
+		payload.GasUsed = 21000
+		wrappedBlock, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{
+			Block: &ethpb.BeaconBlockBellatrix{
+				Body: &ethpb.BeaconBlockBodyBellatrix{
+					ExecutionPayload: payload,
+				},
+			}},
+		)
+		require.NoError(t, err)
+		notification <- &statefeed.BlockProcessedData{
+			SignedBlock: wrappedBlock,
+		}
+		<-exit
+		cancel()
+		require.LogsContain(t, hook, "PoS transition is complete, no longer checking")
+	})
 }
 
 func TestService_handleExchangeConfigurationError(t *testing.T) {
@@ -56,4 +100,18 @@ func TestService_handleExchangeConfigurationError(t *testing.T) {
 		require.Equal(t, true, srv.Status() == nil)
 		require.LogsContain(t, hook, "Could not check configuration values")
 	})
+}
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		ExtraData:     make([]byte, 0),
+	}
 }
