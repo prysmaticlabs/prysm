@@ -101,14 +101,10 @@ func ExecutionEnabled(st state.BeaconState, body block.BeaconBlockBody) (bool, e
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of ExecutionEnabled where beacon state is not required as an argument.
 func IsExecutionEnabledUsingHeader(header *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
-	mergeBlock, err := IsMergeTransitionBlockUsingPayloadHeader(header, body)
-	if err != nil {
-		return false, err
-	}
-	if mergeBlock {
+	if !isEmptyHeader(header) {
 		return true, nil
 	}
-	return !isEmptyHeader(header), nil
+	return ExecutionBlock(body)
 }
 
 // ValidatePayloadWhenMergeCompletes validates if payload is valid versus input beacon state.
