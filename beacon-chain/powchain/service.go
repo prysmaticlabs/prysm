@@ -6,7 +6,6 @@ package powchain
 import (
 	"context"
 	"fmt"
-	"math"
 	"math/big"
 	"reflect"
 	"runtime/debug"
@@ -1060,9 +1059,9 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 // Initializes a client for the engine API if an execution provider endpoint is set.
 func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
 	// If Bellatrix fork epoch is not yet set, we exit early.
-	if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
-		return nil
-	}
+	//if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
+	//	return nil
+	//}
 	opts := []engine.Option{
 		engine.WithJWTSecret(s.cfg.executionEndpointJWTSecret),
 	}
