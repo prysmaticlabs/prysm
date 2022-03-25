@@ -132,6 +132,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				WithExitPool(voluntaryexits.NewPool()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
 				WithStateGen(stategen.New(beaconDB)),
+				WithFinalizedStateAtStartUp(genesis),
 			}
 			s, err := NewService(ctx, opts...)
 			require.NoError(t, err)

@@ -163,3 +163,13 @@ message BeaconStateContainer {
     BeaconStateBellatrix bellatrix_state = 3;
   }
 }
+
+message ForkChoiceHeadsResponse {
+  repeated ForkChoiceHead data = 1;
+}
+
+message ForkChoiceHead {
+  bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+  uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  bool execution_optimistic = 3;
+}

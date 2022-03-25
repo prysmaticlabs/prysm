@@ -6,16 +6,17 @@ import (
 
 // removeNode removes the node with the given root and all of its children
 // from the Fork Choice Store.
-func (s *Store) removeNode(ctx context.Context, root [32]byte) error {
+func (s *Store) removeNode(ctx context.Context, root [32]byte) ([][32]byte, error) {
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
+	invalidRoots := make([][32]byte, 0)
 
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
-		return ErrNilNode
+		return invalidRoots, ErrNilNode
 	}
 	if !node.optimistic || node.parent == nil {
-		return errInvalidOptimisticStatus
+		return invalidRoots, errInvalidOptimisticStatus
 	}
 	children := node.parent.children
 	if len(children) == 1 {
@@ -31,20 +32,21 @@ func (s *Store) removeNode(ctx context.Context, root [32]byte) error {
 			}
 		}
 	}
-	return s.removeNodeAndChildren(ctx, node)
+	return s.removeNodeAndChildren(ctx, node, invalidRoots)
 }
 
 // removeNodeAndChildren removes `node` and all of its descendant from the Store
-func (s *Store) removeNodeAndChildren(ctx context.Context, node *Node) error {
+func (s *Store) removeNodeAndChildren(ctx context.Context, node *Node, invalidRoots [][32]byte) ([][32]byte, error) {
+	var err error
 	for _, child := range node.children {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return invalidRoots, ctx.Err()
 		}
-		if err := s.removeNodeAndChildren(ctx, child); err != nil {
-			return err
+		if invalidRoots, err = s.removeNodeAndChildren(ctx, child, invalidRoots); err != nil {
+			return invalidRoots, err
 		}
 	}
-
+	invalidRoots = append(invalidRoots, node.root)
 	delete(s.nodeByRoot, node.root)
-	return nil
+	return invalidRoots, nil
 }
