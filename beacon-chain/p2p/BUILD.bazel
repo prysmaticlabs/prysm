@@ -182,4 +182,5 @@ go_test(
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
     ],
+    tags = ["requires-network"],
 )

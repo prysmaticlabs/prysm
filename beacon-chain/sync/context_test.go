@@ -9,11 +9,9 @@ import (
 	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	swarm "github.com/libp2p/go-libp2p-swarm"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
@@ -74,6 +72,16 @@ func TestContextRead_NoReads(t *testing.T) {
 	}
 }
 
+var _ = withProtocol(&fakeStream{})
+
+type fakeStream struct {
+	protocol protocol.ID
+}
+
+func (fs *fakeStream) Protocol() protocol.ID {
+	return fs.protocol
+}
+
 func TestValidateVersion(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -106,8 +114,7 @@ func TestValidateVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stream := new(swarm.Stream)
-			require.NoError(t, stream.SetProtocol(protocol.ID(tt.protocol)))
+			stream := &fakeStream{protocol: protocol.ID(tt.protocol)}
 			err := validateVersion(tt.version, stream)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateVersion() error = %v, wantErr %v", err, tt.wantErr)
