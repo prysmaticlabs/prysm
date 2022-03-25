@@ -73,8 +73,12 @@ func TestGetState(t *testing.T) {
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 		require.NoError(t, db.SaveState(ctx, bs, r))
 
+		cc := &mockstategen.MockCanonicalChecker{Is: true}
+		cs := &mockstategen.MockCurrentSlotter{Slot: bs.Slot() + 1}
+		ch := stategen.NewCanonicalHistory(db, cc, cs)
 		p := StateProvider{
-			BeaconDB: db,
+			BeaconDB:        db,
+			ReplayerBuilder: ch,
 		}
 
 		s, err := p.State(ctx, []byte("genesis"))

@@ -366,6 +366,60 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 }
 
+// ensures that if any of the checkpoints are zero-valued, an error will be generated without genesis being present
+func TestServer_GetChainHead_NoGenesis(t *testing.T) {
+	db := dbTest.SetupDB(t)
+
+	s, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, s.SetSlot(1))
+
+	genBlock := util.NewBeaconBlock()
+	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genBlock)))
+	gRoot, err := genBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cases := []struct {
+		name       string
+		zeroSetter func(val *ethpb.Checkpoint) error
+	}{
+		{
+			name:       "zero-value prev justified",
+			zeroSetter: s.SetPreviousJustifiedCheckpoint,
+		},
+		{
+			name:       "zero-value current justified",
+			zeroSetter: s.SetCurrentJustifiedCheckpoint,
+		},
+		{
+			name:       "zero-value finalized",
+			zeroSetter: s.SetFinalizedCheckpoint,
+		},
+	}
+	finalized := &ethpb.Checkpoint{Epoch: 1, Root: gRoot[:]}
+	prevJustified := &ethpb.Checkpoint{Epoch: 2, Root: gRoot[:]}
+	justified := &ethpb.Checkpoint{Epoch: 3, Root: gRoot[:]}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			require.NoError(t, s.SetPreviousJustifiedCheckpoint(prevJustified))
+			require.NoError(t, s.SetCurrentJustifiedCheckpoint(justified))
+			require.NoError(t, s.SetFinalizedCheckpoint(finalized))
+			require.NoError(t, c.zeroSetter(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}))
+		})
+		bs := &Server{
+			BeaconDB:    db,
+			HeadFetcher: &chainMock.ChainService{Block: wrapper.WrappedPhase0SignedBeaconBlock(genBlock), State: s},
+			FinalizationFetcher: &chainMock.ChainService{
+				FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+				CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+				PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+		}
+		_, err = bs.GetChainHead(context.Background(), nil)
+		require.ErrorContains(t, "Could not get genesis block", err)
+	}
+}
+
 func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	db := dbTest.SetupDB(t)
 

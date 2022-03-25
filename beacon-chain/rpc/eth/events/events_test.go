@@ -57,8 +57,9 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 		wantedBlockRoot, err := wantedBlock.HashTreeRoot()
 		require.NoError(t, err)
 		genericResponse, err := anypb.New(&ethpb.EventBlock{
-			Slot:  8,
-			Block: wantedBlockRoot[:],
+			Slot:                8,
+			Block:               wantedBlockRoot[:],
+			ExecutionOptimistic: true,
 		})
 		require.NoError(t, err)
 		wantedMessage := &gateway.EventSource{
@@ -75,7 +76,8 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 			itemToSend: &feed.Event{
 				Type: blockfeed.ReceivedBlock,
 				Data: &blockfeed.ReceivedBlockData{
-					SignedBlock: wrapper.WrappedPhase0SignedBeaconBlock(wantedBlock),
+					SignedBlock:  wrapper.WrappedPhase0SignedBeaconBlock(wantedBlock),
+					IsOptimistic: true,
 				},
 			},
 			feed: srv.BlockNotifier.BlockFeed(),
@@ -244,6 +246,7 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 			EpochTransition:           true,
 			PreviousDutyDependentRoot: make([]byte, 32),
 			CurrentDutyDependentRoot:  make([]byte, 32),
+			ExecutionOptimistic:       true,
 		}
 		genericResponse, err := anypb.New(wantedHead)
 		require.NoError(t, err)
@@ -271,9 +274,10 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		defer ctrl.Finish()
 
 		wantedCheckpoint := &ethpb.EventFinalizedCheckpoint{
-			Block: make([]byte, 32),
-			State: make([]byte, 32),
-			Epoch: 8,
+			Block:               make([]byte, 32),
+			State:               make([]byte, 32),
+			Epoch:               8,
+			ExecutionOptimistic: true,
 		}
 		genericResponse, err := anypb.New(wantedCheckpoint)
 		require.NoError(t, err)
@@ -301,13 +305,14 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 		defer ctrl.Finish()
 
 		wantedReorg := &ethpb.EventChainReorg{
-			Slot:         8,
-			Depth:        1,
-			OldHeadBlock: make([]byte, 32),
-			NewHeadBlock: make([]byte, 32),
-			OldHeadState: make([]byte, 32),
-			NewHeadState: make([]byte, 32),
-			Epoch:        0,
+			Slot:                8,
+			Depth:               1,
+			OldHeadBlock:        make([]byte, 32),
+			NewHeadBlock:        make([]byte, 32),
+			OldHeadState:        make([]byte, 32),
+			NewHeadState:        make([]byte, 32),
+			Epoch:               0,
+			ExecutionOptimistic: true,
 		}
 		genericResponse, err := anypb.New(wantedReorg)
 		require.NoError(t, err)
