@@ -135,6 +135,7 @@ type config struct {
 	eth1HeaderReqLimit         uint64
 	beaconNodeStatsUpdater     BeaconNodeStatsUpdater
 	httpEndpoints              []network.Endpoint
+	executionEndpoint          string
 	executionEndpointJWTSecret []byte
 	currHttpEndpoint           network.Endpoint
 	finalizedStateAtStartup    state.BeaconState
@@ -213,8 +214,11 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	}
 
 	if err := s.initializeEngineAPIClient(ctx); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unable to initialize engine API client")
 	}
+
+	// Check transition configuration for the engine API client in the background.
+	go s.checkTransitionConfiguration(ctx)
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
@@ -250,9 +254,6 @@ func (s *Service) Start() {
 	if s.cfg.currHttpEndpoint.Url == "" {
 		return
 	}
-
-	// Check transition configuration for the engine API client in the background.
-	go s.checkTransitionConfiguration(s.ctx)
 
 	go func() {
 		s.isRunning = true
@@ -1058,10 +1059,13 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 
 // Initializes a client for the engine API if an execution provider endpoint is set.
 func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
+	if s.cfg.executionEndpoint == "" {
+		return nil
+	}
 	opts := []engine.Option{
 		engine.WithJWTSecret(s.cfg.executionEndpointJWTSecret),
 	}
-	client, err := engine.New(ctx, s.cfg.currHttpEndpoint.Url, opts...)
+	client, err := engine.New(ctx, s.cfg.executionEndpoint, opts...)
 	if err != nil {
 		return err
 	}
