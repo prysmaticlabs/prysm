@@ -302,11 +302,11 @@ func handlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []ui
 // handleBalanceSlice returns the root of a slice of validator balances.
 func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, error) {
 	if convertAll {
-		balancesMarshaling := make([][]byte, 0)
-		for _, b := range val {
+		balancesMarshaling := make([][]byte, len(val))
+		for i, b := range val {
 			balanceBuf := make([]byte, 8)
 			binary.LittleEndian.PutUint64(balanceBuf, b)
-			balancesMarshaling = append(balancesMarshaling, balanceBuf)
+			balancesMarshaling[i] = balanceBuf
 		}
 		balancesChunks, err := ssz.PackByChunk(balancesMarshaling)
 		if err != nil {

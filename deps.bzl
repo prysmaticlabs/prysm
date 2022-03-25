@@ -370,6 +370,19 @@ def prysm_deps():
         version = "v0.22.0-beta",
     )
     go_repository(
+        name = "com_github_btcsuite_btcd_btcec_v2",
+        importpath = "github.com/btcsuite/btcd/btcec/v2",
+        sum = "h1:YoYoC9J0jwfukodSBMzZYUVQ8PTiYg4BnOWiJVzTmLs=",
+        version = "v2.1.2",
+    )
+    go_repository(
+        name = "com_github_btcsuite_btcd_chaincfg_chainhash",
+        importpath = "github.com/btcsuite/btcd/chaincfg/chainhash",
+        sum = "h1:MSskdM4/xJYcFzy0altH/C/xHopifpWzHUi1JeVI34Q=",
+        version = "v1.0.0",
+    )
+
+    go_repository(
         name = "com_github_btcsuite_btclog",
         importpath = "github.com/btcsuite/btclog",
         sum = "h1:bAs4lUbRJpnnkd9VhRV3jjAVU7DJVjMaK+IsvSeZvFo=",
@@ -669,6 +682,18 @@ def prysm_deps():
         sum = "h1:sk9/l/KqpunDwP7pSjUg0keiOOLEnOBHzykLrsPppp4=",
         version = "v1.8.0",
     )
+    go_repository(
+        name = "com_github_decred_dcrd_crypto_blake256",
+        importpath = "github.com/decred/dcrd/crypto/blake256",
+        sum = "h1:/8DMNYp9SGi5f0w7uCm6d6M4OU2rGFK09Y2A4Xv7EE0=",
+        version = "v1.0.0",
+    )
+    go_repository(
+        name = "com_github_decred_dcrd_dcrec_secp256k1_v4",
+        importpath = "github.com/decred/dcrd/dcrec/secp256k1/v4",
+        sum = "h1:YLtO71vCjJRCBcrPMtQ9nqBsqpA1m5sE92cU+pd5Mcc=",
+        version = "v4.0.1",
+    )
 
     go_repository(
         name = "com_github_decred_dcrd_lru",
@@ -837,10 +862,11 @@ def prysm_deps():
         ],
         importpath = "github.com/ethereum/go-ethereum",
         patch_args = ["-p1"],
-        patches = ["//third_party:com_github_ethereum_go_ethereum_secp256k1.patch"],
-        replace = "github.com/MariusVanDerWijden/go-ethereum",
-        sum = "h1:lk3QScfS9ueTshQBpLQ0mhrHKkr6Ky15ilQH4VXmP4U=",
-        version = "v1.8.22-0.20220311140157-b951e9cbea24",
+        patches = [
+            "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
+        ],
+        sum = "h1:dZ/6iVmQ9XIKyp5V8TGoQmnpckp5bd2y/No31jZGhZU=",
+        version = "v1.10.17-0.20220323200026-535f25d65fa0",
     )
 
     go_repository(
@@ -1583,8 +1609,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_huin_goupnp",
         importpath = "github.com/huin/goupnp",
-        sum = "h1:RfGLP+h3mvisuWEyybxNq5Eft3NWhHLPeUN72kpKZoI=",
-        version = "v1.0.2",
+        sum = "h1:+EYBkW+dbi3F/atB+LSQZSWh7+HNrV3A/N0y6DSoy9k=",
+        version = "v1.0.3-0.20220313090229-ca81a64b4204",
     )
     go_repository(
         name = "com_github_huin_goutil",
@@ -2147,6 +2173,9 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_core",
+        build_directives = [
+            "gazelle:resolve go github.com/btcsuite/btcd/btcec @com_github_btcsuite_btcd//btcec:btcec",
+        ],
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-core",
         sum = "h1:IFG/s8dN6JN2OTrXX9eq2wNU/Zlz2KLdwZUp5FplgXI=",

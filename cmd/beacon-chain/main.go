@@ -33,7 +33,6 @@ import (
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.HTTPWeb3ProviderFlag,
-	flags.ExecutionProviderFlag,
 	flags.ExecutionJWTSecretFlag,
 	flags.FallbackWeb3ProviderFlag,
 	flags.RPCHost,
@@ -67,7 +66,7 @@ var appFlags = []cli.Flag{
 	flags.Eth1HeaderReqLimit,
 	flags.GenesisStatePath,
 	flags.MinPeersPerSubnet,
-	flags.FeeRecipient,
+	flags.SuggestedFeeRecipient,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,

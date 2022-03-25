@@ -3,9 +3,9 @@
 package flags
 
 import (
-	"encoding/hex"
 	"strings"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 )
@@ -15,12 +15,6 @@ var (
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",
 		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
-		Value: "",
-	}
-	// ExecutionProvider provides an HTTP or IPC access endpoint to an ETH execution node.
-	ExecutionProviderFlag = &cli.StringFlag{
-		Name:  "execution-provider",
-		Usage: "An http endpoint for an Ethereum execution node",
 		Value: "",
 	}
 	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
@@ -216,10 +210,10 @@ var (
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
 	}
-	// FeeRecipient specifies the fee recipient for the transaction fees.
-	FeeRecipient = &cli.StringFlag{
-		Name:  "fee-recipient",
-		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state.",
-		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
+	// SuggestedFeeRecipient specifies the fee recipient for the transaction fees.
+	SuggestedFeeRecipient = &cli.StringFlag{
+		Name:  "suggested-fee-recipient",
+		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state. Validator client can override this value through the preparebeaconproposer api.",
+		Value: fieldparams.EthBurnAddressHex,
 	}
 )

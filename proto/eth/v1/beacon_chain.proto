@@ -270,3 +270,12 @@ message DepositContract {
     // The address of the deployed deposit contract in use.
     string address = 2;
 }
+
+message WeakSubjectivityResponse {
+	WeakSubjectivityData data = 1;
+}
+
+message WeakSubjectivityData {
+    ethereum.eth.v1.Checkpoint ws_checkpoint = 1;
+    bytes state_root = 2;
+}

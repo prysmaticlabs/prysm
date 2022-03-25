@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"go.opencensus.io/trace"
 )
@@ -110,7 +111,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 			return nil, errors.Wrap(err, "could not get head state")
 		}
 	case "genesis":
-		s, err = p.BeaconDB.GenesisState(ctx)
+		s, err = p.StateBySlot(ctx, params.BeaconConfig().GenesisSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get genesis state")
 		}
@@ -203,7 +204,7 @@ func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (sta
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
 
-	st, err := p.ReplayerBuilder.ForSlot(target).ReplayBlocks(ctx)
+	st, err := p.ReplayerBuilder.ReplayerForSlot(target).ReplayBlocks(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("error while replaying history to slot=%d", target)
 		return nil, errors.Wrap(err, msg)
