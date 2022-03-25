@@ -18,6 +18,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 		finalizedEpoch:    finalizedEpoch,
 		proposerBoostRoot: [32]byte{},
 		nodeByRoot:        make(map[[fieldparams.RootLength]byte]*Node),
+		nodeByPayload:     make(map[[fieldparams.RootLength]byte]*Node),
 		pruneThreshold:    defaultPruneThreshold,
 	}
 
@@ -302,6 +303,6 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 }
 
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [fieldparams.RootLength]byte) ([][32]byte, error) {
-	return f.store.removeNode(ctx, root)
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [fieldparams.RootLength]byte) ([][32]byte, error) {
+	return f.store.setOptimisticToInvalid(ctx, root, payload)
 }
