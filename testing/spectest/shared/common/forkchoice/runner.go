@@ -103,6 +103,7 @@ func Run(t *testing.T, config string, fork int) {
 						}
 						r, err := beaconBlock.Block().HashTreeRoot()
 						require.NoError(t, err)
+						require.NoError(t, service.ForkChoicer().BoostProposerRoot(ctx, beaconBlock.Block().Slot(), r, service.GenesisTime()))
 						if step.Valid != nil && !*step.Valid {
 							require.Equal(t, true, service.ReceiveBlock(ctx, beaconBlock, r) != nil)
 						} else {
