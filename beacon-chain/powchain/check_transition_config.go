@@ -3,6 +3,7 @@ package powchain
 import (
 	"context"
 	"errors"
+	"math"
 	"math/big"
 	"time"
 
@@ -24,6 +25,10 @@ var (
 // If there are any discrepancies, we must log errors to ensure users can resolve
 //the problem and be ready for the merge transition.
 func (s *Service) checkTransitionConfiguration(ctx context.Context) {
+	// If Bellatrix fork epoch is not set, we do not run this check.
+	if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
+		return
+	}
 	if s.engineAPIClient == nil {
 		return
 	}
