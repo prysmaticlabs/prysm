@@ -905,6 +905,116 @@ func (*BeaconStateContainer_AltairState) isBeaconStateContainer_State() {}
 
 func (*BeaconStateContainer_BellatrixState) isBeaconStateContainer_State() {}
 
+type ForkChoiceHeadsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Data []*ForkChoiceHead `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
+}
+
+func (x *ForkChoiceHeadsResponse) Reset() {
+	*x = ForkChoiceHeadsResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ForkChoiceHeadsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForkChoiceHeadsResponse) ProtoMessage() {}
+
+func (x *ForkChoiceHeadsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForkChoiceHeadsResponse.ProtoReflect.Descriptor instead.
+func (*ForkChoiceHeadsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_eth_v2_beacon_state_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ForkChoiceHeadsResponse) GetData() []*ForkChoiceHead {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type ForkChoiceHead struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Root                []byte                                   `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
+	Slot                github_com_prysmaticlabs_eth2_types.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/eth2-types.Slot"`
+	ExecutionOptimistic bool                                     `protobuf:"varint,3,opt,name=execution_optimistic,json=executionOptimistic,proto3" json:"execution_optimistic,omitempty"`
+}
+
+func (x *ForkChoiceHead) Reset() {
+	*x = ForkChoiceHead{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ForkChoiceHead) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForkChoiceHead) ProtoMessage() {}
+
+func (x *ForkChoiceHead) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForkChoiceHead.ProtoReflect.Descriptor instead.
+func (*ForkChoiceHead) Descriptor() ([]byte, []int) {
+	return file_proto_eth_v2_beacon_state_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ForkChoiceHead) GetRoot() []byte {
+	if x != nil {
+		return x.Root
+	}
+	return nil
+}
+
+func (x *ForkChoiceHead) GetSlot() github_com_prysmaticlabs_eth2_types.Slot {
+	if x != nil {
+		return x.Slot
+	}
+	return github_com_prysmaticlabs_eth2_types.Slot(0)
+}
+
+func (x *ForkChoiceHead) GetExecutionOptimistic() bool {
+	if x != nil {
+		return x.ExecutionOptimistic
+	}
+	return false
+}
+
 var File_proto_eth_v2_beacon_state_proto protoreflect.FileDescriptor
 
 var file_proto_eth_v2_beacon_state_proto_rawDesc = []byte{
@@ -1212,16 +1322,31 @@ var file_proto_eth_v2_beacon_state_proto_rawDesc = []byte{
 	0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x53,
 	0x74, 0x61, 0x74, 0x65, 0x42, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x48, 0x00, 0x52,
 	0x0e, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x53, 0x74, 0x61, 0x74, 0x65, 0x42,
-	0x07, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x74, 0x65, 0x42, 0x80, 0x01, 0x0a, 0x13, 0x6f, 0x72, 0x67,
-	0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32,
-	0x42, 0x12, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x50,
-	0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2f, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
-	0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73,
-	0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68,
-	0x2f, 0x76, 0x32, 0x3b, 0x65, 0x74, 0x68, 0xaa, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65,
-	0x75, 0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e, 0x56, 0x32, 0xca, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65,
-	0x72, 0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x76, 0x32, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x07, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x74, 0x65, 0x22, 0x4e, 0x0a, 0x17, 0x46, 0x6f, 0x72, 0x6b,
+	0x43, 0x68, 0x6f, 0x69, 0x63, 0x65, 0x48, 0x65, 0x61, 0x64, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x33, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x03, 0x28,
+	0x0b, 0x32, 0x1f, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
+	0x2e, 0x76, 0x32, 0x2e, 0x46, 0x6f, 0x72, 0x6b, 0x43, 0x68, 0x6f, 0x69, 0x63, 0x65, 0x48, 0x65,
+	0x61, 0x64, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0xa1, 0x01, 0x0a, 0x0e, 0x46, 0x6f, 0x72,
+	0x6b, 0x43, 0x68, 0x6f, 0x69, 0x63, 0x65, 0x48, 0x65, 0x61, 0x64, 0x12, 0x1a, 0x0a, 0x04, 0x72,
+	0x6f, 0x6f, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x33,
+	0x32, 0x52, 0x04, 0x72, 0x6f, 0x6f, 0x74, 0x12, 0x40, 0x0a, 0x04, 0x73, 0x6c, 0x6f, 0x74, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x04, 0x42, 0x2c, 0x82, 0xb5, 0x18, 0x28, 0x67, 0x69, 0x74, 0x68, 0x75,
+	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c,
+	0x61, 0x62, 0x73, 0x2f, 0x65, 0x74, 0x68, 0x32, 0x2d, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x53,
+	0x6c, 0x6f, 0x74, 0x52, 0x04, 0x73, 0x6c, 0x6f, 0x74, 0x12, 0x31, 0x0a, 0x14, 0x65, 0x78, 0x65,
+	0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x6f, 0x70, 0x74, 0x69, 0x6d, 0x69, 0x73, 0x74, 0x69,
+	0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x13, 0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69,
+	0x6f, 0x6e, 0x4f, 0x70, 0x74, 0x69, 0x6d, 0x69, 0x73, 0x74, 0x69, 0x63, 0x42, 0x80, 0x01, 0x0a,
+	0x13, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
+	0x68, 0x2e, 0x76, 0x32, 0x42, 0x12, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74,
+	0x74, 0x65, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2f, 0x67, 0x69, 0x74, 0x68,
+	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63,
+	0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x32, 0x3b, 0x65, 0x74, 0x68, 0xaa, 0x02, 0x0f, 0x45, 0x74,
+	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e, 0x56, 0x32, 0xca, 0x02, 0x0f,
+	0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x76, 0x32, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1236,7 +1361,7 @@ func file_proto_eth_v2_beacon_state_proto_rawDescGZIP() []byte {
 	return file_proto_eth_v2_beacon_state_proto_rawDescData
 }
 
-var file_proto_eth_v2_beacon_state_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_eth_v2_beacon_state_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_eth_v2_beacon_state_proto_goTypes = []interface{}{
 	(*BeaconStateV2)(nil),            // 0: ethereum.eth.v2.BeaconStateV2
 	(*BeaconStateBellatrix)(nil),     // 1: ethereum.eth.v2.BeaconStateBellatrix
@@ -1245,48 +1370,51 @@ var file_proto_eth_v2_beacon_state_proto_goTypes = []interface{}{
 	(*BeaconStateResponseV2)(nil),    // 4: ethereum.eth.v2.BeaconStateResponseV2
 	(*BeaconStateSSZResponseV2)(nil), // 5: ethereum.eth.v2.BeaconStateSSZResponseV2
 	(*BeaconStateContainer)(nil),     // 6: ethereum.eth.v2.BeaconStateContainer
-	(*v1.Fork)(nil),                  // 7: ethereum.eth.v1.Fork
-	(*v1.BeaconBlockHeader)(nil),     // 8: ethereum.eth.v1.BeaconBlockHeader
-	(*v1.Eth1Data)(nil),              // 9: ethereum.eth.v1.Eth1Data
-	(*v1.Validator)(nil),             // 10: ethereum.eth.v1.Validator
-	(*v1.Checkpoint)(nil),            // 11: ethereum.eth.v1.Checkpoint
-	(*SyncCommittee)(nil),            // 12: ethereum.eth.v2.SyncCommittee
-	(Version)(0),                     // 13: ethereum.eth.v2.Version
-	(*v1.BeaconState)(nil),           // 14: ethereum.eth.v1.BeaconState
+	(*ForkChoiceHeadsResponse)(nil),  // 7: ethereum.eth.v2.ForkChoiceHeadsResponse
+	(*ForkChoiceHead)(nil),           // 8: ethereum.eth.v2.ForkChoiceHead
+	(*v1.Fork)(nil),                  // 9: ethereum.eth.v1.Fork
+	(*v1.BeaconBlockHeader)(nil),     // 10: ethereum.eth.v1.BeaconBlockHeader
+	(*v1.Eth1Data)(nil),              // 11: ethereum.eth.v1.Eth1Data
+	(*v1.Validator)(nil),             // 12: ethereum.eth.v1.Validator
+	(*v1.Checkpoint)(nil),            // 13: ethereum.eth.v1.Checkpoint
+	(*SyncCommittee)(nil),            // 14: ethereum.eth.v2.SyncCommittee
+	(Version)(0),                     // 15: ethereum.eth.v2.Version
+	(*v1.BeaconState)(nil),           // 16: ethereum.eth.v1.BeaconState
 }
 var file_proto_eth_v2_beacon_state_proto_depIdxs = []int32{
-	7,  // 0: ethereum.eth.v2.BeaconStateV2.fork:type_name -> ethereum.eth.v1.Fork
-	8,  // 1: ethereum.eth.v2.BeaconStateV2.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	9,  // 2: ethereum.eth.v2.BeaconStateV2.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
-	9,  // 3: ethereum.eth.v2.BeaconStateV2.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
-	10, // 4: ethereum.eth.v2.BeaconStateV2.validators:type_name -> ethereum.eth.v1.Validator
-	11, // 5: ethereum.eth.v2.BeaconStateV2.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	11, // 6: ethereum.eth.v2.BeaconStateV2.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	11, // 7: ethereum.eth.v2.BeaconStateV2.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	12, // 8: ethereum.eth.v2.BeaconStateV2.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	12, // 9: ethereum.eth.v2.BeaconStateV2.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	7,  // 10: ethereum.eth.v2.BeaconStateBellatrix.fork:type_name -> ethereum.eth.v1.Fork
-	8,  // 11: ethereum.eth.v2.BeaconStateBellatrix.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	9,  // 12: ethereum.eth.v2.BeaconStateBellatrix.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
-	9,  // 13: ethereum.eth.v2.BeaconStateBellatrix.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
-	10, // 14: ethereum.eth.v2.BeaconStateBellatrix.validators:type_name -> ethereum.eth.v1.Validator
-	11, // 15: ethereum.eth.v2.BeaconStateBellatrix.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	11, // 16: ethereum.eth.v2.BeaconStateBellatrix.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	11, // 17: ethereum.eth.v2.BeaconStateBellatrix.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	12, // 18: ethereum.eth.v2.BeaconStateBellatrix.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	12, // 19: ethereum.eth.v2.BeaconStateBellatrix.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	9,  // 0: ethereum.eth.v2.BeaconStateV2.fork:type_name -> ethereum.eth.v1.Fork
+	10, // 1: ethereum.eth.v2.BeaconStateV2.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	11, // 2: ethereum.eth.v2.BeaconStateV2.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
+	11, // 3: ethereum.eth.v2.BeaconStateV2.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
+	12, // 4: ethereum.eth.v2.BeaconStateV2.validators:type_name -> ethereum.eth.v1.Validator
+	13, // 5: ethereum.eth.v2.BeaconStateV2.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	13, // 6: ethereum.eth.v2.BeaconStateV2.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	13, // 7: ethereum.eth.v2.BeaconStateV2.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	14, // 8: ethereum.eth.v2.BeaconStateV2.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	14, // 9: ethereum.eth.v2.BeaconStateV2.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	9,  // 10: ethereum.eth.v2.BeaconStateBellatrix.fork:type_name -> ethereum.eth.v1.Fork
+	10, // 11: ethereum.eth.v2.BeaconStateBellatrix.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	11, // 12: ethereum.eth.v2.BeaconStateBellatrix.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
+	11, // 13: ethereum.eth.v2.BeaconStateBellatrix.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
+	12, // 14: ethereum.eth.v2.BeaconStateBellatrix.validators:type_name -> ethereum.eth.v1.Validator
+	13, // 15: ethereum.eth.v2.BeaconStateBellatrix.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	13, // 16: ethereum.eth.v2.BeaconStateBellatrix.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	13, // 17: ethereum.eth.v2.BeaconStateBellatrix.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	14, // 18: ethereum.eth.v2.BeaconStateBellatrix.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	14, // 19: ethereum.eth.v2.BeaconStateBellatrix.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
 	2,  // 20: ethereum.eth.v2.BeaconStateBellatrix.latest_execution_payload_header:type_name -> ethereum.eth.v2.ExecutionPayloadHeader
-	13, // 21: ethereum.eth.v2.BeaconStateResponseV2.version:type_name -> ethereum.eth.v2.Version
+	15, // 21: ethereum.eth.v2.BeaconStateResponseV2.version:type_name -> ethereum.eth.v2.Version
 	6,  // 22: ethereum.eth.v2.BeaconStateResponseV2.data:type_name -> ethereum.eth.v2.BeaconStateContainer
-	13, // 23: ethereum.eth.v2.BeaconStateSSZResponseV2.version:type_name -> ethereum.eth.v2.Version
-	14, // 24: ethereum.eth.v2.BeaconStateContainer.phase0_state:type_name -> ethereum.eth.v1.BeaconState
+	15, // 23: ethereum.eth.v2.BeaconStateSSZResponseV2.version:type_name -> ethereum.eth.v2.Version
+	16, // 24: ethereum.eth.v2.BeaconStateContainer.phase0_state:type_name -> ethereum.eth.v1.BeaconState
 	0,  // 25: ethereum.eth.v2.BeaconStateContainer.altair_state:type_name -> ethereum.eth.v2.BeaconStateV2
 	1,  // 26: ethereum.eth.v2.BeaconStateContainer.bellatrix_state:type_name -> ethereum.eth.v2.BeaconStateBellatrix
-	27, // [27:27] is the sub-list for method output_type
-	27, // [27:27] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	8,  // 27: ethereum.eth.v2.ForkChoiceHeadsResponse.data:type_name -> ethereum.eth.v2.ForkChoiceHead
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_proto_eth_v2_beacon_state_proto_init() }
@@ -1381,6 +1509,30 @@ func file_proto_eth_v2_beacon_state_proto_init() {
 				return nil
 			}
 		}
+		file_proto_eth_v2_beacon_state_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ForkChoiceHeadsResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_eth_v2_beacon_state_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ForkChoiceHead); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	file_proto_eth_v2_beacon_state_proto_msgTypes[6].OneofWrappers = []interface{}{
 		(*BeaconStateContainer_Phase0State)(nil),
@@ -1393,7 +1545,7 @@ func file_proto_eth_v2_beacon_state_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_eth_v2_beacon_state_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

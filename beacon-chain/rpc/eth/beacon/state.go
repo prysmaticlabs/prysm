@@ -131,12 +131,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 
 	st, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
 	if err != nil {

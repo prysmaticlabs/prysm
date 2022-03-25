@@ -131,11 +131,11 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 
 				valActivated := v.checkAndLogValidatorStatus(statuses)
 				if valActivated {
+					logActiveValidatorStatus(statuses)
 					// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 					if err := v.UpdateFeeRecipient(ctx, remoteKm); err != nil {
 						return err
 					}
-					logActiveValidatorStatus(statuses)
 				} else {
 					continue
 				}
@@ -179,11 +179,11 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 
 				valActivated := v.checkAndLogValidatorStatus(statuses)
 				if valActivated {
+					logActiveValidatorStatus(statuses)
 					// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 					if err := v.UpdateFeeRecipient(ctx, v.keyManager); err != nil {
 						return err
 					}
-					logActiveValidatorStatus(statuses)
 				} else {
 					continue
 				}

@@ -30,7 +30,7 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	err := grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
 	if err != nil {
 		return status.Errorf(
-			codes.InvalidArgument,
+			codes.Internal,
 			"Syncing to latest head, not ready to respond. Could not prepare sync details: %v",
 			err,
 		)

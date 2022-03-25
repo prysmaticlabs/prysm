@@ -323,9 +323,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
-			if err := s.handleEpochBoundary(ctx, preState); err != nil {
-				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
-			}
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
