@@ -54,6 +54,7 @@ message StateRequest {
 
 message StateRootResponse {
     StateRoot data = 1;
+    bool execution_optimistic = 2;
 
     message StateRoot {
         // SSZ encoded state root for the requested state.
@@ -63,10 +64,12 @@ message StateRootResponse {
 
 message StateForkResponse {
     Fork data = 1;
+    bool execution_optimistic = 2;
 }
 
 message StateFinalityCheckpointResponse {
     StateFinalityCheckpoint data = 1;
+    bool execution_optimistic = 2;
 
     message StateFinalityCheckpoint {
         ethereum.eth.v1.Checkpoint previous_justified = 1;
@@ -100,10 +103,12 @@ message ValidatorBalancesRequest {
 
 message StateValidatorsResponse {
     repeated ValidatorContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message ValidatorBalancesResponse {
     repeated ValidatorBalance data = 1;
+    bool execution_optimistic = 2;
 }
 
 message ValidatorBalance {
@@ -125,6 +130,7 @@ message StateValidatorRequest {
 
 message StateValidatorResponse {
     ValidatorContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message StateCommitteesRequest {
@@ -144,12 +150,14 @@ message StateCommitteesRequest {
 
 message StateCommitteesResponse {
     repeated Committee data = 1;
+    bool execution_optimistic = 2;
 }
 
 // Beacon Block API related messages.
 
 message BlockAttestationsResponse {
     repeated ethereum.eth.v1.Attestation data = 1;
+    bool execution_optimistic = 2;
 }
 
 message BlockRootContainer {
@@ -159,6 +167,7 @@ message BlockRootContainer {
 
 message BlockRootResponse {
     BlockRootContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message BlockHeadersRequest {
@@ -171,6 +180,7 @@ message BlockHeadersRequest {
 
 message BlockHeadersResponse {
     repeated BlockHeaderContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message BlockRequest {
@@ -181,6 +191,7 @@ message BlockRequest {
 
 message BlockHeaderResponse {
     BlockHeaderContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message BlockHeaderContainer {

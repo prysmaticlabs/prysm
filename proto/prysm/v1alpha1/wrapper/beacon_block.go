@@ -7,6 +7,10 @@ import (
 )
 
 var (
+	// ErrUnsupportedField is returned when a field is not supported by a specific beacon block type.
+	// This allows us to create a generic beacon block interface that is implemented by different
+	// fork versions of beacon blocks.
+	ErrUnsupportedField = errors.New("unsupported field for block type")
 	// ErrUnsupportedSignedBeaconBlock is returned when the struct type is not a supported signed
 	// beacon block type.
 	ErrUnsupportedSignedBeaconBlock = errors.New("unsupported signed beacon block")
