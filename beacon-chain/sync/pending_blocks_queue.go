@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -69,7 +69,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		}
 
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
-		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+		span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 		s.pendingQueueLock.RLock()
 		bs := s.pendingBlocksInCache(slot)
@@ -328,7 +328,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if ssz.DeepEqual(blk.Proto(), b.Proto()) {
+		if equality.DeepEqual(blk.Proto(), b.Proto()) {
 			continue
 		}
 		newBlks = append(newBlks, blk)

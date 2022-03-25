@@ -19,9 +19,6 @@ import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
 
-import "proto/eth/v1/validator.proto";
-import "proto/eth/v2/validator.proto";
-
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
 option java_multiple_files = true;
@@ -94,25 +91,25 @@ message ListKeystoresResponse {
     bytes validating_pubkey = 1;
     string derivation_path = 2;
   }
-  repeated Keystore keystores = 1;
+  repeated Keystore data = 1;
 }
 
 message ImportKeystoresRequest {
   repeated string keystores = 1;
-  repeated string passwords  = 2;
+  repeated string passwords = 2;
   string slashing_protection = 3;
 }
 
 message ImportKeystoresResponse {
-  repeated ImportedKeystoreStatus statuses = 1;
+  repeated ImportedKeystoreStatus data = 1;
 }
 
 message DeleteKeystoresRequest {
-  repeated bytes public_keys = 1;
+  repeated bytes pubkeys = 1;
 }
 
 message DeleteKeystoresResponse {
-  repeated DeletedKeystoreStatus statuses = 1;
+  repeated DeletedKeystoreStatus data = 1;
   string slashing_protection = 2;
 }
 

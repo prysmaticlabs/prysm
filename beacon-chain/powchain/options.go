@@ -32,6 +32,14 @@ func WithHttpEndpoints(endpointStrings []string) Option {
 	}
 }
 
+// WithExecutionClientJWTSecret for authenticating the execution node JSON-RPC endpoint.
+func WithExecutionClientJWTSecret(jwtSecret []byte) Option {
+	return func(s *Service) error {
+		s.cfg.executionEndpointJWTSecret = jwtSecret
+		return nil
+	}
+}
+
 // WithDepositContractAddress for the deposit contract.
 func WithDepositContractAddress(addr common.Address) Option {
 	return func(s *Service) error {

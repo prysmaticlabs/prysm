@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -180,7 +181,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	bodyRoot, err := (&ethpb.BeaconBlockBodyAltair{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: make([]byte, 32),
+			DepositRoot: make([]byte, fieldparams.RootLength),
 			BlockHash:   make([]byte, 32),
 		},
 		Graffiti: make([]byte, 32),
@@ -246,12 +247,12 @@ func emptyGenesisState() (state.BeaconStateAltair, error) {
 func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 	return &ethpb.SignedBeaconBlockAltair{
 		Block: &ethpb.BeaconBlockAltair{
-			ParentRoot: make([]byte, 32),
-			StateRoot:  make([]byte, 32),
+			ParentRoot: make([]byte, fieldparams.RootLength),
+			StateRoot:  make([]byte, fieldparams.RootLength),
 			Body: &ethpb.BeaconBlockBodyAltair{
 				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot: make([]byte, 32),
+					DepositRoot: make([]byte, fieldparams.RootLength),
 					BlockHash:   make([]byte, 32),
 				},
 				Graffiti:          make([]byte, 32),
@@ -286,7 +287,7 @@ func BlockSignatureAltair(
 		return nil, err
 	}
 	block.StateRoot = s[:]
-	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}

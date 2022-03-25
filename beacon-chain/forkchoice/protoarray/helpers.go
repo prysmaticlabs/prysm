@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	pmath "github.com/prysmaticlabs/prysm/math"
 	"go.opencensus.io/trace"
 )
 
@@ -15,7 +16,7 @@ func computeDeltas(
 	votes []Vote,
 	oldBalances, newBalances []uint64,
 ) ([]int, []Vote, error) {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.computeDeltas")
+	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.computeDeltas")
 	defer span.End()
 
 	deltas := make([]int, len(blockIndices))
@@ -24,7 +25,7 @@ func computeDeltas(
 		oldBalance := uint64(0)
 		newBalance := uint64(0)
 
-		// Skip if validator has never voted for current root and next root (ie. if the
+		// Skip if validator has never voted for current root and next root (i.e. if the
 		// votes are zero hash aka genesis block), there's nothing to compute.
 		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
 			continue
@@ -46,19 +47,27 @@ func computeDeltas(
 			if ok {
 				// Protection against out of bound, the `nextDeltaIndex` which defines
 				// the block location in the dag can not exceed the total `delta` length.
-				if int(nextDeltaIndex) >= len(deltas) {
+				if nextDeltaIndex >= uint64(len(deltas)) {
 					return nil, nil, errInvalidNodeDelta
 				}
-				deltas[nextDeltaIndex] += int(newBalance)
+				delta, err := pmath.Int(newBalance)
+				if err != nil {
+					return nil, nil, err
+				}
+				deltas[nextDeltaIndex] += delta
 			}
 
 			currentDeltaIndex, ok := blockIndices[vote.currentRoot]
 			if ok {
 				// Protection against out of bound (same as above)
-				if int(currentDeltaIndex) >= len(deltas) {
+				if currentDeltaIndex >= uint64(len(deltas)) {
 					return nil, nil, errInvalidNodeDelta
 				}
-				deltas[currentDeltaIndex] -= int(oldBalance)
+				delta, err := pmath.Int(oldBalance)
+				if err != nil {
+					return nil, nil, err
+				}
+				deltas[currentDeltaIndex] -= delta
 			}
 		}
 
@@ -83,6 +92,7 @@ func copyNode(node *Node) *Node {
 		slot:           node.slot,
 		root:           copiedRoot,
 		parent:         node.parent,
+		payloadHash:    node.payloadHash,
 		justifiedEpoch: node.justifiedEpoch,
 		finalizedEpoch: node.finalizedEpoch,
 		weight:         node.weight,

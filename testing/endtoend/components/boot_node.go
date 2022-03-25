@@ -50,12 +50,12 @@ func (node *BootNode) Start(ctx context.Context) error {
 
 	args := []string{
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.BootNodePort),
-		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+20),
+		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.Ports.BootNodePort),
+		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.Ports.BootNodeMetricsPort),
 		"--debug",
 	}
 
-	cmd := exec.CommandContext(ctx, binaryPath, args...) /* #nosec G204 */
+	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	cmd.Stdout = stdOutFile
 	cmd.Stderr = stdOutFile
 	log.Infof("Starting boot node with flags: %s", strings.Join(args[1:], " "))

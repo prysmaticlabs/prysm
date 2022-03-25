@@ -8,19 +8,20 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestSetupRegistrationContract_OK(t *testing.T) {
-	_, err := depositcontract.Setup()
+	_, err := mock.Setup()
 	assert.NoError(t, err, "Can not deploy validator registration contract")
 }
 
 // negative test case, deposit with less than 1 ETH which is less than the top off amount.
 func TestRegister_Below1ETH(t *testing.T) {
-	testAccount, err := depositcontract.Setup()
+	testAccount, err := mock.Setup()
 	require.NoError(t, err)
 
 	// Generate deposit data
@@ -31,16 +32,16 @@ func TestRegister_Below1ETH(t *testing.T) {
 
 	var depositDataRoot [32]byte
 	copy(depositDataRoot[:], depositDataRoots[0])
-	testAccount.TxOpts.Value = depositcontract.LessThan1Eth()
+	testAccount.TxOpts.Value = mock.LessThan1Eth()
 	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalCredentials, depositDataItems[0].Signature, depositDataRoot)
 	assert.ErrorContains(t, "execution reverted", err, "Validator registration should have failed with insufficient deposit")
 }
 
 // normal test case, test depositing 32 ETH and verify HashChainValue event is correctly emitted.
 func TestValidatorRegister_OK(t *testing.T) {
-	testAccount, err := depositcontract.Setup()
+	testAccount, err := mock.Setup()
 	require.NoError(t, err)
-	testAccount.TxOpts.Value = depositcontract.Amount32Eth()
+	testAccount.TxOpts.Value = mock.Amount32Eth()
 
 	// Generate deposit data
 	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, 1)

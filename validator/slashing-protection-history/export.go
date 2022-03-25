@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
@@ -19,18 +21,14 @@ import (
 func ExportStandardProtectionJSON(
 	ctx context.Context,
 	validatorDB db.Database,
-	keysToFilter ...[]byte,
+	filteredKeys ...[]byte,
 ) (*format.EIPSlashingProtectionFormat, error) {
-	keysFilterMap := make(map[string]bool, len(keysToFilter))
-	for _, k := range keysToFilter {
-		keysFilterMap[string(k)] = true
-	}
 	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	genesisValidatorsRoot, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis validators root from DB")
 	}
-	if genesisValidatorsRoot == nil || bytes.Equal(genesisValidatorsRoot, params.BeaconConfig().ZeroHash[:]) {
+	if genesisValidatorsRoot == nil || !bytesutil.IsValidRoot(genesisValidatorsRoot) {
 		return nil, errors.New(
 			"genesis validators root is empty, perhaps you are not connected to your beacon node",
 		)
@@ -42,6 +40,12 @@ func ExportStandardProtectionJSON(
 	interchangeJSON.Metadata.GenesisValidatorsRoot = genesisRootHex
 	interchangeJSON.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
 
+	// Allow for filtering data for the keys we wish to export.
+	filteredKeysMap := make(map[string]bool, len(filteredKeys))
+	for _, k := range filteredKeys {
+		filteredKeysMap[string(k)] = true
+	}
+
 	// Extract the existing public keys in our database.
 	proposedPublicKeys, err := validatorDB.ProposedPublicKeys(ctx)
 	if err != nil {
@@ -51,14 +55,14 @@ func ExportStandardProtectionJSON(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve attested public keys from DB")
 	}
-	dataByPubKey := make(map[[48]byte]*format.ProtectionData)
+	dataByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]*format.ProtectionData)
 
 	// Extract the signed proposals by public key.
 	bar := progress.InitializeProgressBar(
 		len(proposedPublicKeys), "Extracting signed blocks by validator public key",
 	)
 	for _, pubKey := range proposedPublicKeys {
-		if _, ok := keysFilterMap[string(pubKey[:])]; len(keysToFilter) > 0 && !ok {
+		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
@@ -84,7 +88,7 @@ func ExportStandardProtectionJSON(
 		len(attestedPublicKeys), "Extracting signed attestations by validator public key",
 	)
 	for _, pubKey := range attestedPublicKeys {
-		if _, ok := keysFilterMap[string(pubKey[:])]; len(keysToFilter) > 0 && !ok {
+		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
 		pubKeyHex, err := pubKeyToHexString(pubKey[:])
@@ -127,7 +131,7 @@ func ExportStandardProtectionJSON(
 	return interchangeJSON, nil
 }
 
-func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedAttestation, error) {
+func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*format.SignedAttestation, error) {
 	// If a key does not have an attestation history in our database, we return nil.
 	// This way, a user will be able to export their slashing protection history
 	// even if one of their keys does not have a history of signed attestations.
@@ -169,7 +173,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 	return signedAttestations, nil
 }
 
-func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [48]byte) ([]*format.SignedBlock, error) {
+func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*format.SignedBlock, error) {
 	// If a key does not have a lowest or highest signed proposal history
 	// in our database, we return nil. This way, a user will be able to export their
 	// slashing protection history even if one of their keys does not have a history

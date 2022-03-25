@@ -9,10 +9,12 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestValidatorMap_DistinctCopy(t *testing.T) {
@@ -20,7 +22,7 @@ func TestValidatorMap_DistinctCopy(t *testing.T) {
 	vals := make([]*ethpb.Validator, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -48,7 +50,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	vals := make([]*ethpb.Validator, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -62,10 +64,12 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
+	newState, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{
 		Validators: vals,
 	})
 	assert.NoError(t, err)
+	st, ok := newState.(*BeaconState)
+	require.Equal(t, true, ok)
 
 	wg := new(sync.WaitGroup)
 
@@ -114,7 +118,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	bals := make([]uint64, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -143,11 +147,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	for i := 0; i < len(mockrandaoMixes); i++ {
 		mockrandaoMixes[i] = zeroHash[:]
 	}
-	var pubKeys [][]byte
-	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
-		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
-	}
-	st, err := InitializeFromProto(&ethpb.BeaconState{
+	newState, err := InitializeFromProto(&ethpb.BeaconState{
 		Slot:                  1,
 		GenesisValidatorsRoot: make([]byte, 32),
 		Fork: &ethpb.Fork{
@@ -156,9 +156,9 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 			Epoch:           0,
 		},
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{
-			ParentRoot: make([]byte, 32),
-			StateRoot:  make([]byte, 32),
-			BodyRoot:   make([]byte, 32),
+			ParentRoot: make([]byte, fieldparams.RootLength),
+			StateRoot:  make([]byte, fieldparams.RootLength),
+			BodyRoot:   make([]byte, fieldparams.RootLength),
 		},
 		Validators: vals,
 		Balances:   bals,
@@ -170,12 +170,14 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		StateRoots:                  mockstateRoots,
 		RandaoMixes:                 mockrandaoMixes,
 		JustificationBits:           bitfield.NewBitvector4(),
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, 32)},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 	})
 	assert.NoError(t, err)
+	st, ok := newState.(*BeaconState)
+	require.Equal(t, true, ok)
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
 
@@ -193,4 +195,20 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.state.Balances)
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
+}
+
+func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyPreviousParticipationBits is not supported for phase 0 beacon state", st.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
+}
+
+func TestBeaconState_ModifyCurrentParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyCurrentParticipationBits is not supported for phase 0 beacon state", st.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
 }

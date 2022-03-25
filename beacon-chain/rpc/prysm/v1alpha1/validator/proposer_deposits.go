@@ -174,7 +174,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 		}
 		insertIndex++
 	}
-	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
+	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log a warning here, as the cached trie is invalid.
 	if !valid {
 		log.Warnf("Cached deposit trie is invalid, rebuilding it now: %v", err)
@@ -204,7 +204,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 		return nil, err
 	}
 
-	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
+	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log an error here, as even with rebuilding the trie, it is still invalid.
 	if !valid {
 		log.Errorf("Rebuilt deposit trie is invalid: %v", err)
@@ -213,7 +213,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 }
 
 // validate that the provided deposit trie matches up with the canonical eth1 data provided.
-func (vs *Server) validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
+func validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
 	if trie.NumOfItems() != int(canonicalEth1Data.DepositCount) {
 		return false, errors.Errorf("wanted the canonical count of %d but received %d", canonicalEth1Data.DepositCount, trie.NumOfItems())
 	}

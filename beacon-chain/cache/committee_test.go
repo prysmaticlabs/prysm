@@ -102,7 +102,7 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	}
 
 	k := cache.CommitteeCache.Keys()
-	assert.Equal(t, maxCommitteesCacheSize, uint64(len(k)))
+	assert.Equal(t, maxCommitteesCacheSize, len(k))
 
 	sort.Slice(k, func(i, j int) bool {
 		return k[i].(string) < k[j].(string)

@@ -4,12 +4,14 @@ import (
 	"math"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
 func MainnetConfig() *BeaconChainConfig {
+	if mainnetBeaconConfig.ForkVersionSchedule == nil {
+		mainnetBeaconConfig.InitializeForkSchedule()
+	}
 	return mainnetBeaconConfig
 }
 
@@ -23,11 +25,15 @@ const (
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
+	// Placeholder for the merge epoch until it is decided
+	mainnetBellatrixForkEpoch = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                   1 << 20, // 1 MiB
-	MaxChunkSize:                    1 << 20, // 1 MiB
+	GossipMaxSize:                   1 << 20,      // 1 MiB
+	GossipMaxSizeBellatrix:          10 * 1 << 20, // 10 MiB
+	MaxChunkSize:                    1 << 20,      // 1 MiB
+	MaxChunkSizeBellatrix:           10 * 1 << 20, // 10 MiB
 	AttestationSubnetCount:          64,
 	AttestationPropagationSlotRange: 32,
 	MaxRequestBlocks:                1 << 10, // 1024
@@ -110,6 +116,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
 
+	// Fork choice algorithm constants.
+	ProposerScoreBoost: 70,
+	IntervalsPerSlot:   3,
+
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.
 	DepositNetworkID:       1, // Network ID of eth1 mainnet.
@@ -161,24 +171,23 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
 
 	// Prysm constants.
-	GweiPerEth:                  1000000000,
-	BLSSecretKeyLength:          32,
-	BLSPubkeyLength:             48,
-	BLSSignatureLength:          96,
-	DefaultBufferSize:           10000,
-	WithdrawalPrivkeyFileName:   "/shardwithdrawalkey",
-	ValidatorPrivkeyFileName:    "/validatorprivatekey",
-	RPCSyncCheck:                1,
-	EmptySignature:              [96]byte{},
-	DefaultPageSize:             250,
-	MaxPeersToSync:              15,
-	SlotsPerArchivedPoint:       2048,
-	GenesisCountdownInterval:    time.Minute,
-	ConfigName:                  ConfigNames[Mainnet],
-	PresetBase:                  "mainnet",
-	BeaconStateFieldCount:       21,
-	BeaconStateAltairFieldCount: 24,
-	BeaconStateMergeFieldCount:  25,
+	GweiPerEth:                     1000000000,
+	BLSSecretKeyLength:             32,
+	BLSPubkeyLength:                48,
+	DefaultBufferSize:              10000,
+	WithdrawalPrivkeyFileName:      "/shardwithdrawalkey",
+	ValidatorPrivkeyFileName:       "/validatorprivatekey",
+	RPCSyncCheck:                   1,
+	EmptySignature:                 [96]byte{},
+	DefaultPageSize:                250,
+	MaxPeersToSync:                 15,
+	SlotsPerArchivedPoint:          2048,
+	GenesisCountdownInterval:       time.Minute,
+	ConfigName:                     ConfigNames[Mainnet],
+	PresetBase:                     "mainnet",
+	BeaconStateFieldCount:          21,
+	BeaconStateAltairFieldCount:    24,
+	BeaconStateBellatrixFieldCount: 25,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -189,19 +198,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisForkVersion:          []byte{0, 0, 0, 0},
-	AltairForkVersion:           []byte{1, 0, 0, 0},
-	AltairForkEpoch:             mainnetAltairForkEpoch,
-	MergeForkVersion:            []byte{2, 0, 0, 0},
-	MergeForkEpoch:              math.MaxUint64,
-	ShardingForkVersion:         []byte{3, 0, 0, 0},
-	ShardingForkEpoch:           math.MaxUint64,
-	MinAnchorPowBlockDifficulty: 4294967296,
-	ForkVersionSchedule: map[[4]byte]types.Epoch{
-		{0, 0, 0, 0}: genesisForkEpoch,
-		{1, 0, 0, 0}: mainnetAltairForkEpoch,
-		// Any further forks must be specified here by their epoch number.
-	},
+	GenesisEpoch:         genesisForkEpoch,
+	GenesisForkVersion:   []byte{0, 0, 0, 0},
+	AltairForkVersion:    []byte{1, 0, 0, 0},
+	AltairForkEpoch:      mainnetAltairForkEpoch,
+	BellatrixForkVersion: []byte{2, 0, 0, 0},
+	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
+	ShardingForkVersion:  []byte{3, 0, 0, 0},
+	ShardingForkEpoch:    math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -228,13 +232,18 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	EpochsPerSyncCommitteePeriod: 256,
 
 	// Updated penalty values.
-	InactivityPenaltyQuotientAltair:      3 * 1 << 24, //50331648
-	MinSlashingPenaltyQuotientAltair:     64,
-	ProportionalSlashingMultiplierAltair: 2,
+	InactivityPenaltyQuotientAltair:         3 * 1 << 24, //50331648
+	MinSlashingPenaltyQuotientAltair:        64,
+	ProportionalSlashingMultiplierAltair:    2,
+	MinSlashingPenaltyQuotientBellatrix:     32,
+	ProportionalSlashingMultiplierBellatrix: 3,
+	InactivityPenaltyQuotientBellatrix:      1 << 24,
 
 	// Light client
 	MinSyncCommitteeParticipants: 1,
 
-	// Merge
-	TerminalBlockHashActivationEpoch: math.MaxUint64,
+	// Bellatrix
+	TerminalBlockHashActivationEpoch: 18446744073709551615,
+	TerminalBlockHash:                [32]byte{},
+	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
 }

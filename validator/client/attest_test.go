@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -36,7 +37,7 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, "Could not fetch validator assignment")
@@ -47,7 +48,7 @@ func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -76,9 +77,9 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: make([]byte, 32),
-		Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
-		Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+		BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+		Target:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		Source:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}, nil)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -89,7 +90,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, "Could not submit attestation to beacon node")
@@ -101,7 +102,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -174,7 +175,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	defer finish()
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -226,7 +227,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	defer finish()
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -277,7 +278,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	validatorIndex := types.ValidatorIndex(7)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
@@ -331,7 +332,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.genesisTime = uint64(prysmTime.Now().Unix())
 	m.validatorClient.EXPECT().GetDuties(
@@ -366,7 +367,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.genesisTime = uint64(prysmTime.Now().Unix())
 	validatorIndex := types.ValidatorIndex(5)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -405,7 +406,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	defer finish()
 	validatorIndex := types.ValidatorIndex(2)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -420,7 +421,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	).Return(&ethpb.AttestationData{
 		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
 		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
-		BeaconBlockRoot: make([]byte, 32),
+		BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -453,8 +454,8 @@ func TestSignAttestation(t *testing.T) {
 		CurrentVersion:  []byte{'d', 'e', 'f', 'f'},
 		Epoch:           0,
 	}
-	genesisValidatorRoot := [32]byte{0x01, 0x02}
-	attesterDomain, err := signing.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorRoot[:])
+	genesisValidatorsRoot := [32]byte{0x01, 0x02}
+	attesterDomain, err := signing.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorsRoot[:])
 	require.NoError(t, err)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
@@ -465,15 +466,15 @@ func TestSignAttestation(t *testing.T) {
 	att.Data.Target.Epoch = 200
 	att.Data.Slot = 999
 	att.Data.BeaconBlockRoot = bytesutil.PadTo([]byte("blockRoot"), 32)
-	var pubKey [48]byte
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], publicKey.Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: secretKey,
 		},
 	}
 	validator.keyManager = km
-	sig, sr, err := validator.signAtt(ctx, pubKey, att.Data)
+	sig, sr, err := validator.signAtt(ctx, pubKey, att.Data, att.Data.Slot)
 	require.NoError(t, err, "%x,%x,%v", sig, sr, err)
 	require.Equal(t, "b6a60f8497bd328908be83634d045"+
 		"dd7a32f5e246b2c4031fc2f316983f362e36fc27fd3d6d5a2b15"+

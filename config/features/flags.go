@@ -40,15 +40,6 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
-	attestationAggregationStrategy = &cli.StringFlag{
-		Name:  "attestation-aggregation-strategy",
-		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover, opt_max_cover.",
-		Value: "opt_max_cover",
-	}
-	forceOptMaxCoverAggregationStategy = &cli.BoolFlag{
-		Name:  "attestation-aggregation-force-opt-maxcover",
-		Usage: "When enabled, forces --attestation-aggregation-strategy=opt_max_cover setting.",
-	}
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
 		Usage: "Enable experimental P2P peer scorer",
@@ -84,10 +75,6 @@ var (
 	attestTimely = &cli.BoolFlag{
 		Name:  "attest-timely",
 		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
-	}
-	disableNextSlotStateCache = &cli.BoolFlag{
-		Name:  "disable-next-slot-state-cache",
-		Usage: "Disable next slot cache which improves attesting and proposing efficiency by caching the next slot state at the end of the current slot",
 	}
 	enableSlasherFlag = &cli.BoolFlag{
 		Name:  "slasher",
@@ -131,27 +118,37 @@ var (
 		Name:  "disable-active-balance-cache",
 		Usage: "This disables active balance cache, which improves node performance during block processing",
 	}
-	enableGetBlockOptimizations = &cli.BoolFlag{
-		Name:  "enable-get-block-optimizations",
-		Usage: "This enables some optimizations on the GetBlock() function.",
+	disableGetBlockOptimizations = &cli.BoolFlag{
+		Name:  "disable-get-block-optimizations",
+		Usage: "This disables some optimizations on the GetBlock() function.",
 	}
-	enableBatchGossipVerification = &cli.BoolFlag{
-		Name:  "enable-batch-gossip-verification",
+	disableBatchGossipVerification = &cli.BoolFlag{
+		Name:  "disable-batch-gossip-verification",
 		Usage: "This enables batch verification of signatures received over gossip.",
 	}
-	enableBalanceTrieComputation = &cli.BoolFlag{
-		Name:  "enable-balance-trie-computation",
-		Usage: "This enables optimized hash tree root operations for our balance field.",
+	disableBalanceTrieComputation = &cli.BoolFlag{
+		Name:  "disable-balance-trie-computation",
+		Usage: "This disables optimized hash tree root operations for our balance field.",
+	}
+	enableNativeState = &cli.BoolFlag{
+		Name:  "enable-native-state",
+		Usage: "Enables representing the beacon state as a pure Go struct.",
+	}
+	enableVecHTR = &cli.BoolFlag{
+		Name:  "enable-vectorized-htr",
+		Usage: "Enables new go sha256 library which utilizes optimized routines for merkle trees",
+	}
+	enableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
+		Name:  "enable-forkchoice-doubly-linked-tree",
+		Usage: "Enables new forkchoice store structure that uses doubly linked trees",
 	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableLargerGossipHistory,
-	forceOptMaxCoverAggregationStategy,
-	enableGetBlockOptimizations,
-	enableBatchGossipVerification,
-	enableBalanceTrieComputation,
+	enablePeerScorer,
+	enableVecHTR,
+	enableForkChoiceDoublyLinkedTree,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -178,7 +175,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
-	attestationAggregationStrategy,
 	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
@@ -186,23 +182,23 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
-	disableNextSlotStateCache,
-	forceOptMaxCoverAggregationStategy,
 	enableSlasherFlag,
 	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
 	disableCorrectlyInsertOrphanedAtts,
-	enableGetBlockOptimizations,
+	disableGetBlockOptimizations,
 	disableCorrectlyPruneCanonicalAtts,
 	disableActiveBalanceCache,
-	enableBatchGossipVerification,
-	enableBalanceTrieComputation,
+	disableBatchGossipVerification,
+	disableBalanceTrieComputation,
+	enableNativeState,
+	enableVecHTR,
+	enableForkChoiceDoublyLinkedTree,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
-	"--attestation-aggregation-strategy=opt_max_cover",
 	"--dev",
 	"--use-check-point-cache",
 	"--enable-active-balance-cache",

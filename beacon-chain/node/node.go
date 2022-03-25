@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/deterministic-genesis"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/beacon-chain/monitor"
@@ -114,10 +115,14 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	flags.ConfigureGlobalFlags(cliCtx)
 	configureChainConfig(cliCtx)
 	configureHistoricalSlasher(cliCtx)
+	configureSafeSlotsToImportOptimistically(cliCtx)
 	configureSlotsPerArchivedPoint(cliCtx)
 	configureEth1Config(cliCtx)
 	configureNetwork(cliCtx)
 	configureInteropConfig(cliCtx)
+	if err := configureExecutionSetting(cliCtx); err != nil {
+		return nil, err
+	}
 
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
@@ -153,65 +158,80 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Debugln("Starting DB")
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
 	}
-
+	log.Debugln("Starting Slashing DB")
 	if err := beacon.startSlasherDB(cliCtx); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Starting State Gen")
 	if err := beacon.startStateGen(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering P2P Service")
 	if err := beacon.registerP2P(cliCtx); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering POW Chain Service")
 	if err := beacon.registerPOWChainService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Attestation Pool Service")
 	if err := beacon.registerAttestationPool(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Determinstic Genesis Service")
 	if err := beacon.registerDeterminsticGenesisService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Starting Fork Choice")
 	beacon.startForkChoice()
 
+	log.Debugln("Registering Blockchain Service")
 	if err := beacon.registerBlockchainService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Intial Sync Service")
 	if err := beacon.registerInitialSyncService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Sync Service")
 	if err := beacon.registerSyncService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Slasher Service")
 	if err := beacon.registerSlasherService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering RPC Service")
 	if err := beacon.registerRPCService(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering GRPC Gateway Service")
 	if err := beacon.registerGRPCGateway(); err != nil {
 		return nil, err
 	}
 
+	log.Debugln("Registering Validator Monitoring Service")
 	if err := beacon.registerValidatorMonitorService(); err != nil {
 		return nil, err
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
+		log.Debugln("Registering Prometheus Service")
 		if err := beacon.registerPrometheusService(cliCtx); err != nil {
 			return nil, err
 		}
@@ -294,8 +314,11 @@ func (b *BeaconNode) Close() {
 }
 
 func (b *BeaconNode) startForkChoice() {
-	f := protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
-	b.forkChoiceStore = f
+	if features.Get().EnableForkChoiceDoublyLinkedTree {
+		b.forkChoiceStore = doublylinkedtree.New(0, 0)
+	} else {
+		b.forkChoiceStore = protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
+	}
 }
 
 func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
@@ -538,6 +561,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithDatabase(b.db),
 		blockchain.WithDepositCache(b.depositCache),
 		blockchain.WithChainStartFetcher(web3Service),
+		blockchain.WithExecutionEngineCaller(web3Service.EngineAPIClient()),
 		blockchain.WithAttestationPool(b.attestationPool),
 		blockchain.WithExitPool(b.exitPool),
 		blockchain.WithSlashingPool(b.slashingsPool),
@@ -752,6 +776,7 @@ func (b *BeaconNode) registerRPCService() error {
 		SlashingChecker:         slasherService,
 		SyncCommitteeObjectPool: b.syncCommitteePool,
 		POWChainService:         web3Service,
+		POWChainInfoFetcher:     web3Service,
 		ChainStartFetcher:       chainStartFetcher,
 		MockEth1Votes:           mockEth1DataVotes,
 		SyncService:             syncService,
@@ -763,6 +788,7 @@ func (b *BeaconNode) registerRPCService() error {
 		StateGen:                b.stateGen,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
+		ExecutionEngineCaller:   web3Service.EngineAPIClient(),
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -791,8 +817,6 @@ func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 		)
 	}
 
-	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
-
 	service := prometheus.NewService(
 		fmt.Sprintf("%s:%d", b.cliCtx.String(cmd.MonitoringHostFlag.Name), b.cliCtx.Int(flags.MonitoringPortFlag.Name)),
 		b.services,
@@ -817,6 +841,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	httpModules := b.cliCtx.String(flags.HTTPModules.Name)
+	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	if enableDebugRPCEndpoints {
 		maxCallSize = uint64(math.Max(float64(maxCallSize), debugGrpcMaxMsgSize))
 	}
@@ -830,19 +855,23 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		muxs = append(muxs, gatewayConfig.EthPbMux)
 	}
 
-	g := apigateway.New(
-		b.ctx,
-		muxs,
-		gatewayConfig.Handler,
-		selfAddress,
-		gatewayAddress,
-	).WithAllowedOrigins(allowedOrigins).
-		WithRemoteCert(selfCert).
-		WithMaxCallRecvMsgSize(maxCallSize)
-	if flags.EnableHTTPEthAPI(httpModules) {
-		g.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
+	opts := []apigateway.Option{
+		apigateway.WithGatewayAddr(gatewayAddress),
+		apigateway.WithRemoteAddr(selfAddress),
+		apigateway.WithPbHandlers(muxs),
+		apigateway.WithMuxHandler(gatewayConfig.Handler),
+		apigateway.WithRemoteCert(selfCert),
+		apigateway.WithMaxCallRecvMsgSize(maxCallSize),
+		apigateway.WithAllowedOrigins(allowedOrigins),
+		apigateway.WithTimeout(uint64(timeout)),
 	}
-
+	if flags.EnableHTTPEthAPI(httpModules) {
+		opts = append(opts, apigateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
+	}
+	g, err := apigateway.New(b.ctx, opts...)
+	if err != nil {
+		return err
+	}
 	return b.services.RegisterService(g)
 }
 

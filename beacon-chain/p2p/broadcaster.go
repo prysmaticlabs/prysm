@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
@@ -55,7 +54,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
-func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation) error {
+func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastAttestation")
 	defer span.End()
 	forkDigest, err := s.currentForkDigest()
@@ -89,7 +88,7 @@ func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint
 	return nil
 }
 
-func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation, forkDigest [4]byte) {
+func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation, forkDigest [4]byte) {
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
@@ -105,8 +104,8 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 
 	span.AddAttributes(
 		trace.BoolAttribute("hasPeer", hasPeer),
-		trace.Int64Attribute("slot", int64(att.Data.Slot)),
-		trace.Int64Attribute("subnet", int64(subnet)),
+		trace.Int64Attribute("slot", int64(att.Data.Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
+		trace.Int64Attribute("subnet", int64(subnet)),      // lint:ignore uintcast -- It's safe to do this for tracing.
 	)
 
 	if !hasPeer {
@@ -161,8 +160,8 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 
 	span.AddAttributes(
 		trace.BoolAttribute("hasPeer", hasPeer),
-		trace.Int64Attribute("slot", int64(sMsg.Slot)),
-		trace.Int64Attribute("subnet", int64(subnet)),
+		trace.Int64Attribute("slot", int64(sMsg.Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
+		trace.Int64Attribute("subnet", int64(subnet)),  // lint:ignore uintcast -- It's safe to do this for tracing.
 	)
 
 	if !hasPeer {
@@ -214,7 +213,9 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 	if span.IsRecordingEvents() {
 		id := hash.FastSum64(buf.Bytes())
 		messageLen := int64(buf.Len())
-		span.AddMessageSendEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
+		// lint:ignore uintcast -- It's safe to do this for tracing.
+		iid := int64(id)
+		span.AddMessageSendEvent(iid, messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}
 	if err := s.PublishToTopic(ctx, topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
 		err := errors.Wrap(err, "could not publish message")

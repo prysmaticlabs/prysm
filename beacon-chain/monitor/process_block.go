@@ -14,15 +14,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Number of epochs between aggregate reports
+// AggregateReportingPeriod defines the number of epochs between aggregate reports.
 const AggregateReportingPeriod = 5
 
 // processBlock handles the cases when
-// 1) A block was proposed by one of our tracked validators
-// 2) An attestation by one of our tracked validators was included
-// 3) An Exit by one of our validators was included
-// 4) A Slashing by one of our tracked validators was included
-// 5) A Sync Committe Contribution by one of our tracked validators was included
+// - A block was proposed by one of our tracked validators
+// - An attestation by one of our tracked validators was included
+// - An Exit by one of our validators was included
+// - A Slashing by one of our tracked validators was included
+// - A Sync Committee Contribution by one of our tracked validators was included
 func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 	if b == nil || b.Block() == nil {
 		return
@@ -63,7 +63,7 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 	}
 }
 
-// processProposedBlock logs the event that one of our tracked validators proposed a block that was included
+// processProposedBlock logs when the beacon node observes a beacon block from a tracked validator.
 func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk block.BeaconBlock) {
 	s.Lock()
 	defer s.Unlock()
@@ -96,11 +96,11 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 			"BlockRoot":     fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 			"NewBalance":    balance,
 			"BalanceChange": balanceChg,
-		}).Info("Proposed block was included")
+		}).Info("Proposed beacon block was included")
 	}
 }
 
-// processSlashings logs the event of one of our tracked validators was slashed
+// processSlashings logs the event when tracked validators was slashed
 func (s *Service) processSlashings(blk block.BeaconBlock) {
 	s.RLock()
 	defer s.RUnlock()
@@ -109,10 +109,10 @@ func (s *Service) processSlashings(blk block.BeaconBlock) {
 		if s.trackedIndex(idx) {
 			log.WithFields(logrus.Fields{
 				"ProposerIndex": idx,
-				"Slot:":         blk.Slot(),
+				"Slot":          blk.Slot(),
 				"SlashingSlot":  slashing.Header_1.Header.Slot,
-				"Root1":         fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_1.Header.BodyRoot)),
-				"Root2":         fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_2.Header.BodyRoot)),
+				"BodyRoot1":     fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_1.Header.BodyRoot)),
+				"BodyRoot2":     fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Header_2.Header.BodyRoot)),
 			}).Info("Proposer slashing was included")
 		}
 	}
@@ -121,16 +121,16 @@ func (s *Service) processSlashings(blk block.BeaconBlock) {
 		for _, idx := range blocks.SlashableAttesterIndices(slashing) {
 			if s.trackedIndex(types.ValidatorIndex(idx)) {
 				log.WithFields(logrus.Fields{
-					"AttesterIndex": idx,
-					"Slot:":         blk.Slot(),
-					"Slot1":         slashing.Attestation_1.Data.Slot,
-					"Root1":         fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_1.Data.BeaconBlockRoot)),
-					"SourceEpoch1":  slashing.Attestation_1.Data.Source.Epoch,
-					"TargetEpoch1":  slashing.Attestation_1.Data.Target.Epoch,
-					"Slot2":         slashing.Attestation_2.Data.Slot,
-					"Root2":         fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_2.Data.BeaconBlockRoot)),
-					"SourceEpoch2":  slashing.Attestation_2.Data.Source.Epoch,
-					"TargetEpoch2":  slashing.Attestation_2.Data.Target.Epoch,
+					"AttesterIndex":      idx,
+					"BlockInclusionSlot": blk.Slot(),
+					"AttestationSlot1":   slashing.Attestation_1.Data.Slot,
+					"BeaconBlockRoot1":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_1.Data.BeaconBlockRoot)),
+					"SourceEpoch1":       slashing.Attestation_1.Data.Source.Epoch,
+					"TargetEpoch1":       slashing.Attestation_1.Data.Target.Epoch,
+					"AttestationSlot2":   slashing.Attestation_2.Data.Slot,
+					"BeaconBlockRoot2":   fmt.Sprintf("%#x", bytesutil.Trunc(slashing.Attestation_2.Data.BeaconBlockRoot)),
+					"SourceEpoch2":       slashing.Attestation_2.Data.Source.Epoch,
+					"TargetEpoch2":       slashing.Attestation_2.Data.Target.Epoch,
 				}).Info("Attester slashing was included")
 
 			}
@@ -138,7 +138,7 @@ func (s *Service) processSlashings(blk block.BeaconBlock) {
 	}
 }
 
-// logAggregatedPerformance logs the performance statistics collected since the run started
+// logAggregatedPerformance logs the collected performance statistics since the start of the service.
 func (s *Service) logAggregatedPerformance() {
 	s.RLock()
 	defer s.RUnlock()

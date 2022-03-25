@@ -222,10 +222,10 @@ func verifyDeposit(beaconState state.ReadOnlyBeaconState, deposit *ethpb.Deposit
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash deposit data")
 	}
-	if ok := trie.VerifyMerkleBranch(
+	if ok := trie.VerifyMerkleProofWithDepth(
 		receiptRoot,
 		leaf[:],
-		int(beaconState.Eth1DepositIndex()),
+		beaconState.Eth1DepositIndex(),
 		deposit.Proof,
 		params.BeaconConfig().DepositContractTreeDepth,
 	); !ok {

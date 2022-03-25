@@ -5,8 +5,10 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
+	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/math"
 )
@@ -61,25 +63,43 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	layers[0] = transformedLeaves
 	buffer := bytes.NewBuffer([]byte{})
 	buffer.Grow(64)
-	for i := 0; i < int(depth); i++ {
-		oddNodeLength := len(layers[i])%2 == 1
-		if oddNodeLength {
-			zerohash := trie.ZeroHashes[i]
-			layers[i] = append(layers[i], &zerohash)
+
+	for i := uint8(0); i < depth; i++ {
+		layerLen := len(layers[i])
+		oddNodeLength := layerLen%2 == 1
+		if features.Get().EnableVectorizedHTR {
+			if oddNodeLength {
+				zerohash := trie.ZeroHashes[i]
+				elements = append(elements, zerohash)
+				layerLen++
+			}
+
+			layers[i+1] = make([]*[32]byte, layerLen/2)
+			newElems := make([][32]byte, layerLen/2)
+			htr.VectorizedSha256(elements, newElems)
+			elements = newElems
+			for j := range elements {
+				layers[i+1][j] = &elements[j]
+			}
+		} else {
+			if oddNodeLength {
+				zerohash := trie.ZeroHashes[i]
+				layers[i] = append(layers[i], &zerohash)
+			}
+			updatedValues := make([]*[32]byte, 0, len(layers[i])/2)
+			for j := 0; j < len(layers[i]); j += 2 {
+				buffer.Write(layers[i][j][:])
+				buffer.Write(layers[i][j+1][:])
+				concat := hasher(buffer.Bytes())
+				updatedValues = append(updatedValues, &concat)
+				buffer.Reset()
+			}
+			// remove zerohash node from tree
+			if oddNodeLength {
+				layers[i] = layers[i][:len(layers[i])-1]
+			}
+			layers[i+1] = updatedValues
 		}
-		updatedValues := make([]*[32]byte, 0, len(layers[i])/2)
-		for j := 0; j < len(layers[i]); j += 2 {
-			buffer.Write(layers[i][j][:])
-			buffer.Write(layers[i][j+1][:])
-			concat := hasher(buffer.Bytes())
-			updatedValues = append(updatedValues, &concat)
-			buffer.Reset()
-		}
-		// remove zerohash node from tree
-		if oddNodeLength {
-			layers[i] = layers[i][:len(layers[i])-1]
-		}
-		layers[i+1] = updatedValues
 	}
 	return layers
 }
@@ -106,10 +126,13 @@ func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][
 	}
 
 	root := *layer[0][0]
-	var err error
 
 	for _, idx := range changedIdx {
-		root, layer, err = recomputeRootFromLayer(int(idx), layer, leaves, hasher)
+		ii, err := math.Int(idx)
+		if err != nil {
+			return [32]byte{}, nil, err
+		}
+		root, layer, err = recomputeRootFromLayer(ii, layer, leaves, hasher)
 		if err != nil {
 			return [32]byte{}, nil, err
 		}
@@ -124,10 +147,13 @@ func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, l
 		return *layer[0][0], layer, nil
 	}
 	root := *layer[len(layer)-1][0]
-	var err error
 
 	for i, idx := range changedIdx {
-		root, layer, err = recomputeRootFromLayerVariable(int(idx), changedLeaves[i], layer, hasher)
+		ii, err := math.Int(idx)
+		if err != nil {
+			return [32]byte{}, nil, err
+		}
+		root, layer, err = recomputeRootFromLayerVariable(ii, changedLeaves[i], layer, hasher)
 		if err != nil {
 			return [32]byte{}, nil, err
 		}
@@ -146,6 +172,8 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 	// Using information about the index which changed, idx, we recompute
 	// only its branch up the tree.
 	currentIndex := idx
+	// Allocate only once.
+	combinedChunks := [64]byte{}
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
@@ -155,12 +183,16 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 			neighbor = *layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hasher(append(root[:], neighbor[:]...))
-			root = parentHash
+			copy(combinedChunks[:32], root[:])
+			copy(combinedChunks[32:], neighbor[:])
 		} else {
-			parentHash := hasher(append(neighbor[:], root[:]...))
-			root = parentHash
+			copy(combinedChunks[:32], neighbor[:])
+			copy(combinedChunks[32:], root[:])
 		}
+
+		parentHash := hasher(combinedChunks[:])
+		root = parentHash
+
 		parentIdx := currentIndex / 2
 		// Update the cached layers at the parent index.
 		rootVal := root
@@ -191,23 +223,30 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 
 	currentIndex := idx
 	root := item
+	// Allocate only once.
+	neighbor := [32]byte{}
+	combinedChunks := [64]byte{}
+
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
 
-		neighbor := [32]byte{}
 		if neighborIdx >= len(layers[i]) {
 			neighbor = trie.ZeroHashes[i]
 		} else {
 			neighbor = *layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hasher(append(root[:], neighbor[:]...))
-			root = parentHash
+			copy(combinedChunks[:32], root[:])
+			copy(combinedChunks[32:], neighbor[:])
 		} else {
-			parentHash := hasher(append(neighbor[:], root[:]...))
-			root = parentHash
+			copy(combinedChunks[:32], neighbor[:])
+			copy(combinedChunks[32:], root[:])
 		}
+
+		parentHash := hasher(combinedChunks[:])
+		root = parentHash
+
 		parentIdx := currentIndex / 2
 		if len(layers[i+1]) == 0 || parentIdx >= len(layers[i+1]) {
 			newItem := root
@@ -277,18 +316,24 @@ func MerkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 	chunkBuffer := bytes.NewBuffer([]byte{})
 	chunkBuffer.Grow(64)
 	for len(hashLayer) > 1 && i < len(layers) {
-		layer := make([][32]byte, len(hashLayer)/2)
 		if !math.IsPowerOf2(uint64(len(hashLayer))) {
 			return nil, nil, errors.Errorf("hash layer is a non power of 2: %d", len(hashLayer))
 		}
-		for j := 0; j < len(hashLayer); j += 2 {
-			chunkBuffer.Write(hashLayer[j][:])
-			chunkBuffer.Write(hashLayer[j+1][:])
-			hashedChunk := hasher(chunkBuffer.Bytes())
-			layer[j/2] = hashedChunk
-			chunkBuffer.Reset()
+		if features.Get().EnableVectorizedHTR {
+			newLayer := make([][32]byte, len(hashLayer)/2)
+			htr.VectorizedSha256(hashLayer, newLayer)
+			hashLayer = newLayer
+		} else {
+			layer := make([][32]byte, len(hashLayer)/2)
+			for j := 0; j < len(hashLayer); j += 2 {
+				chunkBuffer.Write(hashLayer[j][:])
+				chunkBuffer.Write(hashLayer[j+1][:])
+				hashedChunk := hasher(chunkBuffer.Bytes())
+				layer[j/2] = hashedChunk
+				chunkBuffer.Reset()
+			}
+			hashLayer = layer
 		}
-		hashLayer = layer
 		layers[i] = hashLayer
 		i++
 	}

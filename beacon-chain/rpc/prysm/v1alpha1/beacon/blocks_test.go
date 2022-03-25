@@ -12,11 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -63,7 +62,7 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 	}
 	res, err = bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Root{
-			Root: make([]byte, 32),
+			Root: make([]byte, fieldparams.RootLength),
 		},
 	})
 	require.NoError(t, err)
@@ -154,8 +153,8 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 }
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	db := dbTest.SetupDB(t)
 	chain := &chainMock.ChainService{
@@ -367,18 +366,72 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 }
 
+// ensures that if any of the checkpoints are zero-valued, an error will be generated without genesis being present
+func TestServer_GetChainHead_NoGenesis(t *testing.T) {
+	db := dbTest.SetupDB(t)
+
+	s, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, s.SetSlot(1))
+
+	genBlock := util.NewBeaconBlock()
+	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
+	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genBlock)))
+	gRoot, err := genBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cases := []struct {
+		name       string
+		zeroSetter func(val *ethpb.Checkpoint) error
+	}{
+		{
+			name:       "zero-value prev justified",
+			zeroSetter: s.SetPreviousJustifiedCheckpoint,
+		},
+		{
+			name:       "zero-value current justified",
+			zeroSetter: s.SetCurrentJustifiedCheckpoint,
+		},
+		{
+			name:       "zero-value finalized",
+			zeroSetter: s.SetFinalizedCheckpoint,
+		},
+	}
+	finalized := &ethpb.Checkpoint{Epoch: 1, Root: gRoot[:]}
+	prevJustified := &ethpb.Checkpoint{Epoch: 2, Root: gRoot[:]}
+	justified := &ethpb.Checkpoint{Epoch: 3, Root: gRoot[:]}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			require.NoError(t, s.SetPreviousJustifiedCheckpoint(prevJustified))
+			require.NoError(t, s.SetCurrentJustifiedCheckpoint(justified))
+			require.NoError(t, s.SetFinalizedCheckpoint(finalized))
+			require.NoError(t, c.zeroSetter(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}))
+		})
+		bs := &Server{
+			BeaconDB:    db,
+			HeadFetcher: &chainMock.ChainService{Block: wrapper.WrappedPhase0SignedBeaconBlock(genBlock), State: s},
+			FinalizationFetcher: &chainMock.ChainService{
+				FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+				CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+				PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+		}
+		_, err = bs.GetChainHead(context.Background(), nil)
+		require.ErrorContains(t, "Could not get genesis block", err)
+	}
+}
+
 func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	db := dbTest.SetupDB(t)
 
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
-	require.NoError(t, s.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 3, Root: bytesutil.PadTo([]byte{'A'}, 32)}))
-	require.NoError(t, s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}))
-	require.NoError(t, s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, 32)}))
+	require.NoError(t, s.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 3, Root: bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)}))
+	require.NoError(t, s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}))
+	require.NoError(t, s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}))
 
 	genBlock := util.NewBeaconBlock()
-	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
+	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genBlock)))
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -406,12 +459,12 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 }
 
 func TestServer_GetChainHead(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	db := dbTest.SetupDB(t)
 	genBlock := util.NewBeaconBlock()
-	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
+	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genBlock)))
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -419,21 +472,21 @@ func TestServer_GetChainHead(t *testing.T) {
 
 	finalizedBlock := util.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 1
-	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
+	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(finalizedBlock)))
 	fRoot, err := finalizedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	justifiedBlock := util.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2
-	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
+	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(justifiedBlock)))
 	jRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	prevJustifiedBlock := util.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 3
-	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
+	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(prevJustifiedBlock)))
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -498,10 +551,11 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
-	params.UseMainnetConfig()
 	genBlock := util.NewBeaconBlock()
-	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
+	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genBlock)))
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -509,21 +563,21 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 
 	finalizedBlock := util.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 32
-	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
+	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(finalizedBlock)))
 	fRoot, err := finalizedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	justifiedBlock := util.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 64
-	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
+	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(justifiedBlock)))
 	jRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	prevJustifiedBlock := util.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 96
-	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
+	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)
 	require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(prevJustifiedBlock)))
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -648,6 +702,8 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.UseMainnetConfig()
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisState(t, 32)
 	b, err := util.GenerateFullBlock(beaconState, privs, util.DefaultBlockGenConfig(), 1)
@@ -682,6 +738,8 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.UseMainnetConfig()
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisState(t, 32)
@@ -720,76 +778,6 @@ func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 		})
 	}
 	<-exitRoutine
-}
-
-func TestServer_GetWeakSubjectivityCheckpoint(t *testing.T) {
-	params.UseMainnetConfig()
-
-	db := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	// Beacon state.
-	beaconState, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetSlot(10))
-
-	// Active validator set is used for computing the weak subjectivity period.
-	numVals := 256 // Works with params.BeaconConfig().MinGenesisActiveValidatorCount as well, but takes longer.
-	validators := make([]*ethpb.Validator, numVals)
-	balances := make([]uint64, len(validators))
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			PublicKey:             make([]byte, params.BeaconConfig().BLSPubkeyLength),
-			WithdrawalCredentials: make([]byte, 32),
-			EffectiveBalance:      28 * 1e9,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-		}
-		balances[i] = validators[i].EffectiveBalance
-	}
-	require.NoError(t, beaconState.SetValidators(validators))
-	require.NoError(t, beaconState.SetBalances(balances))
-
-	// Genesis block.
-	genesisBlock := util.NewBeaconBlock()
-	genesisBlockRoot, err := genesisBlock.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
-	require.NoError(t, db.SaveState(ctx, beaconState, genesisBlockRoot))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
-
-	// Finalized checkpoint.
-	finalizedEpoch := types.Epoch(1020)
-	require.NoError(t, beaconState.SetSlot(types.Slot(finalizedEpoch.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))))
-	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
-		Epoch: finalizedEpoch - 1,
-		Root:  bytesutil.PadTo([]byte{'A'}, 32),
-	}))
-	require.NoError(t, beaconState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
-		Epoch: finalizedEpoch,
-		Root:  bytesutil.PadTo([]byte{'B'}, 32),
-	}))
-
-	chainService := &chainMock.ChainService{State: beaconState}
-	server := &Server{
-		Ctx:           ctx,
-		BlockNotifier: chainService.BlockNotifier(),
-		HeadFetcher:   chainService,
-		BeaconDB:      db,
-		StateGen:      stategen.New(db),
-	}
-
-	wsEpoch, err := helpers.ComputeWeakSubjectivityPeriod(context.Background(), beaconState)
-	require.NoError(t, err)
-
-	c, err := server.GetWeakSubjectivityCheckpoint(ctx, &emptypb.Empty{})
-	require.NoError(t, err)
-	e := finalizedEpoch - (finalizedEpoch % wsEpoch)
-	require.Equal(t, e, c.Epoch)
-	wsState, err := server.StateGen.StateBySlot(ctx, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(e)))
-	require.NoError(t, err)
-	sRoot, err := wsState.HashTreeRoot(ctx)
-	require.NoError(t, err)
-	require.DeepEqual(t, sRoot[:], c.StateRoot)
 }
 
 func TestServer_ListBeaconBlocks_NoResults(t *testing.T) {
@@ -911,8 +899,8 @@ func TestServer_ListBlocksAltair_Genesis_MultiBlocks(t *testing.T) {
 }
 
 func TestServer_ListBlocksAltair_Pagination(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	db := dbTest.SetupDB(t)
 	chain := &chainMock.ChainService{

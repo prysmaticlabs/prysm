@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -93,16 +92,9 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not get head state %v", err)
 	}
 
-	if features.Get().EnableNextSlotStateCache {
-		head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
-		if err != nil {
-			return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
-		}
-	} else {
-		head, err = transition.ProcessSlots(ctx, head, req.Slot)
-		if err != nil {
-			return nil, fmt.Errorf("could not advance slot to calculate proposer index: %v", err)
-		}
+	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
+	if err != nil {
+		return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
 	}
 
 	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
@@ -152,7 +144,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 			log.WithError(err).Warn("Proposer: invalid exit")
 			continue
 		}
-		if err := blocks.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, head.GenesisValidatorRoot()); err != nil {
+		if err := blocks.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, head.GenesisValidatorsRoot()); err != nil {
 			log.WithError(err).Warn("Proposer: invalid exit")
 			continue
 		}

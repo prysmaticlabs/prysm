@@ -16,12 +16,14 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -44,7 +46,6 @@ type Server struct {
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
-	CanonicalStateChan     chan *ethpb.BeaconState
 	BlockFetcher           powchain.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher
@@ -63,6 +64,9 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
+	ReplayerBuilder        stategen.ReplayerBuilder
+	BeaconDB               db.HeadAccessDatabase
+	ExecutionEngineCaller  enginev1.Caller
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -128,8 +132,8 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
-	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
+	headGenesisValidatorsRoot := vs.HeadFetcher.HeadGenesisValidatorsRoot()
+	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +169,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		res := &ethpb.ChainStartResponse{
 			Started:               true,
 			GenesisTime:           head.GenesisTime(),
-			GenesisValidatorsRoot: head.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: head.GenesisValidatorsRoot(),
 		}
 		return stream.Send(res)
 	}

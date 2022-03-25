@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -130,94 +131,19 @@ func TestIsSlashableValidator_OK(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			slashableValidator := IsSlashableValidator(test.validator.ActivationEpoch,
-				test.validator.WithdrawableEpoch, test.validator.Slashed, test.epoch)
-			assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
-		})
-	}
-}
-
-func TestIsSlashableValidatorUsingTrie_OK(t *testing.T) {
-	tests := []struct {
-		name      string
-		validator *ethpb.Validator
-		epoch     types.Epoch
-		slashable bool
-	}{
-		{
-			name: "Unset withdrawable, slashable",
-			validator: &ethpb.Validator{
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
-			epoch:     0,
-			slashable: true,
-		},
-		{
-			name: "before withdrawable, slashable",
-			validator: &ethpb.Validator{
-				WithdrawableEpoch: 5,
-			},
-			epoch:     3,
-			slashable: true,
-		},
-		{
-			name: "inactive, not slashable",
-			validator: &ethpb.Validator{
-				ActivationEpoch:   5,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
-			epoch:     2,
-			slashable: false,
-		},
-		{
-			name: "after withdrawable, not slashable",
-			validator: &ethpb.Validator{
-				WithdrawableEpoch: 3,
-			},
-			epoch:     3,
-			slashable: false,
-		},
-		{
-			name: "slashed and withdrawable, not slashable",
-			validator: &ethpb.Validator{
-				Slashed:           true,
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: 1,
-			},
-			epoch:     2,
-			slashable: false,
-		},
-		{
-			name: "slashed, not slashable",
-			validator: &ethpb.Validator{
-				Slashed:           true,
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
-			epoch:     2,
-			slashable: false,
-		},
-		{
-			name: "inactive and slashed, not slashable",
-			validator: &ethpb.Validator{
-				Slashed:           true,
-				ActivationEpoch:   4,
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
-			epoch:     2,
-			slashable: false,
-		},
-	}
-
-	for _, test := range tests {
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: []*ethpb.Validator{test.validator}})
-		require.NoError(t, err)
-		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
-		require.NoError(t, err)
-		t.Run(test.name, func(t *testing.T) {
-			slashableValidator := IsSlashableValidatorUsingTrie(readOnlyVal, test.epoch)
-			assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
+			t.Run("without trie", func(t *testing.T) {
+				slashableValidator := IsSlashableValidator(test.validator.ActivationEpoch,
+					test.validator.WithdrawableEpoch, test.validator.Slashed, test.epoch)
+				assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
+			})
+			t.Run("with trie", func(t *testing.T) {
+				beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: []*ethpb.Validator{test.validator}})
+				require.NoError(t, err)
+				readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
+				require.NoError(t, err)
+				slashableValidator := IsSlashableValidatorUsingTrie(readOnlyVal, test.epoch)
+				assert.Equal(t, test.slashable, slashableValidator, "Expected active validator slashable to be %t", test.slashable)
+			})
 		})
 	}
 }
@@ -291,7 +217,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 	}
 	roots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
-		roots[i] = make([]byte, 32)
+		roots[i] = make([]byte, fieldparams.RootLength)
 	}
 
 	state, err := v1.InitializeFromProto(&ethpb.BeaconState{

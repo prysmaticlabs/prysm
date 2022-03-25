@@ -66,7 +66,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 					return b
 				}(),
 			},
-			wantedErr: "nil inner state",
+			wantedErr: chainMock.ErrNilState.Error(),
 			check: func(t *testing.T, s *Service) {
 				if s.cfg.attPool.AggregatedAttestationCount() == 0 {
 					t.Error("Expected at least 1 aggregated attestation in the pool")
@@ -142,6 +142,18 @@ func TestBlockFromProto(t *testing.T) {
 			},
 			want: func() block.SignedBeaconBlock {
 				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Slot: 100}})
+				require.NoError(t, err)
+				return wsb
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "bellatrix type provided",
+			msgCreator: func(t *testing.T) proto.Message {
+				return &ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Slot: 100}}
+			},
+			want: func() block.SignedBeaconBlock {
+				wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Slot: 100}})
 				require.NoError(t, err)
 				return wsb
 			}(),

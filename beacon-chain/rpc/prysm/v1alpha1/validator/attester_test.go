@@ -26,6 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -167,6 +169,35 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	assert.ErrorContains(t, "Syncing to latest head", err)
+}
+
+func TestGetAttestationData_Optimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	as := &Server{
+		SyncChecker: &mockSync.Sync{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher: &mock.ChainService{Optimistic: true},
+	}
+	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
+	s, ok := status.FromError(err)
+	require.Equal(t, true, ok)
+	require.DeepEqual(t, codes.Unavailable, s.Code())
+	require.ErrorContains(t, errOptimisticMode.Error(), err)
+
+	beaconState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	as = &Server{
+		SyncChecker:      &mockSync.Sync{},
+		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:      &mock.ChainService{Optimistic: false, State: beaconState},
+		AttestationCache: cache.NewAttestationCache(),
+	}
+	_, err = as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
+	require.NoError(t, err)
 }
 
 func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
@@ -317,6 +348,7 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		HeadFetcher: &mock.ChainService{},
 		TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 

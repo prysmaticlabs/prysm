@@ -104,6 +104,9 @@ cc_library(
         "@io_bazel_rules_go//go/platform:darwin_amd64": [
             "bls/lib/darwin/amd64/libbls384_256.a",
         ],
+        "@io_bazel_rules_go//go/platform:darwin_arm64": [
+            "bls/lib/darwin/arm64/libbls384_256.a",
+        ],
         "@io_bazel_rules_go//go/platform:linux_amd64": [
             "bls/lib/linux/amd64/libbls384_256.a",
         ],
@@ -154,7 +157,6 @@ go_library(
         "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
     ],
     clinkopts = select({
-        "@prysm//testing/fuzz:fuzzing_enabled": ["-Wl,--unresolved-symbols=ignore-all", "-fsanitize=address"],
         "//conditions:default": [],
     }),
 )

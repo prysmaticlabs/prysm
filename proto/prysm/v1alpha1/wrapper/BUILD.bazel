@@ -4,15 +4,22 @@ go_library(
     name = "go_default_library",
     srcs = [
         "beacon_block.go",
+        "beacon_block_altair.go",
+        "beacon_block_bellatrix.go",
+        "beacon_block_phase0.go",
         "metadata.go",
+        "mutator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/metadata:go_default_library",
+        "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//runtime/version:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
@@ -22,11 +29,18 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["beacon_block_test.go"],
+    srcs = [
+        "beacon_block_altair_test.go",
+        "beacon_block_bellatrix_test.go",
+        "beacon_block_phase0_test.go",
+        "beacon_block_test.go",
+    ],
     deps = [
         ":go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//runtime/version:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",

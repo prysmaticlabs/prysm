@@ -14,7 +14,7 @@ import (
 // PruneAttestationsAtEpoch deletes all attestations from the slasher DB with target epoch
 // less than or equal to the specified epoch.
 func (s *Store) PruneAttestationsAtEpoch(
-	ctx context.Context, maxEpoch types.Epoch,
+	_ context.Context, maxEpoch types.Epoch,
 ) (numPruned uint, err error) {
 	// We can prune everything less than the current epoch - history length.
 	encodedEndPruneEpoch := fssz.MarshalUint64([]byte{}, uint64(maxEpoch))
@@ -128,6 +128,9 @@ func (s *Store) PruneProposalsAtEpoch(
 		c := proposalBkt.Cursor()
 		// We begin a pruning iteration starting from the first item in the bucket.
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			// We check the slot from the current key in the database.
 			// If we have hit a slot that is greater than the end slot of the pruning process,
 			// we then completely exit the process as we are done.

@@ -21,6 +21,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -98,12 +99,26 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
+	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+	if err != nil {
+		return err
+	}
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return err
 	}
-
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
+		return err
+	}
+	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, postState, signed, blockRoot); err != nil {
+		return errors.Wrap(err, "could not verify new payload")
+	}
+
+	// We add a proposer score boost to fork choice for the block root if applicable, right after
+	// running a successful state transition for the block.
+	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
+		ctx, signed.Block().Slot(), blockRoot, s.genesisTime,
+	); err != nil {
 		return err
 	}
 
@@ -135,29 +150,39 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	}
 
 	// Update justified check point.
-	currJustifiedEpoch := s.justifiedCheckpt.Epoch
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	currJustifiedEpoch := justified.Epoch
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
 	}
 
-	newFinalized := postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
+	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
 	if newFinalized {
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
-		}
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+		s.store.SetPrevFinalizedCheckpt(finalized)
+		s.store.SetFinalizedCheckpt(postState.FinalizedCheckpoint())
+		s.store.SetPrevJustifiedCheckpt(justified)
+		s.store.SetJustifiedCheckpt(postState.CurrentJustifiedCheckpoint())
 	}
 
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
 	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", s.justifiedCheckpt.Root)
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
 	}
 	if err := s.updateHead(ctx, balances); err != nil {
 		log.WithError(err).Warn("Could not update head")
+	}
+	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), s.headRoot(), bytesutil.ToBytes32(finalized.Root)); err != nil {
+		return err
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
@@ -176,18 +201,16 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	})
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
-	if features.Get().EnableNextSlotStateCache {
-		go func() {
-			// Use a custom deadline here, since this method runs asynchronously.
-			// We ignore the parent method's context and instead create a new one
-			// with a custom deadline, therefore using the background context instead.
-			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-			defer cancel()
-			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-				log.WithError(err).Debug("could not update next slot state cache")
-			}
-		}()
-	}
+	go func() {
+		// Use a custom deadline here, since this method runs asynchronously.
+		// We ignore the parent method's context and instead create a new one
+		// with a custom deadline, therefore using the background context instead.
+		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+		defer cancel()
+		if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+			log.WithError(err).Debug("could not update next slot state cache")
+		}
+	}()
 
 	// Save justified check point to db.
 	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
@@ -233,6 +256,21 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	return s.handleEpochBoundary(ctx, postState)
 }
 
+func getStateVersionAndPayload(preState state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
+	var preStateHeader *ethpb.ExecutionPayloadHeader
+	var err error
+	preStateVersion := preState.Version()
+	switch preStateVersion {
+	case version.Phase0, version.Altair:
+	default:
+		preStateHeader, err = preState.LatestExecutionPayloadHeader()
+		if err != nil {
+			return 0, nil, err
+		}
+	}
+	return preStateVersion, preStateHeader, nil
+}
+
 func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock,
 	blockRoots [][32]byte) ([]*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
@@ -241,6 +279,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	if len(blks) == 0 || len(blockRoots) == 0 {
 		return nil, nil, errors.New("no blocks provided")
 	}
+
+	if len(blks) != len(blockRoots) {
+		return nil, nil, errWrongBlockCount
+	}
+
 	if err := helpers.BeaconBlockIsNil(blks[0]); err != nil {
 		return nil, nil, err
 	}
@@ -275,9 +318,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
 			boundaries[blockRoots[i]] = preState.Copy()
-			if err := s.handleEpochBoundary(ctx, preState); err != nil {
-				return nil, nil, errors.Wrap(err, "could not handle epoch boundary state")
-			}
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
@@ -289,6 +329,25 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	}
 	if !verify {
 		return nil, nil, errors.New("batch block signature verification failed")
+	}
+
+	// blocks have been verified, add them to forkchoice and call the engine
+	for i, b := range blks {
+		preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		s.saveInitSyncBlock(blockRoots[i], b)
+		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+			return nil, nil, err
+		}
+		if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, b, blockRoots[i]); err != nil {
+			return nil, nil, err
+		}
+		if _, err := s.notifyForkchoiceUpdate(ctx, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
+			return nil, nil, err
+		}
 	}
 	for r, st := range boundaries {
 		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
@@ -311,12 +370,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 // their state summaries and split them off to relative hot/cold storage.
 func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.SignedBeaconBlock,
 	blockRoot [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-	b := signed.Block()
 
-	s.saveInitSyncBlock(blockRoot, signed)
-	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
-		return err
-	}
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: signed.Block().Slot(),
 		Root: blockRoot[:],
@@ -332,19 +386,27 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed block.
 		s.clearInitSyncBlocks()
 	}
 
-	if jCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	if jCheckpoint.Epoch > justified.Epoch {
 		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
 			return err
 		}
 	}
 
+	finalized := s.store.FinalizedCheckpt()
+	if finalized == nil {
+		return errNilFinalizedInStore
+	}
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if fCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+	if fCheckpoint.Epoch > finalized.Epoch {
 		if err := s.updateFinalized(ctx, fCheckpoint); err != nil {
 			return err
 		}
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = fCheckpoint
+		s.store.SetPrevFinalizedCheckpt(finalized)
+		s.store.SetFinalizedCheckpt(fCheckpoint)
 	}
 	return nil
 }
@@ -423,13 +485,27 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 		return err
 	}
 	// Feed in block to fork choice store.
-	if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
-		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()), bytesutil.ToBytes32(blk.Body().Graffiti()),
-		jCheckpoint.Epoch,
-		fCheckpoint.Epoch); err != nil {
-		return errors.Wrap(err, "could not process block for proto array fork choice")
+
+	payloadHash, err := getBlockPayloadHash(blk)
+	if err != nil {
+		return err
 	}
-	return nil
+	return s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
+		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()), payloadHash,
+		jCheckpoint.Epoch,
+		fCheckpoint.Epoch)
+}
+
+func getBlockPayloadHash(blk block.BeaconBlock) ([32]byte, error) {
+	payloadHash := [32]byte{}
+	if isPreBellatrix(blk.Version()) {
+		return payloadHash, nil
+	}
+	payload, err := blk.Body().ExecutionPayload()
+	if err != nil {
+		return payloadHash, err
+	}
+	return bytesutil.ToBytes32(payload.BlockHash), nil
 }
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.

@@ -3,10 +3,9 @@ package stateutil
 import (
 	"context"
 	"encoding/binary"
-	"sync"
 
-	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -15,45 +14,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var (
-	// Set the map size as equal to that of the latest state field count.
-	leavesCache = make(map[string][][32]byte, params.BeaconConfig().BeaconStateMergeFieldCount)
-	layersCache = make(map[string][][][32]byte, params.BeaconConfig().BeaconStateMergeFieldCount)
-	lock        sync.RWMutex
-)
-
-const cacheSize = 100000
-
-// NocachedHasher references a hasher that will not utilize a cache.
-var NocachedHasher *stateRootHasher
-
-// CachedHasher references a hasher that will utilize a roots cache.
-var CachedHasher *stateRootHasher
-
-func init() {
-	rootsCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: cacheSize, // number of keys to track frequency of (1M).
-		MaxCost:     1 << 22,   // maximum cost of cache (3MB).
-		// 100,000 roots will take up approximately 3 MB in memory.
-		BufferItems: 64, // number of keys per Get buffer.
-	})
-	if err != nil {
-		panic(err)
-	}
-	// Temporarily disable roots cache until cache issues can be resolved.
-	CachedHasher = &stateRootHasher{rootsCache: rootsCache}
-	NocachedHasher = &stateRootHasher{}
-}
-
-// stateRootHasher defines an object through which we can
-// hash the different fields in the state with a few cached layers.
-type stateRootHasher struct {
-	rootsCache *ristretto.Cache
-}
-
 // ComputeFieldRootsWithHasherPhase0 hashes the provided phase 0 state and returns its respective field roots.
-func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
-	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherPhase0")
+func ComputeFieldRootsWithHasherPhase0(ctx context.Context, state *ethpb.BeaconState) ([][]byte, error) {
+	_, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasherPhase0")
 	defer span.End()
 
 	if state == nil {
@@ -66,7 +29,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 	genesisRoot := ssz.Uint64Root(state.GenesisTime)
 	fieldRoots[0] = genesisRoot[:]
 
-	// Genesis validator root.
+	// Genesis validators root.
 	r := [32]byte{}
 	copy(r[:], state.GenesisValidatorsRoot)
 	fieldRoots[1] = r[:]
@@ -90,21 +53,21 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 	fieldRoots[4] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	blockRootsRoot, err := arraysRoot(state.BlockRoots, fieldparams.BlockRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[5] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := h.arraysRoot(state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	stateRootsRoot, err := arraysRoot(state.StateRoots, fieldparams.StateRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
 	fieldRoots[6] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
-	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
+	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, fieldparams.HistoricalRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -131,7 +94,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 	fieldRoots[10] = eth1DepositBuf[:]
 
 	// Validators slice root.
-	validatorsRoot, err := h.validatorRegistryRoot(state.Validators)
+	validatorsRoot, err := validatorRegistryRoot(state.Validators)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -145,7 +108,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 	fieldRoots[12] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
+	randaoRootsRoot, err := arraysRoot(state.RandaoMixes, fieldparams.RandaoMixesLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
@@ -159,14 +122,14 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 	fieldRoots[14] = slashingsRootsRoot[:]
 
 	// PreviousEpochAttestations slice root.
-	prevAttsRoot, err := h.epochAttestationsRoot(state.PreviousEpochAttestations)
+	prevAttsRoot, err := epochAttestationsRoot(state.PreviousEpochAttestations)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
 	}
 	fieldRoots[15] = prevAttsRoot[:]
 
 	// CurrentEpochAttestations slice root.
-	currAttsRoot, err := h.epochAttestationsRoot(state.CurrentEpochAttestations)
+	currAttsRoot, err := epochAttestationsRoot(state.CurrentEpochAttestations)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute current epoch attestations merkleization")
 	}
@@ -200,8 +163,8 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherPhase0(ctx context.Context,
 }
 
 // ComputeFieldRootsWithHasherAltair hashes the provided altair state and returns its respective field roots.
-func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
-	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherAltair")
+func ComputeFieldRootsWithHasherAltair(ctx context.Context, state *ethpb.BeaconStateAltair) ([][]byte, error) {
+	_, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasherAltair")
 	defer span.End()
 
 	if state == nil {
@@ -214,7 +177,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	genesisRoot := ssz.Uint64Root(state.GenesisTime)
 	fieldRoots[0] = genesisRoot[:]
 
-	// Genesis validator root.
+	// Genesis validators root.
 	r := [32]byte{}
 	copy(r[:], state.GenesisValidatorsRoot)
 	fieldRoots[1] = r[:]
@@ -238,21 +201,21 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	fieldRoots[4] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	blockRootsRoot, err := arraysRoot(state.BlockRoots, fieldparams.BlockRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[5] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := h.arraysRoot(state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	stateRootsRoot, err := arraysRoot(state.StateRoots, fieldparams.StateRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
 	fieldRoots[6] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
-	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
+	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, fieldparams.HistoricalRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -279,7 +242,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	fieldRoots[10] = eth1DepositBuf[:]
 
 	// Validators slice root.
-	validatorsRoot, err := h.validatorRegistryRoot(state.Validators)
+	validatorsRoot, err := validatorRegistryRoot(state.Validators)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -293,7 +256,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	fieldRoots[12] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
+	randaoRootsRoot, err := arraysRoot(state.RandaoMixes, fieldparams.RandaoMixesLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
@@ -369,22 +332,22 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherAltair(ctx context.Context,
 	return fieldRoots, nil
 }
 
-// ComputeFieldRootsWithHasherMerge hashes the provided merge state and returns its respective field roots.
-func (h *stateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, state *ethpb.BeaconStateMerge) ([][]byte, error) {
-	_, span := trace.StartSpan(ctx, "hasher.ComputeFieldRootsWithHasherMerge")
+// ComputeFieldRootsWithHasherBellatrix hashes the provided bellatrix state and returns its respective field roots.
+func ComputeFieldRootsWithHasherBellatrix(ctx context.Context, state *ethpb.BeaconStateBellatrix) ([][]byte, error) {
+	_, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasherBellatrix")
 	defer span.End()
 
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
 	hasher := hash.CustomSHA256Hasher()
-	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateMergeFieldCount)
+	fieldRoots := make([][]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 
 	// Genesis time root.
 	genesisRoot := ssz.Uint64Root(state.GenesisTime)
 	fieldRoots[0] = genesisRoot[:]
 
-	// Genesis validator root.
+	// Genesis validators root.
 	r := [32]byte{}
 	copy(r[:], state.GenesisValidatorsRoot)
 	fieldRoots[1] = r[:]
@@ -408,21 +371,21 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, 
 	fieldRoots[4] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "BlockRoots")
+	blockRootsRoot, err := arraysRoot(state.BlockRoots, fieldparams.BlockRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[5] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := h.arraysRoot(state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot), "StateRoots")
+	stateRootsRoot, err := arraysRoot(state.StateRoots, fieldparams.StateRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
 	fieldRoots[6] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
-	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
+	historicalRootsRt, err := ssz.ByteArrayRootWithLimit(state.HistoricalRoots, fieldparams.HistoricalRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -449,7 +412,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, 
 	fieldRoots[10] = eth1DepositBuf[:]
 
 	// Validators slice root.
-	validatorsRoot, err := h.validatorRegistryRoot(state.Validators)
+	validatorsRoot, err := validatorRegistryRoot(state.Validators)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -463,7 +426,7 @@ func (h *stateRootHasher) ComputeFieldRootsWithHasherMerge(ctx context.Context, 
 	fieldRoots[12] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector), "RandaoMixes")
+	randaoRootsRoot, err := arraysRoot(state.RandaoMixes, fieldparams.RandaoMixesLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}

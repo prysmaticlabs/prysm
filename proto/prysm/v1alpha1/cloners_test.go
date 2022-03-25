@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 )
@@ -318,34 +319,34 @@ func TestCopyPayloadHeader(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
 }
 
-func TestCopySignedBeaconBlockMerge(t *testing.T) {
-	sbb := genSignedBeaconBlockMerge()
+func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
+	sbb := genSignedBeaconBlockBellatrix()
 
-	got := v1alpha1.CopySignedBeaconBlockMerge(sbb)
+	got := v1alpha1.CopySignedBeaconBlockBellatrix(sbb)
 	if !reflect.DeepEqual(got, sbb) {
-		t.Errorf("CopySignedBeaconBlockMerge() = %v, want %v", got, sbb)
+		t.Errorf("CopySignedBeaconBlockBellatrix() = %v, want %v", got, sbb)
 	}
-	assert.NotEmpty(t, sbb, "Copied signed beacon block Merge has empty fields")
+	assert.NotEmpty(t, sbb, "Copied signed beacon block Bellatrix has empty fields")
 }
 
-func TestCopyBeaconBlockMerge(t *testing.T) {
-	b := genBeaconBlockMerge()
+func TestCopyBeaconBlockBellatrix(t *testing.T) {
+	b := genBeaconBlockBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockMerge(b)
+	got := v1alpha1.CopyBeaconBlockBellatrix(b)
 	if !reflect.DeepEqual(got, b) {
-		t.Errorf("CopyBeaconBlockMerge() = %v, want %v", got, b)
+		t.Errorf("CopyBeaconBlockBellatrix() = %v, want %v", got, b)
 	}
-	assert.NotEmpty(t, b, "Copied beacon block Merge has empty fields")
+	assert.NotEmpty(t, b, "Copied beacon block Bellatrix has empty fields")
 }
 
-func TestCopyBeaconBlockBodyMerge(t *testing.T) {
-	bb := genBeaconBlockBodyMerge()
+func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
+	bb := genBeaconBlockBodyBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockBodyMerge(bb)
+	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
 	if !reflect.DeepEqual(got, bb) {
-		t.Errorf("CopyBeaconBlockBodyMerge() = %v, want %v", got, bb)
+		t.Errorf("CopyBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
 	}
-	assert.NotEmpty(t, bb, "Copied beacon block body Merge has empty fields")
+	assert.NotEmpty(t, bb, "Copied beacon block body Bellatrix has empty fields")
 }
 
 func bytes() []byte {
@@ -604,8 +605,8 @@ func genSignedBeaconBlockAltair() *v1alpha1.SignedBeaconBlockAltair {
 	}
 }
 
-func genBeaconBlockBodyMerge() *v1alpha1.BeaconBlockBodyMerge {
-	return &v1alpha1.BeaconBlockBodyMerge{
+func genBeaconBlockBodyBellatrix() *v1alpha1.BeaconBlockBodyBellatrix {
+	return &v1alpha1.BeaconBlockBodyBellatrix{
 		RandaoReveal:      bytes(),
 		Eth1Data:          genEth1Data(),
 		Graffiti:          bytes(),
@@ -619,19 +620,19 @@ func genBeaconBlockBodyMerge() *v1alpha1.BeaconBlockBodyMerge {
 	}
 }
 
-func genBeaconBlockMerge() *v1alpha1.BeaconBlockMerge {
-	return &v1alpha1.BeaconBlockMerge{
+func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockBellatrix {
+	return &v1alpha1.BeaconBlockBellatrix{
 		Slot:          123455,
 		ProposerIndex: 55433,
 		ParentRoot:    bytes(),
 		StateRoot:     bytes(),
-		Body:          genBeaconBlockBodyMerge(),
+		Body:          genBeaconBlockBodyBellatrix(),
 	}
 }
 
-func genSignedBeaconBlockMerge() *v1alpha1.SignedBeaconBlockMerge {
-	return &v1alpha1.SignedBeaconBlockMerge{
-		Block:     genBeaconBlockMerge(),
+func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockBellatrix {
+	return &v1alpha1.SignedBeaconBlockBellatrix{
+		Block:     genBeaconBlockBellatrix(),
 		Signature: bytes(),
 	}
 }
@@ -645,14 +646,14 @@ func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	}
 }
 
-func genPayload() *v1alpha1.ExecutionPayload {
-	return &v1alpha1.ExecutionPayload{
+func genPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
 		ParentHash:    bytes(),
 		FeeRecipient:  bytes(),
 		StateRoot:     bytes(),
-		ReceiptRoot:   bytes(),
+		ReceiptsRoot:  bytes(),
 		LogsBloom:     bytes(),
-		Random:        bytes(),
+		PrevRandao:    bytes(),
 		BlockNumber:   1,
 		GasLimit:      2,
 		GasUsed:       3,
@@ -671,7 +672,7 @@ func genPayloadHeader() *v1alpha1.ExecutionPayloadHeader {
 		StateRoot:        bytes(),
 		ReceiptRoot:      bytes(),
 		LogsBloom:        bytes(),
-		Random:           bytes(),
+		PrevRandao:       bytes(),
 		BlockNumber:      1,
 		GasLimit:         2,
 		GasUsed:          3,

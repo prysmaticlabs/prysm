@@ -12,9 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -27,8 +29,8 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Target: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+				Source: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 			},
 			AggregationBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
@@ -46,8 +48,7 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 
 	processedState, err := ProcessRewardsAndPenaltiesPrecompute(beaconState, bp, vp, AttestationsDelta, ProposersDelta)
 	require.NoError(t, err)
-	beaconState, ok := processedState.(*v1.BeaconState)
-	require.Equal(t, true, ok)
+	require.Equal(t, true, processedState.Version() == version.Phase0)
 
 	// Indices that voted everything except for head, lost a bit money
 	wanted := uint64(31999810265)
@@ -219,8 +220,8 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
-				Source: &ethpb.Checkpoint{Root: make([]byte, 32)},
+				Target: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+				Source: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 			},
 			AggregationBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
@@ -292,9 +293,9 @@ func buildState(slot types.Slot, validatorCount uint64) *ethpb.BeaconState {
 		RandaoMixes:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		BlockRoots:                  make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, 32)},
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, 32)},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
 }
 

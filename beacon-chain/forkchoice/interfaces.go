@@ -2,28 +2,41 @@ package forkchoice
 
 import (
 	"context"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// ForkChoicer represents the full fork choice interface composed of all of the sub-interfaces.
+// ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
 type ForkChoicer interface {
 	HeadRetriever        // to compute head.
 	BlockProcessor       // to track new block for fork choice.
 	AttestationProcessor // to track new attestation for fork choice.
 	Pruner               // to clean old data for fork choice.
 	Getter               // to retrieve fork choice information.
+	Setter               // to set fork choice information.
+	ProposerBooster      // ability to boost timely-proposed block roots.
 }
 
-// HeadRetriever retrieves head root of the current chain.
+// HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
 	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
+	Tips() ([][32]byte, []types.Slot)
+	IsOptimistic(ctx context.Context, root [32]byte) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	ProcessBlock(context.Context, types.Slot, [32]byte, [32]byte, [32]byte, types.Epoch, types.Epoch) error
+	InsertOptimisticBlock(ctx context.Context,
+		slot types.Slot,
+		root [32]byte,
+		parentRoot [32]byte,
+		payloadHash [32]byte,
+		justifiedEpoch types.Epoch,
+		finalizedEpoch types.Epoch,
+	) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
@@ -36,13 +49,27 @@ type Pruner interface {
 	Prune(context.Context, [32]byte) error
 }
 
+// ProposerBooster is able to boost the proposer's root score during fork choice.
+type ProposerBooster interface {
+	BoostProposerRoot(ctx context.Context, blockSlot types.Slot, blockRoot [32]byte, genesisTime time.Time) error
+	ResetBoostedProposerRoot(ctx context.Context) error
+}
+
 // Getter returns fork choice related information.
 type Getter interface {
-	Nodes() []*protoarray.Node
-	Node([32]byte) *protoarray.Node
 	HasNode([32]byte) bool
-	Store() *protoarray.Store
+	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
 	IsCanonical(root [32]byte) bool
+	FinalizedEpoch() types.Epoch
+	JustifiedEpoch() types.Epoch
+	ForkChoiceNodes() []*pbrpc.ForkChoiceNode
+	NodeCount() int
+}
+
+// Setter allows to set forkchoice information
+type Setter interface {
+	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
+	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte) ([][32]byte, error)
 }

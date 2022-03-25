@@ -6,12 +6,13 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v3"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -22,26 +23,26 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var (
-	stateCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_state_merge_count",
-		Help: "Count the number of active beacon state objects.",
-	})
-)
-
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconStateMerge) (*BeaconState, error) {
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateMerge))
+func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (state.BeaconStateBellatrix, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProto(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
+	}
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconStateBellatrix, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoUnsafe(st)
+	}
+
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
 
-	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
@@ -75,8 +76,8 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateMerge) (*BeaconState, error)
 	b.sharedFieldReferences[balances] = stateutil.NewRef(1)
 	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1) // New in Altair.
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Merge.
-	stateCount.Inc()
+	b.sharedFieldReferences[latestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Bellatrix.
+	state.StateCount.Inc()
 	return b, nil
 }
 
@@ -88,10 +89,10 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	fieldCount := params.BeaconConfig().BeaconStateMergeFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 
 	dst := &BeaconState{
-		state: &ethpb.BeaconStateMerge{
+		state: &ethpb.BeaconStateBellatrix{
 			// Primitive types, safe to copy.
 			GenesisTime:      b.state.GenesisTime,
 			Slot:             b.state.Slot,
@@ -120,7 +121,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint(),
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint(),
 			FinalizedCheckpoint:          b.finalizedCheckpoint(),
-			GenesisValidatorsRoot:        b.genesisValidatorRoot(),
+			GenesisValidatorsRoot:        b.genesisValidatorsRoot(),
 			CurrentSyncCommittee:         b.currentSyncCommittee(),
 			NextSyncCommittee:            b.nextSyncCommittee(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader(),
@@ -176,7 +177,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			}
 		}
 	}
-	stateCount.Inc()
+	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
@@ -193,7 +194,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			delete(b.sharedFieldReferences, field)
 			delete(b.stateFieldLeaves, field)
 		}
-		stateCount.Sub(1)
+		state.StateCount.Sub(1)
 	})
 
 	return dst
@@ -202,32 +203,49 @@ func (b *BeaconState) Copy() state.BeaconState {
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "BeaconStateMerge.HashTreeRoot")
+	_, span := trace.StartSpan(ctx, "BeaconStateBellatrix.HashTreeRoot")
 	defer span.End()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
-	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
-		fieldRoots, err := computeFieldRoots(ctx, b.state)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		layers := stateutil.Merkleize(fieldRoots)
-		b.merkleLayers = layers
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateMergeFieldCount)
+	if err := b.initializeMerkleLayers(ctx); err != nil {
+		return [32]byte{}, err
 	}
+	if err := b.recomputeDirtyFields(ctx); err != nil {
+		return [32]byte{}, err
+	}
+	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+}
 
+// Initializes the Merkle layers for the beacon state if they are empty.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
+	if len(b.merkleLayers) > 0 {
+		return nil
+	}
+	fieldRoots, err := computeFieldRoots(ctx, b.state)
+	if err != nil {
+		return err
+	}
+	layers := stateutil.Merkleize(fieldRoots)
+	b.merkleLayers = layers
+	b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+	return nil
+}
+
+// Recomputes the Merkle layers for the dirty fields in the state.
+// WARNING: Caller must acquire the mutex before using.
+func (b *BeaconState) recomputeDirtyFields(_ context.Context) error {
 	for field := range b.dirtyFields {
-		root, err := b.rootSelector(ctx, field)
+		root, err := b.rootSelector(field)
 		if err != nil {
-			return [32]byte{}, err
+			return err
 		}
 		b.merkleLayers[0][field] = root[:]
 		b.recomputeRoot(int(field))
 		delete(b.dirtyFields, field)
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	return nil
 }
 
 // FieldReferencesCount returns the reference count held by each field. This
@@ -256,12 +274,12 @@ func (b *BeaconState) IsNil() bool {
 	return b == nil || b.state == nil
 }
 
-func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
+func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.state.GenesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.state.Slot)), nil
@@ -273,61 +291,74 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.BlockRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+			err := b.resetFieldTrie(field, b.state.BlockRoots, fieldparams.BlockRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(blockRoots, b.state.BlockRoots)
 	case stateRoots:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.StateRoots, uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+			err := b.resetFieldTrie(field, b.state.StateRoots, fieldparams.StateRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(stateRoots, b.state.StateRoots)
 	case historicalRoots:
-		return ssz.ByteArrayRootWithLimit(b.state.HistoricalRoots, params.BeaconConfig().HistoricalRootsLimit)
+		return ssz.ByteArrayRootWithLimit(b.state.HistoricalRoots, fieldparams.HistoricalRootsLength)
 	case eth1Data:
 		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))))
+			err := b.resetFieldTrie(
+				field,
+				b.state.Eth1DataVotes,
+				fieldparams.Eth1DataVotesLength,
+			)
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(field, b.state.Eth1DataVotes)
 	case validators:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.Validators, params.BeaconConfig().ValidatorRegistryLimit)
+			err := b.resetFieldTrie(field, b.state.Validators, fieldparams.ValidatorRegistryLimit)
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[validators] = []uint64{}
 			delete(b.rebuildTrie, validators)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
+		if features.Get().EnableBalanceTrieComputation {
+			if b.rebuildTrie[field] {
+				maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
+				elemSize := uint64(8)
+				balLimit := (maxBalCap*elemSize + 31) / 32
+				err := b.resetFieldTrie(field, b.state.Balances, balLimit)
+				if err != nil {
+					return [32]byte{}, err
+				}
+				delete(b.rebuildTrie, field)
+				return b.stateFieldLeaves[field].TrieRoot()
+			}
+			return b.recomputeFieldTrie(balances, b.state.Balances)
+		}
 		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
-			err := b.resetFieldTrie(field, b.state.RandaoMixes, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+			err := b.resetFieldTrie(field, b.state.RandaoMixes, fieldparams.RandaoMixesLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}

@@ -39,7 +39,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
+	domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorsRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err)
@@ -292,4 +292,35 @@ func TestSeenAttesterSlashingIndices(t *testing.T) {
 		r.setAttesterSlashingIndicesSeen(tc.saveIndices1, tc.saveIndices2)
 		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(tc.checkIndices1, tc.checkIndices2))
 	}
+}
+
+func TestValidateAttesterSlashing_Optimistic(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	slashing, s := setupValidAttesterSlashing(t)
+
+	r := &Service{
+		cfg: &config{
+			p2p:         p,
+			chain:       &mock.ChainService{State: s, Optimistic: true},
+			initialSync: &mockSync.Sync{IsSyncing: false},
+		},
+	}
+
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, slashing)
+	require.NoError(t, err)
+
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationIgnore
+	assert.Equal(t, true, valid, "Should have ignore this message")
 }

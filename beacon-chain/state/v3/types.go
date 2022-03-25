@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	fieldMap = make(map[types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateMergeFieldCount)
+	fieldMap = make(map[types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 
 	// Initialize the fixed sized arrays.
 	fieldMap[types.BlockRoots] = types.BasicArray
@@ -28,7 +28,7 @@ func init() {
 // Field Aliases for values from the types package.
 const (
 	genesisTime                    = types.GenesisTime
-	genesisValidatorRoot           = types.GenesisValidatorRoot
+	genesisValidatorsRoot          = types.GenesisValidatorsRoot
 	slot                           = types.Slot
 	fork                           = types.Fork
 	latestBlockHeader              = types.LatestBlockHeader
@@ -65,7 +65,7 @@ var ErrNilInnerState = errors.New("nil inner state")
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
-	state                 *ethpb.BeaconStateMerge
+	state                 *ethpb.BeaconStateBellatrix
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
 	dirtyIndices          map[types.FieldIndex][]uint64

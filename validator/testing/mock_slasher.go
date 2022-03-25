@@ -18,7 +18,7 @@ type MockSlasher struct {
 }
 
 // HighestAttestations will return an empty array of attestations.
-func (_ MockSlasher) HighestAttestations(ctx context.Context, req *eth.HighestAttestationRequest, _ ...grpc.CallOption) (*eth.HighestAttestationResponse, error) {
+func (MockSlasher) HighestAttestations(ctx context.Context, req *eth.HighestAttestationRequest, _ ...grpc.CallOption) (*eth.HighestAttestationResponse, error) {
 	return &eth.HighestAttestationResponse{
 		Attestations: nil,
 	}, nil
@@ -26,7 +26,7 @@ func (_ MockSlasher) HighestAttestations(ctx context.Context, req *eth.HighestAt
 
 // IsSlashableAttestation returns slashbale attestation if slash attestation is set to true.
 func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedAttestation, _ ...grpc.CallOption) (*eth.AttesterSlashingResponse, error) {
-	ms.IsSlashableAttestationCalled = true
+	ms.IsSlashableAttestationCalled = true // skipcq: RVV-B0006
 	if ms.SlashAttestation {
 
 		slashingAtt, ok := proto.Clone(in).(*eth.IndexedAttestation)
@@ -48,7 +48,7 @@ func (ms MockSlasher) IsSlashableAttestation(_ context.Context, in *eth.IndexedA
 
 // IsSlashableBlock returns proposer slashing if slash block is set to true.
 func (ms MockSlasher) IsSlashableBlock(_ context.Context, in *eth.SignedBeaconBlockHeader, _ ...grpc.CallOption) (*eth.ProposerSlashingResponse, error) {
-	ms.IsSlashableBlockCalled = true
+	ms.IsSlashableBlockCalled = true // skipcq: RVV-B0006
 	if ms.SlashBlock {
 		slashingBlk, ok := proto.Clone(in).(*eth.SignedBeaconBlockHeader)
 		if !ok {

@@ -74,6 +74,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.RestoreTargetDirFlag,
 			cmd.BoltMMapInitialSizeFlag,
 			cmd.ValidatorMonitorIndicesFlag,
+			cmd.ApiTimeoutFlag,
 		},
 	},
 	{
@@ -106,6 +107,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GRPCGatewayPort,
 			flags.GPRCGatewayCorsDomain,
 			flags.HTTPWeb3ProviderFlag,
+			flags.ExecutionJWTSecretFlag,
 			flags.FallbackWeb3ProviderFlag,
 			flags.SetGCPercent,
 			flags.HeadSync,
@@ -128,10 +130,7 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "merge",
 		Flags: []cli.Flag{
-			flags.TerminalTotalDifficultyOverride,
-			flags.TerminalBlockHashOverride,
-			flags.TerminalBlockHashActivationEpochOverride,
-			flags.FeeRecipient,
+			flags.SuggestedFeeRecipient,
 		},
 	},
 	{

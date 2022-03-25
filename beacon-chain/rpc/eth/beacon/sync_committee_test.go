@@ -1,7 +1,9 @@
 package beacon
 
 import (
+	"bytes"
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +16,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -23,6 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 	bytesutil2 "github.com/wealdtech/go-bytesutil"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func Test_currentCommitteeIndicesFromState(t *testing.T) {
@@ -185,6 +190,32 @@ func TestListSyncCommittees(t *testing.T) {
 	}
 }
 
+type futureSyncMockFetcher struct {
+	BeaconState     state.BeaconState
+	BeaconStateRoot []byte
+}
+
+func (m *futureSyncMockFetcher) State(_ context.Context, stateId []byte) (state.BeaconState, error) {
+	expectedRequest := []byte(strconv.FormatUint(uint64(0), 10))
+	res := bytes.Compare(stateId, expectedRequest)
+	if res != 0 {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Requested wrong epoch for next sync committee, expected: %#x, received: %#x",
+			expectedRequest,
+			stateId,
+		)
+	}
+	return m.BeaconState, nil
+}
+func (m *futureSyncMockFetcher) StateRoot(context.Context, []byte) ([]byte, error) {
+	return m.BeaconStateRoot, nil
+}
+
+func (m *futureSyncMockFetcher) StateBySlot(context.Context, types.Slot) (state.BeaconState, error) {
+	return m.BeaconState, nil
+}
+
 func TestListSyncCommitteesFuture(t *testing.T) {
 	ctx := context.Background()
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
@@ -202,7 +233,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
 		},
-		StateFetcher: &testutil.MockFetcher{
+		StateFetcher: &futureSyncMockFetcher{
 			BeaconState: st,
 		},
 	}

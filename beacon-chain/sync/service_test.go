@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
@@ -11,12 +10,14 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -126,75 +127,84 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	r := Service{
-		ctx: context.Background(),
+		ctx: ctx,
 		cfg: &config{
 			p2p:           p2p,
+			beaconDB:      dbTest.SetupDB(t),
 			chain:         chainService,
 			stateNotifier: chainService.StateNotifier(),
+			blockNotifier: chainService.BlockNotifier(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
 		chainStarted: abool.New(),
 		subHandler:   newSubTopicHandler(),
 	}
+	r.initCaches()
 
-	topic := "/eth2/%x/beacon_block"
-	go r.registerHandlers()
-	time.Sleep(100 * time.Millisecond)
-	i := r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime: time.Now(),
-		},
-	})
-	if i == 0 {
-		t.Fatal("didn't send genesis time to subscribers")
+	syncCompleteCh := make(chan bool)
+	go func() {
+		r.registerHandlers()
+		syncCompleteCh <- true
+	}()
+	for i := 0; i == 0; {
+		assert.NoError(t, ctx.Err())
+		i = r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime: time.Now(),
+			},
+		})
 	}
+	for !r.chainStarted.IsSet() {
+		assert.NoError(t, ctx.Err())
+		time.Sleep(time.Millisecond)
+	}
+	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
+
+	blockChan := make(chan *feed.Event, 1)
+	sub := r.cfg.blockNotifier.BlockFeed().Subscribe(blockChan)
+	defer sub.Unsubscribe()
+
 	b := []byte("sk")
 	b32 := bytesutil.ToBytes32(b)
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
-
 	msg := util.NewBeaconBlock()
 	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 	p2p.Digest, err = r.currentForkDigest()
-	r.cfg.blockNotifier = chainService.BlockNotifier()
-	blockChan := make(chan feed.Event, 1)
-	sub := r.cfg.blockNotifier.BlockFeed().Subscribe(blockChan)
-
 	require.NoError(t, err)
+
+	// Save block into DB so that validateBeaconBlockPubSub() process gets short cut.
+	wb, err := wrapper.WrappedSignedBeaconBlock(msg)
+	require.NoError(t, err)
+	require.NoError(t, r.cfg.beaconDB.SaveBlock(ctx, wb))
+
+	topic := "/eth2/%x/beacon_block"
 	p2p.ReceivePubSub(topic, msg)
-
-	// wait for chainstart to be sent
-	time.Sleep(2 * time.Second)
-	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
-
 	assert.Equal(t, 0, len(blockChan), "block was received by sync service despite not being fully synced")
 
-	i = r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: time.Now(),
-		},
-	})
-
-	if i == 0 {
-		t.Fatal("didn't send genesis time to sync event subscribers")
+	for i := 0; i == 0; {
+		assert.NoError(t, ctx.Err())
+		i = r.cfg.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Synced,
+			Data: &statefeed.SyncedData{
+				StartTime: time.Now(),
+			},
+		})
 	}
-
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
-	go func() {
-		// Wait for block to be received by service.
-		<-blockChan
-		wg.Done()
-		sub.Unsubscribe()
-	}()
+	<-syncCompleteCh
 
 	p2p.ReceivePubSub(topic, msg)
-	// wait for message to be sent
-	util.WaitTimeout(wg, 2*time.Second)
+
+	select {
+	case <-blockChan:
+	case <-ctx.Done():
+	}
+	assert.NoError(t, ctx.Err())
 }
 
 func TestSyncService_StopCleanly(t *testing.T) {

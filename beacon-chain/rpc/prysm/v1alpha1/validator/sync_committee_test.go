@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"testing"
+	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -11,11 +12,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -23,10 +28,35 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 	r := []byte{'a'}
 	server := &Server{
 		HeadFetcher: &mock.ChainService{Root: r},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 	res, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.DeepEqual(t, r, res.Root)
+}
+
+func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	server := &Server{
+		HeadFetcher: &mock.ChainService{Optimistic: true},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+	}
+	_, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
+	s, ok := status.FromError(err)
+	require.Equal(t, true, ok)
+	require.DeepEqual(t, codes.Unavailable, s.Code())
+	require.ErrorContains(t, errOptimisticMode.Error(), err)
+
+	server = &Server{
+		HeadFetcher: &mock.ChainService{Optimistic: false},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+	}
+	_, err = server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
 }
 
 func TestSubmitSyncMessage_OK(t *testing.T) {
@@ -60,13 +90,49 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 			SyncCommitteeIndices: []types.CommitteeIndex{0},
 		},
 	}
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	// Request slot 0, should get the index 0 for validator 0.
 	res, err := server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:], Slot: types.Slot(0),
 	})
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, res.Indices)
+}
+
+func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateAltair(t, 10)
+	server := &Server{
+		SyncCommitteePool: synccommittee.NewStore(),
+		P2P:               &mockp2p.MockBroadcaster{},
+		HeadFetcher: &mock.ChainService{
+			State:                st,
+			SyncCommitteeIndices: []types.CommitteeIndex{10},
+		},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+	}
+	secKey, err := bls.RandKey()
+	require.NoError(t, err)
+	sig := secKey.Sign([]byte{'A'}).Marshal()
+	msg := &ethpb.SyncCommitteeMessage{
+		Slot:           1,
+		ValidatorIndex: 2,
+		BlockRoot:      make([]byte, 32),
+		Signature:      sig,
+	}
+	_, err = server.SubmitSyncMessage(context.Background(), msg)
+	require.NoError(t, err)
+	_, err = server.SubmitSyncMessage(context.Background(), msg)
+	require.NoError(t, err)
+	val, err := st.ValidatorAtIndex(2)
+	require.NoError(t, err)
+
+	contr, err := server.GetSyncCommitteeContribution(context.Background(),
+		&ethpb.SyncCommitteeContributionRequest{
+			Slot:      1,
+			PublicKey: val.PublicKey,
+			SubnetId:  1})
+	require.NoError(t, err)
+	assert.DeepEqual(t, sig, contr.Signature)
 }
 
 func TestSubmitSignedContributionAndProof_OK(t *testing.T) {

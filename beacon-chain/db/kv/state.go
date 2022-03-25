@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -43,6 +45,19 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconStat
 	}
 
 	return s.unmarshalState(ctx, enc, valEntries)
+}
+
+// StateOrError is just like State(), except it only returns a non-error response
+// if the requested state is found in the database.
+func (s *Store) StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+	st, err := s.State(ctx, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if st == nil || st.IsNil() {
+		return nil, errors.Wrap(ErrNotFoundState, fmt.Sprintf("no state with blockroot=%#x", blockRoot))
+	}
+	return st, nil
 }
 
 // GenesisState returns the genesis state in beacon chain.
@@ -160,6 +175,12 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 				return err
 			}
 			validators = pbState.Validators
+		case *ethpb.BeaconStateBellatrix:
+			pbState, err := v3.ProtobufBeaconState(st.InnerStateUnsafe())
+			if err != nil {
+				return err
+			}
+			validators = pbState.Validators
 		default:
 			return errors.New("invalid state type")
 		}
@@ -238,6 +259,28 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 				if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
 					return err
 				}
+			case *ethpb.BeaconStateBellatrix:
+				pbState, err := v3.ProtobufBeaconState(rawType)
+				if err != nil {
+					return err
+				}
+				if pbState == nil {
+					return errors.New("nil state")
+				}
+				valEntries := pbState.Validators
+				pbState.Validators = make([]*ethpb.Validator, 0)
+				rawObj, err := pbState.MarshalSSZ()
+				if err != nil {
+					return err
+				}
+				encodedState := snappy.Encode(nil, append(bellatrixKey, rawObj...))
+				if err := bucket.Put(rt[:], encodedState); err != nil {
+					return err
+				}
+				pbState.Validators = valEntries
+				if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+					return err
+				}
 			default:
 				return errors.New("invalid state type")
 			}
@@ -275,7 +318,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 
 // HasState checks if a state by root exists in the db.
 func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
+	_, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
 	hasState := false
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -385,6 +428,20 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 	}
 
 	switch {
+	case hasBellatrixKey(enc):
+		// Marshal state bytes to altair beacon state.
+		protoState := &ethpb.BeaconStateBellatrix{}
+		if err := protoState.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal encoding for altair")
+		}
+		ok, err := s.isStateValidatorMigrationOver()
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			protoState.Validators = validatorEntries
+		}
+		return v3.InitializeFromProtoUnsafe(protoState)
 	case hasAltairKey(enc):
 		// Marshal state bytes to altair beacon state.
 		protoState := &ethpb.BeaconStateAltair{}
@@ -438,6 +495,19 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 			return nil, err
 		}
 		return snappy.Encode(nil, append(altairKey, rawObj...)), nil
+	case *ethpb.BeaconStateBellatrix:
+		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
+		if !ok {
+			return nil, errors.New("non valid inner state")
+		}
+		if rState == nil {
+			return nil, errors.New("nil state")
+		}
+		rawObj, err := rState.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		return snappy.Encode(nil, append(bellatrixKey, rawObj...)), nil
 	default:
 		return nil, errors.New("invalid inner state")
 	}
@@ -513,7 +583,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 
 // retrieves and assembles the state information from multiple buckets.
 func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.stateBytes")
+	_, span := trace.StartSpan(ctx, "BeaconDB.stateBytes")
 	defer span.End()
 	var dst []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -632,7 +702,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[string][]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
+	_, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
 	// Every index has a unique bucket for fast, binary-search

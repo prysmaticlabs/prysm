@@ -37,7 +37,7 @@ func (c *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(ctx context.Con
 }
 
 func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unaggregatedAtts []*ethpb.Attestation) error {
-	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.aggregateUnaggregatedAttestations")
+	_, span := trace.StartSpan(ctx, "operations.attestations.kv.aggregateUnaggregatedAttestations")
 	defer span.End()
 
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
@@ -168,7 +168,7 @@ func (c *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
 func (c *AttCaches) AggregatedAttestationsBySlotIndex(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation {
-	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregatedAttestationsBySlotIndex")
+	_, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregatedAttestationsBySlotIndex")
 	defer span.End()
 
 	atts := make([]*ethpb.Attestation, 0)

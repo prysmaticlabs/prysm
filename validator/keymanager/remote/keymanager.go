@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -16,10 +17,12 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -36,7 +39,7 @@ var (
 // RemoteKeymanager defines the interface for remote Prysm wallets.
 type RemoteKeymanager interface {
 	keymanager.IKeymanager
-	ReloadPublicKeys(ctx context.Context) ([][48]byte, error)
+	ReloadPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error)
 }
 
 // KeymanagerOpts for a remote keymanager.
@@ -66,7 +69,7 @@ type SetupConfig struct {
 type Keymanager struct {
 	opts                *KeymanagerOpts
 	client              validatorpb.RemoteSignerClient
-	orderedPubKeys      [][48]byte
+	orderedPubKeys      [][fieldparams.BLSPubkeyLength]byte
 	accountsChangedFeed *event.Feed
 }
 
@@ -130,7 +133,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	k := &Keymanager{
 		opts:                cfg.Opts,
 		client:              client,
-		orderedPubKeys:      make([][48]byte, 0),
+		orderedPubKeys:      make([][fieldparams.BLSPubkeyLength]byte, 0),
 		accountsChangedFeed: new(event.Feed),
 	}
 	return k, nil
@@ -208,7 +211,7 @@ func (km *Keymanager) KeymanagerOpts() *KeymanagerOpts {
 }
 
 // ReloadPublicKeys reloads public keys.
-func (km *Keymanager) ReloadPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (km *Keymanager) ReloadPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not reload public keys")
@@ -233,12 +236,12 @@ func (km *Keymanager) ReloadPublicKeys(ctx context.Context) ([][48]byte, error) 
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys that should be used to validate with.
-func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
+func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	resp, err := km.client.ListValidatingPublicKeys(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not list accounts from remote server")
 	}
-	pubKeys := make([][48]byte, len(resp.ValidatingPublicKeys))
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, len(resp.ValidatingPublicKeys))
 	for i := range resp.ValidatingPublicKeys {
 		pubKeys[i] = bytesutil.ToBytes48(resp.ValidatingPublicKeys[i])
 	}
@@ -263,6 +266,43 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 // SubscribeAccountChanges creates an event subscription for a channel
 // to listen for public key changes at runtime, such as when new validator accounts
 // are imported into the keymanager while the validator process is running.
-func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return km.accountsChangedFeed.Subscribe(pubKeysChan)
+}
+
+// ExtractKeystores is not supported for the remote keymanager type.
+func (*Keymanager) ExtractKeystores(
+	ctx context.Context, publicKeys []bls.PublicKey, password string,
+) ([]*keymanager.Keystore, error) {
+	return nil, errors.New("extracting keys not supported for a remote keymanager")
+}
+
+func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
+	return ListKeymanagerAccountsImpl(ctx, cfg, km, km.KeymanagerOpts())
+}
+
+func ListKeymanagerAccountsImpl(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig, km keymanager.IKeymanager, opts *KeymanagerOpts) error {
+	au := aurora.NewAurora(true)
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("remote signer").Bold())
+	fmt.Printf(
+		"(configuration file path) %s\n",
+		au.BrightGreen(filepath.Join(cfg.WalletAccountsDir, cfg.KeymanagerConfigFileName)).Bold(),
+	)
+	fmt.Println(" ")
+	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
+	fmt.Println(opts)
+	validatingPubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	if len(validatingPubKeys) == 1 {
+		fmt.Print("Showing 1 validator account\n")
+	} else if len(validatingPubKeys) == 0 {
+		fmt.Print("No accounts found\n")
+		return nil
+	} else {
+		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
+	}
+	remote_utils.DisplayRemotePublicKeys(validatingPubKeys)
+	return nil
 }

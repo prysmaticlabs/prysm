@@ -1,9 +1,11 @@
 package bytesutil_test
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -495,5 +497,88 @@ func TestBytesInvalidInputs(t *testing.T) {
 
 	intRes := bytesutil.ToLowInt64([]byte{})
 	assert.Equal(t, intRes, int64(0))
+}
 
+func TestReverseByteOrder(t *testing.T) {
+	input := []byte{0, 1, 2, 3, 4, 5}
+	expectedResult := []byte{5, 4, 3, 2, 1, 0}
+	output := bytesutil.ReverseByteOrder(input)
+
+	// check that the input is not modified and the output is reversed
+	assert.Equal(t, bytes.Equal(input, []byte{0, 1, 2, 3, 4, 5}), true)
+	assert.Equal(t, bytes.Equal(expectedResult, output), true)
+}
+
+func TestSafeCopy2d32Bytes(t *testing.T) {
+	input := make([][32]byte, 2)
+	input[0] = bytesutil.ToBytes32([]byte{'a'})
+	input[1] = bytesutil.ToBytes32([]byte{'b'})
+	output := bytesutil.SafeCopy2d32Bytes(input)
+	assert.Equal(t, false, &input == &output, "No copy was made")
+	assert.DeepEqual(t, input, output)
+}
+
+func TestZeroRoot(t *testing.T) {
+	input := make([]byte, fieldparams.RootLength)
+	output := bytesutil.ZeroRoot(input)
+	assert.Equal(t, true, output)
+	copy(input[2:], "a")
+	copy(input[3:], "b")
+	output = bytesutil.ZeroRoot(input)
+	assert.Equal(t, false, output)
+}
+
+func TestIsRoot(t *testing.T) {
+	input := make([]byte, fieldparams.RootLength)
+	output := bytesutil.IsRoot(input)
+	assert.Equal(t, true, output)
+}
+
+func TestIsValidRoot(t *testing.T) {
+
+	zeroRoot := make([]byte, fieldparams.RootLength)
+
+	validRoot := make([]byte, fieldparams.RootLength)
+	validRoot[0] = 'a'
+
+	wrongLengthRoot := make([]byte, fieldparams.RootLength-4)
+	wrongLengthRoot[0] = 'a'
+
+	type args struct {
+		root []byte
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "Is ZeroRoot",
+			args: args{
+				root: zeroRoot,
+			},
+			want: false,
+		},
+		{
+			name: "Is ValidRoot",
+			args: args{
+				root: validRoot,
+			},
+			want: true,
+		},
+		{
+			name: "Is NonZeroRoot but not length 32",
+			args: args{
+				root: wrongLengthRoot,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := bytesutil.IsValidRoot(tt.args.root)
+			require.Equal(t, got, tt.want)
+		})
+	}
 }

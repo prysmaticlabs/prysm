@@ -10,11 +10,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -23,8 +27,12 @@ import (
 	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc"
@@ -41,7 +49,7 @@ var _ iface.Validator = (*validator)(nil)
 const cancelledCtx = "context has been canceled"
 
 func genMockKeymanager(numKeys int) *mockKeymanager {
-	km := make(map[[48]byte]bls.SecretKey, numKeys)
+	km := make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey, numKeys)
 	for i := 0; i < numKeys; i++ {
 		k, err := bls.RandKey()
 		if err != nil {
@@ -55,15 +63,15 @@ func genMockKeymanager(numKeys int) *mockKeymanager {
 
 type mockKeymanager struct {
 	lock                sync.RWMutex
-	keysMap             map[[48]byte]bls.SecretKey
+	keysMap             map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey
 	fetchNoKeys         bool
 	accountsChangedFeed *event.Feed
 }
 
-func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byte, error) {
+func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
-	keys := make([][48]byte, 0)
+	keys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	if m.fetchNoKeys {
 		m.fetchNoKeys = false
 		return keys, nil
@@ -75,7 +83,7 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][48]byt
 }
 
 func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], req.PublicKey)
 	privKey, ok := m.keysMap[pubKey]
 	if !ok {
@@ -85,15 +93,26 @@ func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (
 	return sig, nil
 }
 
-func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][48]byte) event.Subscription {
+func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	if m.accountsChangedFeed == nil {
 		m.accountsChangedFeed = &event.Feed{}
 	}
 	return m.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
-func (m *mockKeymanager) SimulateAccountChanges(newKeys [][48]byte) {
+func (m *mockKeymanager) SimulateAccountChanges(newKeys [][fieldparams.BLSPubkeyLength]byte) {
 	m.accountsChangedFeed.Send(newKeys)
+}
+
+func (*mockKeymanager) ExtractKeystores(
+	ctx context.Context, publicKeys []bls.PublicKey, password string,
+) ([]*keymanager.Keystore, error) {
+	return nil, errors.New("extracting keys not supported on mock keymanager")
+}
+
+func (*mockKeymanager) ListKeymanagerAccounts(
+	context.Context, keymanager.ListKeymanagerAccountConfig) error {
+	return nil
 }
 
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
@@ -114,7 +133,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
-	db := dbTest.SetupDB(t, [][48]byte{})
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	v := validator{
 		validatorClient: client,
 		db:              db,
@@ -123,7 +142,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	// Make sure its clean at the start.
 	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
-	assert.DeepEqual(t, []byte(nil), savedGenValRoot, "Unexpected saved genesis validator root")
+	assert.DeepEqual(t, []byte(nil), savedGenValRoot, "Unexpected saved genesis validators root")
 
 	genesis := uint64(time.Unix(1, 0).Unix())
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
@@ -144,7 +163,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	savedGenValRoot, err = db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validator root")
+	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validators root")
 	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 
@@ -169,7 +188,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
-	db := dbTest.SetupDB(t, [][48]byte{})
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	v := validator{
 		validatorClient: client,
 		db:              db,
@@ -193,7 +212,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validator root")
+	assert.DeepEqual(t, genesisValidatorsRoot[:], savedGenValRoot, "Unexpected saved genesis validators root")
 	assert.Equal(t, genesis, v.genesisTime, "Unexpected chain start time")
 	assert.NotNil(t, v.ticker, "Expected ticker to be set, received nil")
 
@@ -252,10 +271,10 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: make(map[[48]byte]bls.SecretKey),
+		keysMap: make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey),
 	}
 	v := validator{
 		validatorClient: client,
@@ -326,23 +345,31 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 }
 
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
+	ctx := context.Background()
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
 	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-		genesisTime:     1,
+		validatorClient:        client,
+		keyManager:             km,
+		genesisTime:            1,
+		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
+		feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
+			ProposeConfig: nil,
+			DefaultConfig: &validator_service_config.FeeRecipientOptions{
+				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+			},
+		},
 	}
 
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
@@ -358,7 +385,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	require.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
+	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
 
@@ -369,17 +396,24 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
 	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-		genesisTime:     1,
+		validatorClient:        client,
+		keyManager:             km,
+		genesisTime:            1,
+		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
+		feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
+			ProposeConfig: nil,
+			DefaultConfig: &validator_service_config.FeeRecipientOptions{
+				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+			},
+		},
 	}
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -491,10 +525,10 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -529,10 +563,10 @@ func TestUpdateDuties_OK(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [48]byte{}
+	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
-		keysMap: map[[48]byte]bls.SecretKey{
+		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 			pubKey: privKey,
 		},
 	}
@@ -586,12 +620,12 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
 
 	numValidators := 10
-	keysMap := make(map[[48]byte]bls.SecretKey)
-	blacklistedPublicKeys := make(map[[48]byte]bool)
+	keysMap := make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
+	blacklistedPublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	for i := 0; i < numValidators; i++ {
 		priv, err := bls.RandKey()
 		require.NoError(t, err)
-		pubKey := [48]byte{}
+		pubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(pubKey[:], priv.PublicKey().Marshal())
 		keysMap[pubKey] = priv
 		blacklistedPublicKeys[pubKey] = true
@@ -936,8 +970,8 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 
 	// Create two different public keys
-	pubKey0 := [48]byte{1, 2, 3, 4}
-	pubKey1 := [48]byte{6, 7, 8, 9}
+	pubKey0 := [fieldparams.BLSPubkeyLength]byte{1, 2, 3, 4}
+	pubKey1 := [fieldparams.BLSPubkeyLength]byte{6, 7, 8, 9}
 	// This is the request expected from AllValidatorsAreExited()
 	request := &ethpb.MultipleValidatorStatusRequest{
 		PublicKeys: [][]byte{
@@ -955,7 +989,7 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 		request,      // request
 	).Return(&ethpb.MultipleValidatorStatusResponse{Statuses: statuses}, nil /*err*/)
 
-	keysMap := make(map[[48]byte]bls.SecretKey)
+	keysMap := make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey)
 	// secretKey below is just filler and is used multiple times
 	secretKeyBytes := [32]byte{1}
 	secretKey, err := bls.SecretKeyFromBytes(secretKeyBytes[:])
@@ -964,7 +998,11 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 	keysMap[pubKey1] = secretKey
 
 	// If AllValidatorsAreExited does not create the expected request, this test will fail
-	v := validator{keyManager: &mockKeymanager{keysMap: keysMap}, validatorClient: client}
+	v := validator{
+		keyManager:             &mockKeymanager{keysMap: keysMap},
+		validatorClient:        client,
+		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+	}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, false, exited)
@@ -1282,7 +1320,7 @@ func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
 			},
 			BeaconBlockRoot: make([]byte, 32),
 		},
-		Signature: make([]byte, params.BeaconConfig().BLSSignatureLength),
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
 	}
 }
 
@@ -1325,4 +1363,314 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
 	require.NoError(t, err)
 	require.Equal(t, true, aggregator)
+}
+
+func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	root := make([]byte, 32)
+	copy(root[2:], "a")
+	err := db.SaveGenesisValidatorsRoot(ctx, root)
+	require.NoError(t, err)
+	w := wallet.NewWalletForWeb3Signer()
+	decodedKey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
+	require.NoError(t, err)
+	keys := [][48]byte{
+		bytesutil.ToBytes48(decodedKey),
+	}
+	v := validator{
+		db:     db,
+		useWeb: false,
+		wallet: w,
+		Web3SignerConfig: &remote_web3signer.SetupConfig{
+			BaseEndpoint:       "http://localhost:8545",
+			ProvidedPublicKeys: keys,
+		},
+	}
+	err = v.WaitForKeymanagerInitialization(context.Background())
+	require.NoError(t, err)
+	km, err := v.Keymanager()
+	require.NoError(t, err)
+	require.NotNil(t, km)
+}
+
+func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	root := make([]byte, 32)
+	copy(root[2:], "a")
+	err := db.SaveGenesisValidatorsRoot(ctx, root)
+	require.NoError(t, err)
+	walletChan := make(chan *wallet.Wallet, 1)
+	v := validator{
+		db:                      db,
+		useWeb:                  true,
+		walletInitializedFeed:   &event.Feed{},
+		walletIntializedChannel: walletChan,
+	}
+	wait := make(chan struct{})
+	go func() {
+		defer close(wait)
+		err = v.WaitForKeymanagerInitialization(ctx)
+		require.NoError(t, err)
+		km, err := v.Keymanager()
+		require.NoError(t, err)
+		require.NotNil(t, km)
+	}()
+
+	walletChan <- wallet.New(&wallet.Config{
+		KeymanagerKind: keymanager.Local,
+	})
+	<-wait
+}
+
+func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	root := make([]byte, 32)
+	copy(root[2:], "a")
+	err := db.SaveGenesisValidatorsRoot(ctx, root)
+	require.NoError(t, err)
+	v := validator{
+		db:     db,
+		useWeb: false,
+		interopKeysConfig: &local.InteropKeymanagerConfig{
+			NumValidatorKeys: 2,
+			Offset:           1,
+		},
+	}
+	err = v.WaitForKeymanagerInitialization(ctx)
+	require.NoError(t, err)
+	km, err := v.Keymanager()
+	require.NoError(t, err)
+	require.NotNil(t, km)
+}
+
+func TestValidator_UdpateFeeRecipient(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	tests := []struct {
+		name            string
+		validatorSetter func(t *testing.T) *validator
+		err             string
+	}{
+		{
+			name: " Happy Path",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:        client,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: nil,
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					},
+				}
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 1,
+				}, nil)
+
+				return &v
+			},
+		},
+		{
+			name: " Skip if no config",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:        client,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				return &v
+			},
+		},
+		{
+			name: " Happy Path validator index not found in cache",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:        client,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: nil,
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					},
+				}
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 1,
+				}, nil)
+				return &v
+			},
+		},
+		{
+			name: " Happy Path proposer config not nil",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:        client,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions)
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 1,
+				}, nil)
+				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
+					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+				}
+				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: config,
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					},
+				}
+				return &v
+			},
+		},
+		{
+			name: " proposer config not nil but fee recipient empty ",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:        client,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions)
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 1,
+				}, nil)
+				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
+					FeeRecipient: common.Address{},
+				}
+				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: config,
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					},
+				}
+				return &v
+			},
+		},
+		{
+			name: "Validator index not found with proposeconfig",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:        client,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions)
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(nil, errors.New("Could not find validator index for public key"))
+				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
+					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+				}
+				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+					ProposeConfig: config,
+					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					},
+				}
+				return &v
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := tt.validatorSetter(t)
+			km, err := v.Keymanager()
+			require.NoError(t, err)
+			if err := v.UpdateFeeRecipient(ctx, km); tt.err != "" {
+				assert.ErrorContains(t, tt.err, err)
+			}
+		})
+	}
 }

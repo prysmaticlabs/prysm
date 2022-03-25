@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -58,9 +59,11 @@ func (bs *Server) ListValidatorAssignments(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", requestedEpoch, err)
+		msg := fmt.Sprintf("could not replay all blocks from the closest stored state (at slot %d) "+
+			"to the requested epoch (%d) - %v", startSlot, requestedEpoch, err)
+		return nil, status.Error(codes.Internal, msg)
 	}
 
 	// Filter out assignments by public keys.

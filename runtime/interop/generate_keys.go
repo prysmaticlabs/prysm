@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -25,6 +27,7 @@ func DeterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey,
 		secrets []bls.SecretKey
 		publics []bls.PublicKey
 	}
+	// lint:ignore uintcast -- this is safe because we can reasonably expect that the number of keys is less than max int64.
 	results, err := async.Scatter(int(numKeys), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		secs, pubs, err := deterministicallyGenerateKeys(uint64(offset)+startIndex, uint64(entries))
 		return &keys{secrets: secs, publics: pubs}, err
@@ -51,7 +54,7 @@ func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey,
 		binary.LittleEndian.PutUint32(enc, uint32(i))
 		hash := hash.Hash(enc)
 		// Reverse byte order to big endian for use with big ints.
-		b := reverseByteOrder(hash[:])
+		b := bytesutil.ReverseByteOrder(hash[:])
 		num := new(big.Int)
 		num = num.SetBytes(b)
 		order := new(big.Int)
@@ -75,13 +78,4 @@ func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey,
 		pubKeys[i-startIndex] = priv.PublicKey()
 	}
 	return privKeys, pubKeys, nil
-}
-
-// Switch the endianness of a byte slice by reversing its order.
-func reverseByteOrder(input []byte) []byte {
-	b := input
-	for i := 0; i < len(b)/2; i++ {
-		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
-	}
-	return b
 }

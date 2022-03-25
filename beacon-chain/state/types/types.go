@@ -30,8 +30,8 @@ func (f FieldIndex) String(stateVersion int) string {
 	switch f {
 	case GenesisTime:
 		return "genesisTime"
-	case GenesisValidatorRoot:
-		return "genesisValidatorRoot"
+	case GenesisValidatorsRoot:
+		return "genesisValidatorsRoot"
 	case Slot:
 		return "slot"
 	case Fork:
@@ -59,12 +59,12 @@ func (f FieldIndex) String(stateVersion int) string {
 	case Slashings:
 		return "slashings"
 	case PreviousEpochAttestations:
-		if version.Altair == stateVersion || version.Merge == stateVersion {
+		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
 			return "previousEpochParticipationBits"
 		}
 		return "previousEpochAttestations"
 	case CurrentEpochAttestations:
-		if version.Altair == stateVersion || version.Merge == stateVersion {
+		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
 			return "currentEpochParticipationBits"
 		}
 		return "currentEpochAttestations"
@@ -108,7 +108,7 @@ func (f FieldIndex) ElemsInChunk() (uint64, error) {
 // to the v1 state.
 const (
 	GenesisTime FieldIndex = iota
-	GenesisValidatorRoot
+	GenesisValidatorsRoot
 	Slot
 	Fork
 	LatestBlockHeader
@@ -132,7 +132,7 @@ const (
 	InactivityScores
 	CurrentSyncCommittee
 	NextSyncCommittee
-	// State fields added in Merge.
+	// State fields added in Bellatrix.
 	LatestExecutionPayloadHeader
 )
 

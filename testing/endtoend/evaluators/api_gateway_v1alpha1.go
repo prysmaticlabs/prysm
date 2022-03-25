@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
@@ -73,6 +74,7 @@ func withComparePeers(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	); err != nil {
 		return err
 	}
+
 	if len(respJSON.Peers) != len(resp.Peers) {
 		return fmt.Errorf(
 			"HTTP gateway number of peers %d does not match gRPC %d",
@@ -80,44 +82,54 @@ func withComparePeers(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			len(resp.Peers),
 		)
 	}
-	for i, peer := range respJSON.Peers {
-		grpcPeer := resp.Peers[i]
+	grpcPeerMap := make(map[string]*ethpb.Peer)
+	jsonPeerMap := make(map[string]*peerJSON)
+	for i := 0; i < len(respJSON.Peers); i++ {
+		grpcPeerMap[resp.Peers[i].PeerId] = resp.Peers[i]
+		jsonPeerMap[respJSON.Peers[i].PeerId] = respJSON.Peers[i]
+	}
+
+	for id, peer := range jsonPeerMap {
+		grpcPeer, ok := grpcPeerMap[id]
+		if !ok {
+			return errors.Errorf("grpc peer %s doesn't exist", id)
+		}
 		if peer.Address != grpcPeer.Address {
 			return fmt.Errorf(
-				"HTTP gateway peer %d address %s does not match gRPC %s",
-				i,
+				"HTTP gateway peer %s with address %s does not match gRPC %s",
+				id,
 				peer.Address,
 				grpcPeer.Address,
 			)
 		}
 		if peer.Direction != grpcPeer.Direction.String() {
 			return fmt.Errorf(
-				"HTTP gateway peer %d direction %s does not match gRPC %s",
-				i,
+				"HTTP gateway peer %s with direction %s does not match gRPC %s",
+				id,
 				peer.Direction,
 				grpcPeer.Direction,
 			)
 		}
 		if peer.ConnectionState != grpcPeer.ConnectionState.String() {
 			return fmt.Errorf(
-				"HTTP gateway peer %d connection state %s does not match gRPC %s",
-				i,
+				"HTTP gateway peer %s with connection state %s does not match gRPC %s",
+				id,
 				peer.ConnectionState,
 				grpcPeer.ConnectionState,
 			)
 		}
 		if peer.PeerId != grpcPeer.PeerId {
 			return fmt.Errorf(
-				"HTTP gateway peer %d peer id %s does not match gRPC %s",
-				i,
+				"HTTP gateway peer %s with peer id %s does not match gRPC %s",
+				id,
 				peer.PeerId,
 				grpcPeer.PeerId,
 			)
 		}
 		if peer.Enr != grpcPeer.Enr {
 			return fmt.Errorf(
-				"HTTP gateway peer %d enr %s does not match gRPC %s",
-				i,
+				"HTTP gateway peer %s with enr %s does not match gRPC %s",
+				id,
 				peer.Enr,
 				grpcPeer.Enr,
 			)
@@ -444,7 +456,7 @@ func withCompareChainHead(beaconNodeIdx int, conn *grpc.ClientConn) error {
 }
 
 func doGatewayJSONRequest(requestPath string, beaconNodeIdx int, dst interface{}) error {
-	basePath := fmt.Sprintf(v1Alpha1GatewayPathTemplate, e2e.TestParams.BeaconNodeRPCPort+beaconNodeIdx+40)
+	basePath := fmt.Sprintf(v1Alpha1GatewayPathTemplate, e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+beaconNodeIdx)
 	httpResp, err := http.Get(
 		basePath + requestPath,
 	)

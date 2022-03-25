@@ -75,7 +75,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	ipAddr := net.ParseIP("127.0.0.1")
 	listen, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
 	require.NoError(t, err, "Failed to p2p listen")
-	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.Security(noise.ID, noise.New)}...)
+	h, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.Security(noise.ID, noise.New)}...)
 	require.NoError(t, err)
 	return h, pkey, ipAddr
 }
@@ -306,7 +306,7 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 // digest associated with that genesis event.
 func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.Feed) [4]byte {
 	gt := prysmTime.Now()
-	gvr := bytesutil.PadTo([]byte("genesis validator root"), 32)
+	gvr := bytesutil.PadTo([]byte("genesis validators root"), 32)
 	for n := 0; n == 0; {
 		if ctx.Err() != nil {
 			t.Fatal(ctx.Err())

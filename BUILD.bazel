@@ -3,7 +3,7 @@ load("@com_github_atlassian_bazel_tools//gometalinter:def.bzl", "gometalinter")
 load("@com_github_atlassian_bazel_tools//goimports:def.bzl", "goimports")
 load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 load("@io_bazel_rules_go//go:def.bzl", "nogo")
-load("@graknlabs_bazel_distribution//common:rules.bzl", "assemble_targz", "assemble_versioned")
+load("@vaticle_bazel_distribution//common:rules.bzl", "assemble_targz", "assemble_versioned")
 load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
 
 prefix = "github.com/prysmaticlabs/prysm"
@@ -16,6 +16,8 @@ exports_files([
 # gazelle:map_kind go_library go_library @prysm//tools/go:def.bzl
 # gazelle:map_kind go_test go_test @prysm//tools/go:def.bzl
 # gazelle:map_kind go_repository go_repository @prysm//tools/go:def.bzl
+# gazelle:build_tags bazel
+# gazelle:exclude tools/analyzers/**/testdata/**
 gazelle(
     name = "gazelle",
     prefix = prefix,
@@ -86,50 +88,52 @@ nogo(
     config = "nogo_config.json",
     visibility = ["//visibility:public"],
     deps = [
-        "@org_golang_x_tools//go/analysis/passes/unsafeptr:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/unreachable:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/unmarshal:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/tests:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/structtag:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/stdmethods:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/shift:go_tool_library",
-        # "@org_golang_x_tools//go/analysis/passes/shadow:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/printf:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/pkgfact:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/nilness:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/nilfunc:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/loopclosure:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/httpresponse:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/findcall:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/deepequalerrors:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/ctrlflow:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/copylock:go_tool_library",
-        #  "@org_golang_x_tools//go/analysis/passes/cgocall:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/buildtag:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/buildssa:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/bools:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/atomicalign:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/atomic:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/assign:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/inspect:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/asmdecl:go_tool_library",
-        "//tools/analyzers/maligned:go_tool_library",
-        "//tools/analyzers/cryptorand:go_tool_library",
-        "//tools/analyzers/errcheck:go_tool_library",
-        "//tools/analyzers/featureconfig:go_tool_library",
-        "//tools/analyzers/comparesame:go_tool_library",
-        "//tools/analyzers/shadowpredecl:go_tool_library",
-        "//tools/analyzers/nop:go_tool_library",
-        "//tools/analyzers/slicedirect:go_tool_library",
-        "//tools/analyzers/interfacechecker:go_tool_library",
-        "//tools/analyzers/ineffassign:go_tool_library",
-        "//tools/analyzers/properpermissions:go_tool_library",
+        "@org_golang_x_tools//go/analysis/passes/unsafeptr:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/unreachable:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/unmarshal:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/tests:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/structtag:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/stdmethods:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/shift:go_default_library",
+        # "@org_golang_x_tools//go/analysis/passes/shadow:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/printf:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/pkgfact:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/nilness:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/nilfunc:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/loopclosure:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/httpresponse:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/findcall:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/deepequalerrors:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/ctrlflow:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/copylock:go_default_library",
+        #  "@org_golang_x_tools//go/analysis/passes/cgocall:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/buildtag:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/buildssa:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/bools:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/atomicalign:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/atomic:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/assign:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/inspect:go_default_library",
+        "@org_golang_x_tools//go/analysis/passes/asmdecl:go_default_library",
+        "//tools/analyzers/maligned:go_default_library",
+        "//tools/analyzers/cryptorand:go_default_library",
+        "//tools/analyzers/errcheck:go_default_library",
+        "//tools/analyzers/featureconfig:go_default_library",
+        "//tools/analyzers/comparesame:go_default_library",
+        "//tools/analyzers/shadowpredecl:go_default_library",
+        "//tools/analyzers/nop:go_default_library",
+        "//tools/analyzers/slicedirect:go_default_library",
+        "//tools/analyzers/interfacechecker:go_default_library",
+        "//tools/analyzers/ineffassign:go_default_library",
+        "//tools/analyzers/properpermissions:go_default_library",
+        "//tools/analyzers/recursivelock:go_default_library",
+        "//tools/analyzers/uintcast:go_default_library",
     ] + select({
         # nogo checks that fail with coverage enabled.
         ":coverage_enabled": [],
         "//conditions:default": [
-            "@org_golang_x_tools//go/analysis/passes/lostcancel:go_tool_library",
-            "@org_golang_x_tools//go/analysis/passes/composite:go_tool_library",
+            "@org_golang_x_tools//go/analysis/passes/lostcancel:go_default_library",
+            "@org_golang_x_tools//go/analysis/passes/composite:go_default_library",
         ],
     }),
 )
@@ -143,15 +147,6 @@ common_files = {
     "//:LICENSE.md": "LICENSE.md",
     "//:README.md": "README.md",
 }
-
-string_setting(
-    name = "gotags",
-    build_setting_default = "",
-    values = [
-        "",
-        "libfuzzer",
-    ],
-)
 
 sh_binary(
     name = "prysm_sh",

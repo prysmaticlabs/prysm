@@ -27,14 +27,14 @@ type stateRequest struct {
 
 // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
 func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.GenesisResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetGenesis")
+	_, span := trace.StartSpan(ctx, "beacon.GetGenesis")
 	defer span.End()
 
 	genesisTime := bs.GenesisTimeFetcher.GenesisTime()
 	if genesisTime.IsZero() {
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
-	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorRoot()
+	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorsRoot()
 	if bytes.Equal(validatorRoot[:], params.BeaconConfig().ZeroHash[:]) {
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
@@ -117,12 +117,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 
 	st, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
 	return &ethpb.StateFinalityCheckpointResponse{

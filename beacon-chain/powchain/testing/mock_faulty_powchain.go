@@ -2,15 +2,14 @@ package testing
 
 import (
 	"context"
-	"errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -21,13 +20,8 @@ type FaultyMockPOWChain struct {
 }
 
 // Eth2GenesisPowchainInfo --
-func (f *FaultyMockPOWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
+func (_ *FaultyMockPOWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return 0, big.NewInt(0)
-}
-
-// LatestBlockHeight --
-func (f *FaultyMockPOWChain) LatestBlockHeight() *big.Int {
-	return big.NewInt(0)
 }
 
 // BlockExists --
@@ -40,52 +34,41 @@ func (f *FaultyMockPOWChain) BlockExists(_ context.Context, _ common.Hash) (bool
 }
 
 // BlockHashByHeight --
-func (f *FaultyMockPOWChain) BlockHashByHeight(_ context.Context, _ *big.Int) (common.Hash, error) {
+func (_ *FaultyMockPOWChain) BlockHashByHeight(_ context.Context, _ *big.Int) (common.Hash, error) {
 	return [32]byte{}, errors.New("failed")
 }
 
 // BlockTimeByHeight --
-func (f *FaultyMockPOWChain) BlockTimeByHeight(_ context.Context, _ *big.Int) (uint64, error) {
+func (_ *FaultyMockPOWChain) BlockTimeByHeight(_ context.Context, _ *big.Int) (uint64, error) {
 	return 0, errors.New("failed")
 }
 
 // BlockByTimestamp --
-func (f *FaultyMockPOWChain) BlockByTimestamp(_ context.Context, _ uint64) (*types.HeaderInfo, error) {
+func (_ *FaultyMockPOWChain) BlockByTimestamp(_ context.Context, _ uint64) (*types.HeaderInfo, error) {
 	return &types.HeaderInfo{Number: big.NewInt(0)}, nil
 }
 
-// DepositRoot --
-func (f *FaultyMockPOWChain) DepositRoot() [32]byte {
-	return [32]byte{}
-}
-
-// DepositTrie --
-func (f *FaultyMockPOWChain) DepositTrie() *trie.SparseMerkleTrie {
-	return &trie.SparseMerkleTrie{}
-}
-
-// ChainStartDeposits --
-func (f *FaultyMockPOWChain) ChainStartDeposits() []*ethpb.Deposit {
-	return []*ethpb.Deposit{}
-}
-
 // ChainStartEth1Data --
-func (f *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
+func (_ *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
 // PreGenesisState --
-func (f *FaultyMockPOWChain) PreGenesisState() state.BeaconState {
-	return &v1.BeaconState{}
+func (_ *FaultyMockPOWChain) PreGenesisState() state.BeaconState {
+	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	if err != nil {
+		panic("could not initialize state")
+	}
+	return s
 }
 
 // ClearPreGenesisData --
-func (f *FaultyMockPOWChain) ClearPreGenesisData() {
+func (_ *FaultyMockPOWChain) ClearPreGenesisData() {
 	// no-op
 }
 
 // IsConnectedToETH1 --
-func (f *FaultyMockPOWChain) IsConnectedToETH1() bool {
+func (_ *FaultyMockPOWChain) IsConnectedToETH1() bool {
 	return true
 }
 

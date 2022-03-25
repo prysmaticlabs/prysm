@@ -20,6 +20,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -33,8 +34,8 @@ import (
 
 func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	ctx := context.Background()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	validators := uint64(32)
 	s, _ := util.DeterministicGenesisState(t, validators)
@@ -58,8 +59,8 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 
 func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 	ctx := context.Background()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	validators := uint64(64)
 	s, _ := util.DeterministicGenesisState(t, validators)
@@ -81,8 +82,8 @@ func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 
 func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	ctx := context.Background()
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	validators := uint64(2048)
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
@@ -106,11 +107,11 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	})
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  bytesutil.PadTo([]byte{'A'}, params.BeaconConfig().BLSSignatureLength),
+		SelectionProof:  bytesutil.PadTo([]byte{'A'}, fieldparams.BLSSignatureLength),
 		Aggregate:       att,
 		AggregatorIndex: 0,
 	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, fieldparams.BLSSignatureLength)}
 
 	c := lruwrpr.New(10)
 	r := &Service{
@@ -169,14 +170,14 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, params.BeaconConfig().BLSSignatureLength),
+		Signature:       make([]byte, fieldparams.BLSSignatureLength),
 	}
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		Aggregate:      att,
-		SelectionProof: make([]byte, params.BeaconConfig().BLSSignatureLength),
+		SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, fieldparams.BLSSignatureLength)}
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 
@@ -253,14 +254,14 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
-		Signature:       make([]byte, params.BeaconConfig().BLSSignatureLength),
+		Signature:       make([]byte, fieldparams.BLSSignatureLength),
 	}
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		Aggregate:      att,
-		SelectionProof: make([]byte, params.BeaconConfig().BLSSignatureLength),
+		SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 	}
-	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, params.BeaconConfig().BLSSignatureLength)}
+	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof, Signature: make([]byte, fieldparams.BLSSignatureLength)}
 
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 	r := &Service{
@@ -329,7 +330,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
 	assert.NoError(t, err)
-	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorsRoot())
 	assert.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, attesterDomain)
 	assert.NoError(t, err)
@@ -423,7 +424,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	require.NoError(t, err)
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
-	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorsRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, attesterDomain)
 	assert.NoError(t, err)
@@ -536,7 +537,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
 	assert.NoError(t, err)
-	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorsRoot())
 	assert.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, attesterDomain)
 	assert.NoError(t, err)
@@ -627,7 +628,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	attestingIndices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
 	assert.NoError(t, err)
-	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	attesterDomain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorsRoot())
 	assert.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, attesterDomain)
 	assert.NoError(t, err)
@@ -684,4 +685,36 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	res, err := r.validateAggregateAndProof(context.Background(), "", msg)
 	assert.NotNil(t, err)
 	assert.Equal(t, pubsub.ValidationReject, res)
+}
+
+func TestValidateAggregateAndProof_Optimistic(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	exit, s := setupValidExit(t)
+
+	r := &Service{
+		cfg: &config{
+			p2p: p,
+			chain: &mock.ChainService{
+				State:      s,
+				Optimistic: true,
+			},
+			initialSync: &mockSync.Sync{IsSyncing: false},
+		},
+	}
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, exit)
+	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(exit)]
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	res, err := r.validateAggregateAndProof(ctx, "", m)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationIgnore
+	assert.Equal(t, true, valid, "Validation should have ignored the message")
 }

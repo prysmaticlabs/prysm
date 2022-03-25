@@ -28,7 +28,7 @@ type stateByRooter interface {
 // to avoid nil pointer bugs when updating the cache in the read path (get())
 func newStateBalanceCache(sg *stategen.State) (*stateBalanceCache, error) {
 	if sg == nil {
-		return nil, errors.New("Can't initialize state balance cache without stategen")
+		return nil, errors.New("can't initialize state balance cache without stategen")
 	}
 	return &stateBalanceCache{stateGen: sg}, nil
 }
@@ -73,7 +73,8 @@ func (c *stateBalanceCache) update(ctx context.Context, justifiedRoot [32]byte) 
 func (c *stateBalanceCache) get(ctx context.Context, justifiedRoot [32]byte) ([]uint64, error) {
 	c.Lock()
 	defer c.Unlock()
-	if justifiedRoot == c.root {
+
+	if justifiedRoot != [32]byte{} && justifiedRoot == c.root {
 		stateBalanceCacheHit.Inc()
 		return c.balances, nil
 	}

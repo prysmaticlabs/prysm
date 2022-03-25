@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -12,6 +11,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
+
+var ErrSlotBeforeOrigin = errors.New("cannot retrieve data for slots before sync origin")
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
@@ -84,7 +85,7 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return cachedInfo.state, nil
 	}
 
-	startState, err := s.lastAncestorState(ctx, blockRoot)
+	startState, err := s.LastAncestorState(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
@@ -109,14 +110,6 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	}
 
 	return startState, nil
-}
-
-// StateBySlot retrieves the state using input slot.
-func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.StateBySlot")
-	defer span.End()
-
-	return s.loadStateBySlot(ctx, slot)
 }
 
 // This returns the state summary object of a given block root, it first checks the cache
@@ -185,7 +178,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 
 	// Since the requested state is not in caches, start replaying using the last available ancestor state which is
 	// retrieved using input block's parent root.
-	startState, err := s.lastAncestorState(ctx, blockRoot)
+	startState, err := s.LastAncestorState(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
@@ -208,36 +201,6 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 	return s.ReplayBlocks(ctx, startState, blks, targetSlot)
 }
 
-// This loads a state by slot.
-func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateBySlot")
-	defer span.End()
-
-	// Return genesis state if slot is 0.
-	if slot == 0 {
-		return s.beaconDB.GenesisState(ctx)
-	}
-
-	// Gather the last saved block root and the slot number.
-	lastValidRoot, lastValidSlot, err := s.lastSavedBlock(ctx, slot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get last valid block for hot state using slot")
-	}
-
-	replayStartState, err := s.loadStateByRoot(ctx, lastValidRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	if lastValidSlot < slot {
-		replayStartState, err = processSlotsStateGen(ctx, replayStartState, slot)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return replayStartState, nil
-}
-
 // This returns the highest available ancestor state of the input block root.
 // It recursively look up block's parent until a corresponding state of the block root
 // is found in the caches or DB.
@@ -246,8 +209,8 @@ func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (state.Bea
 // 1.) block parent state is the last finalized state
 // 2.) block parent state is the epoch boundary state and exists in epoch boundary cache.
 // 3.) block parent state is in DB.
-func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.lastAncestorState")
+func (s *State) LastAncestorState(ctx context.Context, root [32]byte) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.LastAncestorState")
 	defer span.End()
 
 	if s.isFinalizedRoot(root) && s.finalizedState() != nil {
@@ -265,6 +228,11 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 	for {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
+		}
+
+		// return an error if we have rewound to before the checkpoint sync slot
+		if (b.Block().Slot() - 1) < s.minimumSlot() {
+			return nil, errors.Wrapf(ErrSlotBeforeOrigin, "no blocks in db prior to slot %d", s.minimumSlot())
 		}
 		// Is the state a genesis state.
 		parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
@@ -303,4 +271,15 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 			return nil, errUnknownBlock
 		}
 	}
+}
+
+func (s *State) CombinedCache() *CombinedCache {
+	getters := make([]CachedGetter, 0)
+	if s.hotStateCache != nil {
+		getters = append(getters, s.hotStateCache)
+	}
+	if s.epochBoundaryStateCache != nil {
+		getters = append(getters, s.epochBoundaryStateCache)
+	}
+	return &CombinedCache{getters: getters}
 }

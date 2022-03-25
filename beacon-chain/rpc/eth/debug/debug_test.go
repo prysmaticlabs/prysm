@@ -61,6 +61,20 @@ func TestGetBeaconStateV2(t *testing.T) {
 		assert.NotNil(t, resp)
 		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
+	})
 }
 
 func TestGetBeaconStateSSZ(t *testing.T) {
@@ -121,6 +135,24 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 
 		assert.DeepEqual(t, sszState, resp.Data)
 	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+		sszState, err := fakeState.MarshalSSZ()
+		require.NoError(t, err)
+
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+		}
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		assert.DeepEqual(t, sszState, resp.Data)
+	})
 }
 
 func TestListForkChoiceHeads(t *testing.T) {
@@ -153,4 +185,57 @@ func TestListForkChoiceHeads(t *testing.T) {
 		}
 		assert.Equal(t, true, found, "Expected head not found")
 	}
+}
+
+func TestListForkChoiceHeadsV2(t *testing.T) {
+	ctx := context.Background()
+
+	expectedSlotsAndRoots := []struct {
+		Slot types.Slot
+		Root [32]byte
+	}{{
+		Slot: 0,
+		Root: bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
+	}, {
+		Slot: 1,
+		Root: bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
+	}}
+
+	server := &Server{
+		HeadFetcher: &blockchainmock.ChainService{},
+	}
+	resp, err := server.ListForkChoiceHeadsV2(ctx, &emptypb.Empty{})
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(resp.Data))
+	for _, sr := range expectedSlotsAndRoots {
+		found := false
+		for _, h := range resp.Data {
+			if h.Slot == sr.Slot {
+				found = true
+				assert.DeepEqual(t, sr.Root[:], h.Root)
+			}
+			assert.Equal(t, false, h.ExecutionOptimistic)
+		}
+		assert.Equal(t, true, found, "Expected head not found")
+	}
+
+	t.Run("optimistic head", func(t *testing.T) {
+		server := &Server{
+			HeadFetcher: &blockchainmock.ChainService{Optimistic: true},
+		}
+		resp, err := server.ListForkChoiceHeadsV2(ctx, &emptypb.Empty{})
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(resp.Data))
+		for _, sr := range expectedSlotsAndRoots {
+			found := false
+			for _, h := range resp.Data {
+				if h.Slot == sr.Slot {
+					found = true
+					assert.DeepEqual(t, sr.Root[:], h.Root)
+				}
+				assert.Equal(t, true, h.ExecutionOptimistic)
+			}
+			assert.Equal(t, true, found, "Expected head not found")
+		}
+	})
 }

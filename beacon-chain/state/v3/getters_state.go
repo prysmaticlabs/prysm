@@ -23,9 +23,9 @@ func (b *BeaconState) CloneInnerState() interface{} {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	return &ethpb.BeaconStateMerge{
+	return &ethpb.BeaconStateBellatrix{
 		GenesisTime:                  b.genesisTime(),
-		GenesisValidatorsRoot:        b.genesisValidatorRoot(),
+		GenesisValidatorsRoot:        b.genesisValidatorsRoot(),
 		Slot:                         b.slot(),
 		Fork:                         b.fork(),
 		LatestBlockHeader:            b.latestBlockHeader(),
@@ -116,12 +116,12 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 	return b.state.MarshalSSZ()
 }
 
-// ProtobufBeaconState transforms an input into beacon state Merge in the form of protobuf.
+// ProtobufBeaconState transforms an input into beacon state Bellatrix in the form of protobuf.
 // Error is returned if the input is not type protobuf beacon state.
-func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateMerge, error) {
-	pbState, ok := s.(*ethpb.BeaconStateMerge)
+func ProtobufBeaconState(s interface{}) (*ethpb.BeaconStateBellatrix, error) {
+	pbState, ok := s.(*ethpb.BeaconStateBellatrix)
 	if !ok {
-		return nil, errors.New("input is not type pb.BeaconStateMerge")
+		return nil, errors.New("input is not type pb.BeaconStateBellatrix")
 	}
 	return pbState, nil
 }

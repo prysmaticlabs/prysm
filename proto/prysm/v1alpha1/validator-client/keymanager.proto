@@ -74,7 +74,12 @@ message SignRequest {
         ethereum.eth.v1alpha1.SyncAggregatorSelectionData sync_aggregator_selection_data = 108;
         ethereum.eth.v1alpha1.ContributionAndProof contribution_and_proof = 109;
         bytes sync_message_block_root  = 110;
+
+        // Bellatrix objects.
+        ethereum.eth.v1alpha1.BeaconBlockBellatrix blockV3 = 111;
     }
+    reserved 4, 5; // Reserving old, deleted fields.
+    uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
 }
 
 // SignResponse returned by a RemoteSigner gRPC service.

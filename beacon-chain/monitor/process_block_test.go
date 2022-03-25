@@ -45,7 +45,7 @@ func TestProcessSlashings(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: "\"Proposer slashing was included\" ProposerIndex=2",
+			wantedErr: "\"Proposer slashing was included\" BodyRoot1= BodyRoot2= ProposerIndex=2",
 		},
 		{
 			name: "Proposer slashing an untracked index",
@@ -90,7 +90,8 @@ func TestProcessSlashings(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: "\"Attester slashing was included\" AttesterIndex=1",
+			wantedErr: "\"Attester slashing was included\" AttestationSlot1=0 AttestationSlot2=0 AttesterIndex=1 " +
+				"BeaconBlockRoot1=0x000000000000 BeaconBlockRoot2=0x000000000000 BlockInclusionSlot=0 SourceEpoch1=1 SourceEpoch2=0 TargetEpoch1=0 TargetEpoch2=0",
 		},
 		{
 			name: "Attester slashing untracked index",
@@ -147,7 +148,7 @@ func TestProcessProposedBlock(t *testing.T) {
 				ParentRoot:    bytesutil.PadTo([]byte("hello-world"), 32),
 				StateRoot:     bytesutil.PadTo([]byte("state-world"), 32),
 			},
-			wantedErr: "\"Proposed block was included\" BalanceChange=100000000 BlockRoot=0x68656c6c6f2d NewBalance=32000000000 ParentRoot=0x68656c6c6f2d ProposerIndex=12 Slot=6 Version=0 prefix=monitor",
+			wantedErr: "\"Proposed beacon block was included\" BalanceChange=100000000 BlockRoot=0x68656c6c6f2d NewBalance=32000000000 ParentRoot=0x68656c6c6f2d ProposerIndex=12 Slot=6 Version=0 prefix=monitor",
 		},
 		{
 			name: "Block proposed by untracked validator",
@@ -218,10 +219,10 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	root, err := b.GetBlock().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
-	wanted1 := fmt.Sprintf("\"Proposed block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0xf732eaeb7fae ProposerIndex=15 Slot=1 Version=1 prefix=monitor", bytesutil.Trunc(root[:]))
-	wanted2 := fmt.Sprintf("\"Proposer slashing was included\" ProposerIndex=%d Root1=0x000100000000 Root2=0x000200000000 SlashingSlot=0 Slot:=1 prefix=monitor", idx)
-	wanted3 := "\"Sync committee contribution included\" BalanceChange=0 Contributions=3 ExpectedContrib=3 NewBalance=32000000000 ValidatorIndex=1 prefix=monitor"
-	wanted4 := "\"Sync committee contribution included\" BalanceChange=0 Contributions=1 ExpectedContrib=1 NewBalance=32000000000 ValidatorIndex=2 prefix=monitor"
+	wanted1 := fmt.Sprintf("\"Proposed beacon block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0xf732eaeb7fae ProposerIndex=15 Slot=1 Version=1 prefix=monitor", bytesutil.Trunc(root[:]))
+	wanted2 := fmt.Sprintf("\"Proposer slashing was included\" BodyRoot1=0x000100000000 BodyRoot2=0x000200000000 ProposerIndex=%d SlashingSlot=0 Slot=1 prefix=monitor", idx)
+	wanted3 := "\"Sync committee contribution included\" BalanceChange=0 ContribCount=3 ExpectedContribCount=3 NewBalance=32000000000 ValidatorIndex=1 prefix=monitor"
+	wanted4 := "\"Sync committee contribution included\" BalanceChange=0 ContribCount=1 ExpectedContribCount=1 NewBalance=32000000000 ValidatorIndex=2 prefix=monitor"
 	wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(b)
 	require.NoError(t, err)
 	s.processBlock(ctx, wrapped)

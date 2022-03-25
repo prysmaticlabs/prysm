@@ -13,7 +13,7 @@ import (
 
 // SavePowchainData saves the pow chain data.
 func (s *Store) SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SavePowchainData")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SavePowchainData")
 	defer span.End()
 
 	if data == nil {
@@ -36,7 +36,7 @@ func (s *Store) SavePowchainData(ctx context.Context, data *v2.ETH1ChainData) er
 
 // PowchainData retrieves the powchain data.
 func (s *Store) PowchainData(ctx context.Context) (*v2.ETH1ChainData, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.PowchainData")
+	_, span := trace.StartSpan(ctx, "BeaconDB.PowchainData")
 	defer span.End()
 
 	var data *v2.ETH1ChainData

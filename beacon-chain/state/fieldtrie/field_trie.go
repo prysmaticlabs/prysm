@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	pmath "github.com/prysmaticlabs/prysm/math"
 )
 
 // FieldTrie is the representation of the representative
@@ -55,7 +56,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.ValueOf(elements).Len(),
+			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
@@ -65,7 +66,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.ValueOf(elements).Len(),
+			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
 		}, nil
 	default:
 		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())
@@ -96,17 +97,21 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.ValueOf(elements).Len()
+		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		return fieldRoot, nil
 	case types.CompositeArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.ValueOf(elements).Len()
+		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	case types.CompressedArray:
 		numOfElems, err := f.field.ElemsInChunk()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		iNumOfElems, err := pmath.Int(numOfElems)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -114,7 +119,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		// duplicated insertions into the trie.
 		newIndices := []uint64{}
 		indexExists := make(map[uint64]bool)
-		newRoots := make([][32]byte, 0, len(fieldRoots)/int(numOfElems))
+		newRoots := make([][32]byte, 0, len(fieldRoots)/iNumOfElems)
 		for i, idx := range indices {
 			startIdx := idx / numOfElems
 			if indexExists[startIdx] {
@@ -128,7 +133,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.ValueOf(elements).Len()
+		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		return stateutil.AddInMixin(fieldRoot, uint64(f.numOfElems))
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())

@@ -3,7 +3,9 @@ package block
 import (
 	ssz "github.com/ferranbt/fastssz"
 	types "github.com/prysmaticlabs/eth2-types"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -15,9 +17,10 @@ type SignedBeaconBlock interface {
 	IsNil() bool
 	Copy() SignedBeaconBlock
 	Proto() proto.Message
+	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
-	PbMergeBlock() (*ethpb.SignedBeaconBlockMerge, error)
+	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
@@ -37,7 +40,9 @@ type BeaconBlock interface {
 	Proto() proto.Message
 	ssz.Marshaler
 	ssz.Unmarshaler
+	ssz.HashRoot
 	Version() int
+	AsSignRequestObject() validatorpb.SignRequestObject
 }
 
 // BeaconBlockBody describes the method set employed by an object
@@ -55,5 +60,5 @@ type BeaconBlockBody interface {
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
-	ExecutionPayload() (*ethpb.ExecutionPayload, error)
+	ExecutionPayload() (*enginev1.ExecutionPayload, error)
 }

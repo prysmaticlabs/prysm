@@ -10,9 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -21,6 +23,21 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// UpdateHeadWithBalances updates the beacon state head after getting justified balanced from cache.
+func (s *Service) UpdateHeadWithBalances(ctx context.Context) error {
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
+		return errors.New("no justified checkpoint")
+	}
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
+		return errors.Wrap(err, msg)
+	}
+
+	return s.updateHead(ctx, balances)
+}
 
 // This defines the current chain service's view of head.
 type head struct {
@@ -36,21 +53,20 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateHead")
 	defer span.End()
 
-	// To get the proper head update, a node first checks its best justified
-	// can become justified. This is designed to prevent bounce attack and
-	// ensure head gets its best justified info.
-	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
-		s.justifiedCheckpt = s.bestJustifiedCheckpt
-	}
-
 	// Get head from the fork choice service.
-	f := s.finalizedCheckpt
-	j := s.justifiedCheckpt
-	// To get head before the first justified epoch, the fork choice will start with genesis root
+	f := s.store.FinalizedCheckpt()
+	if f == nil {
+		return errNilFinalizedInStore
+	}
+	j := s.store.JustifiedCheckpt()
+	if j == nil {
+		return errNilJustifiedInStore
+	}
+	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
 	headStartRoot := bytesutil.ToBytes32(j.Root)
 	if headStartRoot == params.BeaconConfig().ZeroHash {
-		headStartRoot = s.genesisRoot
+		headStartRoot = s.originBlockRoot
 	}
 
 	// In order to process head, fork choice store requires justified info.
@@ -62,7 +78,11 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 		if err != nil {
 			return err
 		}
-		s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+		if features.Get().EnableForkChoiceDoublyLinkedTree {
+			s.cfg.ForkChoiceStore = doublylinkedtree.New(j.Epoch, f.Epoch)
+		} else {
+			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+		}
 		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
 			return err
 		}
@@ -244,16 +264,16 @@ func (s *Service) headBlock() block.SignedBeaconBlock {
 // It does a full copy on head state for immutability.
 // This is a lock free version.
 func (s *Service) headState(ctx context.Context) state.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "blockChain.headState")
+	_, span := trace.StartSpan(ctx, "blockChain.headState")
 	defer span.End()
 
 	return s.head.state.Copy()
 }
 
-// This returns the genesis validator root of the head state.
+// This returns the genesis validators root of the head state.
 // This is a lock free version.
-func (s *Service) headGenesisValidatorRoot() [32]byte {
-	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+func (s *Service) headGenesisValidatorsRoot() [32]byte {
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorsRoot())
 }
 
 // This returns the validator referenced by the provided index in
@@ -261,6 +281,13 @@ func (s *Service) headGenesisValidatorRoot() [32]byte {
 // This is a lock free version.
 func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOnlyValidator, error) {
 	return s.head.state.ValidatorAtIndexReadOnly(index)
+}
+
+// This returns the validator index referenced by the provided pubkey in
+// the head state.
+// This is a lock free version.
+func (s *Service) headValidatorIndexAtPubkey(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+	return s.head.state.ValidatorIndexByPubkey(pubKey)
 }
 
 // Returns true if head state exists.
@@ -277,8 +304,8 @@ func (s *Service) notifyNewHeadEvent(
 	newHeadStateRoot,
 	newHeadRoot []byte,
 ) error {
-	previousDutyDependentRoot := s.genesisRoot[:]
-	currentDutyDependentRoot := s.genesisRoot[:]
+	previousDutyDependentRoot := s.originBlockRoot[:]
+	currentDutyDependentRoot := s.originBlockRoot[:]
 
 	var previousDutyEpoch types.Epoch
 	currentDutyEpoch := slots.ToEpoch(newHeadSlot)

@@ -3,10 +3,13 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
@@ -16,6 +19,7 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -72,7 +76,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	duties := make([]*ethpbv1.AttesterDuty, 0, len(req.Index))
 	for _, index := range req.Index {
 		pubkey := s.PubkeyAtIndex(index)
-		zeroPubkey := [48]byte{}
+		zeroPubkey := [fieldparams.BLSPubkeyLength]byte{}
 		if bytes.Equal(pubkey[:], zeroPubkey[:]) {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index")
 		}
@@ -229,7 +233,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 			return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
 		}
 	}
-	committeePubkeys := make(map[[48]byte][]uint64)
+	committeePubkeys := make(map[[fieldparams.BLSPubkeyLength]byte][]uint64)
 	for j, pubkey := range committee.Pubkeys {
 		pubkey48 := bytesutil.ToBytes48(pubkey)
 		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], uint64(j))
@@ -251,6 +255,11 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockReq
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlock")
 	defer span.End()
 
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
+
 	block, err := vs.v1BeaconBlock(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
@@ -262,18 +271,9 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
 	defer span.End()
 
-	epoch := slots.ToEpoch(req.Slot)
-	if epoch < params.BeaconConfig().AltairForkEpoch {
-		block, err := vs.v1BeaconBlock(ctx, req)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-		}
-		return &ethpbv2.ProduceBlockResponseV2{
-			Version: ethpbv2.Version_PHASE0,
-			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block: &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: block},
-			},
-		}, nil
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
 	}
 
 	v1alpha1req := &ethpbalpha.BlockRequest{
@@ -286,20 +286,71 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 		// We simply return err because it's already of a gRPC error type.
 		return nil, err
 	}
+	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	if ok {
+		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_PHASE0,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: block},
+			},
+		}, nil
+	}
 	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
-	if !ok {
-		return nil, status.Errorf(codes.Internal, "Could not get Altair block: %v", err)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_ALTAIR,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: block},
+			},
+		}, nil
 	}
-	block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Bellatrix)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: block},
+			},
+		}, nil
 	}
-	return &ethpbv2.ProduceBlockResponseV2{
-		Version: ethpbv2.Version_ALTAIR,
-		Data: &ethpbv2.BeaconBlockContainerV2{
-			Block: &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: block},
-		},
-	}, nil
+	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
+}
+
+// PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
+func (vs *Server) PrepareBeaconProposer(
+	ctx context.Context, request *ethpbv1.PrepareBeaconProposerRequest,
+) (*emptypb.Empty, error) {
+	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
+	defer span.End()
+	var feeRecipients []common.Address
+	var validatorIndices []types.ValidatorIndex
+	for _, recipientContainer := range request.Recipients {
+		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
+		if !common.IsHexAddress(recipient) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
+		}
+		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
+		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
+	}
+	if err := vs.V1Alpha1Server.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
+	}
+	log.WithFields(log.Fields{
+		"validatorIndices": validatorIndices,
+	}).Info("Updated fee recipient addresses for validator indices")
+	return &emptypb.Empty{}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for
@@ -324,7 +375,7 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
+	_, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
 	defer span.End()
 
 	allAtts := vs.AttestationsPool.AggregatedAttestations()
@@ -360,7 +411,7 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.Sub
 		if agg == nil || agg.Message == nil || agg.Message.Aggregate == nil || agg.Message.Aggregate.Data == nil {
 			return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
 		}
-		sigLen := params.BeaconConfig().BLSSignatureLength
+		sigLen := fieldparams.BLSSignatureLength
 		emptySig := make([]byte, sigLen)
 		if bytes.Equal(agg.Signature, emptySig) || bytes.Equal(agg.Message.SelectionProof, emptySig) || bytes.Equal(agg.Message.Aggregate.Signature, emptySig) {
 			return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")
@@ -665,11 +716,9 @@ func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, curr
 			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
 		}
 	}
-	if s.Slot() < epochStartSlot {
-		s, err = transition.ProcessSlots(ctx, s, epochStartSlot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
-		}
+	s, err = transition.ProcessSlotsIfPossible(ctx, s, epochStartSlot)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
 	}
 
 	return s, nil
@@ -712,7 +761,7 @@ func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {
 func syncCommitteeDuties(
 	valIndices []types.ValidatorIndex,
 	st state.BeaconState,
-	committeePubkeys map[[48]byte][]uint64,
+	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]uint64,
 ) ([]*ethpbv2.SyncCommitteeDuty, error) {
 	duties := make([]*ethpbv2.SyncCommitteeDuty, 0)
 	for _, index := range valIndices {
@@ -720,7 +769,7 @@ func syncCommitteeDuties(
 			ValidatorIndex: index,
 		}
 		valPubkey48 := st.PubkeyAtIndex(index)
-		zeroPubkey := [48]byte{}
+		zeroPubkey := [fieldparams.BLSPubkeyLength]byte{}
 		if bytes.Equal(valPubkey48[:], zeroPubkey[:]) {
 			return nil, errInvalidValIndex
 		}
