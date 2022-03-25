@@ -107,6 +107,10 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 	}
+	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, blkRoot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+	}
 
 	return &ethpbv1.BlockHeaderResponse{
 		Data: &ethpbv1.BlockHeaderContainer{
@@ -117,6 +121,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 				Signature: header.Signature,
 			},
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -151,6 +156,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 		return nil, status.Error(codes.NotFound, "Could not find requested blocks")
 	}
 
+	isOptimistic := false
 	blkHdrs := make([]*ethpbv1.BlockHeaderContainer, len(blks))
 	for i, bl := range blks {
 		v1alpha1Header, err := bl.Header()
@@ -166,6 +172,12 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 		}
+		if !isOptimistic {
+			isOptimistic, err = bs.HeadFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+			}
+		}
 		blkHdrs[i] = &ethpbv1.BlockHeaderContainer{
 			Root:      headerRoot[:],
 			Canonical: canonical,
@@ -176,7 +188,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 		}
 	}
 
-	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs}, nil
+	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs, ExecutionOptimistic: isOptimistic}, nil
 }
 
 // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
@@ -230,7 +242,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			"Block proposal received via RPC")
 		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
 			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: wsb},
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: wsb, IsOptimistic: false},
 		})
 	}()
 
@@ -314,6 +326,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 				Message:   &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
 				Signature: v1Blk.Signature,
 			},
+			ExecutionOptimistic: false,
 		}, nil
 	}
 	// ErrUnsupportedPhase0Block means that we have another block type
@@ -336,6 +349,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 				Message:   &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
 				Signature: blk.Signature(),
 			},
+			ExecutionOptimistic: false,
 		}, nil
 	}
 	// ErrUnsupportedAltairBlock means that we have another block type
@@ -352,12 +366,21 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
+		root, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+		}
+		isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+		}
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_BELLATRIX,
 			Data: &ethpbv2.SignedBeaconBlockContainerV2{
 				Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Blk},
 				Signature: blk.Signature(),
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	}
 	// ErrUnsupportedBellatrixBlock means that we have another block type
@@ -519,10 +542,16 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		}
 	}
 
+	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(root))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+	}
+
 	return &ethpbv1.BlockRootResponse{
 		Data: &ethpbv1.BlockRootContainer{
 			Root: root,
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -547,7 +576,8 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
 		return &ethpbv1.BlockAttestationsResponse{
-			Data: v1Blk.Block.Body.Attestations,
+			Data:                v1Blk.Block.Body.Attestations,
+			ExecutionOptimistic: false,
 		}, nil
 	}
 
@@ -564,7 +594,8 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
 		return &ethpbv1.BlockAttestationsResponse{
-			Data: v2Blk.Body.Attestations,
+			Data:                v2Blk.Body.Attestations,
+			ExecutionOptimistic: false,
 		}, nil
 	}
 
@@ -580,8 +611,17 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
+		root, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+		}
+		isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+		}
 		return &ethpbv1.BlockAttestationsResponse{
-			Data: v2Blk.Body.Attestations,
+			Data:                v2Blk.Body.Attestations,
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	}
 
