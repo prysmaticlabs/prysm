@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"path"
 	"testing"
 	"time"
@@ -69,7 +70,10 @@ func Run(t *testing.T, config string, fork int) {
 					t.Fatalf("unknown fork version: %v", fork)
 				}
 
-				service := startChainService(t, beaconState, beaconBlock)
+				execMock := &engineMock{
+					powBlocks: make(map[[32]byte]*ethpb.PowBlock),
+				}
+				service := startChainService(t, beaconState, beaconBlock, execMock)
 				var lastTick int64
 				for _, step := range steps {
 					if step.Tick != nil {
@@ -114,6 +118,18 @@ func Run(t *testing.T, config string, fork int) {
 						require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
 						require.NoError(t, service.OnAttestation(ctx, att))
 					}
+					if step.PowBlock != nil {
+						powBlockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.PowBlock, ".ssz_snappy"))
+						require.NoError(t, err)
+						p, err := snappy.Decode(nil /* dst */, powBlockFile)
+						require.NoError(t, err)
+						pb := &ethpb.PowBlock{}
+						require.NoError(t, pb.UnmarshalSSZ(p), "Failed to unmarshal")
+						execMock.powBlocks[bytesutil.ToBytes32(pb.BlockHash)] = pb
+						tdInBigEndian := bytesutil.ReverseByteOrder(pb.TotalDifficulty)
+						tdBigint := new(big.Int)
+						tdBigint.SetBytes(tdInBigEndian)
+					}
 					if step.Check != nil {
 						require.NoError(t, service.UpdateHeadWithBalances(ctx))
 						c := step.Check
@@ -145,8 +161,9 @@ func Run(t *testing.T, config string, fork int) {
 							require.DeepSSZEqual(t, cp, service.FinalizedCheckpt())
 						}
 						if c.ProposerBoostRoot != nil {
-							want := common.FromHex(*c.ProposerBoostRoot)
-							require.DeepEqual(t, bytesutil.ToBytes32(want), service.ForkChoiceStore().ProposerBoost())
+							want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
+							got := fmt.Sprintf("%#x", service.ForkChoiceStore().ProposerBoost())
+							require.DeepEqual(t, want, got)
 						}
 					}
 				}

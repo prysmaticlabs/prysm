@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -96,6 +97,9 @@ func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) 
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
 func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
+	defer span.End()
+
 	result := &pb.PayloadStatus{}
 	err := c.rpc.CallContext(ctx, result, NewPayloadMethod, payload)
 	if err != nil {
@@ -122,6 +126,9 @@ func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (
 func (c *Client) ForkchoiceUpdated(
 	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 ) (*pb.PayloadIDBytes, []byte, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ForkchoiceUpdated")
+	defer span.End()
+
 	result := &ForkchoiceUpdatedResponse{}
 	err := c.rpc.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
 	if err != nil {
@@ -148,6 +155,9 @@ func (c *Client) ForkchoiceUpdated(
 
 // GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
 func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
+	defer span.End()
+
 	result := &pb.ExecutionPayload{}
 	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
@@ -157,6 +167,9 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 func (c *Client) ExchangeTransitionConfiguration(
 	ctx context.Context, cfg *pb.TransitionConfiguration,
 ) error {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeTransitionConfiguration")
+	defer span.End()
+
 	// We set terminal block number to 0 as the parameter is not set on the consensus layer.
 	zeroBigNum := big.NewInt(0)
 	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
@@ -194,6 +207,9 @@ func (c *Client) ExchangeTransitionConfiguration(
 // LatestExecutionBlock fetches the latest execution engine block by calling
 // eth_blockByNumber via JSON-RPC.
 func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.LatestExecutionBlock")
+	defer span.End()
+
 	result := &pb.ExecutionBlock{}
 	err := c.rpc.CallContext(
 		ctx,
@@ -208,6 +224,9 @@ func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, 
 // ExecutionBlockByHash fetches an execution engine block by hash by calling
 // eth_blockByHash via JSON-RPC.
 func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
+	defer span.End()
+
 	result := &pb.ExecutionBlock{}
 	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)

@@ -64,7 +64,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBloc
 		return err
 	}
 	// Log state transition data.
-	logStateTransitionData(blockCopy.Block())
+	if err := logStateTransitionData(blockCopy.Block()); err != nil {
+		return err
+	}
 
 	return nil
 }

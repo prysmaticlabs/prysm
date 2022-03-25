@@ -146,6 +146,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		trace.Int64Attribute("numAttestations", int64(len(blk.Block().Body().Attestations()))),
 	)
 
+	if blk.Version() == version.Bellatrix {
+		p, err := blk.Block().Body().ExecutionPayload()
+		if err != nil {
+			log.WithError(err).Error("Failed to get execution payload")
+			return
+		}
+		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)))
+		log = log.WithField("txCount", len(p.Transactions))
+	}
+
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            blk.Block().Slot(),

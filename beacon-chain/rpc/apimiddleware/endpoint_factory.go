@@ -37,6 +37,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/voluntary_exits",
 		"/eth/v1/beacon/pool/sync_committees",
+		"/eth/v1/beacon/weak_subjectivity",
 		"/eth/v1/node/identity",
 		"/eth/v1/node/peers",
 		"/eth/v1/node/peers/{peer_id}",
@@ -47,6 +48,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/debug/beacon/states/{state_id}",
 		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
+		"/eth/v2/debug/beacon/heads",
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
@@ -63,6 +65,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/aggregate_and_proofs",
 		"/eth/v1/validator/sync_committee_contribution",
 		"/eth/v1/validator/contribution_and_proofs",
+		"/eth/v1/validator/prepare_beacon_proposer",
 	}
 }
 
@@ -141,6 +144,8 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSignaturesArray,
 		}
+	case "/eth/v1/beacon/weak_subjectivity":
+		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/node/identity":
 		endpoint.GetResponse = &identityResponseJson{}
 	case "/eth/v1/node/peers":
@@ -168,6 +173,8 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconStateSSZV2}
 	case "/eth/v1/debug/beacon/heads":
 		endpoint.GetResponse = &forkChoiceHeadsResponseJson{}
+	case "/eth/v2/debug/beacon/heads":
+		endpoint.GetResponse = &v2ForkChoiceHeadsResponseJson{}
 	case "/eth/v1/config/fork_schedule":
 		endpoint.GetResponse = &forkScheduleResponseJson{}
 	case "/eth/v1/config/deposit_contract":
@@ -237,6 +244,11 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.PostRequest = &submitContributionAndProofsRequestJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSignedContributionAndProofsArray,
+		}
+	case "/eth/v1/validator/prepare_beacon_proposer":
+		endpoint.PostRequest = &feeRecipientsRequestJSON{}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: wrapFeeRecipientsArray,
 		}
 	default:
 		return nil, errors.New("invalid path")

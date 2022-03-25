@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -17,7 +18,7 @@ import (
 var log = logrus.WithField("prefix", "blockchain")
 
 // logs state transition related data every slot.
-func logStateTransitionData(b block.BeaconBlock) {
+func logStateTransitionData(b block.BeaconBlock) error {
 	log := log.WithField("slot", b.Slot())
 	if len(b.Body().Attestations()) > 0 {
 		log = log.WithField("attestations", len(b.Body().Attestations()))
@@ -34,13 +35,23 @@ func logStateTransitionData(b block.BeaconBlock) {
 	if len(b.Body().VoluntaryExits()) > 0 {
 		log = log.WithField("voluntaryExits", len(b.Body().VoluntaryExits()))
 	}
-	if b.Version() == version.Altair {
+	if b.Version() == version.Altair || b.Version() == version.Bellatrix {
 		agg, err := b.Body().SyncAggregate()
-		if err == nil {
-			log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
+		if err != nil {
+			return err
 		}
+		log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
+	}
+	if b.Version() == version.Bellatrix {
+		p, err := b.Body().ExecutionPayload()
+		if err != nil {
+			return err
+		}
+		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)))
+		log = log.WithField("txCount", len(p.Transactions))
 	}
 	log.Info("Finished applying state transition")
+	return nil
 }
 
 func logBlockSyncStatus(block block.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {

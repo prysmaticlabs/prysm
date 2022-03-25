@@ -19,7 +19,6 @@ var (
 	powchainBucket          = []byte("powchain")
 	stateValidatorsBucket   = []byte("state-validators")
 	feeRecipientBucket      = []byte("fee-recipient")
-	validatedTips           = []byte("validated-synced-tips")
 
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
 	slotsHasObjectBucket = []byte("slots-has-objects")
@@ -39,12 +38,13 @@ var (
 	blockRootValidatorHashesBucket      = []byte("block-root-validator-hashes")
 
 	// Specific item keys.
-	headBlockRootKey          = []byte("head-root")
-	genesisBlockRootKey       = []byte("genesis-root")
-	depositContractAddressKey = []byte("deposit-contract")
-	justifiedCheckpointKey    = []byte("justified-checkpoint")
-	finalizedCheckpointKey    = []byte("finalized-checkpoint")
-	powchainDataKey           = []byte("powchain-data")
+	headBlockRootKey           = []byte("head-root")
+	genesisBlockRootKey        = []byte("genesis-root")
+	depositContractAddressKey  = []byte("deposit-contract")
+	justifiedCheckpointKey     = []byte("justified-checkpoint")
+	finalizedCheckpointKey     = []byte("finalized-checkpoint")
+	powchainDataKey            = []byte("powchain-data")
+	lastValidatedCheckpointKey = []byte("last-validated-checkpoint")
 
 	// Below keys are used to identify objects are to be fork compatible.
 	// Objects that are only compatible with specific forks should be prefixed with such keys.

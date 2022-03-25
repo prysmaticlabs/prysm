@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -127,4 +128,49 @@ func (km *Keymanager) DeleteKeystores(
 // are imported into the keymanager while the validator process is running.
 func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return km.localKM.SubscribeAccountChanges(pubKeysChan)
+}
+
+func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
+	au := aurora.NewAurora(true)
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("derived, (HD) hierarchical-deterministic").Bold())
+	fmt.Printf("(derivation format) %s\n", au.BrightGreen(DerivationPathFormat).Bold())
+	validatingPubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	var validatingPrivateKeys [][32]byte
+	if cfg.ShowPrivateKeys {
+		validatingPrivateKeys, err = km.FetchValidatingPrivateKeys(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not fetch validating private keys")
+		}
+	}
+	accountNames, err := km.ValidatingAccountNames(ctx)
+	if err != nil {
+		return err
+	}
+	if len(accountNames) == 1 {
+		fmt.Print("Showing 1 validator account\n")
+	} else if len(accountNames) == 0 {
+		fmt.Print("No accounts found\n")
+		return nil
+	} else {
+		fmt.Printf("Showing %d validator accounts\n", len(accountNames))
+	}
+	for i := 0; i < len(accountNames); i++ {
+		fmt.Println("")
+		validatingKeyPath := fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i)
+
+		// Retrieve the withdrawal key account metadata.
+		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
+		// Retrieve the validating key account metadata.
+		fmt.Printf("%s %#x\n", au.BrightCyan("[validating public key]").Bold(), validatingPubKeys[i])
+		if cfg.ShowPrivateKeys && validatingPrivateKeys != nil {
+			fmt.Printf("%s %#x\n", au.BrightRed("[validating private key]").Bold(), validatingPrivateKeys[i])
+		}
+		fmt.Printf("%s %s\n", au.BrightCyan("[derivation path]").Bold(), validatingKeyPath)
+		fmt.Println(" ")
+	}
+	return nil
+
 }

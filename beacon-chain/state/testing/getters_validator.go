@@ -10,7 +10,7 @@ import (
 
 type getState func() (state.BeaconState, error)
 
-func VerifyBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice(t *testing.T, factory getState) {
+func VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t *testing.T, factory getState) {
 	st, err := factory()
 	require.NoError(t, err)
 

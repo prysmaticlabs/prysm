@@ -148,12 +148,12 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 func (f *ForkChoice) InsertOptimisticBlock(
 	ctx context.Context,
 	slot types.Slot,
-	blockRoot, parentRoot [32]byte,
+	blockRoot, parentRoot, payloadHash [32]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertOptimisticBlock")
 	defer span.End()
 
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
+	return f.store.insert(ctx, slot, blockRoot, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
@@ -342,7 +342,7 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 // It then updates the new node's parent with best child and descendant node.
 func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
-	root, parent [32]byte,
+	root, parent, payloadHash [32]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
@@ -371,6 +371,7 @@ func (s *Store) insert(ctx context.Context,
 		bestChild:      NonExistentNode,
 		bestDescendant: NonExistentNode,
 		weight:         0,
+		payloadHash:    payloadHash,
 	}
 
 	s.nodesIndices[root] = index

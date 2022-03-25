@@ -87,3 +87,69 @@ func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 
 	return nil
 }
+
+// ModifyPreviousParticipationBits modifies the previous participation bitfield via
+// the provided mutator function.
+func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) ([]byte, error)) error {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+
+	participation := b.state.PreviousEpochParticipation
+	if b.sharedFieldReferences[previousEpochParticipationBits].Refs() > 1 {
+		// Copy elements in underlying array by reference.
+		participation = make([]byte, len(b.state.PreviousEpochParticipation))
+		copy(participation, b.state.PreviousEpochParticipation)
+		b.sharedFieldReferences[previousEpochParticipationBits].MinusRef()
+		b.sharedFieldReferences[previousEpochParticipationBits] = stateutil.NewRef(1)
+	}
+	// Lock is released so that mutator can
+	// acquire it.
+	b.lock.Unlock()
+
+	var err error
+	participation, err = mutator(participation)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.state.PreviousEpochParticipation = participation
+	b.markFieldAsDirty(previousEpochParticipationBits)
+	b.rebuildTrie[previousEpochParticipationBits] = true
+	return nil
+}
+
+// ModifyCurrentParticipationBits modifies the current participation bitfield via
+// the provided mutator function.
+func (b *BeaconState) ModifyCurrentParticipationBits(mutator func(val []byte) ([]byte, error)) error {
+	if !b.hasInnerState() {
+		return ErrNilInnerState
+	}
+	b.lock.Lock()
+
+	participation := b.state.CurrentEpochParticipation
+	if b.sharedFieldReferences[currentEpochParticipationBits].Refs() > 1 {
+		// Copy elements in underlying array by reference.
+		participation = make([]byte, len(b.state.CurrentEpochParticipation))
+		copy(participation, b.state.CurrentEpochParticipation)
+		b.sharedFieldReferences[currentEpochParticipationBits].MinusRef()
+		b.sharedFieldReferences[currentEpochParticipationBits] = stateutil.NewRef(1)
+	}
+	// Lock is released so that mutator can
+	// acquire it.
+	b.lock.Unlock()
+
+	var err error
+	participation, err = mutator(participation)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.state.CurrentEpochParticipation = participation
+	b.markFieldAsDirty(currentEpochParticipationBits)
+	b.rebuildTrie[currentEpochParticipationBits] = true
+	return nil
+}

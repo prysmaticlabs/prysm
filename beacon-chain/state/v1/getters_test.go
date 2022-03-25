@@ -12,7 +12,7 @@ import (
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
-	testtmpl.VerifyBeaconState_SlotDataRace(t, func() (state.BeaconState, error) {
+	testtmpl.VerifyBeaconStateSlotDataRace(t, func() (state.BeaconState, error) {
 		return InitializeFromProto(&ethpb.BeaconState{Slot: 1})
 	})
 }
@@ -66,7 +66,7 @@ func TestNilState_NoPanic(t *testing.T) {
 }
 
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
-	testtmpl.VerifyBeaconState_MatchCurrentJustifiedCheckpt(
+	testtmpl.VerifyBeaconStateMatchCurrentJustifiedCheckpt(
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
 			return InitializeFromProto(&ethpb.BeaconState{CurrentJustifiedCheckpoint: cp})
@@ -82,7 +82,7 @@ func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
 }
 
 func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
-	testtmpl.VerifyBeaconState_MatchPreviousJustifiedCheckpt(
+	testtmpl.VerifyBeaconStateMatchPreviousJustifiedCheckpt(
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
 			return InitializeFromProto(&ethpb.BeaconState{PreviousJustifiedCheckpoint: cp})
@@ -98,7 +98,7 @@ func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
 }
 
 func TestBeaconState_MarshalSSZ_NilState(t *testing.T) {
-	testtmpl.VerifyBeaconState_MarshalSSZ_NilState(
+	testtmpl.VerifyBeaconStateMarshalSSZNilState(
 		t,
 		func() (state.BeaconState, error) {
 			return InitializeFromProto(&ethpb.BeaconState{})
@@ -114,7 +114,7 @@ func TestBeaconState_MarshalSSZ_NilState(t *testing.T) {
 }
 
 func TestBeaconState_ValidatorByPubkey(t *testing.T) {
-	testtmpl.VerifyBeaconState_ValidatorByPubkey(t, func() (state.BeaconState, error) {
+	testtmpl.VerifyBeaconStateValidatorByPubkey(t, func() (state.BeaconState, error) {
 		return InitializeFromProto(&ethpb.BeaconState{})
 	})
 }

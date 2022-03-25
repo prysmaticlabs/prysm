@@ -55,7 +55,7 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 	hasViableDescendant := false
 	for _, child := range n.children {
 		if child == nil {
-			return errNilNode
+			return ErrNilNode
 		}
 		if err := child.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
 			return err

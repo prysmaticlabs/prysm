@@ -16,7 +16,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		return nil, err
 	}
 
-	payload, err := vs.getExecutionPayload(ctx, req.Slot)
+	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
 	if err != nil {
 		return nil, err
 	}

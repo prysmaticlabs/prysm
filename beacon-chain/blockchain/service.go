@@ -3,6 +3,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"runtime"
@@ -127,7 +128,7 @@ func (s *Service) Start() {
 	saved := s.cfg.FinalizedStateAtStartUp
 
 	if saved != nil && !saved.IsNil() {
-		if err := s.startFromSavedState(saved); err != nil {
+		if err := s.StartFromSavedState(saved); err != nil {
 			log.Fatal(err)
 		}
 	} else {
@@ -164,7 +165,7 @@ func (s *Service) Status() error {
 	return nil
 }
 
-func (s *Service) startFromSavedState(saved state.BeaconState) error {
+func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	log.Info("Blockchain data already exists in DB, initializing...")
 	s.genesisTime = time.Unix(int64(saved.GenesisTime()), 0) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
 	s.cfg.AttService.SetGenesisTime(saved.GenesisTime())
@@ -191,21 +192,44 @@ func (s *Service) startFromSavedState(saved state.BeaconState) error {
 	s.store = store.New(justified, finalized)
 
 	var store f.ForkChoicer
+	fRoot := bytesutil.ToBytes32(finalized.Root)
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
 		store = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
 	} else {
-		store = protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
+		store = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
 	}
 	s.cfg.ForkChoiceStore = store
-
-	ss, err := slots.EpochStart(finalized.Epoch)
+	fb, err := s.cfg.BeaconDB.Block(s.ctx, s.ensureRootNotZeros(fRoot))
 	if err != nil {
-		return errors.Wrap(err, "could not get start slot of finalized epoch")
+		return errors.Wrap(err, "could not get finalized checkpoint block")
 	}
+	if fb == nil {
+		return errNilFinalizedInStore
+	}
+	payloadHash, err := getBlockPayloadHash(fb.Block())
+	if err != nil {
+		return errors.Wrap(err, "could not get execution payload hash")
+	}
+	fSlot := fb.Block().Slot()
+	if err := store.InsertOptimisticBlock(s.ctx, fSlot, fRoot, params.BeaconConfig().ZeroHash,
+		payloadHash, justified.Epoch, finalized.Epoch); err != nil {
+		return errors.Wrap(err, "could not insert finalized block to forkchoice")
+	}
+
+	lastValidatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get last validated checkpoint")
+	}
+	if bytes.Equal(finalized.Root, lastValidatedCheckpoint.Root) {
+		if err := store.SetOptimisticToValid(s.ctx, fRoot); err != nil {
+			return errors.Wrap(err, "could not set finalized block as validated")
+		}
+	}
+
 	h := s.headBlock().Block()
-	if h.Slot() > ss {
+	if h.Slot() > fSlot {
 		log.WithFields(logrus.Fields{
-			"startSlot": ss,
+			"startSlot": fSlot,
 			"endSlot":   h.Slot(),
 		}).Info("Loading blocks to fork choice store, this may take a while.")
 		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, finalized, justified); err != nil {
@@ -449,10 +473,15 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
+	payloadHash, err := getBlockPayloadHash(genesisBlk.Block())
+	if err != nil {
+		return err
+	}
 	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
 		genesisBlk.Block().Slot(),
 		genesisBlkRoot,
 		params.BeaconConfig().ZeroHash,
+		payloadHash,
 		genesisCheckpoint.Epoch,
 		genesisCheckpoint.Epoch); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)

@@ -1,3 +1,4 @@
+//go:build fuzz
 // +build fuzz
 
 // This file is used in fuzzer builds to bypass proposer indices caches.
