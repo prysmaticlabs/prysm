@@ -41,6 +41,13 @@ func (b *MockReplayerBuilder) SetMockState(s state.BeaconState) {
 	b.forSlot[s.Slot()] = &MockReplayer{State: s}
 }
 
+func (b *MockReplayerBuilder) SetMockStateForSlot(s state.BeaconState, slot types.Slot) {
+	if b.forSlot == nil {
+		b.forSlot = make(map[types.Slot]*MockReplayer)
+	}
+	b.forSlot[slot] = &MockReplayer{State: s}
+}
+
 func (b *MockReplayerBuilder) SetMockSlotError(s types.Slot, e error) {
 	if b.forSlot == nil {
 		b.forSlot = make(map[types.Slot]*MockReplayer)
