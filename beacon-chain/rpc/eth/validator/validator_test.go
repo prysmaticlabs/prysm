@@ -66,6 +66,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
+	db := dbutil.SetupDB(t)
 
 	// Deactivate last validator.
 	vals := bs.Validators()
@@ -213,6 +214,34 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 0, len(resp.Data))
 	})
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		blk.Block.Slot = 31
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainSlot := types.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
+		}
+		vs := &Server{
+			HeadFetcher: chain,
+			TimeFetcher: chain,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: 0,
+			Index: []types.ValidatorIndex{0},
+		}
+		resp, err := vs.GetAttesterDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
 }
 
 func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
@@ -243,6 +272,7 @@ func TestGetProposerDuties(t *testing.T) {
 	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
+	db := dbutil.SetupDB(t)
 
 	pubKeys := make([][]byte, len(deposits))
 	for i := 0; i < len(deposits); i++ {
@@ -337,6 +367,33 @@ func TestGetProposerDuties(t *testing.T) {
 		require.NotNil(t, err)
 		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than current epoch %d", currentEpoch+1, currentEpoch), err)
 	})
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		blk.Block.Slot = 31
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainSlot := types.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
+		}
+		vs := &Server{
+			HeadFetcher: chain,
+			TimeFetcher: chain,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+		req := &ethpbv1.ProposerDutiesRequest{
+			Epoch: 0,
+		}
+		resp, err := vs.GetProposerDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
 }
 
 func TestGetProposerDuties_SyncNotReady(t *testing.T) {
@@ -369,11 +426,14 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
 	}
 	require.NoError(t, st.SetNextSyncCommittee(nextCommittee))
+	db := dbutil.SetupDB(t)
 
+	mockChainService := &mockChain.ChainService{Genesis: genesisTime}
 	vs := &Server{
 		StateFetcher: &testutil.MockFetcher{BeaconState: st},
 		SyncChecker:  &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:  &mockChain.ChainService{Genesis: genesisTime},
+		TimeFetcher:  mockChainService,
+		HeadFetcher:  mockChainService,
 	}
 
 	t.Run("Single validator", func(t *testing.T) {
@@ -506,10 +566,12 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 				return newSyncPeriodSt
 			}
 		}
+		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot}
 		vs := &Server{
 			StateFetcher: &testutil.MockFetcher{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
 			SyncChecker:  &mockSync.Sync{IsSyncing: false},
-			TimeFetcher:  &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot},
+			TimeFetcher:  mockChainService,
+			HeadFetcher:  mockChainService,
 		}
 
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
@@ -526,6 +588,31 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		assert.Equal(t, types.ValidatorIndex(8), duty.ValidatorIndex)
 		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
 		assert.Equal(t, uint64(3), duty.ValidatorSyncCommitteeIndices[0])
+	})
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Optimistic: true}
+		vs := &Server{
+			StateFetcher: &testutil.MockFetcher{BeaconState: st},
+			SyncChecker:  &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:  mockChainService,
+			HeadFetcher:  mockChainService,
+		}
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 0,
+			Index: []types.ValidatorIndex{1},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 }
 
