@@ -20,12 +20,17 @@ import (
 // If the honest proposal is boosted at slot n+2, it will win against this attacker.
 func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 	ctx := context.Background()
+	jEpoch, fEpoch := types.Epoch(0), types.Epoch(0)
 	zeroHash := params.BeaconConfig().ZeroHash
 	balances := make([]uint64, 64) // 64 active validators.
 	for i := 0; i < len(balances); i++ {
 		balances[i] = 10
 	}
-	jEpoch, fEpoch := types.Epoch(0), types.Epoch(0)
+	t.Run("nil args check", func(t *testing.T) {
+		f := setup(jEpoch, fEpoch)
+		err := f.BoostProposerRoot(ctx, nil)
+		require.ErrorContains(t, "nil function args", err)
+	})
 	t.Run("back-propagates boost score to ancestors after proposer boosting", func(t *testing.T) {
 		f := setup(jEpoch, fEpoch)
 
