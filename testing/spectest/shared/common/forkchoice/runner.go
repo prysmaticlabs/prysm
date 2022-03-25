@@ -38,11 +38,6 @@ func Run(t *testing.T, config string, fork int) {
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
-
-				if folder.Name() != "proposer_boost" {
-					t.Skip("Skipping test_forkchoice_genesis_state")
-				}
-
 				ctx := context.Background()
 				preStepsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 				require.NoError(t, err)
@@ -109,6 +104,7 @@ func Run(t *testing.T, config string, fork int) {
 						}
 						r, err := beaconBlock.Block().HashTreeRoot()
 						require.NoError(t, err)
+						require.NoError(t, service.ForkChoicer().BoostProposerRoot(ctx, beaconBlock.Block().Slot(), r, service.GenesisTime()))
 						if step.Valid != nil && !*step.Valid {
 							require.Equal(t, true, service.ReceiveBlock(ctx, beaconBlock, r) != nil)
 						} else {
