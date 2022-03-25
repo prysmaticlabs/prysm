@@ -68,7 +68,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			err := SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 200, false)
+			err := SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), e2e.NumOfExecEngineTxs, false)
 			if err != nil {
 				return err
 			}

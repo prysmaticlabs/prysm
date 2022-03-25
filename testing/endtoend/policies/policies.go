@@ -27,3 +27,10 @@ func BetweenEpochs(fromEpoch, toEpoch types.Epoch) func(types.Epoch) bool {
 		return fromEpoch < currentEpoch && currentEpoch < toEpoch
 	}
 }
+
+// FromEpoch runs for every epoch starting at the provided epoch.
+func FromEpoch(fromEpoch types.Epoch) func(epoch types.Epoch) bool {
+	return func(currentEpoch types.Epoch) bool {
+		return currentEpoch >= fromEpoch
+	}
+}
