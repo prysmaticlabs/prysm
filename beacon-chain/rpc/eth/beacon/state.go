@@ -58,11 +58,11 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	defer span.End()
 
 	var (
-		root []byte
-		err  error
+		stateRoot []byte
+		err       error
 	)
 
-	root, err = bs.StateFetcher.StateRoot(ctx, req.StateId)
+	stateRoot, err = bs.StateFetcher.StateRoot(ctx, req.StateId)
 	if err != nil {
 		if rootNotFoundErr, ok := err.(*statefetcher.StateRootNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State root not found: %v", rootNotFoundErr)
@@ -71,11 +71,20 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
 
 	return &ethpb.StateRootResponse{
 		Data: &ethpb.StateRootResponse_StateRoot{
-			Root: root,
+			Root: stateRoot,
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -93,14 +102,19 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
-
 	fork := st.Fork()
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
 	return &ethpb.StateForkResponse{
 		Data: &ethpb.Fork{
 			PreviousVersion: fork.PreviousVersion,
 			CurrentVersion:  fork.CurrentVersion,
 			Epoch:           fork.Epoch,
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -119,6 +133,10 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
 
 	return &ethpb.StateFinalityCheckpointResponse{
 		Data: &ethpb.StateFinalityCheckpointResponse_StateFinalityCheckpoint{
@@ -126,6 +144,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 			CurrentJustified:  checkpoint(st.CurrentJustifiedCheckpoint()),
 			Finalized:         checkpoint(st.FinalizedCheckpoint()),
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
