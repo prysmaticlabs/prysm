@@ -174,8 +174,9 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 	},
 		Signature: blk.Signature,
 	}
-
-	bh, err := block.SignedBeaconBlockHeaderFromBlockInterface(wrapper.WrappedPhase0SignedBeaconBlock(blk))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	bh, err := block.SignedBeaconBlockHeaderFromBlockInterface(wsb)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }

@@ -40,8 +40,11 @@ func BlockSignature(
 	block *ethpb.BeaconBlock,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
-	var err error
-	s, err := transition.CalculateStateRoot(context.Background(), bState, wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: block}))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: block})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not wrap block")
+	}
+	s, err := transition.CalculateStateRoot(context.Background(), bState, wsb)
 	if err != nil {
 		return nil, err
 	}
