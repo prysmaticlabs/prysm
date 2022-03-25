@@ -25,10 +25,9 @@ type altairSignedBeaconBlock struct {
 	b *eth.SignedBeaconBlockAltair
 }
 
-// WrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
+// wrappedAltairSignedBeaconBlock is constructor which wraps a protobuf altair block
 // with the block wrapper.
-// Deprecated: use WrappedSignedBeaconBlock instead.
-func WrappedAltairSignedBeaconBlock(b *eth.SignedBeaconBlockAltair) (block.SignedBeaconBlock, error) {
+func wrappedAltairSignedBeaconBlock(b *eth.SignedBeaconBlockAltair) (block.SignedBeaconBlock, error) {
 	w := altairSignedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped

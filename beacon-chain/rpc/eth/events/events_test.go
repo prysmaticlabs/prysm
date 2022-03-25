@@ -66,7 +66,8 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 			Event: BlockTopic,
 			Data:  genericResponse,
 		}
-
+		wsb, err := wrapper.WrappedSignedBeaconBlock(wantedBlock)
+		require.NoError(t, err)
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
 			srv:           srv,
@@ -76,7 +77,7 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 			itemToSend: &feed.Event{
 				Type: blockfeed.ReceivedBlock,
 				Data: &blockfeed.ReceivedBlockData{
-					SignedBlock:  wrapper.WrappedPhase0SignedBeaconBlock(wantedBlock),
+					SignedBlock:  wsb,
 					IsOptimistic: true,
 				},
 			},
