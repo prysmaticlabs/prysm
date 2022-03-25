@@ -2,8 +2,10 @@ package evaluators
 
 import (
 	"context"
+	"math"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -17,7 +19,7 @@ import (
 // appear in consensus client blocks' execution payload.
 var TransactionsPresent = types.Evaluator{
 	Name:       "transactions_present_at_epoch_%d",
-	Policy:     policies.FromEpoch(helpers.BellatrixE2EForkEpoch),
+	Policy:     policies.AfterNthEpoch(helpers.BellatrixE2EForkEpoch),
 	Evaluation: transactionsPresent,
 }
 
@@ -33,18 +35,20 @@ func transactionsPresent(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
+	expectedTxNum := int(math.Round(float64(params.E2ETestConfig().SlotsPerEpoch) * float64(e2e.NumOfExecEngineTxs) * 0.7))
+	var numberOfTxs int
 	for _, ctr := range blks.BlockContainers {
 		switch ctr.Block.(type) {
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
-			numberOfTxs := len(ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.Transactions)
-			if uint64(numberOfTxs) != e2e.NumOfExecEngineTxs {
-				return errors.Errorf(
-					"wrong number of transactions in the execution paylod, expected=%d vs actual=%d",
-					e2e.NumOfExecEngineTxs,
-					numberOfTxs,
-				)
-			}
+			numberOfTxs += len(ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.Transactions)
 		}
+	}
+	if numberOfTxs < expectedTxNum {
+		return errors.Errorf(
+			"not enough transactions in execution payload, expected=%d vs actual=%d",
+			expectedTxNum,
+			numberOfTxs,
+		)
 	}
 	return nil
 }
