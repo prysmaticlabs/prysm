@@ -565,11 +565,19 @@ func Test_IsExecutionBlock(t *testing.T) {
 
 func Test_ExecutionEnabled(t *testing.T) {
 	tests := []struct {
-		name    string
-		payload *enginev1.ExecutionPayload
-		header  *ethpb.ExecutionPayloadHeader
-		want    bool
+		name        string
+		payload     *enginev1.ExecutionPayload
+		header      *ethpb.ExecutionPayloadHeader
+		useAltairSt bool
+		want        bool
 	}{
+		{
+			name:        "use older than bellatrix state",
+			payload:     emptyPayload(),
+			header:      emptyPayloadHeader(),
+			useAltairSt: true,
+			want:        false,
+		},
 		{
 			name:    "empty header, empty payload",
 			payload: emptyPayload(),
@@ -619,7 +627,73 @@ func Test_ExecutionEnabled(t *testing.T) {
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
+			if tt.useAltairSt {
+				st, _ = util.DeterministicGenesisStateAltair(t, 1)
+			}
 			got, err := blocks.ExecutionEnabled(st, body)
+			require.NoError(t, err)
+			if got != tt.want {
+				t.Errorf("ExecutionEnabled() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload *enginev1.ExecutionPayload
+		header  *ethpb.ExecutionPayloadHeader
+		want    bool
+	}{
+		{
+			name:    "empty header, empty payload",
+			payload: emptyPayload(),
+			header:  emptyPayloadHeader(),
+			want:    false,
+		},
+		{
+			name:    "non-empty header, empty payload",
+			payload: emptyPayload(),
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return h
+			}(),
+			want: true,
+		},
+		{
+			name:   "empty header, non-empty payload",
+			header: emptyPayloadHeader(),
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.Timestamp = 1
+				return p
+			}(),
+			want: true,
+		},
+		{
+			name: "non-empty header, non-empty payload",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				return h
+			}(),
+			payload: func() *enginev1.ExecutionPayload {
+				p := emptyPayload()
+				p.Timestamp = 1
+				return p
+			}(),
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blk := util.NewBeaconBlockBellatrix()
+			blk.Block.Body.ExecutionPayload = tt.payload
+			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
+			require.NoError(t, err)
+			got, err := blocks.IsExecutionEnabledUsingHeader(tt.header, body)
 			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("ExecutionEnabled() got = %v, want %v", got, tt.want)
