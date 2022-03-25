@@ -1056,7 +1056,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 	return nil
 }
 
-// Initializes a connection to the engine API if an execution provider endpoint is set.
+// Initializes a client for the engine API if an execution provider endpoint is set.
 func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
 	opts := []engine.Option{
 		engine.WithJWTSecret(s.cfg.executionEndpointJWTSecret),
