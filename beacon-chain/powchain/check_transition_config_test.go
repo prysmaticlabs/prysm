@@ -8,11 +8,17 @@ import (
 
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func Test_checkTransitionConfiguration(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
 	ctx := context.Background()
 	hook := logTest.NewGlobal()
 
