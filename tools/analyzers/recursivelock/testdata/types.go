@@ -15,8 +15,18 @@ func (r *ProtectResource) GetResource() string {
 	return r.resource
 }
 
+func (r *ProtectResource) GetResourceLocked() string {
+	defer r.Unlock()
+	r.Lock()
+	return r.resource
+}
+
 func (r *ProtectResource) GetResourceNested() string {
 	return r.GetResource()
+}
+
+func (r *ProtectResource) GetResourceNestedLock() string {
+	return r.GetResourceLocked()
 }
 
 type NestedProtectResource struct {
@@ -27,6 +37,12 @@ type NestedProtectResource struct {
 func (r *NestedProtectResource) GetNestedPResource() string {
 	defer r.nestedPR.RUnlock()
 	r.nestedPR.RLock()
+	return r.nestedPR.resource
+}
+
+func (r *NestedProtectResource) GetNestedPResourceLocked() string {
+	defer r.nestedPR.Unlock()
+	r.nestedPR.Lock()
 	return r.nestedPR.resource
 }
 

@@ -12,3 +12,15 @@ func (resource *NestedProtectResource) NonNestedRLockDifferentRLocks() {
 	resource.GetNestedPResource() // get nested resource uses RLock, but at a deeper level in the struct
 	resource.RUnlock()
 }
+
+func (resource *ProtectResource) NestedLockWithDefer() string {
+	resource.Lock()
+	defer resource.Unlock()
+	return resource.GetResourceLocked() // want `found recursive lock call`
+}
+
+func (resource *NestedProtectResource) NonNestedLockDifferentLocks() {
+	resource.Lock()
+	resource.GetNestedPResourceLocked() // get nested resource uses RLock, but at a deeper level in the struct
+	resource.Unlock()
+}

@@ -104,8 +104,6 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []t
 
 // Start sets up the TrackedValidators map and then calls to wait until the beacon is synced.
 func (s *Service) Start() {
-	s.Lock()
-	defer s.Unlock()
 
 	tracked := make([]types.ValidatorIndex, 0, len(s.TrackedValidators))
 	for idx := range s.TrackedValidators {

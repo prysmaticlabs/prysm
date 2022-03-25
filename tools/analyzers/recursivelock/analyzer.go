@@ -25,6 +25,44 @@ var Analyzer = &analysis.Analyzer{
 }
 
 var errNestedRLock = errors.New("found recursive read lock call")
+var errNestedLock = errors.New("found recursive lock call")
+
+type mode int
+
+const (
+	LockMode = mode(iota)
+	RLockMode
+)
+
+func (m mode) LockName() string {
+	switch m {
+	case LockMode:
+		return "Lock"
+	case RLockMode:
+		return "RLock"
+	}
+	return ""
+}
+
+func (m mode) UnLockName() string {
+	switch m {
+	case LockMode:
+		return "Unlock"
+	case RLockMode:
+		return "RUnlock"
+	}
+	return ""
+}
+
+func (m mode) ErrorFound() error {
+	switch m {
+	case LockMode:
+		return errNestedLock
+	case RLockMode:
+		return errNestedRLock
+	}
+	return nil
+}
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
@@ -42,20 +80,38 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.ReturnStmt)(nil),
 	}
 
-	keepTrackOf := &tracker{}
+	keepTrackOf := &tracker{
+		rLockTrack: &lockTracker{},
+		lockTrack:  &lockTracker{},
+	}
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
-		if keepTrackOf.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.funcLitEnd {
+		if keepTrackOf.rLockTrack.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.rLockTrack.funcLitEnd {
 			return
 		}
-		keepTrackOf.funcLitEnd = token.NoPos
-		if keepTrackOf.deferEnd.IsValid() && node.Pos() > keepTrackOf.deferEnd {
-			keepTrackOf.deferEnd = token.NoPos
-		} else if keepTrackOf.deferEnd.IsValid() {
+		if keepTrackOf.lockTrack.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.lockTrack.funcLitEnd {
 			return
 		}
-		if keepTrackOf.retEnd.IsValid() && node.Pos() > keepTrackOf.retEnd {
-			keepTrackOf.retEnd = token.NoPos
-			keepTrackOf.incFRU()
+		keepTrackOf.rLockTrack.funcLitEnd = token.NoPos
+		keepTrackOf.lockTrack.funcLitEnd = token.NoPos
+
+		if keepTrackOf.rLockTrack.deferEnd.IsValid() && node.Pos() > keepTrackOf.rLockTrack.deferEnd {
+			keepTrackOf.rLockTrack.deferEnd = token.NoPos
+		} else if keepTrackOf.rLockTrack.deferEnd.IsValid() {
+			return
+		}
+		if keepTrackOf.lockTrack.deferEnd.IsValid() && node.Pos() > keepTrackOf.lockTrack.deferEnd {
+			keepTrackOf.lockTrack.deferEnd = token.NoPos
+		} else if keepTrackOf.lockTrack.deferEnd.IsValid() {
+			return
+		}
+
+		if keepTrackOf.rLockTrack.retEnd.IsValid() && node.Pos() > keepTrackOf.rLockTrack.retEnd {
+			keepTrackOf.rLockTrack.retEnd = token.NoPos
+			keepTrackOf.rLockTrack.incFRU()
+		}
+		if keepTrackOf.lockTrack.retEnd.IsValid() && node.Pos() > keepTrackOf.lockTrack.retEnd {
+			keepTrackOf.lockTrack.retEnd = token.NoPos
+			keepTrackOf.lockTrack.incFRU()
 		}
 		keepTrackOf = stmtSelector(node, pass, keepTrackOf, inspect)
 	})
@@ -69,52 +125,32 @@ func stmtSelector(node ast.Node, pass *analysis.Pass, keepTrackOf *tracker, insp
 		if call == nil {
 			break
 		}
-		name := call.name
 		selMap := mapSelTypes(stmt, pass)
 		if selMap == nil {
 			break
 		}
-		if keepTrackOf.rLockSelector != nil {
-			if keepTrackOf.foundRLock > 0 {
-				if keepTrackOf.rLockSelector.isEqual(selMap, 0) {
-					pass.Reportf(
-						node.Pos(),
-						fmt.Sprintf(
-							"%v",
-							errNestedRLock,
-						),
-					)
-				} else {
-					if stack := hasNestedRLock(keepTrackOf.rLockSelector, selMap, call, inspect, pass, make(map[string]bool)); stack != "" {
-						pass.Reportf(
-							node.Pos(),
-							fmt.Sprintf(
-								"%v\n%v",
-								errNestedRLock,
-								stack,
-							),
-						)
-					}
-				}
-			}
-			if name == "RUnlock" && keepTrackOf.rLockSelector.isEqual(selMap, 1) {
-				keepTrackOf.deincFRU()
-			}
-		} else if name == "RLock" && keepTrackOf.foundRLock == 0 {
-			keepTrackOf.rLockSelector = selMap
-			keepTrackOf.incFRU()
-		}
+		checkForRecLocks(node, pass, inspect, RLockMode, call, keepTrackOf.rLockTrack, selMap)
+		checkForRecLocks(node, pass, inspect, LockMode, call, keepTrackOf.lockTrack, selMap)
 
 	case *ast.File:
-		keepTrackOf = &tracker{}
+		keepTrackOf = &tracker{
+			rLockTrack: &lockTracker{},
+			lockTrack:  &lockTracker{},
+		}
 
 	case *ast.FuncDecl:
-		keepTrackOf = &tracker{}
-		keepTrackOf.funcEnd = stmt.End()
+		keepTrackOf = &tracker{
+			rLockTrack: &lockTracker{},
+			lockTrack:  &lockTracker{},
+		}
+		keepTrackOf.rLockTrack.funcEnd = stmt.End()
 
 	case *ast.FuncLit:
-		if keepTrackOf.funcLitEnd == token.NoPos {
-			keepTrackOf.funcLitEnd = stmt.End()
+		if keepTrackOf.rLockTrack.funcLitEnd == token.NoPos {
+			keepTrackOf.rLockTrack.funcLitEnd = stmt.End()
+		}
+		if keepTrackOf.lockTrack.funcLitEnd == token.NoPos {
+			keepTrackOf.lockTrack.funcLitEnd = stmt.End()
 		}
 	case *ast.IfStmt:
 		stmts := stmt.Body.List
@@ -124,26 +160,42 @@ func stmtSelector(node ast.Node, pass *analysis.Pass, keepTrackOf *tracker, insp
 		keepTrackOf = stmtSelector(stmt.Else, pass, keepTrackOf, inspect)
 	case *ast.DeferStmt:
 		call := getCallInfo(pass.TypesInfo, stmt.Call)
-		if keepTrackOf.deferEnd == token.NoPos {
-			keepTrackOf.deferEnd = stmt.End()
+		if keepTrackOf.rLockTrack.deferEnd == token.NoPos {
+			keepTrackOf.rLockTrack.deferEnd = stmt.End()
 		}
-		if call != nil && call.name == "RUnlock" {
-			keepTrackOf.deferredRUnlock = true
+		if keepTrackOf.lockTrack.deferEnd == token.NoPos {
+			keepTrackOf.lockTrack.deferEnd = stmt.End()
+		}
+
+		if call != nil && call.name == RLockMode.UnLockName() {
+			keepTrackOf.rLockTrack.deferredRUnlock = true
+		}
+		if call != nil && call.name == LockMode.UnLockName() {
+			keepTrackOf.lockTrack.deferredRUnlock = true
 		}
 
 	case *ast.ReturnStmt:
 		for i := 0; i < len(stmt.Results); i++ {
 			keepTrackOf = stmtSelector(stmt.Results[i], pass, keepTrackOf, inspect)
 		}
-		if keepTrackOf.deferredRUnlock && keepTrackOf.retEnd == token.NoPos {
-			keepTrackOf.deincFRU()
-			keepTrackOf.retEnd = stmt.End()
+		if keepTrackOf.rLockTrack.deferredRUnlock && keepTrackOf.rLockTrack.retEnd == token.NoPos {
+			keepTrackOf.rLockTrack.deincFRU()
+			keepTrackOf.rLockTrack.retEnd = stmt.End()
+		}
+		if keepTrackOf.lockTrack.deferredRUnlock && keepTrackOf.lockTrack.retEnd == token.NoPos {
+			keepTrackOf.lockTrack.deincFRU()
+			keepTrackOf.lockTrack.retEnd = stmt.End()
 		}
 	}
 	return keepTrackOf
 }
 
 type tracker struct {
+	rLockTrack *lockTracker
+	lockTrack  *lockTracker
+}
+
+type lockTracker struct {
 	funcEnd         token.Pos
 	retEnd          token.Pos
 	deferEnd        token.Pos
@@ -153,17 +205,52 @@ type tracker struct {
 	rLockSelector   *selIdentList
 }
 
-func (t tracker) String() string {
+func (t lockTracker) String() string {
 	return fmt.Sprintf("funcEnd:%v\nretEnd:%v\ndeferEnd:%v\ndeferredRU:%v\nfoundRLock:%v\n", t.funcEnd, t.retEnd, t.deferEnd, t.deferredRUnlock, t.foundRLock)
 }
 
-func (t *tracker) deincFRU() {
+func (t *lockTracker) deincFRU() {
 	if t.foundRLock > 0 {
 		t.foundRLock -= 1
 	}
 }
-func (t *tracker) incFRU() {
+func (t *lockTracker) incFRU() {
 	t.foundRLock += 1
+}
+
+func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Inspector, lockmode mode, call *callInfo,
+	lockTracker *lockTracker, selMap *selIdentList) {
+	name := call.name
+	if lockTracker.rLockSelector != nil {
+		if lockTracker.foundRLock > 0 {
+			if lockTracker.rLockSelector.isEqual(selMap, 0) {
+				pass.Reportf(
+					node.Pos(),
+					fmt.Sprintf(
+						"%v",
+						lockmode.ErrorFound(),
+					),
+				)
+			} else {
+				if stack := hasNestedlock(lockTracker.rLockSelector, selMap, call, inspect, pass, make(map[string]bool), lockmode.UnLockName()); stack != "" {
+					pass.Reportf(
+						node.Pos(),
+						fmt.Sprintf(
+							"%v\n%v",
+							lockmode.ErrorFound(),
+							stack,
+						),
+					)
+				}
+			}
+		}
+		if name == lockmode.UnLockName() && lockTracker.rLockSelector.isEqual(selMap, 1) {
+			lockTracker.deincFRU()
+		}
+	} else if name == lockmode.LockName() && lockTracker.foundRLock == 0 {
+		lockTracker.rLockSelector = selMap
+		lockTracker.incFRU()
+	}
 }
 
 // Stores the AST and type information of a single item in a selector expression
@@ -356,11 +443,12 @@ func interfaceMethod(s *types.Signature) bool {
 	return recv != nil && types.IsInterface(recv.Type())
 }
 
-// hasNestedRLock returns a stack trace of the nested or recursive RLock within the declaration of a function/method call (given by call).
-// If the call expression does not contain a nested or recursive RLock, hasNestedRLock returns an empty string.
-// hasNestedRLock finds a nested or recursive RLock by recursively calling itself on any functions called by the function/method represented
+// hasNestedlock returns a stack trace of the nested or recursive lock within the declaration of a function/method call (given by call).
+// If the call expression does not contain a nested or recursive lock, hasNestedlock returns an empty string.
+// hasNestedlock finds a nested or recursive lock by recursively calling itself on any functions called by the function/method represented
 // by callInfo.
-func hasNestedRLock(fullRLockSelector *selIdentList, compareMap *selIdentList, call *callInfo, inspect *inspector.Inspector, pass *analysis.Pass, hist map[string]bool) (retStack string) {
+func hasNestedlock(fullRLockSelector *selIdentList, compareMap *selIdentList, call *callInfo, inspect *inspector.Inspector,
+	pass *analysis.Pass, hist map[string]bool, lockName string) (retStack string) {
 	var rLockSelector *selIdentList
 	f := pass.Fset
 	tInfo := pass.TypesInfo
@@ -399,11 +487,11 @@ func hasNestedRLock(fullRLockSelector *selIdentList, compareMap *selIdentList, c
 			selMap := mapSelTypes(stmt, pass)
 			if rLockSelector.isEqual(selMap, 0) { // if the method found is an RLock method
 				retStack += addition + fmt.Sprintf("\t%q at %v\n", name, f.Position(iNode.Pos()))
-			} else if name != "RUnlock" { // name should not equal the previousName to prevent infinite recursive loop
+			} else if name != lockName { // name should not equal the previousName to prevent infinite recursive loop
 				nt := c.id
 				if !hist[nt] { // make sure we are not in an infinite recursive loop
 					hist[nt] = true
-					stack := hasNestedRLock(rLockSelector, selMap, c, inspect, pass, hist)
+					stack := hasNestedlock(rLockSelector, selMap, c, inspect, pass, hist, lockName)
 					delete(hist, nt)
 					if stack != "" {
 						retStack += addition + stack
