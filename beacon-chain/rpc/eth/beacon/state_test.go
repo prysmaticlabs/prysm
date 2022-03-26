@@ -102,7 +102,9 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		server := &Server{
@@ -160,7 +162,9 @@ func TestGetStateFork(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		server := &Server{
@@ -226,7 +230,9 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		server := &Server{
