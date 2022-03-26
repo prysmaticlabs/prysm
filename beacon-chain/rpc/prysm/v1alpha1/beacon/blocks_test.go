@@ -871,13 +871,15 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		blkContainer := &ethpb.BeaconBlockContainer{
 			Block: &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: blk}}
-		runListBlocksGenesis(t, wrapper.WrappedPhase0SignedBeaconBlock(blk), blkContainer)
+		wrappedB, err := wrapper.WrappedSignedBeaconBlock(blk)
+		assert.NoError(t, err)
+		runListBlocksGenesis(t, wrappedB, blkContainer)
 	})
 	t.Run("altair block", func(t *testing.T) {
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = parentRoot[:]
-		wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
+		wrapped, err := wrapper.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		blkContainer := &ethpb.BeaconBlockContainer{
 			Block: &ethpb.BeaconBlockContainer_AltairBlock{AltairBlock: blk}}
@@ -887,7 +889,7 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.ParentRoot = parentRoot[:]
-		wrapped, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+		wrapped, err := wrapper.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		blkContainer := &ethpb.BeaconBlockContainer{
 			Block: &ethpb.BeaconBlockContainer_BellatrixBlock{BellatrixBlock: blk}}
@@ -942,9 +944,13 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
-			return wrapper.WrappedPhase0SignedBeaconBlock(b)
+			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
+			assert.NoError(t, err)
+			return wrappedB
 		}
-		runListBeaconBlocksGenesisMultiBlocks(t, wrapper.WrappedPhase0SignedBeaconBlock(blk), blockCreator)
+		genB, err := wrapper.WrappedSignedBeaconBlock(blk)
+		assert.NoError(t, err)
+		runListBeaconBlocksGenesisMultiBlocks(t, genB, blockCreator)
 	})
 	t.Run("altair block", func(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
@@ -953,11 +959,11 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
-		gBlock, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
+		gBlock, err := wrapper.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksGenesisMultiBlocks(t, gBlock, blockCreator)
 	})
@@ -968,11 +974,11 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedBellatrixSignedBeaconBlock(b)
+			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
-		gBlock, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+		gBlock, err := wrapper.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksGenesisMultiBlocks(t, gBlock, blockCreator)
 	})
@@ -1017,7 +1023,9 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
-			return wrapper.WrappedPhase0SignedBeaconBlock(b)
+			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
+			assert.NoError(t, err)
+			return wrappedB
 		}
 		containerCreator := func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
 			b := util.NewBeaconBlock()
@@ -1029,7 +1037,9 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 				Canonical: canonical}
 			return ctr
 		}
-		runListBeaconBlocksPagination(t, wrapper.WrappedPhase0SignedBeaconBlock(blk), blockCreator, containerCreator)
+		wrappedB, err := wrapper.WrappedSignedBeaconBlock(blk)
+		assert.NoError(t, err)
+		runListBeaconBlocksPagination(t, wrappedB, blockCreator, containerCreator)
 	})
 	t.Run("altair block", func(t *testing.T) {
 		blk := util.NewBeaconBlockAltair()
@@ -1037,7 +1047,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
@@ -1051,7 +1061,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 				Canonical: canonical}
 			return ctr
 		}
-		orphanedB, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
+		orphanedB, err := wrapper.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
@@ -1061,7 +1071,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedBellatrixSignedBeaconBlock(b)
+			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
@@ -1075,7 +1085,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 				Canonical: canonical}
 			return ctr
 		}
-		orphanedB, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+		orphanedB, err := wrapper.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
