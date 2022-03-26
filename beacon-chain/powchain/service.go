@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"net/http"
+	"net/url"
 	"reflect"
 	"runtime/debug"
 	"sort"
@@ -27,7 +29,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	nativev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
@@ -123,21 +124,22 @@ type RPCDataFetcher interface {
 // RPCClient defines the rpc methods required to interact with the eth1 node.
 type RPCClient interface {
 	BatchCall(b []gethRPC.BatchElem) error
+	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
 }
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	depositContractAddr        common.Address
-	beaconDB                   db.HeadAccessDatabase
-	depositCache               *depositcache.DepositCache
-	stateNotifier              statefeed.Notifier
-	stateGen                   *stategen.State
-	eth1HeaderReqLimit         uint64
-	beaconNodeStatsUpdater     BeaconNodeStatsUpdater
-	httpEndpoints              []network.Endpoint
-	executionEndpointJWTSecret []byte
-	currHttpEndpoint           network.Endpoint
-	finalizedStateAtStartup    state.BeaconState
+	depositContractAddr     common.Address
+	beaconDB                db.HeadAccessDatabase
+	depositCache            *depositcache.DepositCache
+	stateNotifier           statefeed.Notifier
+	stateGen                *stategen.State
+	eth1HeaderReqLimit      uint64
+	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
+	httpEndpoints           []network.Endpoint
+	httpRPCClient           *http.Client
+	currHttpEndpoint        network.Endpoint
+	finalizedStateAtStartup state.BeaconState
 }
 
 // Service fetches important information about the canonical
@@ -156,7 +158,7 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
-	engineAPIClient         engine.Caller
+	engineRPCClient         RPCClient
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -303,12 +305,6 @@ func (s *Service) Status() error {
 	}
 	// get error from run function
 	return s.runError
-}
-
-// EngineAPIClient returns the associated engine API client to interact
-// with an execution node via JSON-RPC.
-func (s *Service) EngineAPIClient() engine.Caller {
-	return s.engineAPIClient
 }
 
 func (s *Service) updateBeaconNodeStats() {
@@ -1058,14 +1054,26 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 
 // Initializes a connection to the engine API if an execution provider endpoint is set.
 func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
-	opts := []engine.Option{
-		engine.WithJWTSecret(s.cfg.executionEndpointJWTSecret),
-	}
-	client, err := engine.New(ctx, s.cfg.currHttpEndpoint.Url, opts...)
+	u, err := url.Parse(s.CurrentETH1Endpoint())
 	if err != nil {
-		return err
+		return nil
 	}
-	s.engineAPIClient = client
+	switch u.Scheme {
+	case "http", "https":
+		client, err := gethRPC.DialHTTPWithClient(s.CurrentETH1Endpoint(), s.cfg.httpRPCClient)
+		if err != nil {
+			return err
+		}
+		s.engineRPCClient = client
+	case "":
+		client, err := gethRPC.DialIPC(ctx, s.CurrentETH1Endpoint())
+		if err != nil {
+			return err
+		}
+		s.engineRPCClient = client
+	default:
+		return errors.Wrapf(ErrUnsupportedScheme, "%q", u.Scheme)
+	}
 	return nil
 }
 

@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -88,7 +87,7 @@ type config struct {
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	BlockFetcher            powchain.POWBlockFetcher
 	FinalizedStateAtStartUp state.BeaconState
-	ExecutionEngineCaller   enginev1.Caller
+	ExecutionEngineCaller   powchain.EngineCaller
 }
 
 // NewService instantiates a new block service instance that will

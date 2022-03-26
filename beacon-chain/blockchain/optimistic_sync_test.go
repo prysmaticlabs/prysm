@@ -7,7 +7,7 @@ import (
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -131,7 +131,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: engine.ErrAcceptedSyncingPayloadStatus,
+			newForkchoiceErr: powchain.ErrAcceptedSyncingPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 		},
 		{
@@ -145,7 +145,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: engine.ErrInvalidPayloadStatus,
+			newForkchoiceErr: powchain.ErrInvalidPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 			errString:        "could not notify forkchoice update from execution engine: payload status is INVALID",
 		},
@@ -229,14 +229,14 @@ func Test_NotifyNewPayload(t *testing.T) {
 			postState:     bellatrixState,
 			preState:      bellatrixState,
 			blk:           bellatrixBlk,
-			newPayloadErr: engine.ErrAcceptedSyncingPayloadStatus,
+			newPayloadErr: powchain.ErrAcceptedSyncingPayloadStatus,
 		},
 		{
 			name:          "new payload with invalid block",
 			postState:     bellatrixState,
 			preState:      bellatrixState,
 			blk:           bellatrixBlk,
-			newPayloadErr: engine.ErrInvalidPayloadStatus,
+			newPayloadErr: powchain.ErrInvalidPayloadStatus,
 			errString:     "could not validate execution payload from execution engine: payload status is INVALID",
 		},
 		{

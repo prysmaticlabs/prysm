@@ -3,11 +3,9 @@ package powchain
 import (
 	"context"
 	"errors"
-	"testing"
 	"time"
 
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
+	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -26,7 +24,7 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 	m.Err = errors.New("something went wrong")
 
 	srv := &Service{}
-	srv.engineAPIClient = m
+	srv.engineRPCClient = m
 	checkTransitionPollingInterval = time.Millisecond
 	ctx, cancel := context.WithCancel(ctx)
 	go srv.checkTransitionConfiguration(ctx)

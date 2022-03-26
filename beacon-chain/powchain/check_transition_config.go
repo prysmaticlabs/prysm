@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/holiman/uint256"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
@@ -29,7 +28,7 @@ func (s *Service) checkTransitionConfiguration(ctx context.Context) {
 	if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
 		return
 	}
-	if s.engineAPIClient == nil {
+	if s.engineRPCClient == nil {
 		return
 	}
 	i := new(big.Int)
@@ -41,9 +40,9 @@ func (s *Service) checkTransitionConfiguration(ctx context.Context) {
 		TerminalBlockHash:       params.BeaconConfig().TerminalBlockHash[:],
 		TerminalBlockNumber:     big.NewInt(0).Bytes(), // A value of 0 is recommended in the request.
 	}
-	err := s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
+	err := s.ExchangeTransitionConfiguration(ctx, cfg)
 	if err != nil {
-		if errors.Is(err, v1.ErrConfigMismatch) {
+		if errors.Is(err, ErrConfigMismatch) {
 			log.WithError(err).Fatal(configMismatchLog)
 		}
 		log.WithError(err).Error("Could not check configuration values between execution and consensus client")
@@ -59,7 +58,7 @@ func (s *Service) checkTransitionConfiguration(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			err = s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
+			err = s.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
 		}
 	}
@@ -72,13 +71,13 @@ func (s *Service) handleExchangeConfigurationError(err error) {
 	if err == nil {
 		// If there is no error in checking the exchange configuration error, we clear
 		// the run error of the service if we had previously set it to ErrConfigMismatch.
-		if errors.Is(s.runError, v1.ErrConfigMismatch) {
+		if errors.Is(s.runError, ErrConfigMismatch) {
 			s.runError = nil
 		}
 		return
 	}
 	// If the error is a configuration mismatch, we set a runtime error in the service.
-	if errors.Is(err, v1.ErrConfigMismatch) {
+	if errors.Is(err, ErrConfigMismatch) {
 		s.runError = err
 		log.WithError(err).Error(configMismatchLog)
 		return
