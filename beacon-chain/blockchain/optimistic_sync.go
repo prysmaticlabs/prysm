@@ -220,7 +220,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	st = st.Copy()
 	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
 	if err != nil {
-		return false, nil, 0, nil
+		return false, nil, 0, err
 	}
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
@@ -243,7 +243,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	}
 	t, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
 	if err != nil {
-		return false, nil, 0, nil
+		return false, nil, 0, err
 	}
 	attr := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),

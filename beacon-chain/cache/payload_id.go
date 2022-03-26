@@ -45,5 +45,9 @@ func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId 
 	var bytes [vpIdsLength]byte
 	copy(bytes[:], append(vIdBytes[:], pIdBytes[:]...))
 
-	f.slotToProposerAndPayloadIDs[slot] = bytes
+	_, ok := f.slotToProposerAndPayloadIDs[slot]
+	if !ok || (ok && pId != 0) {
+		f.slotToProposerAndPayloadIDs[slot] = bytes
+
+	}
 }
