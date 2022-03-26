@@ -103,3 +103,23 @@ func testForkVersionScheduleBCC() *params.BeaconChainConfig {
 		},
 	}
 }
+
+func TestPrevious(t *testing.T) {
+	cfg := testForkVersionScheduleBCC()
+	os := NewOrderedSchedule(cfg)
+	unreal := [4]byte{255, 255, 255, 255}
+	_, err := os.Previous(unreal)
+	require.ErrorIs(t, err, ErrVersionNotFound)
+	// first element has no previous, should return appropriate error
+	_, err = os.Previous(os[0].Version)
+	require.ErrorIs(t, err, ErrNoPreviousVersion)
+	// work up the list from the second element to the last, make sure each result matches the previous element
+	// this test of course relies on TestOrderedConfigSchedule to be correct!
+	prev := os[0].Version
+	for i := 1; i < len(os); i++ {
+		p, err := os.Previous(os[i].Version)
+		require.NoError(t, err)
+		require.Equal(t, prev, p)
+		prev = os[i].Version
+	}
+}

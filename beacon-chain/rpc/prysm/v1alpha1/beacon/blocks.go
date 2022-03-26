@@ -139,6 +139,8 @@ func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanon
 			return nil, err
 		}
 		ctr.Block = &ethpb.BeaconBlockContainer_BellatrixBlock{BellatrixBlock: rBlk}
+	default:
+		return nil, errors.Errorf("block type is not recognized: %d", blk.Version())
 	}
 	return ctr, nil
 }
