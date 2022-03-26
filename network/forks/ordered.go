@@ -38,6 +38,19 @@ func (o OrderedSchedule) VersionForEpoch(epoch types.Epoch) ([fieldparams.Versio
 	return [fieldparams.VersionLength]byte{}, errors.Wrapf(ErrVersionNotFound, "no epoch in list <= %d", epoch)
 }
 
+func (o OrderedSchedule) Previous(version [fieldparams.VersionLength]byte) ([fieldparams.VersionLength]byte, error) {
+	for i := len(o) - 1; i >= 0; i-- {
+		if o[i].Version == version {
+			if i-1 >= 0 {
+				return o[i-1].Version, nil
+			} else {
+				return [fieldparams.VersionLength]byte{}, errors.Wrapf(ErrNoPreviousVersion, "%#x is the first version", version)
+			}
+		}
+	}
+	return [fieldparams.VersionLength]byte{}, errors.Wrapf(ErrVersionNotFound, "no version in list == %#x", version)
+}
+
 // Converts the ForkVersionSchedule map into a list of Version+Epoch values, ordered by Epoch from lowest to highest.
 // See docs for OrderedSchedule for more detail on what you can do with this type.
 func NewOrderedSchedule(b *params.BeaconChainConfig) OrderedSchedule {
