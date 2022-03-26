@@ -2,13 +2,21 @@ package powchain
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rpc"
 	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/protobuf/proto"
 )
 
 func Test_checkTransitionConfiguration(t *testing.T) {
@@ -23,8 +31,7 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 	m := &mocks.EngineClient{}
 	m.Err = errors.New("something went wrong")
 
-	srv := &Service{}
-	srv.engineRPCClient = m
+	srv := setupTransitionConfigTest(t)
 	checkTransitionPollingInterval = time.Millisecond
 	ctx, cancel := context.WithCancel(ctx)
 	go srv.checkTransitionConfiguration(ctx)
@@ -36,28 +43,66 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 func TestService_handleExchangeConfigurationError(t *testing.T) {
 	hook := logTest.NewGlobal()
 	t.Run("clears existing service error", func(t *testing.T) {
-		srv := &Service{isRunning: true}
-		srv.runError = v1.ErrConfigMismatch
+		srv := setupTransitionConfigTest(t)
+		srv.isRunning = true
+		srv.runError = ErrConfigMismatch
 		srv.handleExchangeConfigurationError(nil)
 		require.Equal(t, true, srv.Status() == nil)
 	})
 	t.Run("does not clear existing service error if wrong kind", func(t *testing.T) {
-		srv := &Service{isRunning: true}
+		srv := setupTransitionConfigTest(t)
+		srv.isRunning = true
 		err := errors.New("something else went wrong")
 		srv.runError = err
 		srv.handleExchangeConfigurationError(nil)
 		require.ErrorIs(t, err, srv.Status())
 	})
 	t.Run("sets service error on config mismatch", func(t *testing.T) {
-		srv := &Service{isRunning: true}
-		srv.handleExchangeConfigurationError(v1.ErrConfigMismatch)
-		require.Equal(t, v1.ErrConfigMismatch, srv.Status())
+		srv := setupTransitionConfigTest(t)
+		srv.isRunning = true
+		srv.handleExchangeConfigurationError(ErrConfigMismatch)
+		require.Equal(t, ErrConfigMismatch, srv.Status())
 		require.LogsContain(t, hook, configMismatchLog)
 	})
 	t.Run("does not set service error if unrelated problem", func(t *testing.T) {
-		srv := &Service{isRunning: true}
+		srv := setupTransitionConfigTest(t)
+		srv.isRunning = true
 		srv.handleExchangeConfigurationError(errors.New("foo"))
 		require.Equal(t, true, srv.Status() == nil)
 		require.LogsContain(t, hook, "Could not check configuration values")
 	})
+}
+
+func setupTransitionConfigTest(t testing.TB) *Service {
+	fix := fixtures()
+	request, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
+	require.Equal(t, true, ok)
+	resp, ok := proto.Clone(request).(*pb.TransitionConfiguration)
+	require.Equal(t, true, ok)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+
+		// Change the terminal block hash.
+		h := common.BytesToHash([]byte("foo"))
+		resp.TerminalBlockHash = h[:]
+		respJSON := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  resp,
+		}
+		require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+	}))
+	defer srv.Close()
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+	defer rpcClient.Close()
+
+	service := &Service{}
+	service.engineRPCClient = rpcClient
+	return service
 }

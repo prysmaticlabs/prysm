@@ -124,7 +124,6 @@ type RPCDataFetcher interface {
 // RPCClient defines the rpc methods required to interact with the eth1 node.
 type RPCClient interface {
 	BatchCall(b []gethRPC.BatchElem) error
-	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
 }
 
 // config defines a config struct for dependencies into the service.
@@ -158,7 +157,7 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
-	engineRPCClient         RPCClient
+	engineRPCClient         *gethRPC.Client
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
