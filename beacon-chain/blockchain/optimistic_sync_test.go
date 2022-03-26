@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
@@ -21,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func Test_NotifyForkchoiceUpdate(t *testing.T) {
@@ -588,4 +592,44 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 	candidate, err := service.optimisticCandidateBlock(ctx, wrappedChild.Block())
 	require.NoError(t, err)
 	require.Equal(t, true, candidate)
+}
+
+func Test_GetPayloadAttribute(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+
+	// Cache miss
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	hasPayload, _, vId, err := service.getPayloadAttribute(ctx, nil, 0)
+	require.NoError(t, err)
+	require.Equal(t, false, hasPayload)
+	require.Equal(t, types.ValidatorIndex(0), vId)
+
+	// Cache hit, advance state, no fee recipient
+	suggestedVid := types.ValidatorIndex(1)
+	slot := types.Slot(1)
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, 0)
+	st, _ := util.DeterministicGenesisState(t, 1)
+	hook := logTest.NewGlobal()
+	hasPayload, attr, vId, err := service.getPayloadAttribute(ctx, st, slot)
+	require.NoError(t, err)
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, fieldparams.EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient).String())
+	require.LogsContain(t, hook, "Fee recipient not set. Using burn address")
+
+	// Cache hit, advance state, has fee recipient
+	suggestedAddr := common.HexToAddress("123")
+	service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr})
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, 0)
+	hasPayload, attr, vId, err = service.getPayloadAttribute(ctx, st, slot)
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient))
 }
