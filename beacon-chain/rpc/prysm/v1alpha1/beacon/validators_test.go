@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -1680,31 +1681,57 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	assert.DeepEqual(t, wanted, res.Participation, "Incorrect validator participation respond")
 }
 
-func TestServer_GetValidatorParticipation_CurrentAndPrevEpochAltair(t *testing.T) {
-	helpers.ClearCache()
-	beaconDB := dbTest.SetupDB(t)
+func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	transition.SkipSlotCache.Disable()
 
+	t.Run("altair", func(t *testing.T) {
+		validatorCount := uint64(32)
+		genState, _ := util.DeterministicGenesisStateAltair(t, validatorCount)
+		c, err := altair.NextSyncCommittee(context.Background(), genState)
+		require.NoError(t, err)
+		require.NoError(t, genState.SetCurrentSyncCommittee(c))
+
+		bits := make([]byte, validatorCount)
+		for i := range bits {
+			bits[i] = 0xff
+		}
+		require.NoError(t, genState.SetCurrentParticipationBits(bits))
+		require.NoError(t, genState.SetPreviousParticipationBits(bits))
+		gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockAltair())
+		assert.NoError(t, err)
+		runGetValidatorParticipationCurrentAndPrevEpoch(t, genState, gb)
+	})
+
+	t.Run("bellatrix", func(t *testing.T) {
+		validatorCount := uint64(32)
+		genState, _ := util.DeterministicGenesisStateBellatrix(t, validatorCount)
+		c, err := altair.NextSyncCommittee(context.Background(), genState)
+		require.NoError(t, err)
+		require.NoError(t, genState.SetCurrentSyncCommittee(c))
+
+		bits := make([]byte, validatorCount)
+		for i := range bits {
+			bits[i] = 0xff
+		}
+		require.NoError(t, genState.SetCurrentParticipationBits(bits))
+		require.NoError(t, genState.SetPreviousParticipationBits(bits))
+		gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+		assert.NoError(t, err)
+		runGetValidatorParticipationCurrentAndPrevEpoch(t, genState, gb)
+	})
+}
+
+func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState state.BeaconState, gb block.SignedBeaconBlock) {
+	helpers.ClearCache()
+	beaconDB := dbTest.SetupDB(t)
+
 	ctx := context.Background()
 	validatorCount := uint64(32)
 
-	genState, _ := util.DeterministicGenesisStateAltair(t, validatorCount)
-	c, err := altair.NextSyncCommittee(ctx, genState)
-	require.NoError(t, err)
-	require.NoError(t, genState.SetCurrentSyncCommittee(c))
-
-	bits := make([]byte, validatorCount)
-	for i := range bits {
-		bits[i] = 0xff
-	}
-	require.NoError(t, genState.SetCurrentParticipationBits(bits))
-	require.NoError(t, genState.SetPreviousParticipationBits(bits))
-
 	gsr, err := genState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockAltair())
 	require.NoError(t, wrapper.SetBlockStateRoot(gb, gsr))
 	require.NoError(t, err)
 	gRoot, err := gb.Block().HashTreeRoot()
