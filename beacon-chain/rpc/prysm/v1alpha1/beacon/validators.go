@@ -528,16 +528,7 @@ func (bs *Server) GetValidatorParticipation(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
-	case version.Altair:
-		v, b, err = altair.InitializePrecomputeValidators(ctx, beaconState)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
-		}
-		_, b, err = altair.ProcessEpochParticipation(ctx, beaconState, b, v)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
-		}
-	case version.Bellatrix:
+	case version.Altair, version.Bellatrix:
 		v, b, err = altair.InitializePrecomputeValidators(ctx, beaconState)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
