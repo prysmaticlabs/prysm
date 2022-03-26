@@ -21,6 +21,7 @@ import (
 	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -91,6 +92,7 @@ type BeaconNode struct {
 	slashingsPool           slashings.PoolManager
 	syncCommitteePool       synccommittee.Pool
 	depositCache            *depositcache.DepositCache
+	proposerIdsCache        *cache.ProposerPayloadIDsCache
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
 	opFeed                  *event.Feed
@@ -146,6 +148,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
 		serviceFlagOpts:         &serviceFlagOpts{},
+		proposerIdsCache:        cache.NewProposerPayloadIDsCache(),
 	}
 
 	for _, opt := range opts {
@@ -572,6 +575,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
+		blockchain.WithProposerIdsCache(b.proposerIdsCache),
 	)
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {
@@ -789,6 +793,7 @@ func (b *BeaconNode) registerRPCService() error {
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 		MaxMsgSize:              maxMsgSize,
 		ExecutionEngineCaller:   web3Service.EngineAPIClient(),
+		ProposerIdsCache:        b.proposerIdsCache,
 	})
 
 	return b.services.RegisterService(rpcService)
