@@ -62,7 +62,7 @@ func WrappedBeaconBlock(i interface{}) (block.BeaconBlock, error) {
 	case *eth.BeaconBlockWithBlobKZGs:
 		return WrappedEip4844BeaconBlock(b)
 	case *eth.GenericBeaconBlock_Eip4844:
-		return WrappedEip4844BeaconBlock(b.Eip4844)
+		return WrappedEip4844BeaconBlock(b.Eip4844.Block)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", i)
 	}

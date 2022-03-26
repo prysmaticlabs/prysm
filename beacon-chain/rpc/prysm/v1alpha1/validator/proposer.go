@@ -64,11 +64,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err := vs.optimisticStatus(ctx); err != nil {
 		return nil, err
 	}
-	blk, err := vs.getEip4844BeaconBlock(ctx, req)
+	blk, sideCar, err := vs.getEip4844BeaconBlock(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not fetch eip4844 beacon block: %v", err)
 	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Eip4844{Eip4844: blk}}, nil
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Eip4844{Eip4844: &ethpb.BeaconBlockWithBlobKZGsAndBlobsSidecar{Block: blk, Sidecar: sideCar}}}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -109,7 +109,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
 		}
 	case *ethpb.GenericSignedBeaconBlock_Eip4844:
-		blk, err = wrapper.WrappedEip4844SignedBeaconBlock(b.Eip4844)
+		blk, err = wrapper.WrappedEip4844SignedBeaconBlock(b.Eip4844.Block)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "could not wrap eip4844 beacon block")
 		}

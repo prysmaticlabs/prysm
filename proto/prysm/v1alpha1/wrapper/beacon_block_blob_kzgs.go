@@ -78,7 +78,9 @@ func (w eip4844SignedBeaconBlock) Proto() proto.Message {
 // PbGenericBlock returns a generic signed beacon block.
 func (w eip4844SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
 	return &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_Eip4844{Eip4844: w.b},
+		Block: &eth.GenericSignedBeaconBlock_Eip4844{Eip4844: &eth.SignedBeaconBlockWithBlobKZGsAndBlobsSidecar{
+			Block: w.b,
+		}},
 	}, nil
 }
 

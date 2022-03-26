@@ -53,7 +53,7 @@ type Caller interface {
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*pb.PayloadIDBytes, []byte, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
-	GetBlobsBundle(ctx context.Context, payloadId [8]byte) ([]*pb.BlobsBundle, error)
+	GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error

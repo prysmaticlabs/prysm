@@ -37,8 +37,8 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Bellatrix fork beacon block.
         SignedBeaconBlockBellatrix bellatrix = 3;
 
-        // Representing a signed, eip4844 compatible fork beacon block.
-        SignedBeaconBlockWithBlobKZGs eip4844 = 4;
+        // Representing a signed, eip4844 compatible fork beacon block and blob.
+        SignedBeaconBlockWithBlobKZGsAndBlobsSidecar eip4844 = 4;
     }
 }
 
@@ -53,7 +53,8 @@ message GenericBeaconBlock {
         // Representing a post-Bellatrix fork beacon block.
         BeaconBlockBellatrix bellatrix = 3;
 
-        BeaconBlockWithBlobKZGs eip4844 = 4;
+        // Representing an eip4844 fork beacon block and blob.
+        BeaconBlockWithBlobKZGsAndBlobsSidecar eip4844 = 4;
     }
 }
 
@@ -397,3 +398,17 @@ message BlobsSidecar {
     repeated ethereum.engine.v1.Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
 }
 
+message SignedBlobsSidecar {
+    BlobsSidecar message = 1;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BeaconBlockWithBlobKZGsAndBlobsSidecar {
+    BeaconBlockWithBlobKZGs block = 1;
+    BlobsSidecar sidecar = 2;
+}
+
+message SignedBeaconBlockWithBlobKZGsAndBlobsSidecar {
+    SignedBeaconBlockWithBlobKZGs block = 1;
+    SignedBlobsSidecar sidecar = 2;
+}
