@@ -157,7 +157,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
 	if err := blocks.VerifyAttestationSignature(context.Background(), hs, att); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not verify attestation", err)
+		return nil, status.Errorf(codes.Internal, "Could not verify attestation: %v", err)
 	}
 
 	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
