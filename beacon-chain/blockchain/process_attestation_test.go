@@ -39,13 +39,17 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 
 	BlkWithOutState := util.NewBeaconBlock()
 	BlkWithOutState.Block.Slot = 0
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithOutState)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(BlkWithOutState)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	BlkWithOutStateRoot, err := BlkWithOutState.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	BlkWithStateBadAtt := util.NewBeaconBlock()
 	BlkWithStateBadAtt.Block.Slot = 1
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithStateBadAtt)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(BlkWithStateBadAtt)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -56,7 +60,9 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 
 	BlkWithValidState := util.NewBeaconBlock()
 	BlkWithValidState.Block.Slot = 2
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithValidState)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(BlkWithValidState)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 
 	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -145,13 +151,17 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 
 	BlkWithOutState := util.NewBeaconBlock()
 	BlkWithOutState.Block.Slot = 0
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithOutState)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(BlkWithOutState)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	BlkWithOutStateRoot, err := BlkWithOutState.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	BlkWithStateBadAtt := util.NewBeaconBlock()
 	BlkWithStateBadAtt.Block.Slot = 1
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithStateBadAtt)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(BlkWithStateBadAtt)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -162,7 +172,9 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 
 	BlkWithValidState := util.NewBeaconBlock()
 	BlkWithValidState.Block.Slot = 2
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(BlkWithValidState)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(BlkWithValidState)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 
 	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -438,7 +450,9 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r[:]}
@@ -455,7 +469,9 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
@@ -478,7 +494,9 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_ProtoArray(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -486,7 +504,9 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_ProtoArray(t *testing.T) {
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -509,7 +529,9 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -517,7 +539,9 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -534,7 +558,9 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -543,7 +569,9 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
