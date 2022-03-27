@@ -25,10 +25,9 @@ type Phase0SignedBeaconBlock struct {
 	b *eth.SignedBeaconBlock
 }
 
-// WrappedPhase0SignedBeaconBlock is constructor which wraps a protobuf phase 0 block
+// wrappedPhase0SignedBeaconBlock is constructor which wraps a protobuf phase 0 block
 // with the block wrapper.
-// Deprecated: use WrappedSignedBeaconBlock instead.
-func WrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) block.SignedBeaconBlock {
+func wrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) block.SignedBeaconBlock {
 	return Phase0SignedBeaconBlock{b: b}
 }
 
@@ -51,7 +50,7 @@ func (w Phase0SignedBeaconBlock) IsNil() bool {
 // Copy performs a deep copy of the signed beacon block
 // object.
 func (w Phase0SignedBeaconBlock) Copy() block.SignedBeaconBlock {
-	return WrappedPhase0SignedBeaconBlock(eth.CopySignedBeaconBlock(w.b))
+	return wrappedPhase0SignedBeaconBlock(eth.CopySignedBeaconBlock(w.b))
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz

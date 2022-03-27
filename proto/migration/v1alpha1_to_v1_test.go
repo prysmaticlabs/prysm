@@ -55,7 +55,9 @@ func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
 	alphaBlock.Block.StateRoot = stateRoot
 	alphaBlock.Signature = signature
 
-	v1Header, err := BlockIfaceToV1BlockHeader(wrapper.WrappedPhase0SignedBeaconBlock(alphaBlock))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(alphaBlock)
+	require.NoError(t, err)
+	v1Header, err := BlockIfaceToV1BlockHeader(wsb)
 	require.NoError(t, err)
 	bodyRoot, err := alphaBlock.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
@@ -362,7 +364,9 @@ func Test_BlockInterfaceToV1Block(t *testing.T) {
 	}
 	v1Alpha1Block.Signature = signature
 
-	v1Block, err := SignedBeaconBlock(wrapper.WrappedPhase0SignedBeaconBlock(v1Alpha1Block))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(v1Alpha1Block)
+	require.NoError(t, err)
+	v1Block, err := SignedBeaconBlock(wsb)
 	require.NoError(t, err)
 	v1Root, err := v1Block.HashTreeRoot()
 	require.NoError(t, err)
