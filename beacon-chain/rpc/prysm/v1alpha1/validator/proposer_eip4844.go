@@ -17,9 +17,9 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 		return nil, nil, errors.Wrap(err, "could not get bellatrix block")
 	}
 
-	blobs, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, [8]byte{})
+	bundle, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, [8]byte{})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get blobs")
+		return nil, nil, errors.Wrap(err, "could not get bundle")
 	}
 
 	blk := &ethpb.BeaconBlockWithBlobKZGs{
@@ -38,7 +38,7 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 			VoluntaryExits:    bellatrixBlk.Body.VoluntaryExits,
 			SyncAggregate:     bellatrixBlk.Body.SyncAggregate,
 			ExecutionPayload:  bellatrixBlk.Body.ExecutionPayload,
-			BlobKzgs:          blobs.Kzg,
+			BlobKzgs:          bundle.Kzg,
 		},
 	}
 	// Compute state root with the newly constructed block.
@@ -62,10 +62,17 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 	if err != nil {
 		return nil, nil, err
 	}
+
+	blobs := make([]*ethpb.Blob, len(bundle.Blobs))
+	for i, b := range bundle.Blobs {
+		blobs[i] = &ethpb.Blob{
+			Blob: b.Blob,
+		}
+	}
 	sideCar := &ethpb.BlobsSidecar{
 		BeaconBlockRoot: r[:],
 		BeaconBlockSlot: bellatrixBlk.Slot,
-		Blobs:           blobs.Blobs,
+		Blobs:           blobs,
 	}
 
 	return blk, sideCar, nil

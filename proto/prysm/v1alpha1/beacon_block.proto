@@ -392,10 +392,14 @@ message BeaconBlockBodyWithBlobKZGs {
     repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
 }
 
+message Blob {
+    repeated bytes blob = 1 [(ethereum.eth.ext.ssz_size) = "4096,32"];
+}
+
 message BlobsSidecar {
     bytes beacon_block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
     uint64 beacon_block_slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-    repeated ethereum.engine.v1.Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
+    repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
 }
 
 message SignedBlobsSidecar {
