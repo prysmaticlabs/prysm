@@ -338,21 +338,19 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		if res == nil || res.Block == nil {
 			continue
 		}
-		if res.GetPhase0Block() == nil && res.GetAltairBlock() == nil {
+		var blk block.SignedBeaconBlock
+		switch b := res.Block.(type) {
+		case *ethpb.StreamBlocksResponse_Phase0Block:
+			blk, err = wrapper.WrappedSignedBeaconBlock(b.Phase0Block)
+		case *ethpb.StreamBlocksResponse_AltairBlock:
+			blk, err = wrapper.WrappedSignedBeaconBlock(b.AltairBlock)
+		}
+		if err != nil {
+			log.WithError(err).Error("Failed to wrap signed block")
 			continue
 		}
-		var blk block.SignedBeaconBlock
-		switch {
-		case res.GetPhase0Block() != nil:
-			blk = wrapper.WrappedPhase0SignedBeaconBlock(res.GetPhase0Block())
-		case res.GetAltairBlock() != nil:
-			blk, err = wrapper.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
-			if err != nil {
-				log.WithError(err).Error("Failed to wrap altair signed block")
-				continue
-			}
-		}
 		if blk == nil || blk.IsNil() {
+			log.Error("Received nil block")
 			continue
 		}
 		if blk.Block().Slot() > v.highestValidSlot {

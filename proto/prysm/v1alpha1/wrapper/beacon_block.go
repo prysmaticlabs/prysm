@@ -7,6 +7,10 @@ import (
 )
 
 var (
+	// ErrUnsupportedField is returned when a field is not supported by a specific beacon block type.
+	// This allows us to create a generic beacon block interface that is implemented by different
+	// fork versions of beacon blocks.
+	ErrUnsupportedField = errors.New("unsupported field for block type")
 	// ErrUnsupportedSignedBeaconBlock is returned when the struct type is not a supported signed
 	// beacon block type.
 	ErrUnsupportedSignedBeaconBlock = errors.New("unsupported signed beacon block")
@@ -30,12 +34,20 @@ var (
 // signed beacon block interface.
 func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
 	switch b := i.(type) {
+	case *eth.GenericSignedBeaconBlock_Phase0:
+		return wrappedPhase0SignedBeaconBlock(b.Phase0), nil
 	case *eth.SignedBeaconBlock:
-		return WrappedPhase0SignedBeaconBlock(b), nil
+		return wrappedPhase0SignedBeaconBlock(b), nil
+	case *eth.GenericSignedBeaconBlock_Altair:
+		return wrappedAltairSignedBeaconBlock(b.Altair)
 	case *eth.SignedBeaconBlockAltair:
-		return WrappedAltairSignedBeaconBlock(b)
+		return wrappedAltairSignedBeaconBlock(b)
+	case *eth.GenericSignedBeaconBlock_Bellatrix:
+		return wrappedBellatrixSignedBeaconBlock(b.Bellatrix)
 	case *eth.SignedBeaconBlockBellatrix:
-		return WrappedBellatrixSignedBeaconBlock(b)
+		return wrappedBellatrixSignedBeaconBlock(b)
+	case nil:
+		return nil, ErrNilObjectWrapped
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", i)
 	}
