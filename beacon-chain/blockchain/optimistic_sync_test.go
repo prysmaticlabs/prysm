@@ -219,11 +219,6 @@ func Test_NotifyNewPayload(t *testing.T) {
 			preState:  altairState,
 		},
 		{
-			name:      "nil post state",
-			preState:  phase0State,
-			errString: "pre and post states must not be nil",
-		},
-		{
 			name:      "nil beacon block",
 			postState: bellatrixState,
 			preState:  bellatrixState,
@@ -348,7 +343,9 @@ func Test_NotifyNewPayload(t *testing.T) {
 			}
 			root := [32]byte{'a'}
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0))
-			err = service.notifyNewPayload(ctx, tt.preState.Version(), payload, tt.postState, tt.blk, root)
+			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
+			require.NoError(t, err)
+			err = service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk, root)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -398,7 +395,9 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	root := [32]byte{'c'}
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 1, root, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 0, 0))
-	err = service.notifyNewPayload(ctx, bellatrixState.Version(), payload, bellatrixState, bellatrixBlk, root)
+	postVersion, postHeader, err := getStateVersionAndPayload(bellatrixState)
+	require.NoError(t, err)
+	err = service.notifyNewPayload(ctx, bellatrixState.Version(), postVersion, payload, postHeader, bellatrixBlk, root)
 	require.NoError(t, err)
 	optimistic, err := service.IsOptimisticForRoot(ctx, root)
 	require.NoError(t, err)
@@ -425,7 +424,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 	service.genesisTime = time.Now().Add(-time.Second * 12 * 2 * 128)
 
 	parentBlk := util.NewBeaconBlockBellatrix()
-	wrappedParentBlock, err := wrapper.WrappedBellatrixSignedBeaconBlock(parentBlk)
+	wrappedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlk)
 	require.NoError(t, err)
 	parentRoot, err := wrappedParentBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -450,7 +449,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -470,7 +469,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedAltairSignedBeaconBlock(blk)
+				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -490,7 +489,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -518,7 +517,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk.Block.Body.ExecutionPayload.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				blk.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				wr, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -573,7 +572,7 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 	block := &ethpb.BeaconBlockBellatrix{Body: body, Slot: 200}
 	rawSigned := &ethpb.SignedBeaconBlockBellatrix{Block: block}
 	blk := util.HydrateSignedBeaconBlockBellatrix(rawSigned)
-	wr, err := wrapper.WrappedBellatrixSignedBeaconBlock(blk)
+	wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wr))
 	blkRoot, err := wr.Block().HashTreeRoot()
@@ -583,7 +582,7 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 	childBlock.Block.ParentRoot = blkRoot[:]
 	// shallow block
 	childBlock.Block.Slot = 201
-	wrappedChild, err := wrapper.WrappedBellatrixSignedBeaconBlock(childBlock)
+	wrappedChild, err := wrapper.WrappedSignedBeaconBlock(childBlock)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedChild))
 	candidate, err := service.optimisticCandidateBlock(ctx, wrappedChild.Block())

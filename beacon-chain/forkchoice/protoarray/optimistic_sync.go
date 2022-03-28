@@ -34,8 +34,6 @@ func (f *ForkChoice) IsOptimistic(ctx context.Context, root [32]byte) (bool, err
 	if ctx.Err() != nil {
 		return false, ctx.Err()
 	}
-	// If we reached this point then the block has to be in the Fork Choice
-	// Store!
 	f.store.nodesLock.RLock()
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
@@ -104,28 +102,28 @@ func (s *Store) findSyncedTip(ctx context.Context, node *Node, syncedTips *optim
 // SetOptimisticToValid is called with the root of a block that was returned as
 // VALID by the EL. This routine recomputes and updates the synced_tips map to
 // account for this new tip.
+// WARNING: This method returns an error if the root is not found in forkchoice or
+// if the root is not a leaf of the fork choice tree.
 func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
 	// We can only update if given root is in Fork Choice
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
 		return errInvalidNodeIndex
 	}
-
-	// We can only update if root is a leaf in Fork Choice
 	node := f.store.nodes[index]
-	if node.bestChild != NonExistentNode {
-		return errInvalidBestChildIndex
-	}
+	f.store.nodesLock.RUnlock()
 
-	// Stop early if the root is part of validated tips
-	f.syncedTips.Lock()
-	defer f.syncedTips.Unlock()
-	_, ok = f.syncedTips.validatedTips[root]
-	if ok {
+	// Stop early if the node is Valid
+	optimistic, err := f.IsOptimistic(ctx, root)
+	if err != nil {
+		return err
+	}
+	if !optimistic {
 		return nil
 	}
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
 
 	// Cache root and slot to validated tips
 	newTips := make(map[[32]byte]types.Slot)

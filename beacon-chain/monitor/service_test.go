@@ -244,7 +244,7 @@ func TestMonitorRoutine(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
 
-	wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	wrapped, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 
 	stateChannel <- &feed.Event{

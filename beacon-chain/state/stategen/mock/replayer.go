@@ -48,7 +48,7 @@ func (b *MockReplayerBuilder) SetMockSlotError(s types.Slot, e error) {
 	b.forSlot[s] = &MockReplayer{Err: e}
 }
 
-func (b *MockReplayerBuilder) ForSlot(target types.Slot) stategen.Replayer {
+func (b *MockReplayerBuilder) ReplayerForSlot(target types.Slot) stategen.Replayer {
 	return b.forSlot[target]
 }
 

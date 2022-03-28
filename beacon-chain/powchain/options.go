@@ -32,14 +32,6 @@ func WithHttpEndpoints(endpointStrings []string) Option {
 	}
 }
 
-// WithExecutionEndpoint for the execution node JSON-RPC endpoint.
-func WithExecutionEndpoint(endpoint string) Option {
-	return func(s *Service) error {
-		s.cfg.executionEndpoint = endpoint
-		return nil
-	}
-}
-
 // WithExecutionClientJWTSecret for authenticating the execution node JSON-RPC endpoint.
 func WithExecutionClientJWTSecret(jwtSecret []byte) Option {
 	return func(s *Service) error {
