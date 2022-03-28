@@ -249,7 +249,7 @@ func TestReceiveEvents_TrailingSpace(t *testing.T) {
 	errJson := receiveEvents(ch, w, req)
 	assert.Equal(t, true, errJson == nil)
 	assert.Equal(t, `event: finalized_checkpoint
-data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1"}
+data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1","execution_optimistic":false}
 
 `, w.Body.String())
 }
@@ -273,5 +273,5 @@ func TestWriteEvent(t *testing.T) {
 	errJson := writeEvent(msg, w, &eventFinalizedCheckpointJson{})
 	require.Equal(t, true, errJson == nil)
 	written := w.Body.String()
-	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\"}\n\n", written)
+	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\",\"execution_optimistic\":false}\n\n", written)
 }
