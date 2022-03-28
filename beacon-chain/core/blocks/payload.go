@@ -101,7 +101,7 @@ func IsExecutionEnabledUsingHeader(header *ethpb.ExecutionPayloadHeader, body bl
 
 // IsPreBellatrixVersion returns true if input version is before bellatrix fork.
 func IsPreBellatrixVersion(v int) bool {
-	return v == version.Phase0 || v == version.Altair
+	return v < version.Bellatrix
 }
 
 // ValidatePayloadWhenMergeCompletes validates if payload is valid versus input beacon state.
