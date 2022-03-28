@@ -38,10 +38,10 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	return !isEmptyHeader(h), nil
 }
 
-// IsMergeTransitionBlockUsingPayloadHeader returns true if the input block is the terminal merge block.
+// IsMergeTransitionBlockUsingPreStatePayloadHeader returns true if the input block is the terminal merge block.
 // Terminal merge block must be associated with an empty payload header.
 // This assumes the header `h` is referenced as the parent state for block body `body.
-func IsMergeTransitionBlockUsingPayloadHeader(h *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
+func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
 	if h == nil || body == nil {
 		return false, errors.New("nil header or block body")
 	}

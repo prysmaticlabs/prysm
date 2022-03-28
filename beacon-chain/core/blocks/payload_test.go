@@ -339,7 +339,7 @@ func Test_IsMergeTransitionBlockUsingPayloadHeader(t *testing.T) {
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
-			got, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(tt.header, body)
+			got, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(tt.header, body)
 			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("MergeTransitionBlock() got = %v, want %v", got, tt.want)
