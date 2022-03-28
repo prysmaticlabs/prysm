@@ -68,7 +68,7 @@ func WithDepositCache(c *depositcache.DepositCache) Option {
 	}
 }
 
-// WithProposerIdsCache --.
+// WithProposerIdsCache for proposer id cache.
 func WithProposerIdsCache(c *cache.ProposerPayloadIDsCache) Option {
 	return func(s *Service) error {
 		s.cfg.ProposerSlotIndexCache = c

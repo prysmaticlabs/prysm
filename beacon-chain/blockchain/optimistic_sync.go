@@ -71,8 +71,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		FinalizedBlockHash: finalizedHash,
 	}
 
-	nextSlot := s.CurrentSlot() + 1
-	hasAttr, attr, vid, err := s.getPayloadAttribute(ctx, s.headState(ctx), nextSlot)
+	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
+	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, s.headState(ctx), nextSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get payload attribute")
 	}
@@ -94,8 +94,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot); err != nil {
 		return nil, errors.Wrap(err, "could not set block to valid")
 	}
-	if hasAttr {
-		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, vid, bytesutil.BytesToUint64BigEndian(payloadID[:]))
+	if hasAttr { // If the forkchoice update call has an attribute, update the proposer payload ID cache.
+		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, bytesutil.BytesToUint64BigEndian(payloadID[:]))
 	}
 	return payloadID, nil
 }
@@ -212,43 +212,51 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 	return blocks.ExecutionBlock(jBlock.Block().Body())
 }
 
+// getPayloadAttributes returns the payload attributes for the given state and slot.
+// The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
 func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot types.Slot) (bool, *enginev1.PayloadAttributes, types.ValidatorIndex, error) {
-	vId, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
-	if !ok {
+	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
+	if !ok { // There's no need to build attribute if there is no proposer for slot.
 		return false, nil, 0, nil
 	}
+
+	// Get previous randao.
 	st = st.Copy()
 	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
 	if err != nil {
 		return false, nil, 0, err
 	}
-	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		return false, nil, 0, nil
 	}
+
+	// Get fee recipient.
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
-	recipient, err := s.cfg.BeaconDB.FeeRecipientByValidatorID(ctx, vId)
+	recipient, err := s.cfg.BeaconDB.FeeRecipientByValidatorID(ctx, proposerID)
 	switch err == nil {
 	case true:
 		feeRecipient = recipient
 	case errors.As(err, kv.ErrNotFoundFeeRecipient):
 		if feeRecipient.String() == fieldparams.EthBurnAddressHex {
 			logrus.WithFields(logrus.Fields{
-				"validatorIndex": vId,
+				"validatorIndex": proposerID,
 				"burnAddress":    fieldparams.EthBurnAddressHex,
 			}).Error("Fee recipient not set. Using burn address")
 		}
 	default:
 		return false, nil, 0, errors.Wrap(err, "could not get fee recipient in db")
 	}
+
+	// Get timestamp.
 	t, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
 	if err != nil {
 		return false, nil, 0, err
 	}
 	attr := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
-		PrevRandao:            random,
+		PrevRandao:            prevRando,
 		SuggestedFeeRecipient: feeRecipient.Bytes(),
 	}
-	return true, attr, vId, nil
+	return true, attr, proposerID, nil
 }

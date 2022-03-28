@@ -42,8 +42,8 @@ var (
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
 func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex) (*enginev1.ExecutionPayload, error) {
-	vId, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
-	if ok && vId == vIdx && payloadId != 0 {
+	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
+	if ok && proposerID == vIdx && payloadId != 0 { // Payload ID is cache hit. Return the cached payload ID.
 		var vIdBytes [8]byte
 		copy(vIdBytes[:], bytesutil.Uint64ToBytesBigEndian(payloadId))
 		payloadIDCacheHit.Inc()

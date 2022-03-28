@@ -11,17 +11,20 @@ const vIdLength = 8
 const pIdLength = 8
 const vpIdsLength = vIdLength + pIdLength
 
+// ProposerPayloadIDsCache is a cache of proposer payload IDs.
 type ProposerPayloadIDsCache struct {
 	slotToProposerAndPayloadIDs map[types.Slot][vpIdsLength]byte
 	sync.RWMutex
 }
 
+// NewProposerPayloadIDsCache creates a new proposer payload IDs cache.
 func NewProposerPayloadIDsCache() *ProposerPayloadIDsCache {
 	return &ProposerPayloadIDsCache{
 		slotToProposerAndPayloadIDs: make(map[types.Slot][vpIdsLength]byte),
 	}
 }
 
+// GetProposerPayloadIDs returns the proposer and  payload IDs for the given slot.
 func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot) (types.ValidatorIndex, uint64, bool) {
 	f.RLock()
 	defer f.RUnlock()
@@ -34,6 +37,7 @@ func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot) (types.
 	return types.ValidatorIndex(bytesutil.BytesToUint64BigEndian(vId)), bytesutil.BytesToUint64BigEndian(pId), true
 }
 
+// SetProposerAndPayloadIDs sets the proposer and payload IDs for the given slot.
 func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId types.ValidatorIndex, pId uint64) {
 	f.Lock()
 	defer f.Unlock()
