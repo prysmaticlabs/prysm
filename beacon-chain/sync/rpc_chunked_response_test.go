@@ -39,7 +39,12 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: []byte{},
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{}),
+
+			want: func() block.SignedBeaconBlock {
+				wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+				require.NoError(t, err)
+				return wsb
+			}(),
 			wantErr: false,
 		},
 		{
@@ -66,7 +71,11 @@ func TestExtractBlockDataType(t *testing.T) {
 				digest: genDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{}),
+			want: func() block.SignedBeaconBlock {
+				wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+				require.NoError(t, err)
+				return wsb
+			}(),
 			wantErr: false,
 		},
 		{
@@ -76,7 +85,7 @@ func TestExtractBlockDataType(t *testing.T) {
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
 			want: func() block.SignedBeaconBlock {
-				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+				wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 				require.NoError(t, err)
 				return wsb
 			}(),
@@ -89,7 +98,7 @@ func TestExtractBlockDataType(t *testing.T) {
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
 			want: func() block.SignedBeaconBlock {
-				wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+				wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 				require.NoError(t, err)
 				return wsb
 			}(),
