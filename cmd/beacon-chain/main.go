@@ -17,6 +17,7 @@ import (
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/logs"
@@ -62,7 +63,7 @@ var appFlags = []cli.Flag{
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
-	flags.WeakSubjectivityCheckpt,
+	flags.WeakSubjectivityCheckpoint,
 	flags.Eth1HeaderReqLimit,
 	flags.GenesisStatePath,
 	flags.MinPeersPerSubnet,
@@ -118,6 +119,9 @@ var appFlags = []cli.Flag{
 	cmd.BoltMMapInitialSizeFlag,
 	cmd.ValidatorMonitorIndicesFlag,
 	cmd.ApiTimeoutFlag,
+	checkpoint.BlockPath,
+	checkpoint.StatePath,
+	checkpoint.RemoteURL,
 }
 
 func init() {
@@ -241,6 +245,13 @@ func startNode(ctx *cli.Context) error {
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
 		node.WithPowchainFlagOptions(powchainFlagOpts),
+	}
+	cptOpts, err := checkpoint.BeaconNodeOptions(ctx)
+	if err != nil {
+		return err
+	}
+	if cptOpts != nil {
+		opts = append(opts, cptOpts)
 	}
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {
