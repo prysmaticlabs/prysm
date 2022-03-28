@@ -19,7 +19,6 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -36,10 +35,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		return nil, errors.New("nil head block")
 	}
 	// Must not call fork choice updated until the transition conditions are met on the Pow network.
-	if isPreBellatrix(headBlk.Version()) {
-		return nil, nil
-	}
-	isExecutionBlk, err := blocks.ExecutionBlock(headBlk.Body())
+	isExecutionBlk, err := blocks.IsExecutionBlock(headBlk.Body())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not determine if block is execution block")
 	}
@@ -55,7 +51,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
 	var finalizedHash []byte
-	if isPreBellatrix(finalizedBlock.Block().Version()) {
+	if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
 		finalizedHash = params.BeaconConfig().ZeroHash[:]
 	} else {
 		payload, err := finalizedBlock.Block().Body().ExecutionPayload()
@@ -108,7 +104,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 
 	// Execution payload is only supported in Bellatrix and beyond. Pre
 	// merge blocks are never optimistic
-	if isPreBellatrix(postStateVersion) {
+	if blocks.IsPreBellatrixVersion(postStateVersion) {
 		return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
 	}
 	if err := helpers.BeaconBlockIsNil(blk); err != nil {
@@ -145,12 +141,12 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 	}
 
 	// During the transition event, the transition block should be verified for sanity.
-	if isPreBellatrix(preStateVersion) {
+	if blocks.IsPreBellatrixVersion(preStateVersion) {
 		// Handle case where pre-state is Altair but block contains payload.
 		// To reach here, the block must have contained a valid payload.
 		return s.validateMergeBlock(ctx, blk)
 	}
-	atTransition, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(preStateHeader, body)
+	atTransition, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(preStateHeader, body)
 	if err != nil {
 		return errors.Wrap(err, "could not check if merge block is terminal")
 	}
@@ -158,11 +154,6 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 		return nil
 	}
 	return s.validateMergeBlock(ctx, blk)
-}
-
-// isPreBellatrix returns true if input version is before bellatrix fork.
-func isPreBellatrix(v int) bool {
-	return v == version.Phase0 || v == version.Altair
 }
 
 // optimisticCandidateBlock returns true if this block can be optimistically synced.
@@ -193,7 +184,7 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 		return false, errNilParentInDB
 	}
 
-	parentIsExecutionBlock, err := blocks.ExecutionBlock(parent.Block().Body())
+	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
 	if err != nil {
 		return false, err
 	}
@@ -209,7 +200,7 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 	if err != nil {
 		return false, err
 	}
-	return blocks.ExecutionBlock(jBlock.Block().Body())
+	return blocks.IsExecutionBlock(jBlock.Block().Body())
 }
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
