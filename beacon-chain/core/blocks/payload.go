@@ -38,9 +38,10 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	return !isEmptyHeader(h), nil
 }
 
-// IsMergeTransitionBlockUsingPayloadHeader returns true if the input block is the terminal merge block.
+// IsMergeTransitionBlockUsingPreStatePayloadHeader returns true if the input block is the terminal merge block.
 // Terminal merge block must be associated with an empty payload header.
-func IsMergeTransitionBlockUsingPayloadHeader(h *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
+// This assumes the header `h` is referenced as the parent state for block body `body.
+func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
 	if h == nil || body == nil {
 		return false, errors.New("nil header or block body")
 	}
@@ -101,7 +102,7 @@ func IsExecutionEnabledUsingHeader(header *ethpb.ExecutionPayloadHeader, body bl
 
 // IsPreBellatrixVersion returns true if input version is before bellatrix fork.
 func IsPreBellatrixVersion(v int) bool {
-	return v == version.Phase0 || v == version.Altair
+	return v < version.Bellatrix
 }
 
 // ValidatePayloadWhenMergeCompletes validates if payload is valid versus input beacon state.

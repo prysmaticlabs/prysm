@@ -146,7 +146,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 		// To reach here, the block must have contained a valid payload.
 		return s.validateMergeBlock(ctx, blk)
 	}
-	atTransition, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(preStateHeader, body)
+	atTransition, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(preStateHeader, body)
 	if err != nil {
 		return errors.Wrap(err, "could not check if merge block is terminal")
 	}
