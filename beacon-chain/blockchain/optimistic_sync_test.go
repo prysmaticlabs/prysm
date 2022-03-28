@@ -610,7 +610,9 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 
 	genesisStateRoot := [32]byte{}
 	genesisBlk := blocks.NewGenesisBlock(genesisStateRoot[:])
-	assert.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)))
+	wr, err := wrapper.WrappedSignedBeaconBlock(genesisBlk)
+	require.NoError(t, err)
+	assert.NoError(t, beaconDB.SaveBlock(ctx, wr))
 	genesisRoot, err := genesisBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
@@ -631,7 +633,9 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 320
 	blk.Block.ParentRoot = genesisRoot[:]
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	wr, err = wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wr))
 	opRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -657,7 +661,9 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	blk = util.NewBeaconBlock()
 	blk.Block.Slot = 640
 	blk.Block.ParentRoot = opRoot[:]
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	wr, err = wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wr))
 	validRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
