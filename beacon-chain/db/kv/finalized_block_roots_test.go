@@ -63,7 +63,9 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Finalized genesis block doesn't exist in db")
 }
@@ -207,7 +209,8 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-i] = wrapper.WrappedPhase0SignedBeaconBlock(blocks[j-i])
+		ifaceBlocks[j-i], err = wrapper.WrappedSignedBeaconBlock(blocks[j-i])
+		require.NoError(t, err)
 	}
 	return ifaceBlocks
 }
@@ -224,7 +227,7 @@ func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte)
 		var err error
 		previousRoot, err = blocks[j-startIdx].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-startIdx], err = wrapper.WrappedAltairSignedBeaconBlock(blocks[j-startIdx])
+		ifaceBlocks[j-startIdx], err = wrapper.WrappedSignedBeaconBlock(blocks[j-startIdx])
 		require.NoError(t, err)
 	}
 	return ifaceBlocks
