@@ -33,6 +33,9 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 	}
 
 	for node := f.store.nodes[index]; node.optimistic == SYNCING; node = f.store.nodes[index] {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		node.optimistic = VALID
 		index = node.parent
 		if index == NonExistentNode {
