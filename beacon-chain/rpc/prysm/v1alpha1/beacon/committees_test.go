@@ -44,7 +44,9 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 		StateGen:           stategen.New(db),
 	}
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
@@ -76,10 +78,9 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
 	cc := &mockstategen.MockCanonicalChecker{Is: true, Err: nil}
 	cs := &mockstategen.MockCurrentSlotter{Slot: math.MaxUint64 - 1}
-	s.ReplayerBuilder = stategen.NewCanonicalBuilder(h, cc, cs)
+	s.ReplayerBuilder = stategen.NewCanonicalHistory(h, cc, cs)
 }
 
-// TODO: test failure
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -172,7 +173,9 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 		StateGen:           stategen.New(db),
 	}
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))

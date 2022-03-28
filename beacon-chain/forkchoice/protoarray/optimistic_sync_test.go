@@ -303,12 +303,55 @@ func TestSetOptimisticToValid(t *testing.T) {
 				[32]byte{'i'}: 106,
 			},
 			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
 				[32]byte{'f'}: 105,
 				[32]byte{'g'}: 104,
 				[32]byte{'i'}: 106,
-				[32]byte{'j'}: 102,
 			},
-			errInvalidBestChildIndex,
+			nil,
+		},
+		{
+			[32]byte{'h'},
+			map[[32]byte]types.Slot{
+				[32]byte{'z'}: 90,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+				[32]byte{'h'}: 105,
+			},
+			nil,
+		},
+		{
+			[32]byte{'h'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'g'}: 104,
+				[32]byte{'i'}: 106,
+			},
+			nil,
+		},
+		{
+			[32]byte{'g'},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'d'}: 103,
+				[32]byte{'e'}: 104,
+			},
+			map[[32]byte]types.Slot{
+				[32]byte{'b'}: 101,
+				[32]byte{'e'}: 104,
+				[32]byte{'g'}: 104,
+			},
+			nil,
 		},
 		{
 			[32]byte{'p'},
@@ -356,6 +399,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		newBestChild      uint64
 		newBestDescendant uint64
 		newParentWeight   uint64
+		returnedRoots     [][32]byte
 	}{
 		{
 			[32]byte{'j'},
@@ -368,6 +412,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			4,
 			8,
+			[][32]byte{[32]byte{'j'}},
 		},
 		{
 			[32]byte{'j'},
@@ -378,6 +423,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			4,
 			8,
+			[][32]byte{[32]byte{'j'}},
 		},
 		{
 			[32]byte{'i'},
@@ -391,6 +437,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
+			[][32]byte{[32]byte{'i'}},
 		},
 		{
 			[32]byte{'i'},
@@ -403,6 +450,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
+			[][32]byte{[32]byte{'i'}},
 		},
 	}
 	for _, tc := range tests {
@@ -439,8 +487,9 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		require.NotEqual(t, NonExistentNode, parentIndex)
 		parent := f.store.nodes[parentIndex]
 		f.store.nodesLock.Unlock()
-		err := f.SetOptimisticToInvalid(context.Background(), tc.root)
+		roots, err := f.SetOptimisticToInvalid(context.Background(), tc.root)
 		require.NoError(t, err)
+		require.DeepEqual(t, tc.returnedRoots, roots)
 		f.syncedTips.RLock()
 		_, parentSyncedTip := f.syncedTips.validatedTips[parent.root]
 		f.syncedTips.RUnlock()

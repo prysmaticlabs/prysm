@@ -70,4 +70,11 @@ service BeaconDebug {
       get: "/internal/eth/v1/debug/beacon/heads"
     };
   }
+
+  // ListForkChoiceHeadsV2 retrieves all possible chain heads (leaves of fork choice tree).
+  rpc ListForkChoiceHeadsV2(google.protobuf.Empty) returns (v2.ForkChoiceHeadsResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v2/debug/beacon/heads"
+    };
+  }
 }

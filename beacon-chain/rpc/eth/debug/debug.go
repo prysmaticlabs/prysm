@@ -65,6 +65,11 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, beaconSt, ds.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
 	switch beaconSt.Version() {
 	case version.Phase0:
 		protoSt, err := migration.BeaconStateToProto(beaconSt)
@@ -76,6 +81,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_Phase0State{Phase0State: protoSt},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Altair:
 		altairState, ok := beaconSt.(state.BeaconStateAltair)
@@ -91,6 +97,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_AltairState{AltairState: protoState},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Bellatrix:
 		bellatrixState, ok := beaconSt.(state.BeaconStateBellatrix)
@@ -106,6 +113,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_BellatrixState{BellatrixState: protoState},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	default:
 		return nil, status.Error(codes.Internal, "Unsupported state version")
@@ -130,7 +138,7 @@ func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateReq
 	return &ethpbv2.BeaconStateSSZResponseV2{Data: sszState}, nil
 }
 
-// ListForkChoiceHeads retrieves the fork choice leaves for the current head.
+// ListForkChoiceHeads retrieves the leaves of the current fork choice tree.
 func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ForkChoiceHeadsResponse, error) {
 	_, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeads")
 	defer span.End()
@@ -143,6 +151,30 @@ func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*e
 		resp.Data[i] = &ethpbv1.ForkChoiceHead{
 			Root: headRoots[i][:],
 			Slot: headSlots[i],
+		}
+	}
+
+	return resp, nil
+}
+
+// ListForkChoiceHeadsV2 retrieves the leaves of the current fork choice tree.
+func (ds *Server) ListForkChoiceHeadsV2(ctx context.Context, _ *emptypb.Empty) (*ethpbv2.ForkChoiceHeadsResponse, error) {
+	_, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeadsV2")
+	defer span.End()
+
+	headRoots, headSlots := ds.HeadFetcher.ChainHeads()
+	resp := &ethpbv2.ForkChoiceHeadsResponse{
+		Data: make([]*ethpbv2.ForkChoiceHead, len(headRoots)),
+	}
+	for i := range headRoots {
+		isOptimistic, err := ds.HeadFetcher.IsOptimisticForRoot(ctx, headRoots[i])
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check if head is optimistic: %v", err)
+		}
+		resp.Data[i] = &ethpbv2.ForkChoiceHead{
+			Root:                headRoots[i][:],
+			Slot:                headSlots[i],
+			ExecutionOptimistic: isOptimistic,
 		}
 	}
 
