@@ -79,10 +79,10 @@ func (s *Store) BackfillBlockRoot(ctx context.Context) ([32]byte, error) {
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		rootSlice := bkt.Get(backfillBlockRootKey)
-		if rootSlice == nil {
+		if len(rootSlice) == 0 {
 			return ErrNotFoundBackfillBlockRoot
 		}
-		copy(root[:], rootSlice)
+		root = bytesutil.ToBytes32(rootSlice)
 		return nil
 	})
 
