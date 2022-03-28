@@ -306,8 +306,8 @@ func (s *Server) ImportRemoteKeys(ctx context.Context, req *ethpbservice.ImportR
 	}
 	adder, ok := km.(keymanager.PublicKeyAdder)
 	if !ok {
-		//statuses := groupImportErrors(req, "Keymanager kind cannot import keys")
-		//return &ethpbservice.ImportKeystoresResponse{Data: statuses}, nil
+		statuses := groupImportRemoteKeysErrors(req, "Keymanager kind cannot import public keys for web3signer keymanager type.")
+		return &ethpbservice.ImportRemoteKeysResponse{Data: statuses}, nil
 	}
 
 	remoteKeys := make([][fieldparams.BLSPubkeyLength]byte, len(req.RemoteKeys))
@@ -316,11 +316,23 @@ func (s *Server) ImportRemoteKeys(ctx context.Context, req *ethpbservice.ImportR
 	}
 	statuses, err := adder.AddPublicKeys(ctx, remoteKeys)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not add keys;error: %v", err)
+		sts := groupImportRemoteKeysErrors(req, fmt.Sprintf("Could not add keys;error: %v", err))
+		return &ethpbservice.ImportRemoteKeysResponse{Data: sts}, nil
 	}
 	return &ethpbservice.ImportRemoteKeysResponse{
 		Data: statuses,
 	}, nil
+}
+
+func groupImportRemoteKeysErrors(req *ethpbservice.ImportRemoteKeysRequest, errorMessage string) []*ethpbservice.ImportedRemoteKeysStatus {
+	statuses := make([]*ethpbservice.ImportedRemoteKeysStatus, len(req.RemoteKeys))
+	for i := 0; i < len(req.RemoteKeys); i++ {
+		statuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
+			Status:  ethpbservice.ImportedRemoteKeysStatus_ERROR,
+			Message: errorMessage,
+		}
+	}
+	return statuses
 }
 
 // DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
@@ -340,8 +352,8 @@ func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteR
 	}
 	deleter, ok := km.(keymanager.PublicKeyDeleter)
 	if !ok {
-		//statuses := groupImportErrors(req, "Keymanager kind cannot import keys")
-		//return &ethpbservice.ImportKeystoresResponse{Data: statuses}, nil
+		statuses := groupDeleteRemoteKeysErrors(req, "Keymanager kind cannot delete public keys for web3signer keymanager type.")
+		return &ethpbservice.DeleteRemoteKeysResponse{Data: statuses}, nil
 	}
 	remoteKeys := make([][fieldparams.BLSPubkeyLength]byte, len(req.Pubkeys))
 	for i, key := range req.Pubkeys {
@@ -349,9 +361,21 @@ func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteR
 	}
 	statuses, err := deleter.DeletePublicKeys(ctx, remoteKeys)
 	if err != nil {
-		//return nil, status.Errorf(codes.Internal, "Could not delete keys;error: %v", err)
+		sts := groupDeleteRemoteKeysErrors(req, fmt.Sprintf("Could not delete keys;error: %v", err))
+		return &ethpbservice.DeleteRemoteKeysResponse{Data: sts}, nil
 	}
 	return &ethpbservice.DeleteRemoteKeysResponse{
 		Data: statuses,
 	}, nil
+}
+
+func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, errorMessage string) []*ethpbservice.DeletedRemoteKeysStatus {
+	statuses := make([]*ethpbservice.DeletedRemoteKeysStatus, len(req.Pubkeys))
+	for i := 0; i < len(req.Pubkeys); i++ {
+		statuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
+			Status:  ethpbservice.DeletedRemoteKeysStatus_ERROR,
+			Message: errorMessage,
+		}
+	}
+	return statuses
 }

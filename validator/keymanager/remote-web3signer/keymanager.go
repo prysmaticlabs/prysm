@@ -317,11 +317,13 @@ func (km *Keymanager) deletePublicKeys(ctx context.Context, pubKeys [][fieldpara
 					Status:  ethpbservice.DeletedRemoteKeysStatus_DELETED,
 					Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(pubkey[:])),
 				}
-			} else {
-				deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
-					Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
-					Message: fmt.Sprintf("Pubkey: %v not found", hexutil.Encode(pubkey[:])),
-				}
+				break
+			}
+		}
+		if deletedRemoteKeysStatuses[i] == nil {
+			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
+				Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
+				Message: fmt.Sprintf("Pubkey: %v not found", hexutil.Encode(pubkey[:])),
 			}
 		}
 	}
