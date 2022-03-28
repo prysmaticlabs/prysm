@@ -7,19 +7,16 @@ package blst
 import (
 	"fmt"
 
-	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 )
 
-var maxKeys = int64(1000000)
-var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
-	NumCounters: maxKeys,
-	MaxCost:     1 << 26, // ~64mb is cache max size
-	BufferItems: 64,
-})
+var maxKeys = 1000000
+var pubkeyCache = lruwrpr.New(maxKeys)
 
 // PublicKey used in the BLS signature scheme.
 type PublicKey struct {
@@ -34,7 +31,8 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	if len(pubKey) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
 	}
-	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
+	newKey := (*[fieldparams.BLSPubkeyLength]byte)(pubKey)
+	if cv, ok := pubkeyCache.Get(*newKey); ok {
 		return cv.(*PublicKey).Copy(), nil
 	}
 	// Subgroup check NOT done when decompressing pubkey.
@@ -49,7 +47,8 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 	}
 	pubKeyObj := &PublicKey{p: p}
 	copiedKey := pubKeyObj.Copy()
-	pubkeyCache.Set(string(pubKey), copiedKey, 48)
+	cacheKey := *newKey
+	pubkeyCache.Add(cacheKey, copiedKey)
 	return pubKeyObj, nil
 }
 
