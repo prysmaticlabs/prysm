@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -535,7 +536,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 
 func getBlockPayloadHash(blk block.BeaconBlock) ([32]byte, error) {
 	payloadHash := [32]byte{}
-	if isPreBellatrix(blk.Version()) {
+	if blocks.IsPreBellatrixVersion(blk.Version()) {
 		return payloadHash, nil
 	}
 	payload, err := blk.Body().ExecutionPayload()
