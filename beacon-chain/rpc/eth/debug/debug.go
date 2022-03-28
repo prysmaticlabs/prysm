@@ -65,6 +65,11 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, beaconSt, ds.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
 	switch beaconSt.Version() {
 	case version.Phase0:
 		protoSt, err := migration.BeaconStateToProto(beaconSt)
@@ -76,6 +81,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_Phase0State{Phase0State: protoSt},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Altair:
 		altairState, ok := beaconSt.(state.BeaconStateAltair)
@@ -91,6 +97,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_AltairState{AltairState: protoState},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Bellatrix:
 		bellatrixState, ok := beaconSt.(state.BeaconStateBellatrix)
@@ -106,6 +113,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_BellatrixState{BellatrixState: protoState},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	default:
 		return nil, status.Error(codes.Internal, "Unsupported state version")
