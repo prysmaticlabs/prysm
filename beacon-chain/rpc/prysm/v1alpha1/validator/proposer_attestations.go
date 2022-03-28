@@ -96,7 +96,17 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 			if err != nil {
 				return nil, err
 			}
-			return altair.ProcessAttestationNoVerifySignature(ctx, st, attestation, totalBalance)
+			_, err = altair.ProcessAttestationNoVerifySignature(ctx, st, attestation, totalBalance)
+			if err != nil {
+				return nil, err
+			}
+			err = blocks.VerifyAttestationSignature(ctx, st, attestation)
+			if err != nil {
+				log.Errorf("attestation with committee index of %d, slot %d, block root %#x ,target epoch %d , root %#x source epoch %d, root %#x had a bad signature %#x", attestation.Data.CommitteeIndex, attestation.Data.Slot,
+					attestation.Data.BeaconBlockRoot, attestation.Data.Target.Epoch, attestation.Data.Target.Root, attestation.Data.Source.Epoch, attestation.Data.Source.Root, attestation.Signature)
+				return nil, err
+			}
+			return st, nil
 		}
 	default:
 		// Exit early if there is an unknown state type.
