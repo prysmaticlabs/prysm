@@ -631,6 +631,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, 0)
 	hasPayload, attr, vId, err = service.getPayloadAttribute(ctx, st, slot)
+	require.NoError(t, err)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient))
