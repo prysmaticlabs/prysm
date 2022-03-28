@@ -11,6 +11,8 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -450,6 +452,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		}()
 
 		var blocks []block.SignedBeaconBlock
+		var pid peer.ID
 		select {
 		case <-ctx.Done():
 			t.Error(ctx.Err())
@@ -458,6 +461,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 				t.Error(resp.err)
 			} else {
 				blocks = resp.blocks
+				pid = resp.pid
 			}
 		}
 		if uint64(len(blocks)) != uint64(blockBatchLimit) {
@@ -471,6 +475,83 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 		missing := slice.NotSlot(slice.IntersectionSlot(chainConfig.expectedBlockSlots, receivedBlockSlots), chainConfig.expectedBlockSlots)
 		if len(missing) > 0 {
 			t.Errorf("Missing blocks at slots %v", missing)
+		}
+
+		// Check that we have touched the peer correctly for responding to the request.
+		maxScore := p2p.Peers().Scorers().BlockProviderScorer().MaxScore()
+		if p2p.Peers().Scorers().BlockProviderScorer().Score(pid) == maxScore {
+			t.Errorf("Received max score despite responding to blocks in time")
+		}
+	})
+}
+
+func TestBlocksFetcher_handleRequest_BadBlocks(t *testing.T) {
+	blockBatchLimit := flags.Get().BlockBatchLimit
+	chainConfig := struct {
+		expectedBlockSlots []types.Slot
+		peers              []*peerData
+	}{
+		expectedBlockSlots: makeSequence(1, types.Slot(blockBatchLimit)),
+		peers: []*peerData{
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+				failureSlots:   makeSequence(20, 40),
+			},
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+				failureSlots:   makeSequence(20, 40),
+			},
+		},
+	}
+
+	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	mc.ValidatorsRoot = [32]byte{}
+	mc.Genesis = time.Now()
+
+	t.Run("receive bad blocks", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+			chain: mc,
+			p2p:   p2p,
+		})
+
+		requestCtx, reqCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer reqCancel()
+		go func() {
+			response := fetcher.handleRequest(requestCtx, 1 /* start */, uint64(blockBatchLimit) /* count */)
+			select {
+			case <-ctx.Done():
+			case fetcher.fetchResponses <- response:
+			}
+		}()
+
+		var blocks []block.SignedBeaconBlock
+		select {
+		case <-ctx.Done():
+			t.Error(ctx.Err())
+		case resp := <-fetcher.requestResponses():
+			if !errors.Is(resp.err, errNoPeersAvailable) {
+				t.Errorf("Wanted %v but received %v", errNoPeersAvailable, resp.err)
+			} else {
+				blocks = resp.blocks
+			}
+		}
+		if uint64(len(blocks)) != 0 {
+			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", 0, len(blocks))
+		}
+
+		// Check that we have touched the peer correctly for responding to the request, even
+		// though the response is invalid.
+		maxScore := p2p.Peers().Scorers().BlockProviderScorer().MaxScore()
+		for _, pid := range p2p.Peers().All() {
+			if p2p.Peers().Scorers().BlockProviderScorer().Score(pid) == maxScore {
+				t.Errorf("Received max score despite responding to blocks in time")
+			}
 		}
 	})
 }
