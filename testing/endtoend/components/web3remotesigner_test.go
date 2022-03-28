@@ -18,7 +18,7 @@ func TestWeb3RemoteSigner_StartsAndReturnsPublicKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wsc := components.NewWeb3RemoteSigner(fp)
+	wsc := components.NewWeb3RemoteSigner()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
