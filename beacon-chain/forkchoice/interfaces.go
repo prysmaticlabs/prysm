@@ -24,7 +24,7 @@ type ForkChoicer interface {
 type HeadRetriever interface {
 	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
 	Tips() ([][32]byte, []types.Slot)
-	IsOptimistic(ctx context.Context, root [32]byte) (bool, error)
+	IsOptimistic(root [32]byte) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.

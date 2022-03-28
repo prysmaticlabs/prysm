@@ -9,7 +9,7 @@ import (
 // execution payload is not validated, while the EL is still syncing.
 // This function returns an error if the block is not found in the fork choice
 // store
-func (f *ForkChoice) IsOptimistic(ctx context.Context, root [32]byte) (bool, error) {
+func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	index, ok := f.store.nodesIndices[root]

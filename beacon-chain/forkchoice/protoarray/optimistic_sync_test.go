@@ -52,8 +52,7 @@ func TestOptimistic_Outside_ForkChoice(t *testing.T) {
 	f := &ForkChoice{
 		store: s,
 	}
-	ctx := context.Background()
-	_, err := f.IsOptimistic(ctx, root0)
+	_, err := f.IsOptimistic(root0)
 	require.ErrorIs(t, ErrUnknownNodeRoot, err)
 }
 
@@ -155,7 +154,7 @@ func TestSetOptimisticToValid(t *testing.T) {
 		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{'I'}, 1, 1))
 		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'L'}, 1, 1))
 		require.NoError(t, f.SetOptimisticToValid(context.Background(), [32]byte{'e'}))
-		optimistic, err := f.IsOptimistic(ctx, [32]byte{'b'})
+		optimistic, err := f.IsOptimistic([32]byte{'b'})
 		require.NoError(t, err)
 		require.Equal(t, false, optimistic)
 
@@ -164,7 +163,7 @@ func TestSetOptimisticToValid(t *testing.T) {
 			require.ErrorIs(t, err, tc.wantedErr)
 		} else {
 			require.NoError(t, err)
-			optimistic, err := f.IsOptimistic(ctx, tc.testRoot)
+			optimistic, err := f.IsOptimistic(tc.testRoot)
 			require.NoError(t, err)
 			require.Equal(t, tc.wantedOptimistic, optimistic)
 		}
