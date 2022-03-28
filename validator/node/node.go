@@ -117,7 +117,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	// client via a web portal, we start the validator client in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
 		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-			return nil, errors.New("web3signer cannot be used with --web")
+			log.Warn("Remote Keymanager API enabled. Prysm Website does not properly support web3signer at this time. please check documents for more information.")
 		}
 		log.Info("Enabling web portal to manage the validator client")
 		if err := validatorClient.initializeForWeb(cliCtx); err != nil {
