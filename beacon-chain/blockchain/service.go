@@ -199,7 +199,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		store = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
 	}
 	s.cfg.ForkChoiceStore = store
-	fb, err := s.cfg.BeaconDB.Block(s.ctx, fRoot)
+	fb, err := s.cfg.BeaconDB.Block(s.ctx, s.ensureRootNotZeros(fRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint block")
 	}

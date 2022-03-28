@@ -378,7 +378,9 @@ func TestService_Resync(t *testing.T) {
 	}, p.Peers())
 	cache.initializeRootCache(makeSequence(1, 160), t)
 	beaconDB := dbtest.SetupDB(t)
-	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	err = beaconDB.SaveBlock(context.Background(), wsb)
 	require.NoError(t, err)
 	cache.RLock()
 	genesisRoot := cache.rootCache[0]

@@ -3,6 +3,7 @@ package powchain
 import (
 	"context"
 	"errors"
+	"math"
 	"math/big"
 	"time"
 
@@ -28,6 +29,11 @@ var (
 func (s *Service) checkTransitionConfiguration(
 	ctx context.Context, blockNotifications chan *statefeed.BlockProcessedData,
 ) {
+	// If Bellatrix fork epoch is not set, we do not run this check.
+	if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
+		return
+	}
+	// If no engine API, then also avoid running this check.
 	if s.engineAPIClient == nil {
 		return
 	}
@@ -62,7 +68,7 @@ func (s *Service) checkTransitionConfiguration(
 		case <-sub.Err():
 			return
 		case ev := <-blockNotifications:
-			isExecutionBlock, err := blocks.ExecutionBlock(ev.SignedBlock.Block().Body())
+			isExecutionBlock, err := blocks.IsExecutionBlock(ev.SignedBlock.Block().Body())
 			if err != nil {
 				log.WithError(err).Debug("Could not check whether signed block is execution block")
 				continue

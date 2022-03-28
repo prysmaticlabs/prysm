@@ -21,7 +21,9 @@ func TestStore_Backup(t *testing.T) {
 	head := util.NewBeaconBlock()
 	head.Block.Slot = 5000
 
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(head)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -61,7 +63,9 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	for i := startSlot; i < 5200; i++ {
 		head := util.NewBeaconBlock()
 		head.Block.Slot = i
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(head)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		root, err := head.Block.HashTreeRoot()
 		require.NoError(t, err)
 		st, err := util.NewBeaconState()
