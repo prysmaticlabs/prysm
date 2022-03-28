@@ -14,7 +14,7 @@ type APIInitializer struct {
 	c *beacon.Client
 }
 
-// NewAPIInitializer creates an APIInitializer, handling the set up a beacon node api client
+// NewAPIInitializer creates an APIInitializer, handling the set up of a beacon node api client
 // using the provided host string.
 func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
 	c, err := beacon.NewClient(beaconNodeHost)

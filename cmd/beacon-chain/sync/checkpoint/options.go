@@ -25,7 +25,7 @@ var (
 	RemoteURL = &cli.StringFlag{
 		Name: "checkpoint-sync-url",
 		Usage: "URL of a synced beacon node to trust in obtaining checkpoint sync data. " +
-			"as an additional safety measure, it is strongly recommended to only use this option in conjunction with " +
+			"As an additional safety measure, it is strongly recommended to only use this option in conjunction with " +
 			"--weak-subjectivity-checkpoint flag",
 	}
 )
