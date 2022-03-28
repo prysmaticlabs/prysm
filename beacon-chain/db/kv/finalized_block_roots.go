@@ -32,7 +32,7 @@ var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to
 //   - De-index all finalized beacon block roots from previous_finalized_epoch to
 //     new_finalized_epoch. (I.e. delete these roots from the index, to be re-indexed.)
 //   - Build the canonical finalized chain by walking up the ancestry chain from the finalized block
-//     root until a parent is found in the index or the parent is genesis.
+//     root until a parent is found in the index, or the parent is genesis or the origin checkpoint.
 //   - Add all block roots in the database where epoch(block.slot) == checkpoint.epoch.
 //
 // This method ensures that all blocks from the current finalized epoch are considered "final" while
@@ -46,6 +46,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	root := checkpoint.Root
 	var previousRoot []byte
 	genesisRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
+	initCheckpointRoot := tx.Bucket(blocksBucket).Get(originCheckpointBlockRootKey)
 
 	// De-index recent finalized block roots, to be re-indexed.
 	previousFinalizedCheckpoint := &ethpb.Checkpoint{}
@@ -74,7 +75,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	// Walk up the ancestry chain until we reach a block root present in the finalized block roots
 	// index bucket or genesis block root.
 	for {
-		if bytes.Equal(root, genesisRoot) {
+		if bytes.Equal(root, genesisRoot) || bytes.Equal(root, initCheckpointRoot) {
 			break
 		}
 
