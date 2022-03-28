@@ -291,6 +291,7 @@ func (s *Service) Start() {
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
+			ReplayerBuilder:    ch,
 		},
 		HeadFetcher:             s.cfg.HeadFetcher,
 		VoluntaryExitsPool:      s.cfg.ExitPool,

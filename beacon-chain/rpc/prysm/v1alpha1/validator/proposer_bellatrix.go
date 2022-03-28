@@ -40,7 +40,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		},
 	}
 	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(
+	wsb, err := wrapper.WrappedSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {

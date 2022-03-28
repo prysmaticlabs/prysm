@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -110,7 +111,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
-	if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, postState, signed, blockRoot); err != nil {
+	postStateVersion, postStateHeader, err := getStateVersionAndPayload(postState)
+	if err != nil {
+		return err
+	}
+	if err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed, blockRoot); err != nil {
 		return errors.Wrap(err, "could not verify new payload")
 	}
 
@@ -228,14 +233,19 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
+		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, fRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not check if node is optimistically synced")
+		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
 			s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 				Type: statefeed.FinalizedCheckpoint,
 				Data: &ethpbv1.EventFinalizedCheckpoint{
-					Epoch: postState.FinalizedCheckpoint().Epoch,
-					Block: postState.FinalizedCheckpoint().Root,
-					State: signed.Block().StateRoot(),
+					Epoch:               postState.FinalizedCheckpoint().Epoch,
+					Block:               postState.FinalizedCheckpoint().Root,
+					State:               signed.Block().StateRoot(),
+					ExecutionOptimistic: isOptimistic,
 				},
 			})
 
@@ -256,14 +266,17 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	return s.handleEpochBoundary(ctx, postState)
 }
 
-func getStateVersionAndPayload(preState state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
+func getStateVersionAndPayload(st state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
+	if st == nil {
+		return 0, nil, errors.New("nil state")
+	}
 	var preStateHeader *ethpb.ExecutionPayloadHeader
 	var err error
-	preStateVersion := preState.Version()
+	preStateVersion := st.Version()
 	switch preStateVersion {
 	case version.Phase0, version.Altair:
 	default:
-		preStateHeader, err = preState.LatestExecutionPayloadHeader()
+		preStateHeader, err = st.LatestExecutionPayloadHeader()
 		if err != nil {
 			return 0, nil, err
 		}
@@ -308,9 +321,24 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		PublicKeys: []bls.PublicKey{},
 		Messages:   [][32]byte{},
 	}
+	type versionAndHeader struct {
+		version int
+		header  *ethpb.ExecutionPayloadHeader
+	}
+	preVersionAndHeaders := make([]*versionAndHeader, len(blks))
+	postVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
+		v, h, err := getStateVersionAndPayload(preState)
+		if err != nil {
+			return nil, nil, err
+		}
+		preVersionAndHeaders[i] = &versionAndHeader{
+			version: v,
+			header:  h,
+		}
+
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return nil, nil, err
@@ -321,6 +349,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
+
+		v, h, err = getStateVersionAndPayload(preState)
+		if err != nil {
+			return nil, nil, err
+		}
+		postVersionAndHeaders[i] = &versionAndHeader{
+			version: v,
+			header:  h,
+		}
 		sigSet.Join(set)
 	}
 	verify, err := sigSet.Verify()
@@ -333,22 +370,23 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 
 	// blocks have been verified, add them to forkchoice and call the engine
 	for i, b := range blks {
-		preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
-		if err != nil {
-			return nil, nil, err
-		}
-
 		s.saveInitSyncBlock(blockRoots[i], b)
 		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			return nil, nil, err
 		}
-		if err := s.notifyNewPayload(ctx, preStateVersion, preStateHeader, preState, b, blockRoots[i]); err != nil {
+		if err := s.notifyNewPayload(ctx,
+			preVersionAndHeaders[i].version,
+			postVersionAndHeaders[i].version,
+			preVersionAndHeaders[i].header,
+			postVersionAndHeaders[i].header, b, blockRoots[i]); err != nil {
 			return nil, nil, err
 		}
+
 		if _, err := s.notifyForkchoiceUpdate(ctx, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
 			return nil, nil, err
 		}
 	}
+
 	for r, st := range boundaries {
 		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 			return nil, nil, err
@@ -498,7 +536,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 
 func getBlockPayloadHash(blk block.BeaconBlock) ([32]byte, error) {
 	payloadHash := [32]byte{}
-	if isPreBellatrix(blk.Version()) {
+	if blocks.IsPreBellatrixVersion(blk.Version()) {
 		return payloadHash, nil
 	}
 	payload, err := blk.Body().ExecutionPayload()

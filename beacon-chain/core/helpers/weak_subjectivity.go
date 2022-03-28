@@ -55,9 +55,9 @@ import (
 //        )
 //
 //    return ws_period
-func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconState) (types.Epoch, error) {
+func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (types.Epoch, error) {
 	// Weak subjectivity period cannot be smaller than withdrawal delay.
-	wsp := uint64(params.BeaconConfig().MinValidatorWithdrawabilityDelay)
+	wsp := uint64(cfg.MinValidatorWithdrawabilityDelay)
 
 	// Cardinality of active validator set.
 	N, err := ActiveValidatorCount(ctx, st, time.CurrentEpoch(st))
@@ -73,10 +73,10 @@ func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconS
 	if err != nil {
 		return 0, fmt.Errorf("cannot find total active balance of validators: %w", err)
 	}
-	t = t / N / params.BeaconConfig().GweiPerEth
+	t = t / N / cfg.GweiPerEth
 
 	// Maximum effective balance per validator.
-	T := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().GweiPerEth
+	T := cfg.MaxEffectiveBalance / cfg.GweiPerEth
 
 	// Validator churn limit.
 	delta, err := ValidatorChurnLimit(N)
@@ -85,14 +85,14 @@ func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconS
 	}
 
 	// Balance top-ups.
-	Delta := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxDeposits))
+	Delta := uint64(cfg.SlotsPerEpoch.Mul(cfg.MaxDeposits))
 
 	if delta == 0 || Delta == 0 {
 		return 0, errors.New("either validator churn limit or balance top-ups is zero")
 	}
 
 	// Safety decay, maximum tolerable loss of safety margin of FFG finality.
-	D := params.BeaconConfig().SafetyDecay
+	D := cfg.SafetyDecay
 
 	if T*(200+3*D) < t*(200+12*D) {
 		epochsForValidatorSetChurn := N * (t*(200+12*D) - T*(200+3*D)) / (600 * delta * (2*t + T))
@@ -123,7 +123,7 @@ func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconS
 //    current_epoch = compute_epoch_at_slot(get_current_slot(store))
 //    return current_epoch <= ws_state_epoch + ws_period
 func IsWithinWeakSubjectivityPeriod(
-	ctx context.Context, currentEpoch types.Epoch, wsState state.ReadOnlyBeaconState, wsStateRoot [fieldparams.RootLength]byte, wsEpoch types.Epoch) (bool, error) {
+	ctx context.Context, currentEpoch types.Epoch, wsState state.ReadOnlyBeaconState, wsStateRoot [fieldparams.RootLength]byte, wsEpoch types.Epoch, cfg *params.BeaconChainConfig) (bool, error) {
 	// Make sure that incoming objects are not nil.
 	if wsState == nil || wsState.IsNil() || wsState.LatestBlockHeader() == nil {
 		return false, errors.New("invalid weak subjectivity state or checkpoint")
@@ -140,7 +140,7 @@ func IsWithinWeakSubjectivityPeriod(
 	}
 
 	// Compare given epoch to state epoch + weak subjectivity period.
-	wsPeriod, err := ComputeWeakSubjectivityPeriod(ctx, wsState)
+	wsPeriod, err := ComputeWeakSubjectivityPeriod(ctx, wsState, cfg)
 	if err != nil {
 		return false, fmt.Errorf("cannot compute weak subjectivity period: %w", err)
 	}
@@ -154,8 +154,8 @@ func IsWithinWeakSubjectivityPeriod(
 // Within the weak subjectivity period, if two conflicting blocks are finalized, 1/3 - D (D := safety decay)
 // of validators will get slashed. Therefore, it is safe to assume that any finalized checkpoint within that
 // period is protected by this safety margin.
-func LatestWeakSubjectivityEpoch(ctx context.Context, st state.ReadOnlyBeaconState) (types.Epoch, error) {
-	wsPeriod, err := ComputeWeakSubjectivityPeriod(ctx, st)
+func LatestWeakSubjectivityEpoch(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (types.Epoch, error) {
+	wsPeriod, err := ComputeWeakSubjectivityPeriod(ctx, st, cfg)
 	if err != nil {
 		return 0, err
 	}

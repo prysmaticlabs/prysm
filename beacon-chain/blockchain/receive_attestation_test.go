@@ -47,13 +47,17 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -74,13 +78,17 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -137,15 +145,16 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	hook.Reset()
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
-	wr := wrapper.WrappedPhase0SignedBeaconBlock(b)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wr))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	finalized := &ethpb.Checkpoint{Root: r[:], Epoch: 0}
 	service.head = &head{
 		slot:  1,
 		root:  r,
-		block: wr,
+		block: wsb,
 	}
 	service.store.SetFinalizedCheckpt(finalized)
 	service.notifyEngineIfChangedHead([32]byte{'b'})
