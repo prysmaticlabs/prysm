@@ -48,22 +48,41 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeac
 	return blk, err
 }
 
-// OriginBlockRoot returns the value written to the db in SaveOriginBlockRoot
+// OriginCheckpointBlockRoot returns the value written to the db in SaveOriginCheckpointBlockRoot
 // This is the root of a finalized block within the weak subjectivity period
 // at the time the chain was started, used to initialize the database and chain
 // without syncing from genesis.
-func (s *Store) OriginBlockRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.OriginBlockRoot")
+func (s *Store) OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error) {
+	_, span := trace.StartSpan(ctx, "BeaconDB.OriginCheckpointBlockRoot")
 	defer span.End()
 
 	var root [32]byte
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		rootSlice := bkt.Get(originBlockRootKey)
+		rootSlice := bkt.Get(originCheckpointBlockRootKey)
 		if rootSlice == nil {
 			return ErrNotFoundOriginBlockRoot
 		}
 		copy(root[:], rootSlice)
+		return nil
+	})
+
+	return root, err
+}
+
+// BackfillBlockRoot keeps track of the highest block available before the OriginCheckpointBlockRoot
+func (s *Store) BackfillBlockRoot(ctx context.Context) ([32]byte, error) {
+	_, span := trace.StartSpan(ctx, "BeaconDB.BackfillBlockRoot")
+	defer span.End()
+
+	var root [32]byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		rootSlice := bkt.Get(backfillBlockRootKey)
+		if len(rootSlice) == 0 {
+			return ErrNotFoundBackfillBlockRoot
+		}
+		root = bytesutil.ToBytes32(rootSlice)
 		return nil
 	})
 
@@ -325,6 +344,22 @@ func (s *Store) GenesisBlock(ctx context.Context) (block.SignedBeaconBlock, erro
 	return blk, err
 }
 
+func (s *Store) GenesisBlockRoot(ctx context.Context) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisBlockRoot")
+	defer span.End()
+	var root [32]byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		r := bkt.Get(genesisBlockRootKey)
+		if len(r) == 0 {
+			return ErrNotFoundGenesisBlockRoot
+		}
+		root = bytesutil.ToBytes32(r)
+		return nil
+	})
+	return root, err
+}
+
 // SaveGenesisBlockRoot to the db.
 func (s *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	_, span := trace.StartSpan(ctx, "BeaconDB.SaveGenesisBlockRoot")
@@ -335,16 +370,27 @@ func (s *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) er
 	})
 }
 
-// SaveOriginBlockRoot is used to keep track of the block root used for origin sync.
+// SaveOriginCheckpointBlockRoot is used to keep track of the block root used for syncing from a checkpoint origin.
 // This should be a finalized block from within the current weak subjectivity period.
 // This value is used by a running beacon chain node to locate the state at the beginning
 // of the chain history, in places where genesis would typically be used.
-func (s *Store) SaveOriginBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	_, span := trace.StartSpan(ctx, "BeaconDB.SaveOriginBlockRoot")
+func (s *Store) SaveOriginCheckpointBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveOriginCheckpointBlockRoot")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
-		return bucket.Put(originBlockRootKey, blockRoot[:])
+		return bucket.Put(originCheckpointBlockRootKey, blockRoot[:])
+	})
+}
+
+// SaveBackfillBlockRoot is used to keep track of the most recently backfilled block root when
+// the node was initialized via checkpoint sync.
+func (s *Store) SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveBackfillBlockRoot")
+	defer span.End()
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(blocksBucket)
+		return bucket.Put(backfillBlockRootKey, blockRoot[:])
 	})
 }
 
