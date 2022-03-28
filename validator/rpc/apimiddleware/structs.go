@@ -63,11 +63,6 @@ type deleteRemoteKeysRequestJson struct {
 	PublicKeys []string `json:"pubkeys" hex:"true"`
 }
 
-type statusRemoteKeysJson struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
-}
-
 type deleteRemoteKeysResponseJson struct {
 	Statuses []*statusJson `json:"data"`
 }

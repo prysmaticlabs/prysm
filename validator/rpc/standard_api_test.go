@@ -528,7 +528,7 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 }
 
 func TestServer_ListRemoteKeys(t *testing.T) {
-	
+
 }
 
 func TestServer_ImportRemoteKeys(t *testing.T) {
