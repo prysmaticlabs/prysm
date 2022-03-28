@@ -100,7 +100,9 @@ func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
-	defer newPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
+	defer func() {
+		newPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
 
 	result := &pb.PayloadStatus{}
 	err := c.rpc.CallContext(ctx, result, NewPayloadMethod, payload)
@@ -131,7 +133,9 @@ func (c *Client) ForkchoiceUpdated(
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ForkchoiceUpdated")
 	defer span.End()
 	start := time.Now()
-	defer forkchoiceUpdatedLatency.Observe(float64(time.Since(start).Milliseconds()))
+	defer func() {
+		forkchoiceUpdatedLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
 
 	result := &ForkchoiceUpdatedResponse{}
 	err := c.rpc.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
@@ -162,7 +166,9 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
-	defer getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
+	defer func() {
+		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
 
 	result := &pb.ExecutionPayload{}
 	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
