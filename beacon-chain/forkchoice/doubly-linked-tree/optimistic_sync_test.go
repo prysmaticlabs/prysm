@@ -86,6 +86,12 @@ func TestPruneInvalid(t *testing.T) {
 				[32]byte{'d'},
 			},
 		},
+		{
+			[32]byte{'g'},
+			[32]byte{'E'},
+			8,
+			[][32]byte{[32]byte{'i'}, [32]byte{'h'}, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'g'}},
+		},
 	}
 	for _, tc := range tests {
 		ctx := context.Background()
