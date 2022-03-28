@@ -289,8 +289,9 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		Step:      1,
 	}
 	for i := 0; i < len(peers); i++ {
-		if blocks, err := f.requestBlocks(ctx, req, peers[i]); err == nil {
-			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
+		blocks, err := f.requestBlocks(ctx, req, peers[i])
+		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
+		if err == nil {
 			return blocks, peers[i], err
 		}
 	}
