@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -93,11 +92,7 @@ func (r *testRunner) run() {
 	// Web3 remote signer.
 	var web3RemoteSigner *components.Web3RemoteSigner
 	if config.UseWeb3RemoteSigner {
-		cfg, err := bazel.Runfile("config/params/testdata/e2e_config.yaml")
-		if err != nil {
-			t.Fatal(err)
-		}
-		web3RemoteSigner = components.NewWeb3RemoteSigner(cfg)
+		web3RemoteSigner = components.NewWeb3RemoteSigner()
 		g.Go(func() error {
 			if err := web3RemoteSigner.Start(ctx); err != nil {
 				return errors.Wrap(err, "failed to start web3 remote signer")
