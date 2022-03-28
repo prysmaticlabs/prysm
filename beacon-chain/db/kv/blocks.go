@@ -25,7 +25,6 @@ import (
 
 // used to represent errors for inconsistent slot ranges.
 var errInvalidSlotRange = errors.New("invalid end slot and start slot provided")
-var errEmptyBucket = errors.New("unexpectedly empty bucket")
 
 // Block retrieval by root.
 func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
