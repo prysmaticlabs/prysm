@@ -31,6 +31,9 @@ const (
 	lookaheadSteps = 8
 	// noRequiredPeersErrMaxRetries defines number of retries when no required peers are found.
 	noRequiredPeersErrMaxRetries = 1000
+	// noRequiredPeersErrMinReadjustment defines number of retries when no required peers are found
+	// for thoe node to readjust the highest expected slot.
+	noRequiredPeersErrMinReadjustment = 50
 	// noRequiredPeersErrRefreshInterval defines interval for which queue will be paused before
 	// making the next attempt to obtain data.
 	noRequiredPeersErrRefreshInterval = 15 * time.Second
@@ -232,6 +235,12 @@ func (q *blocksQueue) loop() {
 						} else {
 							q.exitConditions.noRequiredPeersErrRetries++
 							log.Debug("Waiting for finalized peers")
+							// Re-adjust highest expected slot, in the event we
+							// cannot find the appropriate number of peers to sync with.
+							if q.exitConditions.noRequiredPeersErrRetries > noRequiredPeersErrMinReadjustment &&
+								q.highestExpectedSlot > q.blocksFetcher.bestNonFinalizedSlot() {
+								q.highestExpectedSlot = q.blocksFetcher.bestNonFinalizedSlot()
+							}
 							time.Sleep(noRequiredPeersErrRefreshInterval)
 						}
 						continue
