@@ -2,9 +2,10 @@ package backfill
 
 import (
 	"context"
+	"testing"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"testing"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
