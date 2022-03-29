@@ -6,6 +6,7 @@ package powchain
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -1053,6 +1054,10 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 
 // Initializes a connection to the engine API if an execution provider endpoint is set.
 func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
+	// If Bellatrix fork epoch is not set, we do not run this check.
+	if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
+		return nil
+	}
 	u, err := url.Parse(s.CurrentETH1Endpoint())
 	if err != nil {
 		return nil
