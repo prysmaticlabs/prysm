@@ -34,7 +34,7 @@ const (
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
 	// DefaultTimeout for HTTP.
-	DefaultTimeout = time.Second * 5
+	DefaultTimeout = time.Second * 6
 )
 
 // ForkchoiceUpdatedResponse is the response kind received by the
