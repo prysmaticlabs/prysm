@@ -447,10 +447,12 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	log.WithFields(epochSummaryFields).Info("Previous epoch aggregated voting summary")
 
 	var totalStartBal, totalPrevBal uint64
+	v.prevBalanceLock.RLock()
 	for i, val := range v.startBalances {
 		totalStartBal += val
 		totalPrevBal += v.prevBalance[i]
 	}
+	v.prevBalanceLock.RUnlock()
 
 	if totalStartBal == 0 || summary.totalAttestedCount == 0 {
 		log.Error("Failed to print launch summary: one or more divisors is 0")
