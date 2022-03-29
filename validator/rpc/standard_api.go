@@ -30,7 +30,7 @@ func (s *Server) ListKeystores(
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due beacon node unavailable): %v", err)
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Derived && s.wallet.KeymanagerKind() != keymanager.Local {
 		return nil, status.Errorf(codes.FailedPrecondition, "Prysm validator keys are not stored locally with this keymanager type.")
@@ -67,7 +67,7 @@ func (s *Server) ImportKeystores(
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager (possibly due beacon node unavailable): %v", err)
 	}
 	importer, ok := km.(keymanager.Importer)
 	if !ok {
@@ -150,7 +150,7 @@ func (s *Server) DeleteKeystores(
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager (possibly due beacon node unavailable): %v", err)
 	}
 	deleter, ok := km.(keymanager.Deleter)
 	if !ok {
@@ -267,7 +267,7 @@ func (s *Server) ListRemoteKeys(ctx context.Context, _ *empty.Empty) (*ethpbserv
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due beacon node unavailable): %v", err)
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
 		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
@@ -299,7 +299,7 @@ func (s *Server) ImportRemoteKeys(ctx context.Context, req *ethpbservice.ImportR
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Could not get Prysm keymanager (possibly due beacon node unavailable): %v", err))
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
 		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
@@ -345,7 +345,7 @@ func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteR
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due beacon node unavailable): %v", err)
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
 		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")

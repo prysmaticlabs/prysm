@@ -271,24 +271,28 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var err error
-
-	// Read the wallet password file from the cli context.
-	if err = setWalletPasswordFilePath(cliCtx); err != nil {
-		return errors.Wrap(err, "could not read wallet password file")
-	}
-
-	// Read the wallet from the specified path.
-	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		return nil, nil
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
-	c.wallet = w
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if c.wallet != nil {
-		dataDir = c.wallet.AccountsDir()
+	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+		c.wallet = wallet.NewWalletForWeb3Signer()
+	} else {
+		// Read the wallet password file from the cli context.
+		if err = setWalletPasswordFilePath(cliCtx); err != nil {
+			return errors.Wrap(err, "could not read wallet password file")
+		}
+
+		// Read the wallet from the specified path.
+		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+			return nil, nil
+		})
+		if err != nil {
+			return errors.Wrap(err, "could not open wallet")
+		}
+		c.wallet = w
+		if c.wallet != nil {
+			dataDir = c.wallet.AccountsDir()
+		}
 	}
+
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
 	}
