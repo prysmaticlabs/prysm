@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -76,12 +75,6 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		log.WithError(err).Error("Could not submit sync committee message")
 		return
 	}
-
-	log.WithFields(logrus.Fields{
-		"slot":           msg.Slot,
-		"blockRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
-		"validatorIndex": msg.ValidatorIndex,
-	}).Info("Submitted new sync message")
 }
 
 // SubmitSignedContributionAndProof submits the signed sync committee contribution and proof to the beacon chain.
@@ -164,14 +157,6 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			log.Errorf("Could not submit signed contribution and proof: %v", err)
 			return
 		}
-
-		log.WithFields(logrus.Fields{
-			"slot":              contributionAndProof.Contribution.Slot,
-			"blockRoot":         fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
-			"subcommitteeIndex": contributionAndProof.Contribution.SubcommitteeIndex,
-			"aggregatorIndex":   contributionAndProof.AggregatorIndex,
-			"bitsCount":         contributionAndProof.Contribution.AggregationBits.Count(),
-		}).Info("Submitted new sync contribution and proof")
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/sirupsen/logrus"
 )
 
 // SkipSlotCache exists for the unlikely scenario that is a large gap between the head state and
@@ -28,5 +29,6 @@ func cacheKey(_ context.Context, state state.ReadOnlyBeaconState) ([32]byte, err
 	if err != nil {
 		return [32]byte{}, err
 	}
+	logrus.Infof("checking with cache key of slot %d and root %#x", state.Slot(), r)
 	return hash.Hash(append(bytesutil.Bytes32(uint64(state.Slot())), r[:]...)), nil
 }

@@ -44,6 +44,7 @@ type CommitteeCache struct {
 	CommitteeCache *lru.Cache
 	lock           sync.RWMutex
 	inProgress     map[string]bool
+	disabled       bool
 }
 
 // committeeKeyFn takes the seed as the key to retrieve shuffled indices of a committee in a given epoch.
@@ -63,9 +64,20 @@ func NewCommitteesCache() *CommitteeCache {
 	}
 }
 
+func (c *CommitteeCache) Disable() {
+	c.disabled = true
+}
+
+func (c *CommitteeCache) Enable() {
+	c.disabled = false
+}
+
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
 func (c *CommitteeCache) Committee(ctx context.Context, slot types.Slot, seed [32]byte, index types.CommitteeIndex) ([]types.ValidatorIndex, error) {
+	if c.disabled {
+		return nil, nil
+	}
 	if err := c.checkInProgress(ctx, seed); err != nil {
 		return nil, err
 	}
@@ -116,6 +128,9 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 
 // ActiveIndices returns the active indices of a given seed stored in cache.
 func (c *CommitteeCache) ActiveIndices(ctx context.Context, seed [32]byte) ([]types.ValidatorIndex, error) {
+	if c.disabled {
+		return nil, nil
+	}
 	if err := c.checkInProgress(ctx, seed); err != nil {
 		return nil, err
 	}
@@ -138,6 +153,9 @@ func (c *CommitteeCache) ActiveIndices(ctx context.Context, seed [32]byte) ([]ty
 
 // ActiveIndicesCount returns the active indices count of a given seed stored in cache.
 func (c *CommitteeCache) ActiveIndicesCount(ctx context.Context, seed [32]byte) (int, error) {
+	if c.disabled {
+		return 0, nil
+	}
 	if err := c.checkInProgress(ctx, seed); err != nil {
 		return 0, err
 	}
@@ -160,6 +178,9 @@ func (c *CommitteeCache) ActiveIndicesCount(ctx context.Context, seed [32]byte) 
 
 // HasEntry returns true if the committee cache has a value.
 func (c *CommitteeCache) HasEntry(seed string) bool {
+	if c.disabled {
+		return false
+	}
 	_, ok := c.CommitteeCache.Get(seed)
 	return ok
 }

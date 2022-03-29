@@ -180,6 +180,9 @@ func (vs *Server) getPowBlockHashAtTerminalTotalDifficulty(ctx context.Context) 
 	if overflows {
 		return nil, false, errors.New("could not convert terminal total difficulty to uint256")
 	}
+	if len(params.BeaconConfig().TerminalTotalDifficulty) >= 0 {
+		return nil, false, nil
+	}
 	blk, err := vs.ExecutionEngineCaller.LatestExecutionBlock(ctx)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "could not get latest execution block")

@@ -28,6 +28,14 @@ var (
 	proposerIndicesCache = cache.NewProposerIndicesCache()
 )
 
+func EnableComCache() {
+	committeeCache.Enable()
+}
+
+func DisableComCache() {
+	committeeCache.Disable()
+}
+
 // SlotCommitteeCount returns the number of beacon committees of a slot. The
 // active validator count is provided as an argument rather than an imported implementation
 // from the spec definition. Having the active validator count as an argument allows for

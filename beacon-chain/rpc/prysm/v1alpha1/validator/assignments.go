@@ -3,6 +3,10 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -16,10 +20,12 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -136,6 +142,49 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+	}
+	helpers.DisableComCache()
+	committeeAssignments2, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+	}
+	helpers.EnableComCache()
+	comMap := make(map[string][]types.ValidatorIndex)
+	comMap2 := make(map[string][]types.ValidatorIndex)
+	for _, v := range committeeAssignments {
+		comMap[fmt.Sprintf("%d,%d", v.CommitteeIndex, v.AttesterSlot)] = v.Committee
+	}
+	for _, v := range committeeAssignments2 {
+		comMap2[fmt.Sprintf("%d,%d", v.CommitteeIndex, v.AttesterSlot)] = v.Committee
+	}
+	for k, v := range comMap {
+		sep := strings.Split(k, ",")
+		comIdx, err := strconv.Atoi(sep[0])
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+		}
+		atSlot, err := strconv.Atoi(sep[1])
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+		}
+		val2, ok := comMap2[k]
+		if !ok {
+			logrus.Infof("Committee Index of %d at slot %d has committee of %v, but no cache shuffle doesnt have it", comIdx, atSlot, v)
+			continue
+		}
+		copiedV := make([]types.ValidatorIndex, len(v))
+		copy(copiedV, v)
+		copiedVal2 := make([]types.ValidatorIndex, len(val2))
+		copy(copiedVal2, v)
+		sort.Slice(copiedV, func(i, j int) bool {
+			return uint64(copiedV[i]) < uint64(copiedV[j])
+		})
+		sort.Slice(copiedVal2, func(i, j int) bool {
+			return uint64(copiedVal2[i]) < uint64(copiedVal2[j])
+		})
+		if !equality.DeepEqual(copiedV, copiedVal2) {
+			logrus.Infof("Committee Index of %d at slot %d has committee of %v, but no cache shuffle has %v", comIdx, atSlot, copiedV, copiedVal2)
+		}
 	}
 	// Query the next epoch assignments for committee subnet subscriptions.
 	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch+1)

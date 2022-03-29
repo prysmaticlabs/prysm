@@ -169,7 +169,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 
 	// Verify validator index is within the beacon committee.
 	if err := validateIndexInCommittee(ctx, bs, signed.Message.Aggregate, signed.Message.AggregatorIndex); err != nil {
-		wrappedErr := errors.Wrapf(err, "Could not validate index in committee")
+		wrappedErr := errors.Wrapf(err, "Could not validate index in committee for agg index %d, com idx %d and slot %d", signed.Message.AggregatorIndex, signed.Message.Aggregate.Data.CommitteeIndex, signed.Message.Aggregate.Data.Slot)
 		tracing.AnnotateError(span, wrappedErr)
 		return pubsub.ValidationReject, wrappedErr
 	}

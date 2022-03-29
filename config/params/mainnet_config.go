@@ -24,9 +24,9 @@ const (
 	// Genesis Fork Epoch for the mainnet config.
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
-	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
+	mainnetAltairForkEpoch = 8 // Oct 27, 2021, 10:56:23am UTC
 	// Placeholder for the merge epoch until it is decided
-	mainnetBellatrixForkEpoch = math.MaxUint64
+	mainnetBellatrixForkEpoch = 10
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -103,8 +103,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Time parameter constants.
 	MinAttestationInclusionDelay:     1,
-	SecondsPerSlot:                   12,
-	SlotsPerEpoch:                    32,
+	SecondsPerSlot:                   6,
+	SlotsPerEpoch:                    6,
 	SqrRootSlotsPerEpoch:             5,
 	MinSeedLookahead:                 1,
 	MaxSeedLookahead:                 4,
