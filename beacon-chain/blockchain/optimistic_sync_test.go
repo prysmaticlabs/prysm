@@ -47,8 +47,13 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
 		WithForkChoiceStore(fcs),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
 	service, err := NewService(ctx, opts...)
+	st, _ := util.DeterministicGenesisState(t, 1)
+	service.head = &head{
+		state: st,
+	}
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 

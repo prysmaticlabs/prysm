@@ -176,6 +176,7 @@ func CommitteeAssignments(
 	}
 	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, params.BeaconConfig().SlotsPerEpoch)
 	// Proposal epochs do not have a look ahead, so we skip them over here.
+	validProposalEpoch := epoch < nextEpoch
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
 		if slot == 0 {
@@ -189,6 +190,12 @@ func CommitteeAssignments(
 			return nil, nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
 		}
 		proposerIndexToSlots[i] = append(proposerIndexToSlots[i], slot)
+	}
+
+	if !validProposalEpoch {
+		if err := state.SetSlot(state.Slot() - params.BeaconConfig().SlotsPerEpoch); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	activeValidatorIndices, err := ActiveValidatorIndices(ctx, state, epoch)
