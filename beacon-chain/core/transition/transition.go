@@ -211,7 +211,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		return nil, err
 	}
 
-	if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() < slot {
+	if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() <= slot {
 		highestSlot = cachedState.Slot()
 		state = cachedState
 	}
@@ -220,7 +220,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		if err != nil {
 			return nil, err
 		}
-		if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() < slot {
+		if cachedState != nil && !cachedState.IsNil() && cachedState.Slot() <= slot {
 			highestSlot = cachedState.Slot()
 			state = cachedState
 		}
