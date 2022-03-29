@@ -13,3 +13,9 @@ var ErrNotFoundState = kv.ErrNotFoundState
 
 // ErrNotFoundOriginBlockRoot wraps ErrNotFound for an error specific to the origin block root.
 var ErrNotFoundOriginBlockRoot = kv.ErrNotFoundOriginBlockRoot
+
+// ErrNotFoundOriginBlockRoot wraps ErrNotFound for an error specific to the origin block root.
+var ErrNotFoundBackfillBlockRoot = kv.ErrNotFoundBackfillBlockRoot
+
+// ErrNotFoundGenesisBlockRoot means no genesis block root was found, indicating the db was not initialized with genesis
+var ErrNotFoundGenesisBlockRoot = kv.ErrNotFoundGenesisBlockRoot
