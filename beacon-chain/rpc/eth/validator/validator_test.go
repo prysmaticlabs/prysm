@@ -26,7 +26,6 @@ import (
 	p2pmock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -1020,7 +1019,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mocks.EngineClient{
+			ExecutionEngineCaller: &mockPOW.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
