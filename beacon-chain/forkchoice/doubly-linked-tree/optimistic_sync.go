@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 )
 
-func (s *Store) setOptimisticToInvalid(ctx context.Context, root, payload [32]byte) ([][32]byte, error) {
+func (s *Store) setOptimisticToInvalid(ctx context.Context, root, payloadHash [32]byte) ([][32]byte, error) {
 	s.nodesLock.Lock()
 	invalidRoots := make([][32]byte, 0)
 	node, ok := s.nodeByRoot[root]
@@ -15,13 +15,13 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, payload [32]by
 		return invalidRoots, ErrNilNode
 	}
 	// Check if last valid hash is an ancestor of the passed node.
-	lastValid, ok := s.nodeByPayload[payload]
+	lastValid, ok := s.nodeByPayload[payloadHash]
 	if !ok || lastValid == nil {
 		s.nodesLock.Unlock()
 		return invalidRoots, errInvalidOptimisticStatus
 	}
 	firstInvalid := node
-	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != payload; firstInvalid = firstInvalid.parent {
+	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != payloadHash; firstInvalid = firstInvalid.parent {
 		if ctx.Err() != nil {
 			s.nodesLock.Unlock()
 			return invalidRoots, ctx.Err()
