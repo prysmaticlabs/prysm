@@ -11,6 +11,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -48,8 +49,7 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
-	minSlot                 types.Slot
-	beaconDBInitType        BeaconDBInitType
+	backfillStatus          *backfill.Status
 }
 
 // This tracks the config in the event of long non-finality,
@@ -71,27 +71,14 @@ type finalizedInfo struct {
 	lock  sync.RWMutex
 }
 
-func WithMinimumSlot(min types.Slot) StateGenOption {
-	return func(s *State) {
-		s.minSlot = min
-	}
-}
-
-type BeaconDBInitType uint
-
-const (
-	BeaconDBInitTypeGenesisState = iota
-	BeaconDBInitTypeCheckpoint
-)
-
-func WithInitType(t BeaconDBInitType) StateGenOption {
-	return func(s *State) {
-		s.beaconDBInitType = t
-	}
-}
-
 // StateGenOption is a functional option for controlling the initialization of a *State value
 type StateGenOption func(*State)
+
+func WithBackfillStatus(bfs *backfill.Status) StateGenOption {
+	return func(sg *State) {
+		sg.backfillStatus = bfs
+	}
+}
 
 // New returns a new state management object.
 func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
@@ -104,12 +91,11 @@ func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
 		saveHotStateDB: &saveHotStateDbConfig{
 			duration: defaultHotStateDBInterval,
 		},
-		// defaults to minimumSlot of zero (genesis), overridden by checkpoint sync
-		minSlot: params.BeaconConfig().GenesisSlot,
 	}
 	for _, o := range opts {
 		o(s)
 	}
+
 	return s
 }
 
@@ -166,8 +152,4 @@ func (s *State) finalizedState() state.BeaconState {
 	s.finalizedInfo.lock.RLock()
 	defer s.finalizedInfo.lock.RUnlock()
 	return s.finalizedInfo.state.Copy()
-}
-
-func (s *State) minimumSlot() types.Slot {
-	return s.minSlot
 }

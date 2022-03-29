@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -56,6 +57,10 @@ type EngineCaller interface {
 func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
+	start := time.Now()
+	defer func() {
+		newPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
 
 	result := &pb.PayloadStatus{}
 	err := s.engineRPCClient.CallContext(ctx, result, NewPayloadMethod, payload)
@@ -85,6 +90,10 @@ func (s *Service) ForkchoiceUpdated(
 ) (*pb.PayloadIDBytes, []byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ForkchoiceUpdated")
 	defer span.End()
+	start := time.Now()
+	defer func() {
+		forkchoiceUpdatedLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
 
 	result := &ForkchoiceUpdatedResponse{}
 	err := s.engineRPCClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
@@ -114,6 +123,10 @@ func (s *Service) ForkchoiceUpdated(
 func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
+	start := time.Now()
+	defer func() {
+		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
 
 	result := &pb.ExecutionPayload{}
 	err := s.engineRPCClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
