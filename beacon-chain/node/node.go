@@ -45,6 +45,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/backfill"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/checkpoint"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -103,6 +105,8 @@ type BeaconNode struct {
 	slasherAttestationsFeed *event.Feed
 	finalizedStateAtStartUp state.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
+	blockchainFlagOpts      []blockchain.Option
+	CheckpointInitializer   checkpoint.Initializer
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -165,13 +169,19 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
 	}
+
 	log.Debugln("Starting Slashing DB")
 	if err := beacon.startSlasherDB(cliCtx); err != nil {
 		return nil, err
 	}
 
+	bfs := backfill.NewStatus(beacon.db)
+	if err := bfs.Reload(ctx); err != nil {
+		return nil, errors.Wrap(err, "backfill status initialization error")
+	}
+
 	log.Debugln("Starting State Gen")
-	if err := beacon.startStateGen(); err != nil {
+	if err := beacon.startStateGen(ctx, bfs); err != nil {
 		return nil, err
 	}
 
@@ -242,7 +252,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	// db.DatabasePath is the path to the containing directory
 	// db.NewDBFilename expands that to the canonical full path using
-	// the same constuction as NewDB()
+	// the same construction as NewDB()
 	c, err := newBeaconNodePromCollector(db.NewDBFilename(beacon.db.DatabasePath()))
 	if err != nil {
 		return nil, err
@@ -399,6 +409,13 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
 		return err
 	}
+
+	if b.CheckpointInitializer != nil {
+		if err := b.CheckpointInitializer.Initialize(b.ctx, d); err != nil {
+			return err
+		}
+	}
+
 	knownContract, err := b.db.DepositContractAddress(b.ctx)
 	if err != nil {
 		return err
@@ -466,10 +483,11 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen() error {
-	b.stateGen = stategen.New(b.db)
+func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status) error {
+	opts := []stategen.StateGenOption{stategen.WithBackfillStatus(bfs)}
+	sg := stategen.New(b.db, opts...)
 
-	cp, err := b.db.FinalizedCheckpoint(b.ctx)
+	cp, err := b.db.FinalizedCheckpoint(ctx)
 	if err != nil {
 		return err
 	}
@@ -477,7 +495,7 @@ func (b *BeaconNode) startStateGen() error {
 	r := bytesutil.ToBytes32(cp.Root)
 	// Consider edge case where finalized root are zeros instead of genesis root hash.
 	if r == params.BeaconConfig().ZeroHash {
-		genesisBlock, err := b.db.GenesisBlock(b.ctx)
+		genesisBlock, err := b.db.GenesisBlock(ctx)
 		if err != nil {
 			return err
 		}
@@ -489,10 +507,12 @@ func (b *BeaconNode) startStateGen() error {
 		}
 	}
 
-	b.finalizedStateAtStartUp, err = b.stateGen.StateByRoot(b.ctx, r)
+	b.finalizedStateAtStartUp, err = sg.StateByRoot(ctx, r)
 	if err != nil {
 		return err
 	}
+
+	b.stateGen = sg
 	return nil
 }
 
