@@ -2,6 +2,8 @@ package protoarray
 
 import (
 	"context"
+
+	"github.com/prysmaticlabs/prysm/config/params"
 )
 
 // IsOptimistic returns true if this node is optimistically synced
@@ -99,8 +101,24 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [
 		validNode.weight -= weight
 	}
 
+	// Find the current proposer boost (it should be set to zero if an
+	// INVALID block was boosted
+	f.store.proposerBoostLock.RLock()
+	boostRoot := f.store.proposerBoostRoot
+	previousBoostRoot := f.store.previousProposerBoostRoot
+	f.store.proposerBoostLock.RUnlock()
+
 	// Remove the invalid roots from our store maps and adjust their weight
 	// to zero
+	boosted := false
+	previouslyBoosted := false
+	if node.root == boostRoot {
+		boosted = true
+	}
+	if node.root == previousBoostRoot {
+		previouslyBoosted = true
+	}
+
 	invalidIndices := map[uint64]bool{firstInvalidIndex: true}
 	node.optimistic = INVALID
 	node.weight = 0
@@ -116,12 +134,29 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [
 			f.store.nodesLock.Unlock()
 			return invalidRoots, errInvalidOptimisticStatus
 		}
+		if !boosted && invalidNode.root == boostRoot {
+			boosted = true
+		}
+		if !previouslyBoosted && invalidNode.root == previousBoostRoot {
+			previouslyBoosted = true
+		}
 		invalidNode.optimistic = INVALID
 		invalidIndices[index] = true
 		invalidNode.weight = 0
 		delete(f.store.nodesIndices, invalidNode.root)
 		delete(f.store.canonicalNodes, invalidNode.root)
 		delete(f.store.payloadIndices, invalidNode.payloadHash)
+	}
+	if boosted {
+		if err := f.ResetBoostedProposerRoot(ctx); err != nil {
+			return invalidRoots, err
+		}
+	}
+	if previouslyBoosted {
+		f.store.proposerBoostLock.Lock()
+		f.store.previousProposerBoostRoot = params.BeaconConfig().ZeroHash
+		f.store.previousProposerBoostScore = 0
+		f.store.proposerBoostLock.Unlock()
 	}
 
 	for index := range invalidIndices {

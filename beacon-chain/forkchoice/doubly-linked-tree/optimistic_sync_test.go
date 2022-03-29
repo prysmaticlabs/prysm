@@ -116,3 +116,26 @@ func TestPruneInvalid(t *testing.T) {
 		require.Equal(t, tc.wantedNodeNumber, f.NodeCount())
 	}
 }
+
+// This is a regression test (10445)
+func TestSetOptimisticToInvalid_ProposerBoost(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
+	f.store.proposerBoostLock.Lock()
+	f.store.proposerBoostRoot = [32]byte{'c'}
+	f.store.previousProposerBoostScore = 10
+	f.store.previousProposerBoostRoot = [32]byte{'b'}
+	f.store.proposerBoostLock.Unlock()
+
+	_, err := f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'A'})
+	require.NoError(t, err)
+	f.store.proposerBoostLock.RLock()
+	require.Equal(t, uint64(0), f.store.previousProposerBoostScore)
+	require.DeepEqual(t, [32]byte{}, f.store.proposerBoostRoot)
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash, f.store.previousProposerBoostRoot)
+	f.store.proposerBoostLock.RUnlock()
+}
