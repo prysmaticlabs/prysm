@@ -1161,7 +1161,9 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 
 		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+		wrapped, err := wrapper.WrappedSignedBeaconBlock(genesis)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wrapped), "Could not save genesis block")
 
 		parentRoot, err := genesis.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root")
@@ -1264,7 +1266,8 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedAltairBlock, err := wrapper.WrappedAltairSignedBeaconBlock(genesisBlock)
+		wrappedAltairBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+		require.NoError(t, err)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrappedAltairBlock))
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
@@ -1407,7 +1410,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockBellatrix()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedBellatrixBlock, err := wrapper.WrappedBellatrixSignedBeaconBlock(genesisBlock)
+		wrappedBellatrixBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrappedBellatrixBlock))
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
