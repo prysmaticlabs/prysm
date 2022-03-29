@@ -6,6 +6,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -133,7 +134,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-
+	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 	service.notifyEngineIfChangedHead(service.headRoot())
 	hookErr := "could not notify forkchoice update"
 	finalizedErr := "could not get finalized checkpoint"
@@ -151,13 +152,20 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	finalized := &ethpb.Checkpoint{Root: r[:], Epoch: 0}
+	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		slot:  1,
 		root:  r,
 		block: wsb,
+		state: st,
 	}
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, 1)
 	service.store.SetFinalizedCheckpt(finalized)
 	service.notifyEngineIfChangedHead([32]byte{'b'})
 	require.LogsDoNotContain(t, hook, finalizedErr)
 	require.LogsDoNotContain(t, hook, hookErr)
+	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2)
+	require.Equal(t, true, has)
+	require.Equal(t, types.ValidatorIndex(1), vId)
+	require.Equal(t, uint64(1), payloadID)
 }
