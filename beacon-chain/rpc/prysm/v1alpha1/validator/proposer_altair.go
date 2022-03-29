@@ -60,7 +60,7 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not build block data: %v", err)
 	}
 	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedAltairSignedBeaconBlock(
+	wsb, err := wrapper.WrappedSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {
