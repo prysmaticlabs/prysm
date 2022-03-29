@@ -12,6 +12,7 @@ go_library(
         "errors.go",
         "log.go",
         "log_processing.go",
+        "metrics.go",
         "options.go",
         "prometheus.go",
         "provider.go",

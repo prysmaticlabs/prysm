@@ -11,9 +11,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
-	mockChain2 "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -38,11 +37,8 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 		m := &mocks.EngineClient{}
 		m.Err = errors.New("something went wrong")
 
-		mockChain := &mockChain2.MockStateNotifier{}
-		srv := &Service{
-			cfg: &config{stateNotifier: mockChain},
-		}
-		srv.engineAPIClient = m
+		srv := setupTransitionConfigTest(t)
+		srv.cfg.stateNotifier = &mockChain.MockStateNotifier{}
 		checkTransitionPollingInterval = time.Millisecond
 		ctx, cancel := context.WithCancel(ctx)
 		go srv.checkTransitionConfiguration(ctx, make(chan *statefeed.BlockProcessedData, 1))
@@ -51,24 +47,13 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 		require.LogsContain(t, hook, "Could not check configuration values")
 	})
 
-	srv := setupTransitionConfigTest(t)
-	checkTransitionPollingInterval = time.Millisecond
-	ctx, cancel := context.WithCancel(ctx)
-	go srv.checkTransitionConfiguration(ctx)
-	<-time.After(100 * time.Millisecond)
-	cancel()
-	require.LogsContain(t, hook, "Could not check configuration values")
-
 	t.Run("block containing execution payload exits routine", func(t *testing.T) {
 		ctx := context.Background()
 		m := &mocks.EngineClient{}
 		m.Err = errors.New("something went wrong")
+		srv := setupTransitionConfigTest(t)
+		srv.cfg.stateNotifier = &mockChain.MockStateNotifier{}
 
-		mockChain := &mockChain2.MockStateNotifier{}
-		srv := &Service{
-			cfg: &config{stateNotifier: mockChain},
-		}
-		srv.engineAPIClient = m
 		checkTransitionPollingInterval = time.Millisecond
 		ctx, cancel := context.WithCancel(ctx)
 		exit := make(chan bool)
@@ -158,7 +143,9 @@ func setupTransitionConfigTest(t testing.TB) *Service {
 	require.NoError(t, err)
 	defer rpcClient.Close()
 
-	service := &Service{}
+	service := &Service{
+		cfg: &config{},
+	}
 	service.engineRPCClient = rpcClient
 	return service
 }
