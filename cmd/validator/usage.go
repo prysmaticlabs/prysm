@@ -109,6 +109,9 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableDutyCountDown,
 			flags.Web3SignerURLFlag,
 			flags.Web3SignerPublicValidatorKeysFlag,
+			flags.FeeRecipientConfigFileFlag,
+			flags.FeeRecipientConfigURLFlag,
+			flags.SuggestedFeeRecipientFlag,
 		},
 	},
 	{

@@ -1390,7 +1390,7 @@ var (
 
 	pattern_BeaconValidator_ProduceBlockV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v2", "validator", "blocks", "slot"}, ""))
 
-	pattern_BeaconValidator_ProduceBlindedBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v2", "validator", "blinded_blocks", "slot"}, ""))
+	pattern_BeaconValidator_ProduceBlindedBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v1", "validator", "blinded_blocks", "slot"}, ""))
 
 	pattern_BeaconValidator_PrepareBeaconProposer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "prepare_beacon_proposer"}, ""))
 

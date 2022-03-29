@@ -104,34 +104,30 @@ func SetParticipationAndRewardProposer(
 	targetEpoch types.Epoch,
 	indices []uint64,
 	participatedFlags map[uint8]bool, totalBalance uint64) (state.BeaconState, error) {
-	var epochParticipation []byte
+	var proposerRewardNumerator uint64
 	currentEpoch := time.CurrentEpoch(beaconState)
-	var err error
+	var stateErr error
 	if targetEpoch == currentEpoch {
-		epochParticipation, err = beaconState.CurrentEpochParticipation()
-		if err != nil {
-			return nil, err
-		}
+		stateErr = beaconState.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
+			propRewardNum, epochParticipation, err := EpochParticipation(beaconState, indices, val, participatedFlags, totalBalance)
+			if err != nil {
+				return nil, err
+			}
+			proposerRewardNumerator = propRewardNum
+			return epochParticipation, nil
+		})
 	} else {
-		epochParticipation, err = beaconState.PreviousEpochParticipation()
-		if err != nil {
-			return nil, err
-		}
+		stateErr = beaconState.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
+			propRewardNum, epochParticipation, err := EpochParticipation(beaconState, indices, val, participatedFlags, totalBalance)
+			if err != nil {
+				return nil, err
+			}
+			proposerRewardNumerator = propRewardNum
+			return epochParticipation, nil
+		})
 	}
-
-	proposerRewardNumerator, epochParticipation, err := EpochParticipation(beaconState, indices, epochParticipation, participatedFlags, totalBalance)
-	if err != nil {
-		return nil, err
-	}
-
-	if targetEpoch == currentEpoch {
-		if err := beaconState.SetCurrentParticipationBits(epochParticipation); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := beaconState.SetPreviousParticipationBits(epochParticipation); err != nil {
-			return nil, err
-		}
+	if stateErr != nil {
+		return nil, stateErr
 	}
 
 	if err := RewardProposer(ctx, beaconState, proposerRewardNumerator); err != nil {

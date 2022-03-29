@@ -246,3 +246,13 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 // SubmitSignedContributionAndProof for mocking
 func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
+
+// UpdateFeeRecipient for mocking
+func (_ *FakeValidator) UpdateFeeRecipient(_ context.Context, _ keymanager.IKeymanager) error {
+	return nil
+}
+
+// SetPubKeyToValidatorIndexMap for mocking
+func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
+	return nil
+}

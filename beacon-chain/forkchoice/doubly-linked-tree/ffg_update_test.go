@@ -27,9 +27,9 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- justified: 1, finalized: 0
 	//            |
 	//            3 <- justified: 2, finalized: 1
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(2), indexToHash(1), 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(3), indexToHash(2), 2, 1))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 2, 1))
 
 	// With starting justified epoch at 0, the head should be 3:
 	//            0 <- start
@@ -89,17 +89,17 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//                              |   |
 	//  justified: 2, finalized: 0 -> 9  10 <- justified: 2, finalized: 0
 	// Left branch.
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(3), indexToHash(1), 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(5), indexToHash(3), 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(7), indexToHash(5), 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(9), indexToHash(7), 2, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(3), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(5), indexToHash(3), params.BeaconConfig().ZeroHash, 1, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(7), indexToHash(5), params.BeaconConfig().ZeroHash, 1, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(9), indexToHash(7), params.BeaconConfig().ZeroHash, 2, 0))
 	// Right branch.
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(4), indexToHash(2), 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(6), indexToHash(4), 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(8), indexToHash(6), 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(10), indexToHash(8), 2, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(4), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(8), indexToHash(6), params.BeaconConfig().ZeroHash, 1, 0))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(10), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 0))
 
 	// With start at 0, the head should be 10:
 	//           0  <-- start
@@ -185,7 +185,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	ctx := context.Background()
 	f := New(justifiedEpoch, finalizedEpoch)
-	err := f.InsertOptimisticBlock(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, justifiedEpoch, finalizedEpoch)
+	err := f.InsertOptimisticBlock(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, params.BeaconConfig().ZeroHash, justifiedEpoch, finalizedEpoch)
 	if err != nil {
 		return nil
 	}
