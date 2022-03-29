@@ -20,14 +20,14 @@ type testArgs struct {
 	useWeb3RemoteSigner bool
 }
 
-func TestEndToEnd_MinimalConfig(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          false,
-		useWeb3RemoteSigner: false,
-	})
-	// Calling Sleep method
-	time.Sleep(20 * time.Second)
-}
+//func TestEndToEnd_MinimalConfig(t *testing.T) {
+//	e2eMinimal(t, &testArgs{
+//		usePrysmSh:          false,
+//		useWeb3RemoteSigner: false,
+//	})
+//	// Calling Sleep method
+//	time.Sleep(20 * time.Second)
+//}
 
 // Run minimal e2e config with the current release validator against latest beacon node.
 // func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
