@@ -32,6 +32,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/core/transition/stateutils:go_default_library",
+        "//beacon-chain/state/state-native/v0:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
@@ -42,6 +43,7 @@ go_library(
         "//encoding/ssz:go_default_library",
         "//math:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//runtime/version:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",

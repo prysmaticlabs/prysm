@@ -3,7 +3,6 @@ package v0
 import (
 	types "github.com/prysmaticlabs/eth2-types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // GenesisTime of the beacon state as a uint64.
@@ -25,8 +24,8 @@ func (b *BeaconState) GenesisValidatorsRoot() []byte {
 // Version of the beacon state. This method
 // is strictly meant to be used without a lock
 // internally.
-func (_ *BeaconState) Version() int {
-	return version.Phase0
+func (b *BeaconState) Version() int {
+	return int(b.version)
 }
 
 // Slot of the current beacon chain state.

@@ -65,6 +65,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	b := &BeaconState{
+		version:                     Phase0,
 		genesisTime:                 st.GenesisTime,
 		genesisValidatorsRoot:       bytesutil.ToBytes32(st.GenesisValidatorsRoot),
 		slot:                        st.Slot,
@@ -148,6 +149,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (*BeaconState,
 
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
 	b := &BeaconState{
+		version:                     Altair,
 		genesisTime:                 st.GenesisTime,
 		genesisValidatorsRoot:       bytesutil.ToBytes32(st.GenesisValidatorsRoot),
 		slot:                        st.Slot,
@@ -235,6 +237,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 
 	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	b := &BeaconState{
+		version:                      Bellatrix,
 		genesisTime:                  st.GenesisTime,
 		genesisValidatorsRoot:        bytesutil.ToBytes32(st.GenesisValidatorsRoot),
 		slot:                         st.Slot,
@@ -436,11 +439,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	if len(b.merkleLayers) > 0 {
 		return nil
 	}
-	protoState, ok := b.ToProtoUnsafe().(*ethpb.BeaconState)
-	if !ok {
-		return errors.New("state is of the wrong type")
-	}
-	fieldRoots, err := computeFieldRoots(ctx, protoState)
+	fieldRoots, err := computeFieldRoots(ctx, b)
 	if err != nil {
 		return err
 	}
