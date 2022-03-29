@@ -248,3 +248,27 @@ func (b *BeaconState) slashingsVal() []uint64 {
 	copy(res, b.slashings)
 	return res
 }
+
+// inactivityScoresVal of validators participating in consensus on the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) inactivityScoresVal() []uint64 {
+	if b.inactivityScores == nil {
+		return nil
+	}
+
+	res := make([]uint64, len(b.inactivityScores))
+	copy(res, b.inactivityScores)
+	return res
+}
+
+// InactivityScores of validators participating in consensus on the beacon chain.
+func (b *BeaconState) InactivityScores() ([]uint64, error) {
+	if b.inactivityScores == nil {
+		return nil, nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.inactivityScoresVal(), nil
+}

@@ -199,3 +199,34 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 	b.addDirtyIndices(balances, []uint64{uint64(balIdx)})
 	return nil
 }
+
+// AppendInactivityScore for the beacon state.
+func (b *BeaconState) AppendInactivityScore(s uint64) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	scores := b.inactivityScores
+	if b.sharedFieldReferences[inactivityScores].Refs() > 1 {
+		scores = b.inactivityScoresVal()
+		b.sharedFieldReferences[inactivityScores].MinusRef()
+		b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1)
+	}
+
+	b.inactivityScores = append(scores, s)
+	b.markFieldAsDirty(inactivityScores)
+	return nil
+}
+
+// SetInactivityScores for the beacon state. Updates the entire
+// list to a new value by overwriting the previous one.
+func (b *BeaconState) SetInactivityScores(val []uint64) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[inactivityScores].MinusRef()
+	b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1)
+
+	b.inactivityScores = val
+	b.markFieldAsDirty(inactivityScores)
+	return nil
+}
