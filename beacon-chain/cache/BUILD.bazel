@@ -28,6 +28,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//tools:__subpackages__",
+        "//testing/spectest:__subpackages__",
     ],
     deps = [
         "//beacon-chain/state:go_default_library",
