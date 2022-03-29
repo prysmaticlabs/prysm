@@ -110,7 +110,7 @@ func Run(t *testing.T, config string, fork int) {
 							BlockRoot:       r,
 							BlockSlot:       beaconBlock.Block().Slot(),
 							CurrentSlot:     slotsSinceGenesis,
-							SecondsIntoSlot: 0,
+							SecondsIntoSlot: uint64(lastTick) % params.BeaconConfig().SecondsPerSlot,
 						}
 						require.NoError(t, service.ForkChoicer().BoostProposerRoot(ctx, args))
 						if step.Valid != nil && !*step.Valid {
