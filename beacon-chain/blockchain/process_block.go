@@ -109,15 +109,21 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
-		return err
-	}
 	postStateVersion, postStateHeader, err := getStateVersionAndPayload(postState)
 	if err != nil {
 		return err
 	}
-	if err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed, blockRoot); err != nil {
+	validated, err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed)
+	if err != nil {
 		return errors.Wrap(err, "could not verify new payload")
+	}
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
+		return err
+	}
+	if validated {
+		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
+			return errors.Wrap(err, "could not set optimistic block to valid")
+		}
 	}
 
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
@@ -376,15 +382,23 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	// blocks have been verified, add them to forkchoice and call the engine
 	for i, b := range blks {
 		s.saveInitSyncBlock(blockRoots[i], b)
-		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			return nil, nil, err
-		}
-		if err := s.notifyNewPayload(ctx,
+		validated, err := s.notifyNewPayload(ctx,
 			preVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].version,
 			preVersionAndHeaders[i].header,
-			postVersionAndHeaders[i].header, b, blockRoots[i]); err != nil {
+			postVersionAndHeaders[i].header, b)
+
+		if err != nil {
 			return nil, nil, err
+		}
+
+		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+			return nil, nil, err
+		}
+		if validated {
+			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoots[i]); err != nil {
+				return nil, nil, errors.Wrap(err, "could not set optimistic block to valid")
+			}
 		}
 
 		if _, err := s.notifyForkchoiceUpdate(ctx, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
