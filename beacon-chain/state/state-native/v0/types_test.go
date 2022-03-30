@@ -27,7 +27,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
-	customState, err := v0.InitializeFromProto(genesis)
+	customState, err := v0.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	cloned, ok := proto.Clone(genesis).(*ethpb.BeaconState)
 	assert.Equal(t, true, ok, "Object is not of type *ethpb.BeaconState")
@@ -36,7 +36,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 
 	r1, err := customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	beaconState, err := v0.InitializeFromProto(genesis)
+	beaconState, err := v0.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	r2, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	r1, err = customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis.Balances = balances
-	beaconState, err = v0.InitializeFromProto(genesis)
+	beaconState, err = v0.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	r2, err = beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
@@ -142,7 +142,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	params.SetupTestConfigCleanup(b)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(b, 64)
-	st, err := v0.InitializeFromProto(genesis)
+	st, err := v0.InitializeFromProtoPhase0(genesis)
 	require.NoError(b, err)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -184,7 +184,7 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(t, 64)
-	a, err := v0.InitializeFromProto(genesis)
+	a, err := v0.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	b := a.Copy()
 
@@ -221,7 +221,7 @@ func TestForkManualCopy_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(t, 64)
-	a, err := v0.InitializeFromProto(genesis)
+	a, err := v0.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	wantedFork := &ethpb.Fork{
 		PreviousVersion: []byte{'a', 'b', 'c'},

@@ -55,7 +55,7 @@ func TestInitializeFromProto(t *testing.T) {
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := v0.InitializeFromProto(tt.state)
+			_, err := v0.InitializeFromProtoPhase0(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {
@@ -98,7 +98,7 @@ func TestInitializeFromProtoUnsafe(t *testing.T) {
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := v0.InitializeFromProtoUnsafe(tt.state)
+			_, err := v0.InitializeFromProtoUnsafePhase0(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {
@@ -265,7 +265,7 @@ func BenchmarkBeaconState(b *testing.B) {
 	require.NoError(b, err)
 
 	b.Run("Vectorized SHA256", func(b *testing.B) {
-		st, err := v0.InitializeFromProtoUnsafe(pbState)
+		st, err := v0.InitializeFromProtoUnsafePhase0(pbState)
 		require.NoError(b, err)
 		_, err = st.HashTreeRoot(context.Background())
 		assert.NoError(b, err)

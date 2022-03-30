@@ -31,6 +31,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state/fieldtrie:go_default_library",
+        "//beacon-chain/state/state-native/v0/types:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
         "//config/params:go_default_library",

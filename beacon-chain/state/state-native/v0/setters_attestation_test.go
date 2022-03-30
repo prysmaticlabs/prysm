@@ -9,7 +9,7 @@ import (
 )
 
 func TestBeaconState_RotateAttestations(t *testing.T) {
-	st, err := InitializeFromProto(&ethpb.BeaconState{
+	st, err := InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:                      1,
 		CurrentEpochAttestations:  []*ethpb.PendingAttestation{{Data: &ethpb.AttestationData{Slot: 456}}},
 		PreviousEpochAttestations: []*ethpb.PendingAttestation{{Data: &ethpb.AttestationData{Slot: 123}}},

@@ -11,7 +11,7 @@ import (
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice(t *testing.T) {
 	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
-		return v0.InitializeFromProtoUnsafe(&ethpb.BeaconState{
+		return v0.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
 			Validators: nil,
 		})
 	})

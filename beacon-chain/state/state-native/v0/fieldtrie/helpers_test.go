@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v0/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -71,7 +72,7 @@ func TestValidateIndices_CompressedField(t *testing.T) {
 		RWMutex:     new(sync.RWMutex),
 		reference:   stateutil.NewRef(0),
 		fieldLayers: nil,
-		field:       types.Balances,
+		field:       v0types.Balances,
 		dataType:    types.CompressedArray,
 		length:      params.BeaconConfig().ValidatorRegistryLimit / 4,
 		numOfElems:  0,

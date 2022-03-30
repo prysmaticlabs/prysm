@@ -8,14 +8,14 @@ import (
 )
 
 func TestBeaconState_PreviousEpochAttestations(t *testing.T) {
-	s, err := InitializeFromProto(&ethpb.BeaconState{})
+	s, err := InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	atts, err := s.PreviousEpochAttestations()
 	require.NoError(t, err)
 	require.DeepEqual(t, []*ethpb.PendingAttestation(nil), atts)
 
 	want := []*ethpb.PendingAttestation{{ProposerIndex: 100}}
-	s, err = InitializeFromProto(&ethpb.BeaconState{PreviousEpochAttestations: want})
+	s, err = InitializeFromProtoPhase0(&ethpb.BeaconState{PreviousEpochAttestations: want})
 	require.NoError(t, err)
 	got, err := s.PreviousEpochAttestations()
 	require.NoError(t, err)
@@ -27,14 +27,14 @@ func TestBeaconState_PreviousEpochAttestations(t *testing.T) {
 }
 
 func TestBeaconState_CurrentEpochAttestations(t *testing.T) {
-	s, err := InitializeFromProto(&ethpb.BeaconState{})
+	s, err := InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	atts, err := s.CurrentEpochAttestations()
 	require.NoError(t, err)
 	require.DeepEqual(t, []*ethpb.PendingAttestation(nil), atts)
 
 	want := []*ethpb.PendingAttestation{{ProposerIndex: 101}}
-	s, err = InitializeFromProto(&ethpb.BeaconState{CurrentEpochAttestations: want})
+	s, err = InitializeFromProtoPhase0(&ethpb.BeaconState{CurrentEpochAttestations: want})
 	require.NoError(t, err)
 	got, err := s.CurrentEpochAttestations()
 	require.NoError(t, err)

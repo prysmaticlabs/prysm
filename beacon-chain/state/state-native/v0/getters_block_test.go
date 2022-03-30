@@ -12,10 +12,10 @@ func TestBeaconState_LatestBlockHeader(t *testing.T) {
 	testtmpl.VerifyBeaconStateLatestBlockHeader(
 		t,
 		func() (state.BeaconState, error) {
-			return InitializeFromProto(&ethpb.BeaconState{})
+			return InitializeFromProtoPhase0(&ethpb.BeaconState{})
 		},
 		func(BH *ethpb.BeaconBlockHeader) (state.BeaconState, error) {
-			return InitializeFromProto(&ethpb.BeaconState{LatestBlockHeader: BH})
+			return InitializeFromProtoPhase0(&ethpb.BeaconState{LatestBlockHeader: BH})
 		},
 	)
 }
@@ -24,10 +24,10 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 	testtmpl.VerifyBeaconStateBlockRootsNative(
 		t,
 		func() (state.BeaconState, error) {
-			return InitializeFromProto(&ethpb.BeaconState{})
+			return InitializeFromProtoPhase0(&ethpb.BeaconState{})
 		},
 		func(BR [][]byte) (state.BeaconState, error) {
-			return InitializeFromProto(&ethpb.BeaconState{BlockRoots: BR})
+			return InitializeFromProtoPhase0(&ethpb.BeaconState{BlockRoots: BR})
 		},
 	)
 }
@@ -36,10 +36,10 @@ func TestBeaconState_BlockRootAtIndex(t *testing.T) {
 	testtmpl.VerifyBeaconStateBlockRootAtIndexNative(
 		t,
 		func() (state.BeaconState, error) {
-			return InitializeFromProto(&ethpb.BeaconState{})
+			return InitializeFromProtoPhase0(&ethpb.BeaconState{})
 		},
 		func(BR [][]byte) (state.BeaconState, error) {
-			return InitializeFromProto(&ethpb.BeaconState{BlockRoots: BR})
+			return InitializeFromProtoPhase0(&ethpb.BeaconState{BlockRoots: BR})
 		},
 	)
 }

@@ -173,7 +173,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 
 // InitializeFromProtoUnsafeAltair directly uses the beacon state protobuf fields
 // and sets them as fields of the BeaconState type.
-func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (*BeaconState, error) {
+func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -1087,7 +1087,6 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 			return nil, err
 		}
 		fieldRoots[fieldRootIx] = executionPayloadRoot[:]
-		fieldRootIx++
 	}
 
 	return fieldRoots, nil
