@@ -328,7 +328,7 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	return s.IsOptimisticForRoot(ctx, s.head.root)
 }
 
-// IsOptimisticForRoot takes the root and slot as aguments instead of the current head
+// IsOptimisticForRoot takes the root and slot as arguments instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, root)
