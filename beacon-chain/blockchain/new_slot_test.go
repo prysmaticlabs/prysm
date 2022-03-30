@@ -86,9 +86,9 @@ func TestService_newSlot(t *testing.T) {
 	for _, test := range tests {
 		service, err := NewService(ctx, opts...)
 		require.NoError(t, err)
-		store := store.New(test.args.justified, test.args.finalized)
-		store.SetBestJustifiedCheckpt(test.args.bestJustified)
-		service.store = store
+		s := store.New(test.args.justified, test.args.finalized)
+		s.SetBestJustifiedCheckpt(test.args.bestJustified)
+		service.store = s
 
 		require.NoError(t, service.NewSlot(ctx, test.args.slot))
 		if test.args.shouldEqual {
