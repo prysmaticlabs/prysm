@@ -496,12 +496,12 @@ func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
-	block := util.NewBeaconBlock()
-	r, err := block.Block.HashTreeRoot()
+	b := util.NewBeaconBlock()
+	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
 
@@ -517,12 +517,12 @@ func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
-	block := util.NewBeaconBlock()
-	r, err := block.Block.HashTreeRoot()
+	b := util.NewBeaconBlock()
+	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
 
@@ -539,10 +539,10 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cancel:         cancel,
 		initSyncBlocks: make(map[[32]byte]block.SignedBeaconBlock),
 	}
-	block := util.NewBeaconBlock()
-	r, err := block.Block.HashTreeRoot()
+	b := util.NewBeaconBlock()
+	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	s.saveInitSyncBlock(r, wsb)
 	require.NoError(t, s.Stop())
@@ -569,11 +569,11 @@ func BenchmarkHasBlockDB(b *testing.B) {
 	s := &Service{
 		cfg: &config{BeaconDB: beaconDB},
 	}
-	block := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	blk := util.NewBeaconBlock()
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(b, err)
 	require.NoError(b, s.cfg.BeaconDB.SaveBlock(ctx, wsb))
-	r, err := block.Block.HashTreeRoot()
+	r, err := blk.Block.HashTreeRoot()
 	require.NoError(b, err)
 
 	b.ResetTimer()
@@ -613,13 +613,13 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
-	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
-	r, err := block.Block.HashTreeRoot()
+	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
+	r, err := blk.Block.HashTreeRoot()
 	require.NoError(b, err)
 	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	beaconState, err := v1.InitializeFromProto(bs)
 	require.NoError(b, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(b, err)
 	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
 
