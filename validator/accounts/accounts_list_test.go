@@ -60,9 +60,7 @@ func (km *mockRemoteKeymanager) ListKeymanagerAccounts(ctx context.Context, cfg 
 	return remote.ListKeymanagerAccountsImpl(ctx, cfg, km, km.opts)
 }
 
-func (*mockRemoteKeymanager) DeleteKeystores(
-	ctx context.Context, publicKeys [][]byte,
-) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+func (*mockRemoteKeymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
 	return nil, nil
 }
 

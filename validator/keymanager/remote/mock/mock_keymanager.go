@@ -62,7 +62,7 @@ func (*MockKeymanager) ListKeymanagerAccounts(
 	return nil
 }
 
-func (*MockKeymanager) DeleteKeystores(ctx context.Context, publicKeys [][]byte,
+func (*MockKeymanager) DeleteKeystores(context.Context, [][]byte,
 ) ([]*ethpbservice.DeletedKeystoreStatus, error) {
 	return nil, nil
 }
