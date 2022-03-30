@@ -83,17 +83,21 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 
 // notifyForkchoiceUpdate signals execution engine on a new payload
 func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postStateVersion int,
-	preStateHeader, postStateHeader *ethpb.ExecutionPayloadHeader, blk block.SignedBeaconBlock, root [32]byte) error {
+	preStateHeader, postStateHeader *ethpb.ExecutionPayloadHeader, blk block.SignedBeaconBlock, root [32]byte,
+	fc, jc *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 
+	if err := helpers.BeaconBlockIsNil(blk); err != nil {
+		return err
+	}
 	// Execution payload is only supported in Bellatrix and beyond. Pre
 	// merge blocks are never optimistic
 	if blocks.IsPreBellatrixVersion(postStateVersion) {
+		if err := s.insertBlockToForkChoiceStore(ctx, blk.Block(), root, fc, jc); err != nil {
+			return err
+		}
 		return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
-	}
-	if err := helpers.BeaconBlockIsNil(blk); err != nil {
-		return err
 	}
 	body := blk.Block().Body()
 	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
@@ -101,6 +105,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 		return errors.Wrap(err, "could not determine if execution is enabled")
 	}
 	if !enabled {
+		if err := s.insertBlockToForkChoiceStore(ctx, blk.Block(), root, fc, jc); err != nil {
+			return err
+		}
 		return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
 	}
 	payload, err := body.ExecutionPayload()
@@ -115,12 +122,15 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 				"slot":      blk.Block().Slot(),
 				"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 			}).Info("Called new payload with optimistic block")
-			return nil
+			return s.insertBlockToForkChoiceStore(ctx, blk.Block(), root, fc, jc)
 		default:
 			return errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
 	}
 
+	if err := s.insertBlockToForkChoiceStore(ctx, blk.Block(), root, fc, jc); err != nil {
+		return err
+	}
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root); err != nil {
 		return errors.Wrap(err, "could not set optimistic status")
 	}

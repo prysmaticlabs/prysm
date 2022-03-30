@@ -503,7 +503,7 @@ func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
-	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
+	require.NoError(t, s.insertAttestationsToForkChoiceStore(ctx, wsb.Block(), beaconState))
 
 	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
@@ -524,7 +524,7 @@ func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
-	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
+	require.NoError(t, s.insertAttestationsToForkChoiceStore(ctx, wsb.Block(), beaconState))
 
 	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
 	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
@@ -598,7 +598,7 @@ func BenchmarkHasBlockForkChoiceStore_ProtoArray(b *testing.B) {
 	require.NoError(b, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(b, err)
-	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
+	require.NoError(b, s.insertAttestationsToForkChoiceStore(ctx, wsb.Block(), beaconState))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -621,7 +621,7 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	require.NoError(b, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(b, err)
-	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
+	require.NoError(b, s.insertAttestationsToForkChoiceStore(ctx, wsb.Block(), beaconState))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

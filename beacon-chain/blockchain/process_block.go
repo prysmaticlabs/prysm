@@ -116,7 +116,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
-	if err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed, blockRoot); err != nil {
+	fc := postState.FinalizedCheckpoint()
+	jc := postState.CurrentJustifiedCheckpoint()
+	if err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed, blockRoot, fc, jc); err != nil {
 		return errors.Wrap(err, "could not verify new payload")
 	}
 
@@ -376,14 +378,12 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	// blocks have been verified, add them to forkchoice and call the engine
 	for i, b := range blks {
 		s.saveInitSyncBlock(blockRoots[i], b)
-		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			return nil, nil, err
-		}
 		if err := s.notifyNewPayload(ctx,
 			preVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].version,
 			preVersionAndHeaders[i].header,
-			postVersionAndHeaders[i].header, b, blockRoots[i]); err != nil {
+			postVersionAndHeaders[i].header, b, blockRoots[i],
+			fCheckpoints[i], jCheckpoints[i]); err != nil {
 			return nil, nil, err
 		}
 
@@ -497,16 +497,11 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 // This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk block.BeaconBlock, root [32]byte,
+func (s *Service) insertAttestationsToForkChoiceStore(ctx context.Context, blk block.BeaconBlock,
 	st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockAndAttestationsToForkChoiceStore")
 	defer span.End()
 
-	fCheckpoint := st.FinalizedCheckpoint()
-	jCheckpoint := st.CurrentJustifiedCheckpoint()
-	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint); err != nil {
-		return err
-	}
 	// Feed in block's attestations to fork choice store.
 	for _, a := range blk.Body().Attestations() {
 		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.Data.Slot, a.Data.CommitteeIndex)
@@ -564,7 +559,7 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
-	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
+	if err := s.insertAttestationsToForkChoiceStore(ctx, b.Block(), st); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
 	}
 	return nil

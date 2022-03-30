@@ -214,11 +214,13 @@ func Test_NotifyNewPayload(t *testing.T) {
 			name:      "phase 0 post state",
 			postState: phase0State,
 			preState:  phase0State,
+			errString: "signed beacon block can't be nil",
 		},
 		{
 			name:      "altair post state",
 			postState: altairState,
 			preState:  altairState,
+			errString: "signed beacon block can't be nil",
 		},
 		{
 			name:      "nil beacon block",
@@ -343,11 +345,23 @@ func Test_NotifyNewPayload(t *testing.T) {
 				payload, err = tt.preState.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
 			}
-			root := [32]byte{'a'}
+			blk = util.NewBeaconBlockBellatrix()
+			wr, err := wrapper.WrappedSignedBeaconBlock(blk)
+			require.NoError(t, err)
+			root, err := blk.HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wr))
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0))
 			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
 			require.NoError(t, err)
-			err = service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk, root)
+			fc := &ethpb.Checkpoint{
+				Root:  root[:],
+				Epoch: 1,
+			}
+			require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, tt.postState, root))
+			require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, root))
+			require.NoError(t, service.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, fc))
+			err = service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk, root, fc, fc)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -399,7 +413,9 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 1, root, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 0, 0))
 	postVersion, postHeader, err := getStateVersionAndPayload(bellatrixState)
 	require.NoError(t, err)
-	err = service.notifyNewPayload(ctx, bellatrixState.Version(), postVersion, payload, postHeader, bellatrixBlk, root)
+	fc := bellatrixState.FinalizedCheckpoint()
+	jc := bellatrixState.CurrentJustifiedCheckpoint()
+	err = service.notifyNewPayload(ctx, bellatrixState.Version(), postVersion, payload, postHeader, bellatrixBlk, root, fc, jc)
 	require.NoError(t, err)
 	optimistic, err := service.IsOptimisticForRoot(ctx, root)
 	require.NoError(t, err)
