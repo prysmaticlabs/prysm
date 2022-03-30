@@ -24,7 +24,7 @@ type stateByRooter interface {
 	StateByRoot(context.Context, [32]byte) (state.BeaconState, error)
 }
 
-// newStateBalanceCache exists to remind us that stateBalanceCache needs a stagegen
+// newStateBalanceCache exists to remind us that stateBalanceCache needs a state gen
 // to avoid nil pointer bugs when updating the cache in the read path (get())
 func newStateBalanceCache(sg *stategen.State) (*stateBalanceCache, error) {
 	if sg == nil {

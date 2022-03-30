@@ -234,11 +234,16 @@ func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BL
 	return km.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
-// ExtractKeystores is not supported for the remote keymanager type.
+// ExtractKeystores is not supported for the remote-web3signer keymanager type.
 func (*Keymanager) ExtractKeystores(
 	ctx context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*keymanager.Keystore, error) {
 	return nil, errors.New("extracting keys is not supported for a web3signer keymanager")
+}
+
+// DeleteKeystores is not supported for the remote-web3signer keymanager type.
+func (km *Keymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return nil, errors.New("Wrong wallet type: web3-signer. Only Imported or Derived wallets can delete accounts")
 }
 
 func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
