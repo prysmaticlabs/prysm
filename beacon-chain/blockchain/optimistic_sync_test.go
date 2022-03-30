@@ -155,8 +155,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			engine := &mockEngineService{forkchoiceError: tt.newForkchoiceErr}
-			service.cfg.ExecutionEngineCaller = engine
+			service.cfg.ExecutionEngineCaller = &mockEngineService{forkchoiceError: tt.newForkchoiceErr}
 			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, service.headRoot(), tt.finalizedRoot)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
@@ -328,16 +327,16 @@ func Test_NotifyNewPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			engine := &mockEngineService{newPayloadError: tt.newPayloadErr, blks: map[[32]byte]*v1.ExecutionBlock{}}
-			engine.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
+			e := &mockEngineService{newPayloadError: tt.newPayloadErr, blks: map[[32]byte]*v1.ExecutionBlock{}}
+			e.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
 				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 				TotalDifficulty: "0x2",
 			}
-			engine.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
+			e.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
 				ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 				TotalDifficulty: "0x1",
 			}
-			service.cfg.ExecutionEngineCaller = engine
+			service.cfg.ExecutionEngineCaller = e
 			var payload *ethpb.ExecutionPayloadHeader
 			if tt.preState.Version() == version.Bellatrix {
 				payload, err = tt.preState.LatestExecutionPayloadHeader()
@@ -383,16 +382,16 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	engine := &mockEngineService{blks: map[[32]byte]*v1.ExecutionBlock{}}
-	engine.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
+	e := &mockEngineService{blks: map[[32]byte]*v1.ExecutionBlock{}}
+	e.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 		TotalDifficulty: "0x2",
 	}
-	engine.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
+	e.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 		TotalDifficulty: "0x1",
 	}
-	service.cfg.ExecutionEngineCaller = engine
+	service.cfg.ExecutionEngineCaller = e
 	payload, err := bellatrixState.LatestExecutionPayloadHeader()
 	require.NoError(t, err)
 	root := [32]byte{'c'}
@@ -443,7 +442,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 1
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+				wr, err := wrapper.WrappedBeaconBlock(blk.Block)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -463,7 +462,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 200
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedAltairBeaconBlock(blk.Block)
+				wr, err := wrapper.WrappedBeaconBlock(blk.Block)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -483,7 +482,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 200
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+				wr, err := wrapper.WrappedBeaconBlock(blk.Block)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -503,7 +502,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 200
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+				wr, err := wrapper.WrappedBeaconBlock(blk.Block)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -527,12 +526,12 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		jroot, err := tt.justified.Block().HashTreeRoot()
+		jRoot, err := tt.justified.Block().HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, tt.justified))
 		service.store.SetJustifiedCheckpt(
 			&ethpb.Checkpoint{
-				Root:  jroot[:],
+				Root:  jRoot[:],
 				Epoch: slots.ToEpoch(tt.justified.Block().Slot()),
 			})
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
@@ -571,8 +570,8 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 		BlockNumber:   100,
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{ExecutionPayload: payload}
-	block := &ethpb.BeaconBlockBellatrix{Body: body, Slot: 200}
-	rawSigned := &ethpb.SignedBeaconBlockBellatrix{Block: block}
+	b := &ethpb.BeaconBlockBellatrix{Body: body, Slot: 200}
+	rawSigned := &ethpb.SignedBeaconBlockBellatrix{Block: b}
 	blk := util.HydrateSignedBeaconBlockBellatrix(rawSigned)
 	wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)

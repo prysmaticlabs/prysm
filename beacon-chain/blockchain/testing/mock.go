@@ -195,26 +195,26 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.Signe
 	if s.State == nil {
 		return ErrNilState
 	}
-	for _, block := range blks {
-		if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
-			return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
+	for _, b := range blks {
+		if !bytes.Equal(s.Root, b.Block().ParentRoot()) {
+			return errors.Errorf("wanted %#x but got %#x", s.Root, b.Block().ParentRoot())
 		}
-		if err := s.State.SetSlot(block.Block().Slot()); err != nil {
+		if err := s.State.SetSlot(b.Block().Slot()); err != nil {
 			return err
 		}
-		s.BlocksReceived = append(s.BlocksReceived, block)
-		signingRoot, err := block.Block().HashTreeRoot()
+		s.BlocksReceived = append(s.BlocksReceived, b)
+		signingRoot, err := b.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
 		if s.DB != nil {
-			if err := s.DB.SaveBlock(ctx, block); err != nil {
+			if err := s.DB.SaveBlock(ctx, b); err != nil {
 				return err
 			}
-			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())
+			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, b.Block().Slot())
 		}
 		s.Root = signingRoot[:]
-		s.Block = block
+		s.Block = b
 	}
 	return nil
 }
@@ -417,7 +417,7 @@ func (s *ChainService) HeadValidatorIndexToPublicKey(_ context.Context, _ types.
 }
 
 // HeadSyncCommitteeIndices mocks HeadSyncCommitteeIndices and always return `HeadNextSyncCommitteeIndices`.
-func (s *ChainService) HeadSyncCommitteeIndices(_ context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+func (s *ChainService) HeadSyncCommitteeIndices(_ context.Context, _ types.ValidatorIndex, _ types.Slot) ([]types.CommitteeIndex, error) {
 	return s.SyncCommitteeIndices, nil
 }
 
