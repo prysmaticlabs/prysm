@@ -1994,6 +1994,25 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	aggregationBits := resp.Data.AggregationBits
 	assert.Equal(t, true, aggregationBits.BitAt(0))
 	assert.DeepEqual(t, sig, resp.Data.Signature)
+
+	syncCommitteePool = synccommittee.NewStore()
+	v1Server = &v1alpha1validator.Server{
+		SyncCommitteePool: syncCommitteePool,
+		HeadFetcher: &mockChain.ChainService{
+			SyncCommitteeIndices: []types.CommitteeIndex{0},
+		},
+	}
+	server = Server{
+		V1Alpha1Server:    v1Server,
+		SyncCommitteePool: syncCommitteePool,
+	}
+	req = &ethpbv2.ProduceSyncCommitteeContributionRequest{
+		Slot:              0,
+		SubcommitteeIndex: 0,
+		BeaconBlockRoot:   root,
+	}
+	_, err = server.ProduceSyncCommitteeContribution(ctx, req)
+	assert.ErrorContains(t, "No subcommittee messages found", err)
 }
 
 func TestSubmitContributionAndProofs(t *testing.T) {

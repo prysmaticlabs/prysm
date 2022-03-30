@@ -414,7 +414,7 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.Aggr
 	}
 
 	if bestMatchingAtt == nil {
-		return nil, status.Error(codes.InvalidArgument, "No matching attestation found")
+		return nil, status.Error(codes.NotFound, "No matching attestation found")
 	}
 	return &ethpbv1.AggregateAttestationResponse{
 		Data: migration.V1Alpha1AttestationToV1(bestMatchingAtt),
@@ -630,6 +630,9 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
+	}
+	if msgs == nil {
+		return nil, status.Errorf(codes.NotFound, "No subcommittee messages found")
 	}
 	aggregatedSig, bits, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubcommitteeIndex, req.BeaconBlockRoot)
 	if err != nil {
