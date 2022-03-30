@@ -46,9 +46,10 @@ type Web3RemoteSigner struct {
 	cmd            *exec.Cmd
 }
 
-func NewWeb3RemoteSigner() *Web3RemoteSigner {
+func NewWeb3RemoteSigner(configFilePath string) *Web3RemoteSigner {
 	return &Web3RemoteSigner{
-		started: make(chan struct{}, 1),
+		started:        make(chan struct{}, 1),
+		configFilePath: configFilePath,
 	}
 }
 
@@ -71,15 +72,15 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		return err
 	}
 
-	testDir, err := w.createTestnetDir()
-	if err != nil {
-		return err
-	}
+	// testDir, err := w.createTestnetDir()
+	// if err != nil {
+	// 	return err
+	// }
 
 	network := "minimal"
-	if len(testDir) > 0 {
+	if len(w.configFilePath) > 0 {
 		// A file path to yaml config file is acceptable network argument.
-		network = testDir
+		network = w.configFilePath
 	}
 
 	args := []string{
