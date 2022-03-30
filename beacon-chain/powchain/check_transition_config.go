@@ -11,7 +11,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/sirupsen/logrus"
@@ -80,7 +80,8 @@ func (s *Service) checkTransitionConfiguration(
 				log.Debug("PoS transition is complete, no longer checking for configuration changes")
 				return
 			}
-		case <-ticker.C:
+		case tm := <-ticker.C:
+			ctx, cancel := context.WithDeadline(ctx, tm.Add(enginev1.DefaultTimeout))
 			err = s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
 			if !hasTtdReached {
@@ -89,6 +90,7 @@ func (s *Service) checkTransitionConfiguration(
 					log.WithError(err).Error("Could not log ttd status")
 				}
 			}
+			cancel()
 		}
 	}
 }
