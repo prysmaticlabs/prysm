@@ -31,8 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type mockRemoteKeymanager struct {
@@ -62,11 +60,10 @@ func (km *mockRemoteKeymanager) ListKeymanagerAccounts(ctx context.Context, cfg 
 	return remote.ListKeymanagerAccountsImpl(ctx, cfg, km, km.opts)
 }
 
-// DeleteKeystores is not supported for the remote-web3signer keymanager type.
 func (*mockRemoteKeymanager) DeleteKeystores(
 	ctx context.Context, publicKeys [][]byte,
 ) ([]*ethpbservice.DeletedKeystoreStatus, error) {
-	return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
+	return nil, nil
 }
 
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
