@@ -3,8 +3,8 @@ package v1
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -47,7 +47,7 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 	defer b.lock.Unlock()
 
 	b.genesisTime = val
-	b.markFieldAsDirty(genesisTime)
+	b.markFieldAsDirty(v0types.GenesisTime)
 	return nil
 }
 
@@ -60,7 +60,7 @@ func (b *BeaconState) SetGenesisValidatorsRoot(val []byte) error {
 		return errors.New("incorrect validators root length")
 	}
 	b.genesisValidatorsRoot = bytesutil.ToBytes32(val)
-	b.markFieldAsDirty(genesisValidatorsRoot)
+	b.markFieldAsDirty(v0types.GenesisValidatorsRoot)
 	return nil
 }
 
@@ -70,7 +70,7 @@ func (b *BeaconState) SetSlot(val types.Slot) error {
 	defer b.lock.Unlock()
 
 	b.slot = val
-	b.markFieldAsDirty(slot)
+	b.markFieldAsDirty(v0types.Slot)
 	return nil
 }
 
@@ -84,7 +84,7 @@ func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 		return errors.New("proto.Clone did not return a fork proto")
 	}
 	b.fork = fk
-	b.markFieldAsDirty(fork)
+	b.markFieldAsDirty(v0types.Fork)
 	return nil
 }
 
@@ -94,15 +94,15 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[historicalRoots].MinusRef()
-	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]].MinusRef()
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]] = stateutil.NewRef(1)
 
 	roots := make([][32]byte, len(val))
 	for i, r := range val {
 		copy(roots[i][:], r)
 	}
 	b.historicalRoots = roots
-	b.markFieldAsDirty(historicalRoots)
+	b.markFieldAsDirty(v0types.HistoricalRoots)
 	return nil
 }
 
@@ -113,15 +113,15 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	defer b.lock.Unlock()
 
 	roots := b.historicalRoots
-	if b.sharedFieldReferences[historicalRoots].Refs() > 1 {
+	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]].Refs() > 1 {
 		roots = make([][32]byte, len(b.historicalRoots))
 		copy(roots, b.historicalRoots)
-		b.sharedFieldReferences[historicalRoots].MinusRef()
-		b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
+		b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]].MinusRef()
+		b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]] = stateutil.NewRef(1)
 	}
 
 	b.historicalRoots = append(roots, root)
-	b.markFieldAsDirty(historicalRoots)
+	b.markFieldAsDirty(v0types.HistoricalRoots)
 	return nil
 }
 
@@ -160,25 +160,25 @@ func (b *BeaconState) recomputeRoot(idx int) {
 	b.merkleLayers = layers
 }
 
-func (b *BeaconState) markFieldAsDirty(field stateTypes.FieldIndex) {
-	b.dirtyFields[field] = true
+func (b *BeaconState) markFieldAsDirty(field v0types.FieldIndex) {
+	b.dirtyFields[b.fieldIndexesRev[field]] = true
 }
 
 // addDirtyIndices adds the relevant dirty field indices, so that they
 // can be recomputed.
-func (b *BeaconState) addDirtyIndices(index stateTypes.FieldIndex, indices []uint64) {
-	if b.rebuildTrie[index] {
+func (b *BeaconState) addDirtyIndices(index v0types.FieldIndex, indices []uint64) {
+	if b.rebuildTrie[b.fieldIndexesRev[index]] {
 		return
 	}
 	// Exit early if balance trie computation isn't enabled.
-	if !features.Get().EnableBalanceTrieComputation && index == balances {
+	if !features.Get().EnableBalanceTrieComputation && index == v0types.Balances {
 		return
 	}
-	totalIndicesLen := len(b.dirtyIndices[index]) + len(indices)
+	totalIndicesLen := len(b.dirtyIndices[b.fieldIndexesRev[index]]) + len(indices)
 	if totalIndicesLen > indicesLimit {
-		b.rebuildTrie[index] = true
-		b.dirtyIndices[index] = []uint64{}
+		b.rebuildTrie[b.fieldIndexesRev[index]] = true
+		b.dirtyIndices[b.fieldIndexesRev[index]] = []uint64{}
 	} else {
-		b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
+		b.dirtyIndices[b.fieldIndexesRev[index]] = append(b.dirtyIndices[b.fieldIndexesRev[index]], indices...)
 	}
 }

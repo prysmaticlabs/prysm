@@ -1,6 +1,7 @@
 package v1
 
 import (
+	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -11,7 +12,7 @@ func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 	defer b.lock.Unlock()
 
 	b.eth1Data = val
-	b.markFieldAsDirty(eth1Data)
+	b.markFieldAsDirty(v0types.Eth1Data)
 	return nil
 }
 
@@ -21,12 +22,12 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[eth1DataVotes].MinusRef()
-	b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]].MinusRef()
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]] = stateutil.NewRef(1)
 
 	b.eth1DataVotes = val
-	b.markFieldAsDirty(eth1DataVotes)
-	b.rebuildTrie[eth1DataVotes] = true
+	b.markFieldAsDirty(v0types.Eth1DataVotes)
+	b.rebuildTrie[b.fieldIndexesRev[v0types.Eth1DataVotes]] = true
 	return nil
 }
 
@@ -36,7 +37,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	defer b.lock.Unlock()
 
 	b.eth1DepositIndex = val
-	b.markFieldAsDirty(eth1DepositIndex)
+	b.markFieldAsDirty(v0types.Eth1DepositIndex)
 	return nil
 }
 
@@ -47,16 +48,16 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	defer b.lock.Unlock()
 
 	votes := b.eth1DataVotes
-	if b.sharedFieldReferences[eth1DataVotes].Refs() > 1 {
+	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]].Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		votes = make([]*ethpb.Eth1Data, len(b.eth1DataVotes))
 		copy(votes, b.eth1DataVotes)
-		b.sharedFieldReferences[eth1DataVotes].MinusRef()
-		b.sharedFieldReferences[eth1DataVotes] = stateutil.NewRef(1)
+		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]].MinusRef()
+		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]] = stateutil.NewRef(1)
 	}
 
 	b.eth1DataVotes = append(votes, val)
-	b.markFieldAsDirty(eth1DataVotes)
-	b.addDirtyIndices(eth1DataVotes, []uint64{uint64(len(b.eth1DataVotes) - 1)})
+	b.markFieldAsDirty(v0types.Eth1DataVotes)
+	b.addDirtyIndices(v0types.Eth1DataVotes, []uint64{uint64(len(b.eth1DataVotes) - 1)})
 	return nil
 }
