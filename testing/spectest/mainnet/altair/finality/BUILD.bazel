@@ -10,4 +10,5 @@ go_test(
     shard_count = 4,
     tags = ["spectest"],
     deps = ["//testing/spectest/shared/altair/finality:go_default_library"],
+    timeout = "short",
 )
