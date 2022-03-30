@@ -11,7 +11,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/sirupsen/logrus"
@@ -81,7 +81,7 @@ func (s *Service) checkTransitionConfiguration(
 				return
 			}
 		case tm := <-ticker.C:
-			ctx, cancel := context.WithDeadline(ctx, tm.Add(enginev1.DefaultTimeout))
+			ctx, cancel := context.WithDeadline(ctx, tm.Add(v1.DefaultTimeout))
 			err = s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
 			if !hasTtdReached {
