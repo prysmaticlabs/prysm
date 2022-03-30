@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -152,18 +153,22 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
-				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
-				s.setBadBlock(ctx, blkRoot)
-				tracing.AnnotateError(span, err)
-				// In the next iteration of the queue, this block will be removed from
-				// the pending queue as it has been marked as a 'bad' block.
-				span.End()
-				continue
+				if !errors.Is(ErrOptimisticParent, err) {
+					log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
+					s.setBadBlock(ctx, blkRoot)
+					tracing.AnnotateError(span, err)
+					// In the next iteration of the queue, this block will be removed from
+					// the pending queue as it has been marked as a 'bad' block.
+					span.End()
+					continue
+				}
 			}
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
-				s.setBadBlock(ctx, blkRoot)
+				if !strings.Contains(err.Error(), "Client.Timeout exceeded while awaiting headers") {
+					log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
+					s.setBadBlock(ctx, blkRoot)
+				}
 				tracing.AnnotateError(span, err)
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"strings"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
@@ -30,8 +31,11 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	}
 
 	if err := s.cfg.chain.ReceiveBlock(ctx, signed, root); err != nil {
-		interop.WriteBlockToDisk(signed, true /*failed*/)
-		s.setBadBlock(ctx, root)
+		if !strings.Contains(err.Error(), "Client.Timeout exceeded while awaiting headers") {
+			interop.WriteBlockToDisk(signed, true /*failed*/)
+			s.setBadBlock(ctx, root)
+		}
+
 		return err
 	}
 
