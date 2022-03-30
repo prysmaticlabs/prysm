@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -13,9 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -130,7 +127,7 @@ func TestStart_OK(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -175,7 +172,7 @@ func TestStop_OK(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -204,7 +201,7 @@ func TestService_Eth1Synced(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -233,7 +230,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -310,7 +307,7 @@ func TestStatus(t *testing.T) {
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -346,7 +343,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -484,7 +481,7 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -539,7 +536,7 @@ func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -575,15 +572,15 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
-	server, firstEndpoint := setupRPCServer(t)
+	server, firstEndpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
-	server2, secondEndpoint := setupRPCServer(t)
+	server2, secondEndpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server2.Stop()
 	})
-	server3, thirdEndpoint := setupRPCServer(t)
+	server3, thirdEndpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server3.Stop()
 	})
@@ -645,7 +642,7 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	cache, err := depositcache.New()
 	require.NoError(t, err)
-	srv, endpoint := setupRPCServer(t)
+	srv, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		srv.Stop()
 	})
@@ -674,7 +671,7 @@ func TestService_InitializeCorrectly(t *testing.T) {
 	cache, err := depositcache.New()
 	require.NoError(t, err)
 
-	srv, endpoint := setupRPCServer(t)
+	srv, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		srv.Stop()
 	})
@@ -702,7 +699,7 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	cache, err := depositcache.New()
 	require.NoError(t, err)
-	srv, endpoint := setupRPCServer(t)
+	srv, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		srv.Stop()
 	})
@@ -798,11 +795,11 @@ func TestTimestampIsChecked(t *testing.T) {
 }
 
 func TestETH1Endpoints(t *testing.T) {
-	server, firstEndpoint := setupRPCServer(t)
+	server, firstEndpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
-	server, secondEndpoint := setupRPCServer(t)
+	server, secondEndpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -827,25 +824,4 @@ func TestETH1Endpoints(t *testing.T) {
 
 	// Check endpoints are all present.
 	assert.DeepSSZEqual(t, endpoints, s1.ETH1Endpoints(), "Unexpected http endpoint slice")
-}
-
-func setupRPCServer(t testing.TB) (*gethRPC.Server, string) {
-	srv := gethRPC.NewServer()
-	require.NoError(t, srv.RegisterName("eth", &testETHRPC{}))
-	require.NoError(t, srv.RegisterName("net", &testETHRPC{}))
-	hs := httptest.NewUnstartedServer(srv)
-	hs.Start()
-	return srv, hs.URL
-}
-
-type testETHRPC struct{}
-
-func (*testETHRPC) NoArgsRets() {}
-
-func (*testETHRPC) ChainId(_ context.Context) *hexutil.Big {
-	return (*hexutil.Big)(big.NewInt(int64(params.BeaconConfig().DepositChainID)))
-}
-
-func (*testETHRPC) Version(_ context.Context) string {
-	return fmt.Sprintf("%d", params.BeaconConfig().DepositNetworkID)
 }

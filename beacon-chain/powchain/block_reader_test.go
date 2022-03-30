@@ -30,7 +30,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -72,7 +72,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -103,7 +103,7 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -123,7 +123,7 @@ func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 
 func TestBlockExists_ValidHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -158,7 +158,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 
 func TestBlockExists_InvalidHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -176,7 +176,7 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -203,7 +203,7 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 
 func TestBlockExistsWithCache_UsesCachedHeaderInfo(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -228,7 +228,7 @@ func TestBlockExistsWithCache_UsesCachedHeaderInfo(t *testing.T) {
 
 func TestBlockExistsWithCache_HeaderNotCached(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -248,7 +248,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -279,7 +279,7 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -316,7 +316,7 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -351,7 +351,7 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 
 func TestService_BlockTimeByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})

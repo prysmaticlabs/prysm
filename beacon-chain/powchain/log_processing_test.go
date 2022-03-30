@@ -34,7 +34,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -101,7 +101,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -162,7 +162,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -215,7 +215,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -290,7 +290,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -379,7 +379,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -476,7 +476,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -589,7 +589,7 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 func newPowchainService(t *testing.T, eth1Backend *mock.TestAccount, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
-	server, endpoint := setupRPCServer(t)
+	server, endpoint, _ := mockPOW.SetupRPCServer()
 	t.Cleanup(func() {
 		server.Stop()
 	})
