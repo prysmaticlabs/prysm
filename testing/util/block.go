@@ -763,10 +763,10 @@ func HydrateBlindedBeaconBlockBellatrix(b *v2.BlindedBeaconBlockBellatrix) *v2.B
 		b = &v2.BlindedBeaconBlockBellatrix{}
 	}
 	if b.ParentRoot == nil {
-		b.ParentRoot = make([]byte, 32)
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
 	}
 	if b.StateRoot == nil {
-		b.StateRoot = make([]byte, 32)
+		b.StateRoot = make([]byte, fieldparams.RootLength)
 	}
 	b.Body = HydrateBlindedBeaconBlockBodyBellatrix(b.Body)
 	return b
@@ -786,7 +786,7 @@ func HydrateBlindedBeaconBlockBodyBellatrix(b *v2.BlindedBeaconBlockBodyBellatri
 	}
 	if b.Eth1Data == nil {
 		b.Eth1Data = &v1.Eth1Data{
-			DepositRoot: make([]byte, 32),
+			DepositRoot: make([]byte, fieldparams.RootLength),
 			BlockHash:   make([]byte, 32),
 		}
 	}
@@ -800,13 +800,13 @@ func HydrateBlindedBeaconBlockBodyBellatrix(b *v2.BlindedBeaconBlockBodyBellatri
 		b.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeader{
 			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, 20),
-			StateRoot:        make([]byte, 32),
-			ReceiptsRoot:     make([]byte, 32),
+			StateRoot:        make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 			LogsBloom:        make([]byte, 256),
 			PrevRandao:       make([]byte, 32),
 			BaseFeePerGas:    make([]byte, 32),
 			BlockHash:        make([]byte, 32),
-			TransactionsRoot: make([]byte, 32),
+			TransactionsRoot: make([]byte, fieldparams.RootLength),
 		}
 	}
 	return b
