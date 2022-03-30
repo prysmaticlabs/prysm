@@ -142,6 +142,10 @@ type RPCClient struct {
 	Backend *backends.SimulatedBackend
 }
 
+func (r *RPCClient) CallContext(_ context.Context, _ interface{}, _ string, _ ...interface{}) error {
+	return nil
+}
+
 // BatchCall --
 func (r *RPCClient) BatchCall(b []rpc.BatchElem) error {
 	if r.Backend == nil {

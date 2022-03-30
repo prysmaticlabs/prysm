@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -40,7 +41,7 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 		srv.cfg.stateNotifier = &mockChain.MockStateNotifier{}
 		checkTransitionPollingInterval = time.Millisecond
 		ctx, cancel := context.WithCancel(ctx)
-		go srv.checkTransitionConfiguration(ctx, make(chan *statefeed.BlockProcessedData, 1))
+		go srv.checkTransitionConfiguration(ctx, make(chan *feed.Event, 1))
 		<-time.After(100 * time.Millisecond)
 		cancel()
 		require.LogsContain(t, hook, "Could not check configuration values")
@@ -56,7 +57,7 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 		checkTransitionPollingInterval = time.Millisecond
 		ctx, cancel := context.WithCancel(ctx)
 		exit := make(chan bool)
-		notification := make(chan *statefeed.BlockProcessedData)
+		notification := make(chan *feed.Event)
 		go func() {
 			srv.checkTransitionConfiguration(ctx, notification)
 			exit <- true
@@ -71,8 +72,11 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 			}},
 		)
 		require.NoError(t, err)
-		notification <- &statefeed.BlockProcessedData{
-			SignedBlock: wrappedBlock,
+		notification <- &feed.Event{
+			Data: &statefeed.BlockProcessedData{
+				SignedBlock: wrappedBlock,
+			},
+			Type: statefeed.BlockProcessed,
 		}
 		<-exit
 		cancel()
@@ -145,7 +149,7 @@ func setupTransitionConfigTest(t testing.TB) *Service {
 	service := &Service{
 		cfg: &config{},
 	}
-	service.engineRPCClient = rpcClient
+	service.rpcClient = rpcClient
 	return service
 }
 

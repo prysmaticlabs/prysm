@@ -35,7 +35,7 @@ func TestClient_IPC(t *testing.T) {
 	rpcClient := rpc.DialInProc(server)
 	defer rpcClient.Close()
 	srv := &Service{}
-	srv.engineRPCClient = rpcClient
+	srv.rpcClient = rpcClient
 	ctx := context.Background()
 	fix := fixtures()
 
@@ -126,7 +126,7 @@ func TestClient_HTTP(t *testing.T) {
 		defer rpcClient.Close()
 
 		client := &Service{}
-		client.engineRPCClient = rpcClient
+		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.GetPayload(ctx, payloadId)
@@ -333,7 +333,7 @@ func TestClient_HTTP(t *testing.T) {
 		defer rpcClient.Close()
 
 		service := &Service{}
-		service.engineRPCClient = rpcClient
+		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := service.LatestExecutionBlock(ctx)
@@ -372,7 +372,7 @@ func TestClient_HTTP(t *testing.T) {
 		defer rpcClient.Close()
 
 		client := &Service{}
-		client.engineRPCClient = rpcClient
+		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
 		err = client.ExchangeTransitionConfiguration(ctx, want)
@@ -409,7 +409,7 @@ func TestClient_HTTP(t *testing.T) {
 		defer rpcClient.Close()
 
 		service := &Service{}
-		service.engineRPCClient = rpcClient
+		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := service.ExecutionBlockByHash(ctx, arg)
@@ -450,7 +450,7 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		defer rpcClient.Close()
 
 		service := &Service{}
-		service.engineRPCClient = rpcClient
+		service.rpcClient = rpcClient
 
 		err = service.ExchangeTransitionConfiguration(ctx, request)
 		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
@@ -483,7 +483,7 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		defer rpcClient.Close()
 
 		service := &Service{}
-		service.engineRPCClient = rpcClient
+		service.rpcClient = rpcClient
 
 		err = service.ExchangeTransitionConfiguration(ctx, request)
 		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
@@ -842,7 +842,7 @@ func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.Payloa
 	require.NoError(t, err)
 
 	service := &Service{}
-	service.engineRPCClient = rpcClient
+	service.rpcClient = rpcClient
 	return service
 }
 
@@ -876,6 +876,6 @@ func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.Executi
 	require.NoError(t, err)
 
 	service := &Service{}
-	service.engineRPCClient = rpcClient
+	service.rpcClient = rpcClient
 	return service
 }
