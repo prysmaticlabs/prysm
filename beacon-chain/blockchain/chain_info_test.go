@@ -477,11 +477,11 @@ func TestService_IsOptimisticForRoot_DB_ProtoArray(t *testing.T) {
 	validatedCheckpoint := &ethpb.Checkpoint{Root: br[:]}
 	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, validatedCheckpoint))
 
-	optimistic, err := c.IsOptimisticForRoot(ctx, optimisticRoot)
+	_, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
 	require.ErrorContains(t, "nil summary returned from the DB", err)
 
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: optimisticRoot[:], Slot: 11}))
-	optimistic, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
+	optimistic, err := c.IsOptimisticForRoot(ctx, optimisticRoot)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
 
@@ -541,11 +541,11 @@ func TestService_IsOptimisticForRoot_DB_DoublyLinkedTree(t *testing.T) {
 	validatedCheckpoint := &ethpb.Checkpoint{Root: br[:]}
 	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, validatedCheckpoint))
 
-	optimistic, err := c.IsOptimisticForRoot(ctx, optimisticRoot)
+	_, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
 	require.ErrorContains(t, "nil summary returned from the DB", err)
 
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: optimisticRoot[:], Slot: 11}))
-	optimistic, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
+	optimistic, err := c.IsOptimisticForRoot(ctx, optimisticRoot)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
 
