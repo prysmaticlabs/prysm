@@ -145,10 +145,6 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 //    if is_execution_block(opt_store.blocks[block.parent_root]):
 //        return True
 //
-//    justified_root = opt_store.block_states[opt_store.head_block_root].current_justified_checkpoint.root
-//    if is_execution_block(opt_store.blocks[justified_root]):
-//        return True
-//
 //    if block.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY <= current_slot:
 //        return True
 //
@@ -170,17 +166,5 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 	if err != nil {
 		return false, err
 	}
-	if parentIsExecutionBlock {
-		return true, nil
-	}
-
-	j := s.store.JustifiedCheckpt()
-	if j == nil {
-		return false, errNilJustifiedInStore
-	}
-	jBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(j.Root))
-	if err != nil {
-		return false, err
-	}
-	return blocks.IsExecutionBlock(jBlock.Block().Body())
+	return parentIsExecutionBlock, nil
 }

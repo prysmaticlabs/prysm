@@ -117,6 +117,16 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return errors.Wrap(err, "could not verify new payload")
 	}
+	if !validated {
+		candidate, err := s.optimisticCandidateBlock(ctx, b)
+		if err != nil {
+			return errors.Wrap(err, "could not check if block is optimistic candidate")
+		}
+		if !candidate {
+			return errNotOptimisticCandidate
+		}
+	}
+
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
@@ -390,6 +400,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 
 		if err != nil {
 			return nil, nil, err
+		}
+		if !validated {
+			candidate, err := s.optimisticCandidateBlock(ctx, b.Block())
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not check if block is optimistic candidate")
+			}
+			if !candidate {
+				return nil, nil, errNotOptimisticCandidate
+			}
 		}
 
 		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
