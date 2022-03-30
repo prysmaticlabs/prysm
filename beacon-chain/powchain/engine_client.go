@@ -63,7 +63,7 @@ func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) 
 	}()
 
 	result := &pb.PayloadStatus{}
-	err := s.engineRPCClient.CallContext(ctx, result, NewPayloadMethod, payload)
+	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payload)
 	if err != nil {
 		return nil, handleRPCError(err)
 	}
@@ -96,7 +96,7 @@ func (s *Service) ForkchoiceUpdated(
 	}()
 
 	result := &ForkchoiceUpdatedResponse{}
-	err := s.engineRPCClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
+	err := s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
 	if err != nil {
 		return nil, nil, handleRPCError(err)
 	}
@@ -129,7 +129,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Execut
 	}()
 
 	result := &pb.ExecutionPayload{}
-	err := s.engineRPCClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
+	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
 }
 
@@ -144,7 +144,7 @@ func (s *Service) ExchangeTransitionConfiguration(
 	zeroBigNum := big.NewInt(0)
 	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
 	result := &pb.TransitionConfiguration{}
-	if err := s.engineRPCClient.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
+	if err := s.rpcClient.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
 		return handleRPCError(err)
 	}
 	// We surface an error to the user if local configuration settings mismatch
@@ -181,7 +181,7 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock,
 	defer span.End()
 
 	result := &pb.ExecutionBlock{}
-	err := s.engineRPCClient.CallContext(
+	err := s.rpcClient.CallContext(
 		ctx,
 		result,
 		ExecutionBlockByNumberMethod,
@@ -198,7 +198,7 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*
 	defer span.End()
 
 	result := &pb.ExecutionBlock{}
-	err := s.engineRPCClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
+	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
 }
 

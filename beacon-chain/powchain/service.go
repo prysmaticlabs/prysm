@@ -6,10 +6,8 @@ package powchain
 import (
 	"context"
 	"fmt"
-	"math"
 	"math/big"
 	"net/http"
-	"net/url"
 	"reflect"
 	"runtime/debug"
 	"sort"
@@ -27,6 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -125,6 +124,7 @@ type RPCDataFetcher interface {
 // RPCClient defines the rpc methods required to interact with the eth1 node.
 type RPCClient interface {
 	BatchCall(b []gethRPC.BatchElem) error
+	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
 }
 
 // config defines a config struct for dependencies into the service.
@@ -158,7 +158,6 @@ type Service struct {
 	headTicker              *time.Ticker
 	httpLogger              bind.ContractFilterer
 	eth1DataFetcher         RPCDataFetcher
-	engineRPCClient         *gethRPC.Client
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -214,9 +213,13 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 
-	if err := s.initializeEngineAPIClient(s.ctx); err != nil {
-		log.WithError(err).Fatal("unable to initialize engine API client")
+	if err := s.connectToPowChain(); err != nil {
+		return nil, err
 	}
+
+	log.WithFields(logrus.Fields{
+		"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
+	}).Info("Connected to Ethereum execution client RPC")
 
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
@@ -226,6 +229,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
 	}
+
 	if err := s.initializeEth1Data(ctx, eth1Data); err != nil {
 		return nil, err
 	}
@@ -248,23 +252,15 @@ func (s *Service) Start() {
 		}
 	}
 
-	// Exit early if eth1 endpoint is not set.
-	if s.cfg.currHttpEndpoint.Url == "" {
-		return
-	}
+	s.isRunning = true
+
+	// Poll the execution client connection and fallback if errors occur.
+	go s.pollConnectionStatus()
 
 	// Check transition configuration for the engine API client in the background.
-	go s.checkTransitionConfiguration(s.ctx, make(chan *statefeed.BlockProcessedData, 1))
+	go s.checkTransitionConfiguration(s.ctx, make(chan *feed.Event, 1))
 
-	go func() {
-		s.isRunning = true
-		s.waitForConnection()
-		if s.ctx.Err() != nil {
-			log.Info("Context closed, exiting pow goroutine")
-			return
-		}
-		s.run(s.ctx.Done())
-	}()
+	go s.run(s.ctx.Done())
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -385,19 +381,24 @@ func (s *Service) followBlockHeight(_ context.Context) (uint64, error) {
 func (s *Service) connectToPowChain() error {
 	httpClient, rpcClient, err := s.dialETH1Nodes(s.cfg.currHttpEndpoint)
 	if err != nil {
-		return errors.Wrap(err, "could not dial eth1 nodes")
+		return errors.Wrap(err, "could not dial execution node")
 	}
 
 	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.depositContractAddr, httpClient)
 	if err != nil {
-		return errors.Wrap(err, "could not create deposit contract caller")
+		return errors.Wrap(err, "could not initialize deposit contract caller")
 	}
 
 	if httpClient == nil || rpcClient == nil || depositContractCaller == nil {
-		return errors.New("eth1 client is nil")
+		return errors.New("execution client RPC is nil")
 	}
+	s.httpLogger = httpClient
+	s.eth1DataFetcher = httpClient
+	s.depositContractCaller = depositContractCaller
+	s.rpcClient = rpcClient
 
-	s.initializeConnection(httpClient, rpcClient, depositContractCaller)
+	s.updateConnectedETH1(true)
+	s.runError = nil
 	return nil
 }
 
@@ -419,15 +420,6 @@ func (s *Service) dialETH1Nodes(endpoint network.Endpoint) (*ethclient.Client, *
 	closeClients := func() {
 		httpRPCClient.Close()
 		httpClient.Close()
-	}
-	syncProg, err := httpClient.SyncProgress(s.ctx)
-	if err != nil {
-		closeClients()
-		return nil, nil, err
-	}
-	if syncProg != nil {
-		closeClients()
-		return nil, nil, errors.New("eth1 node has not finished syncing yet")
 	}
 	// Make a simple call to ensure we are actually connected to a working node.
 	cID, err := httpClient.ChainID(s.ctx)
@@ -452,17 +444,6 @@ func (s *Service) dialETH1Nodes(endpoint network.Endpoint) (*ethclient.Client, *
 	return httpClient, httpRPCClient, nil
 }
 
-func (s *Service) initializeConnection(
-	httpClient *ethclient.Client,
-	rpcClient *gethRPC.Client,
-	contractCaller *contracts.DepositContractCaller,
-) {
-	s.httpLogger = httpClient
-	s.eth1DataFetcher = httpClient
-	s.depositContractCaller = contractCaller
-	s.rpcClient = rpcClient
-}
-
 // closes down our active eth1 clients.
 func (s *Service) closeClients() {
 	gethClient, ok := s.rpcClient.(*gethRPC.Client)
@@ -475,30 +456,8 @@ func (s *Service) closeClients() {
 	}
 }
 
-func (s *Service) waitForConnection() {
-	errConnect := s.connectToPowChain()
-	if errConnect == nil {
-		synced, errSynced := s.isEth1NodeSynced()
-		// Resume if eth1 node is synced.
-		if synced {
-			s.updateConnectedETH1(true)
-			s.runError = nil
-			log.WithFields(logrus.Fields{
-				"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
-			}).Info("Connected to eth1 proof-of-work chain")
-			return
-		}
-		if errSynced != nil {
-			s.runError = errSynced
-			log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
-		}
-	}
-	if errConnect != nil {
-		s.runError = errConnect
-		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
-	}
+func (s *Service) pollConnectionStatus() {
 	// Use a custom logger to only log errors
-	// once in  a while.
 	logCounter := 0
 	errorLogger := func(err error, msg string) {
 		if logCounter > logThreshold {
@@ -507,7 +466,6 @@ func (s *Service) waitForConnection() {
 		}
 		logCounter++
 	}
-
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 	for {
@@ -521,23 +479,6 @@ func (s *Service) waitForConnection() {
 				s.fallbackToNextEndpoint()
 				continue
 			}
-			synced, errSynced := s.isEth1NodeSynced()
-			if errSynced != nil {
-				errorLogger(errSynced, "Could not check sync status of eth1 chain")
-				s.runError = errSynced
-				s.fallbackToNextEndpoint()
-				continue
-			}
-			if synced {
-				s.updateConnectedETH1(true)
-				s.runError = nil
-				log.WithFields(logrus.Fields{
-					"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
-				}).Info("Connected to eth1 proof-of-work chain")
-				return
-			}
-			s.runError = errNotSynced
-			log.Debug("Eth1 node is currently syncing")
 		case <-s.ctx.Done():
 			log.Debug("Received cancelled context,closing existing powchain service")
 			return
@@ -569,7 +510,10 @@ func (s *Service) retryETH1Node(err error) {
 	// Back off for a while before
 	// resuming dialing the eth1 node.
 	time.Sleep(backOffPeriod)
-	s.waitForConnection()
+	if err := s.connectToPowChain(); err != nil {
+		s.runError = err
+		return
+	}
 	// Reset run error in the event of a successful connection.
 	s.runError = nil
 }
@@ -1048,35 +992,6 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 			DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
 		}
 		return s.cfg.beaconDB.SavePowchainData(ctx, eth1Data)
-	}
-	return nil
-}
-
-// Initializes a connection to the engine API if an execution provider endpoint is set.
-func (s *Service) initializeEngineAPIClient(ctx context.Context) error {
-	// If Bellatrix fork epoch is not set, we do not run this check.
-	if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
-		return nil
-	}
-	u, err := url.Parse(s.CurrentETH1Endpoint())
-	if err != nil {
-		return nil
-	}
-	switch u.Scheme {
-	case "http", "https":
-		client, err := gethRPC.DialHTTPWithClient(s.CurrentETH1Endpoint(), s.cfg.httpRPCClient)
-		if err != nil {
-			return err
-		}
-		s.engineRPCClient = client
-	case "":
-		client, err := gethRPC.DialIPC(ctx, s.CurrentETH1Endpoint())
-		if err != nil {
-			return err
-		}
-		s.engineRPCClient = client
-	default:
-		return errors.Wrapf(ErrUnsupportedScheme, "%q", u.Scheme)
 	}
 	return nil
 }

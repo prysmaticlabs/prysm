@@ -9,6 +9,7 @@ import (
 
 	"github.com/holiman/uint256"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -26,14 +27,10 @@ var (
 // If there are any discrepancies, we must log errors to ensure users can resolve
 //the problem and be ready for the merge transition.
 func (s *Service) checkTransitionConfiguration(
-	ctx context.Context, blockNotifications chan *statefeed.BlockProcessedData,
+	ctx context.Context, blockNotifications chan *feed.Event,
 ) {
 	// If Bellatrix fork epoch is not set, we do not run this check.
 	if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
-		return
-	}
-	// If no engine API, then also avoid running this check.
-	if s.engineRPCClient == nil {
 		return
 	}
 	i := new(big.Int)
@@ -67,7 +64,11 @@ func (s *Service) checkTransitionConfiguration(
 		case <-sub.Err():
 			return
 		case ev := <-blockNotifications:
-			isExecutionBlock, err := blocks.IsExecutionBlock(ev.SignedBlock.Block().Body())
+			data, ok := ev.Data.(*statefeed.BlockProcessedData)
+			if !ok {
+				continue
+			}
+			isExecutionBlock, err := blocks.IsExecutionBlock(data.SignedBlock.Block().Body())
 			if err != nil {
 				log.WithError(err).Debug("Could not check whether signed block is execution block")
 				continue
