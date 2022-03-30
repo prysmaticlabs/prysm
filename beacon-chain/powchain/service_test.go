@@ -645,8 +645,12 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	cache, err := depositcache.New()
 	require.NoError(t, err)
-
+	srv, endpoint := setupRPCServer(t)
+	t.Cleanup(func() {
+		srv.Stop()
+	})
 	s1, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
 		WithDepositCache(cache),
 	)
@@ -670,7 +674,12 @@ func TestService_InitializeCorrectly(t *testing.T) {
 	cache, err := depositcache.New()
 	require.NoError(t, err)
 
+	srv, endpoint := setupRPCServer(t)
+	t.Cleanup(func() {
+		srv.Stop()
+	})
 	s1, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
 		WithDepositCache(cache),
 	)
@@ -693,8 +702,12 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	cache, err := depositcache.New()
 	require.NoError(t, err)
-
+	srv, endpoint := setupRPCServer(t)
+	t.Cleanup(func() {
+		srv.Stop()
+	})
 	s1, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
 		WithDepositCache(cache),
 	)
@@ -785,8 +798,14 @@ func TestTimestampIsChecked(t *testing.T) {
 }
 
 func TestETH1Endpoints(t *testing.T) {
-	firstEndpoint := "A"
-	secondEndpoint := "B"
+	server, firstEndpoint := setupRPCServer(t)
+	t.Cleanup(func() {
+		server.Stop()
+	})
+	server, secondEndpoint := setupRPCServer(t)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	endpoints := []string{firstEndpoint, secondEndpoint}
 
 	testAcc, err := mock.Setup()
