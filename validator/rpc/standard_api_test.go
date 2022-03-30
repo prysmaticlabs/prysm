@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -528,7 +529,47 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 }
 
 func TestServer_ListRemoteKeys(t *testing.T) {
+	t.Run("wallet not ready", func(t *testing.T) {
+		s := Server{}
+		_, err := s.ListKeystores(context.Background(), &empty.Empty{})
+		require.ErrorContains(t, "Prysm Wallet not initialized. Please create a new wallet.", err)
+	})
+	ctx := context.Background()
+	w := wallet.NewWalletForWeb3Signer()
+	root := make([]byte, fieldparams.RootLength)
+	root[0] = 1
+	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
+	config := &remote_web3signer.SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+		ProvidedPublicKeys:    pubkeys,
+	}
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+		Web3SignerConfig: config,
+	})
+	require.NoError(t, err)
+	s := &Server{
+		walletInitialized: true,
+		wallet:            w,
+		validatorService:  vs,
+	}
+	expectedKeys, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
 
+	t.Run("returns proper data with existing pub keystores", func(t *testing.T) {
+		resp, err := s.ListRemoteKeys(context.Background(), &empty.Empty{})
+		require.NoError(t, err)
+		for i := 0; i < len(resp.Data); i++ {
+			require.DeepEqual(t, expectedKeys[i][:], resp.Data[i].Pubkey)
+		}
+	})
 }
 
 func TestServer_ImportRemoteKeys(t *testing.T) {
