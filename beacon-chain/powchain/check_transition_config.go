@@ -120,6 +120,9 @@ func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, err
 	if err != nil {
 		return false, err
 	}
+	if latest == nil {
+		return false, errors.New("latest block is nil")
+	}
 	latestTtd, err := hexutil.DecodeBig(latest.TotalDifficulty)
 	if err != nil {
 		return false, err
