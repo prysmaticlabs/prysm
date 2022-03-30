@@ -53,7 +53,8 @@ func TestDepositContractAddress_OK(t *testing.T) {
 
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	server, endpoint, _ := testing2.SetupRPCServer()
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -81,7 +82,8 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	server, endpoint, _ := testing2.SetupRPCServer()
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -111,7 +113,8 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
-	server, endpoint, _ := testing2.SetupRPCServer()
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -151,7 +154,8 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
-	server, endpoint, _ := testing2.SetupRPCServer()
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -190,7 +194,8 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
-	server, endpoint, _ := testing2.SetupRPCServer()
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -226,7 +231,8 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	server, endpoint, _ := testing2.SetupRPCServer()
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -292,7 +298,8 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	server, endpoint, _ := testing2.SetupRPCServer()
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})

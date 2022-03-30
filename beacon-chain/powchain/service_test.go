@@ -127,7 +127,8 @@ func TestStart_OK(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	server, endpoint, _ := mockPOW.SetupRPCServer()
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -172,7 +173,8 @@ func TestStop_OK(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint, _ := mockPOW.SetupRPCServer()
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -201,7 +203,8 @@ func TestService_Eth1Synced(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint, _ := mockPOW.SetupRPCServer()
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -230,7 +233,8 @@ func TestFollowBlock_OK(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint, _ := mockPOW.SetupRPCServer()
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -307,7 +311,8 @@ func TestStatus(t *testing.T) {
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint, _ := mockPOW.SetupRPCServer()
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -343,7 +348,8 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint, _ := mockPOW.SetupRPCServer()
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -481,7 +487,8 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
-	server, endpoint, _ := mockPOW.SetupRPCServer()
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -536,7 +543,8 @@ func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
-	server, endpoint, _ := mockPOW.SetupRPCServer()
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
@@ -572,15 +580,18 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
-	server, firstEndpoint, _ := mockPOW.SetupRPCServer()
+	server, firstEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
-	server2, secondEndpoint, _ := mockPOW.SetupRPCServer()
+	server2, secondEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server2.Stop()
 	})
-	server3, thirdEndpoint, _ := mockPOW.SetupRPCServer()
+	server3, thirdEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server3.Stop()
 	})
@@ -642,7 +653,8 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	cache, err := depositcache.New()
 	require.NoError(t, err)
-	srv, endpoint, _ := mockPOW.SetupRPCServer()
+	srv, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		srv.Stop()
 	})
@@ -671,7 +683,8 @@ func TestService_InitializeCorrectly(t *testing.T) {
 	cache, err := depositcache.New()
 	require.NoError(t, err)
 
-	srv, endpoint, _ := mockPOW.SetupRPCServer()
+	srv, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		srv.Stop()
 	})
@@ -699,7 +712,8 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	cache, err := depositcache.New()
 	require.NoError(t, err)
-	srv, endpoint, _ := mockPOW.SetupRPCServer()
+	srv, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		srv.Stop()
 	})
@@ -795,11 +809,13 @@ func TestTimestampIsChecked(t *testing.T) {
 }
 
 func TestETH1Endpoints(t *testing.T) {
-	server, firstEndpoint, _ := mockPOW.SetupRPCServer()
+	server, firstEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
-	server, secondEndpoint, _ := mockPOW.SetupRPCServer()
+	server, secondEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
 	t.Cleanup(func() {
 		server.Stop()
 	})
