@@ -3,12 +3,13 @@ package kv
 import (
 	"bytes"
 	"context"
+	"testing"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	"testing"
 )
 
 func TestSaveOrigin(t *testing.T) {
