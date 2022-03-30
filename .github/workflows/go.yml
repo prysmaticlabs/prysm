@@ -40,6 +40,11 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           args: --print-issued-lines --sort-results --no-config --timeout=10m --disable-all -E deadcode  -E errcheck -E gosimple --skip-files=validator/web/site_data.go --skip-dirs=proto
+      
+      - name: staticcheck
+        uses: dominikh/staticcheck-action@v1.1.0
+        with:
+          version: "2021.1.1"
 
   build:
     name: Build
