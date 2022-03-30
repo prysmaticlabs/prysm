@@ -8,10 +8,10 @@ import (
 
 	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v0/fieldtrie"
+	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v0/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -56,11 +56,13 @@ type BeaconState struct {
 	latestExecutionPayloadHeader *ethpb.ExecutionPayloadHeader `ssz-gen:"true"`
 
 	lock                  sync.RWMutex
-	dirtyFields           map[types.FieldIndex]bool
-	dirtyIndices          map[types.FieldIndex][]uint64
-	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
-	rebuildTrie           map[types.FieldIndex]bool
+	fieldIndexes          map[int]v0types.FieldIndex
+	fieldIndexesRev       map[v0types.FieldIndex]int
+	dirtyFields           map[int]bool
+	dirtyIndices          map[int][]uint64
+	stateFieldLeaves      map[int]*fieldtrie.FieldTrie
+	rebuildTrie           map[int]bool
 	valMapHandler         *stateutil.ValidatorMapHandler
 	merkleLayers          [][][]byte
-	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
+	sharedFieldReferences map[int]*stateutil.Reference
 }

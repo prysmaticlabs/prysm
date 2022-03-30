@@ -2,6 +2,7 @@ package v0
 
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v0/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 )
@@ -10,51 +11,20 @@ import (
 var _ state.BeaconState = (*BeaconState)(nil)
 
 func init() {
-	fieldMap = make(map[types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateFieldCount)
+	fieldMap = make(map[v0types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateFieldCount)
 	// Initialize the fixed sized arrays.
-	fieldMap[types.BlockRoots] = types.BasicArray
-	fieldMap[types.StateRoots] = types.BasicArray
-	fieldMap[types.RandaoMixes] = types.BasicArray
+	fieldMap[v0types.BlockRoots] = types.BasicArray
+	fieldMap[v0types.StateRoots] = types.BasicArray
+	fieldMap[v0types.RandaoMixes] = types.BasicArray
 
 	// Initialize the composite arrays.
-	fieldMap[types.Eth1DataVotes] = types.CompositeArray
-	fieldMap[types.Validators] = types.CompositeArray
-	fieldMap[types.PreviousEpochAttestations] = types.CompositeArray
-	fieldMap[types.CurrentEpochAttestations] = types.CompositeArray
-	fieldMap[types.Balances] = types.CompressedArray
+	fieldMap[v0types.Eth1DataVotes] = types.CompositeArray
+	fieldMap[v0types.Validators] = types.CompositeArray
+	fieldMap[v0types.PreviousEpochAttestations] = types.CompositeArray
+	fieldMap[v0types.CurrentEpochAttestations] = types.CompositeArray
+	fieldMap[v0types.Balances] = types.CompressedArray
 }
 
 // fieldMap keeps track of each field
 // to its corresponding data type.
-var fieldMap map[types.FieldIndex]types.DataType
-
-// Field Aliases for values from the types package.
-const (
-	genesisTime                    = types.GenesisTime
-	genesisValidatorsRoot          = types.GenesisValidatorsRoot
-	slot                           = types.Slot
-	fork                           = types.Fork
-	latestBlockHeader              = types.LatestBlockHeader
-	blockRoots                     = types.BlockRoots
-	stateRoots                     = types.StateRoots
-	historicalRoots                = types.HistoricalRoots
-	eth1Data                       = types.Eth1Data
-	eth1DataVotes                  = types.Eth1DataVotes
-	eth1DepositIndex               = types.Eth1DepositIndex
-	validators                     = types.Validators
-	balances                       = types.Balances
-	randaoMixes                    = types.RandaoMixes
-	slashings                      = types.Slashings
-	previousEpochAttestations      = types.PreviousEpochAttestations
-	currentEpochAttestations       = types.CurrentEpochAttestations
-	previousEpochParticipationBits = types.PreviousEpochParticipationBits
-	currentEpochParticipationBits  = types.CurrentEpochParticipationBits
-	justificationBits              = types.JustificationBits
-	previousJustifiedCheckpoint    = types.PreviousJustifiedCheckpoint
-	currentJustifiedCheckpoint     = types.CurrentJustifiedCheckpoint
-	finalizedCheckpoint            = types.FinalizedCheckpoint
-	inactivityScores               = types.InactivityScores
-	currentSyncCommittee           = types.CurrentSyncCommittee
-	nextSyncCommittee              = types.NextSyncCommittee
-	latestExecutionPayloadHeader   = types.LatestExecutionPayloadHeader
-)
+var fieldMap map[v0types.FieldIndex]types.DataType

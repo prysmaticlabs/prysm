@@ -1,6 +1,7 @@
 package v0
 
 import (
+	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v0/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -10,7 +11,7 @@ func (b *BeaconState) SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error {
 	defer b.lock.Unlock()
 
 	b.currentSyncCommittee = val
-	b.markFieldAsDirty(currentSyncCommittee)
+	b.markFieldAsDirty(v0types.CurrentSyncCommittee)
 	return nil
 }
 
@@ -20,6 +21,6 @@ func (b *BeaconState) SetNextSyncCommittee(val *ethpb.SyncCommittee) error {
 	defer b.lock.Unlock()
 
 	b.nextSyncCommittee = val
-	b.markFieldAsDirty(nextSyncCommittee)
+	b.markFieldAsDirty(v0types.NextSyncCommittee)
 	return nil
 }

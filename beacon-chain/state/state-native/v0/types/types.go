@@ -1,4 +1,4 @@
-package v0
+package types
 
 import (
 	"github.com/pkg/errors"
