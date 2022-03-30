@@ -311,9 +311,17 @@ func (s *Server) ImportRemoteKeys(ctx context.Context, req *ethpbservice.ImportR
 	}
 
 	remoteKeys := make([][fieldparams.BLSPubkeyLength]byte, len(req.RemoteKeys))
+	isUrlUsed := false
 	for i, obj := range req.RemoteKeys {
 		remoteKeys[i] = bytesutil.ToBytes48(obj.Pubkey)
+		if obj.Url != "" {
+			isUrlUsed = true
+		}
 	}
+	if isUrlUsed {
+		log.Warnf("Setting web3signer base url for imported keys is not supported. Prysm only uses the url from --validators-external-signer-url flag for web3signer.")
+	}
+
 	statuses, err := adder.AddPublicKeys(ctx, remoteKeys)
 	if err != nil {
 		sts := groupImportRemoteKeysErrors(req, fmt.Sprintf("Could not add keys;error: %v", err))
