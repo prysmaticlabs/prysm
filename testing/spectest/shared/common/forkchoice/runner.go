@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
 	types "github.com/prysmaticlabs/eth2-types"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
@@ -25,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // Run executes "forkchoice" test.
@@ -103,6 +105,14 @@ func Run(t *testing.T, config string, fork int) {
 						}
 						r, err := beaconBlock.Block().HashTreeRoot()
 						require.NoError(t, err)
+						slotsSinceGenesis := slots.SinceGenesis(service.GenesisTime())
+						args := &forkchoicetypes.ProposerBoostRootArgs{
+							BlockRoot:       r,
+							BlockSlot:       beaconBlock.Block().Slot(),
+							CurrentSlot:     slotsSinceGenesis,
+							SecondsIntoSlot: uint64(lastTick) % params.BeaconConfig().SecondsPerSlot,
+						}
+						require.NoError(t, service.ForkChoicer().BoostProposerRoot(ctx, args))
 						if step.Valid != nil && !*step.Valid {
 							require.Equal(t, true, service.ReceiveBlock(ctx, beaconBlock, r) != nil)
 						} else {
