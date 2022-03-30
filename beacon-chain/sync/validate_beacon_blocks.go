@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -258,12 +257,9 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	if parentState.Version() != blk.Version() {
 		return errors.New("block and state are not the same version")
 	}
-	if parentState.Version() != version.Bellatrix || blk.Version() != version.Bellatrix {
-		return nil
-	}
 
 	body := blk.Body()
-	executionEnabled, err := blocks.ExecutionEnabled(parentState, body)
+	executionEnabled, err := blocks.IsExecutionEnabled(parentState, body)
 	if err != nil {
 		return err
 	}

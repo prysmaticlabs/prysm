@@ -54,7 +54,7 @@ func RunBlockOperationTest(
 	helpers.ClearCache()
 	b := util.NewBeaconBlockBellatrix()
 	b.Block.Body = body
-	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	beaconState, err := operationFn(context.Background(), preState, wsb)
 	if postSSZExists {
