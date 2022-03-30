@@ -128,8 +128,8 @@ func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, err
 		return true, nil
 	}
 	log.WithFields(logrus.Fields{
-		"latestTTD":     latestTtd.String(),
-		"transitionTTD": ttd.ToBig().String(),
-	}).Info("Total terminal difficulty has not been reached yet")
+		"latestDifficulty":   latestTtd.String(),
+		"terminalDifficulty": ttd.ToBig().String(),
+	}).Info("terminal difficulty has not been reached yet")
 	return false, nil
 }
