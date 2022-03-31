@@ -24,9 +24,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// UpdateHeadWithBalances updates the beacon state head after getting justified balanced from cache.
+// UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
 // This function is only used in spec-tests, it does save the head after updating it.
-func (s *Service) UpdateHeadWithBalances(ctx context.Context) error {
+func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 	cp := s.store.JustifiedCheckpt()
 	if cp == nil {
 		return errors.New("no justified checkpoint")
