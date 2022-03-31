@@ -249,7 +249,7 @@ func handleRPCError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if iHTTPTimeoutError(err) {
+	if isTimeout(err) {
 		return errors.Wrapf(ErrHTTPTimeout, "%s", err)
 	}
 	e, ok := err.(rpc.Error)
@@ -281,14 +281,15 @@ func handleRPCError(err error) error {
 	}
 }
 
+// ErrHTTPTimeout returns true if the error is a http.Client timeout error.
 var ErrHTTPTimeout = errors.New("timeout from http.Client")
 
-type HTTPTimeoutError interface {
+type httpTimeoutError interface {
 	Error() string
 	Timeout() bool
 }
 
-func iHTTPTimeoutError(e error) bool {
-	t, ok := e.(HTTPTimeoutError)
+func isTimeout(e error) bool {
+	t, ok := e.(httpTimeoutError)
 	return ok && t.Timeout()
 }
