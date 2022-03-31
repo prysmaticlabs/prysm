@@ -252,7 +252,7 @@ func (s *Service) Start() {
 	}
 
 	// Check transition configuration for the engine API client in the background.
-	go s.checkTransitionConfiguration(s.ctx)
+	go s.checkTransitionConfiguration(s.ctx, make(chan *statefeed.BlockProcessedData, 1))
 
 	go func() {
 		s.isRunning = true

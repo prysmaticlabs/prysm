@@ -6,11 +6,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -107,22 +109,42 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
-		return err
-	}
 	postStateVersion, postStateHeader, err := getStateVersionAndPayload(postState)
 	if err != nil {
 		return err
 	}
-	if err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed, blockRoot); err != nil {
+	isValidPayload, err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed)
+	if err != nil {
 		return errors.Wrap(err, "could not verify new payload")
+	}
+	if !isValidPayload {
+		candidate, err := s.optimisticCandidateBlock(ctx, b)
+		if err != nil {
+			return errors.Wrap(err, "could not check if block is optimistic candidate")
+		}
+		if !candidate {
+			return errNotOptimisticCandidate
+		}
+	}
+
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
+		return err
+	}
+	if isValidPayload {
+		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
+			return errors.Wrap(err, "could not set optimistic block to valid")
+		}
 	}
 
 	// We add a proposer score boost to fork choice for the block root if applicable, right after
 	// running a successful state transition for the block.
-	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(
-		ctx, signed.Block().Slot(), blockRoot, s.genesisTime,
-	); err != nil {
+	secondsIntoSlot := uint64(time.Since(s.genesisTime).Seconds()) % params.BeaconConfig().SecondsPerSlot
+	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(ctx, &forkchoicetypes.ProposerBoostRootArgs{
+		BlockRoot:       blockRoot,
+		BlockSlot:       signed.Block().Slot(),
+		CurrentSlot:     slots.SinceGenesis(s.genesisTime),
+		SecondsIntoSlot: secondsIntoSlot,
+	}); err != nil {
 		return err
 	}
 
@@ -374,15 +396,32 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	// blocks have been verified, add them to forkchoice and call the engine
 	for i, b := range blks {
 		s.saveInitSyncBlock(blockRoots[i], b)
-		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			return nil, nil, err
-		}
-		if err := s.notifyNewPayload(ctx,
+		isValidPayload, err := s.notifyNewPayload(ctx,
 			preVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].version,
 			preVersionAndHeaders[i].header,
-			postVersionAndHeaders[i].header, b, blockRoots[i]); err != nil {
+			postVersionAndHeaders[i].header, b)
+
+		if err != nil {
 			return nil, nil, err
+		}
+		if !isValidPayload {
+			candidate, err := s.optimisticCandidateBlock(ctx, b.Block())
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not check if block is optimistic candidate")
+			}
+			if !candidate {
+				return nil, nil, errNotOptimisticCandidate
+			}
+		}
+
+		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+			return nil, nil, err
+		}
+		if isValidPayload {
+			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoots[i]); err != nil {
+				return nil, nil, errors.Wrap(err, "could not set optimistic block to valid")
+			}
 		}
 
 		if _, err := s.notifyForkchoiceUpdate(ctx, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
@@ -539,7 +578,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 
 func getBlockPayloadHash(blk block.BeaconBlock) ([32]byte, error) {
 	payloadHash := [32]byte{}
-	if isPreBellatrix(blk.Version()) {
+	if blocks.IsPreBellatrixVersion(blk.Version()) {
 		return payloadHash, nil
 	}
 	payload, err := blk.Body().ExecutionPayload()

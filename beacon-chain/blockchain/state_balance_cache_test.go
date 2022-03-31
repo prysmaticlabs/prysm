@@ -15,15 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-type mockStateByRoot struct {
-	state state.BeaconState
-	err   error
-}
-
-func (m *mockStateByRoot) StateByRoot(context.Context, [32]byte) (state.BeaconState, error) {
-	return m.state, m.err
-}
-
 type testStateOpt func(*ethpb.BeaconStateAltair)
 
 func testStateWithValidators(v []*ethpb.Validator) testStateOpt {

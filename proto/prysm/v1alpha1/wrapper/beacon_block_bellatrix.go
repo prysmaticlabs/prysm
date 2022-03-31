@@ -25,9 +25,8 @@ type bellatrixSignedBeaconBlock struct {
 	b *eth.SignedBeaconBlockBellatrix
 }
 
-// WrappedBellatrixSignedBeaconBlock is constructor which wraps a protobuf Bellatrix block with the block wrapper.
-// Deprecated: use WrappedSignedBeaconBlock instead.
-func WrappedBellatrixSignedBeaconBlock(b *eth.SignedBeaconBlockBellatrix) (block.SignedBeaconBlock, error) {
+// wrappedBellatrixSignedBeaconBlock is constructor which wraps a protobuf Bellatrix block with the block wrapper.
+func wrappedBellatrixSignedBeaconBlock(b *eth.SignedBeaconBlockBellatrix) (block.SignedBeaconBlock, error) {
 	w := bellatrixSignedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped

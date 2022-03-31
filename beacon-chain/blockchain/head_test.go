@@ -41,9 +41,10 @@ func TestSaveHead_Different(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	util.NewBeaconBlock()
-	oldBlock := wrapper.WrappedPhase0SignedBeaconBlock(
+	oldBlock, err := wrapper.WrappedSignedBeaconBlock(
 		util.NewBeaconBlock(),
 	)
+	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -57,7 +58,9 @@ func TestSaveHead_Different(t *testing.T) {
 	newHeadSignedBlock.Block.Slot = 1
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(newHeadSignedBlock)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := util.NewBeaconState()
@@ -82,9 +85,10 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 
-	oldBlock := wrapper.WrappedPhase0SignedBeaconBlock(
+	oldBlock, err := wrapper.WrappedSignedBeaconBlock(
 		util.NewBeaconBlock(),
 	)
+	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -100,7 +104,9 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	newHeadSignedBlock.Block.ParentRoot = reorgChainParent[:]
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(newHeadSignedBlock)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := util.NewBeaconState()
@@ -141,7 +147,9 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	b := util.NewBeaconBlock()
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -236,7 +244,9 @@ func TestSaveOrphanedAtts(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 	service.genesisTime = time.Now()
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	require.NoError(t, service.saveOrphanedAtts(ctx, r))
 
 	require.Equal(t, len(b.Block.Body.Attestations), service.cfg.AttPool.AggregatedAttestationCount())
@@ -262,7 +272,9 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 	service.genesisTime = time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch+1)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	require.NoError(t, service.saveOrphanedAtts(ctx, r))
 
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
