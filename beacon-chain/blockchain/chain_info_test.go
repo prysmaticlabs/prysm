@@ -507,12 +507,6 @@ func TestService_IsOptimisticForRoot_DB_ProtoArray(t *testing.T) {
 	optimistic, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
-
-	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: validatedRoot[:], Slot: 9}))
-	validated, err = c.IsOptimisticForRoot(ctx, validatedRoot)
-	require.NoError(t, err)
-	require.Equal(t, false, validated)
-
 }
 
 func TestService_IsOptimisticForRoot_DB_DoublyLinkedTree(t *testing.T) {
@@ -577,11 +571,6 @@ func TestService_IsOptimisticForRoot_DB_DoublyLinkedTree(t *testing.T) {
 	optimistic, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
-
-	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: validatedRoot[:], Slot: 9}))
-	validated, err = c.IsOptimisticForRoot(ctx, validatedRoot)
-	require.NoError(t, err)
-	require.Equal(t, false, validated)
 }
 
 func TestService_IsOptimisticForRoot_DB_non_canonical(t *testing.T) {
