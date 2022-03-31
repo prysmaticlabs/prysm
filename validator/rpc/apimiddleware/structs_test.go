@@ -118,6 +118,18 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 
 }
 
+func TestListRemoteKeys_JSONisEqual(t *testing.T) {
+
+}
+
+func TestImportRemoteKeys_JSONisEqual(t *testing.T) {
+
+}
+
+func TestDeleteRemoteKeys_JSONisEqual(t *testing.T) {
+
+}
+
 // note: this does not do a deep comparison of the structs
 func areJsonPropertyNamesEqual(internal, proto interface{}) (bool, error) {
 	internalJSON, err := json.Marshal(internal)
@@ -158,16 +170,4 @@ func areJsonPropertyNamesEqual(internal, proto interface{}) (bool, error) {
 		return false, nil
 	}
 	return true, nil
-}
-
-func TestListRemoteKeys_JSONisEqual(t *testing.T) {
-
-}
-
-func TestImportRemoteKeys_JSONisEqual(t *testing.T) {
-
-}
-
-func TestDeleteRemoteKeys_JSONisEqual(t *testing.T) {
-
 }
