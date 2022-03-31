@@ -191,14 +191,14 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 	s.store = store.New(justified, finalized)
 
-	var store f.ForkChoicer
+	var f f.ForkChoicer
 	fRoot := bytesutil.ToBytes32(finalized.Root)
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		store = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
+		f = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
 	} else {
-		store = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
+		f = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
 	}
-	s.cfg.ForkChoiceStore = store
+	s.cfg.ForkChoiceStore = f
 	fb, err := s.cfg.BeaconDB.Block(s.ctx, s.ensureRootNotZeros(fRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint block")
@@ -211,7 +211,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "could not get execution payload hash")
 	}
 	fSlot := fb.Block().Slot()
-	if err := store.InsertOptimisticBlock(s.ctx, fSlot, fRoot, params.BeaconConfig().ZeroHash,
+	if err := f.InsertOptimisticBlock(s.ctx, fSlot, fRoot, params.BeaconConfig().ZeroHash,
 		payloadHash, justified.Epoch, finalized.Epoch); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
@@ -221,7 +221,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "could not get last validated checkpoint")
 	}
 	if bytes.Equal(finalized.Root, lastValidatedCheckpoint.Root) {
-		if err := store.SetOptimisticToValid(s.ctx, fRoot); err != nil {
+		if err := f.SetOptimisticToValid(s.ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not set finalized block as validated")
 		}
 	}
@@ -362,9 +362,9 @@ func (s *Service) startFromPOWChain() error {
 		defer stateSub.Unsubscribe()
 		for {
 			select {
-			case event := <-stateChannel:
-				if event.Type == statefeed.ChainStarted {
-					data, ok := event.Data.(*statefeed.ChainStartedData)
+			case e := <-stateChannel:
+				if e.Type == statefeed.ChainStarted {
+					data, ok := e.Data.(*statefeed.ChainStartedData)
 					if !ok {
 						log.Error("event data is not type *statefeed.ChainStartedData")
 						return

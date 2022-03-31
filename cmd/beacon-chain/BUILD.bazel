@@ -22,6 +22,7 @@ go_library(
         "//cmd/beacon-chain/flags:go_default_library",
         "//cmd/beacon-chain/powchain:go_default_library",
         "//cmd/beacon-chain/sync/checkpoint:go_default_library",
+        "//cmd/beacon-chain/sync/genesis:go_default_library",
         "//config/features:go_default_library",
         "//io/file:go_default_library",
         "//io/logs:go_default_library",
