@@ -8,10 +8,10 @@ def e2e_deps():
         name = "web3signer",
         # Built from commit 196462 part of an in progress PR:
         # https://github.com/ConsenSys/web3signer/pull/515
-        urls = ["https://artifacts.consensys.net/public/web3signer/raw/names/web3signer.tar.gz/versions/21.10.6/web3signer-21.10.6.tar.gz"],
-        sha256 = "3f08a262da442e50eef31bb3d6c2e70d9457da8c4e4a8647ae310a17295b886b",
+        urls = ["https://prysmaticlabs.com/uploads/web3signer-17d253b.tar.gz"],
+        sha256 = "bf450a59a0845c1ce8100b3192c7fec021b565efe8b1ab46bed9f71cb994a6d7",
         build_file = "@prysm//testing/endtoend:web3signer.BUILD",
-        strip_prefix = "web3signer-21.10.6",
+        strip_prefix = "web3signer-develop",
     )
 
     http_archive(
