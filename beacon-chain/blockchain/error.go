@@ -16,4 +16,6 @@ var (
 	// errWrongBlockCount is returned when the wrong number of blocks or
 	// block roots is used
 	errWrongBlockCount = errors.New("wrong number of blocks or block roots")
+	// block is not a valid optimistic candidate block
+	errNotOptimisticCandidate = errors.New("block is not suitable for optimistic sync")
 )

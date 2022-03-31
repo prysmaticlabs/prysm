@@ -362,7 +362,18 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if err != nil {
 		return false, err
 	}
-	return ss.Slot > lastValidated.Slot, nil
+
+	if ss.Slot > lastValidated.Slot {
+		return true, nil
+	}
+
+	isCanonical, err := s.IsCanonical(ctx, root)
+	if err != nil {
+		return false, err
+	}
+
+	// historical non-canonical blocks here are returned as optimistic for safety.
+	return !isCanonical, nil
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.
