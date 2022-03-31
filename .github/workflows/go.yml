@@ -52,8 +52,8 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      # - name: Checkout
+      #   uses: actions/checkout@v2
 
       # - name: Set up Go 1.17
       #   uses: actions/setup-go@v3
