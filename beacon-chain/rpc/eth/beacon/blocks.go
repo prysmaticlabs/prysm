@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -717,26 +718,7 @@ func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.Beac
 		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
-	// Do not block proposal critical path with debug logging or block feed updates.
-	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-			"Block proposal received via RPC")
-		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedPhase0Blk},
-		})
-	}()
-
-	// Broadcast the new block to the network.
-	if err := bs.Broadcaster.Broadcast(ctx, wrappedPhase0Blk.Proto()); err != nil {
-		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-	}
-
-	if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedPhase0Blk, root); err != nil {
-		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-	}
-
-	return nil
+	return bs.submitBlock(ctx, root, wrappedPhase0Blk)
 }
 
 func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.BeaconBlockAltair, sig []byte) error {
@@ -754,26 +736,7 @@ func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.Beac
 		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
-	// Do not block proposal critical path with debug logging or block feed updates.
-	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-			"Block proposal received via RPC")
-		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedAltairBlk},
-		})
-	}()
-
-	// Broadcast the new block to the network.
-	if err := bs.Broadcaster.Broadcast(ctx, wrappedAltairBlk.Proto()); err != nil {
-		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-	}
-
-	if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedAltairBlk, root); err != nil {
-		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-	}
-
-	return nil
+	return bs.submitBlock(ctx, root, wrappedAltairBlk)
 }
 
 func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv2.BeaconBlockBellatrix, sig []byte) error {
@@ -791,26 +754,7 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
-	// Do not block proposal critical path with debug logging or block feed updates.
-	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-			"Block proposal received via RPC")
-		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixBlk},
-		})
-	}()
-
-	// Broadcast the new block to the network.
-	if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixBlk.Proto()); err != nil {
-		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
-	}
-
-	if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixBlk, root); err != nil {
-		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
-	}
-
-	return nil
+	return bs.submitBlock(ctx, root, wrappedBellatrixBlk)
 }
 
 func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellatrixBlk *ethpbv2.BlindedBeaconBlockBellatrix, sig []byte) error {
@@ -842,22 +786,26 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
 	}
 
+	return bs.submitBlock(ctx, root, wrappedBellatrixSignedBlk)
+}
+
+func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block block.SignedBeaconBlock) error {
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).Debugf(
 			"Block proposal received via RPC")
 		bs.BlockNotifier.BlockFeed().Send(&feed.Event{
 			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: wrappedBellatrixSignedBlk},
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: block},
 		})
 	}()
 
 	// Broadcast the new block to the network.
-	if err := bs.Broadcaster.Broadcast(ctx, wrappedBellatrixSignedBlk.Proto()); err != nil {
+	if err := bs.Broadcaster.Broadcast(ctx, block.Proto()); err != nil {
 		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
 	}
 
-	if err := bs.BlockReceiver.ReceiveBlock(ctx, wrappedBellatrixSignedBlk, root); err != nil {
+	if err := bs.BlockReceiver.ReceiveBlock(ctx, block, blockRoot); err != nil {
 		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
