@@ -491,7 +491,8 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 }
 
 type customError struct {
-	code int
+	code    int
+	timeout bool
 }
 
 func (c *customError) ErrorCode() int {
@@ -500,6 +501,10 @@ func (c *customError) ErrorCode() int {
 
 func (*customError) Error() string {
 	return "something went wrong"
+}
+
+func (c *customError) Timeout() bool {
+	return c.timeout
 }
 
 type dataError struct {
@@ -533,6 +538,11 @@ func Test_handleRPCError(t *testing.T) {
 			name:             "not an rpc error",
 			expectedContains: "got an unexpected error",
 			given:            errors.New("foo"),
+		},
+		{
+			name:             "HTTP times out",
+			expectedContains: ErrHTTPTimeout.Error(),
+			given:            &customError{timeout: true},
 		},
 		{
 			name:             "ErrParse",
