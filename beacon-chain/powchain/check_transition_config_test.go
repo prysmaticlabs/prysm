@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/holiman/uint256"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -151,6 +152,42 @@ func setupTransitionConfigTest(t testing.TB) *Service {
 	}
 	service.rpcClient = rpcClient
 	return service
+}
+
+func TestService_logTtdStatus(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+
+		resp := &pb.ExecutionBlock{TotalDifficulty: "0x12345678"}
+		respJSON := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  resp,
+		}
+		require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+	}))
+	defer srv.Close()
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+	defer rpcClient.Close()
+
+	service := &Service{
+		cfg: &config{},
+	}
+	service.rpcClient = rpcClient
+
+	ttd := new(uint256.Int)
+	reached, err := service.logTtdStatus(context.Background(), ttd.SetUint64(24343))
+	require.NoError(t, err)
+	require.Equal(t, true, reached)
+
+	reached, err = service.logTtdStatus(context.Background(), ttd.SetUint64(323423484))
+	require.NoError(t, err)
+	require.Equal(t, false, reached)
 }
 
 func emptyPayload() *pb.ExecutionPayload {

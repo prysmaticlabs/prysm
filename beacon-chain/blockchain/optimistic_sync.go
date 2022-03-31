@@ -81,31 +81,32 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	return payloadID, nil
 }
 
-// notifyForkchoiceUpdate signals execution engine on a new payload
+// notifyForkchoiceUpdate signals execution engine on a new payload.
+// It returns true if the EL has returned VALID for the block
 func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postStateVersion int,
-	preStateHeader, postStateHeader *ethpb.ExecutionPayloadHeader, blk block.SignedBeaconBlock, root [32]byte) error {
+	preStateHeader, postStateHeader *ethpb.ExecutionPayloadHeader, blk block.SignedBeaconBlock) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 
 	// Execution payload is only supported in Bellatrix and beyond. Pre
 	// merge blocks are never optimistic
 	if blocks.IsPreBellatrixVersion(postStateVersion) {
-		return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
+		return true, nil
 	}
 	if err := helpers.BeaconBlockIsNil(blk); err != nil {
-		return err
+		return false, err
 	}
 	body := blk.Block().Body()
 	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
 	if err != nil {
-		return errors.Wrap(err, "could not determine if execution is enabled")
+		return false, errors.Wrap(err, "could not determine if execution is enabled")
 	}
 	if !enabled {
-		return s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root)
+		return true, nil
 	}
 	payload, err := body.ExecutionPayload()
 	if err != nil {
-		return errors.Wrap(err, "could not get execution payload")
+		return false, errors.Wrap(err, "could not get execution payload")
 	}
 	_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	if err != nil {
@@ -115,30 +116,26 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 				"slot":      blk.Block().Slot(),
 				"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 			}).Info("Called new payload with optimistic block")
-			return nil
+			return false, nil
 		default:
-			return errors.Wrap(err, "could not validate execution payload from execution engine")
+			return false, errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
-	}
-
-	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, root); err != nil {
-		return errors.Wrap(err, "could not set optimistic status")
 	}
 
 	// During the transition event, the transition block should be verified for sanity.
 	if blocks.IsPreBellatrixVersion(preStateVersion) {
 		// Handle case where pre-state is Altair but block contains payload.
 		// To reach here, the block must have contained a valid payload.
-		return s.validateMergeBlock(ctx, blk)
+		return true, s.validateMergeBlock(ctx, blk)
 	}
 	atTransition, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(preStateHeader, body)
 	if err != nil {
-		return errors.Wrap(err, "could not check if merge block is terminal")
+		return true, errors.Wrap(err, "could not check if merge block is terminal")
 	}
 	if !atTransition {
-		return nil
+		return true, nil
 	}
-	return s.validateMergeBlock(ctx, blk)
+	return true, s.validateMergeBlock(ctx, blk)
 }
 
 // optimisticCandidateBlock returns true if this block can be optimistically synced.
@@ -146,10 +143,6 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 // Spec pseudocode definition:
 // def is_optimistic_candidate_block(opt_store: OptimisticStore, current_slot: Slot, block: BeaconBlock) -> bool:
 //    if is_execution_block(opt_store.blocks[block.parent_root]):
-//        return True
-//
-//    justified_root = opt_store.block_states[opt_store.head_block_root].current_justified_checkpoint.root
-//    if is_execution_block(opt_store.blocks[justified_root]):
 //        return True
 //
 //    if block.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY <= current_slot:
@@ -173,17 +166,5 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 	if err != nil {
 		return false, err
 	}
-	if parentIsExecutionBlock {
-		return true, nil
-	}
-
-	j := s.store.JustifiedCheckpt()
-	if j == nil {
-		return false, errNilJustifiedInStore
-	}
-	jBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(j.Root))
-	if err != nil {
-		return false, err
-	}
-	return blocks.IsExecutionBlock(jBlock.Block().Body())
+	return parentIsExecutionBlock, nil
 }
