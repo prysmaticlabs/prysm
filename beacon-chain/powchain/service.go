@@ -30,7 +30,7 @@ import (
 	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	nativev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
+	native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -278,7 +278,7 @@ func (s *Service) Stop() error {
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
 	if features.Get().EnableNativeState {
-		s.preGenesisState = &nativev1.BeaconState{}
+		s.preGenesisState = &native.BeaconState{}
 	} else {
 		s.preGenesisState = &v1.BeaconState{}
 	}
