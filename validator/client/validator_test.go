@@ -21,6 +21,7 @@ import (
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -113,6 +114,11 @@ func (*mockKeymanager) ExtractKeystores(
 func (*mockKeymanager) ListKeymanagerAccounts(
 	context.Context, keymanager.ListKeymanagerAccountConfig) error {
 	return nil
+}
+
+func (*mockKeymanager) DeleteKeystores(context.Context, [][]byte,
+) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return nil, nil
 }
 
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {

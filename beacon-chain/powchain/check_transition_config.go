@@ -7,10 +7,14 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -24,11 +28,14 @@ var (
 // there are no differences in terminal block difficulty and block hash.
 // If there are any discrepancies, we must log errors to ensure users can resolve
 //the problem and be ready for the merge transition.
-func (s *Service) checkTransitionConfiguration(ctx context.Context) {
+func (s *Service) checkTransitionConfiguration(
+	ctx context.Context, blockNotifications chan *statefeed.BlockProcessedData,
+) {
 	// If Bellatrix fork epoch is not set, we do not run this check.
 	if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
 		return
 	}
+	// If no engine API, then also avoid running this check.
 	if s.engineAPIClient == nil {
 		return
 	}
@@ -53,14 +60,37 @@ func (s *Service) checkTransitionConfiguration(ctx context.Context) {
 	// This serves as a heartbeat to ensure the execution client and Prysm are ready for the
 	// Bellatrix hard-fork transition.
 	ticker := time.NewTicker(checkTransitionPollingInterval)
+	hasTtdReached := false
 	defer ticker.Stop()
+	sub := s.cfg.stateNotifier.StateFeed().Subscribe(blockNotifications)
+	defer sub.Unsubscribe()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-sub.Err():
+			return
+		case ev := <-blockNotifications:
+			isExecutionBlock, err := blocks.IsExecutionBlock(ev.SignedBlock.Block().Body())
+			if err != nil {
+				log.WithError(err).Debug("Could not check whether signed block is execution block")
+				continue
+			}
+			if isExecutionBlock {
+				log.Debug("PoS transition is complete, no longer checking for configuration changes")
+				return
+			}
+		case tm := <-ticker.C:
+			ctx, cancel := context.WithDeadline(ctx, tm.Add(v1.DefaultTimeout))
 			err = s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
+			if !hasTtdReached {
+				hasTtdReached, err = s.logTtdStatus(ctx, ttd)
+				if err != nil {
+					log.WithError(err).Error("Could not log ttd status")
+				}
+			}
+			cancel()
 		}
 	}
 }
@@ -84,4 +114,27 @@ func (s *Service) handleExchangeConfigurationError(err error) {
 		return
 	}
 	log.WithError(err).Error("Could not check configuration values between execution and consensus client")
+}
+
+// Logs the terminal total difficulty status.
+func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, error) {
+	latest, err := s.engineAPIClient.LatestExecutionBlock(ctx)
+	if err != nil {
+		return false, err
+	}
+	if latest == nil {
+		return false, errors.New("latest block is nil")
+	}
+	latestTtd, err := hexutil.DecodeBig(latest.TotalDifficulty)
+	if err != nil {
+		return false, err
+	}
+	if latestTtd.Cmp(ttd.ToBig()) >= 0 {
+		return true, nil
+	}
+	log.WithFields(logrus.Fields{
+		"latestDifficulty":   latestTtd.String(),
+		"terminalDifficulty": ttd.ToBig().String(),
+	}).Info("terminal difficulty has not been reached yet")
+	return false, nil
 }
