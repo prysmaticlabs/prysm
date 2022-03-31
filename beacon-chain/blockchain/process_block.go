@@ -392,7 +392,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	// blocks have been verified, add them to forkchoice and call the engine
 	for i, b := range blks {
 		s.saveInitSyncBlock(blockRoots[i], b)
-		validated, err := s.notifyNewPayload(ctx,
+		isValidPayload, err := s.notifyNewPayload(ctx,
 			preVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].version,
 			preVersionAndHeaders[i].header,
@@ -401,7 +401,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		if err != nil {
 			return nil, nil, err
 		}
-		if !validated {
+		if !isValidPayload {
 			candidate, err := s.optimisticCandidateBlock(ctx, b.Block())
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not check if block is optimistic candidate")
@@ -414,7 +414,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			return nil, nil, err
 		}
-		if validated {
+		if isValidPayload {
 			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoots[i]); err != nil {
 				return nil, nil, errors.Wrap(err, "could not set optimistic block to valid")
 			}
