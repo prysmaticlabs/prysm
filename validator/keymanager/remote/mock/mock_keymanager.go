@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
@@ -59,4 +60,9 @@ func (*MockKeymanager) ExtractKeystores(
 func (*MockKeymanager) ListKeymanagerAccounts(
 	context.Context, keymanager.ListKeymanagerAccountConfig) error {
 	return nil
+}
+
+func (*MockKeymanager) DeleteKeystores(context.Context, [][]byte,
+) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return nil, nil
 }
