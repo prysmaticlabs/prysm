@@ -1,6 +1,6 @@
 #!/bin/sh -l
 set -e
-export PATH=$PATH:/usr/local/go/bin
+export PATH="$PATH:/usr/local/go/bin"
 
 cd "$GITHUB_WORKSPACE"
 
