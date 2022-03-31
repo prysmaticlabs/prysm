@@ -94,7 +94,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		// Command flags
 		"--network=" + network,
 		"--slashing-protection-enabled=false", // Otherwise, a postgres DB is required.
-		"--key-manager-api-enabled=true",
+		"--enable-key-manager-api=true",
 	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Test code is safe to do this.
