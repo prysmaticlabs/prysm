@@ -457,6 +457,8 @@ func (b *BeaconState) Copy() state.BeaconState {
 	defer b.lock.RUnlock()
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	dst := &BeaconState{
+		version: b.version,
+
 		// Primitive v0types, safe to copy.
 		genesisTime:      b.genesisTime,
 		slot:             b.slot,
