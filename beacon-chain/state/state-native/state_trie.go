@@ -302,8 +302,9 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]] = stateutil.NewRef(1)
 	b.sharedFieldReferences[b.fieldIndexesRev[v0types.RandaoMixes]] = stateutil.NewRef(1)
 	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Slashings]] = stateutil.NewRef(1)
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.PreviousEpochAttestations]] = stateutil.NewRef(1)
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.CurrentEpochAttestations]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.PreviousEpochParticipationBits]] = stateutil.NewRef(1) // New in Altair.
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.CurrentEpochParticipationBits]] = stateutil.NewRef(1)  // New in Altair.
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.InactivityScores]] = stateutil.NewRef(1)               // New in Altair.
 
 	state.StateCount.Inc()
 	return b, nil
@@ -443,9 +444,10 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]] = stateutil.NewRef(1)
 	b.sharedFieldReferences[b.fieldIndexesRev[v0types.RandaoMixes]] = stateutil.NewRef(1)
 	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Slashings]] = stateutil.NewRef(1)
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.PreviousEpochAttestations]] = stateutil.NewRef(1)
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.CurrentEpochAttestations]] = stateutil.NewRef(1)
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.LatestExecutionPayloadHeader]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.PreviousEpochParticipationBits]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.CurrentEpochParticipationBits]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.InactivityScores]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[b.fieldIndexesRev[v0types.LatestExecutionPayloadHeader]] = stateutil.NewRef(1) // New in Bellatrix.
 
 	state.StateCount.Inc()
 	return b, nil
@@ -1053,6 +1055,14 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRootIx++
 
 	if state.Version() == version.Altair || state.Version() == version.Bellatrix {
+		// Inactivity scores root.
+		inactivityScoresRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.inactivityScores)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute inactivityScoreRoot")
+		}
+		fieldRoots[fieldRootIx] = inactivityScoresRoot[:]
+		fieldRootIx++
+
 		// Current sync committee root.
 		currentSyncCommitteeRoot, err := stateutil.SyncCommitteeRoot(state.currentSyncCommittee)
 		if err != nil {
