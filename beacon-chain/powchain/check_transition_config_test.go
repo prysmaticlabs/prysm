@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	mockChain2 "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
@@ -109,6 +110,24 @@ func TestService_handleExchangeConfigurationError(t *testing.T) {
 		require.LogsContain(t, hook, "Could not check configuration values")
 	})
 }
+
+func TestService_logTtdStatus(t *testing.T) {
+	srv := &Service{}
+	srv.engineAPIClient = &mocks.EngineClient{ExecutionBlock: &enginev1.ExecutionBlock{TotalDifficulty: "0x12345678"}}
+	ttd := new(uint256.Int)
+	reached, err := srv.logTtdStatus(context.Background(), ttd.SetUint64(24343))
+	require.NoError(t, err)
+	require.Equal(t, true, reached)
+
+	reached, err = srv.logTtdStatus(context.Background(), ttd.SetUint64(323423484))
+	require.NoError(t, err)
+	require.Equal(t, false, reached)
+
+	srv.engineAPIClient = &mocks.EngineClient{ErrLatestExecBlock: errors.New("something went wrong")}
+	_, err = srv.logTtdStatus(context.Background(), ttd.SetUint64(24343))
+	require.ErrorContains(t, "something went wrong", err)
+}
+
 func emptyPayload() *enginev1.ExecutionPayload {
 	return &enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
