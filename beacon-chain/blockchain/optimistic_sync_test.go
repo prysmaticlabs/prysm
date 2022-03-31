@@ -9,6 +9,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -155,7 +156,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service.cfg.ExecutionEngineCaller = &mockEngineService{forkchoiceError: tt.newForkchoiceErr}
+			service.cfg.ExecutionEngineCaller = &mocks.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
 			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, service.headRoot(), tt.finalizedRoot)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
@@ -339,12 +340,12 @@ func Test_NotifyNewPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &mockEngineService{newPayloadError: tt.newPayloadErr, blks: map[[32]byte]*v1.ExecutionBlock{}}
-			e.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
+			e := &mocks.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+			e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 				TotalDifficulty: "0x2",
 			}
-			e.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
+			e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
 				ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 				TotalDifficulty: "0x1",
 			}
@@ -395,12 +396,12 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	e := &mockEngineService{blks: map[[32]byte]*v1.ExecutionBlock{}}
-	e.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
+	e := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+	e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 		TotalDifficulty: "0x2",
 	}
-	e.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
+	e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 		TotalDifficulty: "0x1",
 	}
