@@ -203,49 +203,56 @@ func Test_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name          string
-		preState      state.BeaconState
-		postState     state.BeaconState
-		blk           block.SignedBeaconBlock
-		newPayloadErr error
-		errString     string
+		name           string
+		preState       state.BeaconState
+		postState      state.BeaconState
+		isValidPayload bool
+		blk            block.SignedBeaconBlock
+		newPayloadErr  error
+		errString      string
 	}{
 		{
-			name:      "phase 0 post state",
-			postState: phase0State,
-			preState:  phase0State,
+			name:           "phase 0 post state",
+			postState:      phase0State,
+			preState:       phase0State,
+			isValidPayload: true,
 		},
 		{
-			name:      "altair post state",
-			postState: altairState,
-			preState:  altairState,
+			name:           "altair post state",
+			postState:      altairState,
+			preState:       altairState,
+			isValidPayload: true,
 		},
 		{
-			name:      "nil beacon block",
-			postState: bellatrixState,
-			preState:  bellatrixState,
-			errString: "signed beacon block can't be nil",
+			name:           "nil beacon block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			errString:      "signed beacon block can't be nil",
+			isValidPayload: false,
 		},
 		{
-			name:          "new payload with optimistic block",
-			postState:     bellatrixState,
-			preState:      bellatrixState,
-			blk:           bellatrixBlk,
-			newPayloadErr: engine.ErrAcceptedSyncingPayloadStatus,
+			name:           "new payload with optimistic block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			blk:            bellatrixBlk,
+			newPayloadErr:  engine.ErrAcceptedSyncingPayloadStatus,
+			isValidPayload: false,
 		},
 		{
-			name:          "new payload with invalid block",
-			postState:     bellatrixState,
-			preState:      bellatrixState,
-			blk:           bellatrixBlk,
-			newPayloadErr: engine.ErrInvalidPayloadStatus,
-			errString:     "could not validate execution payload from execution engine: payload status is INVALID",
+			name:           "new payload with invalid block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			blk:            bellatrixBlk,
+			newPayloadErr:  engine.ErrInvalidPayloadStatus,
+			errString:      "could not validate execution payload from execution engine: payload status is INVALID",
+			isValidPayload: false,
 		},
 		{
-			name:      "altair pre state, altair block",
-			postState: bellatrixState,
-			preState:  altairState,
-			blk:       altairBlk,
+			name:           "altair pre state, altair block",
+			postState:      bellatrixState,
+			preState:       altairState,
+			blk:            altairBlk,
+			isValidPayload: true,
 		},
 		{
 			name:      "altair pre state, happy case",
@@ -265,13 +272,15 @@ func Test_NotifyNewPayload(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
+			isValidPayload: true,
 		},
 		{
-			name:      "could not get merge block",
-			postState: bellatrixState,
-			preState:  bellatrixState,
-			blk:       bellatrixBlk,
-			errString: "could not get merge block parent hash and total difficulty",
+			name:           "could not get merge block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			blk:            bellatrixBlk,
+			errString:      "could not get merge block parent hash and total difficulty",
+			isValidPayload: false,
 		},
 		{
 			name:      "not at merge transition",
@@ -298,13 +307,15 @@ func Test_NotifyNewPayload(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
+			isValidPayload: true,
 		},
 		{
-			name:      "could not get merge block",
-			postState: bellatrixState,
-			preState:  bellatrixState,
-			blk:       bellatrixBlk,
-			errString: "could not get merge block parent hash and total difficulty",
+			name:           "could not get merge block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			blk:            bellatrixBlk,
+			errString:      "could not get merge block parent hash and total difficulty",
+			isValidPayload: false,
 		},
 		{
 			name:      "happy case",
@@ -324,6 +335,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
+			isValidPayload: true,
 		},
 	}
 	for _, tt := range tests {
@@ -347,11 +359,12 @@ func Test_NotifyNewPayload(t *testing.T) {
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0))
 			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
 			require.NoError(t, err)
-			_, err = service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk)
+			isValidPayload, err := service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tt.isValidPayload, isValidPayload)
 			}
 		})
 	}

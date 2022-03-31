@@ -113,11 +113,11 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
-	validated, err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed)
+	isValidPayload, err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not verify new payload")
 	}
-	if !validated {
+	if !isValidPayload {
 		candidate, err := s.optimisticCandidateBlock(ctx, b)
 		if err != nil {
 			return errors.Wrap(err, "could not check if block is optimistic candidate")
@@ -130,7 +130,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
 		return err
 	}
-	if validated {
+	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
