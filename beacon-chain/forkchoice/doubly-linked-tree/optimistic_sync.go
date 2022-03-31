@@ -18,7 +18,7 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, payloadHash [3
 	lastValid, ok := s.nodeByPayload[payloadHash]
 	if !ok || lastValid == nil {
 		s.nodesLock.Unlock()
-		return invalidRoots, errInvalidOptimisticStatus
+		return invalidRoots, errUnknownPayloadHash
 	}
 	firstInvalid := node
 	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != payloadHash; firstInvalid = firstInvalid.parent {
@@ -27,13 +27,12 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, payloadHash [3
 			return invalidRoots, ctx.Err()
 		}
 	}
+	// If the last valid payload is in a different fork, we remove only the
+	// passed node.
 	if firstInvalid.parent == nil {
 		firstInvalid = node
 	}
 	s.nodesLock.Unlock()
-	if err := lastValid.setNodeAndParentValidated(ctx); err != nil {
-		return invalidRoots, err
-	}
 	return s.removeNode(ctx, firstInvalid)
 }
 
