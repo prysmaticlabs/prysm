@@ -46,6 +46,7 @@ import (
 	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/checkpoint"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/genesis"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -104,6 +105,7 @@ type BeaconNode struct {
 	finalizedStateAtStartUp state.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
 	blockchainFlagOpts      []blockchain.Option
+	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
 }
 
@@ -381,20 +383,10 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not create deposit cache")
 	}
-
 	b.depositCache = depositCache
 
-	if cliCtx.IsSet(flags.GenesisStatePath.Name) {
-		r, err := os.Open(cliCtx.String(flags.GenesisStatePath.Name))
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if err := r.Close(); err != nil {
-				log.WithError(err).Error("Failed to close genesis file")
-			}
-		}()
-		if err := b.db.LoadGenesis(b.ctx, r); err != nil {
+	if b.GenesisInitializer != nil {
+		if err := b.GenesisInitializer.Initialize(b.ctx, d); err != nil {
 			if err == db.ErrExistingGenesisState {
 				return errors.New("Genesis state flag specified but a genesis state " +
 					"exists already. Run again with --clear-db and/or ensure you are using the " +
@@ -403,6 +395,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 			return errors.Wrap(err, "could not load genesis from file")
 		}
 	}
+
 	if err := b.db.EnsureEmbeddedGenesis(b.ctx); err != nil {
 		return err
 	}

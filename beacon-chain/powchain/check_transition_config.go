@@ -7,12 +7,14 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -58,6 +60,7 @@ func (s *Service) checkTransitionConfiguration(
 	// This serves as a heartbeat to ensure the execution client and Prysm are ready for the
 	// Bellatrix hard-fork transition.
 	ticker := time.NewTicker(checkTransitionPollingInterval)
+	hasTtdReached := false
 	defer ticker.Stop()
 	sub := s.cfg.stateNotifier.StateFeed().Subscribe(blockNotifications)
 	defer sub.Unsubscribe()
@@ -77,9 +80,17 @@ func (s *Service) checkTransitionConfiguration(
 				log.Debug("PoS transition is complete, no longer checking for configuration changes")
 				return
 			}
-		case <-ticker.C:
+		case tm := <-ticker.C:
+			ctx, cancel := context.WithDeadline(ctx, tm.Add(v1.DefaultTimeout))
 			err = s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
+			if !hasTtdReached {
+				hasTtdReached, err = s.logTtdStatus(ctx, ttd)
+				if err != nil {
+					log.WithError(err).Error("Could not log ttd status")
+				}
+			}
+			cancel()
 		}
 	}
 }
@@ -103,4 +114,27 @@ func (s *Service) handleExchangeConfigurationError(err error) {
 		return
 	}
 	log.WithError(err).Error("Could not check configuration values between execution and consensus client")
+}
+
+// Logs the terminal total difficulty status.
+func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, error) {
+	latest, err := s.engineAPIClient.LatestExecutionBlock(ctx)
+	if err != nil {
+		return false, err
+	}
+	if latest == nil {
+		return false, errors.New("latest block is nil")
+	}
+	latestTtd, err := hexutil.DecodeBig(latest.TotalDifficulty)
+	if err != nil {
+		return false, err
+	}
+	if latestTtd.Cmp(ttd.ToBig()) >= 0 {
+		return true, nil
+	}
+	log.WithFields(logrus.Fields{
+		"latestDifficulty":   latestTtd.String(),
+		"terminalDifficulty": ttd.ToBig().String(),
+	}).Info("terminal difficulty has not been reached yet")
+	return false, nil
 }
