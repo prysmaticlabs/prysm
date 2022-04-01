@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
@@ -27,8 +26,7 @@ func TestSaveOrigin(t *testing.T) {
 
 	sb, err := st.MarshalSSZ()
 	require.NoError(t, err)
-	reader := bytes.NewBuffer(sb)
-	require.NoError(t, db.LoadGenesis(ctx, reader))
+	require.NoError(t, db.LoadGenesis(ctx, sb))
 
 	// this is necessary for mainnet, because LoadGenesis is short-circuited by the embedded state,
 	// so the genesis root key is never written to the db.
