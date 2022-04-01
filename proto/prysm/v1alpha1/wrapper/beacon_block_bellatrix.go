@@ -93,6 +93,11 @@ func (w bellatrixSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBe
 	return w.b, nil
 }
 
+// PbBlindedBellatrixBlock is a stub.
+func (bellatrixSignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
+	return nil, ErrUnsupportedBlindedBellatrixBlock
+}
+
 // PbPhase0Block is a stub.
 func (bellatrixSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedPhase0Block
@@ -302,4 +307,9 @@ func (w bellatrixBeaconBlockBody) Proto() proto.Message {
 // ExecutionPayload returns the Execution payload of the block body.
 func (w bellatrixBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return w.b.ExecutionPayload, nil
+}
+
+// ExecutionPayloadHeader is a stub.
+func (w bellatrixBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }

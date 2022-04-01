@@ -108,6 +108,11 @@ func (altairSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatr
 	return nil, ErrUnsupportedBellatrixBlock
 }
 
+// PbBlindedBellatrixBlock is a stub.
+func (altairSignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
+	return nil, ErrUnsupportedBlindedBellatrixBlock
+}
+
 // Version of the underlying protobuf object.
 func (altairSignedBeaconBlock) Version() int {
 	return version.Altair
@@ -307,4 +312,9 @@ func (w altairBeaconBlockBody) Proto() proto.Message {
 // ExecutionPayload is a stub.
 func (w altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayload for %T", w)
+}
+
+// ExecutionPayloadHeader is a stub.
+func (w altairBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }
