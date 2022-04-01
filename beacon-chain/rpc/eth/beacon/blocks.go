@@ -235,6 +235,14 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlock")
 	defer span.End()
 
+	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock)
+	if ok {
+		if err := bs.submitBlindedBellatrixBlock(ctx, bellatrixBlkContainer.BellatrixBlock, req.Signature); err != nil {
+			return nil, err
+		}
+	}
+
+	// At the end we check forks that don't have blinded blocks.
 	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block)
 	if ok {
 		if err := bs.submitPhase0Block(ctx, phase0BlkContainer.Phase0Block, req.Signature); err != nil {
@@ -247,12 +255,7 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 			return nil, err
 		}
 	}
-	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock)
-	if ok {
-		if err := bs.submitBlindedBellatrixBlock(ctx, bellatrixBlkContainer.BellatrixBlock, req.Signature); err != nil {
-			return nil, err
-		}
-	}
+
 	return &emptypb.Empty{}, nil
 }
 
