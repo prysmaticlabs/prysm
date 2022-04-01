@@ -14,7 +14,7 @@ import (
 )
 
 // DefaultRPCHTTPTimeout for HTTP requests via an RPC connection to an execution node.
-const DefaultRPCHTTPTimeout = time.Second * 5
+const DefaultRPCHTTPTimeout = time.Second * 6
 
 type Option func(s *Service) error
 

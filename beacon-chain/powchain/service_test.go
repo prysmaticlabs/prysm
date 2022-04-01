@@ -157,6 +157,7 @@ func TestStart_OK(t *testing.T) {
 }
 
 func TestStart_NoHttpEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
+	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
@@ -165,7 +166,8 @@ func TestStart_NoHttpEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
-	require.ErrorContains(t, "missing address", err)
+	require.NoError(t, err)
+	require.LogsDoNotContain(t, hook, "missing address")
 }
 
 func TestStop_OK(t *testing.T) {
