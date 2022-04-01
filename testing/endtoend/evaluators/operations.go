@@ -407,10 +407,13 @@ var expectedEth1DataVote []byte
 
 func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (block.SignedBeaconBlock, error) {
 	if obj.GetPhase0Block() != nil {
-		return wrapper.WrappedPhase0SignedBeaconBlock(obj.GetPhase0Block()), nil
+		return wrapper.WrappedSignedBeaconBlock(obj.GetPhase0Block())
 	}
 	if obj.GetAltairBlock() != nil {
-		return wrapper.WrappedAltairSignedBeaconBlock(obj.GetAltairBlock())
+		return wrapper.WrappedSignedBeaconBlock(obj.GetAltairBlock())
+	}
+	if obj.GetBellatrixBlock() != nil {
+		return wrapper.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())
 	}
 	return nil, errors.New("container has no block")
 }

@@ -64,6 +64,7 @@ message StateSyncCommitteesRequest {
 
 message StateSyncCommitteesResponse {
   SyncCommitteeValidators data = 1;
+  bool execution_optimistic = 2;
 }
 
 message SyncCommitteeValidators {

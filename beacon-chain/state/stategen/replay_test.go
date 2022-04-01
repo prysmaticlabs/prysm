@@ -104,7 +104,9 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	targetSlot := beaconState.Slot()
 	b := util.NewBeaconBlock()
 	b.Block.Slot = beaconState.Slot() - 1
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []block.SignedBeaconBlock{wrapper.WrappedPhase0SignedBeaconBlock(b)}, targetSlot)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	newState, err := service.ReplayBlocks(context.Background(), beaconState, []block.SignedBeaconBlock{wsb}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
@@ -419,7 +421,9 @@ func tree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		if err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)); err != nil {
+		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
+		require.NoError(t, err)
+		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
 		}
 		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
@@ -499,7 +503,9 @@ func tree2(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		beaconBlock.Block.StateRoot = bytesutil.PadTo(b.Block.StateRoot, 32)
-		if err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)); err != nil {
+		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
+		require.NoError(t, err)
+		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
 		}
 		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
@@ -572,7 +578,9 @@ func tree3(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		beaconBlock.Block.StateRoot = bytesutil.PadTo(b.Block.StateRoot, 32)
-		if err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)); err != nil {
+		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
+		require.NoError(t, err)
+		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
 		}
 		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
@@ -639,7 +647,9 @@ func tree4(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		beaconBlock.Block.StateRoot = bytesutil.PadTo(b.Block.StateRoot, 32)
-		if err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(beaconBlock)); err != nil {
+		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
+		require.NoError(t, err)
+		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
 		}
 		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
@@ -660,7 +670,9 @@ func TestLoadFinalizedBlocks(t *testing.T) {
 	gBlock := util.NewBeaconBlock()
 	gRoot, err := gBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(gBlock)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(gBlock)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, [32]byte{}))
 	roots, _, err := tree1(t, beaconDB, gRoot[:])
 	require.NoError(t, err)

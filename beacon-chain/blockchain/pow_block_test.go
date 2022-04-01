@@ -9,6 +9,7 @@ import (
 	"github.com/holiman/uint256"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -117,13 +118,13 @@ func Test_validateMergeBlock(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	engine := &mockEngineService{blks: map[[32]byte]*enginev1.ExecutionBlock{}}
+	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
-	engine.blks[[32]byte{'a'}] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 		TotalDifficulty: "0x2",
 	}
-	engine.blks[[32]byte{'b'}] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 		TotalDifficulty: "0x1",
 	}
@@ -158,12 +159,12 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	engine := &mockEngineService{blks: map[[32]byte]*enginev1.ExecutionBlock{}}
+	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
 	h := [32]byte{'a'}
 	p := [32]byte{'b'}
 	td := "0x1"
-	engine.blks[h] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
 		ParentHash:      p[:],
 		TotalDifficulty: td,
 	}
@@ -175,18 +176,18 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	_, _, err = service.getBlkParentHashAndTD(ctx, []byte{'c'})
 	require.ErrorContains(t, "could not get pow block: block not found", err)
 
-	engine.blks[h] = nil
+	engine.BlockByHashMap[h] = nil
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
 	require.ErrorContains(t, "pow block is nil", err)
 
-	engine.blks[h] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
 		ParentHash:      p[:],
 		TotalDifficulty: "1",
 	}
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
 	require.ErrorContains(t, "could not decode merge block total difficulty: hex string without 0x prefix", err)
 
-	engine.blks[h] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
 		ParentHash:      p[:],
 		TotalDifficulty: "0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
 	}
