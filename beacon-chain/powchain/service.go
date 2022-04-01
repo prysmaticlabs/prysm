@@ -211,14 +211,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 
-	if err := s.connectToPowChain(); err != nil {
-		return nil, err
-	}
-
-	log.WithFields(logrus.Fields{
-		"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
-	}).Info("Connected to Ethereum execution client RPC")
-
 	if err := s.ensureValidPowchainData(ctx); err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
 	}
@@ -236,6 +228,14 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 
 // Start a web3 service's main event loop.
 func (s *Service) Start() {
+
+	if err := s.connectToPowChain(); err != nil {
+		log.WithError(err).Fatal("Could not connect to execution endpoint")
+	}
+
+	log.WithFields(logrus.Fields{
+		"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
+	}).Info("Connected to Ethereum execution client RPC")
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
 	if !s.chainStartData.Chainstarted && s.cfg.currHttpEndpoint.Url == "" {
