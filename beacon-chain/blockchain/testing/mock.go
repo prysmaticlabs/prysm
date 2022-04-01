@@ -61,6 +61,7 @@ type ChainService struct {
 	SyncCommitteePubkeys        [][]byte
 	Genesis                     time.Time
 	ForkChoiceStore             forkchoice.ForkChoicer
+	ReceiveBlockMockErr         error
 }
 
 // ForkChoicer mocks the same method in the chain service
@@ -221,6 +222,9 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.Signe
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
 func (s *ChainService) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
+	if s.ReceiveBlockMockErr != nil {
+		return s.ReceiveBlockMockErr
+	}
 	if s.State == nil {
 		return ErrNilState
 	}

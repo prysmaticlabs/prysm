@@ -249,6 +249,9 @@ func handleRPCError(err error) error {
 	if err == nil {
 		return nil
 	}
+	if isTimeout(err) {
+		return errors.Wrapf(ErrHTTPTimeout, "%s", err)
+	}
 	e, ok := err.(rpc.Error)
 	if !ok {
 		return errors.Wrap(err, "got an unexpected error")
@@ -276,4 +279,17 @@ func handleRPCError(err error) error {
 	default:
 		return err
 	}
+}
+
+// ErrHTTPTimeout returns true if the error is a http.Client timeout error.
+var ErrHTTPTimeout = errors.New("timeout from http.Client")
+
+type httpTimeoutError interface {
+	Error() string
+	Timeout() bool
+}
+
+func isTimeout(e error) bool {
+	t, ok := e.(httpTimeoutError)
+	return ok && t.Timeout()
 }
