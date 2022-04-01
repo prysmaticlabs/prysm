@@ -1,4 +1,4 @@
-package v1
+package powchain
 
 import "github.com/pkg/errors"
 
@@ -24,12 +24,6 @@ var (
 	// ErrConfigMismatch when the execution node's terminal total difficulty or
 	// terminal block hash received via the API mismatches Prysm's configuration value.
 	ErrConfigMismatch = errors.New("execution client configuration mismatch")
-	// ErrMismatchTerminalBlockHash when the terminal block hash value received via
-	// the API mismatches Prysm's configuration value.
-	ErrMismatchTerminalBlockHash = errors.New("terminal block hash mismatch")
-	// ErrMismatchTerminalTotalDiff when the terminal total difficulty value received via
-	// the API mismatches Prysm's configuration value.
-	ErrMismatchTerminalTotalDiff = errors.New("terminal total difficulty mismatch")
 	// ErrAcceptedSyncingPayloadStatus when the status of the payload is syncing or accepted.
 	ErrAcceptedSyncingPayloadStatus = errors.New("payload status is SYNCING or ACCEPTED")
 	// ErrInvalidPayloadStatus when the status of the payload is invalid.

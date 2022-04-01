@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -32,7 +32,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	}
 
 	if err := s.cfg.chain.ReceiveBlock(ctx, signed, root); err != nil {
-		if !errors.Is(err, v1.ErrHTTPTimeout) {
+		if !errors.Is(err, powchain.ErrHTTPTimeout) {
 			interop.WriteBlockToDisk(signed, true /*failed*/)
 			s.setBadBlock(ctx, root)
 		}
