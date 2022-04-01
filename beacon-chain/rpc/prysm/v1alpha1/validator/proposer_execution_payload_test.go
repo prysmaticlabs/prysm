@@ -10,7 +10,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	powtesting "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -133,7 +132,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			params.OverrideBeaconConfig(cfg)
 
 			vs := &Server{
-				ExecutionEngineCaller: &mocks.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr},
+				ExecutionEngineCaller: &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr},
 				HeadFetcher:           &chainMock.ChainService{State: tt.st},
 				BeaconDB:              beaconDB,
 			}
@@ -260,7 +259,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 				}
 			}
 			vs := &Server{
-				ExecutionEngineCaller: &mocks.EngineClient{
+				ExecutionEngineCaller: &powtesting.EngineClient{
 					ErrLatestExecBlock: tt.errLatestExecutionBlk,
 					ExecutionBlock:     tt.currentPowBlock,
 					BlockByHashMap:     m,
@@ -335,7 +334,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 			c.HashesByHeight[0] = tt.wantTerminalBlockHash
 			vs := &Server{
 				Eth1BlockFetcher: c,
-				ExecutionEngineCaller: &mocks.EngineClient{
+				ExecutionEngineCaller: &powtesting.EngineClient{
 					ExecutionBlock: tt.currentPowBlock,
 					BlockByHashMap: m,
 				},

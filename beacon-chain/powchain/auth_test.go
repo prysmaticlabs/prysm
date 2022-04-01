@@ -1,4 +1,4 @@
-package v1
+package powchain
 
 import (
 	"net/http"
@@ -19,7 +19,7 @@ func TestJWTAuthTransport(t *testing.T) {
 		jwtSecret:           secret,
 	}
 	client := &http.Client{
-		Timeout:   DefaultTimeout,
+		Timeout:   DefaultRPCHTTPTimeout,
 		Transport: authTransport,
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

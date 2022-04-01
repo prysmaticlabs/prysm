@@ -132,6 +132,15 @@ func validHostname(h string) (string, error) {
 	return fmt.Sprintf("%s:%s", host, port), nil
 }
 
+// NodeURL returns a human-readable string representation of the beacon node base url.
+func (c *Client) NodeURL() string {
+	u := &url.URL{
+		Scheme: c.scheme,
+		Host:   c.host,
+	}
+	return u.String()
+}
+
 func (c *Client) urlForPath(methodPath string) *url.URL {
 	u := &url.URL{
 		Scheme: c.scheme,

@@ -1,4 +1,4 @@
-package mocks
+package testing
 
 import (
 	"context"
@@ -19,12 +19,13 @@ type EngineClient struct {
 	ErrLatestExecBlock    error
 	ErrExecBlockByHash    error
 	ErrForkchoiceUpdated  error
+	ErrNewPayload         error
 	BlockByHashMap        map[[32]byte]*pb.ExecutionBlock
 }
 
 // NewPayload --
 func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) ([]byte, error) {
-	return e.NewPayloadResp, nil
+	return e.NewPayloadResp, e.ErrNewPayload
 }
 
 // ForkchoiceUpdated --
