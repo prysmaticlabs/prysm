@@ -27,7 +27,7 @@ func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
 	}
 	if len(jwtSecret) > 0 {
-		opts = append(opts, powchain.WithExecutionClientJWTSecret(jwtSecret))
+		opts = append(opts, powchain.WithJWTSecret(jwtSecret))
 	}
 	return opts, nil
 }

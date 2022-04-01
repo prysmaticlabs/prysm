@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"net/http/httptest"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -142,6 +144,10 @@ type RPCClient struct {
 	Backend *backends.SimulatedBackend
 }
 
+func (*RPCClient) CallContext(_ context.Context, _ interface{}, _ string, _ ...interface{}) error {
+	return nil
+}
+
 // BatchCall --
 func (r *RPCClient) BatchCall(b []rpc.BatchElem) error {
 	if r.Backend == nil {
@@ -174,4 +180,29 @@ func (m *POWChain) InsertBlock(height int, time uint64, hash []byte) *POWChain {
 // BlockExistsWithCache --
 func (m *POWChain) BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	return m.BlockExists(ctx, hash)
+}
+
+func SetupRPCServer() (*rpc.Server, string, error) {
+	srv := rpc.NewServer()
+	if err := srv.RegisterName("eth", &testETHRPC{}); err != nil {
+		return nil, "", err
+	}
+	if err := srv.RegisterName("net", &testETHRPC{}); err != nil {
+		return nil, "", err
+	}
+	hs := httptest.NewUnstartedServer(srv)
+	hs.Start()
+	return srv, hs.URL, nil
+}
+
+type testETHRPC struct{}
+
+func (*testETHRPC) NoArgsRets() {}
+
+func (*testETHRPC) ChainId(_ context.Context) *hexutil.Big {
+	return (*hexutil.Big)(big.NewInt(int64(params.BeaconConfig().DepositChainID)))
+}
+
+func (*testETHRPC) Version(_ context.Context) string {
+	return fmt.Sprintf("%d", params.BeaconConfig().DepositNetworkID)
 }

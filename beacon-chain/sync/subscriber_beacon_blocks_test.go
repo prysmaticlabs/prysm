@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -115,13 +115,13 @@ func TestService_BeaconBlockSubscribe_ExecutionEngineTimesOut(t *testing.T) {
 	s := &Service{
 		cfg: &config{
 			chain: &chainMock.ChainService{
-				ReceiveBlockMockErr: v1.ErrHTTPTimeout,
+				ReceiveBlockMockErr: powchain.ErrHTTPTimeout,
 			},
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
 	}
-	require.ErrorIs(t, v1.ErrHTTPTimeout, s.beaconBlockSubscriber(context.Background(), util.NewBeaconBlock()))
+	require.ErrorIs(t, powchain.ErrHTTPTimeout, s.beaconBlockSubscriber(context.Background(), util.NewBeaconBlock()))
 	require.Equal(t, 0, len(s.badBlockCache.Keys()))
 	require.Equal(t, 1, len(s.seenBlockCache.Keys()))
 }
