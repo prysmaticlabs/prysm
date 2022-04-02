@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/urfave/cli/v2"
@@ -76,9 +77,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.BoltMMapInitialSizeFlag,
 			cmd.ValidatorMonitorIndicesFlag,
 			cmd.ApiTimeoutFlag,
-			checkpoint.BlockPath,
-			checkpoint.StatePath,
-			checkpoint.RemoteURL,
 		},
 	},
 	{
@@ -127,8 +125,12 @@ var appHelpFlagGroups = []flagGroup{
 			flags.NetworkID,
 			flags.WeakSubjectivityCheckpoint,
 			flags.Eth1HeaderReqLimit,
-			flags.GenesisStatePath,
 			flags.MinPeersPerSubnet,
+			checkpoint.BlockPath,
+			checkpoint.StatePath,
+			checkpoint.RemoteURL,
+			genesis.StatePath,
+			genesis.BeaconAPIURL,
 		},
 	},
 	{

@@ -1,4 +1,4 @@
-package v1
+package powchain
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
