@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -64,7 +64,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /*payload attribute*/)
 	if err != nil {
 		switch err {
-		case v1.ErrAcceptedSyncingPayloadStatus:
+		case powchain.ErrAcceptedSyncingPayloadStatus:
 			log.WithFields(logrus.Fields{
 				"headSlot":      headBlk.Slot(),
 				"headHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
@@ -111,7 +111,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 	_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	if err != nil {
 		switch err {
-		case v1.ErrAcceptedSyncingPayloadStatus:
+		case powchain.ErrAcceptedSyncingPayloadStatus:
 			log.WithFields(logrus.Fields{
 				"slot":      blk.Block().Slot(),
 				"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),

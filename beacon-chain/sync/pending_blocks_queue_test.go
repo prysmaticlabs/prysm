@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
@@ -123,7 +123,7 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 				FinalizedCheckPoint: &ethpb.Checkpoint{
 					Epoch: 0,
 				},
-				ReceiveBlockMockErr: v1.ErrHTTPTimeout,
+				ReceiveBlockMockErr: powchain.ErrHTTPTimeout,
 			},
 			stateGen: stategen.New(db),
 		},

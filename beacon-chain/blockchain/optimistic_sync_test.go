@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -134,7 +134,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: engine.ErrAcceptedSyncingPayloadStatus,
+			newForkchoiceErr: powchain.ErrAcceptedSyncingPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 		},
 		{
@@ -148,7 +148,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: engine.ErrInvalidPayloadStatus,
+			newForkchoiceErr: powchain.ErrInvalidPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 			errString:        "could not notify forkchoice update from execution engine: payload status is INVALID",
 		},
@@ -156,7 +156,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service.cfg.ExecutionEngineCaller = &mocks.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
+			service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
 			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, service.headRoot(), tt.finalizedRoot)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
@@ -235,7 +235,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			postState:      bellatrixState,
 			preState:       bellatrixState,
 			blk:            bellatrixBlk,
-			newPayloadErr:  engine.ErrAcceptedSyncingPayloadStatus,
+			newPayloadErr:  powchain.ErrAcceptedSyncingPayloadStatus,
 			isValidPayload: false,
 		},
 		{
@@ -243,7 +243,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			postState:      bellatrixState,
 			preState:       bellatrixState,
 			blk:            bellatrixBlk,
-			newPayloadErr:  engine.ErrInvalidPayloadStatus,
+			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
 			errString:      "could not validate execution payload from execution engine: payload status is INVALID",
 			isValidPayload: false,
 		},
@@ -340,7 +340,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &mocks.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+			e := &mockPOW.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 			e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 				TotalDifficulty: "0x2",
@@ -396,7 +396,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	e := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+	e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 	e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 		TotalDifficulty: "0x2",
