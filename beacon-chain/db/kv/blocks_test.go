@@ -31,7 +31,7 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
+			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
 	{
@@ -42,7 +42,7 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedAltairSignedBeaconBlock(b)
+			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
 	{
@@ -53,9 +53,26 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedBellatrixSignedBeaconBlock(b)
+			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
+}
+
+func TestStore_SaveBackfillBlockRoot(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+
+	_, err := db.BackfillBlockRoot(ctx)
+	require.ErrorIs(t, err, ErrNotFoundBackfillBlockRoot)
+
+	expected := [32]byte{}
+	copy(expected[:], []byte{0x23})
+	err = db.SaveBackfillBlockRoot(ctx, expected)
+	require.NoError(t, err)
+	actual, err := db.BackfillBlockRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expected, actual)
+
 }
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
@@ -212,7 +229,9 @@ func TestStore_GenesisBlock(t *testing.T) {
 	blockRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	retrievedBlock, err := db.GenesisBlock(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, true, proto.Equal(genesisBlock, retrievedBlock.Proto()), "Wanted: %v, received: %v", genesisBlock, retrievedBlock)

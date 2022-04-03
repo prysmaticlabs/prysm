@@ -285,20 +285,18 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	if state.Version() == version.Bellatrix {
-		enabled, err := b.ExecutionEnabled(state, blk.Body())
+	enabled, err := b.IsExecutionEnabled(state, blk.Body())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not check if execution is enabled")
+	}
+	if enabled {
+		payload, err := blk.Body().ExecutionPayload()
 		if err != nil {
-			return nil, errors.Wrap(err, "could not check if execution is enabled")
+			return nil, err
 		}
-		if enabled {
-			payload, err := blk.Body().ExecutionPayload()
-			if err != nil {
-				return nil, err
-			}
-			state, err = b.ProcessPayload(state, payload)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not process execution payload")
-			}
+		state, err = b.ProcessPayload(state, payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process execution payload")
 		}
 	}
 

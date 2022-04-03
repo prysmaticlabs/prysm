@@ -30,7 +30,7 @@ func TestPhase0SignedBeaconBlock_Header(t *testing.T) {
 		},
 		Signature: signature,
 	}
-	wrapped := wrapper.WrappedPhase0SignedBeaconBlock(block)
+	wrapped, _ := wrapper.WrappedSignedBeaconBlock(block)
 
 	header, err := wrapped.Header()
 	require.NoError(t, err)
