@@ -283,7 +283,6 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	}
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
-	// TODO(10261) Check optimistic status if parent is in DB.
 	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, parentRoot)
 	if err != nil {
 		return err

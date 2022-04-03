@@ -135,12 +135,12 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
-	service.notifyEngineIfChangedHead(service.headRoot())
+	service.notifyEngineIfChangedHead(ctx, service.headRoot())
 	hookErr := "could not notify forkchoice update"
 	finalizedErr := "could not get finalized checkpoint"
 	require.LogsDoNotContain(t, hook, finalizedErr)
 	require.LogsDoNotContain(t, hook, hookErr)
-	service.notifyEngineIfChangedHead([32]byte{'a'})
+	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
 	require.LogsContain(t, hook, finalizedErr)
 
 	hook.Reset()
@@ -161,7 +161,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, 1)
 	service.store.SetFinalizedCheckpt(finalized)
-	service.notifyEngineIfChangedHead([32]byte{'b'})
+	service.notifyEngineIfChangedHead(ctx, [32]byte{'b'})
 	require.LogsDoNotContain(t, hook, finalizedErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2)

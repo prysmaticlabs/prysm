@@ -31,7 +31,7 @@ func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
 		opts = append(opts, powchain.WithExecutionEndpoint(executionEndpoint))
 	}
 	if len(jwtSecret) > 0 {
-		opts = append(opts, powchain.WithExecutionClientJWTSecret(jwtSecret))
+		opts = append(opts, powchain.WithJWTSecret(jwtSecret))
 	}
 	return opts, nil
 }

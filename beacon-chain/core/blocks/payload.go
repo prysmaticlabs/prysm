@@ -235,6 +235,9 @@ func PayloadToHeader(payload *enginev1.ExecutionPayload) (*ethpb.ExecutionPayloa
 }
 
 func isEmptyPayload(p *enginev1.ExecutionPayload) bool {
+	if p == nil {
+		return true
+	}
 	if !bytes.Equal(p.ParentHash, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
