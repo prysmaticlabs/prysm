@@ -107,7 +107,7 @@ func BuildSignedBeaconBlock(blk block.BeaconBlock, signature []byte) (block.Sign
 			return nil, errors.New("unable to access inner bellatrix proto")
 		}
 		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: pb, Signature: signature})
-	case bellatrixBlindedBeaconBlock:
+	case blindedBeaconBlockBellatrix:
 		pb, ok := b.Proto().(*eth.BlindedBeaconBlockBellatrix)
 		if !ok {
 			return nil, errors.New("unable to access inner bellatrix proto")

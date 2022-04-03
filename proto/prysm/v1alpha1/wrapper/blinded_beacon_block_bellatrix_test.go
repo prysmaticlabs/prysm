@@ -193,7 +193,7 @@ func TestBellatrixBlindedBeaconBlock_Body(t *testing.T) {
 }
 
 func TestBellatrixBlindedBeaconBlock_IsNil(t *testing.T) {
-	_, err := wrapper.WrappedBeaconBlock(nil)
+	_, err := wrapper.WrappedBellatrixBlindedBeaconBlockBody(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
 	wb, err := wrapper.WrappedBeaconBlock(&ethpb.BlindedBeaconBlockBellatrix{})
@@ -357,9 +357,8 @@ func TestBellatrixBlindedBeaconBlockBody_ExecutionPayloadHeader(t *testing.T) {
 	wbb, err := wrapper.WrappedBellatrixBlindedBeaconBlockBody(body)
 	require.NoError(t, err)
 
-	got, err := wbb.ExecutionPayload()
-	require.NoError(t, err)
-	assert.DeepEqual(t, payloads, got)
+	_, err = wbb.ExecutionPayload()
+	require.ErrorContains(t, wrapper.ErrUnsupportedField.Error(), err)
 }
 
 func TestBellatrixBlindedBeaconBlock_PbGenericBlock(t *testing.T) {
@@ -371,7 +370,7 @@ func TestBellatrixBlindedBeaconBlock_PbGenericBlock(t *testing.T) {
 
 	got, err := wsb.PbGenericBlock()
 	require.NoError(t, err)
-	assert.Equal(t, abb, got.GetBellatrix())
+	assert.Equal(t, abb, got.GetBlindedBellatrix())
 }
 
 func TestBellatrixBlindedBeaconBlock_AsSignRequestObject(t *testing.T) {
@@ -380,7 +379,7 @@ func TestBellatrixBlindedBeaconBlock_AsSignRequestObject(t *testing.T) {
 	require.NoError(t, err)
 
 	sro := wsb.AsSignRequestObject()
-	got, ok := sro.(*validatorpb.SignRequest_BlockV3)
+	got, ok := sro.(*validatorpb.SignRequest_BlindedBlockV3)
 	require.Equal(t, true, ok, "Not a SignRequest_BlockV3")
-	assert.Equal(t, abb, got.BlockV3)
+	assert.Equal(t, abb, got.BlindedBlockV3)
 }

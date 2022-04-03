@@ -59,18 +59,18 @@ func (w Phase0SignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
-// MarshalSSZTo marshals the signed beacon block to its relevant ssz
+// MarshalSSZTo marshals the signed beacon block's ssz
 // form to the provided byte buffer.
 func (w Phase0SignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return w.b.MarshalSSZTo(dst)
 }
 
-// SizeSSZ returns the size of serialized signed block
+// SizeSSZ returns the size of the serialized signed block
 func (w Phase0SignedBeaconBlock) SizeSSZ() int {
 	return w.b.SizeSSZ()
 }
 
-// UnmarshalSSZ unmarshalls the signed beacon block from its relevant ssz
+// UnmarshalSSZ unmarshals the signed beacon block from its relevant ssz
 // form.
 func (w Phase0SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return w.b.UnmarshalSSZ(buf)
@@ -150,7 +150,7 @@ func (w Phase0BeaconBlock) Slot() types.Slot {
 	return w.b.Slot
 }
 
-// ProposerIndex returns proposer index of the beacon block.
+// ProposerIndex returns the proposer index of the beacon block.
 func (w Phase0BeaconBlock) ProposerIndex() types.ValidatorIndex {
 	return w.b.ProposerIndex
 }
@@ -191,18 +191,18 @@ func (w Phase0BeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
-// MarshalSSZTo marshals the beacon block to its relevant ssz
+// MarshalSSZTo marshals the beacon block's ssz
 // form to the provided byte buffer.
 func (w Phase0BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return w.b.MarshalSSZTo(dst)
 }
 
-// SizeSSZ returns the size of serialized block.
+// SizeSSZ returns the size of the serialized block.
 func (w Phase0BeaconBlock) SizeSSZ() int {
 	return w.b.SizeSSZ()
 }
 
-// UnmarshalSSZ unmarshalls the beacon block from its relevant ssz
+// UnmarshalSSZ unmarshals the beacon block from its relevant ssz
 // form.
 func (w Phase0BeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return w.b.UnmarshalSSZ(buf)
@@ -219,6 +219,7 @@ func (Phase0BeaconBlock) Version() int {
 	return version.Phase0
 }
 
+// AsSignRequestObject returns the underlying sign request object.
 func (w Phase0BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
 	return &validatorpb.SignRequest_Block{
 		Block: w.b,
