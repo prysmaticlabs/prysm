@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-func Test_MergeComplete(t *testing.T) {
+func Test_IsMergeComplete(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload *ethpb.ExecutionPayloadHeader
@@ -160,191 +160,10 @@ func Test_MergeComplete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.payload))
-			got, err := blocks.MergeTransitionComplete(st)
+			got, err := blocks.IsMergeTransitionComplete(st)
 			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("mergeComplete() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_MergeBlock(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload *enginev1.ExecutionPayload
-		header  *ethpb.ExecutionPayloadHeader
-		want    bool
-	}{
-		{
-			name:    "empty header, empty payload",
-			payload: emptyPayload(),
-			header:  emptyPayloadHeader(),
-			want:    false,
-		},
-		{
-			name:    "non-empty header, empty payload",
-			payload: emptyPayload(),
-			header: func() *ethpb.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return h
-			}(),
-			want: false,
-		},
-		{
-			name: "empty header, payload has parent hash",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has fee recipient",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.FeeRecipientLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has state root",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has receipt root",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has logs bloom",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has random",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has base fee",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has block hash",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has tx",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.Transactions = [][]byte{{'a'}}
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has extra data",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.ExtraData = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has block number",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.BlockNumber = 1
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has gas limit",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.GasLimit = 1
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has gas used",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.GasUsed = 1
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has timestamp",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.Timestamp = 1
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
-			blk := util.NewBeaconBlockBellatrix()
-			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
-			require.NoError(t, err)
-			got, err := blocks.MergeTransitionBlock(st, body)
-			require.NoError(t, err)
-			if got != tt.want {
-				t.Errorf("MergeTransitionBlock() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -520,7 +339,7 @@ func Test_IsMergeTransitionBlockUsingPayloadHeader(t *testing.T) {
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
-			got, err := blocks.IsMergeTransitionBlockUsingPayloadHeader(tt.header, body)
+			got, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(tt.header, body)
 			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("MergeTransitionBlock() got = %v, want %v", got, tt.want)
@@ -556,14 +375,14 @@ func Test_IsExecutionBlock(t *testing.T) {
 			blk.Block.Body.ExecutionPayload = tt.payload
 			wrappedBlock, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
 			require.NoError(t, err)
-			got, err := blocks.ExecutionBlock(wrappedBlock.Body())
+			got, err := blocks.IsExecutionBlock(wrappedBlock.Body())
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func Test_ExecutionEnabled(t *testing.T) {
+func Test_IsExecutionEnabled(t *testing.T) {
 	tests := []struct {
 		name        string
 		payload     *enginev1.ExecutionPayload
@@ -630,10 +449,10 @@ func Test_ExecutionEnabled(t *testing.T) {
 			if tt.useAltairSt {
 				st, _ = util.DeterministicGenesisStateAltair(t, 1)
 			}
-			got, err := blocks.ExecutionEnabled(st, body)
+			got, err := blocks.IsExecutionEnabled(st, body)
 			require.NoError(t, err)
 			if got != tt.want {
-				t.Errorf("ExecutionEnabled() got = %v, want %v", got, tt.want)
+				t.Errorf("IsExecutionEnabled() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -696,7 +515,7 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 			got, err := blocks.IsExecutionEnabledUsingHeader(tt.header, body)
 			require.NoError(t, err)
 			if got != tt.want {
-				t.Errorf("ExecutionEnabled() got = %v, want %v", got, tt.want)
+				t.Errorf("IsExecutionEnabled() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -904,7 +723,7 @@ func BenchmarkBellatrixComplete(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := blocks.MergeTransitionComplete(st)
+		_, err := blocks.IsMergeTransitionComplete(st)
 		require.NoError(b, err)
 	}
 }

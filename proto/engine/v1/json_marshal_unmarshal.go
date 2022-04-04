@@ -74,7 +74,7 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 	size := new(big.Int).SetBytes(e.Size)
 	sizeHex := hexutil.EncodeBig(size)
 
-	baseFee := new(big.Int).SetBytes(e.BaseFeePerGas)
+	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
 	return json.Marshal(executionBlockJSON{
 		Number:           numHex,
@@ -143,7 +143,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	if err != nil {
 		return err
 	}
-	e.BaseFeePerGas = baseFee.Bytes()
+	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
 		transactions[i] = tx
