@@ -7,14 +7,12 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/fieldtrie"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/fieldtrie"
 	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -23,6 +21,8 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -748,7 +748,9 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	if err := b.recomputeDirtyFields(ctx); err != nil {
 		return [32]byte{}, err
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	htr := bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0])
+	logrus.Infof("HTR: %#x", htr)
+	return htr, nil
 }
 
 // Initializes the Merkle layers for the beacon state if they are empty.
@@ -758,6 +760,11 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 		return nil
 	}
 	fieldRoots, err := ComputeFieldRootsWithHasher(ctx, b)
+	/*logString := "Field roots: \n"
+	for _, r := range fieldRoots {
+		logString += fmt.Sprintf("%#x\n", r)
+	}
+	log.Infof(logString)*/
 	if err != nil {
 		return err
 	}
