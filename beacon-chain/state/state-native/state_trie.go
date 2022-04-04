@@ -750,7 +750,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	}
 	htr := bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0])
 	logrus.Infof("HTR: %#x", htr)
-	return htr, nil
+	return htr, errors.New("blah")
 }
 
 // Initializes the Merkle layers for the beacon state if they are empty.
