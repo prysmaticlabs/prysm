@@ -27,6 +27,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//testing/spectest:__subpackages__",
         "//tools:__subpackages__",
     ],
     deps = [
