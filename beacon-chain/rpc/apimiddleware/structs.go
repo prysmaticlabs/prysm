@@ -424,11 +424,11 @@ type beaconBlockBodyBellatrixJson struct {
 
 type executionPayloadJson struct {
 	ParentHash    string   `json:"parent_hash" hex:"true"`
-	CoinBase      string   `json:"coinbase" hex:"true"`
+	FeeRecipient  string   `json:"fee_recipient" hex:"true"`
 	StateRoot     string   `json:"state_root" hex:"true"`
-	ReceiptRoot   string   `json:"receipt_root" hex:"true"`
+	ReceiptsRoot  string   `json:"receipts_root" hex:"true"`
 	LogsBloom     string   `json:"logs_bloom" hex:"true"`
-	Random        string   `json:"random" hex:"true"`
+	PrevRandao    string   `json:"prev_randao" hex:"true"`
 	BlockNumber   string   `json:"block_number"`
 	GasLimit      string   `json:"gas_limit"`
 	GasUsed       string   `json:"gas_used"`
@@ -441,11 +441,11 @@ type executionPayloadJson struct {
 
 type executionPayloadHeaderJson struct {
 	ParentHash       string `json:"parent_hash" hex:"true"`
-	CoinBase         string `json:"coinbase" hex:"true"`
+	FeeRecipient     string `json:"fee_recipient" hex:"true"`
 	StateRoot        string `json:"state_root" hex:"true"`
-	ReceiptRoot      string `json:"receipt_root" hex:"true"`
+	ReceiptsRoot     string `json:"receipt_root" hex:"true"`
 	LogsBloom        string `json:"logs_bloom" hex:"true"`
-	Random           string `json:"random" hex:"true"`
+	PrevRandao       string `json:"prev_randao" hex:"true"`
 	BlockNumber      string `json:"block_number"`
 	GasLimit         string `json:"gas_limit"`
 	GasUsed          string `json:"gas_used"`
