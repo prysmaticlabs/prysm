@@ -1,7 +1,7 @@
 sh_binary(
     name = "lighthouse_bin",
     srcs = [
-        "lighthouse",
+        "lighthouse-99bb5547",
     ],
     visibility = ["//visibility:public"],
 )
