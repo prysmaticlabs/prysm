@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -167,11 +166,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	err = s.validateBeaconBlock(ctx, blk, blockRoot)
 	if err != nil {
-		// If the parent is optimistic, be gracious and don't penalize the peer.
-		if errors.Is(ErrOptimisticParent, err) {
-			return pubsub.ValidationIgnore, err
+		// If the parent is optimistic, process the block as usual
+		// This also does not penalize a peer which sends optimistic blocks
+		if !errors.Is(ErrOptimisticParent, err) {
+			return pubsub.ValidationReject, err
 		}
-		return pubsub.ValidationReject, err
 	}
 
 	// Record attribute of valid block.
@@ -258,12 +257,9 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	if parentState.Version() != blk.Version() {
 		return errors.New("block and state are not the same version")
 	}
-	if parentState.Version() != version.Bellatrix || blk.Version() != version.Bellatrix {
-		return nil
-	}
 
 	body := blk.Body()
-	executionEnabled, err := blocks.ExecutionEnabled(parentState, body)
+	executionEnabled, err := blocks.IsExecutionEnabled(parentState, body)
 	if err != nil {
 		return err
 	}
@@ -287,7 +283,6 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	}
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
-	// TODO(10261) Check optimistic status if parent is in DB.
 	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, parentRoot)
 	if err != nil {
 		return err

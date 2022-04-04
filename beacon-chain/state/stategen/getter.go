@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -12,7 +13,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var ErrSlotBeforeOrigin = errors.New("cannot retrieve data for slots before sync origin")
+var ErrNoDataForSlot = errors.New("cannot retrieve data for slot")
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
@@ -230,16 +231,17 @@ func (s *State) LastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 			return nil, ctx.Err()
 		}
 
-		// return an error if we have rewound to before the checkpoint sync slot
-		if (b.Block().Slot() - 1) < s.minimumSlot() {
-			return nil, errors.Wrapf(ErrSlotBeforeOrigin, "no blocks in db prior to slot %d", s.minimumSlot())
-		}
 		// Is the state a genesis state.
 		parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
 		if parentRoot == params.BeaconConfig().ZeroHash {
 			return s.beaconDB.GenesisState(ctx)
 		}
 
+		// return an error if slot hasn't been covered by checkpoint sync backfill
+		ps := b.Block().Slot() - 1
+		if !s.slotAvailable(ps) {
+			return nil, errors.Wrapf(ErrNoDataForSlot, "slot %d not in db due to checkpoint sync", ps)
+		}
 		// Does the state exist in the hot state cache.
 		if s.hotStateCache.has(parentRoot) {
 			return s.hotStateCache.get(parentRoot), nil
@@ -282,4 +284,12 @@ func (s *State) CombinedCache() *CombinedCache {
 		getters = append(getters, s.epochBoundaryStateCache)
 	}
 	return &CombinedCache{getters: getters}
+}
+
+func (s *State) slotAvailable(slot types.Slot) bool {
+	// default to assuming node was initialized from genesis - backfill only needs to be specified for checkpoint sync
+	if s.backfillStatus == nil {
+		return true
+	}
+	return s.backfillStatus.SlotCovered(slot)
 }

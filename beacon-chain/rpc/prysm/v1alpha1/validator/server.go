@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -66,7 +65,7 @@ type Server struct {
 	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder
 	BeaconDB               db.HeadAccessDatabase
-	ExecutionEngineCaller  enginev1.Caller
+	ExecutionEngineCaller  powchain.EngineCaller
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
