@@ -1,4 +1,4 @@
-package v1
+package powchain
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
+	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	_ = Caller(&Client{})
-	_ = Caller(&mocks.EngineClient{})
+	_ = EngineCaller(&Service{})
+	_ = EngineCaller(&mocks.EngineClient{})
 )
 
 func TestClient_IPC(t *testing.T) {
@@ -34,8 +34,8 @@ func TestClient_IPC(t *testing.T) {
 	defer server.Stop()
 	rpcClient := rpc.DialInProc(server)
 	defer rpcClient.Close()
-	client := &Client{}
-	client.rpc = rpcClient
+	srv := &Service{}
+	srv.rpcClient = rpcClient
 	ctx := context.Background()
 	fix := fixtures()
 
@@ -43,14 +43,14 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, err := client.GetPayload(ctx, payloadId)
+		resp, err := srv.GetPayload(ctx, payloadId)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
 	t.Run(ForkchoiceUpdatedMethod, func(t *testing.T) {
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, &pb.PayloadAttributes{})
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, &pb.PayloadAttributes{})
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -60,20 +60,20 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
-		latestValidHash, err := client.NewPayload(ctx, req)
+		latestValidHash, err := srv.NewPayload(ctx, req)
 		require.NoError(t, err)
 		require.DeepEqual(t, bytesutil.ToBytes32(want.LatestValidHash), bytesutil.ToBytes32(latestValidHash))
 	})
 	t.Run(ExchangeTransitionConfigurationMethod, func(t *testing.T) {
 		want, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
 		require.Equal(t, true, ok)
-		err := client.ExchangeTransitionConfiguration(ctx, want)
+		err := srv.ExchangeTransitionConfiguration(ctx, want)
 		require.NoError(t, err)
 	})
 	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
-		resp, err := client.LatestExecutionBlock(ctx)
+		resp, err := srv.LatestExecutionBlock(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -81,7 +81,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		arg := common.BytesToHash([]byte("foo"))
-		resp, err := client.ExecutionBlockByHash(ctx, arg)
+		resp, err := srv.ExecutionBlockByHash(ctx, arg)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -125,8 +125,8 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		client := &Service{}
+		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.GetPayload(ctx, payloadId)
@@ -146,10 +146,10 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
+		srv := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -332,11 +332,11 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		service := &Service{}
+		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.LatestExecutionBlock(ctx)
+		resp, err := service.LatestExecutionBlock(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -371,8 +371,8 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		client := &Service{}
+		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
 		err = client.ExchangeTransitionConfiguration(ctx, want)
@@ -408,11 +408,11 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		service := &Service{}
+		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.ExecutionBlockByHash(ctx, arg)
+		resp, err := service.ExecutionBlockByHash(ctx, arg)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -449,10 +449,10 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		service := &Service{}
+		service.rpcClient = rpcClient
 
-		err = client.ExchangeTransitionConfiguration(ctx, request)
+		err = service.ExchangeTransitionConfiguration(ctx, request)
 		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
 	})
 	t.Run("wrong terminal total difficulty", func(t *testing.T) {
@@ -482,10 +482,10 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		service := &Service{}
+		service.rpcClient = rpcClient
 
-		err = client.ExchangeTransitionConfiguration(ctx, request)
+		err = service.ExchangeTransitionConfiguration(ctx, request)
 		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
 	})
 }
@@ -817,7 +817,7 @@ func (*testEngineService) NewPayloadV1(
 	return item
 }
 
-func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.PayloadAttributes, res *ForkchoiceUpdatedResponse) *Client {
+func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.PayloadAttributes, res *ForkchoiceUpdatedResponse) *Service {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		defer func() {
@@ -851,13 +851,12 @@ func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.Payloa
 	rpcClient, err := rpc.DialHTTP(srv.URL)
 	require.NoError(t, err)
 
-	client := &Client{}
-	client.rpc = rpcClient
-
-	return client
+	service := &Service{}
+	service.rpcClient = rpcClient
+	return service
 }
 
-func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.ExecutionPayload) *Client {
+func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.ExecutionPayload) *Service {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		defer func() {
@@ -886,7 +885,7 @@ func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.Executi
 	rpcClient, err := rpc.DialHTTP(srv.URL)
 	require.NoError(t, err)
 
-	client := &Client{}
-	client.rpc = rpcClient
-	return client
+	service := &Service{}
+	service.rpcClient = rpcClient
+	return service
 }

@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/sirupsen/logrus"
@@ -29,14 +29,10 @@ var (
 // If there are any discrepancies, we must log errors to ensure users can resolve
 //the problem and be ready for the merge transition.
 func (s *Service) checkTransitionConfiguration(
-	ctx context.Context, blockNotifications chan *statefeed.BlockProcessedData,
+	ctx context.Context, blockNotifications chan *feed.Event,
 ) {
 	// If Bellatrix fork epoch is not set, we do not run this check.
 	if params.BeaconConfig().BellatrixForkEpoch == math.MaxUint64 {
-		return
-	}
-	// If no engine API, then also avoid running this check.
-	if s.engineAPIClient == nil {
 		return
 	}
 	i := new(big.Int)
@@ -48,9 +44,9 @@ func (s *Service) checkTransitionConfiguration(
 		TerminalBlockHash:       params.BeaconConfig().TerminalBlockHash[:],
 		TerminalBlockNumber:     big.NewInt(0).Bytes(), // A value of 0 is recommended in the request.
 	}
-	err := s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
+	err := s.ExchangeTransitionConfiguration(ctx, cfg)
 	if err != nil {
-		if errors.Is(err, v1.ErrConfigMismatch) {
+		if errors.Is(err, ErrConfigMismatch) {
 			log.WithError(err).Fatal(configMismatchLog)
 		}
 		log.WithError(err).Error("Could not check configuration values between execution and consensus client")
@@ -71,7 +67,11 @@ func (s *Service) checkTransitionConfiguration(
 		case <-sub.Err():
 			return
 		case ev := <-blockNotifications:
-			isExecutionBlock, err := blocks.IsExecutionBlock(ev.SignedBlock.Block().Body())
+			data, ok := ev.Data.(*statefeed.BlockProcessedData)
+			if !ok {
+				continue
+			}
+			isExecutionBlock, err := blocks.IsExecutionBlock(data.SignedBlock.Block().Body())
 			if err != nil {
 				log.WithError(err).Debug("Could not check whether signed block is execution block")
 				continue
@@ -81,8 +81,8 @@ func (s *Service) checkTransitionConfiguration(
 				return
 			}
 		case tm := <-ticker.C:
-			ctx, cancel := context.WithDeadline(ctx, tm.Add(v1.DefaultTimeout))
-			err = s.engineAPIClient.ExchangeTransitionConfiguration(ctx, cfg)
+			ctx, cancel := context.WithDeadline(ctx, tm.Add(DefaultRPCHTTPTimeout))
+			err = s.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
 			if !hasTtdReached {
 				hasTtdReached, err = s.logTtdStatus(ctx, ttd)
@@ -102,13 +102,13 @@ func (s *Service) handleExchangeConfigurationError(err error) {
 	if err == nil {
 		// If there is no error in checking the exchange configuration error, we clear
 		// the run error of the service if we had previously set it to ErrConfigMismatch.
-		if errors.Is(s.runError, v1.ErrConfigMismatch) {
+		if errors.Is(s.runError, ErrConfigMismatch) {
 			s.runError = nil
 		}
 		return
 	}
 	// If the error is a configuration mismatch, we set a runtime error in the service.
-	if errors.Is(err, v1.ErrConfigMismatch) {
+	if errors.Is(err, ErrConfigMismatch) {
 		s.runError = err
 		log.WithError(err).Error(configMismatchLog)
 		return
@@ -118,7 +118,7 @@ func (s *Service) handleExchangeConfigurationError(err error) {
 
 // Logs the terminal total difficulty status.
 func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, error) {
-	latest, err := s.engineAPIClient.LatestExecutionBlock(ctx)
+	latest, err := s.LatestExecutionBlock(ctx)
 	if err != nil {
 		return false, err
 	}
