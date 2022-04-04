@@ -25,11 +25,12 @@ import (
 
 type TransactionGenerator struct {
 	keystore string
+	seed     int64
 	started  chan struct{}
 }
 
-func NewTransactionGenerator(keystore string) *TransactionGenerator {
-	return &TransactionGenerator{keystore: keystore}
+func NewTransactionGenerator(keystore string, seed int64) *TransactionGenerator {
+	return &TransactionGenerator{keystore: keystore, seed: seed}
 }
 
 func (t *TransactionGenerator) Start(ctx context.Context) error {
@@ -37,12 +38,16 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	seed := rand.NewDeterministicGenerator().Int63()
-	logrus.Infof("Seed for transaction generator is: %d", seed)
-	// Set seed so that all
-	mathRand.Seed(seed)
-
 	defer client.Close()
+
+	seed := t.seed
+	if seed == 0 {
+		seed = rand.NewDeterministicGenerator().Int63()
+		logrus.Infof("Seed for transaction generator is: %d", seed)
+	}
+	// Set seed so that all transactions can be
+	// deterministically generated.
+	mathRand.Seed(seed)
 
 	keystoreBytes, err := ioutil.ReadFile(t.keystore) // #nosec G304
 	if err != nil {

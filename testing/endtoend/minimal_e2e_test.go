@@ -59,6 +59,12 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		// TODO(#9166): remove this block once v2 changes are live.
 		epochsToRun = helpers.AltairE2EForkEpoch - 1
 	}
+	seed := 0
+	seedStr, isValid := os.LookupEnv("E2E_SEED")
+	if isValid {
+		seed, err = strconv.Atoi(seedStr)
+		require.NoError(t, err)
+	}
 	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
 	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
 	evals := []types.Evaluator{
@@ -101,6 +107,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		UseWeb3RemoteSigner: args.useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
+		Seed:                int64(seed),
 	}
 
 	newTestRunner(t, testConfig).run()

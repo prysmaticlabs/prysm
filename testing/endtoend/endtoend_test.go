@@ -356,7 +356,7 @@ func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 }
 
 func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
-	txGenerator := eth1.NewTransactionGenerator(keystorePath)
+	txGenerator := eth1.NewTransactionGenerator(keystorePath, r.config.Seed)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
 			return fmt.Errorf("transaction generator requires eth1 nodes to be run: %w", err)
