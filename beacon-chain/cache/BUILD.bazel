@@ -13,6 +13,7 @@ go_library(
         "common.go",
         "doc.go",
         "error.go",
+        "payload_id.go",
         "proposer_indices.go",
         "proposer_indices_disabled.go",  # keep
         "proposer_indices_type.go",
@@ -61,6 +62,7 @@ go_test(
         "checkpoint_state_test.go",
         "committee_fuzz_test.go",
         "committee_test.go",
+        "payload_id_test.go",
         "proposer_indices_test.go",
         "skip_slot_cache_test.go",
         "subnet_ids_test.go",

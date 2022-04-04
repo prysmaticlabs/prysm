@@ -138,7 +138,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 	// Query the next epoch assignments for committee subnet subscriptions.
-	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch+1)
+	nextCommitteeAssignments, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, s, req.Epoch+1)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
@@ -179,6 +179,14 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 				nextAssignment.Committee = ca.Committee
 				nextAssignment.AttesterSlot = ca.AttesterSlot
 				nextAssignment.CommitteeIndex = ca.CommitteeIndex
+			}
+			// Cache proposer assignment for the current epoch.
+			for _, slot := range proposerIndexToSlots[idx] {
+				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, 0 /* payloadID */)
+			}
+			// Cache proposer assignment for the next epoch.
+			for _, slot := range nextProposerIndexToSlots[idx] {
+				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, 0 /* payloadID */)
 			}
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
