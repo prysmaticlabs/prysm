@@ -237,8 +237,8 @@ func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Ins
 				pass.Reportf(
 					node.Pos(),
 					fmt.Sprintf(
-						"%v %d %s %s",
-						errNestedMixedLock, lockTracker.foundRLock, lockTracker.rLockSelector.String(), selMap.String(),
+						"%v",
+						errNestedMixedLock,
 					),
 				)
 			}
