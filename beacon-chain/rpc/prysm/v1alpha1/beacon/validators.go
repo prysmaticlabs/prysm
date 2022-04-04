@@ -693,7 +693,7 @@ func (bs *Server) GetValidatorPerformance(
 			return nil, err
 		}
 		validatorSummary = vp
-	case version.Altair:
+	case version.Altair, version.Bellatrix:
 		vp, bp, err := altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return nil, err
@@ -871,7 +871,7 @@ func (bs *Server) GetIndividualVotes(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
-	case version.Altair:
+	case version.Altair, version.Bellatrix:
 		v, bal, err = altair.InitializePrecomputeValidators(ctx, st)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
