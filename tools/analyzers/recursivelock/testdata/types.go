@@ -25,6 +25,10 @@ func (r *ProtectResource) GetResourceNested() string {
 	return r.GetResource()
 }
 
+func (r *ProtectResource) GetResourceNestedGoroutine() {
+	go r.GetResource()
+}
+
 func (r *ProtectResource) GetResourceNestedLock() string {
 	return r.GetResourceLocked()
 }

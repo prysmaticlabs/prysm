@@ -26,6 +26,7 @@ var Analyzer = &analysis.Analyzer{
 
 var errNestedRLock = errors.New("found recursive read lock call")
 var errNestedLock = errors.New("found recursive lock call")
+var errNestedMixedLock = errors.New("found recursive mixed lock call")
 
 type mode int
 
@@ -71,6 +72,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	nodeFilter := []ast.Node{
+		(*ast.GoStmt)(nil),
 		(*ast.CallExpr)(nil),
 		(*ast.DeferStmt)(nil),
 		(*ast.FuncDecl)(nil),
@@ -118,7 +120,16 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 func stmtSelector(node ast.Node, pass *analysis.Pass, keepTrackOf *tracker, inspect *inspector.Inspector) *tracker {
 	switch stmt := node.(type) {
+	case *ast.GoStmt:
+		keepTrackOf.rLockTrack.goroutinePos = stmt.Call.End()
+		keepTrackOf.lockTrack.goroutinePos = stmt.Call.End()
 	case *ast.CallExpr:
+		if stmt.End() == keepTrackOf.rLockTrack.goroutinePos ||
+			stmt.End() == keepTrackOf.lockTrack.goroutinePos {
+			keepTrackOf.rLockTrack.goroutinePos = 0
+			keepTrackOf.lockTrack.goroutinePos = 0
+			break
+		}
 		call := getCallInfo(pass.TypesInfo, stmt)
 		if call == nil {
 			break
@@ -198,6 +209,7 @@ type lockTracker struct {
 	retEnd          token.Pos
 	deferEnd        token.Pos
 	funcLitEnd      token.Pos
+	goroutinePos    token.Pos
 	deferredRUnlock bool
 	foundRLock      int
 	rLockSelector   *selIdentList
@@ -221,6 +233,15 @@ func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Ins
 	name := call.name
 	if lockTracker.rLockSelector != nil {
 		if lockTracker.foundRLock > 0 {
+			if lockTracker.rLockSelector.isRelated(selMap, 0) {
+				pass.Reportf(
+					node.Pos(),
+					fmt.Sprintf(
+						"%v",
+						errNestedMixedLock,
+					),
+				)
+			}
 			if lockTracker.rLockSelector.isEqual(selMap, 0) {
 				pass.Reportf(
 					node.Pos(),
@@ -230,7 +251,8 @@ func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Ins
 					),
 				)
 			} else {
-				if stack := hasNestedlock(lockTracker.rLockSelector, selMap, call, inspect, pass, make(map[string]bool), lockmode.UnLockName()); stack != "" {
+				if stack := hasNestedlock(lockTracker.rLockSelector, lockTracker.goroutinePos, selMap, call, inspect, pass, make(map[string]bool),
+					lockmode.UnLockName()); stack != "" {
 					pass.Reportf(
 						node.Pos(),
 						fmt.Sprintf(
@@ -244,6 +266,9 @@ func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Ins
 		}
 		if name == lockmode.UnLockName() && lockTracker.rLockSelector.isEqual(selMap, 1) {
 			lockTracker.deincFRU()
+		}
+		if name == lockmode.LockName() && lockTracker.foundRLock == 0 {
+			lockTracker.incFRU()
 		}
 	} else if name == lockmode.LockName() && lockTracker.foundRLock == 0 {
 		lockTracker.rLockSelector = selMap
@@ -304,6 +329,45 @@ func (s *selIdentList) isEqual(s2 *selIdentList, offset int) bool {
 		}
 	}
 	return true
+}
+
+// isRelated checks if our selectors are of the same type and
+// reference the same underlying object. If they do we check
+// if the provided list is referencing a non-equal but related
+// lock. Ex: Lock - RLock, RLock - Lock
+// TODO: Use a generalizable method here instead of hardcoding
+// the lock definitions here.
+func (s *selIdentList) isRelated(s2 *selIdentList, offset int) bool {
+	if s2 == nil || (s.length != s2.length) {
+		return false
+	}
+	s.reset()
+	s2.reset()
+	for i := true; i; {
+		if !s.current.isEqual(s2.current) {
+			return false
+		}
+		if s.currentIndex < s.length-offset-1 && s.next() != nil {
+			s2.next()
+		} else {
+			i = false
+		}
+		// Only check if we are at the last index for
+		// related method calls.
+		if s.currentIndex == s.length-1 {
+			switch s.current.this.String() {
+			case LockMode.LockName():
+				if s2.current.this.String() == RLockMode.LockName() {
+					return true
+				}
+			case RLockMode.LockName():
+				if s2.current.this.String() == LockMode.LockName() {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // getSub returns the shared beginning selIdentList of s and s2,
@@ -445,7 +509,7 @@ func interfaceMethod(s *types.Signature) bool {
 // If the call expression does not contain a nested or recursive lock, hasNestedlock returns an empty string.
 // hasNestedlock finds a nested or recursive lock by recursively calling itself on any functions called by the function/method represented
 // by callInfo.
-func hasNestedlock(fullRLockSelector *selIdentList, compareMap *selIdentList, call *callInfo, inspect *inspector.Inspector,
+func hasNestedlock(fullRLockSelector *selIdentList, goPos token.Pos, compareMap *selIdentList, call *callInfo, inspect *inspector.Inspector,
 	pass *analysis.Pass, hist map[string]bool, lockName string) (retStack string) {
 	var rLockSelector *selIdentList
 	f := pass.Fset
@@ -476,20 +540,26 @@ func hasNestedlock(fullRLockSelector *selIdentList, compareMap *selIdentList, ca
 	addition := fmt.Sprintf("\t%q at %v\n", call.name, f.Position(call.call.Pos()))
 	ast.Inspect(node, func(iNode ast.Node) bool {
 		switch stmt := iNode.(type) {
+		case *ast.GoStmt:
+			goPos = stmt.End()
 		case *ast.CallExpr:
+			if stmt.End() == goPos {
+				goPos = 0
+				return false
+			}
 			c := getCallInfo(tInfo, stmt)
 			if c == nil {
 				return false
 			}
 			name := c.name
 			selMap := mapSelTypes(stmt, pass)
-			if rLockSelector.isEqual(selMap, 0) { // if the method found is an RLock method
+			if rLockSelector.isEqual(selMap, 0) || rLockSelector.isRelated(selMap, 0) { // if the method found is an RLock method
 				retStack += addition + fmt.Sprintf("\t%q at %v\n", name, f.Position(iNode.Pos()))
 			} else if name != lockName { // name should not equal the previousName to prevent infinite recursive loop
 				nt := c.id
 				if !hist[nt] { // make sure we are not in an infinite recursive loop
 					hist[nt] = true
-					stack := hasNestedlock(rLockSelector, selMap, c, inspect, pass, hist, lockName)
+					stack := hasNestedlock(rLockSelector, goPos, selMap, c, inspect, pass, hist, lockName)
 					delete(hist, nt)
 					if stack != "" {
 						retStack += addition + stack
