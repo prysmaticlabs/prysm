@@ -26,10 +26,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var (
-	ErrOptimisticParent = errors.New("parent of the block is optimistic")
-)
-
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
 // this method rebroadcasts the message.
@@ -166,11 +162,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	err = s.validateBeaconBlock(ctx, blk, blockRoot)
 	if err != nil {
-		// If the parent is optimistic, process the block as usual
-		// This also does not penalize a peer which sends optimistic blocks
-		if !errors.Is(ErrOptimisticParent, err) {
-			return pubsub.ValidationReject, err
-		}
+		return pubsub.ValidationReject, err
 	}
 
 	// Record attribute of valid block.
@@ -230,10 +222,6 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
-		if errors.Is(err, ErrOptimisticParent) {
-			return err
-		}
-		// for other kinds of errors, set this block as a bad block.
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
@@ -280,15 +268,6 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	}
 	if payload.Timestamp != uint64(t.Unix()) {
 		return errors.New("incorrect timestamp")
-	}
-
-	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
-	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, parentRoot)
-	if err != nil {
-		return err
-	}
-	if isParentOptimistic {
-		return ErrOptimisticParent
 	}
 	return nil
 }
