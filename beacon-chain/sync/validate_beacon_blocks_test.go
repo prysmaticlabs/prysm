@@ -1314,7 +1314,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	parentBlock := util.NewBeaconBlockBellatrix()
-	signedParentBlock, err := wrapper.WrappedBellatrixSignedBeaconBlock(parentBlock)
+	signedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
 	bRoot, err := parentBlock.Block.HashTreeRoot()
