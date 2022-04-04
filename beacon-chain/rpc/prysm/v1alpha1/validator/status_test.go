@@ -1175,7 +1175,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "exit early for Phase 0",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				hs, _, _ := createStateSetupPhase0(t, 3)
+				hs, _, keys := createStateSetupPhase0(t, 3)
 
 				vs := &Server{
 					HeadFetcher: &mockChain.ChainService{
@@ -1184,9 +1184,22 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					SyncChecker: &mockSync.Sync{IsSyncing: false},
 				}
 				request := &ethpb.DoppelGangerRequest{
-					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
+					ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{
+						{
+							PublicKey:  keys[0].PublicKey().Marshal(),
+							Epoch:      1,
+							SignedRoot: []byte{'A'},
+						},
+					},
 				}
-				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
+				response := &ethpb.DoppelGangerResponse{
+					Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{
+						{
+							PublicKey:       keys[0].PublicKey().Marshal(),
+							DuplicateExists: false,
+						},
+					},
+				}
 
 				return vs, request, response
 			},

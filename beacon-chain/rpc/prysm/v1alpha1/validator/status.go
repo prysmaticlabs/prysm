@@ -113,10 +113,21 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 
 	// Return early if we are in phase0.
 	if headState.Version() == version.Phase0 {
-		return &ethpb.DoppelGangerResponse{
+		log.Info("Skipping goppelganger check for Phase 0")
+
+		resp := &ethpb.DoppelGangerResponse{
 			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
-		}, nil
+		}
+		for _, v := range req.ValidatorRequests {
+			resp.Responses = append(resp.Responses,
+				&ethpb.DoppelGangerResponse_ValidatorResponse{
+					PublicKey:       v.PublicKey,
+					DuplicateExists: false,
+				})
+		}
+		return resp, nil
 	}
+
 	headSlot := headState.Slot()
 	currEpoch := slots.ToEpoch(headSlot)
 
