@@ -85,10 +85,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		lockTrack:  &lockTracker{},
 	}
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
-		if keepTrackOf.rLockTrack.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.rLockTrack.funcLitEnd {
-			return
-		}
-		if keepTrackOf.lockTrack.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.lockTrack.funcLitEnd {
+		if keepTrackOf.rLockTrack.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.rLockTrack.funcLitEnd &&
+			keepTrackOf.lockTrack.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.lockTrack.funcLitEnd {
 			return
 		}
 		keepTrackOf.rLockTrack.funcLitEnd = token.NoPos
