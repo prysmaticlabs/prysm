@@ -237,8 +237,8 @@ func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Ins
 				pass.Reportf(
 					node.Pos(),
 					fmt.Sprintf(
-						"%v",
-						errNestedMixedLock,
+						"%v %d %s %s",
+						errNestedMixedLock, lockTracker.foundRLock, lockTracker.rLockSelector.String(), selMap.String(),
 					),
 				)
 			}
@@ -267,7 +267,7 @@ func checkForRecLocks(node ast.Node, pass *analysis.Pass, inspect *inspector.Ins
 		if name == lockmode.UnLockName() && lockTracker.rLockSelector.isEqual(selMap, 1) {
 			lockTracker.deincFRU()
 		}
-		if name == lockmode.LockName() && lockTracker.foundRLock == 0 {
+		if name == lockmode.LockName() && lockTracker.foundRLock == 0 && lockTracker.rLockSelector.isEqual(selMap, 0) {
 			lockTracker.incFRU()
 		}
 	} else if name == lockmode.LockName() && lockTracker.foundRLock == 0 {
