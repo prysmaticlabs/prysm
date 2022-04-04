@@ -959,7 +959,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "normal doppelganger request",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				hs, ps, keys := createStateSetup(t, 3)
+				hs, ps, keys := createStateSetupAltair(t, 3)
 				rb := mockstategen.NewMockReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 20)
 				vs := &Server{
@@ -991,7 +991,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "doppelganger exists current epoch",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				hs, ps, keys := createStateSetup(t, 3)
+				hs, ps, keys := createStateSetupAltair(t, 3)
 				rb := mockstategen.NewMockReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 20)
 				currentIndices := make([]byte, 64)
@@ -1038,7 +1038,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "doppelganger exists previous epoch",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				hs, ps, keys := createStateSetup(t, 3)
+				hs, ps, keys := createStateSetupAltair(t, 3)
 				prevIndices := make([]byte, 64)
 				prevIndices[2] = 1
 				require.NoError(t, ps.SetPreviousParticipationBits(prevIndices))
@@ -1085,7 +1085,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "multiple doppelganger exists",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				hs, ps, keys := createStateSetup(t, 3)
+				hs, ps, keys := createStateSetupAltair(t, 3)
 				currentIndices := make([]byte, 64)
 				currentIndices[10] = 1
 				currentIndices[11] = 2
@@ -1141,7 +1141,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			name:    "attesters are too recent",
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
-				hs, ps, keys := createStateSetup(t, 3)
+				hs, ps, keys := createStateSetupAltair(t, 3)
 				rb := mockstategen.NewMockReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 20)
 
@@ -1171,6 +1171,26 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				return vs, request, response
 			},
 		},
+		{
+			name:    "exit early for Phase 0",
+			wantErr: false,
+			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
+				hs, _, _ := createStateSetupPhase0(t, 3)
+
+				vs := &Server{
+					HeadFetcher: &mockChain.ChainService{
+						State: hs,
+					},
+					SyncChecker: &mockSync.Sync{IsSyncing: false},
+				}
+				request := &ethpb.DoppelGangerRequest{
+					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
+				}
+				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
+
+				return vs, request, response
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1188,7 +1208,24 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 	}
 }
 
-func createStateSetup(t *testing.T, head types.Epoch) (state.BeaconState,
+func createStateSetupPhase0(t *testing.T, head types.Epoch) (state.BeaconState,
+	state.BeaconState, []bls.SecretKey) {
+	gs, keys := util.DeterministicGenesisState(t, 64)
+	hs := gs.Copy()
+
+	// Head State
+	headSlot := types.Slot(head)*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().SlotsPerEpoch/2
+	assert.NoError(t, hs.SetSlot(headSlot))
+
+	// Previous Epoch State
+	prevSlot := headSlot - params.BeaconConfig().SlotsPerEpoch
+	ps := gs.Copy()
+	assert.NoError(t, ps.SetSlot(prevSlot))
+
+	return hs, ps, keys
+}
+
+func createStateSetupAltair(t *testing.T, head types.Epoch) (state.BeaconState,
 	state.BeaconState, []bls.SecretKey) {
 	gs, keys := util.DeterministicGenesisStateAltair(t, 64)
 	hs := gs.Copy()

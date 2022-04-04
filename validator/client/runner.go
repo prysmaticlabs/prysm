@@ -92,15 +92,13 @@ func run(ctx context.Context, v iface.Validator) {
 		if err != nil {
 			log.Fatalf("Could not get current canonical head slot: %v", err)
 		}
-		if slots.ToEpoch(headSlot) >= params.BeaconConfig().AltairForkEpoch {
-			err = v.CheckDoppelGanger(ctx)
-			if isConnectionError(err) {
-				log.Warnf("Could not wait for checking doppelganger: %v", err)
-				continue
-			}
-			if err != nil {
-				log.Fatalf("Could not succeed with doppelganger check: %v", err)
-			}
+		err = v.CheckDoppelGanger(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not wait for checking doppelganger: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not succeed with doppelganger check: %v", err)
 		}
 		break
 	}

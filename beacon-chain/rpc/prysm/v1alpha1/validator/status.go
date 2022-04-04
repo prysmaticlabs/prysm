@@ -113,7 +113,9 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 
 	// Return early if we are in phase0.
 	if headState.Version() == version.Phase0 {
-		return nil, status.Errorf(codes.FailedPrecondition, "Doppelganger test not available for Phase0")
+		return &ethpb.DoppelGangerResponse{
+			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
+		}, nil
 	}
 	headSlot := headState.Slot()
 	currEpoch := slots.ToEpoch(headSlot)
