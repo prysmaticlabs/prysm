@@ -1628,9 +1628,9 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			version, header, err := getStateVersionAndPayload(tt.st)
+			ver, header, err := getStateVersionAndPayload(tt.st)
 			require.NoError(t, err)
-			require.Equal(t, tt.version, version)
+			require.Equal(t, tt.version, ver)
 			require.DeepEqual(t, tt.header, header)
 		})
 	}
