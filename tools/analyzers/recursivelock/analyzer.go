@@ -510,7 +510,7 @@ func interfaceMethod(s *types.Signature) bool {
 // hasNestedlock finds a nested or recursive lock by recursively calling itself on any functions called by the function/method represented
 // by callInfo.
 func hasNestedlock(fullRLockSelector *selIdentList, goPos token.Pos, compareMap *selIdentList, call *callInfo, inspect *inspector.Inspector,
-	pass *analysis.Pass, hist map[string]bool, lockName string) (retStack string) {
+	pass *analysis.Pass, hist map[string]bool, lmode mode, lCount int) (retStack string) {
 	var rLockSelector *selIdentList
 	f := pass.Fset
 	tInfo := pass.TypesInfo
@@ -553,13 +553,23 @@ func hasNestedlock(fullRLockSelector *selIdentList, goPos token.Pos, compareMap 
 			}
 			name := c.name
 			selMap := mapSelTypes(stmt, pass)
-			if rLockSelector.isEqual(selMap, 0) || rLockSelector.isRelated(selMap, 0) { // if the method found is an RLock method
-				retStack += addition + fmt.Sprintf("\t%q at %v\n", name, f.Position(iNode.Pos()))
-			} else if name != lockName { // name should not equal the previousName to prevent infinite recursive loop
+			switch {
+			case name == lmode.LockName() && rLockSelector.isEqual(selMap, 0):
+				if lCount > 0 {
+					retStack += addition + fmt.Sprintf("\t%q at %v \n", name, f.Position(iNode.Pos()))
+				}
+				lCount += 1
+			case name == lmode.UnLockName() && rLockSelector.isEqual(selMap, 1):
+				if lCount > 0 {
+					lCount -= 1
+				}
+			case lCount > 0 && rLockSelector.isRelated(selMap, 0):
+				retStack += addition + fmt.Sprintf("\t%q at %v \n", name, f.Position(iNode.Pos()))
+			case name != lmode.UnLockName():
 				nt := c.id
 				if !hist[nt] { // make sure we are not in an infinite recursive loop
 					hist[nt] = true
-					stack := hasNestedlock(rLockSelector, goPos, selMap, c, inspect, pass, hist, lockName)
+					stack := hasNestedlock(rLockSelector, goPos, selMap, c, inspect, pass, hist, lmode, lCount)
 					delete(hist, nt)
 					if stack != "" {
 						retStack += addition + stack
