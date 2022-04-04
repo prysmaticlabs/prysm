@@ -58,7 +58,7 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
-		blockchain.WithProposerIdsCache(cache.NewProposerPayloadIDsCache())),
+		blockchain.WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
