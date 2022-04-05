@@ -1,7 +1,6 @@
 package transition
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -65,7 +64,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	}
 
 	// Execute per block transition.
-	set, state, err := ProcessBlockNoVerifyAnySig(ctx, state, signed)
+	_, state, err = ProcessBlockNoVerifyAnySig(ctx, state, signed)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process block")
 	}
@@ -75,12 +74,12 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	if err != nil {
 		return nil, nil, err
 	}
-	if !bytes.Equal(postStateRoot[:], signed.Block().StateRoot()) {
-		return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x",
-			postStateRoot[:], signed.Block().StateRoot())
-	}
+	//if !bytes.Equal(postStateRoot[:], signed.Block().StateRoot()) {
+	return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x",
+		postStateRoot[:], signed.Block().StateRoot())
+	//}
 
-	return set, state, nil
+	//return set, state, nil
 }
 
 // CalculateStateRoot defines the procedure for a state transition function.

@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
@@ -748,9 +747,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	if err := b.recomputeDirtyFields(ctx); err != nil {
 		return [32]byte{}, err
 	}
-	htr := bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0])
-	logrus.Infof("HTR: %#x", htr)
-	return htr, errors.New("blah")
+	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
 
 // Initializes the Merkle layers for the beacon state if they are empty.
