@@ -26,6 +26,17 @@ config_setting(
 )
 
 config_setting(
+    name = "darwin_arm64",
+    constraint_values = [
+        "@platforms//os:osx",
+        "@platforms//cpu:arm64",
+    ],
+    values = {
+        "define": "blst_disabled=false",
+    },
+)
+
+config_setting(
     name = "windows_amd64",
     constraint_values = [
         "@platforms//os:windows",
@@ -79,6 +90,7 @@ go_library(
                 ":linux_amd64",
                 ":linux_arm64",
                 ":darwin_amd64",
+                ":darwin_arm64",
                 ":windows_amd64",
                 ":android_amd64",
                 ":android_arm64",
@@ -103,14 +115,17 @@ go_library(
             ":linux_amd64",
             ":linux_arm64",
             ":darwin_amd64",
+            ":darwin_arm64",
             ":windows_amd64",
             ":android_amd64",
             ":android_arm64",
         ): [
             "//crypto/bls/common:go_default_library",
             "//config/features:go_default_library",
+            "//config/fieldparams:go_default_library",
             "//config/params:go_default_library",
             "//crypto/rand:go_default_library",
+            "//cache/lru:go_default_library",
             "@com_github_dgraph_io_ristretto//:go_default_library",
             "@com_github_pkg_errors//:go_default_library",
             "@com_github_supranational_blst//:go_default_library",
@@ -127,6 +142,7 @@ go_test(
             ":linux_amd64",
             ":linux_arm64",
             ":darwin_amd64",
+            ":darwin_arm64",
             ":windows_amd64",
             ":android_amd64",
             ":android_arm64",
@@ -141,6 +157,7 @@ go_test(
             ":linux_amd64",
             ":linux_arm64",
             ":darwin_amd64",
+            ":darwin_arm64",
             ":windows_amd64",
             ":android_amd64",
             ":android_arm64",
@@ -163,6 +180,7 @@ go_test(
             ":linux_amd64",
             ":linux_arm64",
             ":darwin_amd64",
+            ":darwin_arm64",
             ":windows_amd64",
             ":android_amd64",
             ":android_arm64",
@@ -177,6 +195,7 @@ go_test(
             ":linux_amd64",
             ":linux_arm64",
             ":darwin_amd64",
+            ":darwin_arm64",
             ":windows_amd64",
             ":android_amd64",
             ":android_arm64",
@@ -209,7 +228,7 @@ go_test(
     deps = [
         ":go_default_library",
         "//crypto/bls/common:go_default_library",
-        "//encoding/bytesutil:go_default_library",
         "//crypto/hash:go_default_library",
+        "//encoding/bytesutil:go_default_library",
     ],
 )

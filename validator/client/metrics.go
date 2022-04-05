@@ -7,6 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -226,7 +227,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 		return nil
 	}
 
-	var pks [][48]byte
+	var pks [][fieldparams.BLSPubkeyLength]byte
 	var err error
 	pks, err = v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -446,10 +447,12 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	log.WithFields(epochSummaryFields).Info("Previous epoch aggregated voting summary")
 
 	var totalStartBal, totalPrevBal uint64
+	v.prevBalanceLock.RLock()
 	for i, val := range v.startBalances {
 		totalStartBal += val
 		totalPrevBal += v.prevBalance[i]
 	}
+	v.prevBalanceLock.RUnlock()
 
 	if totalStartBal == 0 || summary.totalAttestedCount == 0 {
 		log.Error("Failed to print launch summary: one or more divisors is 0")

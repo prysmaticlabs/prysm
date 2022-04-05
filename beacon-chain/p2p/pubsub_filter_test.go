@@ -16,8 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/stretchr/testify/require"
 )
 
 func TestService_CanSubscribe(t *testing.T) {
@@ -116,7 +116,7 @@ func TestService_CanSubscribe(t *testing.T) {
 
 func TestService_CanSubscribe_uninitialized(t *testing.T) {
 	s := &Service{}
-	require.False(t, s.CanSubscribe("foo"))
+	require.Equal(t, false, s.CanSubscribe("foo"))
 }
 
 func Test_scanfcheck(t *testing.T) {
@@ -336,7 +336,7 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.False(t, s.isInitialized())
+	require.Equal(t, false, s.isInitialized())
 
 	go s.awaitStateInitialized()
 
@@ -355,5 +355,5 @@ func TestService_MonitorsStateForkUpdates(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	require.True(t, s.isInitialized())
+	require.Equal(t, true, s.isInitialized())
 }

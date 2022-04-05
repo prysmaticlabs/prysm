@@ -53,11 +53,10 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 	t.Run("prune_and_verify_deletions", func(t *testing.T) {
 		beaconDB := setupDB(t)
 
+		params.SetupTestConfigCleanup(t)
 		config := params.BeaconConfig()
-		copyConfig := config.Copy()
-		copyConfig.SlotsPerEpoch = 2
-		params.OverrideBeaconConfig(copyConfig)
-		defer params.OverrideBeaconConfig(config)
+		config.SlotsPerEpoch = 2
+		params.OverrideBeaconConfig(config)
 
 		historyLength := types.Epoch(10)
 		currentEpoch := types.Epoch(20)
@@ -153,11 +152,10 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 	t.Run("prune_and_verify_deletions", func(t *testing.T) {
 		beaconDB := setupDB(t)
 
+		params.SetupTestConfigCleanup(t)
 		config := params.BeaconConfig()
-		copyConfig := config.Copy()
-		copyConfig.SlotsPerEpoch = 2
-		params.OverrideBeaconConfig(copyConfig)
-		defer params.OverrideBeaconConfig(config)
+		config.SlotsPerEpoch = 2
+		params.OverrideBeaconConfig(config)
 
 		historyLength := types.Epoch(10)
 		currentEpoch := types.Epoch(20)

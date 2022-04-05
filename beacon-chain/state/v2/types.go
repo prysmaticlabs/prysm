@@ -22,6 +22,9 @@ func init() {
 	// Initialize the composite arrays.
 	fieldMap[types.Eth1DataVotes] = types.CompositeArray
 	fieldMap[types.Validators] = types.CompositeArray
+
+	// Initialize Compressed Arrays
+	fieldMap[types.Balances] = types.CompressedArray
 }
 
 // fieldMap keeps track of each field
@@ -49,7 +52,7 @@ type BeaconState struct {
 // Field Aliases for values from the types package.
 const (
 	genesisTime                    = types.GenesisTime
-	genesisValidatorRoot           = types.GenesisValidatorRoot
+	genesisValidatorsRoot          = types.GenesisValidatorsRoot
 	slot                           = types.Slot
 	fork                           = types.Fork
 	latestBlockHeader              = types.LatestBlockHeader

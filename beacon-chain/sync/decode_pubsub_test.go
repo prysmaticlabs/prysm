@@ -17,6 +17,7 @@ import (
 	p2ptesting "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -71,7 +72,11 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				},
 			},
 			wantErr: nil,
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()),
+			want: func() block.SignedBeaconBlock {
+				wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+				require.NoError(t, err)
+				return wsb
+			}(),
 		},
 	}
 	for _, tt := range tests {
@@ -85,10 +90,12 @@ func TestService_decodePubsubMessage(t *testing.T) {
 				} else if tt.input.Message == nil {
 					tt.input.Message = &pb.Message{}
 				}
-				tt.input.Message.Topic = &tt.topic
+				// reassign because tt is a loop variable
+				topic := tt.topic
+				tt.input.Message.Topic = &topic
 			}
 			got, err := s.decodePubsubMessage(tt.input)
-			if err != tt.wantErr && !strings.Contains(err.Error(), tt.wantErr.Error()) {
+			if err != nil && err != tt.wantErr && !strings.Contains(err.Error(), tt.wantErr.Error()) {
 				t.Errorf("decodePubsubMessage() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}

@@ -11,6 +11,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -105,7 +106,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("foo"),
 				},
-				Signature: bytesutil.PadTo([]byte("A"), params.BeaconConfig().BLSSignatureLength),
+				Signature: bytesutil.PadTo([]byte("A"), fieldparams.BLSSignatureLength),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
@@ -113,7 +114,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 					Slot:          0,
 					BodyRoot:      []byte("bar"),
 				},
-				Signature: bytesutil.PadTo([]byte("B"), params.BeaconConfig().BLSSignatureLength),
+				Signature: bytesutil.PadTo([]byte("B"), fieldparams.BLSSignatureLength),
 			},
 		},
 	}
@@ -233,6 +234,54 @@ func TestProcessProposerSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	require.Equal(t, uint64(32000000000), newState.Balances()[2])
 }
 
+func TestProcessProposerSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
+	// We test the case when data is correct and verify the validator
+	// registry has been updated.
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
+	proposerIdx := types.ValidatorIndex(1)
+
+	header1 := &ethpb.SignedBeaconBlockHeader{
+		Header: util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerIdx,
+			StateRoot:     bytesutil.PadTo([]byte("A"), 32),
+		}),
+	}
+	var err error
+	header1.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	header2 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerIdx,
+			StateRoot:     bytesutil.PadTo([]byte("B"), 32),
+		},
+	})
+	header2.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, header2.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	slashings := []*ethpb.ProposerSlashing{
+		{
+			Header_1: header1,
+			Header_2: header2,
+		},
+	}
+
+	block := util.NewBeaconBlock()
+	block.Block.Body.ProposerSlashings = slashings
+
+	newState, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Block.Body.ProposerSlashings, v.SlashValidator)
+	require.NoError(t, err)
+
+	newStateVals := newState.Validators()
+	if newStateVals[1].ExitEpoch != beaconState.Validators()[1].ExitEpoch {
+		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
+			newStateVals[1].ExitEpoch, beaconState.Validators()[1].ExitEpoch)
+	}
+
+	require.Equal(t, uint64(31000000000), newState.Balances()[1])
+	require.Equal(t, uint64(32000000000), newState.Balances()[2])
+}
+
 func TestVerifyProposerSlashing(t *testing.T) {
 	type args struct {
 		beaconState state.BeaconState
@@ -329,7 +378,7 @@ func TestVerifyProposerSlashing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			sk := sks[tt.args.slashing.Header_1.Header.ProposerIndex]
-			d, err := signing.Domain(tt.args.beaconState.Fork(), slots.ToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorRoot())
+			d, err := signing.Domain(tt.args.beaconState.Fork(), slots.ToEpoch(tt.args.slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, tt.args.beaconState.GenesisValidatorsRoot())
 			require.NoError(t, err)
 			if tt.args.slashing.Header_1.Signature == nil {
 				sr, err := signing.ComputeSigningRoot(tt.args.slashing.Header_1.Header, d)

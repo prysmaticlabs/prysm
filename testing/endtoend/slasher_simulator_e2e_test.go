@@ -9,8 +9,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	mockslashings "github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings/mock"
+	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -18,6 +18,32 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+type mockSyncChecker struct{}
+
+func (c mockSyncChecker) Initialized() bool {
+	return true
+}
+
+func (c mockSyncChecker) Syncing() bool {
+	return false
+}
+
+func (c mockSyncChecker) Synced() bool {
+	return true
+}
+
+func (c mockSyncChecker) Status() error {
+	return nil
+}
+
+func (c mockSyncChecker) Resync() error {
+	return nil
+}
+
+func (mockSyncChecker) IsSynced(_ context.Context) (bool, error) {
+	return true, nil
+}
 
 func TestEndToEnd_SlasherSimulator(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -54,7 +80,7 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 	require.NoError(t, err)
 
 	mockChain := &mock.ChainService{State: beaconState}
-	gen := stategen.NewMockService()
+	gen := mockstategen.NewMockService()
 	gen.AddStateForRoot(beaconState, [32]byte{})
 
 	sim, err := slashersimulator.New(ctx, &slashersimulator.ServiceConfig{
@@ -65,7 +91,8 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 		AttestationStateFetcher:     mockChain,
 		StateGen:                    gen,
 		PrivateKeysByValidatorIndex: privKeys,
-		SlashingsPool:               &slashings.PoolMock{},
+		SlashingsPool:               &mockslashings.PoolMock{},
+		SyncChecker:                 mockSyncChecker{},
 	})
 	require.NoError(t, err)
 	sim.Start()

@@ -151,12 +151,12 @@ func MaxChunkSpansSliceFrom(params *Parameters, chunk []uint16) (*MaxSpanChunksS
 
 // NeutralElement for a min span chunks slice is undefined, in this case
 // using MaxUint16 as a sane value given it is impossible we reach it.
-func (m *MinSpanChunksSlice) NeutralElement() uint16 {
+func (_ *MinSpanChunksSlice) NeutralElement() uint16 {
 	return math.MaxUint16
 }
 
 // NeutralElement for a max span chunks slice is 0.
-func (m *MaxSpanChunksSlice) NeutralElement() uint16 {
+func (_ *MaxSpanChunksSlice) NeutralElement() uint16 {
 	return 0
 }
 
@@ -435,7 +435,7 @@ func (m *MinSpanChunksSlice) StartEpoch(
 
 // StartEpoch given a source epoch and current epoch, determines the start epoch of
 // a max span chunk for use in chunk updates. The source epoch cannot be >= the current epoch.
-func (m *MaxSpanChunksSlice) StartEpoch(
+func (_ *MaxSpanChunksSlice) StartEpoch(
 	sourceEpoch, currentEpoch types.Epoch,
 ) (epoch types.Epoch, exists bool) {
 	if sourceEpoch >= currentEpoch {

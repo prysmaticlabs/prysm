@@ -2,6 +2,7 @@ package simulator
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -32,6 +34,7 @@ type ServiceConfig struct {
 	StateGen                    stategen.StateManager
 	SlashingsPool               slashings.PoolManager
 	PrivateKeysByValidatorIndex map[types.ValidatorIndex]bls.SecretKey
+	SyncChecker                 sync.Checker
 }
 
 // Parameters for a slasher simulator.
@@ -90,6 +93,7 @@ func New(ctx context.Context, srvConfig *ServiceConfig) (*Simulator, error) {
 		AttestationStateFetcher: srvConfig.AttestationStateFetcher,
 		StateGen:                srvConfig.StateGen,
 		SlashingPoolInserter:    srvConfig.SlashingsPool,
+		SyncChecker:             srvConfig.SyncChecker,
 	})
 	if err != nil {
 		return nil, err
@@ -132,8 +136,8 @@ func (s *Simulator) Start() {
 	time.Sleep(time.Second)
 	s.genesisTime = time.Now()
 	s.srvConfig.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.ChainStarted,
-		Data: &statefeed.ChainStartedData{StartTime: s.genesisTime},
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{StartTime: s.genesisTime},
 	})
 
 	// We simulate blocks and attestations for N epochs.
@@ -256,10 +260,12 @@ func (s *Simulator) verifySlashingsWereDetected(ctx context.Context) {
 	for slashingRoot, slashing := range s.sentAttesterSlashings {
 		if _, ok := detectedAttesterSlashings[slashingRoot]; !ok {
 			log.WithFields(logrus.Fields{
-				"targetEpoch":     slashing.Attestation_1.Data.Target.Epoch,
-				"prevTargetEpoch": slashing.Attestation_2.Data.Target.Epoch,
-				"sourceEpoch":     slashing.Attestation_1.Data.Source.Epoch,
-				"prevSourceEpoch": slashing.Attestation_2.Data.Source.Epoch,
+				"targetEpoch":         slashing.Attestation_1.Data.Target.Epoch,
+				"prevTargetEpoch":     slashing.Attestation_2.Data.Target.Epoch,
+				"sourceEpoch":         slashing.Attestation_1.Data.Source.Epoch,
+				"prevSourceEpoch":     slashing.Attestation_2.Data.Source.Epoch,
+				"prevBeaconBlockRoot": fmt.Sprintf("%#x", slashing.Attestation_1.Data.BeaconBlockRoot),
+				"newBeaconBlockRoot":  fmt.Sprintf("%#x", slashing.Attestation_2.Data.BeaconBlockRoot),
 			}).Errorf("Did not detect simulated attester slashing")
 			continue
 		}

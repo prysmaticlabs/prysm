@@ -2,32 +2,19 @@ package v1
 
 import (
 	"runtime/debug"
-	"sync"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
-	headState, err := InitializeFromProto(&ethpb.BeaconState{Slot: 1})
-	require.NoError(t, err)
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-	go func() {
-		require.NoError(t, headState.SetSlot(0))
-		wg.Done()
-	}()
-	go func() {
-		headState.Slot()
-		wg.Done()
-	}()
-
-	wg.Wait()
+	testtmpl.VerifyBeaconStateSlotDataRace(t, func() (state.BeaconState, error) {
+		return InitializeFromProto(&ethpb.BeaconState{Slot: 1})
+	})
 }
 
 func TestNilState_NoPanic(t *testing.T) {
@@ -39,8 +26,8 @@ func TestNilState_NoPanic(t *testing.T) {
 	}()
 	// retrieve elements from nil state
 	_ = st.GenesisTime()
-	_ = st.GenesisValidatorRoot()
-	_ = st.GenesisValidatorRoot()
+	_ = st.GenesisValidatorsRoot()
+	_ = st.GenesisValidatorsRoot()
 	_ = st.Slot()
 	_ = st.Fork()
 	_ = st.LatestBlockHeader()
@@ -56,7 +43,7 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = err
 	_, err = st.ValidatorAtIndexReadOnly(0)
 	_ = err
-	_, _ = st.ValidatorIndexByPubkey([48]byte{})
+	_, _ = st.ValidatorIndexByPubkey([fieldparams.BLSPubkeyLength]byte{})
 	_ = st.PubkeyAtIndex(0)
 	_ = st.NumValidators()
 	_ = st.Balances()
@@ -79,138 +66,55 @@ func TestNilState_NoPanic(t *testing.T) {
 }
 
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
-	c1 := &eth.Checkpoint{Epoch: 1}
-	c2 := &eth.Checkpoint{Epoch: 2}
-	beaconState, err := InitializeFromProto(&ethpb.BeaconState{CurrentJustifiedCheckpoint: c1})
-	require.NoError(t, err)
-	require.Equal(t, true, beaconState.MatchCurrentJustifiedCheckpoint(c1))
-	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
-	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c1))
-	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
-	beaconState.state = nil
-	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c1))
+	testtmpl.VerifyBeaconStateMatchCurrentJustifiedCheckpt(
+		t,
+		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
+			return InitializeFromProto(&ethpb.BeaconState{CurrentJustifiedCheckpoint: cp})
+		},
+		func(i state.BeaconState) {
+			s, ok := i.(*BeaconState)
+			if !ok {
+				panic("error in type assertion in test template")
+			}
+			s.state = nil
+		},
+	)
 }
 
 func TestBeaconState_MatchPreviousJustifiedCheckpt(t *testing.T) {
-	c1 := &eth.Checkpoint{Epoch: 1}
-	c2 := &eth.Checkpoint{Epoch: 2}
-	beaconState, err := InitializeFromProto(&ethpb.BeaconState{PreviousJustifiedCheckpoint: c1})
-	require.NoError(t, err)
-	require.NoError(t, err)
-	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c1))
-	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
-	require.Equal(t, true, beaconState.MatchPreviousJustifiedCheckpoint(c1))
-	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
-	beaconState.state = nil
-	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c1))
+	testtmpl.VerifyBeaconStateMatchPreviousJustifiedCheckpt(
+		t,
+		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
+			return InitializeFromProto(&ethpb.BeaconState{PreviousJustifiedCheckpoint: cp})
+		},
+		func(i state.BeaconState) {
+			s, ok := i.(*BeaconState)
+			if !ok {
+				panic("error in type assertion in test template")
+			}
+			s.state = nil
+		},
+	)
 }
 
 func TestBeaconState_MarshalSSZ_NilState(t *testing.T) {
-	s, err := InitializeFromProto(&ethpb.BeaconState{})
-	require.NoError(t, err)
-	s.state = nil
-	_, err = s.MarshalSSZ()
-	require.ErrorContains(t, "nil beacon state", err)
+	testtmpl.VerifyBeaconStateMarshalSSZNilState(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProto(&ethpb.BeaconState{})
+		},
+		func(i state.BeaconState) {
+			s, ok := i.(*BeaconState)
+			if !ok {
+				panic("error in type assertion in test template")
+			}
+			s.state = nil
+		},
+	)
 }
 
 func TestBeaconState_ValidatorByPubkey(t *testing.T) {
-	keyCreator := func(input []byte) [48]byte {
-		nKey := [48]byte{}
-		copy(nKey[:1], input)
-		return nKey
-	}
-
-	tests := []struct {
-		name            string
-		modifyFunc      func(b *BeaconState, k [48]byte)
-		exists          bool
-		expectedIdx     types.ValidatorIndex
-		largestIdxInSet types.ValidatorIndex
-	}{
-		{
-			name: "retrieve validator",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key[:]}))
-			},
-			exists:      true,
-			expectedIdx: 0,
-		},
-		{
-			name: "retrieve validator with multiple validators from the start",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
-				key1 := keyCreator([]byte{'C'})
-				key2 := keyCreator([]byte{'D'})
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key[:]}))
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key2[:]}))
-			},
-			exists:      true,
-			expectedIdx: 0,
-		},
-		{
-			name: "retrieve validator with multiple validators",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
-				key1 := keyCreator([]byte{'C'})
-				key2 := keyCreator([]byte{'D'})
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key2[:]}))
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key[:]}))
-			},
-			exists:      true,
-			expectedIdx: 2,
-		},
-		{
-			name: "retrieve validator with multiple validators from the start with shared state",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
-				key1 := keyCreator([]byte{'C'})
-				key2 := keyCreator([]byte{'D'})
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key[:]}))
-				_ = b.Copy()
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key2[:]}))
-			},
-			exists:      true,
-			expectedIdx: 0,
-		},
-		{
-			name: "retrieve validator with multiple validators with shared state",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
-				key1 := keyCreator([]byte{'C'})
-				key2 := keyCreator([]byte{'D'})
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key2[:]}))
-				n := b.Copy()
-				// Append to another state
-				assert.NoError(t, n.AppendValidator(&eth.Validator{PublicKey: key[:]}))
-
-			},
-			exists:      false,
-			expectedIdx: 0,
-		},
-		{
-			name: "retrieve validator with multiple validators with shared state at boundary",
-			modifyFunc: func(b *BeaconState, key [48]byte) {
-				key1 := keyCreator([]byte{'C'})
-				assert.NoError(t, b.AppendValidator(&eth.Validator{PublicKey: key1[:]}))
-				n := b.Copy()
-				// Append to another state
-				assert.NoError(t, n.AppendValidator(&eth.Validator{PublicKey: key[:]}))
-
-			},
-			exists:      false,
-			expectedIdx: 0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s, err := InitializeFromProto(&ethpb.BeaconState{})
-			require.NoError(t, err)
-			nKey := keyCreator([]byte{'A'})
-			tt.modifyFunc(s, nKey)
-			idx, ok := s.ValidatorIndexByPubkey(nKey)
-			assert.Equal(t, tt.exists, ok)
-			assert.Equal(t, tt.expectedIdx, idx)
-		})
-	}
+	testtmpl.VerifyBeaconStateValidatorByPubkey(t, func() (state.BeaconState, error) {
+		return InitializeFromProto(&ethpb.BeaconState{})
+	})
 }

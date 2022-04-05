@@ -71,6 +71,9 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	defer cancel()
 	go srv.refreshAuthTokenFromFileChanges(ctx, authTokenPath)
 
+	// Wait for service to be ready.
+	time.Sleep(time.Millisecond * 250)
+
 	// Update the auth token file with a new secret.
 	require.NoError(t, CreateAuthToken(walletDir, "localhost:7500"))
 

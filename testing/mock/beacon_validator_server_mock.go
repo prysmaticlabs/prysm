@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	metadata "google.golang.org/grpc/metadata"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
@@ -209,6 +210,13 @@ func (m *MockBeaconNodeValidatorServer) ProposeBeaconBlock(arg0 context.Context,
 	ret0, _ := ret[0].(*eth.ProposeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
+}
+
+// ProposeBeaconBlock mocks base method
+func (m *MockBeaconNodeValidatorServer) PrepareBeaconProposer(
+	arg0 context.Context, arg1 *eth.PrepareBeaconProposerRequest,
+) (*emptypb.Empty, error) {
+	return nil, errors.New("unimplemented")
 }
 
 // ProposeBeaconBlock indicates an expected call of ProposeBeaconBlock

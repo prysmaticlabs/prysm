@@ -3,12 +3,6 @@ load("@io_bazel_rules_docker//contrib:passwd.bzl", "passwd_entry", "passwd_file"
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("//tools:build_settings.bzl", "base_image")
 
-sh_binary(
-    name = "fuzz_wrapper",
-    srcs = ["fuzz_wrapper.sh"],
-    tags = ["manual"],
-)
-
 ################################################################################
 ##                      Docker images as non-root user                        ##
 ################################################################################

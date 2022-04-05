@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
 var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
@@ -189,7 +190,7 @@ func ToLowInt64(x []byte) int64 {
 	}
 	// Use the first 8 bytes.
 	x = x[:8]
-	return int64(binary.LittleEndian.Uint64(x))
+	return int64(binary.LittleEndian.Uint64(x)) // lint:ignore uintcast -- A negative number might be the expected result.
 }
 
 // SafeCopyRootAtIndex takes a copy of an 32-byte slice in a slice of byte slices. Returns error if index out of range.
@@ -223,6 +224,16 @@ func SafeCopy2dBytes(ary [][]byte) [][]byte {
 		for i, a := range ary {
 			copied[i] = SafeCopyBytes(a)
 		}
+		return copied
+	}
+	return nil
+}
+
+// SafeCopy2d32Bytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
+func SafeCopy2d32Bytes(ary [][32]byte) [][32]byte {
+	if ary != nil {
+		copied := make([][32]byte, len(ary))
+		copy(copied, ary)
 		return copied
 	}
 	return nil
@@ -382,4 +393,30 @@ func IsHex(b []byte) bool {
 		return false
 	}
 	return hexRegex.Match(b)
+}
+
+// ReverseByteOrder Switch the endianness of a byte slice by reversing its order.
+// this function does not modify the actual input bytes.
+func ReverseByteOrder(input []byte) []byte {
+	b := make([]byte, len(input))
+	copy(b, input)
+	for i := 0; i < len(b)/2; i++ {
+		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
+	}
+	return b
+}
+
+// ZeroRoot returns whether or not a root is of proper length and non-zero hash.
+func ZeroRoot(root []byte) bool {
+	return string(make([]byte, fieldparams.RootLength)) == string(root)
+}
+
+// IsRoot checks whether the byte array is a root.
+func IsRoot(root []byte) bool {
+	return len(root) == fieldparams.RootLength
+}
+
+// IsValidRoot checks whether the byte array is a valid root.
+func IsValidRoot(root []byte) bool {
+	return IsRoot(root) && !ZeroRoot(root)
 }

@@ -39,7 +39,7 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	s.cfg = &Config{MaxPeers: 0}
 	s.addrFilter, err = configureFilter(&Config{})
 	require.NoError(t, err)
-	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
+	h1, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
 	s.host = h1
 	defer func() {
@@ -54,7 +54,7 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	// create alternate host
 	listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
-	h2, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
+	h2, err := libp2p.New([]libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
 	require.NoError(t, err)
 	defer func() {
 		err := h2.Close()
@@ -153,7 +153,7 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	s.cfg = &Config{MaxPeers: 1}
 	s.addrFilter, err = configureFilter(&Config{})
 	require.NoError(t, err)
-	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
+	h1, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
 	s.host = h1
 	defer func() {
@@ -164,7 +164,7 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	// create alternate host
 	listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
-	h2, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
+	h2, err := libp2p.New([]libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
 	require.NoError(t, err)
 	defer func() {
 		err := h2.Close()
@@ -198,7 +198,7 @@ func TestPeerAllowList(t *testing.T) {
 	}
 	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: cidr})
 	require.NoError(t, err)
-	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
+	h1, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
 	s.host = h1
 	defer func() {
@@ -209,7 +209,7 @@ func TestPeerAllowList(t *testing.T) {
 	// create alternate host
 	listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
-	h2, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
+	h2, err := libp2p.New([]libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
 	require.NoError(t, err)
 	defer func() {
 		err := h2.Close()
@@ -244,7 +244,7 @@ func TestPeerDenyList(t *testing.T) {
 	}
 	s.addrFilter, err = configureFilter(&Config{DenyListCIDR: []string{cidr}})
 	require.NoError(t, err)
-	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
+	h1, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
 	s.host = h1
 	defer func() {
@@ -255,7 +255,7 @@ func TestPeerDenyList(t *testing.T) {
 	// create alternate host
 	listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr2, 3000))
 	require.NoError(t, err, "Failed to p2p listen")
-	h2, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
+	h2, err := libp2p.New([]libp2p.Option{privKeyOption(pkey2), libp2p.ListenAddrs(listen)}...)
 	require.NoError(t, err)
 	defer func() {
 		err := h2.Close()

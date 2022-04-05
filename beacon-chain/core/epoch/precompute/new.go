@@ -18,7 +18,7 @@ import (
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
 func New(ctx context.Context, s state.BeaconState) ([]*Validator, *Balance, error) {
-	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
+	_, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
 
 	pValidators := make([]*Validator, s.NumValidators())

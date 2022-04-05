@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	bolt "go.etcd.io/bbolt"
@@ -33,7 +32,7 @@ var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to
 //   - De-index all finalized beacon block roots from previous_finalized_epoch to
 //     new_finalized_epoch. (I.e. delete these roots from the index, to be re-indexed.)
 //   - Build the canonical finalized chain by walking up the ancestry chain from the finalized block
-//     root until a parent is found in the index or the parent is genesis.
+//     root until a parent is found in the index, or the parent is genesis or the origin checkpoint.
 //   - Add all block roots in the database where epoch(block.slot) == checkpoint.epoch.
 //
 // This method ensures that all blocks from the current finalized epoch are considered "final" while
@@ -47,6 +46,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	root := checkpoint.Root
 	var previousRoot []byte
 	genesisRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
+	initCheckpointRoot := tx.Bucket(blocksBucket).Get(originCheckpointBlockRootKey)
 
 	// De-index recent finalized block roots, to be re-indexed.
 	previousFinalizedCheckpoint := &ethpb.Checkpoint{}
@@ -75,7 +75,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	// Walk up the ancestry chain until we reach a block root present in the finalized block roots
 	// index bucket or genesis block root.
 	for {
-		if bytes.Equal(root, genesisRoot) {
+		if bytes.Equal(root, genesisRoot) || bytes.Equal(root, initCheckpointRoot) {
 			break
 		}
 
@@ -90,7 +90,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 		}
 		block := signedBlock.Block()
 
-		container := &dbpb.FinalizedBlockRootContainer{
+		container := &ethpb.FinalizedBlockRootContainer{
 			ParentRoot: block.ParentRoot(),
 			ChildRoot:  previousRoot,
 		}
@@ -107,7 +107,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 
 		// Found parent, loop exit condition.
 		if parentBytes := bkt.Get(block.ParentRoot()); parentBytes != nil {
-			parent := &dbpb.FinalizedBlockRootContainer{}
+			parent := &ethpb.FinalizedBlockRootContainer{}
 			if err := decode(ctx, parentBytes, parent); err != nil {
 				tracing.AnnotateError(span, err)
 				return err
@@ -160,7 +160,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 // Note: beacon blocks from the latest finalized epoch return true, whether or not they are
 // considered canonical in the "head view" of the beacon node.
 func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
+	_, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
 	defer span.End()
 
 	var exists bool
@@ -195,7 +195,7 @@ func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (bl
 		if bytes.Equal(blkBytes, containerFinalizedButNotCanonical) {
 			return nil
 		}
-		ctr := &dbpb.FinalizedBlockRootContainer{}
+		ctr := &ethpb.FinalizedBlockRootContainer{}
 		if err := decode(ctx, blkBytes, ctr); err != nil {
 			tracing.AnnotateError(span, err)
 			return err

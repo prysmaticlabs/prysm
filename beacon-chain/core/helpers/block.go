@@ -11,18 +11,22 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
+var ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
+var ErrNilBeaconBlock = errors.New("beacon block can't be nil")
+var ErrNilBeaconBlockBody = errors.New("beacon block body can't be nil")
+
 // BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
 func BeaconBlockIsNil(b block.SignedBeaconBlock) error {
 	if b == nil || b.IsNil() {
-		return errors.New("signed beacon block can't be nil")
+		return ErrNilSignedBeaconBlock
 	}
 	if b.Block().IsNil() {
-		return errors.New("beacon block can't be nil")
+		return ErrNilBeaconBlock
 	}
 	if b.Block().Body().IsNil() {
-		return errors.New("beacon block body can't be nil")
+		return ErrNilBeaconBlockBody
 	}
 	return nil
 }

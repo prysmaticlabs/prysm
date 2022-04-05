@@ -13,7 +13,7 @@ import (
 	"github.com/kr/pretty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -175,7 +175,11 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, wrapper.WrappedPhase0SignedBeaconBlock(block))
+				wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+				if err != nil {
+					log.Fatal(err)
+				}
+				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, wsb)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -191,7 +195,7 @@ func main() {
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}
-					if !ssz.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
+					if !equality.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
 						diff, _ := messagediff.PrettyDiff(expectedState, postState.InnerStateUnsafe())
 						log.Errorf("Derived state differs from provided post state: %s", diff)
 					}

@@ -151,8 +151,8 @@ func (s *Service) Resync() error {
 
 	// Set it to false since we are syncing again.
 	s.synced.UnSet()
-	defer func() { s.synced.Set() }() // Reset it at the end of the method.
-	genesis := time.Unix(int64(headState.GenesisTime()), 0)
+	defer func() { s.synced.Set() }()                       // Reset it at the end of the method.
+	genesis := time.Unix(int64(headState.GenesisTime()), 0) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
 
 	s.waitForMinimumPeers()
 	if err = s.roundRobinSync(genesis); err != nil {

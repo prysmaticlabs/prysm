@@ -22,6 +22,7 @@ go_test(
     shard_count = 4,
     tags = ["spectest"],
     deps = [
+        "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//testing/spectest/shared/phase0/epoch_processing:go_default_library",
     ],

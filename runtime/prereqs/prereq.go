@@ -27,7 +27,7 @@ var (
 
 // execShellOutputFunc passes a command and args to exec.CommandContext and returns the result as a string
 func execShellOutputFunc(ctx context.Context, command string, args ...string) (string, error) {
-	result, err := exec.CommandContext(ctx, command, args...).Output() /* #nosec G204 */
+	result, err := exec.CommandContext(ctx, command, args...).Output() // #nosec G204
 	if err != nil {
 		return "", errors.Wrap(err, "error in command execution")
 	}

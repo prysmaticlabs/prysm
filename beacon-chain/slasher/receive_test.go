@@ -306,5 +306,5 @@ func TestService_processQueuedBlocks(t *testing.T) {
 	tickerChan <- 0
 	cancel()
 	<-exitChan
-	assert.LogsContain(t, hook, "New slot, processing queued")
+	assert.LogsContain(t, hook, "Processing queued")
 }

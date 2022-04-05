@@ -13,6 +13,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
@@ -22,8 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/imported"
 	"github.com/urfave/cli/v2"
 )
 
@@ -47,9 +46,10 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not initialize wallet")
 	}
-	if w.KeymanagerKind() == keymanager.Remote {
+	// TODO(#9883) - Remove this when we have a better way to handle this.
+	if w.KeymanagerKind() == keymanager.Remote || w.KeymanagerKind() == keymanager.Web3Signer {
 		return errors.New(
-			"remote wallets cannot backup accounts",
+			"remote and web3signer wallets cannot backup accounts",
 		)
 	}
 	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
@@ -92,36 +92,15 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not determine password for backed up accounts")
 	}
 
-	var keystoresToBackup []*keymanager.Keystore
-	switch w.KeymanagerKind() {
-	case keymanager.Imported:
-		km, ok := km.(*imported.Keymanager)
-		if !ok {
-			return errors.New("could not assert keymanager interface to concrete type")
-		}
-		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
-		if err != nil {
-			return errors.Wrap(err, "could not backup accounts for imported keymanager")
-		}
-	case keymanager.Derived:
-		km, ok := km.(*derived.Keymanager)
-		if !ok {
-			return errors.New("could not assert keymanager interface to concrete type")
-		}
-		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
-		if err != nil {
-			return errors.Wrap(err, "could not backup accounts for derived keymanager")
-		}
-	case keymanager.Remote:
-		return errors.New("backing up keys is not supported for a remote keymanager")
-	default:
-		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
+	keystoresToBackup, err := km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
+	if err != nil {
+		return errors.Wrap(err, "could not extract keys from keymanager")
 	}
 	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }
 
 // Ask user to select accounts via an interactive userprompt.
-func selectAccounts(selectionPrompt string, pubKeys [][48]byte) (filteredPubKeys []bls.PublicKey, err error) {
+func selectAccounts(selectionPrompt string, pubKeys [][fieldparams.BLSPubkeyLength]byte) (filteredPubKeys []bls.PublicKey, err error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
 		name := petnames.DeterministicName(pk[:], "-")
@@ -211,7 +190,7 @@ func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir
 		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}
 	// We create a new file to store our backup.zip.
-	zipfile, err := os.Create(archivePath)
+	zipfile, err := os.Create(filepath.Clean(archivePath))
 	if err != nil {
 		return errors.Wrapf(err, "could not create zip file with path: %s", archivePath)
 	}

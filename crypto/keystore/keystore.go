@@ -53,10 +53,9 @@ type Keystore struct {
 }
 
 // GetKey from file using the filename path and a decryption password.
-func (ks Keystore) GetKey(filename, password string) (*Key, error) {
+func (_ Keystore) GetKey(filename, password string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
-	// #nosec G304
-	keyJSON, err := ioutil.ReadFile(filename)
+	keyJSON, err := ioutil.ReadFile(filename) // #nosec G304 -- ReadFile is safe
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +64,7 @@ func (ks Keystore) GetKey(filename, password string) (*Key, error) {
 
 // GetKeys from directory using the prefix to filter relevant files
 // and a decryption password.
-func (ks Keystore) GetKeys(directory, filePrefix, password string, warnOnFail bool) (map[string]*Key, error) {
+func (_ Keystore) GetKeys(directory, filePrefix, password string, warnOnFail bool) (map[string]*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
 	files, err := ioutil.ReadDir(directory)

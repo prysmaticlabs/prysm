@@ -46,9 +46,9 @@ func NextEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 	return slots.ToEpoch(state.Slot()) + 1
 }
 
-// AltairCompatible returns if the input state `s` is altair compatible and input epoch `e` is higher equal than fork epoch.
-func AltairCompatible(s state.BeaconState, e types.Epoch) bool {
-	return s.Version() == version.Altair && e >= params.BeaconConfig().AltairForkEpoch
+// HigherEqualThanAltairVersionAndEpoch returns if the input state `s` has a higher version number than Altair state and input epoch `e` is higher equal than fork epoch.
+func HigherEqualThanAltairVersionAndEpoch(s state.BeaconState, e types.Epoch) bool {
+	return s.Version() >= version.Altair && e >= params.BeaconConfig().AltairForkEpoch
 }
 
 // CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.
@@ -60,14 +60,14 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 	return epochStart && altairEpoch
 }
 
-// CanUpgradeToMerge returns true if the input `slot` can upgrade to Merge fork.
+// CanUpgradeToBellatrix returns true if the input `slot` can upgrade to Bellatrix fork.
 //
 // Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == MERGE_FORK_EPOCH
-func CanUpgradeToMerge(slot types.Slot) bool {
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == BELLATRIX_FORK_EPOCH
+func CanUpgradeToBellatrix(slot types.Slot) bool {
 	epochStart := slots.IsEpochStart(slot)
-	mergeEpoch := slots.ToEpoch(slot) == params.BeaconConfig().MergeForkEpoch
-	return epochStart && mergeEpoch
+	bellatrixEpoch := slots.ToEpoch(slot) == params.BeaconConfig().BellatrixForkEpoch
+	return epochStart && bellatrixEpoch
 }
 
 // CanProcessEpoch checks the eligibility to process epoch.

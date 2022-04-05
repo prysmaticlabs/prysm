@@ -28,7 +28,7 @@ var log = logrus.WithField("prefix", "forkchoice_checker")
 
 type endpoint []string
 
-func (e *endpoint) String() string {
+func (_ *endpoint) String() string {
 	return "gRPC endpoints"
 }
 

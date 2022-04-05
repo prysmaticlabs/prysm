@@ -52,23 +52,28 @@ func main() {
 	if gatewayConfig.EthPbMux != nil {
 		muxs = append(muxs, gatewayConfig.EthPbMux)
 	}
+	opts := []gateway.Option{
+		gateway.WithPbHandlers(muxs),
+		gateway.WithMuxHandler(gatewayConfig.Handler),
+		gateway.WithRemoteAddr(*beaconRPC),
+		gateway.WithGatewayAddr(fmt.Sprintf("%s:%d", *host, *port)),
+		gateway.WithAllowedOrigins(strings.Split(*allowedOrigins, ",")),
+		gateway.WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize)),
+	}
 
-	gw := gateway.New(
-		context.Background(),
-		muxs,
-		gatewayConfig.Handler,
-		*beaconRPC,
-		fmt.Sprintf("%s:%d", *host, *port),
-	).WithAllowedOrigins(strings.Split(*allowedOrigins, ",")).
-		WithMaxCallRecvMsgSize(uint64(*grpcMaxMsgSize))
 	if flags.EnableHTTPEthAPI(*httpModules) {
-		gw.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{})
+		opts = append(opts, gateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
+	}
+
+	gw, err := gateway.New(context.Background(), opts...)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/swagger/", gateway.SwaggerServer())
 	r.HandleFunc("/healthz", healthzServer(gw))
-	gw = gw.WithRouter(r)
+	gw.SetRouter(r)
 
 	gw.Start()
 

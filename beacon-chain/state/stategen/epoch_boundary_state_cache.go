@@ -66,11 +66,27 @@ func newBoundaryStateCache() *epochBoundaryState {
 	}
 }
 
+// ByRoot satisfies the CachedGetter interface
+func (e *epochBoundaryState) ByRoot(r [32]byte) (state.BeaconState, error) {
+	rsi, ok, err := e.getByRoot(r)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrNotInCache
+	}
+	return rsi.state, nil
+}
+
 // get epoch boundary state by its block root. Returns copied state in state info object if exists. Otherwise returns nil.
 func (e *epochBoundaryState) getByRoot(r [32]byte) (*rootStateInfo, bool, error) {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 
+	return e.getByRootLockFree(r)
+}
+
+func (e *epochBoundaryState) getByRootLockFree(r [32]byte) (*rootStateInfo, bool, error) {
 	obj, exists, err := e.rootStateCache.GetByKey(string(r[:]))
 	if err != nil {
 		return nil, false, err
@@ -106,7 +122,7 @@ func (e *epochBoundaryState) getBySlot(s types.Slot) (*rootStateInfo, bool, erro
 		return nil, false, errNotSlotRootInfo
 	}
 
-	return e.getByRoot(info.root)
+	return e.getByRootLockFree(info.root)
 }
 
 // put adds a state to the epoch boundary state cache. This method also trims the

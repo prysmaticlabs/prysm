@@ -6,7 +6,6 @@ go_library(
         "doc.go",
         "log.go",
         "metrics.go",
-        "mock.go",
         "service.go",
         "types.go",
     ],
@@ -14,7 +13,6 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/endtoend:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//testing/slasher/simulator:__pkg__",
     ],
     deps = [
@@ -45,7 +43,9 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/operations/slashings/mock:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

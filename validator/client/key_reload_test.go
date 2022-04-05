@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -24,14 +25,14 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		inactivePubKey := [48]byte{}
+		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		activePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		activePubKey := [48]byte{}
+		activePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
 		km := &mockKeymanager{
-			keysMap: map[[48]byte]bls.SecretKey{
+			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 				inactivePubKey: inactivePrivKey,
 			},
 		}
@@ -52,7 +53,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			},
 		).Return(resp, nil)
 
-		anyActive, err := v.HandleKeyReload(context.Background(), [][48]byte{inactivePubKey, activePubKey})
+		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactivePubKey, activePubKey})
 		require.NoError(t, err)
 		assert.Equal(t, true, anyActive)
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
@@ -64,10 +65,10 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		inactivePubKey := [48]byte{}
+		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		km := &mockKeymanager{
-			keysMap: map[[48]byte]bls.SecretKey{
+			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 				inactivePubKey: inactivePrivKey,
 			},
 		}
@@ -87,7 +88,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			},
 		).Return(resp, nil)
 
-		anyActive, err := v.HandleKeyReload(context.Background(), [][48]byte{inactivePubKey})
+		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactivePubKey})
 		require.NoError(t, err)
 		assert.Equal(t, false, anyActive)
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
@@ -97,10 +98,10 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 	t.Run("error when getting status", func(t *testing.T) {
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		inactivePubKey := [48]byte{}
+		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		km := &mockKeymanager{
-			keysMap: map[[48]byte]bls.SecretKey{
+			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
 				inactivePubKey: inactivePrivKey,
 			},
 		}
@@ -118,7 +119,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			},
 		).Return(nil, errors.New("error"))
 
-		_, err = v.HandleKeyReload(context.Background(), [][48]byte{inactivePubKey})
+		_, err = v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactivePubKey})
 		assert.ErrorContains(t, "error", err)
 	})
 }

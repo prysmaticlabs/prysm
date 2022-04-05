@@ -16,7 +16,7 @@ const signatureVerificationInterval = 50 * time.Millisecond
 const verifierLimit = 50
 
 type signatureVerifier struct {
-	set     *bls.SignatureSet
+	set     *bls.SignatureBatch
 	resChan chan error
 }
 
@@ -49,8 +49,8 @@ func (s *Service) verifierRoutine() {
 	}
 }
 
-func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureSet) (pubsub.ValidationResult, error) {
-	ctx, span := trace.StartSpan(ctx, "sync.validateWithBatchVerifier")
+func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureBatch) (pubsub.ValidationResult, error) {
+	_, span := trace.StartSpan(ctx, "sync.validateWithBatchVerifier")
 	defer span.End()
 
 	resChan := make(chan error)

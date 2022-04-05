@@ -71,3 +71,9 @@ func LogsDoNotContain(tb assertions.AssertionTestingTB, hook *test.Hook, want st
 func NotEmpty(tb assertions.AssertionTestingTB, obj interface{}, msg ...interface{}) {
 	assertions.NotEmpty(tb.Fatalf, obj, msg...)
 }
+
+// ErrorIs uses Errors.Is to recursively unwrap err looking for target in the chain.
+// If any error in the chain matches target, the assertion will pass.
+func ErrorIs(tb assertions.AssertionTestingTB, err, target error, msg ...interface{}) {
+	assertions.ErrorIs(tb.Fatalf, err, target, msg)
+}

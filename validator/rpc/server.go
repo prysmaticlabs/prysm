@@ -14,13 +14,12 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -52,7 +51,6 @@ type Config struct {
 	WalletInitializedFeed    *event.Feed
 	NodeGatewayEndpoint      string
 	Wallet                   *wallet.Wallet
-	Keymanager               keymanager.IKeymanager
 }
 
 // Server defining a gRPC server for the remote signer API.
@@ -62,7 +60,7 @@ type Server struct {
 	beaconChainClient         ethpb.BeaconChainClient
 	beaconNodeClient          ethpb.NodeClient
 	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
-	beaconNodeHealthClient    pb.HealthClient
+	beaconNodeHealthClient    ethpb.HealthClient
 	valDB                     db.Database
 	ctx                       context.Context
 	cancel                    context.CancelFunc
@@ -75,7 +73,6 @@ type Server struct {
 	host                      string
 	port                      string
 	listener                  net.Listener
-	keymanager                keymanager.IKeymanager
 	withCert                  string
 	withKey                   string
 	credentialError           error
@@ -121,7 +118,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		walletInitializedFeed:    cfg.WalletInitializedFeed,
 		walletInitialized:        cfg.Wallet != nil,
 		wallet:                   cfg.Wallet,
-		keymanager:               cfg.Keymanager,
 		nodeGatewayEndpoint:      cfg.NodeGatewayEndpoint,
 		validatorMonitoringHost:  cfg.ValidatorMonitoringHost,
 		validatorMonitoringPort:  cfg.ValidatorMonitoringPort,
@@ -180,6 +176,7 @@ func (s *Server) Start() {
 	validatorpb.RegisterHealthServer(s.grpcServer, s)
 	validatorpb.RegisterBeaconServer(s.grpcServer, s)
 	validatorpb.RegisterAccountsServer(s.grpcServer, s)
+	ethpbservice.RegisterKeyManagementServer(s.grpcServer, s)
 	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
 	go func() {

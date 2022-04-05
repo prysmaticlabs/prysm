@@ -1,6 +1,7 @@
 package assertions
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -8,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/d4l3k/messagediff"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -60,7 +61,7 @@ func DeepNotEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg 
 
 // DeepSSZEqual compares values using ssz.DeepEqual.
 func DeepSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if !ssz.DeepEqual(expected, actual) {
+	if !equality.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		diff, _ := messagediff.PrettyDiff(expected, actual)
@@ -70,7 +71,7 @@ func DeepSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg 
 
 // DeepNotSSZEqual compares values using ssz.DeepEqual.
 func DeepNotSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...interface{}) {
-	if ssz.DeepEqual(expected, actual) {
+	if equality.DeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s, want: %#v, got: %#v", filepath.Base(file), line, errMsg, expected, actual)
@@ -81,6 +82,16 @@ func DeepNotSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, m
 func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
 	if err != nil {
 		errMsg := parseMsg("Unexpected error", msg...)
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s: %v", filepath.Base(file), line, errMsg, err)
+	}
+}
+
+// ErrorIs uses Errors.Is to recursively unwrap err looking for target in the chain.
+// If any error in the chain matches target, the assertion will pass.
+func ErrorIs(loggerFn assertionLoggerFn, err, target error, msg ...interface{}) {
+	if !errors.Is(err, target) {
+		errMsg := parseMsg(fmt.Sprintf("error %s not in chain", target), msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s: %v", filepath.Base(file), line, errMsg, err)
 	}

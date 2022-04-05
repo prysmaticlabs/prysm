@@ -41,6 +41,13 @@ func InternalServerError(err error) *DefaultErrorJson {
 	}
 }
 
+func TimeoutError() *DefaultErrorJson {
+	return &DefaultErrorJson{
+		Message: "Request timeout",
+		Code:    http.StatusRequestTimeout,
+	}
+}
+
 // StatusCode returns the error's underlying error code.
 func (e *DefaultErrorJson) StatusCode() int {
 	return e.Code

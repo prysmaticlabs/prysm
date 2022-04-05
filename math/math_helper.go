@@ -9,6 +9,19 @@ import (
 	"github.com/thomaso-mirodin/intmath/u64"
 )
 
+func init() {
+	// The Int function assumes that the operating system is 64 bit. In any case, Ethereum
+	// consensus layer uses 64 bit values almost exclusively so 64 bit OS requirement should
+	// already be established. This panic is a strict fail fast feedback to alert 32 bit users
+	// that they are not supported.
+	if stdmath.MaxUint < stdmath.MaxUint64 {
+		panic("Prysm is only supported on 64 bit OS")
+	}
+}
+
+// ErrOverflow occurs when an operation exceeds max or minimum values.
+var ErrOverflow = errors.New("integer overflow")
+
 // Common square root values.
 var squareRootTable = map[uint64]uint64{
 	4:       2,
@@ -111,4 +124,38 @@ func Add64(a, b uint64) (uint64, error) {
 		return 0, errors.New("addition overflows")
 	}
 	return res, nil
+}
+
+// Sub64 subtracts two 64-bit unsigned integers and checks for errors.
+func Sub64(a, b uint64) (uint64, error) {
+	res, borrow := bits.Sub64(a, b, 0 /* borrow */)
+	if borrow > 0 {
+		return 0, errors.New("subtraction underflow")
+	}
+	return res, nil
+}
+
+// Int returns the integer value of the uint64 argument. If there is an overlow, then an error is
+// returned.
+func Int(u uint64) (int, error) {
+	if u > stdmath.MaxInt {
+		return 0, ErrOverflow
+	}
+	return int(u), nil // lint:ignore uintcast -- This is the preferred method of casting uint64 to int.
+}
+
+// AddInt adds two or more integers and checks for integer overflows.
+func AddInt(i ...int) (int, error) {
+	var sum int
+	for _, ii := range i {
+		if ii > 0 && sum > stdmath.MaxInt-ii {
+			return 0, ErrOverflow
+		} else if ii < 0 && sum < stdmath.MinInt-ii {
+			return 0, ErrOverflow
+		}
+
+		sum += ii
+
+	}
+	return sum, nil
 }

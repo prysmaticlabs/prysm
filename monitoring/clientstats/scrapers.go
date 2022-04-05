@@ -76,7 +76,7 @@ func NewValidatorScraper(promExpoURL string) Scraper {
 // will be used.
 func scrapeProm(url string, tripper http.RoundTripper) (map[string]*dto.MetricFamily, error) {
 	mfChan := make(chan *dto.MetricFamily)
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 	go func() {
 		// FetchMetricFamilies handles grpc flavored prometheus ez
 		// but at the cost of the awkward channel select loop below

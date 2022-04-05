@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -345,7 +346,7 @@ func TestReloadPublicKeys(t *testing.T) {
 	k := &Keymanager{
 		client:              m,
 		accountsChangedFeed: new(event.Feed),
-		orderedPubKeys:      [][48]byte{bytesutil.ToBytes48([]byte("100"))},
+		orderedPubKeys:      [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("100"))},
 	}
 
 	// Add key
@@ -359,7 +360,7 @@ func TestReloadPublicKeys(t *testing.T) {
 
 	keys, err := k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("100")), bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("100")), bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
 	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsContain(t, hook, keymanager.KeysReloaded)
 
@@ -375,7 +376,7 @@ func TestReloadPublicKeys(t *testing.T) {
 
 	keys, err = k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("200"))}, k.orderedPubKeys)
 	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsContain(t, hook, keymanager.KeysReloaded)
 
@@ -391,7 +392,7 @@ func TestReloadPublicKeys(t *testing.T) {
 
 	keys, err = k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
 	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsContain(t, hook, keymanager.KeysReloaded)
 
@@ -407,7 +408,7 @@ func TestReloadPublicKeys(t *testing.T) {
 
 	keys, err = k.ReloadPublicKeys(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, [][48]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
+	assert.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48([]byte("300"))}, k.orderedPubKeys)
 	assert.DeepEqual(t, keys, k.orderedPubKeys)
 	assert.LogsDoNotContain(t, hook, keymanager.KeysReloaded)
 }

@@ -76,7 +76,7 @@ func (s *Simulator) signBlockHeader(
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
-		beaconState.GenesisValidatorRoot(),
+		beaconState.GenesisValidatorsRoot(),
 	)
 	if err != nil {
 		return nil, err

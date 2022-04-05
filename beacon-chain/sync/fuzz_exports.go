@@ -1,5 +1,5 @@
-//go:build libfuzzer
-// +build libfuzzer
+//go:build fuzz
+// +build fuzz
 
 package sync
 

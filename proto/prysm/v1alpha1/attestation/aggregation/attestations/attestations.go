@@ -2,28 +2,11 @@ package attestations
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
 	"github.com/sirupsen/logrus"
 )
-
-const (
-	// NaiveAggregation is an aggregation strategy without any optimizations.
-	NaiveAggregation AttestationAggregationStrategy = "naive"
-
-	// MaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
-	MaxCoverAggregation AttestationAggregationStrategy = "max_cover"
-
-	// OptMaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
-	// This new variant is optimized and relies on Bitlist64 (once fully tested, `max_cover`
-	// strategy will be replaced with this one).
-	OptMaxCoverAggregation AttestationAggregationStrategy = "opt_max_cover"
-)
-
-// AttestationAggregationStrategy defines attestation aggregation strategy.
-type AttestationAggregationStrategy string
 
 // attList represents list of attestations, defined for easier en masse operations (filtering, sorting).
 type attList []*ethpb.Attestation
@@ -50,17 +33,7 @@ var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 //   }
 //   aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
-	strategy := AttestationAggregationStrategy(features.Get().AttestationAggregationStrategy)
-	switch strategy {
-	case "", NaiveAggregation:
-		return NaiveAttestationAggregation(atts)
-	case MaxCoverAggregation:
-		return MaxCoverAttestationAggregation(atts)
-	case OptMaxCoverAggregation:
-		return optMaxCoverAttestationAggregation(atts)
-	default:
-		return nil, errors.Wrapf(aggregation.ErrInvalidStrategy, "%q", strategy)
-	}
+	return MaxCoverAttestationAggregation(atts)
 }
 
 // AggregatePair aggregates pair of attestations a1 and a2 together.

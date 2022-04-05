@@ -16,10 +16,13 @@ func TestHeadSlot_DataRace(t *testing.T) {
 	s := &Service{
 		cfg: &config{BeaconDB: beaconDB},
 	}
+	wait := make(chan struct{})
 	go func() {
+		defer close(wait)
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))
 	}()
 	s.HeadSlot()
+	<-wait
 }
 
 func TestHeadRoot_DataRace(t *testing.T) {
@@ -28,24 +31,32 @@ func TestHeadRoot_DataRace(t *testing.T) {
 		cfg:  &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 		head: &head{root: [32]byte{'A'}},
 	}
+	wait := make(chan struct{})
 	go func() {
+		defer close(wait)
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))
 	}()
 	_, err := s.HeadRoot(context.Background())
 	require.NoError(t, err)
+	<-wait
 }
 
 func TestHeadBlock_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	require.NoError(t, err)
 	s := &Service{
 		cfg:  &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
-		head: &head{block: wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{})},
+		head: &head{block: wsb},
 	}
+	wait := make(chan struct{})
 	go func() {
+		defer close(wait)
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))
 	}()
-	_, err := s.HeadBlock(context.Background())
+	_, err = s.HeadBlock(context.Background())
 	require.NoError(t, err)
+	<-wait
 }
 
 func TestHeadState_DataRace(t *testing.T) {
@@ -53,9 +64,12 @@ func TestHeadState_DataRace(t *testing.T) {
 	s := &Service{
 		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 	}
+	wait := make(chan struct{})
 	go func() {
+		defer close(wait)
 		require.NoError(t, s.saveHead(context.Background(), [32]byte{}))
 	}()
 	_, err := s.HeadState(context.Background())
 	require.NoError(t, err)
+	<-wait
 }

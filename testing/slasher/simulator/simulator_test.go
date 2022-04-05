@@ -6,7 +6,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -34,7 +34,7 @@ func setupService(t *testing.T, params *Parameters) *Simulator {
 	err = beaconState.SetValidators(validators)
 	require.NoError(t, err)
 
-	gen := stategen.NewMockService()
+	gen := mockstategen.NewMockService()
 	gen.AddStateForRoot(beaconState, [32]byte{})
 	return &Simulator{
 		srvConfig: &ServiceConfig{

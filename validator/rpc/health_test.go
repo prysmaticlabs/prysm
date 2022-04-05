@@ -23,7 +23,7 @@ func (m *mockSyncChecker) Syncing(_ context.Context) (bool, error) {
 
 type mockGenesisFetcher struct{}
 
-func (m *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, error) {
+func (_ *mockGenesisFetcher) GenesisInfo(_ context.Context) (*ethpb.Genesis, error) {
 	genesis := timestamppb.New(time.Unix(0, 0))
 	return &ethpb.Genesis{
 		GenesisTime: genesis,

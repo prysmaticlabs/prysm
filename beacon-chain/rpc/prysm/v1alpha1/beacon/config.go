@@ -11,7 +11,7 @@ import (
 )
 
 // GetBeaconConfig retrieves the current configuration parameters of the beacon chain.
-func (bs *Server) GetBeaconConfig(_ context.Context, _ *emptypb.Empty) (*ethpb.BeaconConfig, error) {
+func (_ *Server) GetBeaconConfig(_ context.Context, _ *emptypb.Empty) (*ethpb.BeaconConfig, error) {
 	conf := params.BeaconConfig()
 	val := reflect.ValueOf(conf).Elem()
 	numFields := val.Type().NumField()

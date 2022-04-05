@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/sirupsen/logrus"
@@ -15,7 +16,7 @@ var failedBlockSignLocalErr = "attempted to sign a double proposal, block reject
 var failedBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
 
 func (v *validator) slashableProposalCheck(
-	ctx context.Context, pubKey [48]byte, signedBlock block.SignedBeaconBlock, signingRoot [32]byte,
+	ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signedBlock block.SignedBeaconBlock, signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
@@ -82,7 +83,7 @@ func (v *validator) slashableProposalCheck(
 	return nil
 }
 
-func blockLogFields(pubKey [48]byte, blk block.BeaconBlock, sig []byte) logrus.Fields {
+func blockLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, blk block.BeaconBlock, sig []byte) logrus.Fields {
 	fields := logrus.Fields{
 		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
 		"proposerIndex":     blk.ProposerIndex(),

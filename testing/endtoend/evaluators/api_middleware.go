@@ -238,7 +238,7 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 }
 
 func doMiddlewareJSONGetRequestV1(requestPath string, beaconNodeIdx int, dst interface{}) error {
-	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.BeaconNodeRPCPort+beaconNodeIdx+40)
+	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.Ports.PrysmBeaconNodeGatewayPort+beaconNodeIdx)
 	httpResp, err := http.Get(
 		basePath + requestPath,
 	)
@@ -248,12 +248,12 @@ func doMiddlewareJSONGetRequestV1(requestPath string, beaconNodeIdx int, dst int
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
-func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData interface{}, dst interface{}) error {
+func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData, dst interface{}) error {
 	b, err := json.Marshal(postData)
 	if err != nil {
 		return err
 	}
-	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.BeaconNodeRPCPort+beaconNodeIdx+40)
+	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.Ports.PrysmBeaconNodeGatewayPort+beaconNodeIdx)
 	httpResp, err := http.Post(
 		basePath+requestPath,
 		"application/json",

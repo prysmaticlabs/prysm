@@ -99,6 +99,7 @@ message AttesterDutiesRequest {
 message AttesterDutiesResponse {
     bytes dependent_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
     repeated AttesterDuty data = 2;
+    bool execution_optimistic = 3;
 }
 
 message AttesterDuty {
@@ -132,6 +133,7 @@ message ProposerDutiesRequest {
 message ProposerDutiesResponse {
     bytes dependent_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
     repeated ProposerDuty data = 2;
+    bool execution_optimistic = 3;
 }
 
 message ProposerDuty {
@@ -208,4 +210,15 @@ message BeaconCommitteeSubscribe {
 
     // If subscribing for aggregator, the beacon node will aggregate all attestations received.
     bool is_aggregator = 5;
+}
+
+message PrepareBeaconProposerRequest {
+    message FeeRecipientContainer {
+        // The address of the fee recipient.
+        bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+
+        // The proposer validator index.
+        uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    }
+    repeated FeeRecipientContainer recipients = 1;
 }

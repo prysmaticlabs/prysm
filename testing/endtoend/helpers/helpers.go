@@ -27,13 +27,14 @@ import (
 )
 
 const (
-	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
-	filePollingInterval = 500 * time.Millisecond
-	memoryHeapFileName  = "node_heap_%d.pb.gz"
-	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
-	fileBufferSize      = 64 * 1024
-	maxFileBufferSize   = 1024 * 1024
-	AltairE2EForkEpoch  = 6
+	maxPollingWaitTime    = 60 * time.Second // A minute so timing out doesn't take very long.
+	filePollingInterval   = 500 * time.Millisecond
+	memoryHeapFileName    = "node_heap_%d.pb.gz"
+	cpuProfileFileName    = "node_cpu_profile_%d.pb.gz"
+	fileBufferSize        = 64 * 1024
+	maxFileBufferSize     = 1024 * 1024
+	AltairE2EForkEpoch    = 6
+	BellatrixE2EForkEpoch = 8
 )
 
 // Graffiti is a list of sample graffiti strings.
@@ -48,7 +49,9 @@ func DeleteAndCreateFile(tmpPath, fileName string) (*os.File, error) {
 			return nil, err
 		}
 	}
-	newFile, err := os.Create(path.Join(tmpPath, fileName))
+
+	newFile, err := os.Create(filepath.Clean(path.Join(tmpPath, fileName)))
+
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +91,53 @@ func WaitForTextInFile(file *os.File, text string) error {
 			_, err := file.Seek(0, io.SeekStart)
 			if err != nil {
 				return err
+			}
+		}
+	}
+}
+
+// FindFollowingTextInFile checks a file every polling interval for the  following text requested.
+func FindFollowingTextInFile(file *os.File, text string) (string, error) {
+	d := time.Now().Add(maxPollingWaitTime)
+	ctx, cancel := context.WithDeadline(context.Background(), d)
+	defer cancel()
+
+	// Use a ticker with a deadline to poll a given file.
+	ticker := time.NewTicker(filePollingInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			contents, err := ioutil.ReadAll(file)
+			if err != nil {
+				return "", err
+			}
+			return "", fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, contents)
+		case <-ticker.C:
+			fileScanner := bufio.NewScanner(file)
+			buf := make([]byte, 0, fileBufferSize)
+			fileScanner.Buffer(buf, maxFileBufferSize)
+			for fileScanner.Scan() {
+				scanned := fileScanner.Text()
+				if strings.Contains(scanned, text) {
+					lastIdx := strings.LastIndex(scanned, text)
+					truncatedIdx := lastIdx + len(text)
+					if len(scanned) <= truncatedIdx {
+						return "", fmt.Errorf("truncated index is larger than the size of whole scanned line")
+					}
+					splitObjs := strings.Split(scanned[truncatedIdx:], " ")
+					if len(splitObjs) == 0 {
+						return "", fmt.Errorf("0 split substrings retrieved")
+					}
+					return splitObjs[0], nil
+				}
+			}
+			if err := fileScanner.Err(); err != nil {
+				return "", err
+			}
+			_, err := file.Seek(0, io.SeekStart)
+			if err != nil {
+				return "", err
 			}
 		}
 	}
@@ -151,18 +201,18 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 
 // WritePprofFiles writes the memory heap and cpu profile files to the test path.
 func WritePprofFiles(testDir string, index int) error {
-	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
 	filePath := filepath.Join(testDir, fmt.Sprintf(memoryHeapFileName, index))
 	if err := writeURLRespAtPath(url, filePath); err != nil {
 		return err
 	}
-	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
 	filePath = filepath.Join(testDir, fmt.Sprintf(cpuProfileFileName, index))
 	return writeURLRespAtPath(url, filePath)
 }
 
-func writeURLRespAtPath(url, filePath string) error {
-	resp, err := http.Get(url) /* #nosec G107 */
+func writeURLRespAtPath(url, fp string) error {
+	resp, err := http.Get(url) // #nosec G107 -- Safe, used internally
 	if err != nil {
 		return err
 	}
@@ -176,7 +226,9 @@ func writeURLRespAtPath(url, filePath string) error {
 	if err != nil {
 		return err
 	}
-	file, err := os.Create(filePath)
+
+	file, err := os.Create(filepath.Clean(fp))
+
 	if err != nil {
 		return err
 	}
@@ -203,7 +255,7 @@ func NewLocalConnection(ctx context.Context, port int) (*grpc.ClientConn, error)
 func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn, func(), error) {
 	conns := make([]*grpc.ClientConn, numConns)
 	for i := 0; i < len(conns); i++ {
-		conn, err := NewLocalConnection(ctx, e2e.TestParams.BeaconNodeRPCPort+i)
+		conn, err := NewLocalConnection(ctx, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i)
 		if err != nil {
 			return nil, nil, err
 		}

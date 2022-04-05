@@ -10,39 +10,36 @@
 
 # Prysm specific remote-cache properties.
 #build:remote-cache --disk_cache=
-build:remote-cache --remote_download_toplevel
+build:remote-cache --remote_download_minimal
 build:remote-cache --remote_cache=grpc://bazel-remote-cache:9092
 build:remote-cache --experimental_remote_downloader=grpc://bazel-remote-cache:9092
 build:remote-cache --remote_local_fallback
+build:remote-cache --experimental_remote_cache_async
+build:remote-cache --experimental_remote_merkle_tree_cache
+build:remote-cache --experimental_action_cache_store_output_metadata
+build:remote-cache --experimental_remote_cache_compression
 # Enforce stricter environment rules, which eliminates some non-hermetic
 # behavior and therefore improves both the remote cache hit rate and the
 # correctness and repeatability of the build.
 build:remote-cache --incompatible_strict_action_env=true
 
+build --experimental_use_hermetic_linux_sandbox
+
 # Import workspace options.
 import %workspace%/.bazelrc
 
-startup --host_jvm_args=-Xmx2g --host_jvm_args=-Xms2g
-query --repository_cache=/tmp/repositorycache
-query --experimental_repository_cache_hardlinks
-build --repository_cache=/tmp/repositorycache
-build --experimental_repository_cache_hardlinks
+startup --host_jvm_args=-Xmx4g --host_jvm_args=-Xms2g
 build --experimental_strict_action_env
-build --disk_cache=/tmp/bazelbuilds
-build --experimental_multi_threaded_digest
 build --sandbox_tmpfs_path=/tmp
 build --verbose_failures
 build --announce_rc
 build --show_progress_rate_limit=5
-build --curses=yes --color=no
+build --curses=no --color=no
 build --keep_going
 build --test_output=errors
 build --flaky_test_attempts=5
 # Disabled race detection due to unstable test results under constrained environment build kite
 # build --features=race
-
-# Disable flaky test detection for fuzzing.
-test:fuzz --flaky_test_attempts=1
 
 # Better caching
 build:nostamp --nostamp

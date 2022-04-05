@@ -13,7 +13,7 @@ import (
 )
 
 func decode(ctx context.Context, data []byte, dst proto.Message) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.decode")
+	_, span := trace.StartSpan(ctx, "BeaconDB.decode")
 	defer span.End()
 
 	data, err := snappy.Decode(nil, data)
@@ -27,7 +27,7 @@ func decode(ctx context.Context, data []byte, dst proto.Message) error {
 }
 
 func encode(ctx context.Context, msg proto.Message) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.encode")
+	_, span := trace.StartSpan(ctx, "BeaconDB.encode")
 	defer span.End()
 
 	if msg == nil || reflect.ValueOf(msg).IsNil() {

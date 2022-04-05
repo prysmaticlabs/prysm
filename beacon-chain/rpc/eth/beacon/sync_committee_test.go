@@ -1,27 +1,35 @@
 package beacon
 
 import (
+	"bytes"
 	"context"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	types "github.com/prysmaticlabs/eth2-types"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	bytesutil2 "github.com/wealdtech/go-bytesutil"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func Test_currentCommitteeIndicesFromState(t *testing.T) {
@@ -51,6 +59,37 @@ func Test_currentCommitteeIndicesFromState(t *testing.T) {
 			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 		}))
 		_, _, err := currentCommitteeIndicesFromState(st)
+		require.ErrorContains(t, "index not found for pubkey", err)
+	})
+}
+
+func Test_nextCommitteeIndicesFromState(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	vals := st.Validators()
+	wantedCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
+	wantedIndices := make([]types.ValidatorIndex, len(wantedCommittee))
+	for i := 0; i < len(wantedCommittee); i++ {
+		wantedIndices[i] = types.ValidatorIndex(i)
+		wantedCommittee[i] = vals[i].PublicKey
+	}
+	require.NoError(t, st.SetNextSyncCommittee(&ethpbalpha.SyncCommittee{
+		Pubkeys:         wantedCommittee,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}))
+
+	t.Run("OK", func(t *testing.T) {
+		indices, committee, err := nextCommitteeIndicesFromState(st)
+		require.NoError(t, err)
+		require.DeepEqual(t, wantedIndices, indices)
+		require.DeepEqual(t, wantedCommittee, committee.Pubkeys)
+	})
+	t.Run("validator in committee not found in state", func(t *testing.T) {
+		wantedCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), 48)
+		require.NoError(t, st.SetNextSyncCommittee(&ethpbalpha.SyncCommittee{
+			Pubkeys:         wantedCommittee,
+			AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		}))
+		_, _, err := nextCommitteeIndicesFromState(st)
 		require.ErrorContains(t, "index not found for pubkey", err)
 	})
 }
@@ -121,15 +160,127 @@ func TestListSyncCommittees(t *testing.T) {
 	}))
 	stRoot, err := st.HashTreeRoot(ctx)
 	require.NoError(t, err)
+	db := dbTest.SetupDB(t)
 
 	s := &Server{
+		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+			Genesis: time.Now(),
+		},
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: st,
 		},
+		HeadFetcher: &mock.ChainService{},
+		BeaconDB:    db,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{StateId: stRoot[:]}
 	resp, err := s.ListSyncCommittees(ctx, req)
 	require.NoError(t, err)
+	require.NotNil(t, resp.Data)
+	committeeVals := resp.Data.Validators
+	require.NotNil(t, committeeVals)
+	require.Equal(t, params.BeaconConfig().SyncCommitteeSize, uint64(len(committeeVals)), "incorrect committee size")
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
+		assert.Equal(t, types.ValidatorIndex(i), committeeVals[i])
+	}
+	require.NotNil(t, resp.Data.ValidatorAggregates)
+	assert.Equal(t, params.BeaconConfig().SyncCommitteeSubnetCount, uint64(len(resp.Data.ValidatorAggregates)))
+	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+		vStartIndex := types.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount * i)
+		vEndIndex := types.ValidatorIndex(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount*(i+1) - 1)
+		j := 0
+		for vIndex := vStartIndex; vIndex <= vEndIndex; vIndex++ {
+			assert.Equal(t, vIndex, resp.Data.ValidatorAggregates[i].Validators[j])
+			j++
+		}
+	}
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		s := &Server{
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher: &mock.ChainService{Optimistic: true},
+			BeaconDB:    db,
+		}
+		resp, err := s.ListSyncCommittees(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+}
+
+type futureSyncMockFetcher struct {
+	BeaconState     state.BeaconState
+	BeaconStateRoot []byte
+}
+
+func (m *futureSyncMockFetcher) State(_ context.Context, stateId []byte) (state.BeaconState, error) {
+	expectedRequest := []byte(strconv.FormatUint(uint64(0), 10))
+	res := bytes.Compare(stateId, expectedRequest)
+	if res != 0 {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Requested wrong epoch for next sync committee, expected: %#x, received: %#x",
+			expectedRequest,
+			stateId,
+		)
+	}
+	return m.BeaconState, nil
+}
+func (m *futureSyncMockFetcher) StateRoot(context.Context, []byte) ([]byte, error) {
+	return m.BeaconStateRoot, nil
+}
+
+func (m *futureSyncMockFetcher) StateBySlot(context.Context, types.Slot) (state.BeaconState, error) {
+	return m.BeaconState, nil
+}
+
+func TestListSyncCommitteesFuture(t *testing.T) {
+	ctx := context.Background()
+	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
+	vals := st.Validators()
+	for i := 0; i < len(syncCommittee); i++ {
+		syncCommittee[i] = vals[i].PublicKey
+	}
+	require.NoError(t, st.SetNextSyncCommittee(&ethpbalpha.SyncCommittee{
+		Pubkeys:         syncCommittee,
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}))
+	db := dbTest.SetupDB(t)
+
+	s := &Server{
+		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+			Genesis: time.Now(),
+		},
+		StateFetcher: &futureSyncMockFetcher{
+			BeaconState: st,
+		},
+		HeadFetcher: &mock.ChainService{},
+		BeaconDB:    db,
+	}
+	req := &ethpbv2.StateSyncCommitteesRequest{}
+	epoch := 2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	req.Epoch = &epoch
+	_, err := s.ListSyncCommittees(ctx, req)
+	require.ErrorContains(t, "Could not fetch sync committee too far in the future", err)
+
+	epoch = 2*params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1
+	resp, err := s.ListSyncCommittees(ctx, req)
+	require.NoError(t, err)
+
 	require.NotNil(t, resp.Data)
 	committeeVals := resp.Data.Validators
 	require.NotNil(t, committeeVals)

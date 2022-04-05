@@ -1,4 +1,5 @@
-// +build libfuzzer
+//go:build fuzz
+// +build fuzz
 
 // This file is used in fuzzer builds to bypass global committee caches.
 package cache

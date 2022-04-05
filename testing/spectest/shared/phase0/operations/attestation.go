@@ -36,7 +36,7 @@ func RunAttestationTest(t *testing.T, config string) {
 				if err != nil {
 					return nil, err
 				}
-				aSet, err := b.AttestationSignatureSet(ctx, st, blk.Block().Body().Attestations())
+				aSet, err := b.AttestationSignatureBatch(ctx, st, blk.Block().Body().Attestations())
 				if err != nil {
 					return nil, err
 				}

@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -109,7 +109,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// This can happen sometimes when we receive the same log twice from the
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
-	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex))
+	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex)) // lint:ignore uintcast -- MerkleTreeIndex should not exceed int64 in your lifetime.
 	if index <= s.lastReceivedMerkleIndex {
 		return nil
 	}
@@ -211,7 +211,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	s.chainStartData.Chainstarted = true
 	s.chainStartData.GenesisBlock = blockNumber.Uint64()
 
-	chainStartTime := time.Unix(int64(genesisTime), 0)
+	chainStartTime := time.Unix(int64(genesisTime), 0) // lint:ignore uintcast -- Genesis time wont exceed int64 in your lifetime.
 
 	for i := range s.chainStartData.ChainstartDeposits {
 		proof, err := s.depositTrie.MerkleProof(i)
@@ -244,7 +244,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	}
 }
 
-func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
+func createGenesisTime(timeStamp uint64) uint64 {
 	// adds in the genesis delay to the eth1 block time
 	// on which it was triggered.
 	return timeStamp + params.BeaconConfig().GenesisDelay
@@ -303,8 +303,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			Addresses: []common.Address{
 				s.cfg.depositContractAddr,
 			},
-			FromBlock: big.NewInt(int64(start)),
-			ToBlock:   big.NewInt(int64(end)),
+			FromBlock: big.NewInt(0).SetUint64(start),
+			ToBlock:   big.NewInt(0).SetUint64(end),
 		}
 		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
 		// only change the end block if the remaining logs are below the required log limit.
@@ -312,7 +312,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		withinLimit := remainingLogs < depositlogRequestLimit
 		aboveFollowHeight := end >= latestFollowHeight
 		if withinLimit && aboveFollowHeight {
-			query.ToBlock = big.NewInt(int64(latestFollowHeight))
+			query.ToBlock = big.NewInt(0).SetUint64(latestFollowHeight)
 			end = latestFollowHeight
 		}
 		logs, err := s.httpLogger.FilterLogs(ctx, query)
@@ -374,12 +374,24 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if fRoot == params.BeaconConfig().ZeroHash {
 		return nil
 	}
-	fState, err := s.cfg.stateGen.StateByRoot(ctx, fRoot)
-	if err != nil {
-		return err
+	fState := s.cfg.finalizedStateAtStartup
+	isNil := fState == nil || fState.IsNil()
+
+	// If processing past logs take a long time, we
+	// need to check if this is the correct finalized
+	// state we are referring to and whether our cached
+	// finalized state is referring to our current finalized checkpoint.
+	// The current code does ignore an edge case where the finalized
+	// block is in a different epoch from the checkpoint's epoch.
+	// This only happens in skipped slots, so pruning it is not an issue.
+	if isNil || slots.ToEpoch(fState.Slot()) != c.Epoch {
+		fState, err = s.cfg.stateGen.StateByRoot(ctx, fRoot)
+		if err != nil {
+			return err
+		}
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
-		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex()))
+		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
 	}
 	return nil
 }
@@ -401,11 +413,11 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		// Cache eth1 block header here.
-		_, err := s.BlockHashByHeight(ctx, big.NewInt(int64(i)))
+		_, err := s.BlockHashByHeight(ctx, big.NewInt(0).SetUint64(i))
 		if err != nil {
 			return err
 		}
-		err = s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
+		err = s.ProcessETH1Block(ctx, big.NewInt(0).SetUint64(i))
 		if err != nil {
 			return err
 		}
@@ -416,27 +428,27 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 }
 
 func (s *Service) retrieveBlockHashAndTime(ctx context.Context, blkNum *big.Int) ([32]byte, uint64, error) {
-	hash, err := s.BlockHashByHeight(ctx, blkNum)
+	bHash, err := s.BlockHashByHeight(ctx, blkNum)
 	if err != nil {
 		return [32]byte{}, 0, errors.Wrap(err, "could not get eth1 block hash")
 	}
-	if hash == [32]byte{} {
+	if bHash == [32]byte{} {
 		return [32]byte{}, 0, errors.Wrap(err, "got empty block hash")
 	}
 	timeStamp, err := s.BlockTimeByHeight(ctx, blkNum)
 	if err != nil {
 		return [32]byte{}, 0, errors.Wrap(err, "could not get block timestamp")
 	}
-	return hash, timeStamp, nil
+	return bHash, timeStamp, nil
 }
 
 // checkBlockNumberForChainStart checks the given block number for if chainstart has occurred.
 func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big.Int) error {
-	hash, timeStamp, err := s.retrieveBlockHashAndTime(ctx, blkNum)
+	bHash, timeStamp, err := s.retrieveBlockHashAndTime(ctx, blkNum)
 	if err != nil {
 		return err
 	}
-	s.checkForChainstart(ctx, hash, blkNum, timeStamp)
+	s.checkForChainstart(ctx, bHash, blkNum, timeStamp)
 	return nil
 }
 
@@ -474,7 +486,7 @@ func (s *Service) currentCountAndTime(ctx context.Context, blockTime uint64) (ui
 		log.WithError(err).Error("Could not determine active validator count from pre genesis state")
 		return 0, 0
 	}
-	return valCount, s.createGenesisTime(blockTime)
+	return valCount, createGenesisTime(blockTime)
 }
 
 func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
@@ -495,7 +507,7 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	eth1Data := &protodb.ETH1ChainData{
+	eth1Data := &ethpb.ETH1ChainData{
 		CurrentEth1Data:   s.latestEth1Data,
 		ChainstartData:    s.chainStartData,
 		BeaconState:       pbState, // I promise not to mutate it!

@@ -15,7 +15,6 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -32,7 +31,7 @@ const (
 func (s *Store) LastEpochWrittenForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
 ) ([]*slashertypes.AttestedEpochForValidator, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastEpochWrittenForValidators")
+	_, span := trace.StartSpan(ctx, "BeaconDB.LastEpochWrittenForValidators")
 	defer span.End()
 	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
 	encodedIndices := make([][]byte, len(validatorIndices))
@@ -42,47 +41,73 @@ func (s *Store) LastEpochWrittenForValidators(
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestedEpochsByValidator)
 		for i, encodedIndex := range encodedIndices {
+			var epoch types.Epoch
 			epochBytes := bkt.Get(encodedIndex)
 			if epochBytes != nil {
-				var epoch types.Epoch
 				if err := epoch.UnmarshalSSZ(epochBytes); err != nil {
 					return err
 				}
-				attestedEpochs = append(attestedEpochs, &slashertypes.AttestedEpochForValidator{
-					ValidatorIndex: validatorIndices[i],
-					Epoch:          epoch,
-				})
 			}
+			attestedEpochs = append(attestedEpochs, &slashertypes.AttestedEpochForValidator{
+				ValidatorIndex: validatorIndices[i],
+				Epoch:          epoch,
+			})
 		}
 		return nil
 	})
 	return attestedEpochs, err
 }
 
-// SaveLastEpochWrittenForValidators updates the latest epoch a slice
+// SaveLastEpochsWrittenForValidators updates the latest epoch a slice
 // of validator indices has attested to.
-func (s *Store) SaveLastEpochWrittenForValidators(
-	ctx context.Context, validatorIndices []types.ValidatorIndex, epoch types.Epoch,
+func (s *Store) SaveLastEpochsWrittenForValidators(
+	ctx context.Context, epochByValidator map[types.ValidatorIndex]types.Epoch,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochWrittenForValidators")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochsWrittenForValidators")
 	defer span.End()
-	encodedIndices := make([][]byte, len(validatorIndices))
-	for i, valIdx := range validatorIndices {
-		encodedIndices[i] = encodeValidatorIndex(valIdx)
-	}
-	encodedEpoch, err := epoch.MarshalSSZ()
-	if err != nil {
-		return err
-	}
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestedEpochsByValidator)
-		for _, encodedIndex := range encodedIndices {
-			if err = bkt.Put(encodedIndex, encodedEpoch); err != nil {
-				return err
-			}
+	encodedIndices := make([][]byte, 0, len(epochByValidator))
+	encodedEpochs := make([][]byte, 0, len(epochByValidator))
+	for valIdx, epoch := range epochByValidator {
+		if ctx.Err() != nil {
+			return ctx.Err()
 		}
-		return nil
-	})
+		encodedEpoch, err := epoch.MarshalSSZ()
+		if err != nil {
+			return err
+		}
+		encodedIndices = append(encodedIndices, encodeValidatorIndex(valIdx))
+		encodedEpochs = append(encodedEpochs, encodedEpoch)
+	}
+	// The list of validators might be too massive for boltdb to handle in a single transaction,
+	// so instead we split it into batches and write each batch.
+	batchSize := 10000
+	for i := 0; i < len(encodedIndices); i += batchSize {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if err := s.db.Update(func(tx *bolt.Tx) error {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			bkt := tx.Bucket(attestedEpochsByValidator)
+			min := i + batchSize
+			if min > len(encodedIndices) {
+				min = len(encodedIndices)
+			}
+			for j, encodedIndex := range encodedIndices[i:min] {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				if err := bkt.Put(encodedIndex, encodedEpochs[j]); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // CheckAttesterDoubleVotes retries any slashable double votes that exist
@@ -158,7 +183,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 func (s *Store) AttestationRecordForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
+	_, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
 	var record *slashertypes.IndexedAttestationWrapper
 	encIdx := encodeValidatorIndex(validatorIdx)
@@ -190,7 +215,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 	encodedTargetEpoch := make([][]byte, len(attestations))
 	encodedRecords := make([][]byte, len(attestations))
@@ -234,7 +259,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 func (s *Store) LoadSlasherChunks(
 	ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
 ) ([][]uint16, []bool, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LoadSlasherChunk")
+	_, span := trace.StartSpan(ctx, "BeaconDB.LoadSlasherChunk")
 	defer span.End()
 	chunks := make([][]uint16, 0)
 	var exists []bool
@@ -265,7 +290,7 @@ func (s *Store) LoadSlasherChunks(
 func (s *Store) SaveSlasherChunks(
 	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveSlasherChunks")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveSlasherChunks")
 	defer span.End()
 	encodedKeys := make([][]byte, len(chunkKeys))
 	encodedChunks := make([][]byte, len(chunkKeys))
@@ -295,7 +320,7 @@ func (s *Store) SaveSlasherChunks(
 func (s *Store) CheckDoubleBlockProposals(
 	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 ) ([]*ethpb.ProposerSlashing, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckDoubleBlockProposals")
+	_, span := trace.StartSpan(ctx, "BeaconDB.CheckDoubleBlockProposals")
 	defer span.End()
 	proposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(proposals))
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -334,7 +359,7 @@ func (s *Store) CheckDoubleBlockProposals(
 func (s *Store) BlockProposalForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
 ) (*slashertypes.SignedBlockHeaderWrapper, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
+	_, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
 	defer span.End()
 	var record *slashertypes.SignedBlockHeaderWrapper
 	key, err := keyForValidatorProposal(slot, validatorIdx)
@@ -362,7 +387,7 @@ func (s *Store) BlockProposalForValidator(
 func (s *Store) SaveBlockProposals(
 	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockProposals")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockProposals")
 	defer span.End()
 	encodedKeys := make([][]byte, len(proposals))
 	encodedProposals := make([][]byte, len(proposals))
@@ -394,9 +419,9 @@ func (s *Store) SaveBlockProposals(
 
 // HighestAttestations retrieves the last attestation data from the database for all indices.
 func (s *Store) HighestAttestations(
-	ctx context.Context,
+	_ context.Context,
 	indices []types.ValidatorIndex,
-) ([]*slashpb.HighestAttestation, error) {
+) ([]*ethpb.HighestAttestation, error) {
 	if len(indices) == 0 {
 		return nil, nil
 	}
@@ -411,7 +436,7 @@ func (s *Store) HighestAttestations(
 		encodedIndices[i] = encodeValidatorIndex(valIdx)
 	}
 
-	history := make([]*slashpb.HighestAttestation, 0, len(encodedIndices))
+	history := make([]*ethpb.HighestAttestation, 0, len(encodedIndices))
 	err = s.db.View(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
@@ -427,7 +452,7 @@ func (s *Store) HighestAttestations(
 					if err != nil {
 						return err
 					}
-					highestAtt := &slashpb.HighestAttestation{
+					highestAtt := &ethpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),
 						HighestSourceEpoch: attWrapper.IndexedAttestation.Data.Source.Epoch,
 						HighestTargetEpoch: attWrapper.IndexedAttestation.Data.Target.Epoch,

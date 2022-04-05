@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -175,12 +176,10 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 	}
 
 	period := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
-	var ok bool
 	for i := uint64(0); i < period; i++ {
 		processedState, err := blocks.ProcessEth1DataInBlock(context.Background(), beaconState, b.Block.Body.Eth1Data)
 		require.NoError(t, err)
-		beaconState, ok = processedState.(*v1.BeaconState)
-		require.Equal(t, true, ok)
+		require.Equal(t, true, processedState.Version() == version.Phase0)
 	}
 
 	newETH1DataVotes := beaconState.Eth1DataVotes()

@@ -60,8 +60,8 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	remainingBucketCapacity := blockLimiter.Remaining(stream.Conn().RemotePeer().String())
 	span.AddAttributes(
-		trace.Int64Attribute("start", int64(startSlot)),
-		trace.Int64Attribute("end", int64(endReqSlot)),
+		trace.Int64Attribute("start", int64(startSlot)), // lint:ignore uintcast -- This conversion is OK for tracing.
+		trace.Int64Attribute("end", int64(endReqSlot)),  // lint:ignore uintcast -- This conversion is OK for tracing.
 		trace.Int64Attribute("step", int64(m.Step)),
 		trace.Int64Attribute("count", int64(m.Count)),
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),

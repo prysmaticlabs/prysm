@@ -12,4 +12,5 @@ go_library(
         "//crypto/bls:__subpackages__",
         "//testing:__subpackages__",
     ],
+    deps = ["//config/fieldparams:go_default_library"],
 )

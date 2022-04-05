@@ -5,12 +5,10 @@ go_library(
     srcs = [
         "attestations.go",
         "maxcover.go",
-        "naive.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations",
     visibility = ["//visibility:public"],
     deps = [
-        "//config/features:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation:go_default_library",
@@ -23,16 +21,14 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "attestations_bench_test.go",
         "attestations_test.go",
         "maxcover_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
-        "//config/features:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
-        "//encoding/ssz:go_default_library",
+        "//encoding/ssz/equality:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation/testing:go_default_library",

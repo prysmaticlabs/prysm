@@ -188,6 +188,15 @@ service BeaconNodeValidator {
         };
     }
 
+    // PrepareBeaconProposer submits fee recipient information to be used when preparing block
+    // proposal execution payloads.
+    rpc PrepareBeaconProposer(PrepareBeaconProposerRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/prepare_beacon_proposer"
+            body: "*"
+        };
+    }
+
     // Retrieves the latest valid attestation data to be attested on the beacon chain.
     //
     // The server returns the latest valid data which represents the correct vote
@@ -718,4 +727,15 @@ message DoppelGangerResponse {
 // Request to only return blocks that is verified by the beacon node.
 message StreamBlocksRequest {
     bool verified_only = 1;
+}
+
+message PrepareBeaconProposerRequest {
+    message FeeRecipientContainer {
+        // The address of the fee recipient.
+        bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+
+        // The proposer validator index.
+        uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    }
+    repeated FeeRecipientContainer recipients = 1;
 }

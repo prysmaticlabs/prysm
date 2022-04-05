@@ -6,6 +6,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -44,11 +45,11 @@ type FakeValidator struct {
 	PublicKey                         string
 	UpdateDutiesRet                   error
 	RolesAtRet                        []iface.ValidatorRole
-	Balances                          map[[48]byte]uint64
-	IndexToPubkeyMap                  map[uint64][48]byte
-	PubkeyToIndexMap                  map[[48]byte]uint64
-	PubkeysToStatusesMap              map[[48]byte]ethpb.ValidatorStatus
-	Keymanager                        keymanager.IKeymanager
+	Balances                          map[[fieldparams.BLSPubkeyLength]byte]uint64
+	IndexToPubkeyMap                  map[uint64][fieldparams.BLSPubkeyLength]byte
+	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
+	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
+	Km                                keymanager.IKeymanager
 }
 
 type ctxKey string
@@ -62,7 +63,7 @@ func (fv *FakeValidator) Done() {
 }
 
 // WaitForWalletInitialization for mocking.
-func (fv *FakeValidator) WaitForWalletInitialization(_ context.Context) error {
+func (fv *FakeValidator) WaitForKeymanagerInitialization(_ context.Context) error {
 	fv.WaitForWalletInitializationCalled = true
 	return nil
 }
@@ -77,7 +78,7 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 }
 
 // WaitForActivation for mocking.
-func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan [][48]byte) error {
+func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan [][fieldparams.BLSPubkeyLength]byte) error {
 	fv.WaitForActivationCalled++
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
 		return iface.ErrConnectionIssue
@@ -146,78 +147,80 @@ func (fv *FakeValidator) ResetAttesterProtectionData() {
 }
 
 // RolesAt for mocking.
-func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[48]byte][]iface.ValidatorRole, error) {
+func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = uint64(slot)
-	vr := make(map[[48]byte][]iface.ValidatorRole)
-	vr[[48]byte{1}] = fv.RolesAtRet
+	vr := make(map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole)
+	vr[[fieldparams.BLSPubkeyLength]byte{1}] = fv.RolesAtRet
 	return vr, nil
 }
 
 // SubmitAttestation for mocking.
-func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot types.Slot, _ [48]byte) {
+func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = uint64(slot)
 }
 
 // ProposeBlock for mocking.
-func (fv *FakeValidator) ProposeBlock(_ context.Context, slot types.Slot, _ [48]byte) {
+func (fv *FakeValidator) ProposeBlock(_ context.Context, slot types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = uint64(slot)
 }
 
 // SubmitAggregateAndProof for mocking.
-func (fv *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot, _ [48]byte) {}
+func (_ *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+}
 
 // SubmitSyncCommitteeMessage for mocking.
-func (fv *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.Slot, _ [48]byte) {}
+func (_ *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+}
 
 // LogAttestationsSubmitted for mocking.
-func (fv *FakeValidator) LogAttestationsSubmitted() {}
+func (_ *FakeValidator) LogAttestationsSubmitted() {}
 
 // LogNextDutyTimeLeft for mocking.
-func (fv *FakeValidator) LogNextDutyTimeLeft(_ types.Slot) error {
+func (_ *FakeValidator) LogNextDutyTimeLeft(_ types.Slot) error {
 	return nil
 }
 
 // UpdateDomainDataCaches for mocking.
-func (fv *FakeValidator) UpdateDomainDataCaches(context.Context, types.Slot) {}
+func (_ *FakeValidator) UpdateDomainDataCaches(context.Context, types.Slot) {}
 
 // BalancesByPubkeys for mocking.
-func (fv *FakeValidator) BalancesByPubkeys(_ context.Context) map[[48]byte]uint64 {
+func (fv *FakeValidator) BalancesByPubkeys(_ context.Context) map[[fieldparams.BLSPubkeyLength]byte]uint64 {
 	return fv.Balances
 }
 
 // IndicesToPubkeys for mocking.
-func (fv *FakeValidator) IndicesToPubkeys(_ context.Context) map[uint64][48]byte {
+func (fv *FakeValidator) IndicesToPubkeys(_ context.Context) map[uint64][fieldparams.BLSPubkeyLength]byte {
 	return fv.IndexToPubkeyMap
 }
 
 // PubkeysToIndices for mocking.
-func (fv *FakeValidator) PubkeysToIndices(_ context.Context) map[[48]byte]uint64 {
+func (fv *FakeValidator) PubkeysToIndices(_ context.Context) map[[fieldparams.BLSPubkeyLength]byte]uint64 {
 	return fv.PubkeyToIndexMap
 }
 
 // PubkeysToStatuses for mocking.
-func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[48]byte]ethpb.ValidatorStatus {
+func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus {
 	return fv.PubkeysToStatusesMap
 }
 
 // AllValidatorsAreExited for mocking
-func (fv *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
+func (_ *FakeValidator) AllValidatorsAreExited(ctx context.Context) (bool, error) {
 	if ctx.Value(AllValidatorsAreExitedCtxKey) == nil {
 		return false, nil
 	}
 	return ctx.Value(AllValidatorsAreExitedCtxKey).(bool), nil
 }
 
-// GetKeymanager for mocking
-func (fv *FakeValidator) GetKeymanager() keymanager.IKeymanager {
-	return fv.Keymanager
+// Keymanager for mocking
+func (fv *FakeValidator) Keymanager() (keymanager.IKeymanager, error) {
+	return fv.Km, nil
 }
 
 // CheckDoppelGanger for mocking
-func (fv *FakeValidator) CheckDoppelGanger(_ context.Context) error {
+func (_ *FakeValidator) CheckDoppelGanger(_ context.Context) error {
 	return nil
 }
 
@@ -230,7 +233,7 @@ func (fv *FakeValidator) ReceiveBlocks(_ context.Context, connectionErrorChannel
 }
 
 // HandleKeyReload for mocking
-func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) (anyActive bool, err error) {
+func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (anyActive bool, err error) {
 	fv.HandleKeyReloadCalled = true
 	for _, key := range newKeys {
 		if bytes.Equal(key[:], ActiveKey[:]) {
@@ -241,5 +244,15 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][48]byte) 
 }
 
 // SubmitSignedContributionAndProof for mocking
-func (fv *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [48]byte) {
+func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+}
+
+// UpdateFeeRecipient for mocking
+func (_ *FakeValidator) UpdateFeeRecipient(_ context.Context, _ keymanager.IKeymanager) error {
+	return nil
+}
+
+// SetPubKeyToValidatorIndexMap for mocking
+func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
+	return nil
 }

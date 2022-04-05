@@ -19,13 +19,13 @@
 # Specifically, it includes all toolchain/platform flags
 # This file is used for testing purposes.
 
-build:remote --host_javabase=//tools/cross-toolchain/configs/clang/bazel_4.2.1/java:jdk
-build:remote --javabase=//tools/cross-toolchain/configs/clang/bazel_4.2.1/java:jdk
-build:remote --crosstool_top=//tools/cross-toolchain/configs/clang/bazel_4.2.1/cc:toolchain
-build:remote --extra_toolchains=//tools/cross-toolchain/configs/clang/bazel_4.2.1/config:cc-toolchain
-build:remote --extra_execution_platforms=//tools/cross-toolchain/configs/clang/bazel_4.2.1/config:platform
-build:remote --host_platform=//tools/cross-toolchain/configs/clang/bazel_4.2.1/config:platform
-build:remote --platforms=//tools/cross-toolchain/configs/clang/bazel_4.2.1/config:platform
+build:remote --host_javabase=//tools/cross-toolchain/configs/clang/bazel_5.0.0/java:jdk
+build:remote --javabase=//tools/cross-toolchain/configs/clang/bazel_5.0.0/java:jdk
+build:remote --crosstool_top=//tools/cross-toolchain/configs/clang/bazel_5.0.0/cc:toolchain
+build:remote --extra_toolchains=//tools/cross-toolchain/configs/clang/bazel_5.0.0/config:cc-toolchain
+build:remote --extra_execution_platforms=//tools/cross-toolchain/configs/clang/bazel_5.0.0/config:platform
+build:remote --host_platform=//tools/cross-toolchain/configs/clang/bazel_5.0.0/config:platform
+build:remote --platforms=//tools/cross-toolchain/configs/clang/bazel_5.0.0/config:platform
 
 # Import the default bazelrc file in bazel-toolchains repo.
 # This will only work for tests executed from bazel-toolchains

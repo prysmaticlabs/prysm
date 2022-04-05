@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	dbpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"google.golang.org/protobuf/proto"
@@ -42,7 +41,7 @@ func TestRemovePendingDeposit_OK(t *testing.T) {
 	}
 	depToRemove := &ethpb.Deposit{Proof: proof1, Data: data}
 	otherDep := &ethpb.Deposit{Proof: proof2, Data: data}
-	db.pendingDeposits = []*dbpb.DepositContainer{
+	db.pendingDeposits = []*ethpb.DepositContainer{
 		{Deposit: depToRemove, Index: 1},
 		{Deposit: otherDep, Index: 5},
 	}
@@ -55,7 +54,7 @@ func TestRemovePendingDeposit_OK(t *testing.T) {
 
 func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 	dc := DepositCache{}
-	dc.pendingDeposits = []*dbpb.DepositContainer{{Deposit: &ethpb.Deposit{}}}
+	dc.pendingDeposits = []*ethpb.DepositContainer{{Deposit: &ethpb.Deposit{}}}
 	dc.RemovePendingDeposit(context.Background(), nil /*deposit*/)
 	assert.Equal(t, 1, len(dc.pendingDeposits), "Deposit unexpectedly removed")
 }
@@ -79,7 +78,7 @@ func TestPendingDeposit_RoundTrip(t *testing.T) {
 func TestPendingDeposits_OK(t *testing.T) {
 	dc := DepositCache{}
 
-	dc.pendingDeposits = []*dbpb.DepositContainer{
+	dc.pendingDeposits = []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 2, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}},
 		{Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
 		{Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
@@ -99,7 +98,7 @@ func TestPendingDeposits_OK(t *testing.T) {
 func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 	dc := DepositCache{}
 
-	dc.pendingDeposits = []*dbpb.DepositContainer{
+	dc.pendingDeposits = []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 2, Index: 2},
 		{Eth1BlockHeight: 4, Index: 4},
 		{Eth1BlockHeight: 6, Index: 6},
@@ -109,7 +108,7 @@ func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 	}
 
 	dc.PrunePendingDeposits(context.Background(), 0)
-	expected := []*dbpb.DepositContainer{
+	expected := []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 2, Index: 2},
 		{Eth1BlockHeight: 4, Index: 4},
 		{Eth1BlockHeight: 6, Index: 6},
@@ -123,7 +122,7 @@ func TestPrunePendingDeposits_ZeroMerkleIndex(t *testing.T) {
 func TestPrunePendingDeposits_OK(t *testing.T) {
 	dc := DepositCache{}
 
-	dc.pendingDeposits = []*dbpb.DepositContainer{
+	dc.pendingDeposits = []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 2, Index: 2},
 		{Eth1BlockHeight: 4, Index: 4},
 		{Eth1BlockHeight: 6, Index: 6},
@@ -133,7 +132,7 @@ func TestPrunePendingDeposits_OK(t *testing.T) {
 	}
 
 	dc.PrunePendingDeposits(context.Background(), 6)
-	expected := []*dbpb.DepositContainer{
+	expected := []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 6, Index: 6},
 		{Eth1BlockHeight: 8, Index: 8},
 		{Eth1BlockHeight: 10, Index: 10},
@@ -142,7 +141,7 @@ func TestPrunePendingDeposits_OK(t *testing.T) {
 
 	assert.DeepEqual(t, expected, dc.pendingDeposits)
 
-	dc.pendingDeposits = []*dbpb.DepositContainer{
+	dc.pendingDeposits = []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 2, Index: 2},
 		{Eth1BlockHeight: 4, Index: 4},
 		{Eth1BlockHeight: 6, Index: 6},
@@ -152,7 +151,7 @@ func TestPrunePendingDeposits_OK(t *testing.T) {
 	}
 
 	dc.PrunePendingDeposits(context.Background(), 10)
-	expected = []*dbpb.DepositContainer{
+	expected = []*ethpb.DepositContainer{
 		{Eth1BlockHeight: 10, Index: 10},
 		{Eth1BlockHeight: 12, Index: 12},
 	}

@@ -15,12 +15,12 @@ func TestValidateWithBatchVerifier(t *testing.T) {
 	assert.NoError(t, err)
 	sig := keys[0].Sign(make([]byte, 32))
 	badSig := keys[1].Sign(make([]byte, 32))
-	validSet := &bls.SignatureSet{
+	validSet := &bls.SignatureBatch{
 		Messages:   [][32]byte{{}},
 		PublicKeys: []bls.PublicKey{keys[0].PublicKey()},
 		Signatures: [][]byte{sig.Marshal()},
 	}
-	invalidSet := &bls.SignatureSet{
+	invalidSet := &bls.SignatureBatch{
 		Messages:   [][32]byte{{}},
 		PublicKeys: []bls.PublicKey{keys[0].PublicKey()},
 		Signatures: [][]byte{badSig.Marshal()},
@@ -28,8 +28,8 @@ func TestValidateWithBatchVerifier(t *testing.T) {
 	tests := []struct {
 		name          string
 		message       string
-		set           *bls.SignatureSet
-		preFilledSets []*bls.SignatureSet
+		set           *bls.SignatureBatch
+		preFilledSets []*bls.SignatureBatch
 		want          pubsub.ValidationResult
 	}{
 		{
@@ -48,14 +48,14 @@ func TestValidateWithBatchVerifier(t *testing.T) {
 			name:          "invalid set in routine with valid set",
 			message:       "random",
 			set:           validSet,
-			preFilledSets: []*bls.SignatureSet{invalidSet},
+			preFilledSets: []*bls.SignatureBatch{invalidSet},
 			want:          pubsub.ValidationAccept,
 		},
 		{
 			name:          "valid set in routine with invalid set",
 			message:       "random",
 			set:           invalidSet,
-			preFilledSets: []*bls.SignatureSet{validSet},
+			preFilledSets: []*bls.SignatureBatch{validSet},
 			want:          pubsub.ValidationReject,
 		},
 	}

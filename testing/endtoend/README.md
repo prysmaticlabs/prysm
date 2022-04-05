@@ -18,8 +18,10 @@ Evaluators have 3 parts, the name for it's test name, a `policy` which declares 
 
 ## Instructions
 
+Note: Java 11 or greater is required to run web3signer.
+
 If you wish to run all the minimal spec E2E tests, you can run them through bazel with:
 
 ```
-bazel test //testing/endtoend:go_default_test --define=ssz=minimal --test_output=streamed
+bazel test //testing/endtoend:go_default_test --test_output=streamed
 ```

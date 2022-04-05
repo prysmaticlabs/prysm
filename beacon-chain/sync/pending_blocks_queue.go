@@ -12,10 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -69,7 +70,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		}
 
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
-		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+		span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 		s.pendingQueueLock.RLock()
 		bs := s.pendingBlocksInCache(slot)
@@ -88,16 +89,29 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			s.pendingQueueLock.RLock()
-			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
-			s.pendingQueueLock.RUnlock()
-
 			blkRoot, err := b.Block().HashTreeRoot()
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				span.End()
 				return err
 			}
+			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
+			// No need to process the same block twice.
+			if inDB {
+				s.pendingQueueLock.Lock()
+				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+					s.pendingQueueLock.Unlock()
+					return err
+				}
+				s.pendingQueueLock.Unlock()
+				span.End()
+				continue
+			}
+
+			s.pendingQueueLock.RLock()
+			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
+			s.pendingQueueLock.RUnlock()
+
 			parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block().ParentRoot()))
 			blockIsBad := s.hasBadBlock(blkRoot)
 			// Check if parent is a bad block.
@@ -117,12 +131,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			inDB := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
+			parentInDb := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
 			hasPeer := len(pids) != 0
 
 			// Only request for missing parent block if it's not in beaconDB, not in pending cache
 			// and has peer in the peer list.
-			if !inPendingQueue && !inDB && hasPeer {
+			if !inPendingQueue && !parentInDb && hasPeer {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block().Slot(),
 					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block().ParentRoot())),
@@ -133,25 +147,29 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			if !inDB {
+			if !parentInDb {
 				span.End()
 				continue
 			}
 
-			if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
+			err = s.validateBeaconBlock(ctx, b, blkRoot)
+			switch {
+			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
+			case err != nil:
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)
-				// In the next iteration of the queue, this block will be removed from
-				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
 				continue
+			default:
 			}
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
-				s.setBadBlock(ctx, blkRoot)
-				tracing.AnnotateError(span, err)
+				if !errors.Is(err, powchain.ErrHTTPTimeout) {
+					log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
+					tracing.AnnotateError(span, err)
+					s.setBadBlock(ctx, blkRoot)
+				}
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
@@ -167,6 +185,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			s.pendingQueueLock.Lock()
 			if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+				s.pendingQueueLock.Unlock()
 				return err
 			}
 			s.pendingQueueLock.Unlock()
@@ -314,13 +333,14 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 
 	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if ssz.DeepEqual(blk.Proto(), b.Proto()) {
+		if equality.DeepEqual(blk.Proto(), b.Proto()) {
 			continue
 		}
 		newBlks = append(newBlks, blk)
 	}
 	if len(newBlks) == 0 {
 		s.slotToPendingBlocks.Delete(slotToCacheKey(slot))
+		delete(s.seenPendingBlocks, r)
 		return nil
 	}
 

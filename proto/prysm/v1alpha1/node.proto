@@ -85,6 +85,13 @@ service Node {
             get: "/eth/v1alpha1/node/peers"
         };
     }
+
+    // // Retrieve the status of the ETH1 connections.
+    rpc GetETH1ConnectionStatus(google.protobuf.Empty) returns (ETH1ConnectionStatus) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/node/eth1/connections"
+        };
+    }
 }
 
 // Information about the current network sync status of the node.
@@ -146,7 +153,7 @@ message Peer {
 }
 
 // P2P Data on the local host.
-message HostData{
+message HostData {
     // All the  multiaddress of the peer, specified as a full multiaddr, for example:
     // /ip4/37.221.192.134/tcp/13000/p2p/16Uiu2HAm8maLMjag1TAUM52zPfmLbVMGFdwUAWgoHu1HDQLR6e17
     repeated string addresses = 1;
@@ -169,4 +176,20 @@ enum ConnectionState {
     DISCONNECTING = 1;
     CONNECTED = 2;
     CONNECTING = 3;
+}
+
+// ETH1ConnectionStatus states the current address and error of the ETH1 API
+// endpoint. It also provides the addresses and errors for any fallback URLs. 
+message ETH1ConnectionStatus {
+    // Current ETH1 HTTP endpoint.
+    string current_address = 1;
+
+    // Current error (if any) of the current connection.
+    string current_connection_error = 2;
+
+    // A list of all provider URLs. 
+    repeated string addresses = 3;
+
+    // Current error (if any) of the HTTP connections.
+    repeated string connection_errors = 4;
 }

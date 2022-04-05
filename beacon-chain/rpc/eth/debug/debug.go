@@ -4,8 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	statev2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -26,11 +25,10 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	st, ok := beaconSt.(*statev1.BeaconState)
-	if !ok {
-		return nil, status.Error(codes.Internal, "State type assertion failed")
+	if beaconSt.Version() != version.Phase0 {
+		return nil, status.Error(codes.Internal, "State has incorrect type")
 	}
-	protoSt, err := migration.BeaconStateToV1(st)
+	protoSt, err := migration.BeaconStateToProto(beaconSt)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 	}
@@ -67,13 +65,14 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, beaconSt, ds.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
 	switch beaconSt.Version() {
 	case version.Phase0:
-		st, ok := beaconSt.(*statev1.BeaconState)
-		if !ok {
-			return nil, status.Error(codes.Internal, "State type assertion failed")
-		}
-		protoSt, err := migration.BeaconStateToV1(st)
+		protoSt, err := migration.BeaconStateToProto(beaconSt)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}
@@ -82,13 +81,14 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_Phase0State{Phase0State: protoSt},
 			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Altair:
-		altairState, ok := beaconSt.(*statev2.BeaconState)
+		altairState, ok := beaconSt.(state.BeaconStateAltair)
 		if !ok {
 			return nil, status.Error(codes.Internal, "Altair state type assertion failed")
 		}
-		protoState, err := migration.BeaconStateAltairToV2(altairState)
+		protoState, err := migration.BeaconStateAltairToProto(altairState)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}
@@ -97,6 +97,23 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			Data: &ethpbv2.BeaconStateContainer{
 				State: &ethpbv2.BeaconStateContainer_AltairState{AltairState: protoState},
 			},
+			ExecutionOptimistic: isOptimistic,
+		}, nil
+	case version.Bellatrix:
+		bellatrixState, ok := beaconSt.(state.BeaconStateBellatrix)
+		if !ok {
+			return nil, status.Error(codes.Internal, "Bellatrix state type assertion failed")
+		}
+		protoState, err := migration.BeaconStateBellatrixToProto(bellatrixState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
+		}
+		return &ethpbv2.BeaconStateResponseV2{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.BeaconStateContainer{
+				State: &ethpbv2.BeaconStateContainer_BellatrixState{BellatrixState: protoState},
+			},
+			ExecutionOptimistic: isOptimistic,
 		}, nil
 	default:
 		return nil, status.Error(codes.Internal, "Unsupported state version")
@@ -121,9 +138,9 @@ func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateReq
 	return &ethpbv2.BeaconStateSSZResponseV2{Data: sszState}, nil
 }
 
-// ListForkChoiceHeads retrieves the fork choice leaves for the current head.
+// ListForkChoiceHeads retrieves the leaves of the current fork choice tree.
 func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ForkChoiceHeadsResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeads")
+	_, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeads")
 	defer span.End()
 
 	headRoots, headSlots := ds.HeadFetcher.ChainHeads()
@@ -134,6 +151,30 @@ func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*e
 		resp.Data[i] = &ethpbv1.ForkChoiceHead{
 			Root: headRoots[i][:],
 			Slot: headSlots[i],
+		}
+	}
+
+	return resp, nil
+}
+
+// ListForkChoiceHeadsV2 retrieves the leaves of the current fork choice tree.
+func (ds *Server) ListForkChoiceHeadsV2(ctx context.Context, _ *emptypb.Empty) (*ethpbv2.ForkChoiceHeadsResponse, error) {
+	_, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeadsV2")
+	defer span.End()
+
+	headRoots, headSlots := ds.HeadFetcher.ChainHeads()
+	resp := &ethpbv2.ForkChoiceHeadsResponse{
+		Data: make([]*ethpbv2.ForkChoiceHead, len(headRoots)),
+	}
+	for i := range headRoots {
+		isOptimistic, err := ds.HeadFetcher.IsOptimisticForRoot(ctx, headRoots[i])
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check if head is optimistic: %v", err)
+		}
+		resp.Data[i] = &ethpbv2.ForkChoiceHead{
+			Root:                headRoots[i][:],
+			Slot:                headSlots[i],
+			ExecutionOptimistic: isOptimistic,
 		}
 	}
 

@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -13,12 +15,18 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+func TestMain(m *testing.M) {
+	resetCfg := features.InitWithReset(&features.Flags{EnableBalanceTrieComputation: true})
+	defer resetCfg()
+	m.Run()
+}
+
 func TestValidatorMap_DistinctCopy(t *testing.T) {
 	count := uint64(100)
 	vals := make([]*ethpb.Validator, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -83,7 +91,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 	vals := make([]*ethpb.Validator, 0, count)
 	for i := uint64(1); i < count; i++ {
 		someRoot := [32]byte{}
-		someKey := [48]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		vals = append(vals, &ethpb.Validator{
@@ -101,6 +109,8 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 		Validators: vals,
 	})
 	assert.NoError(t, err)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
 
 	wg := new(sync.WaitGroup)
 
@@ -109,7 +119,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 		// Continuously lock and unlock the state
 		// by acquiring the lock.
 		for i := 0; i < 1000; i++ {
-			for _, f := range st.stateFieldLeaves {
+			for _, f := range s.stateFieldLeaves {
 				f.Lock()
 				if f.Empty() {
 					f.InsertFieldLayer(make([][]*[32]byte, 10))

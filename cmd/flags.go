@@ -224,6 +224,13 @@ var (
 		Name:  "accept-terms-of-use",
 		Usage: "Accept Terms and Conditions (for non-interactive environments)",
 	}
+	// ValidatorMonitorIndicesFlag specifies a list of validator indices to
+	// track for performance updates
+	ValidatorMonitorIndicesFlag = &cli.IntSliceFlag{
+		Name:  "monitor-indices",
+		Usage: "List of validator indices to track performance",
+	}
+
 	// RestoreSourceFileFlag specifies the filepath to the backed-up database file
 	// which will be used to restore the database.
 	RestoreSourceFileFlag = &cli.StringFlag{
@@ -241,6 +248,12 @@ var (
 		Name:  "bolt-mmap-initial-size",
 		Usage: "Specifies the size in bytes of bolt db's mmap syscall allocation",
 		Value: 536870912, // 512 Mb as a default value.
+	}
+	// ApiTimeoutFlag specifies the timeout value for API requests in seconds. A timeout of zero means no timeout.
+	ApiTimeoutFlag = &cli.IntFlag{
+		Name:  "api-timeout",
+		Usage: "Specifies the timeout value for API requests in seconds",
+		Value: 120,
 	}
 )
 

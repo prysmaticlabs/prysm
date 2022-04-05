@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/urfave/cli/v2"
 )
@@ -13,7 +14,7 @@ import (
 func filterPublicKeysFromUserInput(
 	cliCtx *cli.Context,
 	publicKeysFlag *cli.StringFlag,
-	validatingPublicKeys [][48]byte,
+	validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte,
 	selectionPrompt string,
 ) ([]bls.PublicKey, error) {
 	var filteredPubKeys []bls.PublicKey

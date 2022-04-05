@@ -1,0 +1,17 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["block.go"],
+    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block/mock",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/engine/v1:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/block:go_default_library",
+        "//proto/prysm/v1alpha1/validator-client:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
+    ],
+)

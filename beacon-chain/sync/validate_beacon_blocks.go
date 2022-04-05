@@ -14,6 +14,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -23,6 +24,10 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+)
+
+var (
+	ErrOptimisticParent = errors.New("parent of the block is optimistic")
 )
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
@@ -159,8 +164,13 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, errors.Errorf("unknown parent for block with slot %d and parent root %#x", blk.Block().Slot(), blk.Block().ParentRoot())
 	}
 
-	if err := s.validateBeaconBlock(ctx, blk, blockRoot); err != nil {
-		return pubsub.ValidationReject, err
+	err = s.validateBeaconBlock(ctx, blk, blockRoot)
+	if err != nil {
+		// If the parent is optimistic, process the block as usual
+		// This also does not penalize a peer which sends optimistic blocks
+		if !errors.Is(ErrOptimisticParent, err) {
+			return pubsub.ValidationReject, err
+		}
 	}
 
 	// Record attribute of valid block.
@@ -206,16 +216,9 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	}
 	// In the event the block is more than an epoch ahead from its
 	// parent state, we have to advance the state forward.
-	if features.Get().EnableNextSlotStateCache {
-		parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, blk.Block().ParentRoot(), blk.Block().Slot())
-		if err != nil {
-			return err
-		}
-	} else {
-		parentState, err = transition.ProcessSlots(ctx, parentState, blk.Block().Slot())
-		if err != nil {
-			return err
-		}
+	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, blk.Block().ParentRoot(), blk.Block().Slot())
+	if err != nil {
+		return err
 	}
 	idx, err := helpers.BeaconProposerIndex(ctx, parentState)
 	if err != nil {
@@ -226,6 +229,67 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 		return errors.New("incorrect proposer index")
 	}
 
+	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
+		if errors.Is(err, ErrOptimisticParent) {
+			return err
+		}
+		// for other kinds of errors, set this block as a bad block.
+		s.setBadBlock(ctx, blockRoot)
+		return err
+	}
+	return nil
+}
+
+// validateBellatrixBeaconBlock validates the block for the Bellatrix fork.
+// spec code:
+//   If the execution is enabled for the block -- i.e. is_execution_enabled(state, block.body) then validate the following:
+//      [REJECT] The block's execution payload timestamp is correct with respect to the slot --
+//      i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+//
+//      If exection_payload verification of block's parent by an execution node is not complete:
+//         [REJECT] The block's parent (defined by block.parent_root) passes all validation (excluding execution
+//          node verification of the block.body.execution_payload).
+//      otherwise:
+//         [IGNORE] The block's parent (defined by block.parent_root) passes all validation (including execution
+//          node verification of the block.body.execution_payload).
+func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState state.BeaconState, blk block.BeaconBlock) error {
+	// Error if block and state are not the same version
+	if parentState.Version() != blk.Version() {
+		return errors.New("block and state are not the same version")
+	}
+
+	body := blk.Body()
+	executionEnabled, err := blocks.IsExecutionEnabled(parentState, body)
+	if err != nil {
+		return err
+	}
+	if !executionEnabled {
+		return nil
+	}
+
+	t, err := slots.ToTime(parentState.GenesisTime(), blk.Slot())
+	if err != nil {
+		return err
+	}
+	payload, err := body.ExecutionPayload()
+	if err != nil {
+		return err
+	}
+	if payload == nil {
+		return errors.New("execution payload is nil")
+	}
+	if payload.Timestamp != uint64(t.Unix()) {
+		return errors.New("incorrect timestamp")
+	}
+
+	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
+	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, parentRoot)
+	if err != nil {
+		return err
+	}
+	if isParentOptimistic {
+		return ErrOptimisticParent
+	}
 	return nil
 }
 

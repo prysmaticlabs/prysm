@@ -10,10 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -22,6 +23,25 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
+// This function is only used in spec-tests, it does save the head after updating it.
+func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
+	cp := s.store.JustifiedCheckpt()
+	if cp == nil {
+		return errors.New("no justified checkpoint")
+	}
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
+		return errors.Wrap(err, msg)
+	}
+	headRoot, err := s.updateHead(ctx, balances)
+	if err != nil {
+		return errors.Wrap(err, "could not update head")
+	}
+	return s.saveHead(ctx, headRoot)
+}
 
 // This defines the current chain service's view of head.
 type head struct {
@@ -33,28 +53,24 @@ type head struct {
 
 // Determined the head from the fork choice service and saves its new data
 // (head root, head block, and head state) to the local service cache.
-func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
+func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateHead")
 	defer span.End()
 
-	// To get the proper head update, a node first checks its best justified
-	// can become justified. This is designed to prevent bounce attack and
-	// ensure head gets its best justified info.
-	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
-		s.justifiedCheckpt = s.bestJustifiedCheckpt
-		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
-			return err
-		}
-	}
-
 	// Get head from the fork choice service.
-	f := s.finalizedCheckpt
-	j := s.justifiedCheckpt
-	// To get head before the first justified epoch, the fork choice will start with genesis root
+	f := s.store.FinalizedCheckpt()
+	if f == nil {
+		return [32]byte{}, errNilFinalizedInStore
+	}
+	j := s.store.JustifiedCheckpt()
+	if j == nil {
+		return [32]byte{}, errNilJustifiedInStore
+	}
+	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
 	headStartRoot := bytesutil.ToBytes32(j.Root)
 	if headStartRoot == params.BeaconConfig().ZeroHash {
-		headStartRoot = s.genesisRoot
+		headStartRoot = s.originBlockRoot
 	}
 
 	// In order to process head, fork choice store requires justified info.
@@ -64,21 +80,19 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	if !s.cfg.ForkChoiceStore.HasNode(headStartRoot) {
 		jb, err := s.cfg.BeaconDB.Block(ctx, headStartRoot)
 		if err != nil {
-			return err
+			return [32]byte{}, err
 		}
-		s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+		if features.Get().EnableForkChoiceDoublyLinkedTree {
+			s.cfg.ForkChoiceStore = doublylinkedtree.New(j.Epoch, f.Epoch)
+		} else {
+			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+		}
 		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
-			return err
+			return [32]byte{}, err
 		}
 	}
 
-	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
-	if err != nil {
-		return err
-	}
-
-	// Save head to the local service cache.
-	return s.saveHead(ctx, headRoot)
+	return s.cfg.ForkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
 }
 
 // This saves head info to the local service cache, it also saves the
@@ -132,16 +146,21 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			"oldSlot": fmt.Sprintf("%d", headSlot),
 		}).Debug("Chain reorg occurred")
 		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
+		isOptimistic, err := s.IsOptimistic(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not check if node is optimistically synced")
+		}
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
 			Data: &ethpbv1.EventChainReorg{
-				Slot:         newHeadSlot,
-				Depth:        absoluteSlotDifference,
-				OldHeadBlock: oldHeadRoot[:],
-				NewHeadBlock: headRoot[:],
-				OldHeadState: oldStateRoot,
-				NewHeadState: newStateRoot,
-				Epoch:        slots.ToEpoch(newHeadSlot),
+				Slot:                newHeadSlot,
+				Depth:               absoluteSlotDifference,
+				OldHeadBlock:        oldHeadRoot[:],
+				NewHeadBlock:        headRoot[:],
+				OldHeadState:        oldStateRoot,
+				NewHeadState:        newStateRoot,
+				Epoch:               slots.ToEpoch(newHeadSlot),
+				ExecutionOptimistic: isOptimistic,
 			},
 		})
 
@@ -163,7 +182,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
 	go func() {
-		if err := s.notifyNewHeadEvent(newHeadSlot, newHeadState, newStateRoot, headRoot[:]); err != nil {
+		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, newHeadState, newStateRoot, headRoot[:]); err != nil {
 			log.WithError(err).Error("Could not notify event feed of new chain head")
 		}
 	}()
@@ -248,16 +267,16 @@ func (s *Service) headBlock() block.SignedBeaconBlock {
 // It does a full copy on head state for immutability.
 // This is a lock free version.
 func (s *Service) headState(ctx context.Context) state.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "blockChain.headState")
+	_, span := trace.StartSpan(ctx, "blockChain.headState")
 	defer span.End()
 
 	return s.head.state.Copy()
 }
 
-// This returns the genesis validator root of the head state.
+// This returns the genesis validators root of the head state.
 // This is a lock free version.
-func (s *Service) headGenesisValidatorRoot() [32]byte {
-	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+func (s *Service) headGenesisValidatorsRoot() [32]byte {
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorsRoot())
 }
 
 // This returns the validator referenced by the provided index in
@@ -267,73 +286,30 @@ func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOn
 	return s.head.state.ValidatorAtIndexReadOnly(index)
 }
 
+// This returns the validator index referenced by the provided pubkey in
+// the head state.
+// This is a lock free version.
+func (s *Service) headValidatorIndexAtPubkey(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+	return s.head.state.ValidatorIndexByPubkey(pubKey)
+}
+
 // Returns true if head state exists.
 // This is the lock free version.
 func (s *Service) hasHeadState() bool {
 	return s.head != nil && s.head.state != nil
 }
 
-// This caches justified state balances to be used for fork choice.
-func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot [32]byte) error {
-	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-		return err
-	}
-
-	s.clearInitSyncBlocks()
-
-	var justifiedState state.BeaconState
-	var err error
-	if justifiedRoot == s.genesisRoot {
-		justifiedState, err = s.cfg.BeaconDB.GenesisState(ctx)
-		if err != nil {
-			return err
-		}
-	} else {
-		justifiedState, err = s.cfg.StateGen.StateByRoot(ctx, justifiedRoot)
-		if err != nil {
-			return err
-		}
-	}
-	if justifiedState == nil || justifiedState.IsNil() {
-		return errors.New("justified state can't be nil")
-	}
-
-	epoch := time.CurrentEpoch(justifiedState)
-
-	justifiedBalances := make([]uint64, justifiedState.NumValidators())
-	if err := justifiedState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
-		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
-			justifiedBalances[idx] = val.EffectiveBalance()
-		} else {
-			justifiedBalances[idx] = 0
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	s.justifiedBalancesLock.Lock()
-	defer s.justifiedBalancesLock.Unlock()
-	s.justifiedBalances = justifiedBalances
-	return nil
-}
-
-func (s *Service) getJustifiedBalances() []uint64 {
-	s.justifiedBalancesLock.RLock()
-	defer s.justifiedBalancesLock.RUnlock()
-	return s.justifiedBalances
-}
-
 // Notifies a common event feed of a new chain head event. Called right after a new
 // chain head is determined, set, and saved to disk.
 func (s *Service) notifyNewHeadEvent(
+	ctx context.Context,
 	newHeadSlot types.Slot,
 	newHeadState state.BeaconState,
 	newHeadStateRoot,
 	newHeadRoot []byte,
 ) error {
-	previousDutyDependentRoot := s.genesisRoot[:]
-	currentDutyDependentRoot := s.genesisRoot[:]
+	previousDutyDependentRoot := s.originBlockRoot[:]
+	currentDutyDependentRoot := s.originBlockRoot[:]
 
 	var previousDutyEpoch types.Epoch
 	currentDutyEpoch := slots.ToEpoch(newHeadSlot)
@@ -360,6 +336,10 @@ func (s *Service) notifyNewHeadEvent(
 			return errors.Wrap(err, "could not get duty dependent root")
 		}
 	}
+	isOptimistic, err := s.IsOptimistic(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not check if node is optimistically synced")
+	}
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.NewHead,
 		Data: &ethpbv1.EventHead{
@@ -369,6 +349,7 @@ func (s *Service) notifyNewHeadEvent(
 			EpochTransition:           slots.IsEpochStart(newHeadSlot),
 			PreviousDutyDependentRoot: previousDutyDependentRoot,
 			CurrentDutyDependentRoot:  currentDutyDependentRoot,
+			ExecutionOptimistic:       isOptimistic,
 		},
 	})
 	return nil

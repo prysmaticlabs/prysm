@@ -52,6 +52,14 @@ func (c *hotStateCache) get(root [32]byte) state.BeaconState {
 	return nil
 }
 
+func (c *hotStateCache) ByRoot(root [32]byte) (state.BeaconState, error) {
+	st := c.get(root)
+	if st == nil {
+		return nil, ErrNotInCache
+	}
+	return st, nil
+}
+
 // GetWithoutCopy returns a non-copied cached response via input block root.
 func (c *hotStateCache) getWithoutCopy(root [32]byte) state.BeaconState {
 	c.lock.RLock()

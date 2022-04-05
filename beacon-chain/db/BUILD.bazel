@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "alias.go",
         "db.go",
+        "errors.go",
         "log.go",
         "restore.go",
     ],
@@ -12,7 +13,6 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//cmd/beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
         "//testing/slasher/simulator:__pkg__",
         "//tools:__subpackages__",
     ],

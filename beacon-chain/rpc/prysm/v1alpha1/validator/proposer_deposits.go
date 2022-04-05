@@ -94,7 +94,12 @@ func (vs *Server) deposits(
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.deposits")
 	defer span.End()
 
-	if vs.MockEth1Votes || !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+	if vs.MockEth1Votes {
+		return []*ethpb.Deposit{}, nil
+	}
+
+	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+		log.Warn("not connected to eth1 node, skip pending deposit insertion")
 		return []*ethpb.Deposit{}, nil
 	}
 	// Need to fetch if the deposits up to the state's latest eth1 data matches
@@ -112,6 +117,7 @@ func (vs *Server) deposits(
 	// If there are no pending deposits, exit early.
 	allPendingContainers := vs.PendingDepositsFetcher.PendingContainers(ctx, canonicalEth1DataHeight)
 	if len(allPendingContainers) == 0 {
+		log.Debug("no pending deposits for inclusion in block")
 		return []*ethpb.Deposit{}, nil
 	}
 
@@ -127,21 +133,21 @@ func (vs *Server) deposits(
 		if uint64(dep.Index) >= beaconState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
+		// Don't try to pack more than the max allowed in a block
+		if uint64(len(pendingDeps)) == params.BeaconConfig().MaxDeposits {
+			break
+		}
 	}
 
 	for i := range pendingDeps {
-		// Don't construct merkle proof if the number of deposits is more than max allowed in block.
-		if uint64(i) == params.BeaconConfig().MaxDeposits {
-			break
-		}
 		pendingDeps[i].Deposit, err = constructMerkleProof(depositTrie, int(pendingDeps[i].Index), pendingDeps[i].Deposit)
 		if err != nil {
 			return nil, err
 		}
 	}
-	// Limit the return of pending deposits to not be more than max deposits allowed in block.
+
 	var pendingDeposits []*ethpb.Deposit
-	for i := uint64(0); i < uint64(len(pendingDeps)) && i < params.BeaconConfig().MaxDeposits; i++ {
+	for i := uint64(0); i < uint64(len(pendingDeps)); i++ {
 		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
 	return pendingDeposits, nil
@@ -168,7 +174,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 		}
 		insertIndex++
 	}
-	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
+	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log a warning here, as the cached trie is invalid.
 	if !valid {
 		log.Warnf("Cached deposit trie is invalid, rebuilding it now: %v", err)
@@ -198,7 +204,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 		return nil, err
 	}
 
-	valid, err := vs.validateDepositTrie(depositTrie, canonicalEth1Data)
+	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log an error here, as even with rebuilding the trie, it is still invalid.
 	if !valid {
 		log.Errorf("Rebuilt deposit trie is invalid: %v", err)
@@ -207,7 +213,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 }
 
 // validate that the provided deposit trie matches up with the canonical eth1 data provided.
-func (vs *Server) validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
+func validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
 	if trie.NumOfItems() != int(canonicalEth1Data.DepositCount) {
 		return false, errors.Errorf("wanted the canonical count of %d but received %d", canonicalEth1Data.DepositCount, trie.NumOfItems())
 	}

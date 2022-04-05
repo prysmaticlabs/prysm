@@ -32,8 +32,8 @@ func TestAttestation_IsAggregator(t *testing.T) {
 	})
 
 	t.Run("not aggregator", func(t *testing.T) {
-		params.UseMinimalConfig()
-		defer params.UseMainnetConfig()
+		params.SetupTestConfigCleanup(t)
+		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 		beaconState, privKeys := util.DeterministicGenesisState(t, 2048)
 
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, 0, 0)

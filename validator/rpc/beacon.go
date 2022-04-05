@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"google.golang.org/grpc"
@@ -48,7 +47,7 @@ func (s *Server) registerBeaconClient() error {
 	}
 	s.beaconChainClient = ethpb.NewBeaconChainClient(conn)
 	s.beaconNodeClient = ethpb.NewNodeClient(conn)
-	s.beaconNodeHealthClient = pb.NewHealthClient(conn)
+	s.beaconNodeHealthClient = ethpb.NewHealthClient(conn)
 	s.beaconNodeValidatorClient = ethpb.NewBeaconNodeValidatorClient(conn)
 	return nil
 }

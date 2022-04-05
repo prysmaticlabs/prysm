@@ -23,7 +23,7 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
-	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorRoot())
+	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func ComputeDomainVerifySigningRoot(st state.ReadOnlyBeaconState, index types.Va
 	if err != nil {
 		return err
 	}
-	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorRoot())
+	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
 	if err != nil {
 		return err
 	}
@@ -118,11 +118,11 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signatur
 
 // VerifyBlockSigningRoot verifies the signing root of a block given its public key, signature and domain.
 func VerifyBlockSigningRoot(pub, signature, domain []byte, rootFunc func() ([32]byte, error)) error {
-	set, err := BlockSignatureSet(pub, signature, domain, rootFunc)
+	set, err := BlockSignatureBatch(pub, signature, domain, rootFunc)
 	if err != nil {
 		return err
 	}
-	// We assume only one signature set is returned here.
+	// We assume only one signature batch is returned here.
 	sig := set.Signatures[0]
 	publicKey := set.PublicKeys[0]
 	root := set.Messages[0]
@@ -137,9 +137,9 @@ func VerifyBlockSigningRoot(pub, signature, domain []byte, rootFunc func() ([32]
 	return nil
 }
 
-// BlockSignatureSet retrieves the relevant signature, message and pubkey data from a block and collating it
-// into a signature set object.
-func BlockSignatureSet(pub, signature, domain []byte, rootFunc func() ([32]byte, error)) (*bls.SignatureSet, error) {
+// BlockSignatureBatch retrieves the relevant signature, message and pubkey data from a block and collating it
+// into a signature batch object.
+func BlockSignatureBatch(pub, signature, domain []byte, rootFunc func() ([32]byte, error)) (*bls.SignatureBatch, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
@@ -149,7 +149,7 @@ func BlockSignatureSet(pub, signature, domain []byte, rootFunc func() ([32]byte,
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
-	return &bls.SignatureSet{
+	return &bls.SignatureBatch{
 		Signatures: [][]byte{signature},
 		PublicKeys: []bls.PublicKey{publicKey},
 		Messages:   [][32]byte{root},
@@ -219,7 +219,7 @@ func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 	return r, nil
 }
 
-// ComputeForkDigest returns the fork for the current version and genesis validator root
+// ComputeForkDigest returns the fork for the current version and genesis validators root
 //
 // Spec pseudocode definition:
 //	def compute_fork_digest(current_version: Version, genesis_validators_root: Root) -> ForkDigest:

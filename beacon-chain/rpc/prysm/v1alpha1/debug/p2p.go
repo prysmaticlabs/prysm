@@ -8,13 +8,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // GetPeer returns the data known about the peer defined by the provided peer id.
-func (ds *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*pbrpc.DebugPeerResponse, error) {
+func (ds *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*ethpb.DebugPeerResponse, error) {
 	pid, err := peer.Decode(peerReq.PeerId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Unable to parse provided peer id: %v", err)
@@ -24,8 +23,8 @@ func (ds *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*pbrpc
 
 // ListPeers returns all peers known to the host node, irregardless of if they are connected/
 // disconnected.
-func (ds *Server) ListPeers(_ context.Context, _ *empty.Empty) (*pbrpc.DebugPeerResponses, error) {
-	var responses []*pbrpc.DebugPeerResponse
+func (ds *Server) ListPeers(_ context.Context, _ *empty.Empty) (*ethpb.DebugPeerResponses, error) {
+	var responses []*ethpb.DebugPeerResponse
 	for _, pid := range ds.PeersFetcher.Peers().All() {
 		resp, err := ds.getPeer(pid)
 		if err != nil {
@@ -33,10 +32,10 @@ func (ds *Server) ListPeers(_ context.Context, _ *empty.Empty) (*pbrpc.DebugPeer
 		}
 		responses = append(responses, resp)
 	}
-	return &pbrpc.DebugPeerResponses{Responses: responses}, nil
+	return &ethpb.DebugPeerResponses{Responses: responses}, nil
 }
 
-func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
+func (ds *Server) getPeer(pid peer.ID) (*ethpb.DebugPeerResponse, error) {
 	peers := ds.PeersFetcher.Peers()
 	peerStore := ds.PeerManager.Host().Peerstore()
 	addr, err := peers.Address(pid)
@@ -92,7 +91,7 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 	if err != nil || !ok {
 		aVersion = ""
 	}
-	peerInfo := &pbrpc.DebugPeerResponse_PeerInfo{
+	peerInfo := &ethpb.DebugPeerResponse_PeerInfo{
 		Protocols:       protocols,
 		FaultCount:      uint64(resp),
 		ProtocolVersion: pVersion,
@@ -137,7 +136,7 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
-	scoreInfo := &pbrpc.ScoreInfo{
+	scoreInfo := &ethpb.ScoreInfo{
 		OverallScore:       float32(peers.Scorers().Score(pid)),
 		ProcessedBlocks:    peers.Scorers().BlockProviderScorer().ProcessedBlocks(pid),
 		BlockProviderScore: float32(peers.Scorers().BlockProviderScorer().Score(pid)),
@@ -146,7 +145,7 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 		BehaviourPenalty:   float32(bPenalty),
 		ValidationError:    errorToString(peers.Scorers().ValidationError(pid)),
 	}
-	return &pbrpc.DebugPeerResponse{
+	return &ethpb.DebugPeerResponse{
 		ListeningAddresses: stringAddrs,
 		Direction:          pbDirection,
 		ConnectionState:    ethpb.ConnectionState(connState),

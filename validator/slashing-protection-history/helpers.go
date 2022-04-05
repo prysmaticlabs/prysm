@@ -8,6 +8,7 @@ import (
 
 	"github.com/k0kubun/go-ansi"
 	types "github.com/prysmaticlabs/eth2-types"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -53,16 +54,16 @@ func SlotFromString(str string) (types.Slot, error) {
 }
 
 // PubKeyFromHex takes in a hex string, verifies its length as 48 bytes, and converts that representation.
-func PubKeyFromHex(str string) ([48]byte, error) {
+func PubKeyFromHex(str string) ([fieldparams.BLSPubkeyLength]byte, error) {
 	pubKeyBytes, err := hex.DecodeString(strings.TrimPrefix(str, "0x"))
 	if err != nil {
-		return [48]byte{}, err
+		return [fieldparams.BLSPubkeyLength]byte{}, err
 	}
 	if len(pubKeyBytes) != 48 {
-		return [48]byte{}, fmt.Errorf("public key is not correct, 48-byte length: %s", str)
+		return [fieldparams.BLSPubkeyLength]byte{}, fmt.Errorf("public key is not correct, 48-byte length: %s", str)
 	}
-	var pk [48]byte
-	copy(pk[:], pubKeyBytes[:48])
+	var pk [fieldparams.BLSPubkeyLength]byte
+	copy(pk[:], pubKeyBytes[:fieldparams.BLSPubkeyLength])
 	return pk, nil
 }
 

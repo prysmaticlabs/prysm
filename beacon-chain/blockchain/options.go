@@ -50,6 +50,14 @@ func WithChainStartFetcher(f powchain.ChainStartFetcher) Option {
 	}
 }
 
+// WithExecutionEngineCaller to call execution engine.
+func WithExecutionEngineCaller(c powchain.EngineCaller) Option {
+	return func(s *Service) error {
+		s.cfg.ExecutionEngineCaller = c
+		return nil
+	}
+}
+
 // WithDepositCache for deposit lifecycle after chain inclusion.
 func WithDepositCache(c *depositcache.DepositCache) Option {
 	return func(s *Service) error {
@@ -126,6 +134,13 @@ func WithStateGen(g *stategen.State) Option {
 func WithSlasherAttestationsFeed(f *event.Feed) Option {
 	return func(s *Service) error {
 		s.cfg.SlasherAttestationsFeed = f
+		return nil
+	}
+}
+
+func withStateBalanceCache(c *stateBalanceCache) Option {
+	return func(s *Service) error {
+		s.justifiedBalances = c
 		return nil
 	}
 }

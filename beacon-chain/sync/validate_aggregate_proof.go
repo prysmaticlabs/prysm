@@ -41,6 +41,16 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 
+	// We should not attempt to process this message if the node is running in optimistic mode.
+	// We just ignore in p2p so that the peer is not penalized.
+	optimistic, err := s.cfg.chain.IsOptimistic(ctx)
+	if err != nil {
+		return pubsub.ValidationReject, err
+	}
+	if optimistic {
+		return pubsub.ValidationIgnore, nil
+	}
+
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
@@ -93,6 +103,15 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.New("bad block referenced in attestation data")
 	}
 
+	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
+	seen, err := s.cfg.attPool.HasAggregatedAttestation(m.Message.Aggregate)
+	if err != nil {
+		tracing.AnnotateError(span, err)
+		return pubsub.ValidationIgnore, err
+	}
+	if seen {
+		return pubsub.ValidationIgnore, nil
+	}
 	if !s.validateBlockInAttestation(ctx, m) {
 		return pubsub.ValidationIgnore, nil
 	}
@@ -125,7 +144,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
 	if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, signed.Message.Aggregate.Data.BeaconBlockRoot); err != nil {
 		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject, err
+		return pubsub.ValidationIgnore, err
 	}
 
 	bs, err := s.cfg.chain.AttestationTargetState(ctx, signed.Message.Aggregate.Data.Target)
@@ -171,7 +190,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		tracing.AnnotateError(span, wrappedErr)
 		return pubsub.ValidationIgnore, wrappedErr
 	}
-	attSigSet, err := blocks.AttestationSignatureSet(ctx, bs, []*ethpb.Attestation{signed.Message.Aggregate})
+	attSigSet, err := blocks.AttestationSignatureBatch(ctx, bs, []*ethpb.Attestation{signed.Message.Aggregate})
 	if err != nil {
 		wrappedErr := errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex)
 		tracing.AnnotateError(span, wrappedErr)
@@ -256,7 +275,7 @@ func validateSelectionIndex(
 	data *ethpb.AttestationData,
 	validatorIndex types.ValidatorIndex,
 	proof []byte,
-) (*bls.SignatureSet, error) {
+) (*bls.SignatureBatch, error) {
 	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
@@ -284,7 +303,7 @@ func validateSelectionIndex(
 		return nil, err
 	}
 
-	d, err := signing.Domain(bs.Fork(), epoch, domain, bs.GenesisValidatorRoot())
+	d, err := signing.Domain(bs.Fork(), epoch, domain, bs.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +312,7 @@ func validateSelectionIndex(
 	if err != nil {
 		return nil, err
 	}
-	return &bls.SignatureSet{
+	return &bls.SignatureBatch{
 		Signatures: [][]byte{proof},
 		PublicKeys: []bls.PublicKey{publicKey},
 		Messages:   [][32]byte{root},
@@ -301,7 +320,7 @@ func validateSelectionIndex(
 }
 
 // This returns aggregator signature set which can be used to batch verify.
-func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureSet, error) {
+func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureBatch, error) {
 	v, err := s.ValidatorAtIndex(a.Message.AggregatorIndex)
 	if err != nil {
 		return nil, err
@@ -312,7 +331,7 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 	}
 
 	epoch := slots.ToEpoch(a.Message.Aggregate.Data.Slot)
-	d, err := signing.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
+	d, err := signing.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +339,7 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 	if err != nil {
 		return nil, err
 	}
-	return &bls.SignatureSet{
+	return &bls.SignatureBatch{
 		Signatures: [][]byte{a.Signature},
 		PublicKeys: []bls.PublicKey{publicKey},
 		Messages:   [][32]byte{root},

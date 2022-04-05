@@ -3,11 +3,9 @@ package powchain
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -15,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -22,11 +21,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	protodb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -117,7 +116,7 @@ func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethT
 	return header, nil
 }
 
-func (g *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
+func (_ *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
 	return nil, nil
 }
 
@@ -126,8 +125,13 @@ var depositsReqForChainStart = 64
 func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -155,99 +159,27 @@ func TestStart_OK(t *testing.T) {
 func TestStart_NoHttpEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
-	s, err := NewService(context.Background(),
+	_, err = NewService(context.Background(),
 		WithHttpEndpoints([]string{""}),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err)
-	// Set custom exit func so test can proceed
-	log.Logger.ExitFunc = func(i int) {
-		panic(i)
-	}
-	defer func() {
-		log.Logger.ExitFunc = nil
-	}()
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
-	// Expect Start function to fail from a fatal call due
-	// to no state existing.
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				wg.Done()
-			}
-		}()
-		s.Start()
-	}()
-	util.WaitTimeout(wg, time.Second)
-	require.LogsContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
-	hook.Reset()
-}
-
-func TestStart_NoHttpEndpointDefinedSucceeds_WithGenesisState(t *testing.T) {
-	hook := logTest.NewGlobal()
-	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
-	require.NoError(t, err, "Unable to set up simulated backend")
-	st, _ := util.DeterministicGenesisState(t, 10)
-	b := util.NewBeaconBlock()
-	genRoot, err := b.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveState(context.Background(), st, genRoot))
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(context.Background(), genRoot))
-	depositCache, err := depositcache.New()
-	require.NoError(t, err)
-	s, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{""}),
-		WithDepositContractAddress(testAcc.ContractAddr),
-		WithDatabase(beaconDB),
-		WithDepositCache(depositCache),
-	)
-	require.NoError(t, err)
-
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
-
-	go func() {
-		s.Start()
-		wg.Done()
-	}()
-	s.cancel()
-	util.WaitTimeout(wg, time.Second)
-	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
-	hook.Reset()
-}
-
-func TestStart_NoHttpEndpointDefinedSucceeds_WithChainStarted(t *testing.T) {
-	hook := logTest.NewGlobal()
-	beaconDB := dbutil.SetupDB(t)
-	testAcc, err := contracts.Setup()
-	require.NoError(t, err, "Unable to set up simulated backend")
-
-	require.NoError(t, beaconDB.SavePowchainData(context.Background(), &protodb.ETH1ChainData{
-		ChainstartData: &protodb.ChainStartData{Chainstarted: true},
-		Trie:           &protodb.SparseMerkleTrie{},
-	}))
-	s, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{""}),
-		WithDepositContractAddress(testAcc.ContractAddr),
-		WithDatabase(beaconDB),
-	)
-	require.NoError(t, err)
-
-	s.Start()
-	require.LogsDoNotContain(t, hook, "cannot create genesis state: no eth1 http endpoint defined")
-	hook.Reset()
+	require.LogsDoNotContain(t, hook, "missing address")
 }
 
 func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -270,9 +202,14 @@ func TestStop_OK(t *testing.T) {
 }
 
 func TestService_Eth1Synced(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -295,9 +232,14 @@ func TestService_Eth1Synced(t *testing.T) {
 }
 
 func TestFollowBlock_OK(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -307,10 +249,10 @@ func TestFollowBlock_OK(t *testing.T) {
 
 	// simulated backend sets eth1 block
 	// time as 10 seconds
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(conf)
-	defer params.UseMainnetConfig()
 
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
@@ -350,9 +292,9 @@ func TestStatus(t *testing.T) {
 	testCases := map[*Service]string{
 		// "status is ok" cases
 		{}: "",
-		{isRunning: true, latestEth1Data: &protodb.LatestETH1Data{BlockTime: afterFiveMinutesAgo}}:   "",
-		{isRunning: false, latestEth1Data: &protodb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "",
-		{isRunning: false, runError: errors.New("test runError")}:                                    "",
+		{isRunning: true, latestEth1Data: &ethpb.LatestETH1Data{BlockTime: afterFiveMinutesAgo}}:   "",
+		{isRunning: false, latestEth1Data: &ethpb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "",
+		{isRunning: false, runError: errors.New("test runError")}:                                  "",
 		// "status is error" cases
 		{isRunning: true, runError: errors.New("test runError")}: "test runError",
 	}
@@ -371,6 +313,11 @@ func TestStatus(t *testing.T) {
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -390,26 +337,24 @@ func TestLogTillGenesis_OK(t *testing.T) {
 		logPeriod = currPeriod
 	}()
 
-	orgConfig := params.BeaconConfig().Copy()
+	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig()
 	cfg.Eth1FollowDistance = 5
 	params.OverrideBeaconConfig(cfg)
-	defer func() {
-		params.OverrideBeaconConfig(orgConfig)
-	}()
 
-	orgNetworkConfig := params.BeaconNetworkConfig().Copy()
 	nCfg := params.BeaconNetworkConfig()
 	nCfg.ContractDeploymentBlock = 0
 	params.OverrideBeaconNetworkConfig(nCfg)
-	defer func() {
-		params.OverrideBeaconNetworkConfig(orgNetworkConfig)
-	}()
 
 	hook := logTest.NewGlobal()
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -425,7 +370,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		testAcc.Backend.Commit()
 	}
-	web3Service.latestEth1Data = &protodb.LatestETH1Data{LastRequestedBlock: 0}
+	web3Service.latestEth1Data = &ethpb.LatestETH1Data{LastRequestedBlock: 0}
 	// Spin off to a separate routine
 	go web3Service.run(web3Service.ctx.Done())
 	// Wait for 2 seconds so that the
@@ -436,15 +381,15 @@ func TestLogTillGenesis_OK(t *testing.T) {
 }
 
 func TestInitDepositCache_OK(t *testing.T) {
-	ctrs := []*protodb.DepositContainer{
-		{Index: 0, Eth1BlockHeight: 2, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}},
-		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}},
-		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}}},
+	ctrs := []*ethpb.DepositContainer{
+		{Index: 0, Eth1BlockHeight: 2, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("A")}, Data: &ethpb.Deposit_Data{PublicKey: []byte{}}}},
+		{Index: 1, Eth1BlockHeight: 4, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("B")}, Data: &ethpb.Deposit_Data{PublicKey: []byte{}}}},
+		{Index: 2, Eth1BlockHeight: 6, Deposit: &ethpb.Deposit{Proof: [][]byte{[]byte("c")}, Data: &ethpb.Deposit_Data{PublicKey: []byte{}}}},
 	}
 	gs, _ := util.DeterministicGenesisState(t, 1)
 	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
-		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
+		chainStartData:  &ethpb.ChainStartData{Chainstarted: false},
 		preGenesisState: gs,
 		cfg:             &config{beaconDB: beaconDB},
 	}
@@ -467,7 +412,7 @@ func TestInitDepositCache_OK(t *testing.T) {
 }
 
 func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
-	ctrs := []*protodb.DepositContainer{
+	ctrs := []*ethpb.DepositContainer{
 		{
 			Index:           0,
 			Eth1BlockHeight: 2,
@@ -505,7 +450,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 	gs, _ := util.DeterministicGenesisState(t, 1)
 	beaconDB := dbutil.SetupDB(t)
 	s := &Service{
-		chainStartData:  &protodb.ChainStartData{Chainstarted: false},
+		chainStartData:  &ethpb.ChainStartData{Chainstarted: false},
 		preGenesisState: gs,
 		cfg:             &config{beaconDB: beaconDB},
 	}
@@ -541,9 +486,14 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 }
 
 func TestNewService_EarliestVotingBlock(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -553,11 +503,11 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	// simulated backend sets eth1 block
 	// time as 10 seconds
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.SecondsPerETH1Block = 10
 	conf.Eth1FollowDistance = 50
 	params.OverrideBeaconConfig(conf)
-	defer params.UseMainnetConfig()
 
 	// Genesis not set
 	followBlock := uint64(2000)
@@ -591,10 +541,15 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 }
 
 func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
 
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	s1, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -623,12 +578,25 @@ func (mbs *mockBSUpdater) Update(bs clientstats.BeaconNodeStats) {
 var _ BeaconNodeStatsUpdater = &mockBSUpdater{}
 
 func TestServiceFallbackCorrectly(t *testing.T) {
-	firstEndpoint := "A"
-	secondEndpoint := "B"
-
-	testAcc, err := contracts.Setup()
+	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := dbutil.SetupDB(t)
+
+	server, firstEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
+	server2, secondEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server2.Stop()
+	})
+	server3, thirdEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server3.Stop()
+	})
 
 	mbs := &mockBSUpdater{}
 	s1, err := NewService(context.Background(),
@@ -637,10 +605,11 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 		WithDatabase(beaconDB),
 		WithBeaconNodeStatsUpdater(mbs),
 	)
-	s1.cfg.beaconNodeStatsUpdater = mbs
 	require.NoError(t, err)
+	s1.cfg.beaconNodeStatsUpdater = mbs
 
 	assert.Equal(t, firstEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
+
 	// Stay at the first endpoint.
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, firstEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
@@ -652,16 +621,10 @@ func TestServiceFallbackCorrectly(t *testing.T) {
 	assert.Equal(t, secondEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
 	assert.Equal(t, true, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be true when > 1 endpoint is configured")
 
-	thirdEndpoint := "C"
-	fourthEndpoint := "D"
-
-	s1.cfg.httpEndpoints = append(s1.cfg.httpEndpoints, network.Endpoint{Url: thirdEndpoint}, network.Endpoint{Url: fourthEndpoint})
+	s1.cfg.httpEndpoints = append(s1.cfg.httpEndpoints, network.Endpoint{Url: thirdEndpoint})
 
 	s1.fallbackToNextEndpoint()
 	assert.Equal(t, thirdEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-
-	s1.fallbackToNextEndpoint()
-	assert.Equal(t, fourthEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
 
 	// Rollover correctly back to the first endpoint
 	s1.fallbackToNextEndpoint()
@@ -692,8 +655,13 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	cache, err := depositcache.New()
 	require.NoError(t, err)
-
+	srv, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		srv.Stop()
+	})
 	s1, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
 		WithDepositCache(cache),
 	)
@@ -717,7 +685,13 @@ func TestService_InitializeCorrectly(t *testing.T) {
 	cache, err := depositcache.New()
 	require.NoError(t, err)
 
+	srv, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		srv.Stop()
+	})
 	s1, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
 		WithDepositCache(cache),
 	)
@@ -740,8 +714,13 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	cache, err := depositcache.New()
 	require.NoError(t, err)
-
+	srv, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		srv.Stop()
+	})
 	s1, err := NewService(context.Background(),
+		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
 		WithDepositCache(cache),
 	)
@@ -752,9 +731,9 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 
 	require.NoError(t, s1.cfg.beaconDB.SaveGenesisData(context.Background(), genState))
 
-	err = s1.cfg.beaconDB.SavePowchainData(context.Background(), &protodb.ETH1ChainData{
-		ChainstartData:    &protodb.ChainStartData{Chainstarted: true},
-		DepositContainers: []*protodb.DepositContainer{{Index: 1}},
+	err = s1.cfg.beaconDB.SavePowchainData(context.Background(), &ethpb.ETH1ChainData{
+		ChainstartData:    &ethpb.ChainStartData{Chainstarted: true},
+		DepositContainers: []*ethpb.DepositContainer{{Index: 1}},
 	})
 	require.NoError(t, err)
 	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
@@ -767,34 +746,24 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 }
 
 func TestService_ValidateDepositContainers(t *testing.T) {
-	beaconDB := dbutil.SetupDB(t)
-	cache, err := depositcache.New()
-	require.NoError(t, err)
-
-	s1, err := NewService(context.Background(),
-		WithDatabase(beaconDB),
-		WithDepositCache(cache),
-	)
-	require.NoError(t, err)
-
 	var tt = []struct {
 		name        string
-		ctrsFunc    func() []*protodb.DepositContainer
+		ctrsFunc    func() []*ethpb.DepositContainer
 		expectedRes bool
 	}{
 		{
 			name: "zero containers",
-			ctrsFunc: func() []*protodb.DepositContainer {
-				return make([]*protodb.DepositContainer, 0)
+			ctrsFunc: func() []*ethpb.DepositContainer {
+				return make([]*ethpb.DepositContainer, 0)
 			},
 			expectedRes: true,
 		},
 		{
 			name: "ordered containers",
-			ctrsFunc: func() []*protodb.DepositContainer {
-				ctrs := make([]*protodb.DepositContainer, 0)
+			ctrsFunc: func() []*ethpb.DepositContainer {
+				ctrs := make([]*ethpb.DepositContainer, 0)
 				for i := 0; i < 10; i++ {
-					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+					ctrs = append(ctrs, &ethpb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
 				}
 				return ctrs
 			},
@@ -802,10 +771,10 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 		},
 		{
 			name: "0th container missing",
-			ctrsFunc: func() []*protodb.DepositContainer {
-				ctrs := make([]*protodb.DepositContainer, 0)
+			ctrsFunc: func() []*ethpb.DepositContainer {
+				ctrs := make([]*ethpb.DepositContainer, 0)
 				for i := 1; i < 10; i++ {
-					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+					ctrs = append(ctrs, &ethpb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
 				}
 				return ctrs
 			},
@@ -813,13 +782,13 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 		},
 		{
 			name: "skipped containers",
-			ctrsFunc: func() []*protodb.DepositContainer {
-				ctrs := make([]*protodb.DepositContainer, 0)
+			ctrsFunc: func() []*ethpb.DepositContainer {
+				ctrs := make([]*ethpb.DepositContainer, 0)
 				for i := 0; i < 10; i++ {
 					if i == 5 || i == 7 {
 						continue
 					}
-					ctrs = append(ctrs, &protodb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
+					ctrs = append(ctrs, &ethpb.DepositContainer{Index: int64(i), Eth1BlockHeight: uint64(i + 10)})
 				}
 				return ctrs
 			},
@@ -828,7 +797,7 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 	}
 
 	for _, test := range tt {
-		assert.Equal(t, test.expectedRes, s1.validateDepositContainers(test.ctrsFunc()))
+		assert.Equal(t, test.expectedRes, validateDepositContainers(test.ctrsFunc()))
 	}
 }
 
@@ -839,4 +808,38 @@ func TestTimestampIsChecked(t *testing.T) {
 	// Give an older timestmap beyond threshold.
 	timestamp = uint64(time.Now().Add(-eth1Threshold).Add(-1 * time.Minute).Unix())
 	assert.Equal(t, true, eth1HeadIsBehind(timestamp))
+}
+
+func TestETH1Endpoints(t *testing.T) {
+	server, firstEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
+	server, secondEndpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
+	endpoints := []string{firstEndpoint, secondEndpoint}
+
+	testAcc, err := mock.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
+	beaconDB := dbutil.SetupDB(t)
+
+	mbs := &mockBSUpdater{}
+	s1, err := NewService(context.Background(),
+		WithHttpEndpoints(endpoints),
+		WithDepositContractAddress(testAcc.ContractAddr),
+		WithDatabase(beaconDB),
+		WithBeaconNodeStatsUpdater(mbs),
+	)
+	s1.cfg.beaconNodeStatsUpdater = mbs
+	require.NoError(t, err)
+
+	// Check default endpoint is set to current.
+	assert.Equal(t, firstEndpoint, s1.CurrentETH1Endpoint(), "Unexpected http endpoint")
+
+	// Check endpoints are all present.
+	assert.DeepSSZEqual(t, endpoints, s1.ETH1Endpoints(), "Unexpected http endpoint slice")
 }

@@ -23,15 +23,20 @@ import (
 
 const (
 	phraseWordCount = 24
-	/* #nosec G101 */
+	// #nosec G101 -- Not sensitive data
 	newMnemonicPassphraseYesNoText = "(Advanced) Do you want to setup a '25th word' passphrase for your mnemonic? [y/n]"
-	/* #nosec G101 */
+	// #nosec G101 -- Not sensitive data
 	newMnemonicPassphrasePromptText = "(Advanced) Setup a passphrase '25th word' for your mnemonic " +
 		"(WARNING: You cannot recover your keys from your mnemonic if you forget this passphrase!)"
-	/* #nosec G101 */
+	// #nosec G101 -- Not sensitive data
 	mnemonicPassphraseYesNoText = "(Advanced) Do you have an optional '25th word' passphrase for your mnemonic? [y/n]"
-	/* #nosec G101 */
+	// #nosec G101 -- Not sensitive data
 	mnemonicPassphrasePromptText = "(Advanced) Enter the '25th word' passphrase for your mnemonic"
+)
+
+var (
+	ErrIncorrectWordNumber = errors.New("incorrect number of words provided")
+	ErrEmptyMnemonic       = errors.New("phrase cannot be empty")
 )
 
 // RecoverWalletConfig to run the recover wallet function.
@@ -152,7 +157,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 	if cliCtx.IsSet(flags.MnemonicFileFlag.Name) {
 		mnemonicFilePath := cliCtx.String(flags.MnemonicFileFlag.Name)
-		data, err := ioutil.ReadFile(mnemonicFilePath) // #nosec G304
+		data, err := ioutil.ReadFile(mnemonicFilePath) // #nosec G304 -- ReadFile is safe
 		if err != nil {
 			return "", err
 		}
@@ -228,16 +233,18 @@ func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 // as specified(currently 24).
 func ValidateMnemonic(mnemonic string) error {
 	if strings.Trim(mnemonic, " ") == "" {
-		return errors.New("phrase cannot be empty")
+		return ErrEmptyMnemonic
 	}
 	words := strings.Split(mnemonic, " ")
-	for i, word := range words {
+	validWordCount := 0
+	for _, word := range words {
 		if strings.Trim(word, " ") == "" {
-			words = append(words[:i], words[i+1:]...)
+			continue
 		}
+		validWordCount += 1
 	}
-	if len(words) != phraseWordCount {
-		return fmt.Errorf("phrase must be %d words, entered %d", phraseWordCount, len(words))
+	if validWordCount != phraseWordCount {
+		return errors.Wrapf(ErrIncorrectWordNumber, "phrase must be %d words, entered %d", phraseWordCount, validWordCount)
 	}
 	return nil
 }

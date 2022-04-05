@@ -30,6 +30,13 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 			log.Fatalf("Failed to p2p listen: %v", err)
 		}
 	}
+	ifaceKey := convertToInterfacePrivkey(priKey)
+	id, err := peer.IDFromPublicKey(ifaceKey.GetPublic())
+	if err != nil {
+		log.Fatalf("Failed to retrieve peer id: %v", err)
+	}
+	log.Infof("Running node with peer id of %s ", id.String())
+
 	options := []libp2p.Option{
 		privKeyOption(priKey),
 		libp2p.ListenAddrs(listen),

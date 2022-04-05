@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -25,6 +26,11 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	// An optimistic validator MUST NOT participate in attestation. (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
+	if err := vs.optimisticStatus(ctx); err != nil {
+		return nil, err
 	}
 
 	st, err := vs.HeadFetcher.HeadState(ctx)
@@ -117,7 +123,7 @@ func (vs *Server) SubmitSignedAggregateSelectionProof(
 		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
 		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
 	}
-	emptySig := make([]byte, params.BeaconConfig().BLSSignatureLength)
+	emptySig := make([]byte, fieldparams.BLSSignatureLength)
 	if bytes.Equal(req.SignedAggregateAndProof.Signature, emptySig) ||
 		bytes.Equal(req.SignedAggregateAndProof.Message.SelectionProof, emptySig) {
 		return nil, status.Error(codes.InvalidArgument, "Signed signatures can't be zero hashes")

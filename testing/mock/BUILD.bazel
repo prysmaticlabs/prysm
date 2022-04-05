@@ -27,6 +27,8 @@ go_library(
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",

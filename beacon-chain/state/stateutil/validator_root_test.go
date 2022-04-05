@@ -1,15 +1,22 @@
-package stateutil
+package stateutil_test
 
 import (
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
-func Test_handleValidatorSlice_OutOfRange(t *testing.T) {
-	vals := make([]*ethpb.Validator, 1)
-	indices := []uint64{3}
-	_, err := HandleValidatorSlice(vals, indices, false)
-	assert.ErrorContains(t, "index 3 greater than number of validators 1", err)
+func BenchmarkUint64ListRootWithRegistryLimit(b *testing.B) {
+	balances := make([]uint64, 100000)
+	for i := 0; i < len(balances); i++ {
+		balances[i] = uint64(i)
+	}
+	b.Run("100k balances", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_, err := stateutil.Uint64ListRootWithRegistryLimit(balances)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }

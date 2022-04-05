@@ -46,6 +46,6 @@ func (hook *LogrusCollector) Fire(entry *logrus.Entry) error {
 }
 
 // Levels return a slice of levels supported by this hook;
-func (hook *LogrusCollector) Levels() []logrus.Level {
+func (_ *LogrusCollector) Levels() []logrus.Level {
 	return supportedLevels
 }

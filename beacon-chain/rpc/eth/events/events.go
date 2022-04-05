@@ -1,6 +1,8 @@
 package events
 
 import (
+	"strings"
+
 	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -54,11 +56,14 @@ func (s *Server) StreamEvents(
 	}
 	// Check if the topics in the request are valid.
 	requestedTopics := make(map[string]bool)
-	for _, topic := range req.Topics {
-		if _, ok := casesHandled[topic]; !ok {
-			return status.Errorf(codes.InvalidArgument, "Topic %s not allowed for event subscriptions", topic)
+	for _, rawTopic := range req.Topics {
+		splitTopic := strings.Split(rawTopic, ",")
+		for _, topic := range splitTopic {
+			if _, ok := casesHandled[topic]; !ok {
+				return status.Errorf(codes.InvalidArgument, "Topic %s not allowed for event subscriptions", topic)
+			}
+			requestedTopics[topic] = true
 		}
-		requestedTopics[topic] = true
 	}
 
 	// Subscribe to event feeds from information received in the beacon node runtime.
@@ -119,8 +124,9 @@ func handleBlockEvents(
 			return errors.Wrap(err, "could not hash tree root block")
 		}
 		eventBlock := &ethpb.EventBlock{
-			Slot:  v1Data.Message.Slot,
-			Block: item[:],
+			Slot:                v1Data.Message.Slot,
+			Block:               item[:],
+			ExecutionOptimistic: blkData.IsOptimistic,
 		}
 		return streamData(stream, BlockTopic, eventBlock)
 	default:

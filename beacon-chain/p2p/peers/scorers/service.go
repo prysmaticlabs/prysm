@@ -183,8 +183,16 @@ func (s *Service) loop(ctx context.Context) {
 	for {
 		select {
 		case <-decayBadResponsesStats.C:
+			// Exit early if context is canceled.
+			if ctx.Err() != nil {
+				return
+			}
 			s.scorers.badResponsesScorer.Decay()
 		case <-decayBlockProviderStats.C:
+			// Exit early if context is canceled.
+			if ctx.Err() != nil {
+				return
+			}
 			s.scorers.blockProviderScorer.Decay()
 		case <-ctx.Done():
 			return

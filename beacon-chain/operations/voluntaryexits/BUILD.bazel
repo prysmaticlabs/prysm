@@ -4,13 +4,11 @@ go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
-        "mock.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits",
     visibility = [
         "//beacon-chain:__subpackages__",
-        "//testing/fuzz:__pkg__",
     ],
     deps = [
         "//beacon-chain/state:go_default_library",

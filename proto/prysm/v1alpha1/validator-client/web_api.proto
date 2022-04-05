@@ -26,7 +26,7 @@ service Wallet {
             get: "/v2/validator/wallet"
         };
     }
-    rpc ImportKeystores(ImportKeystoresRequest) returns (ImportKeystoresResponse) {
+    rpc ImportAccounts(ImportAccountsRequest) returns (ImportAccountsResponse) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/keystores/import",
             body: "*"
@@ -168,11 +168,12 @@ service Auth {
     }
 }
 
-// Type of key manager for the wallet, either direct, derived, or remote.
+// Type of key manager for the wallet, either derived, imported, or remote.
 enum KeymanagerKind {
     DERIVED = 0;
     IMPORTED = 1;
     REMOTE = 2;
+    WEB3SIGNER = 3;
 }
 
 message CreateWalletRequest {
@@ -308,7 +309,7 @@ message HasWalletResponse {
     bool wallet_exists = 1;
 }
 
-message ImportKeystoresRequest {
+message ImportAccountsRequest {
     // JSON-encoded keystore files to import during wallet creation.
     repeated string keystores_imported = 1;
 
@@ -316,7 +317,7 @@ message ImportKeystoresRequest {
     string keystores_password = 2;
 }
 
-message ImportKeystoresResponse {
+message ImportAccountsResponse {
     repeated bytes imported_public_keys = 1;
 }
 

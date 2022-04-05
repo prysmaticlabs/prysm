@@ -1,3 +1,4 @@
+//go:build ((linux && amd64) || (linux && arm64) || (darwin && amd64) || (darwin && arm64) || (windows && amd64)) && !blst_disabled
 // +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
 // +build !blst_disabled
 
@@ -10,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	blst "github.com/supranational/blst/bindings/go"
@@ -31,8 +32,8 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 	if features.Get().SkipBLSVerify {
 		return &Signature{}, nil
 	}
-	if len(sig) != params.BeaconConfig().BLSSignatureLength {
-		return nil, fmt.Errorf("signature must be %d bytes", params.BeaconConfig().BLSSignatureLength)
+	if len(sig) != fieldparams.BLSSignatureLength {
+		return nil, fmt.Errorf("signature must be %d bytes", fieldparams.BLSSignatureLength)
 	}
 	signature := new(blstSignature).Uncompress(sig)
 	if signature == nil {
@@ -44,6 +45,39 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 		return nil, errors.New("signature not in group")
 	}
 	return &Signature{s: signature}, nil
+}
+
+// MultipleSignaturesFromBytes creates a group of BLS signatures from a LittleEndian 2d-byte slice.
+func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error) {
+	if features.Get().SkipBLSVerify {
+		return []common.Signature{}, nil
+	}
+	if len(multiSigs) == 0 {
+		return nil, fmt.Errorf("0 signatures provided to the method")
+	}
+	for _, s := range multiSigs {
+		if len(s) != fieldparams.BLSSignatureLength {
+			return nil, fmt.Errorf("signature must be %d bytes", fieldparams.BLSSignatureLength)
+		}
+	}
+	multiSignatures := new(blstSignature).BatchUncompress(multiSigs)
+	if len(multiSignatures) == 0 {
+		return nil, errors.New("could not unmarshal bytes into signature")
+	}
+	if len(multiSignatures) != len(multiSigs) {
+		return nil, errors.Errorf("wanted %d decompressed signatures but got %d", len(multiSigs), len(multiSignatures))
+	}
+	wrappedSigs := make([]common.Signature, len(multiSignatures))
+	for i, signature := range multiSignatures {
+		// Group check signature. Do not check for infinity since an aggregated signature
+		// could be infinite.
+		if !signature.SigValidate(false) {
+			return nil, errors.New("signature not in group")
+		}
+		copiedSig := signature
+		wrappedSigs[i] = &Signature{s: copiedSig}
+	}
+	return wrappedSigs, nil
 }
 
 // Verify a bls signature given a public key, a message.
@@ -207,8 +241,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 	randFunc := func(scalar *blst.Scalar) {
 		var rbytes [scalarBytes]byte
 		randLock.Lock()
-		// Ignore error as the error will always be nil in `read` in math/rand.
-		randGen.Read(rbytes[:]) /* #nosec G104 */
+		randGen.Read(rbytes[:]) // #nosec G104 -- Error will always be nil in `read` in math/rand
 		randLock.Unlock()
 		// Protect against the generator returning 0. Since the scalar value is
 		// derived from a big endian byte slice, we take the last byte.
@@ -224,7 +257,7 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
 	if features.Get().SkipBLSVerify {
-		return make([]byte, params.BeaconConfig().BLSSignatureLength)
+		return make([]byte, fieldparams.BLSSignatureLength)
 	}
 
 	return s.s.Compress()

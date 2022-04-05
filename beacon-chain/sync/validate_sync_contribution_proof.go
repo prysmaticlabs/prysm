@@ -52,6 +52,17 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
+
+	// We should not attempt to process this message if the node is running in optimistic mode.
+	// We just ignore in p2p so that the peer is not penalized.
+	optimistic, err := s.cfg.chain.IsOptimistic(ctx)
+	if err != nil {
+		return pubsub.ValidationReject, err
+	}
+	if optimistic {
+		return pubsub.ValidationIgnore, nil
+	}
+
 	m, err := s.readSyncContributionMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
@@ -224,7 +235,7 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 				tracing.AnnotateError(span, err)
 				return pubsub.ValidationReject, err
 			}
-			set := &bls.SignatureSet{
+			set := &bls.SignatureBatch{
 				Messages:   [][32]byte{root},
 				PublicKeys: []bls.PublicKey{publicKey},
 				Signatures: [][]byte{m.Signature},
@@ -288,7 +299,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 				tracing.AnnotateError(span, err)
 				return pubsub.ValidationIgnore, err
 			}
-			set := &bls.SignatureSet{
+			set := &bls.SignatureBatch{
 				Messages:   [][32]byte{sigRoot},
 				PublicKeys: []bls.PublicKey{aggKey},
 				Signatures: [][]byte{m.Message.Contribution.Signature},
@@ -349,7 +360,7 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 		if err != nil {
 			return err
 		}
-		set := &bls.SignatureSet{
+		set := &bls.SignatureBatch{
 			Messages:   [][32]byte{root},
 			PublicKeys: []bls.PublicKey{publicKey},
 			Signatures: [][]byte{m.SelectionProof},

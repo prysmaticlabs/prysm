@@ -9,9 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -42,22 +40,24 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 
 func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
+	opts := testServiceOptsWithDB(t)
 
-	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx)
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg = cfg
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -71,22 +71,24 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
 
-	cfg := &config{BeaconDB: beaconDB, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
-	service, err := NewService(ctx)
+	opts := testServiceOptsWithDB(t)
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg = cfg
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b32)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b33)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -101,18 +103,12 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 func TestProcessAttestations_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
+	opts := testServiceOptsWithDB(t)
+	opts = append(opts, WithAttestationPool(attestations.NewPool()))
 
-	cfg := &config{
-		BeaconDB:        beaconDB,
-		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
-		StateGen:        stategen.New(beaconDB),
-		AttPool:         attestations.NewPool(),
-	}
-	service, err := NewService(ctx)
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-	service.cfg = cfg
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
@@ -123,9 +119,45 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	require.NoError(t, service.cfg.ForkChoiceStore.ProcessBlock(ctx, 0, tRoot, tRoot, tRoot, 1, 1))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1))
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
 	service.processAttestations(ctx)
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	require.LogsDoNotContain(t, hook, "Could not process attestation for fork choice")
+}
+
+func TestNotifyEngineIfChangedHead(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	opts := testServiceOptsWithDB(t)
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	service.notifyEngineIfChangedHead(ctx, service.headRoot())
+	hookErr := "could not notify forkchoice update"
+	finalizedErr := "could not get finalized checkpoint"
+	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, hookErr)
+	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
+	require.LogsContain(t, hook, finalizedErr)
+
+	hook.Reset()
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 1
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	finalized := &ethpb.Checkpoint{Root: r[:], Epoch: 0}
+	service.head = &head{
+		slot:  1,
+		root:  r,
+		block: wsb,
+	}
+	service.store.SetFinalizedCheckpt(finalized)
+	service.notifyEngineIfChangedHead(ctx, [32]byte{'b'})
+	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, hookErr)
 }

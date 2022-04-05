@@ -83,6 +83,9 @@ go_proto_library(
 
 go_library(
     name = "go_default_library",
+    srcs = [
+        "interface.go",
+    ],
     embed = [
         ":go_grpc_gateway_library",
     ],

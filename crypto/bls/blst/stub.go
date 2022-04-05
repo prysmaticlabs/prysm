@@ -1,4 +1,5 @@
-// +build  blst_disabled libfuzzer
+//go:build blst_disabled || fuzz
+// +build blst_disabled fuzz
 
 package blst
 

@@ -35,7 +35,7 @@ var (
 func NextSlotState(_ context.Context, root []byte) (state.BeaconState, error) {
 	nsc.RLock()
 	defer nsc.RUnlock()
-	if !bytes.Equal(root, nsc.root) {
+	if !bytes.Equal(root, nsc.root) || bytes.Equal(root, []byte{}) {
 		nextSlotCacheMiss.Inc()
 		return nil, nil
 	}

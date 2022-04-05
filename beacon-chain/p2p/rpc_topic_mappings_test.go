@@ -102,7 +102,7 @@ func TestTopicFromMessage_CorrectType(t *testing.T) {
 		assert.Equal(t, SchemaVersionV1, version)
 	}
 
-	// After Fork
+	// Altair Fork
 	for m := range messageMapping {
 		topic, err := TopicFromMessage(m, forkEpoch)
 		assert.NoError(t, err)

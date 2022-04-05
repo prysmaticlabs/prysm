@@ -59,7 +59,7 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 	case err == nil:
 		return bal, nil
 	case errors.Is(err, cache.ErrNotFound):
-		break
+		// Do nothing if we receive a not found error.
 	default:
 		// In the event, we encounter another error we return it.
 		return 0, err

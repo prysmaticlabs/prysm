@@ -71,7 +71,8 @@ func TestServer_StreamAltairBlocks_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisStateAltair(t, 64)
 	c, err := altair.NextSyncCommittee(ctx, beaconState)
@@ -99,7 +100,7 @@ func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 	go func(tt *testing.T) {
 		assert.NoError(tt, server.StreamBlocksAltair(&ethpb.StreamBlocksRequest{}, mockStream), "Could not call RPC method")
 	}(t)
-	wrappedBlk, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	wrappedBlk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
@@ -112,7 +113,8 @@ func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisStateAltair(t, 32)
@@ -124,7 +126,7 @@ func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
 	require.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wrappedBlk, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	wrappedBlk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wrappedBlk))
 	chainService := &chainMock.ChainService{State: beaconState}
