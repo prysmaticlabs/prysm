@@ -26,34 +26,48 @@ func NewProposerPayloadIDsCache() *ProposerPayloadIDsCache {
 }
 
 // GetProposerPayloadIDs returns the proposer and  payload IDs for the given slot.
-func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot) (types.ValidatorIndex, uint64, bool) {
+func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot) (types.ValidatorIndex, [8]byte, bool) {
 	f.RLock()
 	defer f.RUnlock()
 	ids, ok := f.slotToProposerAndPayloadIDs[slot]
 	if !ok {
-		return 0, 0, false
+		return 0, [8]byte{}, false
 	}
 	vId := ids[:vIdLength]
-	pId := ids[vIdLength:]
-	return types.ValidatorIndex(bytesutil.BytesToUint64BigEndian(vId)), bytesutil.BytesToUint64BigEndian(pId), true
+
+	b := ids[vIdLength:]
+	var pId [pIdLength]byte
+	copy(pId[:], b)
+
+	return types.ValidatorIndex(bytesutil.BytesToUint64BigEndian(vId)), pId, true
 }
 
 // SetProposerAndPayloadIDs sets the proposer and payload IDs for the given slot.
-func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId types.ValidatorIndex, pId uint64) {
+func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId types.ValidatorIndex, pId [8]byte) {
 	f.Lock()
 	defer f.Unlock()
 	var vIdBytes [vIdLength]byte
 	copy(vIdBytes[:], bytesutil.Uint64ToBytesBigEndian(uint64(vId)))
-	var pIdBytes [pIdLength]byte
-	copy(pIdBytes[:], bytesutil.Uint64ToBytesBigEndian(pId))
 
 	var bytes [vpIdsLength]byte
-	copy(bytes[:], append(vIdBytes[:], pIdBytes[:]...))
+	copy(bytes[:], append(vIdBytes[:], pId[:]...))
 
 	_, ok := f.slotToProposerAndPayloadIDs[slot]
 	// Ok to overwrite if the slot is already set but the payload ID is not set.
 	// This combats the re-org case where payload assignment could change the epoch of.
-	if !ok || (ok && pId != 0) {
+	if !ok || (ok && pId != [pIdLength]byte{}) {
 		f.slotToProposerAndPayloadIDs[slot] = bytes
+	}
+}
+
+// PrunePayloadIDs removes the payload id entries that's current than input slot.
+func (f *ProposerPayloadIDsCache) PrunePayloadIDs(slot types.Slot) {
+	f.Lock()
+	defer f.Unlock()
+
+	for s := range f.slotToProposerAndPayloadIDs {
+		if slot > s {
+			delete(f.slotToProposerAndPayloadIDs, s)
+		}
 	}
 }

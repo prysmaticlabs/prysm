@@ -91,7 +91,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		return nil, errors.Wrap(err, "could not set block to valid")
 	}
 	if hasAttr { // If the forkchoice update call has an attribute, update the proposer payload ID cache.
-		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, bytesutil.BytesToUint64BigEndian(payloadID[:]))
+		var pId [8]byte
+		copy(pId[:], payloadID[:])
+		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId)
 	}
 	return payloadID, nil
 }
@@ -206,18 +208,18 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	// Get fee recipient.
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := s.cfg.BeaconDB.FeeRecipientByValidatorID(ctx, proposerID)
-	switch err == nil {
-	case true:
-		feeRecipient = recipient
-	case errors.As(err, kv.ErrNotFoundFeeRecipient):
+	switch {
+	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
 		if feeRecipient.String() == fieldparams.EthBurnAddressHex {
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": proposerID,
 				"burnAddress":    fieldparams.EthBurnAddressHex,
 			}).Error("Fee recipient not set. Using burn address")
 		}
-	default:
+	case err != nil:
 		return false, nil, 0, errors.Wrap(err, "could not get fee recipient in db")
+	default:
+		feeRecipient = recipient
 	}
 
 	// Get timestamp.

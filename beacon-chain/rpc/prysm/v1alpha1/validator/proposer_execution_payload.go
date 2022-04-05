@@ -43,11 +43,11 @@ var (
 // The payload is computed given the respected time of merge.
 func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex) (*enginev1.ExecutionPayload, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
-	if ok && proposerID == vIdx && payloadId != 0 { // Payload ID is cache hit. Return the cached payload ID.
-		var vIdBytes [8]byte
-		copy(vIdBytes[:], bytesutil.Uint64ToBytesBigEndian(payloadId))
+	if ok && proposerID == vIdx && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
+		var pid [8]byte
+		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		return vs.ExecutionEngineCaller.GetPayload(ctx, vIdBytes)
+		return vs.ExecutionEngineCaller.GetPayload(ctx, pid)
 	}
 	payloadIDCacheMiss.Inc()
 
