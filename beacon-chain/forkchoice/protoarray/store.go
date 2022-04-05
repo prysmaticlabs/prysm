@@ -631,7 +631,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
 func (s *Store) leadsToViableHead(node *Node) (bool, error) {
-	if node.optimistic == INVALID {
+	if node.optimistic == invalid {
 		return false, nil
 	}
 

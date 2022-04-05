@@ -19,26 +19,26 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 		return false, ErrUnknownNodeRoot
 	}
 	node := f.store.nodes[index]
-	return node.optimistic == SYNCING, nil
+	return node.optimistic == syncing, nil
 }
 
 // SetOptimisticToValid is called with the root of a block that was returned as
 // VALID by the EL.
 // WARNING: This method returns an error if the root is not found in forkchoice
 func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) error {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
 	// We can only update if given root is in Fork Choice
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
 		return ErrUnknownNodeRoot
 	}
 
-	for node := f.store.nodes[index]; node.optimistic == SYNCING; node = f.store.nodes[index] {
+	for node := f.store.nodes[index]; node.optimistic == syncing; node = f.store.nodes[index] {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		node.optimistic = VALID
+		node.optimistic = valid
 		index = node.parent
 		if index == NonExistentNode {
 			break
@@ -51,7 +51,7 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 // SetOptimisticToInvalid updates the synced_tips map when the block with the given root becomes INVALID.
 // It takes two parameters: the root of the INVALID block and the payload Hash
 // of the last valid block.s
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [32]byte) ([][32]byte, error) {
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHash [32]byte) ([][32]byte, error) {
 	f.store.nodesLock.Lock()
 	invalidRoots := make([][32]byte, 0)
 	// We only support setting invalid a node existing in Forkchoice
@@ -62,7 +62,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [
 	}
 	node := f.store.nodes[invalidIndex]
 
-	lastValidIndex, ok := f.store.payloadIndices[payload]
+	lastValidIndex, ok := f.store.payloadIndices[payloadHash]
 	if !ok || lastValidIndex == NonExistentNode {
 		f.store.nodesLock.Unlock()
 		return invalidRoots, errInvalidFinalizedNode
@@ -77,6 +77,8 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [
 		}
 		node = f.store.nodes[firstInvalidIndex]
 	}
+	// if the last valid hash is not an ancestor of the invalid block, we
+	// just remove the invalid block.
 	if node.parent != lastValidIndex {
 		node = f.store.nodes[invalidIndex]
 		firstInvalidIndex = invalidIndex
@@ -120,7 +122,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [
 	}
 
 	invalidIndices := map[uint64]bool{firstInvalidIndex: true}
-	node.optimistic = INVALID
+	node.optimistic = invalid
 	node.weight = 0
 	delete(f.store.nodesIndices, node.root)
 	delete(f.store.canonicalNodes, node.root)
@@ -130,7 +132,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [
 		if _, ok := invalidIndices[invalidNode.parent]; !ok {
 			continue
 		}
-		if invalidNode.optimistic == VALID {
+		if invalidNode.optimistic == valid {
 			f.store.nodesLock.Unlock()
 			return invalidRoots, errInvalidOptimisticStatus
 		}
@@ -140,7 +142,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [
 		if !previouslyBoosted && invalidNode.root == previousBoostRoot {
 			previouslyBoosted = true
 		}
-		invalidNode.optimistic = INVALID
+		invalidNode.optimistic = invalid
 		invalidIndices[index] = true
 		invalidNode.weight = 0
 		delete(f.store.nodesIndices, invalidNode.root)

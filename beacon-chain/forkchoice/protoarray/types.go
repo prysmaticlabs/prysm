@@ -51,9 +51,9 @@ type Node struct {
 type OptimisticStatus uint8
 
 const (
-	SYNCING OptimisticStatus = iota // the node is optimistic
-	VALID                           //fully validated node
-	INVALID                         // invalid execution payload
+	syncing OptimisticStatus = iota // the node is optimistic
+	valid                           //fully validated node
+	invalid                         // invalid execution payload
 )
 
 // Vote defines an individual validator's vote.
