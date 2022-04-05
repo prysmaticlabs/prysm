@@ -52,6 +52,9 @@ func E2ETestConfig() *BeaconChainConfig {
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "600"
 
+	// Sync Committee.
+	e2eConfig.EpochsPerSyncCommitteePeriod = 6
+
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 253}
