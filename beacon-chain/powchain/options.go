@@ -1,6 +1,9 @@
 package powchain
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -9,6 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/network"
 )
+
+// DefaultRPCHTTPTimeout for HTTP requests via an RPC connection to an execution node.
+const DefaultRPCHTTPTimeout = time.Second * 6
 
 type Option func(s *Service) error
 
@@ -32,10 +38,20 @@ func WithHttpEndpoints(endpointStrings []string) Option {
 	}
 }
 
-// WithExecutionClientJWTSecret for authenticating the execution node JSON-RPC endpoint.
-func WithExecutionClientJWTSecret(jwtSecret []byte) Option {
-	return func(s *Service) error {
-		s.cfg.executionEndpointJWTSecret = jwtSecret
+// WithJWTSecret for authenticating the execution node JSON-RPC endpoint.
+func WithJWTSecret(secret []byte) Option {
+	return func(c *Service) error {
+		if len(secret) == 0 {
+			return nil
+		}
+		authTransport := &jwtTransport{
+			underlyingTransport: http.DefaultTransport,
+			jwtSecret:           secret,
+		}
+		c.cfg.httpRPCClient = &http.Client{
+			Timeout:   DefaultRPCHTTPTimeout,
+			Transport: authTransport,
+		}
 		return nil
 	}
 }

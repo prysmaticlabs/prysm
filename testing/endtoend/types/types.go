@@ -20,6 +20,7 @@ type E2EConfig struct {
 	UseFixedPeerIDs         bool
 	UseValidatorCrossClient bool
 	EpochsToRun             uint64
+	Seed                    int64
 	TracingSinkEndpoint     string
 	Evaluators              []Evaluator
 	BeaconFlags             []string

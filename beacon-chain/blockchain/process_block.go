@@ -204,11 +204,15 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
 	}
-	if err := s.updateHead(ctx, balances); err != nil {
+	headRoot, err := s.updateHead(ctx, balances)
+	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
 	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), s.headRoot(), bytesutil.ToBytes32(finalized.Root)); err != nil {
 		return err
+	}
+	if err := s.saveHead(ctx, headRoot); err != nil {
+		return errors.Wrap(err, "could not save head")
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
