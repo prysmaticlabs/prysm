@@ -782,12 +782,12 @@ func HydrateBlindedBeaconBlockBodyBellatrix(b *ethpb.BlindedBeaconBlockBodyBella
 		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	if b.Graffiti == nil {
-		b.Graffiti = make([]byte, fieldparams.RootLength)
+		b.Graffiti = make([]byte, 32)
 	}
 	if b.Eth1Data == nil {
 		b.Eth1Data = &ethpb.Eth1Data{
 			DepositRoot: make([]byte, fieldparams.RootLength),
-			BlockHash:   make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, 32),
 		}
 	}
 	if b.SyncAggregate == nil {
@@ -798,14 +798,14 @@ func HydrateBlindedBeaconBlockBodyBellatrix(b *ethpb.BlindedBeaconBlockBodyBella
 	}
 	if b.ExecutionPayloadHeader == nil {
 		b.ExecutionPayloadHeader = &ethpb.ExecutionPayloadHeader{
-			ParentHash:       make([]byte, fieldparams.RootLength),
+			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, 20),
 			StateRoot:        make([]byte, fieldparams.RootLength),
 			ReceiptRoot:      make([]byte, fieldparams.RootLength),
 			LogsBloom:        make([]byte, 256),
-			PrevRandao:       make([]byte, fieldparams.RootLength),
-			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-			BlockHash:        make([]byte, fieldparams.RootLength),
+			PrevRandao:       make([]byte, 32),
+			BaseFeePerGas:    make([]byte, 32),
+			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
 		}
 	}
