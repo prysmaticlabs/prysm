@@ -50,6 +50,10 @@ func (SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, er
 	panic("implement me")
 }
 
+func (SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
+	panic("implement me")
+}
+
 func (SignedBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
 	panic("implement me")
 }
@@ -192,6 +196,10 @@ func (BeaconBlockBody) Proto() proto.Message {
 }
 
 func (BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+	panic("implement me")
+}
+
+func (BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
 	panic("implement me")
 }
 
