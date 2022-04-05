@@ -241,10 +241,7 @@ func (r *testRunner) run() {
 			return errors.New("chain cannot start")
 		}
 
-		if config.TestDeposits {
-			log.Info("Running deposit tests")
-			r.testDeposits(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
-		}
+		r.testDepositsAndTx(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
 
 		// Create GRPC connection to beacon nodes.
 		conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)
@@ -331,8 +328,8 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	return nil
 }
 
-// testDeposits runs tests when config.TestDeposits is enabled.
-func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
+// testDepositsAndTx runs tests when config.TestDeposits is enabled.
+func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 
@@ -342,12 +339,29 @@ func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
 			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
 		}
 		go func() {
-			err := components.SendAndMineDeposits(keystorePath, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
-			if err != nil {
-				r.t.Fatal(err)
+			if r.config.TestDeposits {
+				log.Info("Running deposit tests")
+				err := components.SendAndMineDeposits(keystorePath, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
+				if err != nil {
+					r.t.Fatal(err)
+				}
 			}
+			r.testTxGeneration(ctx, g, keystorePath, []e2etypes.ComponentRunner{})
 		}()
-		return depositCheckValidator.Start(ctx)
+		if r.config.TestDeposits {
+			return depositCheckValidator.Start(ctx)
+		}
+		return nil
+	})
+}
+
+func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
+	txGenerator := eth1.NewTransactionGenerator(keystorePath, r.config.Seed)
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
+			return fmt.Errorf("transaction generator requires eth1 nodes to be run: %w", err)
+		}
+		return txGenerator.Start(ctx)
 	})
 }
 
@@ -360,11 +374,14 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	g.Go(func() error {
 		return ethNode.Start(ctx)
 	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
 	syncBeaconNode := components.NewBeaconNode(config, index, bootnodeEnr)
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})
-	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode, syncBeaconNode}); err != nil {
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{syncBeaconNode}); err != nil {
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index), grpc.WithInsecure())

@@ -77,6 +77,7 @@ message SignRequest {
 
         // Bellatrix objects.
         ethereum.eth.v1alpha1.BeaconBlockBellatrix blockV3 = 111;
+        ethereum.eth.v1alpha1.BlindedBeaconBlockBellatrix blinded_blockV3 = 112;
     }
     reserved 4, 5; // Reserving old, deleted fields.
     uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
