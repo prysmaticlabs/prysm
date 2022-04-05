@@ -92,7 +92,8 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		// Command
 		"eth2",
 		// Command flags
-		"--network=" + network,
+		//"--network=" + network,
+		"--Xnetwork-altair-fork-epoch=6",
 		"--slashing-protection-enabled=false", // Otherwise, a postgres DB is required.
 		"--key-manager-api-enabled=true",
 	}
