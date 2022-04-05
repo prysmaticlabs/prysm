@@ -18,8 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-var endpoint = "http://127.0.0.1"
-
 func setDefaultMocks(service *Service) *Service {
 	service.eth1DataFetcher = &goodFetcher{}
 	service.httpLogger = &goodLogger{}
@@ -32,6 +30,11 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -70,6 +73,11 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -97,6 +105,11 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -113,6 +126,11 @@ func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 
 func TestBlockExists_ValidHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -144,6 +162,11 @@ func TestBlockExists_ValidHash(t *testing.T) {
 
 func TestBlockExists_InvalidHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -158,6 +181,11 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -181,6 +209,11 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 
 func TestBlockExistsWithCache_UsesCachedHeaderInfo(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -202,6 +235,11 @@ func TestBlockExistsWithCache_UsesCachedHeaderInfo(t *testing.T) {
 
 func TestBlockExistsWithCache_HeaderNotCached(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -218,6 +256,11 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -245,6 +288,11 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -278,6 +326,11 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -309,6 +362,11 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 
 func TestService_BlockTimeByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),

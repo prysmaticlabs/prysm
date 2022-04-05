@@ -8,7 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	engine "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -133,7 +134,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: engine.ErrAcceptedSyncingPayloadStatus,
+			newForkchoiceErr: powchain.ErrAcceptedSyncingPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 		},
 		{
@@ -147,7 +148,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: engine.ErrInvalidPayloadStatus,
+			newForkchoiceErr: powchain.ErrInvalidPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 			errString:        "could not notify forkchoice update from execution engine: payload status is INVALID",
 		},
@@ -155,7 +156,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service.cfg.ExecutionEngineCaller = &mockEngineService{forkchoiceError: tt.newForkchoiceErr}
+			service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
 			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, service.headRoot(), tt.finalizedRoot)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
@@ -202,49 +203,56 @@ func Test_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name          string
-		preState      state.BeaconState
-		postState     state.BeaconState
-		blk           block.SignedBeaconBlock
-		newPayloadErr error
-		errString     string
+		name           string
+		preState       state.BeaconState
+		postState      state.BeaconState
+		isValidPayload bool
+		blk            block.SignedBeaconBlock
+		newPayloadErr  error
+		errString      string
 	}{
 		{
-			name:      "phase 0 post state",
-			postState: phase0State,
-			preState:  phase0State,
+			name:           "phase 0 post state",
+			postState:      phase0State,
+			preState:       phase0State,
+			isValidPayload: true,
 		},
 		{
-			name:      "altair post state",
-			postState: altairState,
-			preState:  altairState,
+			name:           "altair post state",
+			postState:      altairState,
+			preState:       altairState,
+			isValidPayload: true,
 		},
 		{
-			name:      "nil beacon block",
-			postState: bellatrixState,
-			preState:  bellatrixState,
-			errString: "signed beacon block can't be nil",
+			name:           "nil beacon block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			errString:      "signed beacon block can't be nil",
+			isValidPayload: false,
 		},
 		{
-			name:          "new payload with optimistic block",
-			postState:     bellatrixState,
-			preState:      bellatrixState,
-			blk:           bellatrixBlk,
-			newPayloadErr: engine.ErrAcceptedSyncingPayloadStatus,
+			name:           "new payload with optimistic block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			blk:            bellatrixBlk,
+			newPayloadErr:  powchain.ErrAcceptedSyncingPayloadStatus,
+			isValidPayload: false,
 		},
 		{
-			name:          "new payload with invalid block",
-			postState:     bellatrixState,
-			preState:      bellatrixState,
-			blk:           bellatrixBlk,
-			newPayloadErr: engine.ErrInvalidPayloadStatus,
-			errString:     "could not validate execution payload from execution engine: payload status is INVALID",
+			name:           "new payload with invalid block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			blk:            bellatrixBlk,
+			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
+			errString:      "could not validate execution payload from execution engine: payload status is INVALID",
+			isValidPayload: false,
 		},
 		{
-			name:      "altair pre state, altair block",
-			postState: bellatrixState,
-			preState:  altairState,
-			blk:       altairBlk,
+			name:           "altair pre state, altair block",
+			postState:      bellatrixState,
+			preState:       altairState,
+			blk:            altairBlk,
+			isValidPayload: true,
 		},
 		{
 			name:      "altair pre state, happy case",
@@ -264,13 +272,15 @@ func Test_NotifyNewPayload(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
+			isValidPayload: true,
 		},
 		{
-			name:      "could not get merge block",
-			postState: bellatrixState,
-			preState:  bellatrixState,
-			blk:       bellatrixBlk,
-			errString: "could not get merge block parent hash and total difficulty",
+			name:           "could not get merge block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			blk:            bellatrixBlk,
+			errString:      "could not get merge block parent hash and total difficulty",
+			isValidPayload: false,
 		},
 		{
 			name:      "not at merge transition",
@@ -297,13 +307,15 @@ func Test_NotifyNewPayload(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
+			isValidPayload: true,
 		},
 		{
-			name:      "could not get merge block",
-			postState: bellatrixState,
-			preState:  bellatrixState,
-			blk:       bellatrixBlk,
-			errString: "could not get merge block parent hash and total difficulty",
+			name:           "could not get merge block",
+			postState:      bellatrixState,
+			preState:       bellatrixState,
+			blk:            bellatrixBlk,
+			errString:      "could not get merge block parent hash and total difficulty",
+			isValidPayload: false,
 		},
 		{
 			name:      "happy case",
@@ -323,16 +335,17 @@ func Test_NotifyNewPayload(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
+			isValidPayload: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &mockEngineService{newPayloadError: tt.newPayloadErr, blks: map[[32]byte]*v1.ExecutionBlock{}}
-			e.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
+			e := &mockPOW.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+			e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 				TotalDifficulty: "0x2",
 			}
-			e.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
+			e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
 				ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 				TotalDifficulty: "0x1",
 			}
@@ -346,11 +359,12 @@ func Test_NotifyNewPayload(t *testing.T) {
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0))
 			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
 			require.NoError(t, err)
-			err = service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk, root)
+			isValidPayload, err := service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tt.isValidPayload, isValidPayload)
 			}
 		})
 	}
@@ -382,27 +396,23 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	e := &mockEngineService{blks: map[[32]byte]*v1.ExecutionBlock{}}
-	e.blks[[32]byte{'a'}] = &v1.ExecutionBlock{
+	e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+	e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 		TotalDifficulty: "0x2",
 	}
-	e.blks[[32]byte{'b'}] = &v1.ExecutionBlock{
+	e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 		TotalDifficulty: "0x1",
 	}
 	service.cfg.ExecutionEngineCaller = e
 	payload, err := bellatrixState.LatestExecutionPayloadHeader()
 	require.NoError(t, err)
-	root := [32]byte{'c'}
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 1, root, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 0, 0))
 	postVersion, postHeader, err := getStateVersionAndPayload(bellatrixState)
 	require.NoError(t, err)
-	err = service.notifyNewPayload(ctx, bellatrixState.Version(), postVersion, payload, postHeader, bellatrixBlk, root)
+	validated, err := service.notifyNewPayload(ctx, bellatrixState.Version(), postVersion, payload, postHeader, bellatrixBlk)
 	require.NoError(t, err)
-	optimistic, err := service.IsOptimisticForRoot(ctx, root)
-	require.NoError(t, err)
-	require.Equal(t, false, optimistic)
+	require.Equal(t, true, validated)
 }
 
 func Test_IsOptimisticCandidateBlock(t *testing.T) {
@@ -495,34 +505,6 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				return wr
 			}(t),
 			want: false,
-		},
-		{
-			name: "shallow block, execution enabled justified chkpt",
-			blk: func(tt *testing.T) block.BeaconBlock {
-				blk := util.NewBeaconBlockBellatrix()
-				blk.Block.Slot = 200
-				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedBeaconBlock(blk.Block)
-				require.NoError(tt, err)
-				return wr
-			}(t),
-			justified: func(tt *testing.T) block.SignedBeaconBlock {
-				blk := util.NewBeaconBlockBellatrix()
-				blk.Block.Slot = 32
-				blk.Block.ParentRoot = parentRoot[:]
-				blk.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				blk.Block.Body.ExecutionPayload.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.FeeRecipientLength)
-				blk.Block.Body.ExecutionPayload.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				blk.Block.Body.ExecutionPayload.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				blk.Block.Body.ExecutionPayload.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
-				blk.Block.Body.ExecutionPayload.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				blk.Block.Body.ExecutionPayload.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				blk.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
-				require.NoError(tt, err)
-				return wr
-			}(t),
-			want: true,
 		},
 	}
 	for _, tt := range tests {
