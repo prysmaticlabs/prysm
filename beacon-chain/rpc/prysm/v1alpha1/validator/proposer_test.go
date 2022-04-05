@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -2341,7 +2340,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 		ExitPool:          voluntaryexits.NewPool(),
 		StateGen:          stategen.New(db),
 		SyncCommitteePool: synccommittee.NewStore(),
-		ExecutionEngineCaller: &mocks.EngineClient{
+		ExecutionEngineCaller: &mockPOW.EngineClient{
 			PayloadIDBytes:   &enginev1.PayloadIDBytes{1},
 			ExecutionPayload: payload,
 		},

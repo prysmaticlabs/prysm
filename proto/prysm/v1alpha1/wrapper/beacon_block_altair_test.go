@@ -328,3 +328,23 @@ func TestAltairBeaconBlock_AsSignRequestObject(t *testing.T) {
 	require.Equal(t, true, ok, "Not a SignRequest_BlockV2")
 	assert.Equal(t, abb, got.BlockV2)
 }
+
+func TestAltairBeaconBlock_PbBlindedBellatrixBlock(t *testing.T) {
+	sb := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{Slot: 66},
+	}
+	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
+	require.NoError(t, err)
+	_, err = wsb.PbBlindedBellatrixBlock()
+	require.ErrorContains(t, "unsupported blinded bellatrix block", err)
+}
+
+func TestAltairBeaconBlock_ExecutionPayloadHeader(t *testing.T) {
+	sb := &ethpb.SignedBeaconBlockAltair{
+		Block: &ethpb.BeaconBlockAltair{Slot: 66},
+	}
+	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
+	require.NoError(t, err)
+	_, err = wsb.Block().Body().ExecutionPayloadHeader()
+	require.ErrorContains(t, "unsupported field for block type", err)
+}

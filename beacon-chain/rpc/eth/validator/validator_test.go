@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	p2pmock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
@@ -1020,7 +1019,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mocks.EngineClient{
+			ExecutionEngineCaller: &mockPOW.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
@@ -1994,6 +1993,25 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	aggregationBits := resp.Data.AggregationBits
 	assert.Equal(t, true, aggregationBits.BitAt(0))
 	assert.DeepEqual(t, sig, resp.Data.Signature)
+
+	syncCommitteePool = synccommittee.NewStore()
+	v1Server = &v1alpha1validator.Server{
+		SyncCommitteePool: syncCommitteePool,
+		HeadFetcher: &mockChain.ChainService{
+			SyncCommitteeIndices: []types.CommitteeIndex{0},
+		},
+	}
+	server = Server{
+		V1Alpha1Server:    v1Server,
+		SyncCommitteePool: syncCommitteePool,
+	}
+	req = &ethpbv2.ProduceSyncCommitteeContributionRequest{
+		Slot:              0,
+		SubcommitteeIndex: 0,
+		BeaconBlockRoot:   root,
+	}
+	_, err = server.ProduceSyncCommitteeContribution(ctx, req)
+	assert.ErrorContains(t, "No subcommittee messages found", err)
 }
 
 func TestSubmitContributionAndProofs(t *testing.T) {
