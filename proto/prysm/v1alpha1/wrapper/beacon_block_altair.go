@@ -63,18 +63,18 @@ func (w altairSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
-// MarshalSSZTo marshals the signed beacon block to its relevant ssz
+// MarshalSSZTo marshals the signed beacon block's ssz
 // form to the provided byte buffer.
 func (w altairSignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return w.b.MarshalSSZTo(dst)
 }
 
-// SizeSSZ returns the size of serialized signed block
+// SizeSSZ returns the size of the serialized signed block
 func (w altairSignedBeaconBlock) SizeSSZ() int {
 	return w.b.SizeSSZ()
 }
 
-// UnmarshalSSZ unmarshalls the signed beacon block from its relevant ssz
+// UnmarshalSSZ unmarshals the signed beacon block from its relevant ssz
 // form.
 func (w altairSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return w.b.UnmarshalSSZ(buf)
@@ -106,6 +106,11 @@ func (altairSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 // PbBellatrixBlock is a stub.
 func (altairSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return nil, ErrUnsupportedBellatrixBlock
+}
+
+// PbBlindedBellatrixBlock is a stub.
+func (altairSignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
+	return nil, ErrUnsupportedBlindedBellatrixBlock
 }
 
 // Version of the underlying protobuf object.
@@ -153,7 +158,7 @@ func (w altairBeaconBlock) Slot() types.Slot {
 	return w.b.Slot
 }
 
-// ProposerIndex returns proposer index of the beacon block.
+// ProposerIndex returns the proposer index of the beacon block.
 func (w altairBeaconBlock) ProposerIndex() types.ValidatorIndex {
 	return w.b.ProposerIndex
 }
@@ -194,18 +199,18 @@ func (w altairBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
-// MarshalSSZTo marshals the beacon block to its relevant ssz
+// MarshalSSZTo marshals the beacon block's ssz
 // form to the provided byte buffer.
 func (w altairBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return w.b.MarshalSSZTo(dst)
 }
 
-// SizeSSZ returns the size of serialized block.
+// SizeSSZ returns the size of the serialized block.
 func (w altairBeaconBlock) SizeSSZ() int {
 	return w.b.SizeSSZ()
 }
 
-// UnmarshalSSZ unmarshalls the beacon block from its relevant ssz
+// UnmarshalSSZ unmarshals the beacon block from its relevant ssz
 // form.
 func (w altairBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return w.b.UnmarshalSSZ(buf)
@@ -222,6 +227,7 @@ func (altairBeaconBlock) Version() int {
 	return version.Altair
 }
 
+// AsSignRequestObject returns the underlying sign request object.
 func (w altairBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
 	return &validatorpb.SignRequest_BlockV2{
 		BlockV2: w.b,
@@ -307,4 +313,9 @@ func (w altairBeaconBlockBody) Proto() proto.Message {
 // ExecutionPayload is a stub.
 func (w altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayload for %T", w)
+}
+
+// ExecutionPayloadHeader is a stub.
+func (w altairBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }
