@@ -77,11 +77,11 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 	// 	return err
 	// }
 
-	//network := "minimal"
-	//if len(w.configFilePath) > 0 {
-	//	// A file path to yaml config file is acceptable network argument.
-	//	network = w.configFilePath
-	//}
+	network := "minimal"
+	if len(w.configFilePath) > 0 {
+		// A file path to yaml config file is acceptable network argument.
+		network = w.configFilePath
+	}
 
 	args := []string{
 		// Global flags
@@ -92,8 +92,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		// Command
 		"eth2",
 		// Command flags
-		//"--network=" + network,
-		"--Xnetwork-altair-fork-epoch=6",
+		"--network=" + network,
 		"--slashing-protection-enabled=false", // Otherwise, a postgres DB is required.
 		"--key-manager-api-enabled=true",
 	}
