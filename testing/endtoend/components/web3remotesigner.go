@@ -77,11 +77,11 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 	// 	return err
 	// }
 
-	network := "minimal"
-	if len(w.configFilePath) > 0 {
-		// A file path to yaml config file is acceptable network argument.
-		network = w.configFilePath
-	}
+	//network := "minimal"
+	//if len(w.configFilePath) > 0 {
+	//	// A file path to yaml config file is acceptable network argument.
+	//	network = w.configFilePath
+	//}
 
 	args := []string{
 		// Global flags
