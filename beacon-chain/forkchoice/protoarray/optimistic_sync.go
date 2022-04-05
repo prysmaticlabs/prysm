@@ -19,7 +19,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 		return false, ErrUnknownNodeRoot
 	}
 	node := f.store.nodes[index]
-	return node.optimistic == syncing, nil
+	return node.status == syncing, nil
 }
 
 // SetOptimisticToValid is called with the root of a block that was returned as
@@ -34,11 +34,11 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 		return ErrUnknownNodeRoot
 	}
 
-	for node := f.store.nodes[index]; node.optimistic == syncing; node = f.store.nodes[index] {
+	for node := f.store.nodes[index]; node.status == syncing; node = f.store.nodes[index] {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		node.optimistic = valid
+		node.status = valid
 		index = node.parent
 		if index == NonExistentNode {
 			break
@@ -122,7 +122,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 	}
 
 	invalidIndices := map[uint64]bool{firstInvalidIndex: true}
-	node.optimistic = invalid
+	node.status = invalid
 	node.weight = 0
 	delete(f.store.nodesIndices, node.root)
 	delete(f.store.canonicalNodes, node.root)
@@ -132,7 +132,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 		if _, ok := invalidIndices[invalidNode.parent]; !ok {
 			continue
 		}
-		if invalidNode.optimistic == valid {
+		if invalidNode.status == valid {
 			f.store.nodesLock.Unlock()
 			return invalidRoots, errInvalidOptimisticStatus
 		}
@@ -142,7 +142,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 		if !previouslyBoosted && invalidNode.root == previousBoostRoot {
 			previouslyBoosted = true
 		}
-		invalidNode.optimistic = invalid
+		invalidNode.status = invalid
 		invalidIndices[index] = true
 		invalidNode.weight = 0
 		delete(f.store.nodesIndices, invalidNode.root)

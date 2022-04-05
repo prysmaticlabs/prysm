@@ -95,6 +95,6 @@ func copyNode(node *Node) *Node {
 		weight:         node.weight,
 		bestChild:      node.bestChild,
 		bestDescendant: node.bestDescendant,
-		optimistic:     node.optimistic,
+		status:         node.status,
 	}
 }

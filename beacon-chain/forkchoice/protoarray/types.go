@@ -44,16 +44,16 @@ type Node struct {
 	weight         uint64                       // weight of this node.
 	bestChild      uint64                       // bestChild index of this node.
 	bestDescendant uint64                       // bestDescendant of this node.
-	optimistic     OptimisticStatus             // optimistic status of this node
+	status         status                       // optimistic status of this node
 }
 
 // enum used as optimistic status of a node
-type OptimisticStatus uint8
+type status uint8
 
 const (
-	syncing OptimisticStatus = iota // the node is optimistic
-	valid                           //fully validated node
-	invalid                         // invalid execution payload
+	syncing status = iota // the node is optimistic
+	valid                 //fully validated node
+	invalid               // invalid execution payload
 )
 
 // Vote defines an individual validator's vote.

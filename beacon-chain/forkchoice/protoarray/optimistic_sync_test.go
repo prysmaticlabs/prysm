@@ -32,10 +32,10 @@ func TestOptimistic_Outside_ForkChoice(t *testing.T) {
 	root0 := bytesutil.ToBytes32([]byte("hello0"))
 
 	nodeA := &Node{
-		slot:       types.Slot(100),
-		root:       bytesutil.ToBytes32([]byte("helloA")),
-		bestChild:  1,
-		optimistic: valid,
+		slot:      types.Slot(100),
+		root:      bytesutil.ToBytes32([]byte("helloA")),
+		bestChild: 1,
+		status:    valid,
 	}
 	nodes := []*Node{
 		nodeA,
@@ -291,8 +291,8 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		require.Equal(t, tc.newBestChild, lvh.bestChild)
 		require.Equal(t, tc.newBestDescendant, lvh.bestDescendant)
 		require.Equal(t, tc.newParentWeight, lvh.weight)
-		require.Equal(t, syncing, f.store.nodes[8].optimistic /* F */)
-		require.Equal(t, valid, f.store.nodes[5].optimistic /* E */)
+		require.Equal(t, syncing, f.store.nodes[8].status /* F */)
+		require.Equal(t, valid, f.store.nodes[5].status /* E */)
 		f.store.nodesLock.RUnlock()
 	}
 }
