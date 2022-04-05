@@ -266,3 +266,11 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 	assert.Nil(t, resp)
 	assert.Equal(t, "could not get public keys from remote server url: http://example2.com/api/v1/eth2/publicKeys: mock error", fmt.Sprintf("%v", err))
 }
+
+func TestKeymanager_AddPublicKeys(t *testing.T) {
+
+}
+
+func TestKeymanager_DeletePublicKeys(t *testing.T) {
+	
+}
