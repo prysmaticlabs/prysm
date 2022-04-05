@@ -152,14 +152,16 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
+			err = s.validateBeaconBlock(ctx, b, blkRoot)
+			switch {
+			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
+			case err != nil:
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)
-				// In the next iteration of the queue, this block will be removed from
-				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
 				continue
+			default:
 			}
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
