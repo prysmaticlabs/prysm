@@ -343,11 +343,12 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	require.NoError(t, err)
 
 	vs := &Server{
-		HeadFetcher:     chain,
-		TimeFetcher:     chain,
-		Eth1InfoFetcher: &mockPOW.POWChain{},
-		SyncChecker:     &mockSync.Sync{IsSyncing: false},
-		DepositFetcher:  depositCache,
+		HeadFetcher:            chain,
+		TimeFetcher:            chain,
+		Eth1InfoFetcher:        &mockPOW.POWChain{},
+		SyncChecker:            &mockSync.Sync{IsSyncing: false},
+		DepositFetcher:         depositCache,
+		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
 
 	unknownPubkey := bytesutil.PadTo([]byte{'u'}, 48)

@@ -143,7 +143,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 				BeaconDB:               beaconDB,
 				ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			}
-			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(tt.st.Slot(), 100, 100)
+			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(tt.st.Slot(), 100, [8]byte{100})
 			_, err := vs.getExecutionPayload(context.Background(), tt.st.Slot(), tt.validatorIndx)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
