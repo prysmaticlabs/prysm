@@ -116,9 +116,9 @@ func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
 	return b.stateRoots[idx], nil
 }
 
-// ProtobufBeaconState transforms an input into beacon state in the form of protobuf.
+// ProtobufBeaconStatePhase0 transforms an input into beacon state in the form of protobuf.
 // Error is returned if the input is not type protobuf beacon state.
-func ProtobufBeaconState(s interface{}) (*ethpb.BeaconState, error) {
+func ProtobufBeaconStatePhase0(s interface{}) (*ethpb.BeaconState, error) {
 	pbState, ok := s.(*ethpb.BeaconState)
 	if !ok {
 		return nil, errors.New("input is not type ethpb.BeaconState")
