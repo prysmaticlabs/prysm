@@ -757,11 +757,6 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 		return nil
 	}
 	fieldRoots, err := ComputeFieldRootsWithHasher(ctx, b)
-	/*logString := "Field roots: \n"
-	for _, r := range fieldRoots {
-		logString += fmt.Sprintf("%#x\n", r)
-	}
-	log.Infof(logString)*/
 	if err != nil {
 		return err
 	}
