@@ -303,6 +303,6 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 }
 
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payload [fieldparams.RootLength]byte) ([][32]byte, error) {
-	return f.store.setOptimisticToInvalid(ctx, root, payload)
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
+	return f.store.setOptimisticToInvalid(ctx, root, payloadHash)
 }
