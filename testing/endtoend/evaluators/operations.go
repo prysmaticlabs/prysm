@@ -372,6 +372,10 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 			b := blk.GetAltairBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
+		case *ethpb.BeaconBlockContainer_BellatrixBlock:
+			b := blk.GetBellatrixBlock().Block
+			slot = b.Slot
+			vote = b.Body.Eth1Data.BlockHash
 		default:
 			return errors.New("block neither phase0 nor altair")
 		}

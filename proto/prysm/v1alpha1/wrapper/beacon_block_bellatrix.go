@@ -18,14 +18,14 @@ var (
 	_ = block.BeaconBlockBody(&bellatrixBeaconBlockBody{})
 )
 
-// bellatrixSignedBeaconBlock is a convenience wrapper around a Bellatrix beacon block
+// bellatrixSignedBeaconBlock is a convenience wrapper around a Bellatrix blinded beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
 type bellatrixSignedBeaconBlock struct {
 	b *eth.SignedBeaconBlockBellatrix
 }
 
-// wrappedBellatrixSignedBeaconBlock is constructor which wraps a protobuf Bellatrix block with the block wrapper.
+// wrappedBellatrixSignedBeaconBlock is a constructor which wraps a protobuf Bellatrix block with the block wrapper.
 func wrappedBellatrixSignedBeaconBlock(b *eth.SignedBeaconBlockBellatrix) (block.SignedBeaconBlock, error) {
 	w := bellatrixSignedBeaconBlock{b: b}
 	if w.IsNil() {
@@ -59,18 +59,18 @@ func (w bellatrixSignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
-// MarshalSSZTo marshals the signed beacon block to its relevant ssz
+// MarshalSSZTo marshals the signed beacon block's ssz
 // form to the provided byte buffer.
 func (w bellatrixSignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return w.b.MarshalSSZTo(dst)
 }
 
-// SizeSSZ returns the size of serialized signed block
+// SizeSSZ returns the size of the serialized signed block
 func (w bellatrixSignedBeaconBlock) SizeSSZ() int {
 	return w.b.SizeSSZ()
 }
 
-// UnmarshalSSZ unmarshalls the signed beacon block from its relevant ssz
+// UnmarshalSSZ unmarshals the signed beacon block from its relevant ssz
 // form.
 func (w bellatrixSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return w.b.UnmarshalSSZ(buf)
@@ -91,6 +91,11 @@ func (w bellatrixSignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBl
 // PbBellatrixBlock returns the underlying protobuf object.
 func (w bellatrixSignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return w.b, nil
+}
+
+// PbBlindedBellatrixBlock is a stub.
+func (bellatrixSignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
+	return nil, ErrUnsupportedBlindedBellatrixBlock
 }
 
 // PbPhase0Block is a stub.
@@ -131,7 +136,7 @@ type bellatrixBeaconBlock struct {
 	b *eth.BeaconBlockBellatrix
 }
 
-// WrappedBellatrixBeaconBlock is constructor which wraps a protobuf Bellatrix object
+// WrappedBellatrixBeaconBlock is a constructor which wraps a protobuf Bellatrix object
 // with the block wrapper.
 //
 // Deprecated: Use WrappedBeaconBlock.
@@ -148,7 +153,7 @@ func (w bellatrixBeaconBlock) Slot() types.Slot {
 	return w.b.Slot
 }
 
-// ProposerIndex returns proposer index of the beacon block.
+// ProposerIndex returns the proposer index of the beacon block.
 func (w bellatrixBeaconBlock) ProposerIndex() types.ValidatorIndex {
 	return w.b.ProposerIndex
 }
@@ -189,18 +194,18 @@ func (w bellatrixBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
-// MarshalSSZTo marshals the beacon block to its relevant ssz
+// MarshalSSZTo marshals the beacon block's ssz
 // form to the provided byte buffer.
 func (w bellatrixBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return w.b.MarshalSSZTo(dst)
 }
 
-// SizeSSZ returns the size of serialized block.
+// SizeSSZ returns the size of the serialized block.
 func (w bellatrixBeaconBlock) SizeSSZ() int {
 	return w.b.SizeSSZ()
 }
 
-// UnmarshalSSZ unmarshalls the beacon block from its relevant ssz
+// UnmarshalSSZ unmarshals the beacon block from its relevant ssz
 // form.
 func (w bellatrixBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return w.b.UnmarshalSSZ(buf)
@@ -217,6 +222,7 @@ func (bellatrixBeaconBlock) Version() int {
 	return version.Bellatrix
 }
 
+// AsSignRequestObject returns the underlying sign request object.
 func (w bellatrixBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
 	return &validatorpb.SignRequest_BlockV3{
 		BlockV3: w.b,
@@ -228,7 +234,7 @@ type bellatrixBeaconBlockBody struct {
 	b *eth.BeaconBlockBodyBellatrix
 }
 
-// WrappedBellatrixBeaconBlockBody is constructor which wraps a protobuf bellatrix object
+// WrappedBellatrixBeaconBlockBody is a constructor which wraps a protobuf bellatrix object
 // with the block wrapper.
 func WrappedBellatrixBeaconBlockBody(b *eth.BeaconBlockBodyBellatrix) (block.BeaconBlockBody, error) {
 	w := bellatrixBeaconBlockBody{b: b}
@@ -302,4 +308,9 @@ func (w bellatrixBeaconBlockBody) Proto() proto.Message {
 // ExecutionPayload returns the Execution payload of the block body.
 func (w bellatrixBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return w.b.ExecutionPayload, nil
+}
+
+// ExecutionPayloadHeader is a stub.
+func (w bellatrixBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }
