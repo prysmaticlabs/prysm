@@ -156,8 +156,17 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		root:  r,
 		block: wsb,
 	}
+
+	b = util.NewBeaconBlock()
+	b.Block.Slot = 2
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	r1, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+
 	service.store.SetFinalizedCheckpt(finalized)
-	service.notifyEngineIfChangedHead(ctx, [32]byte{'b'})
+	service.notifyEngineIfChangedHead(ctx, r1)
 	require.LogsDoNotContain(t, hook, finalizedErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 }
