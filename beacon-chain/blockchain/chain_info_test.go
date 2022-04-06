@@ -459,7 +459,7 @@ func TestService_IsOptimisticForRoot_DB_ProtoArray(t *testing.T) {
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: br[:], Slot: 10}))
 
 	optimisticBlock := util.NewBeaconBlock()
-	optimisticBlock.Block.Slot = 11
+	optimisticBlock.Block.Slot = 97
 	optimisticRoot, err := optimisticBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb, err = wrapper.WrappedSignedBeaconBlock(optimisticBlock)
@@ -477,18 +477,39 @@ func TestService_IsOptimisticForRoot_DB_ProtoArray(t *testing.T) {
 	validatedCheckpoint := &ethpb.Checkpoint{Root: br[:]}
 	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, validatedCheckpoint))
 
+	_, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
+	require.ErrorContains(t, "nil summary returned from the DB", err)
+
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: optimisticRoot[:], Slot: 11}))
 	optimistic, err := c.IsOptimisticForRoot(ctx, optimisticRoot)
 	require.NoError(t, err)
 	require.Equal(t, true, optimistic)
 
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: validatedRoot[:], Slot: 9}))
+	cp := &ethpb.Checkpoint{
+		Epoch: 1,
+		Root:  validatedRoot[:],
+	}
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, validatedRoot))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, cp))
+
 	validated, err := c.IsOptimisticForRoot(ctx, validatedRoot)
 	require.NoError(t, err)
 	require.Equal(t, false, validated)
+
+	// Before the first finalized epoch, finalized root could be zeros.
+	validatedCheckpoint = &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, br))
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: params.BeaconConfig().ZeroHash[:], Slot: 10}))
+	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, validatedCheckpoint))
+
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: optimisticRoot[:], Slot: 11}))
+	optimistic, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
 }
 
-func TestService_IsOptimisticForRoot__DB_DoublyLinkedTree(t *testing.T) {
+func TestService_IsOptimisticForRoot_DB_DoublyLinkedTree(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New(0, 0)}, head: &head{slot: 101, root: [32]byte{'b'}}}
@@ -503,7 +524,71 @@ func TestService_IsOptimisticForRoot__DB_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: br[:], Slot: 10}))
 
 	optimisticBlock := util.NewBeaconBlock()
-	optimisticBlock.Block.Slot = 11
+	optimisticBlock.Block.Slot = 97
+	optimisticRoot, err := optimisticBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(optimisticBlock)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+
+	validatedBlock := util.NewBeaconBlock()
+	validatedBlock.Block.Slot = 9
+	validatedRoot, err := validatedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(validatedBlock)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+
+	validatedCheckpoint := &ethpb.Checkpoint{Root: br[:]}
+	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, validatedCheckpoint))
+
+	_, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
+	require.ErrorContains(t, "nil summary returned from the DB", err)
+
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: optimisticRoot[:], Slot: 11}))
+	optimistic, err := c.IsOptimisticForRoot(ctx, optimisticRoot)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: validatedRoot[:], Slot: 9}))
+	cp := &ethpb.Checkpoint{
+		Epoch: 1,
+		Root:  validatedRoot[:],
+	}
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, validatedRoot))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, cp))
+	validated, err := c.IsOptimisticForRoot(ctx, validatedRoot)
+	require.NoError(t, err)
+	require.Equal(t, false, validated)
+
+	// Before the first finalized epoch, finalized root could be zeros.
+	validatedCheckpoint = &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, br))
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: params.BeaconConfig().ZeroHash[:], Slot: 10}))
+	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, validatedCheckpoint))
+
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: optimisticRoot[:], Slot: 11}))
+	optimistic, err = c.IsOptimisticForRoot(ctx, optimisticRoot)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+}
+
+func TestService_IsOptimisticForRoot_DB_non_canonical(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	ctx := context.Background()
+	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New(0, 0)}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	c.head = &head{root: params.BeaconConfig().ZeroHash}
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 10
+	br, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: br[:], Slot: 10}))
+
+	optimisticBlock := util.NewBeaconBlock()
+	optimisticBlock.Block.Slot = 97
 	optimisticRoot, err := optimisticBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb, err = wrapper.WrappedSignedBeaconBlock(optimisticBlock)
@@ -529,5 +614,6 @@ func TestService_IsOptimisticForRoot__DB_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: validatedRoot[:], Slot: 9}))
 	validated, err := c.IsOptimisticForRoot(ctx, validatedRoot)
 	require.NoError(t, err)
-	require.Equal(t, false, validated)
+	require.Equal(t, true, validated)
+
 }

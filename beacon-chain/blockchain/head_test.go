@@ -9,6 +9,8 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -154,8 +156,9 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
 	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{})
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
-
-	require.NoError(t, service.updateHead(context.Background(), []uint64{}))
+	headRoot, err := service.updateHead(context.Background(), []uint64{})
+	require.NoError(t, err)
+	require.NoError(t, service.saveHead(context.Background(), headRoot))
 }
 
 func Test_notifyNewHeadEvent(t *testing.T) {
@@ -278,4 +281,44 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	savedAtts := service.cfg.AttPool.AggregatedAttestations()
 	atts := b.Block.Body.Attestations
 	require.DeepNotSSZEqual(t, atts, savedAtts)
+}
+
+func TestUpdateHead_noSavedChanges(t *testing.T) {
+	ctx := context.Background()
+
+	beaconDB := testDB.SetupDB(t)
+	fcs := doublylinkedtree.New(0, 0)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+	}
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+	require.NoError(t, err)
+	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, bellatrixBlk))
+	fcp := &ethpb.Checkpoint{
+		Root:  bellatrixBlkRoot[:],
+		Epoch: 1,
+	}
+	service.store.SetFinalizedCheckpt(fcp)
+	service.store.SetJustifiedCheckpt(fcp)
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
+
+	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
+	require.NoError(t, beaconDB.SaveState(ctx, bellatrixState, bellatrixBlkRoot))
+	service.cfg.StateGen.SaveFinalizedState(0, bellatrixBlkRoot, bellatrixState)
+
+	headRoot := service.headRoot()
+	require.Equal(t, [32]byte{}, headRoot)
+
+	newRoot, err := service.updateHead(ctx, []uint64{1, 2})
+	require.NoError(t, err)
+	require.NotEqual(t, headRoot, newRoot)
+	require.Equal(t, headRoot, service.headRoot())
 }

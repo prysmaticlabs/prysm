@@ -443,6 +443,7 @@ func (s *Store) applyWeightChanges(
 			}
 			iProposerScore, err := pmath.Int(proposerScore)
 			if err != nil {
+				s.proposerBoostLock.Unlock()
 				return err
 			}
 			nodeDelta = nodeDelta + iProposerScore

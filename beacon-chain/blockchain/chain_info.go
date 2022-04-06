@@ -328,7 +328,7 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	return s.IsOptimisticForRoot(ctx, s.head.root)
 }
 
-// IsOptimisticForRoot takes the root and slot as aguments instead of the current head
+// IsOptimisticForRoot takes the root and slot as arguments instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, root)
@@ -358,11 +358,26 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return false, nil
 	}
 
-	lastValidated, err := s.cfg.BeaconDB.StateSummary(ctx, bytesutil.ToBytes32(validatedCheckpoint.Root))
+	// checkpoint root could be zeros before the first finalized epoch. Use genesis root if the case.
+	lastValidated, err := s.cfg.BeaconDB.StateSummary(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(validatedCheckpoint.Root)))
 	if err != nil {
 		return false, err
 	}
-	return ss.Slot > lastValidated.Slot, nil
+	if lastValidated == nil {
+		return false, errInvalidNilSummary
+	}
+
+	if ss.Slot > lastValidated.Slot {
+		return true, nil
+	}
+
+	isCanonical, err := s.IsCanonical(ctx, root)
+	if err != nil {
+		return false, err
+	}
+
+	// historical non-canonical blocks here are returned as optimistic for safety.
+	return !isCanonical, nil
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.
