@@ -370,7 +370,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
-	ethNode := eth1.NewNode(index, minerEnr)
+	ethNode := eth1.NewNode(index, minerEnr, []string{"--syncmode=full"})
 	g.Go(func() error {
 		return ethNode.Start(ctx)
 	})
