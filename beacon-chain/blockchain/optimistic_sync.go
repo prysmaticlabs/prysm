@@ -114,7 +114,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 	if err != nil {
 		return false, errors.Wrap(err, "could not get execution payload")
 	}
-	_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	if err != nil {
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
@@ -123,6 +123,19 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 				"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 			}).Info("Called new payload with optimistic block")
 			return false, nil
+		case powchain.ErrInvalidPayloadStatus:
+			root, err := blk.Block().HashTreeRoot()
+			if err != nil {
+				return false, err
+			}
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(lastValidHash))
+			if err != nil {
+				return false, err
+			}
+			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+				return false, err
+			}
+			return false, errors.New("could not validate an INVALID payload from execution engine")
 		default:
 			return false, errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
@@ -173,4 +186,21 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 		return false, err
 	}
 	return parentIsExecutionBlock, nil
+}
+
+// removeInvalidBlockAndState removes the invalid block and its corresponding state from the cache and DB.
+func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32]byte) error {
+	for _, root := range blkRoots {
+		if err := s.cfg.StateGen.DeleteStateFromCaches(ctx, root); err != nil {
+			return err
+		}
+
+		// Delete block also deletes the state as well.
+		if err := s.cfg.BeaconDB.DeleteBlock(ctx, root); err != nil {
+			// TODO(10487): If a caller requests to delete a root that's justified and finalized. We should gracefully shutdown.
+			// This is an irreparable condition, it would me a justified or finalized block has become invalid.
+			return err
+		}
+	}
+	return nil
 }

@@ -183,13 +183,6 @@ func Test_NotifyNewPayload(t *testing.T) {
 	phase0State, _ := util.DeterministicGenesisState(t, 1)
 	altairState, _ := util.DeterministicGenesisStateAltair(t, 1)
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
-	blk := &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockBellatrix{
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				ExecutionPayload: &v1.ExecutionPayload{},
-			},
-		},
-	}
 	a := &ethpb.SignedBeaconBlockAltair{
 		Block: &ethpb.BeaconBlockAltair{
 			Body: &ethpb.BeaconBlockBodyAltair{},
@@ -197,10 +190,32 @@ func Test_NotifyNewPayload(t *testing.T) {
 	}
 	altairBlk, err := wrapper.WrappedSignedBeaconBlock(a)
 	require.NoError(t, err)
-	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(blk)
+	blk := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{
+			Slot: 1,
+			Body: &ethpb.BeaconBlockBodyBellatrix{
+				ExecutionPayload: &v1.ExecutionPayload{
+					BlockNumber:   1,
+					ParentHash:    make([]byte, fieldparams.RootLength),
+					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:    make([]byte, fieldparams.RootLength),
+					BaseFeePerGas: make([]byte, fieldparams.RootLength),
+					BlockHash:     make([]byte, fieldparams.RootLength),
+				},
+			},
+		},
+	}
+	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(blk))
 	require.NoError(t, err)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
+	r, err := bellatrixBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 1, r, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 
 	tests := []struct {
 		name           string
@@ -244,7 +259,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			preState:       bellatrixState,
 			blk:            bellatrixBlk,
 			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
-			errString:      "could not validate execution payload from execution engine: payload status is INVALID",
+			errString:      "could not validate an INVALID payload from execution engine",
 			isValidPayload: false,
 		},
 		{
@@ -588,7 +603,6 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-
 	genesisStateRoot := [32]byte{}
 	genesisBlk := blocks.NewGenesisBlock(genesisStateRoot[:])
 	wr, err := wrapper.WrappedSignedBeaconBlock(genesisBlk)
@@ -670,4 +684,60 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.Equal(t, false, optimistic)
 	require.DeepEqual(t, validCheckpoint.Root, cp.Root)
 	require.Equal(t, validCheckpoint.Epoch, cp.Epoch)
+}
+
+func TestService_removeInvalidBlockAndState(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	// Deleting unknown block should not error.
+	require.NoError(t, service.removeInvalidBlockAndState(ctx, [][32]byte{{'a'}, {'b'}, {'c'}}))
+
+	// Happy case
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 1
+	blk1, err := wrapper.WrappedSignedBeaconBlock(b1)
+	require.NoError(t, err)
+	r1, err := blk1.Block().HashTreeRoot()
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, blk1))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
+		Slot: 1,
+		Root: r1[:],
+	}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, r1))
+
+	b2 := util.NewBeaconBlock()
+	b2.Block.Slot = 2
+	blk2, err := wrapper.WrappedSignedBeaconBlock(b2)
+	require.NoError(t, err)
+	r2, err := blk2.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, blk2))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
+		Slot: 2,
+		Root: r2[:],
+	}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, r2))
+
+	require.NoError(t, service.removeInvalidBlockAndState(ctx, [][32]byte{r1, r2}))
+
+	require.Equal(t, false, service.hasBlock(ctx, r1))
+	require.Equal(t, false, service.hasBlock(ctx, r2))
+	require.Equal(t, false, service.cfg.BeaconDB.HasStateSummary(ctx, r1))
+	require.Equal(t, false, service.cfg.BeaconDB.HasStateSummary(ctx, r2))
+	has, err := service.cfg.StateGen.HasState(ctx, r1)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	has, err = service.cfg.StateGen.HasState(ctx, r2)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
 }
