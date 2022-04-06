@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/build/bazel"
 	"github.com/prysmaticlabs/prysm/config/params"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -92,11 +93,10 @@ func (r *testRunner) run() {
 	// Web3 remote signer.
 	var web3RemoteSigner *components.Web3RemoteSigner
 	if config.UseWeb3RemoteSigner {
-		//cfg, err := bazel.Runfile("config/params/testdata/e2e_config.yaml")
-		//if err != nil {
-		//	t.Fatal(err)
-		//}
-		cfg := ""
+		cfg, err := bazel.Runfile("config/params/testdata/e2e_config.yaml")
+		if err != nil {
+			t.Fatal(err)
+		}
 		web3RemoteSigner = components.NewWeb3RemoteSigner(cfg)
 		g.Go(func() error {
 			if err := web3RemoteSigner.Start(ctx); err != nil {
@@ -246,7 +246,10 @@ func (r *testRunner) run() {
 			return errors.New("chain cannot start")
 		}
 
-		r.testDepositsAndTx(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
+		if config.TestDeposits {
+			log.Info("Running deposit tests")
+			r.testDeposits(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
+		}
 
 		// Create GRPC connection to beacon nodes.
 		conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)
@@ -333,8 +336,8 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	return nil
 }
 
-// testDepositsAndTx runs tests when config.TestDeposits is enabled.
-func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
+// testDeposits runs tests when config.TestDeposits is enabled.
+func (r *testRunner) testDeposits(ctx context.Context, g *errgroup.Group,
 	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 
@@ -344,29 +347,12 @@ func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
 		}
 		go func() {
-			if r.config.TestDeposits {
-				log.Info("Running deposit tests")
-				err := components.SendAndMineDeposits(keystorePath, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
-				if err != nil {
-					r.t.Fatal(err)
-				}
+			err := components.SendAndMineDeposits(keystorePath, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
+			if err != nil {
+				r.t.Fatal(err)
 			}
-			r.testTxGeneration(ctx, g, keystorePath, []e2etypes.ComponentRunner{})
 		}()
-		if r.config.TestDeposits {
-			return depositCheckValidator.Start(ctx)
-		}
-		return nil
-	})
-}
-
-func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
-	txGenerator := eth1.NewTransactionGenerator(keystorePath, r.config.Seed)
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
-			return fmt.Errorf("transaction generator requires eth1 nodes to be run: %w", err)
-		}
-		return txGenerator.Start(ctx)
+		return depositCheckValidator.Start(ctx)
 	})
 }
 
@@ -379,14 +365,11 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	g.Go(func() error {
 		return ethNode.Start(ctx)
 	})
-	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
-		return fmt.Errorf("sync beacon node not ready: %w", err)
-	}
 	syncBeaconNode := components.NewBeaconNode(config, index, bootnodeEnr)
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})
-	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{syncBeaconNode}); err != nil {
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode, syncBeaconNode}); err != nil {
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index), grpc.WithInsecure())
