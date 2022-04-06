@@ -7,7 +7,6 @@ go_test(
     size = "large",
     testonly = True,
     srcs = [
-        "checkpoint_sync_test.go",
         "endtoend_test.go",
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
@@ -74,6 +73,7 @@ go_test(
     srcs = [
         "endtoend_test.go",
         "mainnet_e2e_test.go",
+        "checkpoint_sync_test.go",
     ],
     args = ["-test.v"],
     data = [

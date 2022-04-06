@@ -49,7 +49,7 @@ func (node *BootNode) Start(ctx context.Context) error {
 		return err
 	}
 
-	cfg := params.E2ETestConfig()
+	cfg := params.BeaconConfig()
 	args := []string{
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.Ports.BootNodePort),
