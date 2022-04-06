@@ -367,6 +367,12 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 			return ErrDeleteJustifiedAndFinalized
 		}
 
+		// Nothing to delete if state doesn't exist.
+		enc = bkt.Get(blockRoot[:])
+		if enc == nil {
+			return nil
+		}
+
 		slot, err := s.slotByBlockRoot(ctx, tx, blockRoot[:])
 		if err != nil {
 			return err

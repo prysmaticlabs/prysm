@@ -682,6 +682,10 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
+	// Deleting unknown block should not error.
+	require.NoError(t, service.removeInvalidBlockAndState(ctx, [][32]byte{{'a'}, {'b'}, {'c'}}))
+
+	// Happy case
 	b1 := util.NewBeaconBlock()
 	b1.Block.Slot = 1
 	blk1, err := wrapper.WrappedSignedBeaconBlock(b1)
