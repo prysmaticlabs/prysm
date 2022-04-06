@@ -740,22 +740,4 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	has, err = service.cfg.StateGen.HasState(ctx, r2)
 	require.NoError(t, err)
 	require.Equal(t, false, has)
-
-	// Delete finalized block
-	f := util.NewBeaconBlock()
-	fBlk, err := wrapper.WrappedSignedBeaconBlock(f)
-	require.NoError(t, err)
-	fRoot, err := fBlk.Block().HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, fBlk))
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, fRoot))
-	require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, fRoot))
-	require.NoError(t, service.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: fRoot[:]}))
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic.")
-		}
-	}()
-	require.NoError(t, service.removeInvalidBlockAndState(ctx, [][32]byte{fRoot}))
 }
