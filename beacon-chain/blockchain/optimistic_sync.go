@@ -133,7 +133,10 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 			if err != nil {
 				return false, err
 			}
-			return false, s.removeInvalidBlockAndState(ctx, invalidRoots)
+			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+				return false, err
+			}
+			return false, errors.New("could not validate an INVALID payload from execution engine")
 		default:
 			return false, errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
