@@ -67,7 +67,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
 	b := &BeaconState{
-		version:                     Phase0,
+		version:                     version.Phase0,
 		genesisTime:                 st.GenesisTime,
 		genesisValidatorsRoot:       bytesutil.ToBytes32(st.GenesisValidatorsRoot),
 		slot:                        st.Slot,
@@ -153,7 +153,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
 	b := &BeaconState{
-		version:                     Altair,
+		version:                     version.Altair,
 		genesisTime:                 st.GenesisTime,
 		genesisValidatorsRoot:       bytesutil.ToBytes32(st.GenesisValidatorsRoot),
 		slot:                        st.Slot,
@@ -243,7 +243,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 
 	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	b := &BeaconState{
-		version:                      Bellatrix,
+		version:                      version.Bellatrix,
 		genesisTime:                  st.GenesisTime,
 		genesisValidatorsRoot:        bytesutil.ToBytes32(st.GenesisValidatorsRoot),
 		slot:                         st.Slot,
@@ -315,12 +315,12 @@ func (b *BeaconState) Copy() state.BeaconState {
 	defer b.lock.RUnlock()
 
 	var fieldCount int
-	switch b.version {
-	case Phase0:
+	switch b.Version() {
+	case version.Phase0:
 		fieldCount = params.BeaconConfig().BeaconStateFieldCount
-	case Altair:
+	case version.Altair:
 		fieldCount = params.BeaconConfig().BeaconStateAltairFieldCount
-	case Bellatrix:
+	case version.Bellatrix:
 		fieldCount = params.BeaconConfig().BeaconStateBellatrixFieldCount
 	}
 
@@ -371,14 +371,14 @@ func (b *BeaconState) Copy() state.BeaconState {
 		valMapHandler: b.valMapHandler,
 	}
 
-	switch b.version {
-	case Phase0:
+	switch b.Version() {
+	case version.Phase0:
 		dst.sharedFieldReferences = make(map[int]*stateutil.Reference, 10)
 		b.populateFieldIndexesPhase0()
-	case Altair:
+	case version.Altair:
 		dst.sharedFieldReferences = make(map[int]*stateutil.Reference, 11)
 		b.populateFieldIndexesAltair()
-	case Bellatrix:
+	case version.Bellatrix:
 		dst.sharedFieldReferences = make(map[int]*stateutil.Reference, 11)
 		b.populateFieldIndexesBellatrix()
 	}
@@ -476,12 +476,12 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	}
 	layers := stateutil.Merkleize(fieldRoots)
 	b.merkleLayers = layers
-	switch b.version {
-	case Phase0:
+	switch b.Version() {
+	case version.Phase0:
 		b.dirtyFields = make(map[int]bool, params.BeaconConfig().BeaconStateFieldCount)
-	case Altair:
+	case version.Altair:
 		b.dirtyFields = make(map[int]bool, params.BeaconConfig().BeaconStateAltairFieldCount)
-	case Bellatrix:
+	case version.Bellatrix:
 		b.dirtyFields = make(map[int]bool, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	}
 
@@ -728,11 +728,11 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	hasher := hash.CustomSHA256Hasher()
 	var fieldRoots [][]byte
 	switch state.Version() {
-	case int(Phase0):
+	case version.Phase0:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateFieldCount)
-	case int(Altair):
+	case version.Altair:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateAltairFieldCount)
-	case int(Bellatrix):
+	case version.Bellatrix:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	}
 

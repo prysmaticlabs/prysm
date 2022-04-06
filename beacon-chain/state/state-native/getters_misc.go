@@ -25,7 +25,7 @@ func (b *BeaconState) GenesisValidatorsRoot() []byte {
 // is strictly meant to be used without a lock
 // internally.
 func (b *BeaconState) Version() int {
-	return int(b.version)
+	return b.version
 }
 
 // Slot of the current beacon chain state.
