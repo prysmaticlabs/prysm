@@ -23,7 +23,7 @@ func NewMockService() *MockStateManager {
 	}
 }
 
-// StateByRootIfCached
+// StateByRootIfCachedNoCopy
 func (_ *MockStateManager) StateByRootIfCachedNoCopy(_ [32]byte) state.BeaconState {
 	panic("implement me")
 }
@@ -123,4 +123,9 @@ func (m *MockStateManager) AddStateForRoot(state state.BeaconState, blockRoot [3
 // AddStateForSlot --
 func (m *MockStateManager) AddStateForSlot(state state.BeaconState, slot types.Slot) {
 	m.StatesBySlot[slot] = state
+}
+
+// DeleteStateFromCaches --
+func (m *MockStateManager) DeleteStateFromCaches(context.Context, [32]byte) error {
+	return nil
 }
