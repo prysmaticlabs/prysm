@@ -53,18 +53,17 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 // of the last valid block.s
 func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHash [32]byte) ([][32]byte, error) {
 	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
 	invalidRoots := make([][32]byte, 0)
 	// We only support setting invalid a node existing in Forkchoice
 	invalidIndex, ok := f.store.nodesIndices[root]
 	if !ok {
-		f.store.nodesLock.Unlock()
 		return invalidRoots, ErrUnknownNodeRoot
 	}
 	node := f.store.nodes[invalidIndex]
 
 	lastValidIndex, ok := f.store.payloadIndices[payloadHash]
 	if !ok || lastValidIndex == NonExistentNode {
-		f.store.nodesLock.Unlock()
 		return invalidRoots, errInvalidFinalizedNode
 	}
 
@@ -81,7 +80,6 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 		firstInvalidIndex = invalidIndex
 		lastValidIndex = node.parent
 		if lastValidIndex == NonExistentNode {
-			f.store.nodesLock.Unlock()
 			return invalidRoots, errInvalidFinalizedNode
 		}
 	} else {
@@ -120,7 +118,6 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 			continue
 		}
 		if invalidNode.status == valid {
-			f.store.nodesLock.Unlock()
 			return invalidRoots, errInvalidOptimisticStatus
 		}
 		if !boosted && invalidNode.root == boostRoot {
@@ -157,13 +154,9 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 		n := f.store.nodes[i]
 		if n.parent != NonExistentNode {
 			if err := f.store.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
-				f.store.nodesLock.Unlock()
 				return invalidRoots, err
 			}
 		}
 	}
-
-	lastValidRoot := f.store.nodes[lastValidIndex].root
-	f.store.nodesLock.Unlock()
-	return invalidRoots, f.SetOptimisticToValid(ctx, lastValidRoot)
+	return invalidRoots, nil
 }
