@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -198,9 +197,8 @@ func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32
 
 		// Delete block also deletes the state as well.
 		if err := s.cfg.BeaconDB.DeleteBlock(ctx, root); err != nil {
-			if err == kv.ErrDeleteJustifiedAndFinalized {
-				log.Panic("Invalid justified / finalized block in DB. Please resync from last weak subjectivity checkpoint")
-			}
+			// TODO(10487): If a caller requests to delete a root that's justified and finalized. We should gracefully shutdown.
+			// This is an irreparable condition, it would me a justified or finalized block has become invalid.
 			return err
 		}
 	}
