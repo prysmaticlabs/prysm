@@ -31,12 +31,13 @@ var _ e2etypes.ComponentRunner = (*BeaconNodeSet)(nil)
 
 // BeaconNodeSet represents set of beacon nodes.
 type BeaconNodeSet struct {
-	started chan struct{}
+	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	enr     string
 	ids     []string
+	started chan struct{}
 	nodes []*BeaconNode
-	flags []string
+	flags   []string
 }
 
 // NewBeaconNodes creates and returns a set of beacon nodes.
@@ -49,8 +50,8 @@ func NewBeaconNodes(config *e2etypes.E2EConfig, enr string, flags []string) *Bea
 
 	return &BeaconNodeSet{
 		config:  config,
-		nodes:   nodes,
 		started: make(chan struct{}, 1),
+		nodes:   nodes,
 		enr:     enr,
 		flags:   flags,
 	}
@@ -115,9 +116,9 @@ func (s *BeaconNodeSet) Started() <-chan struct{} {
 type BeaconNode struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
+	started chan struct{}
 	index   int
 	flags   []string
-	started chan struct{}
 	enr     string
 	peerID  string
 }
@@ -181,11 +182,11 @@ var _ e2ez.ZPage = &BeaconNode{}
 // NewBeaconNode creates and returns a beacon node.
 func NewBeaconNode(index int, enr string, flags []string, config *e2etypes.E2EConfig) *BeaconNode {
 	return &BeaconNode{
+		config:  config,
 		index:   index,
 		enr:     enr,
 		started: make(chan struct{}, 1),
 		flags:   flags,
-		config:  config,
 	}
 }
 
