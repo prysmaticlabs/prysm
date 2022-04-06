@@ -1,8 +1,8 @@
 package params
 
 const (
-	altairE2EForkEpoch    = 6
-	bellatrixE2EForkEpoch = 8 //nolint:deadcode
+	altairE2EForkEpoch    = 1
+	bellatrixE2EForkEpoch = 1000 //nolint:deadcode
 )
 
 // UseE2EConfig for beacon chain services.

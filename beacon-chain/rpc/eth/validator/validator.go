@@ -216,7 +216,11 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	}
 
 	requestedEpoch := req.Epoch
+	if requestedEpoch > currentEpoch {
+		requestedEpoch = currentEpoch
+	}
 	slot, err := slots.EpochStart(requestedEpoch)
+	log.Info(fmt.Sprintf("GetSyncCommitteeDuties Requested epoch %d, current epoch %d, last valid epoch %d", requestedEpoch, currentEpoch, lastValidEpoch))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync committee slot: %v", err)
 	}
