@@ -98,50 +98,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
-	b.fieldIndexes = make(map[int]v0types.FieldIndex, fieldCount)
-	b.fieldIndexes[0] = v0types.GenesisTime
-	b.fieldIndexes[1] = v0types.GenesisValidatorsRoot
-	b.fieldIndexes[2] = v0types.Slot
-	b.fieldIndexes[3] = v0types.Fork
-	b.fieldIndexes[4] = v0types.LatestBlockHeader
-	b.fieldIndexes[5] = v0types.BlockRoots
-	b.fieldIndexes[6] = v0types.StateRoots
-	b.fieldIndexes[7] = v0types.HistoricalRoots
-	b.fieldIndexes[8] = v0types.Eth1Data
-	b.fieldIndexes[9] = v0types.Eth1DataVotes
-	b.fieldIndexes[10] = v0types.Eth1DepositIndex
-	b.fieldIndexes[11] = v0types.Validators
-	b.fieldIndexes[12] = v0types.Balances
-	b.fieldIndexes[13] = v0types.RandaoMixes
-	b.fieldIndexes[14] = v0types.Slashings
-	b.fieldIndexes[15] = v0types.PreviousEpochAttestations
-	b.fieldIndexes[16] = v0types.CurrentEpochAttestations
-	b.fieldIndexes[17] = v0types.JustificationBits
-	b.fieldIndexes[18] = v0types.PreviousJustifiedCheckpoint
-	b.fieldIndexes[19] = v0types.CurrentJustifiedCheckpoint
-	b.fieldIndexes[20] = v0types.FinalizedCheckpoint
-	b.fieldIndexesRev = make(map[v0types.FieldIndex]int, fieldCount)
-	b.fieldIndexesRev[v0types.GenesisTime] = 0
-	b.fieldIndexesRev[v0types.GenesisValidatorsRoot] = 1
-	b.fieldIndexesRev[v0types.Slot] = 2
-	b.fieldIndexesRev[v0types.Fork] = 3
-	b.fieldIndexesRev[v0types.LatestBlockHeader] = 4
-	b.fieldIndexesRev[v0types.BlockRoots] = 5
-	b.fieldIndexesRev[v0types.StateRoots] = 6
-	b.fieldIndexesRev[v0types.HistoricalRoots] = 7
-	b.fieldIndexesRev[v0types.Eth1Data] = 8
-	b.fieldIndexesRev[v0types.Eth1DataVotes] = 9
-	b.fieldIndexesRev[v0types.Eth1DepositIndex] = 10
-	b.fieldIndexesRev[v0types.Validators] = 11
-	b.fieldIndexesRev[v0types.Balances] = 12
-	b.fieldIndexesRev[v0types.RandaoMixes] = 13
-	b.fieldIndexesRev[v0types.Slashings] = 14
-	b.fieldIndexesRev[v0types.PreviousEpochAttestations] = 15
-	b.fieldIndexesRev[v0types.CurrentEpochAttestations] = 16
-	b.fieldIndexesRev[v0types.JustificationBits] = 17
-	b.fieldIndexesRev[v0types.PreviousJustifiedCheckpoint] = 18
-	b.fieldIndexesRev[v0types.CurrentJustifiedCheckpoint] = 19
-	b.fieldIndexesRev[v0types.FinalizedCheckpoint] = 20
+	b.populateFieldIndexesPhase0()
 
 	var err error
 	for i := 0; i < fieldCount; i++ {
@@ -230,56 +187,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
-	b.fieldIndexes = make(map[int]v0types.FieldIndex, fieldCount)
-	b.fieldIndexes[0] = v0types.GenesisTime
-	b.fieldIndexes[1] = v0types.GenesisValidatorsRoot
-	b.fieldIndexes[2] = v0types.Slot
-	b.fieldIndexes[3] = v0types.Fork
-	b.fieldIndexes[4] = v0types.LatestBlockHeader
-	b.fieldIndexes[5] = v0types.BlockRoots
-	b.fieldIndexes[6] = v0types.StateRoots
-	b.fieldIndexes[7] = v0types.HistoricalRoots
-	b.fieldIndexes[8] = v0types.Eth1Data
-	b.fieldIndexes[9] = v0types.Eth1DataVotes
-	b.fieldIndexes[10] = v0types.Eth1DepositIndex
-	b.fieldIndexes[11] = v0types.Validators
-	b.fieldIndexes[12] = v0types.Balances
-	b.fieldIndexes[13] = v0types.RandaoMixes
-	b.fieldIndexes[14] = v0types.Slashings
-	b.fieldIndexes[15] = v0types.PreviousEpochParticipationBits
-	b.fieldIndexes[16] = v0types.CurrentEpochParticipationBits
-	b.fieldIndexes[17] = v0types.JustificationBits
-	b.fieldIndexes[18] = v0types.PreviousJustifiedCheckpoint
-	b.fieldIndexes[19] = v0types.CurrentJustifiedCheckpoint
-	b.fieldIndexes[20] = v0types.FinalizedCheckpoint
-	b.fieldIndexes[21] = v0types.InactivityScores
-	b.fieldIndexes[22] = v0types.CurrentSyncCommittee
-	b.fieldIndexes[23] = v0types.NextSyncCommittee
-	b.fieldIndexesRev = make(map[v0types.FieldIndex]int, fieldCount)
-	b.fieldIndexesRev[v0types.GenesisTime] = 0
-	b.fieldIndexesRev[v0types.GenesisValidatorsRoot] = 1
-	b.fieldIndexesRev[v0types.Slot] = 2
-	b.fieldIndexesRev[v0types.Fork] = 3
-	b.fieldIndexesRev[v0types.LatestBlockHeader] = 4
-	b.fieldIndexesRev[v0types.BlockRoots] = 5
-	b.fieldIndexesRev[v0types.StateRoots] = 6
-	b.fieldIndexesRev[v0types.HistoricalRoots] = 7
-	b.fieldIndexesRev[v0types.Eth1Data] = 8
-	b.fieldIndexesRev[v0types.Eth1DataVotes] = 9
-	b.fieldIndexesRev[v0types.Eth1DepositIndex] = 10
-	b.fieldIndexesRev[v0types.Validators] = 11
-	b.fieldIndexesRev[v0types.Balances] = 12
-	b.fieldIndexesRev[v0types.RandaoMixes] = 13
-	b.fieldIndexesRev[v0types.Slashings] = 14
-	b.fieldIndexesRev[v0types.PreviousEpochParticipationBits] = 15
-	b.fieldIndexesRev[v0types.CurrentEpochParticipationBits] = 16
-	b.fieldIndexesRev[v0types.JustificationBits] = 17
-	b.fieldIndexesRev[v0types.PreviousJustifiedCheckpoint] = 18
-	b.fieldIndexesRev[v0types.CurrentJustifiedCheckpoint] = 19
-	b.fieldIndexesRev[v0types.FinalizedCheckpoint] = 20
-	b.fieldIndexesRev[v0types.InactivityScores] = 21
-	b.fieldIndexesRev[v0types.CurrentSyncCommittee] = 22
-	b.fieldIndexesRev[v0types.NextSyncCommittee] = 23
+	b.populateFieldIndexesAltair()
 
 	var err error
 	for i := 0; i < fieldCount; i++ {
@@ -370,58 +278,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
-	b.fieldIndexes = make(map[int]v0types.FieldIndex, fieldCount)
-	b.fieldIndexes[0] = v0types.GenesisTime
-	b.fieldIndexes[1] = v0types.GenesisValidatorsRoot
-	b.fieldIndexes[2] = v0types.Slot
-	b.fieldIndexes[3] = v0types.Fork
-	b.fieldIndexes[4] = v0types.LatestBlockHeader
-	b.fieldIndexes[5] = v0types.BlockRoots
-	b.fieldIndexes[6] = v0types.StateRoots
-	b.fieldIndexes[7] = v0types.HistoricalRoots
-	b.fieldIndexes[8] = v0types.Eth1Data
-	b.fieldIndexes[9] = v0types.Eth1DataVotes
-	b.fieldIndexes[10] = v0types.Eth1DepositIndex
-	b.fieldIndexes[11] = v0types.Validators
-	b.fieldIndexes[12] = v0types.Balances
-	b.fieldIndexes[13] = v0types.RandaoMixes
-	b.fieldIndexes[14] = v0types.Slashings
-	b.fieldIndexes[15] = v0types.PreviousEpochParticipationBits
-	b.fieldIndexes[16] = v0types.CurrentEpochParticipationBits
-	b.fieldIndexes[17] = v0types.JustificationBits
-	b.fieldIndexes[18] = v0types.PreviousJustifiedCheckpoint
-	b.fieldIndexes[19] = v0types.CurrentJustifiedCheckpoint
-	b.fieldIndexes[20] = v0types.FinalizedCheckpoint
-	b.fieldIndexes[21] = v0types.InactivityScores
-	b.fieldIndexes[22] = v0types.CurrentSyncCommittee
-	b.fieldIndexes[23] = v0types.NextSyncCommittee
-	b.fieldIndexes[24] = v0types.LatestExecutionPayloadHeader
-	b.fieldIndexesRev = make(map[v0types.FieldIndex]int, fieldCount)
-	b.fieldIndexesRev[v0types.GenesisTime] = 0
-	b.fieldIndexesRev[v0types.GenesisValidatorsRoot] = 1
-	b.fieldIndexesRev[v0types.Slot] = 2
-	b.fieldIndexesRev[v0types.Fork] = 3
-	b.fieldIndexesRev[v0types.LatestBlockHeader] = 4
-	b.fieldIndexesRev[v0types.BlockRoots] = 5
-	b.fieldIndexesRev[v0types.StateRoots] = 6
-	b.fieldIndexesRev[v0types.HistoricalRoots] = 7
-	b.fieldIndexesRev[v0types.Eth1Data] = 8
-	b.fieldIndexesRev[v0types.Eth1DataVotes] = 9
-	b.fieldIndexesRev[v0types.Eth1DepositIndex] = 10
-	b.fieldIndexesRev[v0types.Validators] = 11
-	b.fieldIndexesRev[v0types.Balances] = 12
-	b.fieldIndexesRev[v0types.RandaoMixes] = 13
-	b.fieldIndexesRev[v0types.Slashings] = 14
-	b.fieldIndexesRev[v0types.PreviousEpochParticipationBits] = 15
-	b.fieldIndexesRev[v0types.CurrentEpochParticipationBits] = 16
-	b.fieldIndexesRev[v0types.JustificationBits] = 17
-	b.fieldIndexesRev[v0types.PreviousJustifiedCheckpoint] = 18
-	b.fieldIndexesRev[v0types.CurrentJustifiedCheckpoint] = 19
-	b.fieldIndexesRev[v0types.FinalizedCheckpoint] = 20
-	b.fieldIndexesRev[v0types.InactivityScores] = 21
-	b.fieldIndexesRev[v0types.CurrentSyncCommittee] = 22
-	b.fieldIndexesRev[v0types.NextSyncCommittee] = 23
-	b.fieldIndexesRev[v0types.LatestExecutionPayloadHeader] = 24
+	b.populateFieldIndexesBellatrix()
 
 	var err error
 	for i := 0; i < fieldCount; i++ {
@@ -517,156 +374,13 @@ func (b *BeaconState) Copy() state.BeaconState {
 	switch b.version {
 	case Phase0:
 		dst.sharedFieldReferences = make(map[int]*stateutil.Reference, 10)
-		dst.fieldIndexes = make(map[int]v0types.FieldIndex, fieldCount)
-		dst.fieldIndexes[0] = v0types.GenesisTime
-		dst.fieldIndexes[1] = v0types.GenesisValidatorsRoot
-		dst.fieldIndexes[2] = v0types.Slot
-		dst.fieldIndexes[3] = v0types.Fork
-		dst.fieldIndexes[4] = v0types.LatestBlockHeader
-		dst.fieldIndexes[5] = v0types.BlockRoots
-		dst.fieldIndexes[6] = v0types.StateRoots
-		dst.fieldIndexes[7] = v0types.HistoricalRoots
-		dst.fieldIndexes[8] = v0types.Eth1Data
-		dst.fieldIndexes[9] = v0types.Eth1DataVotes
-		dst.fieldIndexes[10] = v0types.Eth1DepositIndex
-		dst.fieldIndexes[11] = v0types.Validators
-		dst.fieldIndexes[12] = v0types.Balances
-		dst.fieldIndexes[13] = v0types.RandaoMixes
-		dst.fieldIndexes[14] = v0types.Slashings
-		dst.fieldIndexes[15] = v0types.PreviousEpochAttestations
-		dst.fieldIndexes[16] = v0types.CurrentEpochAttestations
-		dst.fieldIndexes[17] = v0types.JustificationBits
-		dst.fieldIndexes[18] = v0types.PreviousJustifiedCheckpoint
-		dst.fieldIndexes[19] = v0types.CurrentJustifiedCheckpoint
-		dst.fieldIndexes[20] = v0types.FinalizedCheckpoint
-		dst.fieldIndexesRev = make(map[v0types.FieldIndex]int, fieldCount)
-		dst.fieldIndexesRev[v0types.GenesisTime] = 0
-		dst.fieldIndexesRev[v0types.GenesisValidatorsRoot] = 1
-		dst.fieldIndexesRev[v0types.Slot] = 2
-		dst.fieldIndexesRev[v0types.Fork] = 3
-		dst.fieldIndexesRev[v0types.LatestBlockHeader] = 4
-		dst.fieldIndexesRev[v0types.BlockRoots] = 5
-		dst.fieldIndexesRev[v0types.StateRoots] = 6
-		dst.fieldIndexesRev[v0types.HistoricalRoots] = 7
-		dst.fieldIndexesRev[v0types.Eth1Data] = 8
-		dst.fieldIndexesRev[v0types.Eth1DataVotes] = 9
-		dst.fieldIndexesRev[v0types.Eth1DepositIndex] = 10
-		dst.fieldIndexesRev[v0types.Validators] = 11
-		dst.fieldIndexesRev[v0types.Balances] = 12
-		dst.fieldIndexesRev[v0types.RandaoMixes] = 13
-		dst.fieldIndexesRev[v0types.Slashings] = 14
-		dst.fieldIndexesRev[v0types.PreviousEpochAttestations] = 15
-		dst.fieldIndexesRev[v0types.CurrentEpochAttestations] = 16
-		dst.fieldIndexesRev[v0types.JustificationBits] = 17
-		dst.fieldIndexesRev[v0types.PreviousJustifiedCheckpoint] = 18
-		dst.fieldIndexesRev[v0types.CurrentJustifiedCheckpoint] = 19
-		dst.fieldIndexesRev[v0types.FinalizedCheckpoint] = 20
+		b.populateFieldIndexesPhase0()
 	case Altair:
 		dst.sharedFieldReferences = make(map[int]*stateutil.Reference, 11)
-		dst.fieldIndexes = make(map[int]v0types.FieldIndex, fieldCount)
-		dst.fieldIndexes[0] = v0types.GenesisTime
-		dst.fieldIndexes[1] = v0types.GenesisValidatorsRoot
-		dst.fieldIndexes[2] = v0types.Slot
-		dst.fieldIndexes[3] = v0types.Fork
-		dst.fieldIndexes[4] = v0types.LatestBlockHeader
-		dst.fieldIndexes[5] = v0types.BlockRoots
-		dst.fieldIndexes[6] = v0types.StateRoots
-		dst.fieldIndexes[7] = v0types.HistoricalRoots
-		dst.fieldIndexes[8] = v0types.Eth1Data
-		dst.fieldIndexes[9] = v0types.Eth1DataVotes
-		dst.fieldIndexes[10] = v0types.Eth1DepositIndex
-		dst.fieldIndexes[11] = v0types.Validators
-		dst.fieldIndexes[12] = v0types.Balances
-		dst.fieldIndexes[13] = v0types.RandaoMixes
-		dst.fieldIndexes[14] = v0types.Slashings
-		dst.fieldIndexes[15] = v0types.PreviousEpochParticipationBits
-		dst.fieldIndexes[16] = v0types.CurrentEpochParticipationBits
-		dst.fieldIndexes[17] = v0types.JustificationBits
-		dst.fieldIndexes[18] = v0types.PreviousJustifiedCheckpoint
-		dst.fieldIndexes[19] = v0types.CurrentJustifiedCheckpoint
-		dst.fieldIndexes[20] = v0types.FinalizedCheckpoint
-		dst.fieldIndexes[21] = v0types.InactivityScores
-		dst.fieldIndexes[22] = v0types.CurrentSyncCommittee
-		dst.fieldIndexes[23] = v0types.NextSyncCommittee
-		dst.fieldIndexesRev = make(map[v0types.FieldIndex]int, fieldCount)
-		dst.fieldIndexesRev[v0types.GenesisTime] = 0
-		dst.fieldIndexesRev[v0types.GenesisValidatorsRoot] = 1
-		dst.fieldIndexesRev[v0types.Slot] = 2
-		dst.fieldIndexesRev[v0types.Fork] = 3
-		dst.fieldIndexesRev[v0types.LatestBlockHeader] = 4
-		dst.fieldIndexesRev[v0types.BlockRoots] = 5
-		dst.fieldIndexesRev[v0types.StateRoots] = 6
-		dst.fieldIndexesRev[v0types.HistoricalRoots] = 7
-		dst.fieldIndexesRev[v0types.Eth1Data] = 8
-		dst.fieldIndexesRev[v0types.Eth1DataVotes] = 9
-		dst.fieldIndexesRev[v0types.Eth1DepositIndex] = 10
-		dst.fieldIndexesRev[v0types.Validators] = 11
-		dst.fieldIndexesRev[v0types.Balances] = 12
-		dst.fieldIndexesRev[v0types.RandaoMixes] = 13
-		dst.fieldIndexesRev[v0types.Slashings] = 14
-		dst.fieldIndexesRev[v0types.PreviousEpochParticipationBits] = 15
-		dst.fieldIndexesRev[v0types.CurrentEpochParticipationBits] = 16
-		dst.fieldIndexesRev[v0types.JustificationBits] = 17
-		dst.fieldIndexesRev[v0types.PreviousJustifiedCheckpoint] = 18
-		dst.fieldIndexesRev[v0types.CurrentJustifiedCheckpoint] = 19
-		dst.fieldIndexesRev[v0types.FinalizedCheckpoint] = 20
-		dst.fieldIndexesRev[v0types.InactivityScores] = 21
-		dst.fieldIndexesRev[v0types.CurrentSyncCommittee] = 22
-		dst.fieldIndexesRev[v0types.NextSyncCommittee] = 23
+		b.populateFieldIndexesAltair()
 	case Bellatrix:
 		dst.sharedFieldReferences = make(map[int]*stateutil.Reference, 11)
-		dst.fieldIndexes = make(map[int]v0types.FieldIndex, fieldCount)
-		dst.fieldIndexes[0] = v0types.GenesisTime
-		dst.fieldIndexes[1] = v0types.GenesisValidatorsRoot
-		dst.fieldIndexes[2] = v0types.Slot
-		dst.fieldIndexes[3] = v0types.Fork
-		dst.fieldIndexes[4] = v0types.LatestBlockHeader
-		dst.fieldIndexes[5] = v0types.BlockRoots
-		dst.fieldIndexes[6] = v0types.StateRoots
-		dst.fieldIndexes[7] = v0types.HistoricalRoots
-		dst.fieldIndexes[8] = v0types.Eth1Data
-		dst.fieldIndexes[9] = v0types.Eth1DataVotes
-		dst.fieldIndexes[10] = v0types.Eth1DepositIndex
-		dst.fieldIndexes[11] = v0types.Validators
-		dst.fieldIndexes[12] = v0types.Balances
-		dst.fieldIndexes[13] = v0types.RandaoMixes
-		dst.fieldIndexes[14] = v0types.Slashings
-		dst.fieldIndexes[15] = v0types.PreviousEpochParticipationBits
-		dst.fieldIndexes[16] = v0types.CurrentEpochParticipationBits
-		dst.fieldIndexes[17] = v0types.JustificationBits
-		dst.fieldIndexes[18] = v0types.PreviousJustifiedCheckpoint
-		dst.fieldIndexes[19] = v0types.CurrentJustifiedCheckpoint
-		dst.fieldIndexes[20] = v0types.FinalizedCheckpoint
-		dst.fieldIndexes[21] = v0types.InactivityScores
-		dst.fieldIndexes[22] = v0types.CurrentSyncCommittee
-		dst.fieldIndexes[23] = v0types.NextSyncCommittee
-		dst.fieldIndexes[24] = v0types.LatestExecutionPayloadHeader
-		dst.fieldIndexesRev = make(map[v0types.FieldIndex]int, fieldCount)
-		dst.fieldIndexesRev[v0types.GenesisTime] = 0
-		dst.fieldIndexesRev[v0types.GenesisValidatorsRoot] = 1
-		dst.fieldIndexesRev[v0types.Slot] = 2
-		dst.fieldIndexesRev[v0types.Fork] = 3
-		dst.fieldIndexesRev[v0types.LatestBlockHeader] = 4
-		dst.fieldIndexesRev[v0types.BlockRoots] = 5
-		dst.fieldIndexesRev[v0types.StateRoots] = 6
-		dst.fieldIndexesRev[v0types.HistoricalRoots] = 7
-		dst.fieldIndexesRev[v0types.Eth1Data] = 8
-		dst.fieldIndexesRev[v0types.Eth1DataVotes] = 9
-		dst.fieldIndexesRev[v0types.Eth1DepositIndex] = 10
-		dst.fieldIndexesRev[v0types.Validators] = 11
-		dst.fieldIndexesRev[v0types.Balances] = 12
-		dst.fieldIndexesRev[v0types.RandaoMixes] = 13
-		dst.fieldIndexesRev[v0types.Slashings] = 14
-		dst.fieldIndexesRev[v0types.PreviousEpochParticipationBits] = 15
-		dst.fieldIndexesRev[v0types.CurrentEpochParticipationBits] = 16
-		dst.fieldIndexesRev[v0types.JustificationBits] = 17
-		dst.fieldIndexesRev[v0types.PreviousJustifiedCheckpoint] = 18
-		dst.fieldIndexesRev[v0types.CurrentJustifiedCheckpoint] = 19
-		dst.fieldIndexesRev[v0types.FinalizedCheckpoint] = 20
-		dst.fieldIndexesRev[v0types.InactivityScores] = 21
-		dst.fieldIndexesRev[v0types.CurrentSyncCommittee] = 22
-		dst.fieldIndexesRev[v0types.NextSyncCommittee] = 23
-		dst.fieldIndexesRev[v0types.LatestExecutionPayloadHeader] = 24
+		b.populateFieldIndexesBellatrix()
 	}
 
 	for field, ref := range b.sharedFieldReferences {
@@ -1003,7 +717,6 @@ func (b *BeaconState) resetFieldTrie(index int, elements interface{}, length uin
 	return nil
 }
 
-// TODO: Better doc
 // ComputeFieldRootsWithHasher hashes the provided state and returns its respective field roots.
 func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]byte, error) {
 	_, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasher")
@@ -1253,4 +966,159 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	}
 
 	return fieldRoots, nil
+}
+
+func (b *BeaconState) populateFieldIndexesPhase0() {
+	b.fieldIndexes = make(map[int]v0types.FieldIndex, params.BeaconConfig().BeaconStateFieldCount)
+	b.fieldIndexes[0] = v0types.GenesisTime
+	b.fieldIndexes[1] = v0types.GenesisValidatorsRoot
+	b.fieldIndexes[2] = v0types.Slot
+	b.fieldIndexes[3] = v0types.Fork
+	b.fieldIndexes[4] = v0types.LatestBlockHeader
+	b.fieldIndexes[5] = v0types.BlockRoots
+	b.fieldIndexes[6] = v0types.StateRoots
+	b.fieldIndexes[7] = v0types.HistoricalRoots
+	b.fieldIndexes[8] = v0types.Eth1Data
+	b.fieldIndexes[9] = v0types.Eth1DataVotes
+	b.fieldIndexes[10] = v0types.Eth1DepositIndex
+	b.fieldIndexes[11] = v0types.Validators
+	b.fieldIndexes[12] = v0types.Balances
+	b.fieldIndexes[13] = v0types.RandaoMixes
+	b.fieldIndexes[14] = v0types.Slashings
+	b.fieldIndexes[15] = v0types.PreviousEpochAttestations
+	b.fieldIndexes[16] = v0types.CurrentEpochAttestations
+	b.fieldIndexes[17] = v0types.JustificationBits
+	b.fieldIndexes[18] = v0types.PreviousJustifiedCheckpoint
+	b.fieldIndexes[19] = v0types.CurrentJustifiedCheckpoint
+	b.fieldIndexes[20] = v0types.FinalizedCheckpoint
+	b.fieldIndexesRev = make(map[v0types.FieldIndex]int, params.BeaconConfig().BeaconStateFieldCount)
+	b.fieldIndexesRev[v0types.GenesisTime] = 0
+	b.fieldIndexesRev[v0types.GenesisValidatorsRoot] = 1
+	b.fieldIndexesRev[v0types.Slot] = 2
+	b.fieldIndexesRev[v0types.Fork] = 3
+	b.fieldIndexesRev[v0types.LatestBlockHeader] = 4
+	b.fieldIndexesRev[v0types.BlockRoots] = 5
+	b.fieldIndexesRev[v0types.StateRoots] = 6
+	b.fieldIndexesRev[v0types.HistoricalRoots] = 7
+	b.fieldIndexesRev[v0types.Eth1Data] = 8
+	b.fieldIndexesRev[v0types.Eth1DataVotes] = 9
+	b.fieldIndexesRev[v0types.Eth1DepositIndex] = 10
+	b.fieldIndexesRev[v0types.Validators] = 11
+	b.fieldIndexesRev[v0types.Balances] = 12
+	b.fieldIndexesRev[v0types.RandaoMixes] = 13
+	b.fieldIndexesRev[v0types.Slashings] = 14
+	b.fieldIndexesRev[v0types.PreviousEpochAttestations] = 15
+	b.fieldIndexesRev[v0types.CurrentEpochAttestations] = 16
+	b.fieldIndexesRev[v0types.JustificationBits] = 17
+	b.fieldIndexesRev[v0types.PreviousJustifiedCheckpoint] = 18
+	b.fieldIndexesRev[v0types.CurrentJustifiedCheckpoint] = 19
+	b.fieldIndexesRev[v0types.FinalizedCheckpoint] = 20
+}
+
+func (b *BeaconState) populateFieldIndexesAltair() {
+	b.fieldIndexes = make(map[int]v0types.FieldIndex, params.BeaconConfig().BeaconStateAltairFieldCount)
+	b.fieldIndexes[0] = v0types.GenesisTime
+	b.fieldIndexes[1] = v0types.GenesisValidatorsRoot
+	b.fieldIndexes[2] = v0types.Slot
+	b.fieldIndexes[3] = v0types.Fork
+	b.fieldIndexes[4] = v0types.LatestBlockHeader
+	b.fieldIndexes[5] = v0types.BlockRoots
+	b.fieldIndexes[6] = v0types.StateRoots
+	b.fieldIndexes[7] = v0types.HistoricalRoots
+	b.fieldIndexes[8] = v0types.Eth1Data
+	b.fieldIndexes[9] = v0types.Eth1DataVotes
+	b.fieldIndexes[10] = v0types.Eth1DepositIndex
+	b.fieldIndexes[11] = v0types.Validators
+	b.fieldIndexes[12] = v0types.Balances
+	b.fieldIndexes[13] = v0types.RandaoMixes
+	b.fieldIndexes[14] = v0types.Slashings
+	b.fieldIndexes[15] = v0types.PreviousEpochParticipationBits
+	b.fieldIndexes[16] = v0types.CurrentEpochParticipationBits
+	b.fieldIndexes[17] = v0types.JustificationBits
+	b.fieldIndexes[18] = v0types.PreviousJustifiedCheckpoint
+	b.fieldIndexes[19] = v0types.CurrentJustifiedCheckpoint
+	b.fieldIndexes[20] = v0types.FinalizedCheckpoint
+	b.fieldIndexes[21] = v0types.InactivityScores
+	b.fieldIndexes[22] = v0types.CurrentSyncCommittee
+	b.fieldIndexes[23] = v0types.NextSyncCommittee
+	b.fieldIndexesRev = make(map[v0types.FieldIndex]int, params.BeaconConfig().BeaconStateAltairFieldCount)
+	b.fieldIndexesRev[v0types.GenesisTime] = 0
+	b.fieldIndexesRev[v0types.GenesisValidatorsRoot] = 1
+	b.fieldIndexesRev[v0types.Slot] = 2
+	b.fieldIndexesRev[v0types.Fork] = 3
+	b.fieldIndexesRev[v0types.LatestBlockHeader] = 4
+	b.fieldIndexesRev[v0types.BlockRoots] = 5
+	b.fieldIndexesRev[v0types.StateRoots] = 6
+	b.fieldIndexesRev[v0types.HistoricalRoots] = 7
+	b.fieldIndexesRev[v0types.Eth1Data] = 8
+	b.fieldIndexesRev[v0types.Eth1DataVotes] = 9
+	b.fieldIndexesRev[v0types.Eth1DepositIndex] = 10
+	b.fieldIndexesRev[v0types.Validators] = 11
+	b.fieldIndexesRev[v0types.Balances] = 12
+	b.fieldIndexesRev[v0types.RandaoMixes] = 13
+	b.fieldIndexesRev[v0types.Slashings] = 14
+	b.fieldIndexesRev[v0types.PreviousEpochParticipationBits] = 15
+	b.fieldIndexesRev[v0types.CurrentEpochParticipationBits] = 16
+	b.fieldIndexesRev[v0types.JustificationBits] = 17
+	b.fieldIndexesRev[v0types.PreviousJustifiedCheckpoint] = 18
+	b.fieldIndexesRev[v0types.CurrentJustifiedCheckpoint] = 19
+	b.fieldIndexesRev[v0types.FinalizedCheckpoint] = 20
+	b.fieldIndexesRev[v0types.InactivityScores] = 21
+	b.fieldIndexesRev[v0types.CurrentSyncCommittee] = 22
+	b.fieldIndexesRev[v0types.NextSyncCommittee] = 23
+}
+
+func (b *BeaconState) populateFieldIndexesBellatrix() {
+	b.fieldIndexes = make(map[int]v0types.FieldIndex, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+	b.fieldIndexes[0] = v0types.GenesisTime
+	b.fieldIndexes[1] = v0types.GenesisValidatorsRoot
+	b.fieldIndexes[2] = v0types.Slot
+	b.fieldIndexes[3] = v0types.Fork
+	b.fieldIndexes[4] = v0types.LatestBlockHeader
+	b.fieldIndexes[5] = v0types.BlockRoots
+	b.fieldIndexes[6] = v0types.StateRoots
+	b.fieldIndexes[7] = v0types.HistoricalRoots
+	b.fieldIndexes[8] = v0types.Eth1Data
+	b.fieldIndexes[9] = v0types.Eth1DataVotes
+	b.fieldIndexes[10] = v0types.Eth1DepositIndex
+	b.fieldIndexes[11] = v0types.Validators
+	b.fieldIndexes[12] = v0types.Balances
+	b.fieldIndexes[13] = v0types.RandaoMixes
+	b.fieldIndexes[14] = v0types.Slashings
+	b.fieldIndexes[15] = v0types.PreviousEpochParticipationBits
+	b.fieldIndexes[16] = v0types.CurrentEpochParticipationBits
+	b.fieldIndexes[17] = v0types.JustificationBits
+	b.fieldIndexes[18] = v0types.PreviousJustifiedCheckpoint
+	b.fieldIndexes[19] = v0types.CurrentJustifiedCheckpoint
+	b.fieldIndexes[20] = v0types.FinalizedCheckpoint
+	b.fieldIndexes[21] = v0types.InactivityScores
+	b.fieldIndexes[22] = v0types.CurrentSyncCommittee
+	b.fieldIndexes[23] = v0types.NextSyncCommittee
+	b.fieldIndexes[24] = v0types.LatestExecutionPayloadHeader
+	b.fieldIndexesRev = make(map[v0types.FieldIndex]int, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+	b.fieldIndexesRev[v0types.GenesisTime] = 0
+	b.fieldIndexesRev[v0types.GenesisValidatorsRoot] = 1
+	b.fieldIndexesRev[v0types.Slot] = 2
+	b.fieldIndexesRev[v0types.Fork] = 3
+	b.fieldIndexesRev[v0types.LatestBlockHeader] = 4
+	b.fieldIndexesRev[v0types.BlockRoots] = 5
+	b.fieldIndexesRev[v0types.StateRoots] = 6
+	b.fieldIndexesRev[v0types.HistoricalRoots] = 7
+	b.fieldIndexesRev[v0types.Eth1Data] = 8
+	b.fieldIndexesRev[v0types.Eth1DataVotes] = 9
+	b.fieldIndexesRev[v0types.Eth1DepositIndex] = 10
+	b.fieldIndexesRev[v0types.Validators] = 11
+	b.fieldIndexesRev[v0types.Balances] = 12
+	b.fieldIndexesRev[v0types.RandaoMixes] = 13
+	b.fieldIndexesRev[v0types.Slashings] = 14
+	b.fieldIndexesRev[v0types.PreviousEpochParticipationBits] = 15
+	b.fieldIndexesRev[v0types.CurrentEpochParticipationBits] = 16
+	b.fieldIndexesRev[v0types.JustificationBits] = 17
+	b.fieldIndexesRev[v0types.PreviousJustifiedCheckpoint] = 18
+	b.fieldIndexesRev[v0types.CurrentJustifiedCheckpoint] = 19
+	b.fieldIndexesRev[v0types.FinalizedCheckpoint] = 20
+	b.fieldIndexesRev[v0types.InactivityScores] = 21
+	b.fieldIndexesRev[v0types.CurrentSyncCommittee] = 22
+	b.fieldIndexesRev[v0types.NextSyncCommittee] = 23
+	b.fieldIndexesRev[v0types.LatestExecutionPayloadHeader] = 24
 }

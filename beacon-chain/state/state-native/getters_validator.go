@@ -186,7 +186,7 @@ func (b *BeaconState) Balances() []uint64 {
 	return b.balancesVal()
 }
 
-// balances of validators participating in consensus on the beacon chain.
+// balancesVal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) balancesVal() []uint64 {
 	if b.balances == nil {
@@ -237,7 +237,7 @@ func (b *BeaconState) Slashings() []uint64 {
 	return b.slashingsVal()
 }
 
-// slashings of validators on the beacon chain.
+// slashingsVal of validators on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) slashingsVal() []uint64 {
 	if b.slashings == nil {

@@ -40,6 +40,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([32]byte, error) {
 	if uint64(len(b.randaoMixes)) <= idx {
 		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}
+
 	return b.randaoMixes[idx], nil
 }
 
