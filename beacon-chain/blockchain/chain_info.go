@@ -358,9 +358,13 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return false, nil
 	}
 
-	lastValidated, err := s.cfg.BeaconDB.StateSummary(ctx, bytesutil.ToBytes32(validatedCheckpoint.Root))
+	// checkpoint root could be zeros before the first finalized epoch. Use genesis root if the case.
+	lastValidated, err := s.cfg.BeaconDB.StateSummary(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(validatedCheckpoint.Root)))
 	if err != nil {
 		return false, err
+	}
+	if lastValidated == nil {
+		return false, errInvalidNilSummary
 	}
 
 	if ss.Slot > lastValidated.Slot {
