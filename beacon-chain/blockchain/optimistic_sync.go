@@ -5,14 +5,21 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -20,7 +27,7 @@ import (
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
-func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.BeaconBlock, headRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.BeaconState, headBlk block.BeaconBlock, headRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
@@ -66,8 +73,13 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 		FinalizedBlockHash: finalizedHash,
 	}
 
-	// payload attribute is only required when requesting payload, here we are just updating fork choice, so it is nil.
-	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /*payload attribute*/)
+	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
+	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, headState, nextSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get payload attribute")
+	}
+
+	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
@@ -83,6 +95,11 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headBlk block.Beac
 	}
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot); err != nil {
 		return nil, errors.Wrap(err, "could not set block to valid")
+	}
+	if hasAttr { // If the forkchoice update call has an attribute, update the proposer payload ID cache.
+		var pId [8]byte
+		copy(pId[:], payloadID[:])
+		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId)
 	}
 	return payloadID, nil
 }
@@ -186,6 +203,55 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 		return false, err
 	}
 	return parentIsExecutionBlock, nil
+}
+
+// getPayloadAttributes returns the payload attributes for the given state and slot.
+// The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
+func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot types.Slot) (bool, *enginev1.PayloadAttributes, types.ValidatorIndex, error) {
+	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
+	if !ok { // There's no need to build attribute if there is no proposer for slot.
+		return false, nil, 0, nil
+	}
+
+	// Get previous randao.
+	st = st.Copy()
+	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
+	if err != nil {
+		return false, nil, 0, err
+	}
+	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	if err != nil {
+		return false, nil, 0, nil
+	}
+
+	// Get fee recipient.
+	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
+	recipient, err := s.cfg.BeaconDB.FeeRecipientByValidatorID(ctx, proposerID)
+	switch {
+	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
+		if feeRecipient.String() == fieldparams.EthBurnAddressHex {
+			logrus.WithFields(logrus.Fields{
+				"validatorIndex": proposerID,
+				"burnAddress":    fieldparams.EthBurnAddressHex,
+			}).Error("Fee recipient not set. Using burn address")
+		}
+	case err != nil:
+		return false, nil, 0, errors.Wrap(err, "could not get fee recipient in db")
+	default:
+		feeRecipient = recipient
+	}
+
+	// Get timestamp.
+	t, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
+	if err != nil {
+		return false, nil, 0, err
+	}
+	attr := &enginev1.PayloadAttributes{
+		Timestamp:             uint64(t.Unix()),
+		PrevRandao:            prevRando,
+		SuggestedFeeRecipient: feeRecipient.Bytes(),
+	}
+	return true, attr, proposerID, nil
 }
 
 // removeInvalidBlockAndState removes the invalid block and its corresponding state from the cache and DB.

@@ -186,7 +186,13 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		log.WithError(err).Error("Could not get block from db")
 		return
 	}
+	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)
+	if err != nil {
+		log.WithError(err).Error("Could not get state from db")
+		return
+	}
 	_, err = s.notifyForkchoiceUpdate(s.ctx,
+		headState,
 		newHeadBlock.Block(),
 		newHeadRoot,
 		bytesutil.ToBytes32(finalized.Root),
@@ -194,7 +200,7 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 	if err != nil {
 		log.WithError(err).Error("could not notify forkchoice update")
 	}
-	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock); err != nil {
+	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
 		log.WithError(err).Error("could not save head")
 	}
 }

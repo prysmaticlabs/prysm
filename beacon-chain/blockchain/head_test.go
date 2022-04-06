@@ -31,7 +31,8 @@ func TestSaveHead_Same(t *testing.T) {
 	service.head = &head{slot: 0, root: r}
 	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	require.NoError(t, service.saveHead(context.Background(), r, b))
+	st, _ := util.DeterministicGenesisState(t, 1)
+	require.NoError(t, service.saveHead(context.Background(), r, b, st))
 	assert.Equal(t, types.Slot(0), service.headSlot(), "Head did not stay the same")
 	assert.Equal(t, r, service.headRoot(), "Head did not stay the same")
 }
@@ -69,7 +70,7 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
-	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb))
+	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
 
 	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
 
@@ -115,7 +116,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
-	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb))
+	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
 
 	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
 
@@ -159,7 +160,8 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
 	headRoot, err := service.updateHead(context.Background(), []uint64{})
 	require.NoError(t, err)
-	require.NoError(t, service.saveHead(context.Background(), headRoot, wsb))
+	st, _ := util.DeterministicGenesisState(t, 1)
+	require.NoError(t, service.saveHead(context.Background(), headRoot, wsb, st))
 }
 
 func Test_notifyNewHeadEvent(t *testing.T) {
