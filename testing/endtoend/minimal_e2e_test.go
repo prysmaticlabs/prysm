@@ -50,6 +50,10 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
 	epochsToRun := 10
+	// TODO(#10053): Web3signer does not support bellatrix yet.
+	if args.useWeb3RemoteSigner {
+		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
+	}
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
