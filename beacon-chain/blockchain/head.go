@@ -40,7 +40,11 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not update head")
 	}
-	return s.saveHead(ctx, headRoot)
+	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
+	if err != nil {
+		return err
+	}
+	return s.saveHead(ctx, headRoot, headBlock)
 }
 
 // This defines the current chain service's view of head.
@@ -97,7 +101,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 
 // This saves head info to the local service cache, it also saves the
 // new head root to the DB.
-func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
+func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock block.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
 
@@ -109,20 +113,14 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if headRoot == bytesutil.ToBytes32(r) {
 		return nil
 	}
+	if err := helpers.BeaconBlockIsNil(headBlock); err != nil {
+		return err
+	}
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
 	if !s.cfg.BeaconDB.HasStateSummary(ctx, headRoot) {
 		return nil
-	}
-
-	// Get the new head block from DB.
-	newHeadBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
-	if err != nil {
-		return err
-	}
-	if err := helpers.BeaconBlockIsNil(newHeadBlock); err != nil {
-		return err
 	}
 
 	// Get the new head state from cached state or DB.
@@ -136,11 +134,11 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	headSlot := s.HeadSlot()
-	newHeadSlot := newHeadBlock.Block().Slot()
+	newHeadSlot := headBlock.Block().Slot()
 	oldHeadRoot := s.headRoot()
 	oldStateRoot := s.headBlock().Block().StateRoot()
-	newStateRoot := newHeadBlock.Block().StateRoot()
-	if bytesutil.ToBytes32(newHeadBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
+	newStateRoot := headBlock.Block().StateRoot()
+	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
 		log.WithFields(logrus.Fields{
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
@@ -172,7 +170,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	}
 
 	// Cache the new head info.
-	s.setHead(headRoot, newHeadBlock, newHeadState)
+	s.setHead(headRoot, headBlock, newHeadState)
 
 	// Save the new head root to DB.
 	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {

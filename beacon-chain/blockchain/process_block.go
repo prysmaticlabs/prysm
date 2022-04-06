@@ -208,10 +208,14 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), s.headRoot(), bytesutil.ToBytes32(finalized.Root)); err != nil {
+	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
+	if err != nil {
 		return err
 	}
-	if err := s.saveHead(ctx, headRoot); err != nil {
+	if _, err := s.notifyForkchoiceUpdate(ctx, headBlock.Block(), headRoot, bytesutil.ToBytes32(finalized.Root)); err != nil {
+		return err
+	}
+	if err := s.saveHead(ctx, headRoot, headBlock); err != nil {
 		return errors.Wrap(err, "could not save head")
 	}
 
@@ -258,7 +262,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
-		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, fRoot)
+		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
 		}
