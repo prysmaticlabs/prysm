@@ -166,7 +166,8 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
-			_, err := service.notifyForkchoiceUpdate(ctx, tt.blk, service.headRoot(), tt.finalizedRoot)
+			st, _ := util.DeterministicGenesisState(t, 1)
+			_, err := service.notifyForkchoiceUpdate(ctx, st, tt.blk, service.headRoot(), tt.finalizedRoot)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
