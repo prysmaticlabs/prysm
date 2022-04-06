@@ -109,6 +109,7 @@ type Config struct {
 	StateGen                *stategen.State
 	MaxMsgSize              int
 	ExecutionEngineCaller   powchain.EngineCaller
+	ProposerIdsCache        *cache.ProposerPayloadIDsCache
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -207,6 +208,7 @@ func (s *Service) Start() {
 		ReplayerBuilder:        ch,
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 		BeaconDB:               s.cfg.BeaconDB,
+		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
