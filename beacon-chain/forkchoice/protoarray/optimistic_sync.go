@@ -70,13 +70,10 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 
 	// Check if last valid hash is an ancestor of the passed node
 	firstInvalidIndex := node.parent
-	for ; firstInvalidIndex != NonExistentNode && firstInvalidIndex != lastValidIndex; firstInvalidIndex = node.parent {
-		if ctx.Err() != nil {
-			f.store.nodesLock.Unlock()
-			return invalidRoots, ctx.Err()
-		}
-		node = f.store.nodes[firstInvalidIndex]
+	for index := firstInvalidIndex; index != NonExistentNode && index != lastValidIndex; index = node.parent {
+		node = f.store.nodes[index]
 	}
+
 	// if the last valid hash is not an ancestor of the invalid block, we
 	// just remove the invalid block.
 	if node.parent != lastValidIndex {
@@ -96,15 +93,11 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 	var validNode *Node
 	for index := lastValidIndex; index != NonExistentNode; index = validNode.parent {
 		validNode = f.store.nodes[index]
-		if ctx.Err() != nil {
-			f.store.nodesLock.Unlock()
-			return invalidRoots, ctx.Err()
-		}
 		validNode.weight -= weight
 	}
 
 	// Find the current proposer boost (it should be set to zero if an
-	// INVALID block was boosted
+	// INVALID block was boosted)
 	f.store.proposerBoostLock.RLock()
 	boostRoot := f.store.proposerBoostRoot
 	previousBoostRoot := f.store.previousProposerBoostRoot
@@ -112,14 +105,8 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 
 	// Remove the invalid roots from our store maps and adjust their weight
 	// to zero
-	boosted := false
-	previouslyBoosted := false
-	if node.root == boostRoot {
-		boosted = true
-	}
-	if node.root == previousBoostRoot {
-		previouslyBoosted = true
-	}
+	boosted := node.root == boostRoot
+	previouslyBoosted := node.root == previousBoostRoot
 
 	invalidIndices := map[uint64]bool{firstInvalidIndex: true}
 	node.status = invalid
@@ -165,7 +152,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 		invalidRoots = append(invalidRoots, f.store.nodes[index].root)
 	}
 
-	// Update best child and descendant
+	// Update the best child and descendant
 	for i := len(f.store.nodes) - 1; i >= 0; i-- {
 		n := f.store.nodes[i]
 		if n.parent != NonExistentNode {
