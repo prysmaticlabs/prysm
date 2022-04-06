@@ -247,7 +247,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	}
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
-	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, fRoot)
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
 	if err != nil {
 		return err
 	}

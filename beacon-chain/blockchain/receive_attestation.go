@@ -181,15 +181,20 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
 		return
 	}
-	_, err := s.notifyForkchoiceUpdate(s.ctx,
-		s.headBlock().Block(),
-		s.headRoot(),
+	newHeadBlock, err := s.cfg.BeaconDB.Block(ctx, newHeadRoot)
+	if err != nil {
+		log.WithError(err).Error("Could not get block from db")
+		return
+	}
+	_, err = s.notifyForkchoiceUpdate(s.ctx,
+		newHeadBlock.Block(),
+		newHeadRoot,
 		bytesutil.ToBytes32(finalized.Root),
 	)
 	if err != nil {
 		log.WithError(err).Error("could not notify forkchoice update")
 	}
-	if err := s.saveHead(ctx, newHeadRoot); err != nil {
+	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock); err != nil {
 		log.WithError(err).Error("could not save head")
 	}
 }

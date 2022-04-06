@@ -109,7 +109,7 @@ func (n *Node) leadsToViableHead(justifiedEpoch, finalizedEpoch types.Epoch) boo
 	return n.bestDescendant.viableForHead(justifiedEpoch, finalizedEpoch)
 }
 
-// setNodeAndParentValidated sets the current node and the parent as validated (i.e. non-optimistic).
+// setNodeAndParentValidated sets the current node and all the ancestors as validated (i.e. non-optimistic).
 func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
