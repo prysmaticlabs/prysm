@@ -44,7 +44,11 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return s.saveHead(ctx, headRoot, headBlock)
+	headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
+	return s.saveHead(ctx, headRoot, headBlock, headState)
 }
 
 // This defines the current chain service's view of head.
@@ -101,7 +105,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 
 // This saves head info to the local service cache, it also saves the
 // new head root to the DB.
-func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock block.SignedBeaconBlock) error {
+func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock block.SignedBeaconBlock, headState state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
 
@@ -116,20 +120,14 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock blo
 	if err := helpers.BeaconBlockIsNil(headBlock); err != nil {
 		return err
 	}
+	if headState == nil || headState.IsNil() {
+		return errors.New("cannot save nil head state")
+	}
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
 	if !s.cfg.BeaconDB.HasStateSummary(ctx, headRoot) {
 		return nil
-	}
-
-	// Get the new head state from cached state or DB.
-	newHeadState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
-	}
-	if newHeadState == nil || newHeadState.IsNil() {
-		return errors.New("cannot save nil head state")
 	}
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
@@ -170,7 +168,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock blo
 	}
 
 	// Cache the new head info.
-	s.setHead(headRoot, headBlock, newHeadState)
+	s.setHead(headRoot, headBlock, headState)
 
 	// Save the new head root to DB.
 	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
@@ -180,7 +178,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock blo
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
 	go func() {
-		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, newHeadState, newStateRoot, headRoot[:]); err != nil {
+		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, headState, newStateRoot, headRoot[:]); err != nil {
 			log.WithError(err).Error("Could not notify event feed of new chain head")
 		}
 	}()
