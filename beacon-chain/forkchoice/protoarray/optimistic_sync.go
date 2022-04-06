@@ -70,8 +70,8 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 
 	// Check if last valid hash is an ancestor of the passed node
 	firstInvalidIndex := node.parent
-	for index := firstInvalidIndex; index != NonExistentNode && index != lastValidIndex; index = node.parent {
-		node = f.store.nodes[index]
+	for ; firstInvalidIndex != NonExistentNode && firstInvalidIndex != lastValidIndex; firstInvalidIndex = node.parent {
+		node = f.store.nodes[firstInvalidIndex]
 	}
 
 	// if the last valid hash is not an ancestor of the invalid block, we
