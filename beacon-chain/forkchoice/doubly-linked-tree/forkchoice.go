@@ -18,6 +18,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 		finalizedEpoch:    finalizedEpoch,
 		proposerBoostRoot: [32]byte{},
 		nodeByRoot:        make(map[[fieldparams.RootLength]byte]*Node),
+		nodeByPayload:     make(map[[fieldparams.RootLength]byte]*Node),
 		pruneThreshold:    defaultPruneThreshold,
 	}
 
@@ -168,7 +169,7 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 }
 
 // IsOptimistic returns true if the given root has been optimistically synced.
-func (f *ForkChoice) IsOptimistic(_ context.Context, root [32]byte) (bool, error) {
+func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
@@ -302,6 +303,6 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 }
 
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [fieldparams.RootLength]byte) ([][32]byte, error) {
-	return f.store.removeNode(ctx, root)
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
+	return f.store.setOptimisticToInvalid(ctx, root, payloadHash)
 }

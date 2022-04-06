@@ -43,8 +43,3 @@ func (n *Node) BestChild() uint64 {
 func (n *Node) BestDescendant() uint64 {
 	return n.bestDescendant
 }
-
-// Graffiti of the fork choice node.
-func (n *Node) Graffiti() [32]byte {
-	return n.graffiti
-}
