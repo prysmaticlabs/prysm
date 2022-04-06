@@ -3,11 +3,11 @@ package helpers
 import (
 	"context"
 	"encoding/hex"
-	"github.com/pkg/errors"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -19,15 +19,26 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
+var errWeakSubjectivityBalanceUnavailable = errors.New("cannot find total active balance of validators")
+var errWeakSubjectivityValidatorCountUnavailable = errors.New("cannot obtain active validator count")
+var errWeakSubjectivityChurnLimit = errors.New("cannot obtain active validator churn limit")
+var errWeakSubjectivityZeroChurn = errors.New("either validator churn limit, or max deposits per-epoch, is zero")
+
+// these are exported for tests in helpers_test (see export_test.go)
+var errWeakSubjectivityZeroValidators = errors.New("cannot compute weak subjectivity with 0 active validators")
+var errInvalidWeakSubjectivityState = errors.New("invalid weak subjectivity state or checkpoint")
+var errWeakSubjectivityMismatchedRoot = errors.New("state and checkpoint roots do not match")
+var errWeakSubjectivityMismatchedEpoch = errors.New("state and checkpoint epochs do not match")
+
 // CurrentWeakSubjectivityPeriod returns weak subjectivity period for a given state.
 func CurrentWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (types.Epoch, error) {
 	activeValidators, err := ActiveValidatorCount(ctx, st, time.CurrentEpoch(st))
 	if err != nil {
-		return 0, fmt.Errorf("cannot obtain active valiadtor count: %w", err)
+		return 0, errors.Wrap(errWeakSubjectivityValidatorCountUnavailable, err.Error())
 	}
 	totalActiveBalance, err := TotalActiveBalance(st)
 	if err != nil {
-		return 0, fmt.Errorf("cannot find total active balance of validators: %w", err)
+		return 0, errors.Wrap(errWeakSubjectivityBalanceUnavailable, err.Error())
 	}
 	return ComputeWeakSubjectivityPeriod(cfg, activeValidators, totalActiveBalance)
 }
@@ -74,7 +85,7 @@ func ComputeWeakSubjectivityPeriod(cfg *params.BeaconChainConfig, activeValidato
 	wsPeriod := cfg.MinValidatorWithdrawabilityDelay
 
 	if activeValidators == 0 {
-		return 0, errors.New("cannot compute weak subjectivity with 0 active validators")
+		return 0, errWeakSubjectivityZeroValidators
 	}
 	// Variables like 'N' are used to 1:1 match the spec. N is the total number of active validators.
 	N := activeValidators
@@ -90,16 +101,15 @@ func ComputeWeakSubjectivityPeriod(cfg *params.BeaconChainConfig, activeValidato
 	// delta is the Validator churn limit.
 	delta, err := ValidatorChurnLimit(activeValidators)
 	if err != nil {
-		return 0, fmt.Errorf("cannot obtain active validator churn limit: %w", err)
+		return 0, errors.Wrap(errWeakSubjectivityChurnLimit, err.Error())
 	}
-
 	// Delta is the upper bound on how many Validators can deposit in an Epoch, in other words,
 	// it sets the entry rate limit.
 	// Notice the pattern of lowercase/uppercase variable names ratios of actual/max: delta/Delta, t/T
 	Delta := uint64(cfg.SlotsPerEpoch.Mul(cfg.MaxDeposits))
 
 	if delta == 0 || Delta == 0 {
-		return 0, errors.New("either validator churn limit, or max deposits per-epoch, is zero")
+		return 0, errWeakSubjectivityZeroChurn
 	}
 
 	// Safety decay, maximum tolerable loss of safety margin of FFG finality.
@@ -110,7 +120,7 @@ func ComputeWeakSubjectivityPeriod(cfg *params.BeaconChainConfig, activeValidato
 		epochsForBalanceTopUps := N * (200 + 3*D) / (600 * Delta)
 		return wsPeriod + types.Epoch(math.Max(epochsForValidatorSetChurn, epochsForBalanceTopUps)), nil
 	}
-	return wsPeriod + types.Epoch(3 * N * D * t / (200 * Delta * (T - t))), nil
+	return wsPeriod + types.Epoch(3*N*D*t/(200*Delta*(T-t))), nil
 }
 
 // IsWithinWeakSubjectivityPeriod verifies if a given weak subjectivity checkpoint is not stale i.e.
@@ -134,27 +144,27 @@ func IsWithinWeakSubjectivityPeriod(
 	ctx context.Context, currentEpoch types.Epoch, wsState state.ReadOnlyBeaconState, wsStateRoot [fieldparams.RootLength]byte, wsEpoch types.Epoch, cfg *params.BeaconChainConfig) (bool, error) {
 	// Make sure that incoming objects are not nil.
 	if wsState == nil || wsState.IsNil() || wsState.LatestBlockHeader() == nil {
-		return false, errors.New("invalid weak subjectivity state or checkpoint")
+		return false, errInvalidWeakSubjectivityState
 	}
 
+	hr := bytesutil.ToBytes32(wsState.LatestBlockHeader().StateRoot)
 	// Assert that state and checkpoint have the same root and epoch.
-	if bytesutil.ToBytes32(wsState.LatestBlockHeader().StateRoot) != wsStateRoot {
-		return false, fmt.Errorf("state (%#x) and checkpoint (%#x) roots do not match",
-			wsState.LatestBlockHeader().StateRoot, wsStateRoot)
+	if hr != wsStateRoot {
+		return false, errors.Wrapf(errWeakSubjectivityMismatchedRoot, "state=%#x, checkpoint=%#x", hr, wsStateRoot)
 	}
-	if slots.ToEpoch(wsState.Slot()) != wsEpoch {
-		return false, fmt.Errorf("state (%v) and checkpoint (%v) epochs do not match",
-			slots.ToEpoch(wsState.Slot()), wsEpoch)
+
+	se := slots.ToEpoch(wsState.Slot())
+	if se != wsEpoch {
+		return false, errors.Wrapf(errWeakSubjectivityMismatchedEpoch, "state=%v, checkpoint=%v", se, wsEpoch)
 	}
 
 	// Compare given epoch to state epoch + weak subjectivity period.
 	wsPeriod, err := CurrentWeakSubjectivityPeriod(ctx, wsState, cfg)
 	if err != nil {
-		return false, fmt.Errorf("cannot compute weak subjectivity period: %w", err)
+		return false, errors.Wrapf(err, "cannot check if within weak subjectivity period")
 	}
-	wsStateEpoch := slots.ToEpoch(wsState.Slot())
 
-	return currentEpoch <= wsStateEpoch+wsPeriod, nil
+	return currentEpoch <= se+wsPeriod, nil
 }
 
 // LatestWeakSubjectivityEpoch returns epoch of the most recent weak subjectivity checkpoint known to a node.

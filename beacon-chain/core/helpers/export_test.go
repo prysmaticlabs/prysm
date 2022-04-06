@@ -1,0 +1,7 @@
+package helpers
+
+// export these for helpers_test package visibility.
+var ErrWeakSubjectivityZeroValidators = errWeakSubjectivityZeroValidators
+var ErrInvalidWeakSubjectivityState = errInvalidWeakSubjectivityState
+var ErrWeakSubjectivityMismatchedRoot = errWeakSubjectivityMismatchedRoot
+var ErrWeakSubjectivityMismatchedEpoch = errWeakSubjectivityMismatchedEpoch

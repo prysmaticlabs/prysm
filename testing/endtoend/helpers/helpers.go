@@ -273,7 +273,7 @@ func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn,
 func BeaconAPIHostnames(numConns int) []string {
 	hostnames := make([]string, 0)
 	for i := 0; i < numConns; i++ {
-		port := e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i
+		port := e2e.TestParams.Ports.PrysmBeaconNodeRPCPort + i
 		hostnames = append(hostnames, fmt.Sprintf("127.0.0.1:%d", port))
 	}
 	return hostnames
