@@ -182,12 +182,14 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			}
 			// Cache proposer assignment for the current epoch.
 			for _, slot := range proposerIndexToSlots[idx] {
-				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, 0 /* payloadID */)
+				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, [8]byte{} /* payloadID */)
 			}
 			// Cache proposer assignment for the next epoch.
 			for _, slot := range nextProposerIndexToSlots[idx] {
-				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, 0 /* payloadID */)
+				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, [8]byte{} /* payloadID */)
 			}
+			// Prune payload ID cache for any slots before request slot.
+			vs.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
 			vStatus, _ := vs.validatorStatus(ctx, s, pubKey)

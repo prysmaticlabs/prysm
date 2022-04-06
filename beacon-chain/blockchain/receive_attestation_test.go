@@ -164,7 +164,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		block: wsb,
 		state: st,
 	}
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, 1)
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
 	service.store.SetFinalizedCheckpt(finalized)
 	service.notifyEngineIfChangedHead(ctx, r1)
 	require.LogsDoNotContain(t, hook, finalizedErr)
@@ -172,5 +172,5 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2)
 	require.Equal(t, true, has)
 	require.Equal(t, types.ValidatorIndex(1), vId)
-	require.Equal(t, uint64(1), payloadID)
+	require.Equal(t, [8]byte{1}, payloadID)
 }
