@@ -115,7 +115,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 	if err != nil {
 		return false, errors.Wrap(err, "could not get execution payload")
 	}
-	_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	if err != nil {
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
@@ -129,7 +129,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 			if err != nil {
 				return false, err
 			}
-			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(payload.BlockHash))
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
 				return false, err
 			}
