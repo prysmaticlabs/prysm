@@ -271,7 +271,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		}
 
 		if time.CanUpgradeToAltair(state.Slot()) {
-			log.Warnf("Upgrading to Altair at slot %d, epoch %d", state.Slot(), time.CurrentEpoch(state))
 			state, err = altair.UpgradeToAltair(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)

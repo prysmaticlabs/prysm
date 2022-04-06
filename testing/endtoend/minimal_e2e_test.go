@@ -5,7 +5,6 @@ import (
 	"os"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
@@ -20,30 +19,28 @@ type testArgs struct {
 	useWeb3RemoteSigner bool
 }
 
-//func TestEndToEnd_MinimalConfig(t *testing.T) {
-//	e2eMinimal(t, &testArgs{
-//		usePrysmSh:          false,
-//		useWeb3RemoteSigner: false,
-//	})
-//	// Calling Sleep method
-//	time.Sleep(20 * time.Second)
-//}
+func TestEndToEnd_MinimalConfig(t *testing.T) {
+	e2eMinimal(t, &testArgs{
+		usePrysmSh:          false,
+		useWeb3RemoteSigner: false,
+	})
 
-// Run minimal e2e config with the current release validator against latest beacon node.
-// func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
-// 	e2eMinimal(t, &testArgs{
-// 		usePrysmSh:          true,
-// 		useWeb3RemoteSigner: false,
-// 	})
-// }
+}
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 	e2eMinimal(t, &testArgs{
 		usePrysmSh:          false,
 		useWeb3RemoteSigner: true,
 	})
-	// Calling Sleep method
-	time.Sleep(20 * time.Second)
+
+}
+
+//Run minimal e2e config with the current release validator against latest beacon node.
+func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
+	e2eMinimal(t, &testArgs{
+		usePrysmSh:          true,
+		useWeb3RemoteSigner: false,
+	})
 }
 
 func e2eMinimal(t *testing.T, args *testArgs) {
