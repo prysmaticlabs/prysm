@@ -18,7 +18,7 @@ import (
 )
 
 // ProofFromMerkleLayers creates a proof starting at the leaf index of the state Merkle layers.
-func ProofFromMerkleLayers(layers [][][]byte, startingLeafIndex types.FieldIndex) [][]byte {
+func ProofFromMerkleLayers(layers [][][]byte, startingLeafIndex int) [][]byte {
 	// The merkle tree structure looks as follows:
 	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
 	proof := make([][]byte, 0)
@@ -49,7 +49,7 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	return nil
 }
 
-func validateElements(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) error {
+func validateElements(field types.FieldIdx, dataType types.DataType, elements interface{}, length uint64) error {
 	if dataType == types.CompressedArray {
 		comLength, err := field.ElemsInChunk()
 		if err != nil {
@@ -65,7 +65,7 @@ func validateElements(field types.FieldIndex, dataType types.DataType, elements 
 }
 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func fieldConverters(field types.FieldIdx, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots:
 		switch val := elements.(type) {

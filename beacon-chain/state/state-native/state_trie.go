@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/fieldtrie"
 	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
@@ -796,13 +796,13 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	for i, f := range b.sharedFieldReferences {
-		refMap[b.fieldIndexes[i].String()] = uint64(f.Refs())
+		refMap[b.fieldIndexes[i].String(-1)] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
 		numOfRefs := uint64(f.FieldReference().Refs())
 		f.RLock()
 		if !f.Empty() {
-			refMap[b.fieldIndexes[i].String()+"_trie"] = numOfRefs
+			refMap[b.fieldIndexes[i].String(-1)+"_trie"] = numOfRefs
 		}
 		f.RUnlock()
 	}
@@ -818,7 +818,7 @@ func (b *BeaconState) IsNil() bool {
 func (b *BeaconState) rootSelector(ctx context.Context, field int) ([32]byte, error) {
 	_, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("field", b.fieldIndexes[field].String()))
+	span.AddAttributes(trace.StringAttribute("field", b.fieldIndexes[field].String(-1)))
 
 	hasher := hash.CustomSHA256Hasher()
 	switch b.fieldIndexes[field] {

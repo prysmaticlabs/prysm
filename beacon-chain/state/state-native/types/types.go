@@ -9,7 +9,7 @@ import (
 type FieldIndex int
 
 // String returns the name of the field index.
-func (f FieldIndex) String() string {
+func (f FieldIndex) String(stateVersion int) string {
 	switch f {
 	case GenesisTime:
 		return "genesisTime"

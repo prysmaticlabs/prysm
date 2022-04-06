@@ -25,6 +25,11 @@ const (
 	CompressedArray
 )
 
+type FieldIdx interface {
+	String(stateVersion int) string
+	ElemsInChunk() (uint64, error)
+}
+
 // String returns the name of the field index.
 func (f FieldIndex) String(stateVersion int) string {
 	switch f {

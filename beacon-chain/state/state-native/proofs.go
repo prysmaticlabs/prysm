@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/fieldtrie"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -49,7 +49,7 @@ func (b *BeaconState) FinalizedRootProof(ctx context.Context) ([][]byte, error) 
 	epochRoot := bytesutil.ToBytes32(epochBuf)
 	proof := make([][]byte, 0)
 	proof = append(proof, epochRoot[:])
-	branch := fieldtrie.ProofFromMerkleLayers(b.merkleLayers, v0types.FinalizedCheckpoint)
+	branch := fieldtrie.ProofFromMerkleLayers(b.merkleLayers, int(v0types.FinalizedCheckpoint))
 	proof = append(proof, branch...)
 	return proof, nil
 }
