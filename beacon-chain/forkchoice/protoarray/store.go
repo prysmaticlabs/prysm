@@ -30,43 +30,14 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 		proposerBoostRoot: [32]byte{},
 		nodes:             make([]*Node, 0),
 		nodesIndices:      make(map[[32]byte]uint64),
+		payloadIndices:    make(map[[32]byte]uint64),
 		canonicalNodes:    make(map[[32]byte]bool),
 		pruneThreshold:    defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
-	st := &optimisticStore{
-		validatedTips: make(map[[32]byte]types.Slot),
-	}
-	return &ForkChoice{store: s, balances: b, votes: v, syncedTips: st}
-}
-
-// SetSyncedTips sets the synced and validated tips from the passed map
-func (f *ForkChoice) SetSyncedTips(tips map[[32]byte]types.Slot) error {
-	if len(tips) == 0 {
-		return errInvalidSyncedTips
-	}
-	newTips := make(map[[32]byte]types.Slot, len(tips))
-	for k, v := range tips {
-		newTips[k] = v
-	}
-	f.syncedTips.Lock()
-	defer f.syncedTips.Unlock()
-	f.syncedTips.validatedTips = newTips
-	return nil
-}
-
-// SyncedTips returns the synced and validated tips from the fork choice store.
-func (f *ForkChoice) SyncedTips() map[[32]byte]types.Slot {
-	f.syncedTips.RLock()
-	defer f.syncedTips.RUnlock()
-
-	m := make(map[[32]byte]types.Slot)
-	for k, v := range f.syncedTips.validatedTips {
-		m[k] = v
-	}
-	return m
+	return &ForkChoice{store: s, balances: b, votes: v}
 }
 
 // Head returns the head root from fork choice store.
@@ -159,7 +130,7 @@ func (f *ForkChoice) InsertOptimisticBlock(
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
 // root is different than the current store finalized root, and the number of the store has met prune threshold.
 func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
-	return f.store.prune(ctx, finalizedRoot, f.syncedTips)
+	return f.store.prune(ctx, finalizedRoot)
 }
 
 // HasNode returns true if the node exists in fork choice store,
@@ -375,6 +346,7 @@ func (s *Store) insert(ctx context.Context,
 	}
 
 	s.nodesIndices[root] = index
+	s.payloadIndices[payloadHash] = index
 	s.nodes = append(s.nodes, n)
 
 	// Update parent with the best child and descendant only if it's available.
@@ -599,7 +571,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 // prune prunes the store with the new finalized root. The tree is only
 // pruned if the input finalized root are different than the one in stored and
 // the number of the nodes in store has met prune threshold.
-func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *optimisticStore) error {
+func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
 	defer span.End()
 
@@ -619,18 +591,9 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 		return nil
 	}
 
-	// Traverse through the node list starting from the finalized node at index 0.
-	// Nodes that are not branching off from the finalized node will be removed.
-	syncedTips.Lock()
-	defer syncedTips.Unlock()
-
 	canonicalNodesMap := make(map[uint64]uint64, uint64(len(s.nodes))-finalizedIndex)
 	canonicalNodes := make([]*Node, 1, uint64(len(s.nodes))-finalizedIndex)
 	finalizedNode := s.nodes[finalizedIndex]
-	finalizedTipIndex, err := s.findSyncedTip(ctx, finalizedNode, syncedTips)
-	if err != nil {
-		return err
-	}
 	finalizedNode.parent = NonExistentNode
 	canonicalNodes[0] = finalizedNode
 	canonicalNodesMap[finalizedIndex] = uint64(0)
@@ -646,10 +609,6 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 		} else {
 			// Remove node and synced tip that is not part of finalized branch.
 			delete(s.nodesIndices, node.root)
-			_, ok := syncedTips.validatedTips[node.root]
-			if ok && idx != finalizedTipIndex {
-				delete(syncedTips.validatedTips, node.root)
-			}
 		}
 	}
 	s.nodesIndices[finalizedRoot] = uint64(0)
@@ -666,7 +625,6 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 
 	s.nodes = canonicalNodes
 	prunedCount.Inc()
-	syncedTipsCount.Set(float64(len(syncedTips.validatedTips)))
 	return nil
 }
 
@@ -674,6 +632,10 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte, syncedTips *o
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
 func (s *Store) leadsToViableHead(node *Node) (bool, error) {
+	if node.status == invalid {
+		return false, nil
+	}
+
 	var bestDescendantViable bool
 	bestDescendantIndex := node.bestDescendant
 
@@ -703,20 +665,6 @@ func (s *Store) viableForHead(node *Node) bool {
 	finalized := s.finalizedEpoch == node.finalizedEpoch || s.finalizedEpoch == 0
 
 	return justified && finalized
-}
-
-// Returns the list of leaves in the Fork Choice store.
-// These are all the nodes that have NonExistentNode as best child.
-// This internal method assumes that the caller holds a lock in s.nodesLock.
-func (s *Store) leaves() ([]uint64, error) {
-	var leaves []uint64
-	for i := uint64(0); i < uint64(len(s.nodes)); i++ {
-		node := s.nodes[i]
-		if node.bestChild == NonExistentNode {
-			leaves = append(leaves, i)
-		}
-	}
-	return leaves, nil
 }
 
 // Tips returns all possible chain heads (leaves of fork choice tree).

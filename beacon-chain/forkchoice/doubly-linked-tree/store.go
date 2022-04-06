@@ -121,6 +121,7 @@ func (s *Store) insert(ctx context.Context,
 		payloadHash:    payloadHash,
 	}
 
+	s.nodeByPayload[payloadHash] = n
 	s.nodeByRoot[root] = n
 	if parent != nil {
 		parent.children = append(parent.children, n)
