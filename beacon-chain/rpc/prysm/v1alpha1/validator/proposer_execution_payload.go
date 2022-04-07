@@ -49,7 +49,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		payloadIDCacheHit.Inc()
 		return vs.ExecutionEngineCaller.GetPayload(ctx, pid)
 	}
-	payloadIDCacheMiss.Inc()
 
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
@@ -85,6 +84,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 			return emptyPayload(), nil
 		}
 	}
+	payloadIDCacheMiss.Inc()
 
 	t, err := slots.ToTime(st.GenesisTime(), slot)
 	if err != nil {

@@ -3,7 +3,10 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -24,6 +27,113 @@ import (
 	"go.opencensus.io/trace"
 )
 
+func tDStringToUint256(td string) (*uint256.Int, error) {
+	b, err := hexutil.DecodeBig(td)
+	if err != nil {
+		return nil, err
+	}
+	i, overflows := uint256.FromBig(b)
+	if overflows {
+		return nil, errors.New("total difficulty overflowed")
+	}
+	return i, nil
+}
+
+func (s *Service) prepareProposerTerminalBlock(ctx context.Context, st state.BeaconState) error {
+	nextSlot := s.CurrentSlot() + 1
+	_, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(nextSlot)
+	if !ok {
+		return nil
+	}
+	hash, has, err := s.getTerminalBlockHash(ctx)
+	if err != nil {
+		return err
+	}
+	if !has {
+		return nil
+	}
+	fcs := &enginev1.ForkchoiceState{
+		HeadBlockHash:      hash,
+		SafeBlockHash:      hash,
+		FinalizedBlockHash: params.BeaconConfig().ZeroHash[:],
+	}
+	_, attr, proposerId, err := s.getPayloadAttribute(ctx, st, nextSlot)
+	if err != nil {
+		return err
+	}
+	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
+	if err != nil {
+		switch err {
+		case powchain.ErrAcceptedSyncingPayloadStatus:
+			return nil
+		default:
+			return errors.Wrap(err, "could not notify forkchoice update from execution engine")
+		}
+	}
+	var pId [8]byte
+	copy(pId[:], payloadID[:])
+	s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId)
+	return nil
+}
+
+func (s *Service) getTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
+	ttd := new(big.Int)
+	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	terminalTotalDifficulty, overflows := uint256.FromBig(ttd)
+	if overflows {
+		return nil, false, errors.New("could not convert terminal total difficulty to uint256")
+	}
+	blk, err := s.cfg.ExecutionEngineCaller.LatestExecutionBlock(ctx)
+	if err != nil {
+		return nil, false, errors.Wrap(err, "could not get latest execution block")
+	}
+	if blk == nil {
+		return nil, false, errors.New("latest execution block is nil")
+	}
+	for {
+		if ctx.Err() != nil {
+			return nil, false, ctx.Err()
+		}
+		currentTotalDifficulty, err := tDStringToUint256(blk.TotalDifficulty)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
+		}
+		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+
+		parentHash := bytesutil.ToBytes32(blk.ParentHash)
+		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
+			return nil, false, nil
+		}
+		parentBlk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(ctx, parentHash)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not get parent execution block")
+		}
+		if parentBlk == nil {
+			return nil, false, errors.New("parent execution block is nil")
+		}
+		if blockReachedTTD {
+			parentTotalDifficulty, err := tDStringToUint256(parentBlk.TotalDifficulty)
+			if err != nil {
+				return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
+			}
+			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+			if !parentReachedTTD {
+				log.WithFields(logrus.Fields{
+					"number":   blk.Number,
+					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash)),
+					"td":       blk.TotalDifficulty,
+					"parentTd": parentBlk.TotalDifficulty,
+					"ttd":      terminalTotalDifficulty,
+				}).Info("Retrieved terminal block hash")
+				return blk.Hash, true, nil
+			}
+		} else {
+			return nil, false, nil
+		}
+		blk = parentBlk
+	}
+}
+
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
@@ -40,7 +150,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		return nil, errors.Wrap(err, "could not determine if block is execution block")
 	}
 	if !isExecutionBlk {
-		return nil, nil
+		return nil, s.prepareProposerTerminalBlock(ctx, headState)
 	}
 	headPayload, err := headBlk.Body().ExecutionPayload()
 	if err != nil {
