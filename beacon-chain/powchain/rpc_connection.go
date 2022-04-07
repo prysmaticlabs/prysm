@@ -16,8 +16,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Service) setupExecutionClientConnections(ctx context.Context) error {
-	client, err := newRPCClientWithAuth(s.cfg.currHttpEndpoint)
+func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpoint network.Endpoint) error {
+	client, err := newRPCClientWithAuth(currEndpoint)
 	if err != nil {
 		return errors.Wrap(err, "could not dial execution node")
 	}
@@ -43,9 +43,78 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context) error {
 	s.runError = nil
 
 	log.WithFields(logrus.Fields{
-		"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
+		"endpoint": logs.MaskCredentialsLogging(currEndpoint.Url),
 	}).Info("Connected to Ethereum execution client RPC")
 	return nil
+}
+
+func (s *Service) pollConnectionStatus(ctx context.Context) {
+	// Use a custom logger to only log errors
+	logCounter := 0
+	errorLogger := func(err error, msg string) {
+		if logCounter > logThreshold {
+			log.Errorf("%s: %v", msg, err)
+			logCounter = 0
+		}
+		logCounter++
+	}
+	ticker := time.NewTicker(backOffPeriod)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			log.Warnf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+			if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
+				errorLogger(err, "Could not connect to execution client endpoint")
+				s.runError = err
+				s.fallbackToNextEndpoint()
+			}
+		case <-s.ctx.Done():
+			log.Debug("Received cancelled context,closing existing powchain service")
+			return
+		}
+	}
+}
+
+// This performs a health check on our primary endpoint, and if it
+// is ready to serve we connect to it again. This method is only
+// relevant if we are on our backup endpoint.
+func (s *Service) checkDefaultEndpoint(ctx context.Context) {
+	primaryEndpoint := s.cfg.httpEndpoints[0]
+	// Return early if we are running on our primary
+	// endpoint.
+	if s.cfg.currHttpEndpoint.Equals(primaryEndpoint) {
+		return
+	}
+
+	if err := s.setupExecutionClientConnections(ctx, primaryEndpoint); err != nil {
+		log.Debugf("Primary endpoint not ready: %v", err)
+		return
+	}
+	s.updateCurrHttpEndpoint(primaryEndpoint)
+}
+
+// This is an inefficient way to search for the next endpoint, but given N is expected to be
+// small ( < 25), it is fine to search this way.
+func (s *Service) fallbackToNextEndpoint() {
+	currEndpoint := s.cfg.currHttpEndpoint
+	currIndex := 0
+	totalEndpoints := len(s.cfg.httpEndpoints)
+
+	for i, endpoint := range s.cfg.httpEndpoints {
+		if endpoint.Equals(currEndpoint) {
+			currIndex = i
+			break
+		}
+	}
+	nextIndex := currIndex + 1
+	if nextIndex >= totalEndpoints {
+		nextIndex = 0
+	}
+	s.updateCurrHttpEndpoint(s.cfg.httpEndpoints[nextIndex])
+	if nextIndex != currIndex {
+		log.Infof("Falling back to alternative endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+	}
 }
 
 func newRPCClientWithAuth(endpoint network.Endpoint) (*gethRPC.Client, error) {
@@ -82,46 +151,3 @@ func ensureCorrectExecutionChain(ctx context.Context, client *ethclient.Client) 
 	}
 	return nil
 }
-
-func (s *Service) pollConnectionStatus(ctx context.Context) {
-	// Use a custom logger to only log errors
-	logCounter := 0
-	errorLogger := func(err error, msg string) {
-		if logCounter > logThreshold {
-			log.Errorf("%s: %v", msg, err)
-			logCounter = 0
-		}
-		logCounter++
-	}
-	ticker := time.NewTicker(backOffPeriod)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			log.Warnf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
-			if err := s.setupExecutionClientConnections(ctx); err != nil {
-				errorLogger(err, "Could not connect to execution client endpoint")
-				s.runError = err
-				s.fallbackToNextEndpoint()
-			}
-		case <-s.ctx.Done():
-			log.Debug("Received cancelled context,closing existing powchain service")
-			return
-		}
-	}
-}
-
-//// Reconnect to eth1 node in case of any failure.
-//func (s *Service) retryETH1Node(err error) {
-//	s.runError = err
-//	s.updateConnectedETH1(false)
-//	// Back off for a while before
-//	// resuming dialing the eth1 node.
-//	time.Sleep(backOffPeriod)
-//	if err := s.connectToPowChain(); err != nil {
-//		s.runError = err
-//		return
-//	}
-//	// Reset run error in the event of a successful connection.
-//	s.runError = nil
-//}
