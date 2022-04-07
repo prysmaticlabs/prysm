@@ -19,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -42,7 +41,6 @@ import (
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/network"
-	"github.com/prysmaticlabs/prysm/network/authorization"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -338,7 +336,7 @@ func (s *Service) CurrentETH1Endpoint() string {
 
 // CurrentETH1ConnectionError returns the error (if any) of the current connection.
 func (s *Service) CurrentETH1ConnectionError() error {
-	httpClient, rpcClient, err := s.dialETH1Nodes(s.cfg.currHttpEndpoint)
+	httpClient, rpcClient, err := s.dialExecutionClient(s.cfg.currHttpEndpoint)
 	httpClient.Close()
 	rpcClient.Close()
 	return err
@@ -358,7 +356,7 @@ func (s *Service) ETH1Endpoints() []string {
 func (s *Service) ETH1ConnectionErrors() []error {
 	var errs []error
 	for _, ep := range s.cfg.httpEndpoints {
-		httpClient, rpcClient, err := s.dialETH1Nodes(ep)
+		httpClient, rpcClient, err := s.dialExecutionClient(ep)
 		httpClient.Close()
 		rpcClient.Close()
 		errs = append(errs, err)
@@ -374,146 +372,6 @@ func (s *Service) followBlockHeight(_ context.Context) (uint64, error) {
 		latestValidBlock = s.latestEth1Data.BlockHeight - params.BeaconConfig().Eth1FollowDistance
 	}
 	return latestValidBlock, nil
-}
-
-func (s *Service) connectToPowChain() error {
-	httpClient, rpcClient, err := s.dialETH1Nodes(s.cfg.currHttpEndpoint)
-	if err != nil {
-		return errors.Wrap(err, "could not dial execution node")
-	}
-
-	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.depositContractAddr, httpClient)
-	if err != nil {
-		return errors.Wrap(err, "could not initialize deposit contract caller")
-	}
-
-	if httpClient == nil || rpcClient == nil || depositContractCaller == nil {
-		return errors.New("execution client RPC is nil")
-	}
-	s.httpLogger = httpClient
-	s.eth1DataFetcher = httpClient
-	s.depositContractCaller = depositContractCaller
-	s.rpcClient = rpcClient
-
-	s.updateConnectedETH1(true)
-	s.runError = nil
-	return nil
-}
-
-func (s *Service) dialETH1Nodes(endpoint network.Endpoint) (*ethclient.Client, *gethRPC.Client, error) {
-	httpRPCClient, err := gethRPC.Dial(endpoint.Url)
-	if err != nil {
-		return nil, nil, err
-	}
-	if endpoint.Auth.Method != authorization.None {
-		header, err := endpoint.Auth.ToHeaderValue()
-		if err != nil {
-			return nil, nil, err
-		}
-		httpRPCClient.SetHeader("Authorization", header)
-	}
-	httpClient := ethclient.NewClient(httpRPCClient)
-	// Add a method to clean-up and close clients in the event
-	// of any connection failure.
-	closeClients := func() {
-		httpRPCClient.Close()
-		httpClient.Close()
-	}
-	// Make a simple call to ensure we are actually connected to a working node.
-	cID, err := httpClient.ChainID(s.ctx)
-	if err != nil {
-		closeClients()
-		return nil, nil, err
-	}
-	nID, err := httpClient.NetworkID(s.ctx)
-	if err != nil {
-		closeClients()
-		return nil, nil, err
-	}
-	if cID.Uint64() != params.BeaconConfig().DepositChainID {
-		closeClients()
-		return nil, nil, fmt.Errorf("eth1 node using incorrect chain id, %d != %d", cID.Uint64(), params.BeaconConfig().DepositChainID)
-	}
-	if nID.Uint64() != params.BeaconConfig().DepositNetworkID {
-		closeClients()
-		return nil, nil, fmt.Errorf("eth1 node using incorrect network id, %d != %d", nID.Uint64(), params.BeaconConfig().DepositNetworkID)
-	}
-
-	return httpClient, httpRPCClient, nil
-}
-
-// closes down our active eth1 clients.
-func (s *Service) closeClients() {
-	gethClient, ok := s.rpcClient.(*gethRPC.Client)
-	if ok {
-		gethClient.Close()
-	}
-	httpClient, ok := s.eth1DataFetcher.(*ethclient.Client)
-	if ok {
-		httpClient.Close()
-	}
-}
-
-func (s *Service) pollConnectionStatus() {
-	// Use a custom logger to only log errors
-	logCounter := 0
-	errorLogger := func(err error, msg string) {
-		if logCounter > logThreshold {
-			log.Errorf("%s: %v", msg, err)
-			logCounter = 0
-		}
-		logCounter++
-	}
-	ticker := time.NewTicker(backOffPeriod)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
-			errConnect := s.connectToPowChain()
-			if errConnect != nil {
-				errorLogger(errConnect, "Could not connect to powchain endpoint")
-				s.runError = errConnect
-				s.fallbackToNextEndpoint()
-				continue
-			}
-		case <-s.ctx.Done():
-			log.Debug("Received cancelled context,closing existing powchain service")
-			return
-		}
-	}
-}
-
-// checks if the eth1 node is healthy and ready to serve before
-// fetching data from  it.
-func (s *Service) isEth1NodeSynced() (bool, error) {
-	syncProg, err := s.eth1DataFetcher.SyncProgress(s.ctx)
-	if err != nil {
-		return false, err
-	}
-	if syncProg != nil {
-		return false, nil
-	}
-	head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
-	if err != nil {
-		return false, err
-	}
-	return !eth1HeadIsBehind(head.Time), nil
-}
-
-// Reconnect to eth1 node in case of any failure.
-func (s *Service) retryETH1Node(err error) {
-	s.runError = err
-	s.updateConnectedETH1(false)
-	// Back off for a while before
-	// resuming dialing the eth1 node.
-	time.Sleep(backOffPeriod)
-	if err := s.connectToPowChain(); err != nil {
-		s.runError = err
-		return
-	}
-	// Reset run error in the event of a successful connection.
-	s.runError = nil
 }
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositContainer) error {
@@ -865,7 +723,7 @@ func (s *Service) checkDefaultEndpoint() {
 		return
 	}
 
-	httpClient, rpcClient, err := s.dialETH1Nodes(primaryEndpoint)
+	httpClient, rpcClient, err := s.dialExecutionClient(primaryEndpoint)
 	if err != nil {
 		log.Debugf("Primary endpoint not ready: %v", err)
 		return

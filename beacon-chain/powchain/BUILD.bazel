@@ -16,6 +16,7 @@ go_library(
         "options.go",
         "prometheus.go",
         "provider.go",
+        "rpc_connection.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain",
