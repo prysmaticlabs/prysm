@@ -1,7 +1,7 @@
 package state_native
 
 import (
-	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
+	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -11,6 +11,6 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloa
 	defer b.lock.Unlock()
 
 	b.latestExecutionPayloadHeader = val
-	b.markFieldAsDirty(v0types.LatestExecutionPayloadHeader)
+	b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
 	return nil
 }

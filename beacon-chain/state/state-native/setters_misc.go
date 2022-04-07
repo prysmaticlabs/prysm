@@ -3,7 +3,7 @@ package state_native
 import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
+	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -47,7 +47,7 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 	defer b.lock.Unlock()
 
 	b.genesisTime = val
-	b.markFieldAsDirty(v0types.GenesisTime)
+	b.markFieldAsDirty(nativetypes.GenesisTime)
 	return nil
 }
 
@@ -60,7 +60,7 @@ func (b *BeaconState) SetGenesisValidatorsRoot(val []byte) error {
 		return errors.New("incorrect validators root length")
 	}
 	b.genesisValidatorsRoot = bytesutil.ToBytes32(val)
-	b.markFieldAsDirty(v0types.GenesisValidatorsRoot)
+	b.markFieldAsDirty(nativetypes.GenesisValidatorsRoot)
 	return nil
 }
 
@@ -70,7 +70,7 @@ func (b *BeaconState) SetSlot(val types.Slot) error {
 	defer b.lock.Unlock()
 
 	b.slot = val
-	b.markFieldAsDirty(v0types.Slot)
+	b.markFieldAsDirty(nativetypes.Slot)
 	return nil
 }
 
@@ -84,7 +84,7 @@ func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 		return errors.New("proto.Clone did not return a fork proto")
 	}
 	b.fork = fk
-	b.markFieldAsDirty(v0types.Fork)
+	b.markFieldAsDirty(nativetypes.Fork)
 	return nil
 }
 
@@ -94,15 +94,15 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[v0types.HistoricalRoots].MinusRef()
-	b.sharedFieldReferences[v0types.HistoricalRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[nativetypes.HistoricalRoots].MinusRef()
+	b.sharedFieldReferences[nativetypes.HistoricalRoots] = stateutil.NewRef(1)
 
 	roots := make([][32]byte, len(val))
 	for i, r := range val {
 		copy(roots[i][:], r)
 	}
 	b.historicalRoots = roots
-	b.markFieldAsDirty(v0types.HistoricalRoots)
+	b.markFieldAsDirty(nativetypes.HistoricalRoots)
 	return nil
 }
 
@@ -113,15 +113,15 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	defer b.lock.Unlock()
 
 	roots := b.historicalRoots
-	if b.sharedFieldReferences[v0types.HistoricalRoots].Refs() > 1 {
+	if b.sharedFieldReferences[nativetypes.HistoricalRoots].Refs() > 1 {
 		roots = make([][32]byte, len(b.historicalRoots))
 		copy(roots, b.historicalRoots)
-		b.sharedFieldReferences[v0types.HistoricalRoots].MinusRef()
-		b.sharedFieldReferences[v0types.HistoricalRoots] = stateutil.NewRef(1)
+		b.sharedFieldReferences[nativetypes.HistoricalRoots].MinusRef()
+		b.sharedFieldReferences[nativetypes.HistoricalRoots] = stateutil.NewRef(1)
 	}
 
 	b.historicalRoots = append(roots, root)
-	b.markFieldAsDirty(v0types.HistoricalRoots)
+	b.markFieldAsDirty(nativetypes.HistoricalRoots)
 	return nil
 }
 
@@ -160,18 +160,18 @@ func (b *BeaconState) recomputeRoot(idx int) {
 	b.merkleLayers = layers
 }
 
-func (b *BeaconState) markFieldAsDirty(field v0types.FieldIndex) {
+func (b *BeaconState) markFieldAsDirty(field nativetypes.FieldIndex) {
 	b.dirtyFields[field] = true
 }
 
 // addDirtyIndices adds the relevant dirty field indices, so that they
 // can be recomputed.
-func (b *BeaconState) addDirtyIndices(index v0types.FieldIndex, indices []uint64) {
+func (b *BeaconState) addDirtyIndices(index nativetypes.FieldIndex, indices []uint64) {
 	if b.rebuildTrie[index] {
 		return
 	}
 	// Exit early if balance trie computation isn't enabled.
-	if !features.Get().EnableBalanceTrieComputation && index == v0types.Balances {
+	if !features.Get().EnableBalanceTrieComputation && index == nativetypes.Balances {
 		return
 	}
 	totalIndicesLen := len(b.dirtyIndices[index]) + len(indices)

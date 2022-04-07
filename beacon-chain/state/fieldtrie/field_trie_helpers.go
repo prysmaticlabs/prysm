@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
-	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
+	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -69,19 +69,19 @@ func validateElements(field types.FieldIdx, dataType types.DataType, elements in
 func fieldConverters(field types.FieldIdx, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	if field.Native() {
 		switch field {
-		case v0types.BlockRoots:
+		case nativetypes.BlockRoots:
 			return convertBlockRoots(indices, elements, convertAll)
-		case v0types.StateRoots:
+		case nativetypes.StateRoots:
 			return convertStateRoots(indices, elements, convertAll)
-		case v0types.RandaoMixes:
+		case nativetypes.RandaoMixes:
 			return convertRandaoMixes(indices, elements, convertAll)
-		case v0types.Eth1DataVotes:
+		case nativetypes.Eth1DataVotes:
 			return convertEth1DataVotes(indices, elements, convertAll)
-		case v0types.Validators:
+		case nativetypes.Validators:
 			return convertValidators(indices, elements, convertAll)
-		case v0types.PreviousEpochAttestations, v0types.CurrentEpochAttestations:
+		case nativetypes.PreviousEpochAttestations, nativetypes.CurrentEpochAttestations:
 			return convertAttestations(indices, elements, convertAll)
-		case v0types.Balances:
+		case nativetypes.Balances:
 			return convertBalances(indices, elements, convertAll)
 		default:
 			return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())

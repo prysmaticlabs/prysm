@@ -2,7 +2,7 @@ package state_native
 
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
+	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 )
@@ -11,20 +11,20 @@ import (
 var _ state.BeaconState = (*BeaconState)(nil)
 
 func init() {
-	fieldMap = make(map[v0types.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateFieldCount)
+	fieldMap = make(map[nativetypes.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateFieldCount)
 	// Initialize the fixed sized arrays.
-	fieldMap[v0types.BlockRoots] = types.BasicArray
-	fieldMap[v0types.StateRoots] = types.BasicArray
-	fieldMap[v0types.RandaoMixes] = types.BasicArray
+	fieldMap[nativetypes.BlockRoots] = types.BasicArray
+	fieldMap[nativetypes.StateRoots] = types.BasicArray
+	fieldMap[nativetypes.RandaoMixes] = types.BasicArray
 
 	// Initialize the composite arrays.
-	fieldMap[v0types.Eth1DataVotes] = types.CompositeArray
-	fieldMap[v0types.Validators] = types.CompositeArray
-	fieldMap[v0types.PreviousEpochAttestations] = types.CompositeArray
-	fieldMap[v0types.CurrentEpochAttestations] = types.CompositeArray
-	fieldMap[v0types.Balances] = types.CompressedArray
+	fieldMap[nativetypes.Eth1DataVotes] = types.CompositeArray
+	fieldMap[nativetypes.Validators] = types.CompositeArray
+	fieldMap[nativetypes.PreviousEpochAttestations] = types.CompositeArray
+	fieldMap[nativetypes.CurrentEpochAttestations] = types.CompositeArray
+	fieldMap[nativetypes.Balances] = types.CompressedArray
 }
 
 // fieldMap keeps track of each field
 // to its corresponding data type.
-var fieldMap map[v0types.FieldIndex]types.DataType
+var fieldMap map[nativetypes.FieldIndex]types.DataType

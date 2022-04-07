@@ -2,7 +2,7 @@ package state_native
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"
-	v0types "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
+	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -12,7 +12,7 @@ func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 	defer b.lock.Unlock()
 
 	b.justificationBits = val
-	b.markFieldAsDirty(v0types.JustificationBits)
+	b.markFieldAsDirty(nativetypes.JustificationBits)
 	return nil
 }
 
@@ -22,7 +22,7 @@ func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) erro
 	defer b.lock.Unlock()
 
 	b.previousJustifiedCheckpoint = val
-	b.markFieldAsDirty(v0types.PreviousJustifiedCheckpoint)
+	b.markFieldAsDirty(nativetypes.PreviousJustifiedCheckpoint)
 	return nil
 }
 
@@ -32,7 +32,7 @@ func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error
 	defer b.lock.Unlock()
 
 	b.currentJustifiedCheckpoint = val
-	b.markFieldAsDirty(v0types.CurrentJustifiedCheckpoint)
+	b.markFieldAsDirty(nativetypes.CurrentJustifiedCheckpoint)
 	return nil
 }
 
@@ -42,6 +42,6 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 	defer b.lock.Unlock()
 
 	b.finalizedCheckpoint = val
-	b.markFieldAsDirty(v0types.FinalizedCheckpoint)
+	b.markFieldAsDirty(nativetypes.FinalizedCheckpoint)
 	return nil
 }
