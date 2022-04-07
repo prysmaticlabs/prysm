@@ -17,6 +17,7 @@ import (
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context) error {
+	log.Infof("Trying with: %s", s.cfg.currHttpEndpoint.Url)
 	client, err := newRPCClientWithAuth(s.cfg.currHttpEndpoint)
 	if err != nil {
 		return errors.Wrap(err, "could not dial execution node")
@@ -26,6 +27,7 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context) error {
 	s.rpcClient = client
 	s.httpLogger = fetcher
 	s.eth1DataFetcher = fetcher
+	log.Info("UPDATED")
 
 	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.depositContractAddr, fetcher)
 	if err != nil {
