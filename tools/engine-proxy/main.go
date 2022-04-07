@@ -25,11 +25,11 @@ var (
 )
 
 type jsonRPCObject struct {
-	Jsonrpc string      `json:"jsonrpc"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params"`
-	ID      uint64      `json:"id"`
-	Result  interface{} `json:"result"`
+	Jsonrpc string        `json:"jsonrpc"`
+	Method  string        `json:"method"`
+	Params  []interface{} `json:"params"`
+	ID      uint64        `json:"id"`
+	Result  interface{}   `json:"result"`
 }
 
 func main() {
@@ -52,7 +52,7 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	// We optionally spoof the request as desired.
 	modifiedReq, err := spoofRequest(requestBytes)
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failed to spoof request")
 		return
 	}
 
@@ -83,7 +83,7 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	// We optionally spoof the response as desired.
 	modifiedResp, err := spoofResponse(requestBytes, proxyRes.Body)
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Error("Failed to spoof response")
 		return
 	}
 
@@ -107,6 +107,7 @@ func parseRequestBytes(req *http.Request) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Infof("%s", requestBytes)
 	if err = req.Body.Close(); err != nil {
 		return nil, err
 	}
@@ -128,18 +129,21 @@ func spoofRequest(requestBytes []byte) ([]byte, error) {
 			return nil, err
 		}
 	}
+	if len(jsonRequest.Params) == 0 {
+		return requestBytes, nil
+	}
 	// TODO: Allow configurable spoofing via YAML file inputs.
 	switch jsonRequest.Method {
 	case powchain.NewPayloadMethod:
 		newPayloadReq := &enginev1.ExecutionPayload{}
-		if err := extractObjectFromJSONRPC(jsonRequest, newPayloadReq); err != nil {
+		if err := extractObjectFromJSONRPC(jsonRequest.Params[0], newPayloadReq); err != nil {
 			return nil, err
 		}
 		// Modify the fork choice updated response to point
 		// to the zero hash as the latest valid hash.
 		newPayloadReq.ParentHash = make([]byte, 32)
-
 		log.WithField("method", jsonRequest.Method).Infof("Modified request %v", newPayloadReq)
+		jsonRequest.Params[0] = newPayloadReq
 		return json.Marshal(jsonRequest)
 	default:
 		return requestBytes, nil
@@ -181,7 +185,7 @@ func spoofResponse(requestBytes []byte, responseBody io.Reader) ([]byte, error) 
 	switch jsonRequest.Method {
 	case powchain.ForkchoiceUpdatedMethod:
 		forkChoiceResp := &powchain.ForkchoiceUpdatedResponse{}
-		if err := extractObjectFromJSONRPC(jsonResponse, forkChoiceResp); err != nil {
+		if err := extractObjectFromJSONRPC(jsonResponse.Result, forkChoiceResp); err != nil {
 			return nil, err
 		}
 		// Modify the fork choice updated response to point
@@ -204,10 +208,10 @@ func unmarshalRPCObject(rawBytes []byte) (*jsonRPCObject, error) {
 	return jsonObj, nil
 }
 
-func extractObjectFromJSONRPC(object *jsonRPCObject, target interface{}) error {
-	rawResp, err := json.Marshal(object.Result)
+func extractObjectFromJSONRPC(src interface{}, dst interface{}) error {
+	rawResp, err := json.Marshal(src)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(rawResp, target)
+	return json.Unmarshal(rawResp, dst)
 }
