@@ -17,7 +17,6 @@ import (
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context) error {
-	log.Infof("Trying with: %s", s.cfg.currHttpEndpoint.Url)
 	client, err := newRPCClientWithAuth(s.cfg.currHttpEndpoint)
 	if err != nil {
 		return errors.Wrap(err, "could not dial execution node")
@@ -27,7 +26,6 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context) error {
 	s.rpcClient = client
 	s.httpLogger = fetcher
 	s.eth1DataFetcher = fetcher
-	log.Info("UPDATED")
 
 	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.depositContractAddr, fetcher)
 	if err != nil {
@@ -102,12 +100,10 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 		case <-ticker.C:
 			log.Warnf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
 			if err := s.setupExecutionClientConnections(ctx); err != nil {
-				log.Infof("GOT ISSUE DIALING: %v", err)
 				errorLogger(err, "Could not connect to execution client endpoint")
 				s.runError = err
 				s.fallbackToNextEndpoint()
 			}
-			log.Info("Managed to dial")
 		case <-s.ctx.Done():
 			log.Debug("Received cancelled context,closing existing powchain service")
 			return

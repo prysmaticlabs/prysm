@@ -557,7 +557,7 @@ func (s *Service) initPOWService() {
 			}
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
-				log.Errorf("Unable to process past headers %v", err)
+				//log.Errorf("Unable to process past headers %v", err)
 				continue
 			}
 			// Handle edge case with embedded genesis state by fetching genesis header to determine
