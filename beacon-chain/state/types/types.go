@@ -28,6 +28,7 @@ const (
 type FieldIdx interface {
 	String(stateVersion int) string
 	ElemsInChunk() (uint64, error)
+	Native() bool
 }
 
 // String returns the name of the field index.
@@ -103,6 +104,10 @@ func (f FieldIndex) ElemsInChunk() (uint64, error) {
 	default:
 		return 0, errors.Errorf("field %d doesn't support element compression", f)
 	}
+}
+
+func (f FieldIndex) Native() bool {
+	return false
 }
 
 // Below we define a set of useful enum values for the field
