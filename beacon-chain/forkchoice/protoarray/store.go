@@ -9,8 +9,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/math"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -426,6 +428,16 @@ func (s *Store) applyWeightChanges(
 		if nodeDelta < 0 {
 			d := uint64(-nodeDelta)
 			if n.weight < d {
+				s.proposerBoostLock.RLock()
+				log.WithFields(logrus.Fields{
+					"nodeDelta":                  d,
+					"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(n.root[:])),
+					"nodeWeight":                 n.weight,
+					"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(s.proposerBoostRoot[:])),
+					"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(s.previousProposerBoostRoot[:])),
+					"previousProposerBoostScore": s.previousProposerBoostScore,
+				}).Warning("node with invalid weight, setting it to zero")
+				s.proposerBoostLock.RUnlock()
 				n.weight = 0
 			} else {
 				n.weight -= d
