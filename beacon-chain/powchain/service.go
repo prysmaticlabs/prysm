@@ -247,7 +247,7 @@ func (s *Service) Start() {
 	s.isRunning = true
 
 	// Poll the execution client connection and fallback if errors occur.
-	//go s.pollConnectionStatus()
+	go s.pollConnectionStatus(s.ctx)
 
 	// Check transition configuration for the engine API client in the background.
 	go s.checkTransitionConfiguration(s.ctx, make(chan *feed.Event, 1))

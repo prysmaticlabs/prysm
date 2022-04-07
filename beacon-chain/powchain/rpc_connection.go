@@ -3,6 +3,7 @@ package powchain
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
@@ -82,35 +83,33 @@ func ensureCorrectExecutionChain(ctx context.Context, client *ethclient.Client) 
 	return nil
 }
 
-//func (s *Service) pollConnectionStatus() {
-//	// Use a custom logger to only log errors
-//	logCounter := 0
-//	errorLogger := func(err error, msg string) {
-//		if logCounter > logThreshold {
-//			log.Errorf("%s: %v", msg, err)
-//			logCounter = 0
-//		}
-//		logCounter++
-//	}
-//	ticker := time.NewTicker(backOffPeriod)
-//	defer ticker.Stop()
-//	for {
-//		select {
-//		case <-ticker.C:
-//			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
-//			errConnect := s.connectToPowChain()
-//			if errConnect != nil {
-//				errorLogger(errConnect, "Could not connect to powchain endpoint")
-//				s.runError = errConnect
-//				s.fallbackToNextEndpoint()
-//				continue
-//			}
-//		case <-s.ctx.Done():
-//			log.Debug("Received cancelled context,closing existing powchain service")
-//			return
-//		}
-//	}
-//}
+func (s *Service) pollConnectionStatus(ctx context.Context) {
+	// Use a custom logger to only log errors
+	logCounter := 0
+	errorLogger := func(err error, msg string) {
+		if logCounter > logThreshold {
+			log.Errorf("%s: %v", msg, err)
+			logCounter = 0
+		}
+		logCounter++
+	}
+	ticker := time.NewTicker(backOffPeriod)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+			if err := s.setupExecutionClientConnections(ctx); err != nil {
+				errorLogger(err, "Could not connect to execution client endpoint")
+				s.runError = err
+				s.fallbackToNextEndpoint()
+			}
+		case <-s.ctx.Done():
+			log.Debug("Received cancelled context,closing existing powchain service")
+			return
+		}
+	}
+}
 
 //// Reconnect to eth1 node in case of any failure.
 //func (s *Service) retryETH1Node(err error) {
