@@ -13,16 +13,27 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 var (
-	log               = logrus.WithField("prefix", "engine-proxy")
-	port              = flag.Int("port", 8546, "")
-	executionEndpoint = flag.String("execution-endpoint", "http://localhost:8545", "")
+	log                = logrus.WithField("prefix", "engine-proxy")
+	port               = flag.Int("port", 8546, "")
+	spoofingConfigFile = flag.String("spoofing-config", "tools/engine-proxy/spoofing_config.yaml", "")
+	executionEndpoint  = flag.String("execution-endpoint", "http://localhost:8545", "")
 )
+
+type spoofingConfig struct {
+	Requests  []*spoof `yaml:"requests"`
+	Responses []*spoof `yaml:"responses"`
+}
+
+type spoof struct {
+	Method string
+	Fields map[string]interface{}
+}
 
 type jsonRPCObject struct {
 	Jsonrpc string        `json:"jsonrpc"`
@@ -34,71 +45,81 @@ type jsonRPCObject struct {
 
 func main() {
 	flag.Parse()
+	configBytes, err := file.ReadFileAsBytes(*spoofingConfigFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	config := &spoofingConfig{}
+	if err := yaml.Unmarshal(configBytes, config); err != nil {
+		log.Fatal(err)
+	}
 	// Handle all HTTP requests through the proxy middleware.
-	http.HandleFunc("/", proxyHandler)
+	http.HandleFunc("/", proxyHandler(config))
 	log.Printf("Engine proxy now listening on port %d", *port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
 // Proxies requests from a consensus client to an execution client, spoofing requests
 // and/or responses as desired. Acts as a middleware useful for testing different merge scenarios.
-func proxyHandler(w http.ResponseWriter, r *http.Request) {
-	requestBytes, err := parseRequestBytes(r)
-	if err != nil {
-		log.WithError(err).Error("Could not parse request")
-		return
-	}
+func proxyHandler(config *spoofingConfig) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		requestBytes, err := parseRequestBytes(r)
+		if err != nil {
+			log.WithError(err).Error("Could not parse request")
+			return
+		}
 
-	// We optionally spoof the request as desired.
-	modifiedReq, err := spoofRequest(requestBytes)
-	if err != nil {
-		log.WithError(err).Error("Failed to spoof request")
-		return
-	}
+		// We optionally spoof the request as desired.
+		modifiedReq, err := spoofRequest(config, requestBytes)
+		if err != nil {
+			log.WithError(err).Error("Failed to spoof request")
+			return
+		}
 
-	// Create a new proxy request to the execution client.
-	url := r.URL
-	url.Host = *executionEndpoint
-	proxyReq, err := http.NewRequest(r.Method, *executionEndpoint, r.Body)
-	if err != nil {
-		log.WithError(err).Error("Could create new request")
-		return
-	}
+		// Create a new proxy request to the execution client.
+		url := r.URL
+		url.Host = *executionEndpoint
+		proxyReq, err := http.NewRequest(r.Method, *executionEndpoint, r.Body)
+		if err != nil {
+			log.WithError(err).Error("Could create new request")
+			return
+		}
 
-	// Set the modified request as the proxy request body.
-	proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(modifiedReq))
+		// Set the modified request as the proxy request body.
+		proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(modifiedReq))
 
-	// Required proxy headers for forwarding JSON-RPC requests to the execution client.
-	proxyReq.Header.Set("Host", r.Host)
-	proxyReq.Header.Set("X-Forwarded-For", r.RemoteAddr)
-	proxyReq.Header.Set("Content-Type", "application/json")
+		// Required proxy headers for forwarding JSON-RPC requests to the execution client.
+		proxyReq.Header.Set("Host", r.Host)
+		proxyReq.Header.Set("X-Forwarded-For", r.RemoteAddr)
+		proxyReq.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	proxyRes, err := client.Do(proxyReq)
-	if err != nil {
-		log.WithError(err).Error("Could not do client proxy")
-		return
-	}
+		client := &http.Client{}
+		proxyRes, err := client.Do(proxyReq)
+		if err != nil {
+			log.WithError(err).Error("Could not do client proxy")
+			return
+		}
 
-	// We optionally spoof the response as desired.
-	modifiedResp, err := spoofResponse(requestBytes, proxyRes.Body)
-	if err != nil {
-		log.WithError(err).Error("Failed to spoof response")
-		return
-	}
+		// We optionally spoof the response as desired.
+		modifiedResp, err := spoofResponse(config, requestBytes, proxyRes.Body)
+		if err != nil {
+			log.WithError(err).Error("Failed to spoof response")
+			return
+		}
 
-	if err = proxyRes.Body.Close(); err != nil {
-		log.WithError(err).Error("Could not do client proxy")
-		return
-	}
+		if err = proxyRes.Body.Close(); err != nil {
+			log.WithError(err).Error("Could not do client proxy")
+			return
+		}
 
-	// Set the modified response as the proxy response body.
-	proxyRes.Body = ioutil.NopCloser(bytes.NewBuffer(modifiedResp))
+		// Set the modified response as the proxy response body.
+		proxyRes.Body = ioutil.NopCloser(bytes.NewBuffer(modifiedResp))
 
-	// Pipe the proxy response to the original caller.
-	if _, err = io.Copy(w, proxyRes.Body); err != nil {
-		log.WithError(err).Error("Could not copy proxy request body")
-		return
+		// Pipe the proxy response to the original caller.
+		if _, err = io.Copy(w, proxyRes.Body); err != nil {
+			log.WithError(err).Error("Could not copy proxy request body")
+			return
+		}
 	}
 }
 
@@ -118,8 +139,8 @@ func parseRequestBytes(req *http.Request) ([]byte, error) {
 // Parses the request from thec consensus client and checks if user desires
 // to spoof it based on the JSON-RPC method. If so, it returns the modified
 // request bytes which will be proxied to the execution client.
-func spoofRequest(requestBytes []byte) ([]byte, error) {
-	// If the JSON request is not a JSON-RPC object, return the response as-is.
+func spoofRequest(config *spoofingConfig, requestBytes []byte) ([]byte, error) {
+	// If the JSON request is not a JSON-RPC object, return the request as-is.
 	jsonRequest, err := unmarshalRPCObject(requestBytes)
 	if err != nil {
 		switch {
@@ -132,34 +153,41 @@ func spoofRequest(requestBytes []byte) ([]byte, error) {
 	if len(jsonRequest.Params) == 0 {
 		return requestBytes, nil
 	}
-	// TODO: Allow configurable spoofing via YAML file inputs.
-	switch jsonRequest.Method {
-	case powchain.NewPayloadMethod:
-		newPayloadReq := &enginev1.ExecutionPayload{}
-		if err := extractObjectFromJSONRPC(jsonRequest.Params[0], newPayloadReq); err != nil {
-			return nil, err
-		}
-		// Modify the fork choice updated response to point
-		// to the zero hash as the latest valid hash.
-		newPayloadReq.ParentHash = make([]byte, 32)
-		log.WithField("method", jsonRequest.Method).Infof("Modified request %v", newPayloadReq)
-		jsonRequest.Params[0] = newPayloadReq
-		return json.Marshal(jsonRequest)
-	default:
+	desiredMethodsToSpoof := make(map[string]*spoof)
+	for _, spoofReq := range config.Requests {
+		desiredMethodsToSpoof[spoofReq.Method] = spoofReq
+	}
+	// If we don't want to spoof the request, just return the request as-is.
+	spoofDetails, ok := desiredMethodsToSpoof[jsonRequest.Method]
+	if !ok {
 		return requestBytes, nil
 	}
+
+	// TODO: Support methods with multiple params.
+	params := make(map[string]interface{})
+	if err := extractObjectFromJSONRPC(jsonRequest.Params[0], &params); err != nil {
+		return nil, err
+	}
+	for fieldToModify, fieldValue := range spoofDetails.Fields {
+		if _, ok := params[fieldToModify]; !ok {
+			continue
+		}
+		params[fieldToModify] = fieldValue
+	}
+	log.WithField("method", jsonRequest.Method).Infof("Modified request %v", params)
+	jsonRequest.Params[0] = params
+	return json.Marshal(jsonRequest)
 }
 
 // Parses the response body from the execution client and checks if user desires
 // to spoof it based on the JSON-RPC method. If so, it returns the modified
 // response bytes which will be proxied to the consensus client.
-func spoofResponse(requestBytes []byte, responseBody io.Reader) ([]byte, error) {
+func spoofResponse(config *spoofingConfig, requestBytes []byte, responseBody io.Reader) ([]byte, error) {
 	responseBytes, err := ioutil.ReadAll(responseBody)
 	if err != nil {
 		return nil, err
 	}
-
-	// If the JSON request is not a JSON-RPC object, return the response as-is.
+	// If the JSON request is not a JSON-RPC object, return the request as-is.
 	jsonRequest, err := unmarshalRPCObject(requestBytes)
 	if err != nil {
 		switch {
@@ -169,8 +197,6 @@ func spoofResponse(requestBytes []byte, responseBody io.Reader) ([]byte, error) 
 			return nil, err
 		}
 	}
-
-	// Detect the response, and modify execution payloads as needed.
 	jsonResponse, err := unmarshalRPCObject(responseBytes)
 	if err != nil {
 		switch {
@@ -180,24 +206,30 @@ func spoofResponse(requestBytes []byte, responseBody io.Reader) ([]byte, error) 
 			return nil, err
 		}
 	}
-
-	// TODO: Allow configurable spoofing via YAML file inputs.
-	switch jsonRequest.Method {
-	case powchain.ForkchoiceUpdatedMethod:
-		forkChoiceResp := &powchain.ForkchoiceUpdatedResponse{}
-		if err := extractObjectFromJSONRPC(jsonResponse.Result, forkChoiceResp); err != nil {
-			return nil, err
-		}
-		// Modify the fork choice updated response to point
-		// to the zero hash as the latest valid hash.
-		forkChoiceResp.Status.LatestValidHash = make([]byte, 32)
-		jsonResponse.Result = forkChoiceResp
-
-		log.WithField("method", jsonRequest.Method).Infof("Modified response %v", forkChoiceResp)
-		return json.Marshal(jsonResponse)
-	default:
+	desiredMethodsToSpoof := make(map[string]*spoof)
+	for _, spoofReq := range config.Responses {
+		desiredMethodsToSpoof[spoofReq.Method] = spoofReq
+	}
+	// If we don't want to spoof the request, just return the request as-is.
+	spoofDetails, ok := desiredMethodsToSpoof[jsonRequest.Method]
+	if !ok {
 		return responseBytes, nil
 	}
+
+	// TODO: Support nested objects.
+	params := make(map[string]interface{})
+	if err := extractObjectFromJSONRPC(jsonResponse.Result, &params); err != nil {
+		return nil, err
+	}
+	for fieldToModify, fieldValue := range spoofDetails.Fields {
+		if _, ok := params[fieldToModify]; !ok {
+			continue
+		}
+		params[fieldToModify] = fieldValue
+	}
+	log.WithField("method", jsonRequest.Method).Infof("Modified response %v", params)
+	jsonResponse.Result = params
+	return json.Marshal(jsonResponse)
 }
 
 func unmarshalRPCObject(rawBytes []byte) (*jsonRPCObject, error) {

@@ -1,0 +1,8 @@
+requests:
+  - method: engine_newPayloadV1
+    fields:
+      parentHash: "0x0000000000000000000000000000000000000000000000000000000000000000"
+responses:
+  - method: engine_exchangeTransitionConfigurationV1
+    fields:
+      terminalBlockHash: "0x0000000000000000000000000000000000000000000000000000000000000000"
