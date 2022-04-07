@@ -26,6 +26,7 @@ type Store struct {
 	treeRootNode               *Node                                  // the root node of the store tree.
 	headNode                   *Node                                  // last head Node
 	nodeByRoot                 map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
+	nodeByPayload              map[[fieldparams.RootLength]byte]*Node // nodes indexed by payload Hash
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 }

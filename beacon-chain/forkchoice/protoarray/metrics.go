@@ -48,16 +48,10 @@ var (
 			Help: "The number of times pruning happened.",
 		},
 	)
-	lastSyncedTipSlot = promauto.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "proto_array_last_synced_tip_slot",
-			Help: "The slot of the last fully validated block added to the proto array.",
-		},
-	)
-	syncedTipsCount = promauto.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "proto_array_synced_tips_count",
-			Help: "The number of elements in the syncedTips structure.",
+	validatedNodesCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "proto_array_validated_nodes_count",
+			Help: "The number of nodes that have been fully validated.",
 		},
 	)
 )
