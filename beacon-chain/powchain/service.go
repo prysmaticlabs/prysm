@@ -226,7 +226,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 
 // Start a web3 service's main event loop.
 func (s *Service) Start() {
-
 	if err := s.setupExecutionClientConnections(s.ctx); err != nil {
 		log.WithError(err).Error("Could not connect to execution endpoint")
 	}

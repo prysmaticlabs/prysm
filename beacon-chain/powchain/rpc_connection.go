@@ -98,12 +98,14 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+			log.Warnf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
 			if err := s.setupExecutionClientConnections(ctx); err != nil {
+				log.Infof("GOT ISSUE DIALING: %v", err)
 				errorLogger(err, "Could not connect to execution client endpoint")
 				s.runError = err
 				s.fallbackToNextEndpoint()
 			}
+			log.Info("Managed to dial")
 		case <-s.ctx.Done():
 			log.Debug("Received cancelled context,closing existing powchain service")
 			return
