@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -227,6 +228,49 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 
 	h := s.headBlock().Block()
+
+	endSlot, err := slots.EpochStart(finalized.Epoch)
+	if err != nil {
+		return errors.Wrap(err, "could not get slot")
+	}
+	startSlot := endSlot - 100000
+	headRoot := finalized.Root
+	rootMap := make(map[[32]byte]bool)
+	for {
+		log.Infof("Looking at batch %d to %d", startSlot, endSlot)
+		for {
+			rootMap[*(*[32]byte)(headRoot)] = true
+			b, err := s.cfg.BeaconDB.Block(s.ctx, *(*[32]byte)(headRoot))
+			if err != nil {
+				return errors.Wrap(err, "could not get block")
+			}
+			if b.Block().Slot() < startSlot {
+				break
+			}
+			headRoot = b.Block().ParentRoot()
+		}
+		roots, err := s.cfg.BeaconDB.BlockRoots(s.ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+		if err != nil {
+			return errors.Wrap(err, "could not get roots")
+		}
+		for _, rt := range roots {
+			if !rootMap[rt] {
+				isFinalized := s.cfg.BeaconDB.IsFinalizedBlock(s.ctx, rt)
+				if isFinalized {
+					b, err := s.cfg.BeaconDB.Block(s.ctx, rt)
+					if err != nil {
+						return errors.Wrap(err, "could not get block")
+					}
+					log.Errorf("block with root %#x and slot %d was mistakenly marked as finalized", rt, b.Block().Slot())
+				}
+			}
+		}
+		if endSlot < 1000000 {
+			break
+		}
+		startSlot -= 100000
+		endSlot -= 100000
+	}
 	if h.Slot() > fSlot {
 		log.WithFields(logrus.Fields{
 			"startSlot": fSlot,
