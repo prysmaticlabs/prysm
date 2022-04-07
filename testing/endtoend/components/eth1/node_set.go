@@ -37,7 +37,7 @@ func (s *NodeSet) Start(ctx context.Context) error {
 	nodes := make([]e2etypes.ComponentRunner, totalNodeCount)
 	for i := 0; i < totalNodeCount; i++ {
 		// We start indexing nodes from 1 because the miner has an implicit 0 index.
-		node := NewNode(i+1, s.enr, []string{})
+		node := NewNode(i+1, s.enr)
 		nodes[i] = node
 	}
 
