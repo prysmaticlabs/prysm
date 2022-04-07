@@ -5,14 +5,18 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -23,6 +27,11 @@ var (
 	port               = flag.Int("port", 8546, "")
 	spoofingConfigFile = flag.String("spoofing-config", "tools/engine-proxy/spoofing_config.yaml", "")
 	executionEndpoint  = flag.String("execution-endpoint", "http://localhost:8545", "")
+	fuzz               = flag.Bool(
+		"fuzz",
+		false,
+		"fuzzes requests and responses, overrides -spoofing-config if -fuzz is set",
+	)
 )
 
 type spoofingConfig struct {
@@ -69,8 +78,13 @@ func proxyHandler(config *spoofingConfig) func(w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		// We optionally spoof the request as desired.
-		modifiedReq, err := spoofRequest(config, requestBytes)
+		var modifiedReq []byte
+		if *fuzz {
+			modifiedReq, err = fuzzRequest(requestBytes)
+		} else {
+			// We optionally spoof the request as desired.
+			modifiedReq, err = spoofRequest(config, requestBytes)
+		}
 		if err != nil {
 			log.WithError(err).Error("Failed to spoof request")
 			return
@@ -101,7 +115,12 @@ func proxyHandler(config *spoofingConfig) func(w http.ResponseWriter, r *http.Re
 		}
 
 		// We optionally spoof the response as desired.
-		modifiedResp, err := spoofResponse(config, requestBytes, proxyRes.Body)
+		var modifiedResp []byte
+		if *fuzz {
+			modifiedResp, err = fuzzResponse(proxyRes.Body)
+		} else {
+			modifiedResp, err = spoofResponse(config, requestBytes, proxyRes.Body)
+		}
 		if err != nil {
 			log.WithError(err).Error("Failed to spoof response")
 			return
@@ -128,12 +147,69 @@ func parseRequestBytes(req *http.Request) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("%s", requestBytes)
 	if err = req.Body.Close(); err != nil {
 		return nil, err
 	}
+	log.Infof("%s", string(requestBytes))
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBytes))
 	return requestBytes, nil
+}
+
+func fuzzRequest(requestBytes []byte) ([]byte, error) {
+	// If the JSON request is not a JSON-RPC object, return the request as-is.
+	jsonRequest, err := unmarshalRPCObject(requestBytes)
+	if err != nil {
+		switch {
+		case strings.Contains(err.Error(), "cannot unmarshal array"):
+			return requestBytes, nil
+		default:
+			return nil, err
+		}
+	}
+	if len(jsonRequest.Params) == 0 {
+		return requestBytes, nil
+	}
+	params := make(map[string]interface{})
+	if err := extractObjectFromJSONRPC(jsonRequest.Params[0], &params); err != nil {
+		return requestBytes, nil
+	}
+	// 10% chance to fuzz a field.
+	fuzzProbability := uint64(5) // TODO: Do not hardcode.
+	for k, v := range params {
+		// Each field has a probability of of being fuzzed.
+		r, err := rand.Int(rand.Reader, big.NewInt(100))
+		if err != nil {
+			return nil, err
+		}
+		switch obj := v.(type) {
+		case string:
+			if strings.Contains(obj, "0x") && r.Uint64() <= fuzzProbability {
+				// Ignore hex strings of odd length.
+				if len(obj)%2 != 0 {
+					continue
+				}
+				// Generate some random hex string with same length and set it.
+				// TODO: Experiment with length < current field, or junk in general.
+				hexBytes, err := hexutil.Decode(obj)
+				if err != nil {
+					return nil, err
+				}
+				fuzzedStr, err := randomHex(len(hexBytes))
+				if err != nil {
+					return nil, err
+				}
+				log.WithField("method", jsonRequest.Method).Warnf(
+					"Fuzzing field %s, modifying value from %s to %s",
+					k,
+					obj,
+					fuzzedStr,
+				)
+				params[k] = fuzzedStr
+			}
+		}
+	}
+	jsonRequest.Params[0] = params
+	return json.Marshal(jsonRequest)
 }
 
 // Parses the request from thec consensus client and checks if user desires
@@ -177,6 +253,14 @@ func spoofRequest(config *spoofingConfig, requestBytes []byte) ([]byte, error) {
 	log.WithField("method", jsonRequest.Method).Infof("Modified request %v", params)
 	jsonRequest.Params[0] = params
 	return json.Marshal(jsonRequest)
+}
+
+func fuzzResponse(responseBody io.Reader) ([]byte, error) {
+	responseBytes, err := ioutil.ReadAll(responseBody)
+	if err != nil {
+		return nil, err
+	}
+	return responseBytes, nil
 }
 
 // Parses the response body from the execution client and checks if user desires
@@ -246,4 +330,12 @@ func extractObjectFromJSONRPC(src interface{}, dst interface{}) error {
 		return err
 	}
 	return json.Unmarshal(rawResp, dst)
+}
+
+func randomHex(n int) (string, error) {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return "0x" + hex.EncodeToString(b), nil
 }
