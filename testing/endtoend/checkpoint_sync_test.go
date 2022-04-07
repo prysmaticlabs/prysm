@@ -8,17 +8,12 @@ import (
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestEndToEnd_MainnetConfig(t *testing.T) {
-	e2eMainnet(t, false /*usePrysmSh*/)
-}
-
-func e2eMainnet(t *testing.T, usePrysmSh bool) {
+func TestCheckpointSync_MainnetConfig(t *testing.T) {
 	params.UseE2EMainnetConfig()
 	require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
 
@@ -31,17 +26,6 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		require.NoError(t, err)
 	}
 	_, crossClient := os.LookupEnv("RUN_CROSS_CLIENT")
-	if usePrysmSh {
-		// If using prysm.sh, run for only 6 epochs.
-		// TODO(#9166): remove this block once v2 changes are live.
-		epochsToRun = helpers.AltairE2EForkEpoch - 1
-	}
-	seed := 0
-	seedStr, isValid := os.LookupEnv("E2E_SEED")
-	if isValid {
-		seed, err = strconv.Atoi(seedStr)
-		require.NoError(t, err)
-	}
 	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
 	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
 	evals := []types.Evaluator{
@@ -69,16 +53,15 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		},
 		ValidatorFlags:          []string{},
 		EpochsToRun:             uint64(epochsToRun),
-		TestSync:                false,
+		TestSync:                true,
 		TestFeature:             true,
 		TestDeposits:            true,
 		UseFixedPeerIDs:         true,
 		UseValidatorCrossClient: crossClient,
-		UsePrysmShValidator:     usePrysmSh,
+		UsePrysmShValidator:     false,
 		UsePprof:                !longRunning,
 		TracingSinkEndpoint:     tracingEndpoint,
 		Evaluators:              evals,
-		Seed:                    int64(seed),
 	}
 
 	newTestRunner(t, testConfig).run()

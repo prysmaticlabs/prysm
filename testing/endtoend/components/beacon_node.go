@@ -31,29 +31,28 @@ var _ e2etypes.ComponentRunner = (*BeaconNodeSet)(nil)
 
 // BeaconNodeSet represents set of beacon nodes.
 type BeaconNodeSet struct {
-	e2etypes.ComponentRunner
+	started chan struct{}
 	config  *e2etypes.E2EConfig
 	enr     string
 	ids     []string
-	started chan struct{}
 	nodes []*BeaconNode
+	flags []string
 }
 
 // NewBeaconNodes creates and returns a set of beacon nodes.
-func NewBeaconNodes(config *e2etypes.E2EConfig, enr string) *BeaconNodeSet {
+func NewBeaconNodes(config *e2etypes.E2EConfig, enr string, flags []string) *BeaconNodeSet {
 	// Create beacon nodes.
-	//nodes := make([]e2etypes.ComponentRunner, e2e.TestParams.BeaconNodeCount)
 	nodes := make([]*BeaconNode, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		nodes[i] = NewBeaconNode(config, i, enr)
-		//nodes[i] = s.nodes[i]
+		nodes[i] = NewBeaconNode(i, enr, flags, config)
 	}
 
 	return &BeaconNodeSet{
 		config:  config,
-		nodes: nodes,
+		nodes:   nodes,
 		started: make(chan struct{}, 1),
-		enr: enr,
+		enr:     enr,
+		flags:   flags,
 	}
 }
 
@@ -116,8 +115,9 @@ func (s *BeaconNodeSet) Started() <-chan struct{} {
 type BeaconNode struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
-	started chan struct{}
 	index   int
+	flags   []string
+	started chan struct{}
 	enr     string
 	peerID  string
 }
@@ -179,12 +179,13 @@ func (node *BeaconNode) ZChildren() []e2ez.ZPage {
 var _ e2ez.ZPage = &BeaconNode{}
 
 // NewBeaconNode creates and returns a beacon node.
-func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNode {
+func NewBeaconNode(index int, enr string, flags []string, config *e2etypes.E2EConfig) *BeaconNode {
 	return &BeaconNode{
-		config:  config,
 		index:   index,
 		enr:     enr,
 		started: make(chan struct{}, 1),
+		flags:   flags,
+		config:  config,
 	}
 }
 
@@ -194,7 +195,7 @@ func (node *BeaconNode) startCommand() (string, []string, error) {
 		log.Info(binaryPath)
 		return "", []string{}, errors.New("beacon chain binary not found")
 	}
-	config, index, enr := node.config, node.index, node.enr
+	config, nodeFlags, index, enr := node.config, node.flags, node.index, node.enr
 	expectedNumOfPeers := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount - 1
 	if node.config.TestSync {
 		expectedNumOfPeers += 1
@@ -236,6 +237,7 @@ func (node *BeaconNode) startCommand() (string, []string, error) {
 		args = append(args, features.E2EBeaconChainFlags...)
 	}
 	args = append(args, config.BeaconFlags...)
+	args = append(args, nodeFlags...)
 
 	return binaryPath, args, nil
 }

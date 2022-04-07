@@ -3,7 +3,7 @@ package helpers
 import (
 	"context"
 	"encoding/hex"
-	"errors"
+	"github.com/pkg/errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -19,9 +19,22 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// ComputeWeakSubjectivityPeriod returns weak subjectivity period for the active validator count and finalized epoch.
+// CurrentWeakSubjectivityPeriod returns weak subjectivity period for a given state.
+func CurrentWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (types.Epoch, error) {
+	activeValidators, err := ActiveValidatorCount(ctx, st, time.CurrentEpoch(st))
+	if err != nil {
+		return 0, fmt.Errorf("cannot obtain active valiadtor count: %w", err)
+	}
+	totalActiveBalance, err := TotalActiveBalance(st)
+	if err != nil {
+		return 0, fmt.Errorf("cannot find total active balance of validators: %w", err)
+	}
+	return ComputeWeakSubjectivityPeriod(cfg, activeValidators, totalActiveBalance)
+}
+
+// ComputeWeakSubjectivityPeriod is an implementation of the below reference spec. It uses explicit parameters for
+// values derived from the state for ease of verification and experimentation.
 //
-// Reference spec implementation:
 // https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
 //
 // def compute_weak_subjectivity_period(state: BeaconState) -> uint64:
@@ -55,40 +68,38 @@ import (
 //        )
 //
 //    return ws_period
-func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (types.Epoch, error) {
-	// Weak subjectivity period cannot be smaller than withdrawal delay.
-	wsp := uint64(cfg.MinValidatorWithdrawabilityDelay)
+func ComputeWeakSubjectivityPeriod(cfg *params.BeaconChainConfig, activeValidators, totalActiveBalance uint64) (types.Epoch, error) {
+	// The Weak Subjectivity Period should never be less than MIN_VALIDATOR_WITHDRAWABILITY_DELAY.
+	// To ensure this, the results of the computation are added to MinValidatorWithdrawabilityDelay.
+	wsPeriod := cfg.MinValidatorWithdrawabilityDelay
 
-	// Cardinality of active validator set.
-	N, err := ActiveValidatorCount(ctx, st, time.CurrentEpoch(st))
-	if err != nil {
-		return 0, fmt.Errorf("cannot obtain active valiadtor count: %w", err)
+	if activeValidators == 0 {
+		return 0, errors.New("cannot compute weak subjectivity with 0 active validators")
 	}
-	if N == 0 {
-		return 0, errors.New("no active validators found")
-	}
+	// Variables like 'N' are used to 1:1 match the spec. N is the total number of active validators.
+	N := activeValidators
 
-	// Average effective balance in the given validator set, in Ether.
-	t, err := TotalActiveBalance(st)
-	if err != nil {
-		return 0, fmt.Errorf("cannot find total active balance of validators: %w", err)
-	}
-	t = t / N / cfg.GweiPerEth
+	// Total active balance is denominated in Gwei. Dividing it by N (count of active validators)
+	// gives the average balance per Validator in Gwei. All computations are performed in Ether, rather than Gwei,
+	// to reduce the likelihood of an overflow. The division by GweiPerEth is the conversion to Ether.
+	t := totalActiveBalance / N / cfg.GweiPerEth
 
-	// Maximum effective balance per validator.
+	// Maximum effective balance per Validator, also converted to Ether.
 	T := cfg.MaxEffectiveBalance / cfg.GweiPerEth
 
-	// Validator churn limit.
-	delta, err := ValidatorChurnLimit(N)
+	// delta is the Validator churn limit.
+	delta, err := ValidatorChurnLimit(activeValidators)
 	if err != nil {
 		return 0, fmt.Errorf("cannot obtain active validator churn limit: %w", err)
 	}
 
-	// Balance top-ups.
+	// Delta is the upper bound on how many Validators can deposit in an Epoch, in other words,
+	// it sets the entry rate limit.
+	// Notice the pattern of lowercase/uppercase variable names ratios of actual/max: delta/Delta, t/T
 	Delta := uint64(cfg.SlotsPerEpoch.Mul(cfg.MaxDeposits))
 
 	if delta == 0 || Delta == 0 {
-		return 0, errors.New("either validator churn limit or balance top-ups is zero")
+		return 0, errors.New("either validator churn limit, or max deposits per-epoch, is zero")
 	}
 
 	// Safety decay, maximum tolerable loss of safety margin of FFG finality.
@@ -97,12 +108,9 @@ func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconS
 	if T*(200+3*D) < t*(200+12*D) {
 		epochsForValidatorSetChurn := N * (t*(200+12*D) - T*(200+3*D)) / (600 * delta * (2*t + T))
 		epochsForBalanceTopUps := N * (200 + 3*D) / (600 * Delta)
-		wsp += math.Max(epochsForValidatorSetChurn, epochsForBalanceTopUps)
-	} else {
-		wsp += 3 * N * D * t / (200 * Delta * (T - t))
+		return wsPeriod + types.Epoch(math.Max(epochsForValidatorSetChurn, epochsForBalanceTopUps)), nil
 	}
-
-	return types.Epoch(wsp), nil
+	return wsPeriod + types.Epoch(3 * N * D * t / (200 * Delta * (T - t))), nil
 }
 
 // IsWithinWeakSubjectivityPeriod verifies if a given weak subjectivity checkpoint is not stale i.e.
@@ -140,7 +148,7 @@ func IsWithinWeakSubjectivityPeriod(
 	}
 
 	// Compare given epoch to state epoch + weak subjectivity period.
-	wsPeriod, err := ComputeWeakSubjectivityPeriod(ctx, wsState, cfg)
+	wsPeriod, err := CurrentWeakSubjectivityPeriod(ctx, wsState, cfg)
 	if err != nil {
 		return false, fmt.Errorf("cannot compute weak subjectivity period: %w", err)
 	}
@@ -155,7 +163,7 @@ func IsWithinWeakSubjectivityPeriod(
 // of validators will get slashed. Therefore, it is safe to assume that any finalized checkpoint within that
 // period is protected by this safety margin.
 func LatestWeakSubjectivityEpoch(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (types.Epoch, error) {
-	wsPeriod, err := ComputeWeakSubjectivityPeriod(ctx, st, cfg)
+	wsPeriod, err := CurrentWeakSubjectivityPeriod(ctx, st, cfg)
 	if err != nil {
 		return 0, err
 	}

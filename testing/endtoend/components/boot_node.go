@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -48,10 +49,12 @@ func (node *BootNode) Start(ctx context.Context) error {
 		return err
 	}
 
+	cfg := params.E2ETestConfig()
 	args := []string{
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.Ports.BootNodePort),
 		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.Ports.BootNodeMetricsPort),
+		fmt.Sprintf("--fork-version=%#x", cfg.GenesisForkVersion),
 		"--debug",
 	}
 
