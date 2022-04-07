@@ -394,7 +394,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	defer b.lock.RUnlock()
 
 	var fieldCount int
-	switch b.Version() {
+	switch b.version {
 	case version.Phase0:
 		fieldCount = params.BeaconConfig().BeaconStateFieldCount
 	case version.Altair:
@@ -450,7 +450,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		valMapHandler: b.valMapHandler,
 	}
 
-	switch b.Version() {
+	switch b.version {
 	case version.Phase0:
 		dst.sharedFieldReferences = make(map[v0types.FieldIndex]*stateutil.Reference, 10)
 		b.populateFieldIndexes(phase0Fields)
@@ -563,7 +563,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	}
 	layers := stateutil.Merkleize(fieldRoots)
 	b.merkleLayers = layers
-	switch b.Version() {
+	switch b.version {
 	case version.Phase0:
 		b.dirtyFields = make(map[v0types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
 	case version.Altair:
@@ -597,13 +597,13 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	for i, f := range b.sharedFieldReferences {
-		refMap[i.String(b.Version())] = uint64(f.Refs())
+		refMap[i.String(b.version)] = uint64(f.Refs())
 	}
 	for i, f := range b.stateFieldLeaves {
 		numOfRefs := uint64(f.FieldReference().Refs())
 		f.RLock()
 		if !f.Empty() {
-			refMap[i.String(b.Version())+"_trie"] = numOfRefs
+			refMap[i.String(b.version)+"_trie"] = numOfRefs
 		}
 		f.RUnlock()
 	}
@@ -619,7 +619,7 @@ func (b *BeaconState) IsNil() bool {
 func (b *BeaconState) rootSelector(ctx context.Context, field v0types.FieldIndex) ([32]byte, error) {
 	_, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("field", field.String(b.Version())))
+	span.AddAttributes(trace.StringAttribute("field", field.String(b.version)))
 
 	hasher := hash.CustomSHA256Hasher()
 	switch field {
@@ -814,7 +814,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	}
 	hasher := hash.CustomSHA256Hasher()
 	var fieldRoots [][]byte
-	switch state.Version() {
+	switch state.version {
 	case version.Phase0:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateFieldCount)
 	case version.Altair:
@@ -952,7 +952,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[fieldRootIx] = slashingsRootsRoot[:]
 	fieldRootIx++
 
-	if state.Version() == version.Phase0 {
+	if state.version == version.Phase0 {
 		// PreviousEpochAttestations slice root.
 		prevAttsRoot, err := stateutil.EpochAttestationsRoot(state.previousEpochAttestations)
 		if err != nil {
@@ -970,7 +970,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRootIx++
 	}
 
-	if state.Version() == version.Altair || state.Version() == version.Bellatrix {
+	if state.version == version.Altair || state.version == version.Bellatrix {
 		// PreviousEpochParticipation slice root.
 		prevParticipationRoot, err := stateutil.ParticipationBitsRoot(state.previousEpochParticipation)
 		if err != nil {
@@ -1017,7 +1017,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[fieldRootIx] = finalRoot[:]
 	fieldRootIx++
 
-	if state.Version() == version.Altair || state.Version() == version.Bellatrix {
+	if state.version == version.Altair || state.version == version.Bellatrix {
 		// Inactivity scores root.
 		inactivityScoresRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.inactivityScores)
 		if err != nil {
@@ -1043,7 +1043,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRootIx++
 	}
 
-	if state.Version() == version.Bellatrix {
+	if state.version == version.Bellatrix {
 		// Execution payload root.
 		executionPayloadRoot, err := state.latestExecutionPayloadHeader.HashTreeRoot()
 		if err != nil {
