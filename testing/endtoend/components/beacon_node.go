@@ -224,8 +224,8 @@ func (node *BeaconNode) startCommand() (string, []string, error) {
 		fmt.Sprintf("--%s=%d", cmdshared.RPCMaxPageSizeFlag.Name, params.BeaconConfig().MinGenesisActiveValidatorCount),
 		fmt.Sprintf("--%s=%s", cmdshared.BootstrapNode.Name, enr),
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
+		fmt.Sprintf("--%s=%s", cmdshared.ChainConfigFileFlag.Name, node.config.BeaconChainConfigPath()),
 		"--" + cmdshared.ForceClearDB.Name,
-		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 		"--" + flags.EnableDebugRPCEndpoints.Name,
 	}

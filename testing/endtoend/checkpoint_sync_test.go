@@ -14,8 +14,9 @@ import (
 )
 
 func TestCheckpointSync_MainnetConfig(t *testing.T) {
-	params.UseE2EMainnetConfig()
-	require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
+	cfg := params.E2ETestConfig()
+	params.OverrideBeaconConfig(cfg)
+	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
@@ -25,7 +26,12 @@ func TestCheckpointSync_MainnetConfig(t *testing.T) {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
-	_, crossClient := os.LookupEnv("RUN_CROSS_CLIENT")
+	seed := 0
+	seedStr, isValid := os.LookupEnv("E2E_SEED")
+	if isValid {
+		seed, err = strconv.Atoi(seedStr)
+		require.NoError(t, err)
+	}
 	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
 	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
 	evals := []types.Evaluator{
@@ -35,14 +41,21 @@ func TestCheckpointSync_MainnetConfig(t *testing.T) {
 		ev.ValidatorsAreActive,
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
+		ev.PeersCheck,
+		ev.ProcessesDepositsInBlocks,
+		ev.VerifyBlockGraffiti,
+		ev.ActivatesDepositedValidators,
+		ev.DepositedValidatorsAreActive,
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorHasExited,
+		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
 		ev.ForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
+		ev.ValidatorSyncParticipation,
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -51,17 +64,18 @@ func TestCheckpointSync_MainnetConfig(t *testing.T) {
 			"--enable-tracing",
 			"--trace-sample-fraction=1.0",
 		},
-		ValidatorFlags:          []string{},
-		EpochsToRun:             uint64(epochsToRun),
-		TestSync:                true,
-		TestFeature:             true,
-		TestDeposits:            true,
-		UseFixedPeerIDs:         true,
-		UseValidatorCrossClient: crossClient,
-		UsePrysmShValidator:     false,
-		UsePprof:                !longRunning,
-		TracingSinkEndpoint:     tracingEndpoint,
-		Evaluators:              evals,
+		ValidatorFlags:      []string{},
+		EpochsToRun:         uint64(epochsToRun),
+		TestSync:            true,
+		TestFeature:         true,
+		TestDeposits:        true,
+		UseFixedPeerIDs:     true,
+		UsePrysmShValidator: false,
+		UsePprof:            !longRunning,
+		TracingSinkEndpoint: tracingEndpoint,
+		Evaluators:          evals,
+		Seed:                int64(seed),
+		BeaconChainConfig:   cfg,
 	}
 
 	newTestRunner(t, testConfig).run()

@@ -43,7 +43,8 @@ func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
 }
 
 func e2eMinimal(t *testing.T, args *testArgs) {
-	params.UseE2EConfig()
+	cfg := params.E2ETestConfig()
+	params.OverrideBeaconConfig(cfg)
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
@@ -108,6 +109,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 		Seed:                int64(seed),
+		BeaconChainConfig:   cfg,
 	}
 
 	newTestRunner(t, testConfig).run()

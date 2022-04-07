@@ -19,7 +19,8 @@ func TestEndToEnd_MainnetConfig(t *testing.T) {
 }
 
 func e2eMainnet(t *testing.T, usePrysmSh bool) {
-	params.UseE2EMainnetConfig()
+	cfg := params.E2EMainnetTestConfig()
+	params.OverrideBeaconConfig(cfg)
 	require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
 
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
@@ -79,6 +80,7 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		TracingSinkEndpoint:     tracingEndpoint,
 		Evaluators:              evals,
 		Seed:                    int64(seed),
+		BeaconChainConfig:       cfg,
 	}
 
 	newTestRunner(t, testConfig).run()
