@@ -616,7 +616,7 @@ func TestServer_ImportRemoteKeys(t *testing.T) {
 		expectedStatuses := []*ethpbservice.ImportedRemoteKeysStatus{
 			&ethpbservice.ImportedRemoteKeysStatus{
 				Status:  ethpbservice.ImportedRemoteKeysStatus_IMPORTED,
-				Message: fmt.Sprintf("Successfully added pubkey: %v", hexutil.Encode(bytevalue[:])),
+				Message: fmt.Sprintf("Successfully added pubkey: %v", hexutil.Encode(bytevalue)),
 			},
 		}
 		require.NoError(t, err)
@@ -667,7 +667,7 @@ func TestServer_DeleteRemoteKeys(t *testing.T) {
 		expectedStatuses := []*ethpbservice.DeletedRemoteKeysStatus{
 			&ethpbservice.DeletedRemoteKeysStatus{
 				Status:  ethpbservice.DeletedRemoteKeysStatus_DELETED,
-				Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(bytevalue[:])),
+				Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(bytevalue)),
 			},
 		}
 		require.NoError(t, err)
