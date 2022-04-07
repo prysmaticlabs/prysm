@@ -314,7 +314,7 @@ func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldpara
 		if len(km.providedPublicKeys) == 0 {
 			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
 				Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
-				Message: fmt.Sprintf("No pubkeys are set in validator"),
+				Message: "No pubkeys are set in validator",
 			}
 			continue
 		}
