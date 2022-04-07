@@ -37,6 +37,13 @@ func (c *stateSummaryCache) has(r [32]byte) bool {
 	return ok
 }
 
+// delete state summary in cache.
+func (c *stateSummaryCache) delete(r [32]byte) {
+	c.initSyncStateSummariesLock.Lock()
+	defer c.initSyncStateSummariesLock.Unlock()
+	delete(c.initSyncStateSummaries, r)
+}
+
 // get retrieves a state summary from the initial sync state summaries cache using the root of
 // the block.
 func (c *stateSummaryCache) get(r [32]byte) *ethpb.StateSummary {

@@ -9,6 +9,7 @@ import (
 	"github.com/holiman/uint256"
 	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	powtesting "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -107,6 +108,11 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			validatorIndx: 1,
 		},
 		{
+			name:          "transition completed, happy case, payload ID cached)",
+			st:            transitionSt,
+			validatorIndx: 100,
+		},
+		{
 			name:          "transition completed, could not prepare payload",
 			st:            transitionSt,
 			forkchoiceErr: errors.New("fork choice error"),
@@ -132,10 +138,12 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			params.OverrideBeaconConfig(cfg)
 
 			vs := &Server{
-				ExecutionEngineCaller: &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr},
-				HeadFetcher:           &chainMock.ChainService{State: tt.st},
-				BeaconDB:              beaconDB,
+				ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr},
+				HeadFetcher:            &chainMock.ChainService{State: tt.st},
+				BeaconDB:               beaconDB,
+				ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			}
+			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(tt.st.Slot(), 100, [8]byte{100})
 			_, err := vs.getExecutionPayload(context.Background(), tt.st.Slot(), tt.validatorIndx)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
