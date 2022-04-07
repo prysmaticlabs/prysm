@@ -4,14 +4,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
-	"github.com/prysmaticlabs/prysm/config/params"
 )
 
 // Ensure type BeaconState below implements BeaconState interface.
 var _ state.BeaconState = (*BeaconState)(nil)
 
 func init() {
-	fieldMap = make(map[nativetypes.FieldIndex]types.DataType, params.BeaconConfig().BeaconStateFieldCount)
+	fieldMap = make(map[nativetypes.FieldIndex]types.DataType)
 	// Initialize the fixed sized arrays.
 	fieldMap[nativetypes.BlockRoots] = types.BasicArray
 	fieldMap[nativetypes.StateRoots] = types.BasicArray
