@@ -262,7 +262,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 						"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(f.store.proposerBoostRoot[:])),
 						"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.previousProposerBoostRoot[:])),
 						"previousProposerBoostScore": f.store.previousProposerBoostScore,
-					}).Debug("node with invalid balance, setting it to zero")
+					}).Warning("node with invalid balance, setting it to zero")
 					f.store.proposerBoostLock.RUnlock()
 					currentNode.balance = 0
 				} else {

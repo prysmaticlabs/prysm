@@ -436,7 +436,7 @@ func (s *Store) applyWeightChanges(
 					"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(s.proposerBoostRoot[:])),
 					"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(s.previousProposerBoostRoot[:])),
 					"previousProposerBoostScore": s.previousProposerBoostScore,
-				}).Debug("node with invalid weight, setting it to zero")
+				}).Warning("node with invalid weight, setting it to zero")
 				s.proposerBoostLock.RUnlock()
 				n.weight = 0
 			} else {
