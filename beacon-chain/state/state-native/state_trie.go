@@ -554,9 +554,9 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 // Initializes the Merkle layers for the beacon state if they are empty.
 // WARNING: Caller must acquire the mutex before using.
 func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
-	/*if len(b.merkleLayers) > 0 {
+	if len(b.merkleLayers) > 0 {
 		return nil
-	}*/
+	}
 	fieldRoots, err := ComputeFieldRootsWithHasher(ctx, b)
 	if err != nil {
 		return err
