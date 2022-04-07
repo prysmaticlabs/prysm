@@ -375,7 +375,7 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 		parent:         uint64(numOfNodes - 2),
 	})
 	indices[indexToHash(uint64(numOfNodes-1))] = uint64(numOfNodes - 1)
-	s := &Store{nodes: nodes, nodesIndices: indices}
+	s := &Store{nodes: nodes, nodesIndices: indices, canonicalNodes: map[[32]byte]bool{}, payloadIndices: map[[32]byte]uint64{}}
 
 	// Finalized root is at index 99 so everything before 99 should be pruned.
 	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
@@ -413,7 +413,7 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 		parent:         uint64(numOfNodes - 2),
 	})
 
-	s := &Store{nodes: nodes, nodesIndices: indices}
+	s := &Store{nodes: nodes, nodesIndices: indices, canonicalNodes: map[[32]byte]bool{}, payloadIndices: map[[32]byte]uint64{}}
 
 	// Finalized root is at index 11 so everything before 11 should be pruned.
 	require.NoError(t, s.prune(context.Background(), indexToHash(10)))
