@@ -6,6 +6,7 @@ package powchain
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"net/http"
 	"reflect"
@@ -226,12 +227,21 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	return s, nil
 }
 
+func handlePowchainConnectionError(err error) {
+	if err == nil {
+		return
+	}
+	if params.BeaconConfig().BellatrixForkEpoch != math.MaxUint64 {
+		log.WithError(err).Fatal("Could not connect to execution endpoint")
+	} else {
+		log.WithError(err).Error("Could not connect to execution endpoint")
+	}
+}
+
 // Start a web3 service's main event loop.
 func (s *Service) Start() {
-
-	if err := s.connectToPowChain(); err != nil {
-		log.WithError(err).Fatal("Could not connect to execution endpoint")
-	}
+	err := s.connectToPowChain()
+	handlePowchainConnectionError(err)
 
 	log.WithFields(logrus.Fields{
 		"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
@@ -472,6 +482,7 @@ func (s *Service) pollConnectionStatus() {
 			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
 			errConnect := s.connectToPowChain()
 			if errConnect != nil {
+				handlePowchainConnectionError(errConnect)
 				errorLogger(errConnect, "Could not connect to powchain endpoint")
 				s.runError = errConnect
 				s.fallbackToNextEndpoint()
@@ -509,6 +520,7 @@ func (s *Service) retryETH1Node(err error) {
 	// resuming dialing the eth1 node.
 	time.Sleep(backOffPeriod)
 	if err := s.connectToPowChain(); err != nil {
+		handlePowchainConnectionError(err)
 		s.runError = err
 		return
 	}
@@ -687,6 +699,9 @@ func (s *Service) initPOWService() {
 		case <-s.ctx.Done():
 			return
 		default:
+			if s.runError != nil {
+				continue
+			}
 			ctx := s.ctx
 			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
