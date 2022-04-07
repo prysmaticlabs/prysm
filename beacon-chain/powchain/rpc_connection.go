@@ -63,7 +63,7 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			log.Warnf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
 			if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
 				errorLogger(err, "Could not connect to execution client endpoint")
 				s.runError = err
