@@ -3,7 +3,6 @@ package powchain
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/network"
 	"github.com/prysmaticlabs/prysm/network/authorization"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context) error {
@@ -20,22 +20,30 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not dial execution node")
 	}
+	// Attach the clients to the service struct.
 	fetcher := ethclient.NewClient(client)
+	s.rpcClient = client
+	s.httpLogger = fetcher
+	s.eth1DataFetcher = fetcher
+
 	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.depositContractAddr, fetcher)
 	if err != nil {
 		client.Close()
 		return errors.Wrap(err, "could not initialize deposit contract caller")
 	}
+	s.depositContractCaller = depositContractCaller
+
+	// Ensure we have the correct chain and deposit IDs.
 	if err := ensureCorrectExecutionChain(ctx, fetcher); err != nil {
 		client.Close()
 		return errors.Wrap(err, "could not make initial request to verify execution chain ID")
 	}
-	s.rpcClient = client
-	s.httpLogger = fetcher
-	s.eth1DataFetcher = fetcher
-	s.depositContractCaller = depositContractCaller
 	s.updateConnectedETH1(true)
 	s.runError = nil
+
+	log.WithFields(logrus.Fields{
+		"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
+	}).Info("Connected to Ethereum execution client RPC")
 	return nil
 }
 
@@ -74,47 +82,47 @@ func ensureCorrectExecutionChain(ctx context.Context, client *ethclient.Client) 
 	return nil
 }
 
-func (s *Service) pollConnectionStatus() {
-	// Use a custom logger to only log errors
-	logCounter := 0
-	errorLogger := func(err error, msg string) {
-		if logCounter > logThreshold {
-			log.Errorf("%s: %v", msg, err)
-			logCounter = 0
-		}
-		logCounter++
-	}
-	ticker := time.NewTicker(backOffPeriod)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
-			errConnect := s.connectToPowChain()
-			if errConnect != nil {
-				errorLogger(errConnect, "Could not connect to powchain endpoint")
-				s.runError = errConnect
-				s.fallbackToNextEndpoint()
-				continue
-			}
-		case <-s.ctx.Done():
-			log.Debug("Received cancelled context,closing existing powchain service")
-			return
-		}
-	}
-}
+//func (s *Service) pollConnectionStatus() {
+//	// Use a custom logger to only log errors
+//	logCounter := 0
+//	errorLogger := func(err error, msg string) {
+//		if logCounter > logThreshold {
+//			log.Errorf("%s: %v", msg, err)
+//			logCounter = 0
+//		}
+//		logCounter++
+//	}
+//	ticker := time.NewTicker(backOffPeriod)
+//	defer ticker.Stop()
+//	for {
+//		select {
+//		case <-ticker.C:
+//			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+//			errConnect := s.connectToPowChain()
+//			if errConnect != nil {
+//				errorLogger(errConnect, "Could not connect to powchain endpoint")
+//				s.runError = errConnect
+//				s.fallbackToNextEndpoint()
+//				continue
+//			}
+//		case <-s.ctx.Done():
+//			log.Debug("Received cancelled context,closing existing powchain service")
+//			return
+//		}
+//	}
+//}
 
-// Reconnect to eth1 node in case of any failure.
-func (s *Service) retryETH1Node(err error) {
-	s.runError = err
-	s.updateConnectedETH1(false)
-	// Back off for a while before
-	// resuming dialing the eth1 node.
-	time.Sleep(backOffPeriod)
-	if err := s.connectToPowChain(); err != nil {
-		s.runError = err
-		return
-	}
-	// Reset run error in the event of a successful connection.
-	s.runError = nil
-}
+//// Reconnect to eth1 node in case of any failure.
+//func (s *Service) retryETH1Node(err error) {
+//	s.runError = err
+//	s.updateConnectedETH1(false)
+//	// Back off for a while before
+//	// resuming dialing the eth1 node.
+//	time.Sleep(backOffPeriod)
+//	if err := s.connectToPowChain(); err != nil {
+//		s.runError = err
+//		return
+//	}
+//	// Reset run error in the event of a successful connection.
+//	s.runError = nil
+//}

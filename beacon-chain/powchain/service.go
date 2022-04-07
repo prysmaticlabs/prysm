@@ -227,13 +227,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 // Start a web3 service's main event loop.
 func (s *Service) Start() {
 
-	if err := s.connectToPowChain(); err != nil {
-		log.WithError(err).Fatal("Could not connect to execution endpoint")
+	if err := s.setupExecutionClientConnections(s.ctx); err != nil {
+		log.WithError(err).Error("Could not connect to execution endpoint")
 	}
-
-	log.WithFields(logrus.Fields{
-		"endpoint": logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url),
-	}).Info("Connected to Ethereum execution client RPC")
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
 	if !s.chainStartData.Chainstarted && s.cfg.currHttpEndpoint.Url == "" {
@@ -251,7 +247,7 @@ func (s *Service) Start() {
 	s.isRunning = true
 
 	// Poll the execution client connection and fallback if errors occur.
-	go s.pollConnectionStatus()
+	//go s.pollConnectionStatus()
 
 	// Check transition configuration for the engine API client in the background.
 	go s.checkTransitionConfiguration(s.ctx, make(chan *feed.Event, 1))
@@ -264,7 +260,7 @@ func (s *Service) Stop() error {
 	if s.cancel != nil {
 		defer s.cancel()
 	}
-	s.closeClients()
+	//s.closeClients()
 	return nil
 }
 
@@ -336,10 +332,10 @@ func (s *Service) CurrentETH1Endpoint() string {
 
 // CurrentETH1ConnectionError returns the error (if any) of the current connection.
 func (s *Service) CurrentETH1ConnectionError() error {
-	httpClient, rpcClient, err := s.dialExecutionClient(s.cfg.currHttpEndpoint)
-	httpClient.Close()
-	rpcClient.Close()
-	return err
+	//httpClient, rpcClient, err := s.setupExecutionClientConnections(s.cfg.currHttpEndpoint)
+	//httpClient.Close()
+	//rpcClient.Close()
+	return s.runError
 }
 
 // ETH1Endpoints returns the slice of HTTP endpoint URLs (default is 0th element).
@@ -355,12 +351,12 @@ func (s *Service) ETH1Endpoints() []string {
 // of nil means the connection was successful.
 func (s *Service) ETH1ConnectionErrors() []error {
 	var errs []error
-	for _, ep := range s.cfg.httpEndpoints {
-		httpClient, rpcClient, err := s.dialExecutionClient(ep)
-		httpClient.Close()
-		rpcClient.Close()
-		errs = append(errs, err)
-	}
+	//for _, ep := range s.cfg.httpEndpoints {
+	//	httpClient, rpcClient, err := s.dialExecutionClient(ep)
+	//	httpClient.Close()
+	//	rpcClient.Close()
+	//	errs = append(errs, err)
+	//}
 	return errs
 }
 
@@ -548,8 +544,7 @@ func (s *Service) initPOWService() {
 			ctx := s.ctx
 			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
-				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
-				s.retryETH1Node(err)
+				//log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 				continue
 			}
 
@@ -559,13 +554,11 @@ func (s *Service) initPOWService() {
 
 			if err := s.processPastLogs(ctx); err != nil {
 				log.Errorf("Unable to process past logs %v", err)
-				s.retryETH1Node(err)
 				continue
 			}
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				log.Errorf("Unable to process past headers %v", err)
-				s.retryETH1Node(err)
 				continue
 			}
 			// Handle edge case with embedded genesis state by fetching genesis header to determine
@@ -579,7 +572,6 @@ func (s *Service) initPOWService() {
 					genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, genHash)
 					if err != nil {
 						log.Errorf("Unable to retrieve genesis ETH1.0 chain header: %v", err)
-						s.retryETH1Node(err)
 						continue
 					}
 					genBlock = genHeader.Number.Uint64()
@@ -615,12 +607,10 @@ func (s *Service) run(done <-chan struct{}) {
 			head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
 			if err != nil {
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
-				s.retryETH1Node(err)
 				continue
 			}
 			if eth1HeadIsBehind(head.Time) {
 				log.WithError(errFarBehind).Debug("Could not get an up to date eth1 header")
-				s.retryETH1Node(errFarBehind)
 				continue
 			}
 			s.processBlockHeader(head)
@@ -716,30 +706,30 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 // is ready to serve we connect to it again. This method is only
 // relevant if we are on our backup endpoint.
 func (s *Service) checkDefaultEndpoint() {
-	primaryEndpoint := s.cfg.httpEndpoints[0]
-	// Return early if we are running on our primary
-	// endpoint.
-	if s.cfg.currHttpEndpoint.Equals(primaryEndpoint) {
-		return
-	}
-
-	httpClient, rpcClient, err := s.dialExecutionClient(primaryEndpoint)
-	if err != nil {
-		log.Debugf("Primary endpoint not ready: %v", err)
-		return
-	}
-	log.Info("Primary endpoint ready again, switching back to it")
-	// Close the clients and let our main connection routine
-	// properly connect with it.
-	httpClient.Close()
-	rpcClient.Close()
-	// Close current active clients.
-	s.closeClients()
-
-	// Switch back to primary endpoint and try connecting
-	// to it again.
-	s.updateCurrHttpEndpoint(primaryEndpoint)
-	s.retryETH1Node(nil)
+	//primaryEndpoint := s.cfg.httpEndpoints[0]
+	//// Return early if we are running on our primary
+	//// endpoint.
+	//if s.cfg.currHttpEndpoint.Equals(primaryEndpoint) {
+	//	return
+	//}
+	//
+	//httpClient, rpcClient, err := s.dialExecutionClient(primaryEndpoint)
+	//if err != nil {
+	//	log.Debugf("Primary endpoint not ready: %v", err)
+	//	return
+	//}
+	//log.Info("Primary endpoint ready again, switching back to it")
+	//// Close the clients and let our main connection routine
+	//// properly connect with it.
+	//httpClient.Close()
+	//rpcClient.Close()
+	//// Close current active clients.
+	//s.closeClients()
+	//
+	//// Switch back to primary endpoint and try connecting
+	//// to it again.
+	//s.updateCurrHttpEndpoint(primaryEndpoint)
+	//s.retryETH1Node(nil)
 }
 
 // This is an inefficient way to search for the next endpoint, but given N is expected to be
