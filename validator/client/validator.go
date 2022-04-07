@@ -135,7 +135,6 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 			return errors.New("wallet not set")
 		} else {
 			if v.Web3SignerConfig != nil {
-				log.Info("Waiting for key manager to initialize web3signer")
 				v.Web3SignerConfig.GenesisValidatorsRoot = genesisRoot
 			}
 			keyManager, err := v.wallet.InitializeKeymanager(ctx, accountsiface.InitKeymanagerConfig{ListenForChanges: true, Web3SignerConfig: v.Web3SignerConfig})
