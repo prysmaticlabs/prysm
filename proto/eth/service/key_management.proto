@@ -199,7 +199,7 @@ message DeletedRemoteKeysStatus {
   enum Status {
     DELETED = 0;
     NOT_FOUND = 1;
-    ERROR = 3;
+    ERROR = 3; // skips 2 to match Delete KeyStore status which has error = 3.
   }
   Status status = 1;
   string message = 2;
