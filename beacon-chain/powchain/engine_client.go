@@ -104,6 +104,7 @@ func (s *Service) ForkchoiceUpdated(
 	if result.Status == nil {
 		return nil, nil, ErrNilResponse
 	}
+	log.Infof("GOT FORKCHOICE UPDATED %#x", result.Status.LatestValidHash)
 	resp := result.Status
 	switch resp.Status {
 	case pb.PayloadStatus_INVALID_TERMINAL_BLOCK:
