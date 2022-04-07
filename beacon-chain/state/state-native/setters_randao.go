@@ -15,8 +15,8 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.RandaoMixes]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.RandaoMixes]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.RandaoMixes].MinusRef()
+	b.sharedFieldReferences[v0types.RandaoMixes] = stateutil.NewRef(1)
 
 	var mixesArr [fieldparams.RandaoMixesLength][32]byte
 	for i := 0; i < len(mixesArr); i++ {
@@ -25,7 +25,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	mixes := customtypes.RandaoMixes(mixesArr)
 	b.randaoMixes = &mixes
 	b.markFieldAsDirty(v0types.RandaoMixes)
-	b.rebuildTrie[b.fieldIndexesRev[v0types.RandaoMixes]] = true
+	b.rebuildTrie[v0types.RandaoMixes] = true
 	return nil
 }
 
@@ -39,13 +39,13 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	defer b.lock.Unlock()
 
 	mixes := b.randaoMixes
-	if refs := b.sharedFieldReferences[b.fieldIndexesRev[v0types.RandaoMixes]].Refs(); refs > 1 {
+	if refs := b.sharedFieldReferences[v0types.RandaoMixes].Refs(); refs > 1 {
 		// Copy elements in underlying array by reference.
 		m := *b.randaoMixes
 		mCopy := m
 		mixes = &mCopy
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.RandaoMixes]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.RandaoMixes]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.RandaoMixes].MinusRef()
+		b.sharedFieldReferences[v0types.RandaoMixes] = stateutil.NewRef(1)
 	}
 
 	mixes[idx] = bytesutil.ToBytes32(val)

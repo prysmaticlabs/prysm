@@ -21,21 +21,21 @@ func (b *BeaconState) RotateAttestations() error {
 }
 
 func (b *BeaconState) setPreviousEpochAttestations(val []*ethpb.PendingAttestation) {
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.PreviousEpochAttestations]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.PreviousEpochAttestations]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.PreviousEpochAttestations].MinusRef()
+	b.sharedFieldReferences[v0types.PreviousEpochAttestations] = stateutil.NewRef(1)
 
 	b.previousEpochAttestations = val
 	b.markFieldAsDirty(v0types.PreviousEpochAttestations)
-	b.rebuildTrie[b.fieldIndexesRev[v0types.PreviousEpochAttestations]] = true
+	b.rebuildTrie[v0types.PreviousEpochAttestations] = true
 }
 
 func (b *BeaconState) setCurrentEpochAttestations(val []*ethpb.PendingAttestation) {
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.CurrentEpochAttestations]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.CurrentEpochAttestations]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.CurrentEpochAttestations].MinusRef()
+	b.sharedFieldReferences[v0types.CurrentEpochAttestations] = stateutil.NewRef(1)
 
 	b.currentEpochAttestations = val
 	b.markFieldAsDirty(v0types.PreviousEpochAttestations)
-	b.rebuildTrie[b.fieldIndexesRev[v0types.CurrentEpochAttestations]] = true
+	b.rebuildTrie[v0types.CurrentEpochAttestations] = true
 }
 
 // AppendCurrentEpochAttestations for the beacon state. Appends the new value
@@ -50,12 +50,12 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 		return fmt.Errorf("current pending attestation exceeds max length %d", max)
 	}
 
-	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.CurrentEpochAttestations]].Refs() > 1 {
+	if b.sharedFieldReferences[v0types.CurrentEpochAttestations].Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		atts = make([]*ethpb.PendingAttestation, len(b.currentEpochAttestations))
 		copy(atts, b.currentEpochAttestations)
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.CurrentEpochAttestations]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.CurrentEpochAttestations]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.CurrentEpochAttestations].MinusRef()
+		b.sharedFieldReferences[v0types.CurrentEpochAttestations] = stateutil.NewRef(1)
 	}
 
 	b.currentEpochAttestations = append(atts, val)
@@ -76,11 +76,11 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestat
 		return fmt.Errorf("previous pending attestation exceeds max length %d", max)
 	}
 
-	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.PreviousEpochAttestations]].Refs() > 1 {
+	if b.sharedFieldReferences[v0types.PreviousEpochAttestations].Refs() > 1 {
 		atts = make([]*ethpb.PendingAttestation, len(b.previousEpochAttestations))
 		copy(atts, b.previousEpochAttestations)
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.PreviousEpochAttestations]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.PreviousEpochAttestations]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.PreviousEpochAttestations].MinusRef()
+		b.sharedFieldReferences[v0types.PreviousEpochAttestations] = stateutil.NewRef(1)
 	}
 
 	b.previousEpochAttestations = append(atts, val)

@@ -50,11 +50,11 @@ type BeaconState struct {
 	lock                  sync.RWMutex
 	fieldIndexes          map[int]v0types.FieldIndex
 	fieldIndexesRev       map[v0types.FieldIndex]int
-	dirtyFields           map[int]bool
-	dirtyIndices          map[int][]uint64
-	stateFieldLeaves      map[int]*fieldtrie.FieldTrie
-	rebuildTrie           map[int]bool
+	dirtyFields           map[v0types.FieldIndex]bool
+	dirtyIndices          map[v0types.FieldIndex][]uint64
+	stateFieldLeaves      map[v0types.FieldIndex]*fieldtrie.FieldTrie
+	rebuildTrie           map[v0types.FieldIndex]bool
 	valMapHandler         *stateutil.ValidatorMapHandler
 	merkleLayers          [][][]byte
-	sharedFieldReferences map[int]*stateutil.Reference
+	sharedFieldReferences map[v0types.FieldIndex]*stateutil.Reference
 }

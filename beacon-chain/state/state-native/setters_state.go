@@ -14,8 +14,8 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.StateRoots]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.StateRoots]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.StateRoots].MinusRef()
+	b.sharedFieldReferences[v0types.StateRoots] = stateutil.NewRef(1)
 
 	var rootsArr [fieldparams.StateRootsLength][32]byte
 	for i := 0; i < len(rootsArr); i++ {
@@ -24,7 +24,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	roots := customtypes.StateRoots(rootsArr)
 	b.stateRoots = &roots
 	b.markFieldAsDirty(v0types.StateRoots)
-	b.rebuildTrie[b.fieldIndexesRev[v0types.StateRoots]] = true
+	b.rebuildTrie[v0types.StateRoots] = true
 	return nil
 }
 
@@ -43,13 +43,13 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 
 	// Check if we hold the only reference to the shared state roots slice.
 	r := b.stateRoots
-	if ref := b.sharedFieldReferences[b.fieldIndexesRev[v0types.StateRoots]]; ref.Refs() > 1 {
+	if ref := b.sharedFieldReferences[v0types.StateRoots]; ref.Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		roots := *b.stateRoots
 		rootsCopy := roots
 		r = &rootsCopy
 		ref.MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.StateRoots]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.StateRoots] = stateutil.NewRef(1)
 	}
 
 	r[idx] = stateRoot

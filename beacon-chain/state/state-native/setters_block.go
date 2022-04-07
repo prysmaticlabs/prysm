@@ -26,8 +26,8 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.BlockRoots]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.BlockRoots]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.BlockRoots].MinusRef()
+	b.sharedFieldReferences[v0types.BlockRoots] = stateutil.NewRef(1)
 
 	var rootsArr [fieldparams.BlockRootsLength][32]byte
 	for i := 0; i < len(rootsArr); i++ {
@@ -36,7 +36,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	roots := customtypes.BlockRoots(rootsArr)
 	b.blockRoots = &roots
 	b.markFieldAsDirty(v0types.BlockRoots)
-	b.rebuildTrie[b.fieldIndexesRev[v0types.BlockRoots]] = true
+	b.rebuildTrie[v0types.BlockRoots] = true
 	return nil
 }
 
@@ -50,13 +50,13 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	defer b.lock.Unlock()
 
 	r := b.blockRoots
-	if ref := b.sharedFieldReferences[b.fieldIndexesRev[v0types.BlockRoots]]; ref.Refs() > 1 {
+	if ref := b.sharedFieldReferences[v0types.BlockRoots]; ref.Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		roots := *b.blockRoots
 		rootsCopy := roots
 		r = &rootsCopy
 		ref.MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.BlockRoots]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.BlockRoots] = stateutil.NewRef(1)
 	}
 
 	r[idx] = blockRoot

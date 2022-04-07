@@ -22,12 +22,12 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.Eth1DataVotes].MinusRef()
+	b.sharedFieldReferences[v0types.Eth1DataVotes] = stateutil.NewRef(1)
 
 	b.eth1DataVotes = val
 	b.markFieldAsDirty(v0types.Eth1DataVotes)
-	b.rebuildTrie[b.fieldIndexesRev[v0types.Eth1DataVotes]] = true
+	b.rebuildTrie[v0types.Eth1DataVotes] = true
 	return nil
 }
 
@@ -48,12 +48,12 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	defer b.lock.Unlock()
 
 	votes := b.eth1DataVotes
-	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]].Refs() > 1 {
+	if b.sharedFieldReferences[v0types.Eth1DataVotes].Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		votes = make([]*ethpb.Eth1Data, len(b.eth1DataVotes))
 		copy(votes, b.eth1DataVotes)
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Eth1DataVotes]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.Eth1DataVotes].MinusRef()
+		b.sharedFieldReferences[v0types.Eth1DataVotes] = stateutil.NewRef(1)
 	}
 
 	b.eth1DataVotes = append(votes, val)

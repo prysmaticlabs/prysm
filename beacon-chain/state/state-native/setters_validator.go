@@ -16,10 +16,10 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	defer b.lock.Unlock()
 
 	b.validators = val
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Validators]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Validators]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.Validators].MinusRef()
+	b.sharedFieldReferences[v0types.Validators] = stateutil.NewRef(1)
 	b.markFieldAsDirty(v0types.Validators)
-	b.rebuildTrie[b.fieldIndexesRev[v0types.Validators]] = true
+	b.rebuildTrie[v0types.Validators] = true
 	b.valMapHandler = stateutil.NewValMapHandler(b.validators)
 	return nil
 }
@@ -29,10 +29,10 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
 	b.lock.Lock()
 	v := b.validators
-	if ref := b.sharedFieldReferences[b.fieldIndexesRev[v0types.Validators]]; ref.Refs() > 1 {
+	if ref := b.sharedFieldReferences[v0types.Validators]; ref.Refs() > 1 {
 		v = b.validatorsReferences()
 		ref.MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Validators]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.Validators] = stateutil.NewRef(1)
 	}
 	b.lock.Unlock()
 	var changedVals []uint64
@@ -67,10 +67,10 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx types.ValidatorIndex, val *ethp
 	defer b.lock.Unlock()
 
 	v := b.validators
-	if ref := b.sharedFieldReferences[b.fieldIndexesRev[v0types.Validators]]; ref.Refs() > 1 {
+	if ref := b.sharedFieldReferences[v0types.Validators]; ref.Refs() > 1 {
 		v = b.validatorsReferences()
 		ref.MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Validators]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.Validators] = stateutil.NewRef(1)
 	}
 
 	v[idx] = val
@@ -87,12 +87,12 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.Balances].MinusRef()
+	b.sharedFieldReferences[v0types.Balances] = stateutil.NewRef(1)
 
 	b.balances = val
 	b.markFieldAsDirty(v0types.Balances)
-	b.rebuildTrie[b.fieldIndexesRev[v0types.Balances]] = true
+	b.rebuildTrie[v0types.Balances] = true
 	return nil
 }
 
@@ -106,10 +106,10 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64
 	defer b.lock.Unlock()
 
 	bals := b.balances
-	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]].Refs() > 1 {
+	if b.sharedFieldReferences[v0types.Balances].Refs() > 1 {
 		bals = b.balancesVal()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.Balances].MinusRef()
+		b.sharedFieldReferences[v0types.Balances] = stateutil.NewRef(1)
 	}
 
 	bals[idx] = val
@@ -125,8 +125,8 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Slashings]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.Slashings]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.Slashings].MinusRef()
+	b.sharedFieldReferences[v0types.Slashings] = stateutil.NewRef(1)
 
 	b.slashings = val
 	b.markFieldAsDirty(v0types.Slashings)
@@ -143,10 +143,10 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 	defer b.lock.Unlock()
 
 	s := b.slashings
-	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.Slashings]].Refs() > 1 {
+	if b.sharedFieldReferences[v0types.Slashings].Refs() > 1 {
 		s = b.slashingsVal()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Slashings]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Slashings]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.Slashings].MinusRef()
+		b.sharedFieldReferences[v0types.Slashings] = stateutil.NewRef(1)
 	}
 
 	s[idx] = val
@@ -164,10 +164,10 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	defer b.lock.Unlock()
 
 	vals := b.validators
-	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.Validators]].Refs() > 1 {
+	if b.sharedFieldReferences[v0types.Validators].Refs() > 1 {
 		vals = b.validatorsReferences()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Validators]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Validators]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.Validators].MinusRef()
+		b.sharedFieldReferences[v0types.Validators] = stateutil.NewRef(1)
 	}
 
 	// append validator to slice
@@ -188,10 +188,10 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 	defer b.lock.Unlock()
 
 	bals := b.balances
-	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]].Refs() > 1 {
+	if b.sharedFieldReferences[v0types.Balances].Refs() > 1 {
 		bals = b.balancesVal()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.Balances]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.Balances].MinusRef()
+		b.sharedFieldReferences[v0types.Balances] = stateutil.NewRef(1)
 	}
 
 	b.balances = append(bals, bal)
@@ -207,10 +207,10 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 	defer b.lock.Unlock()
 
 	scores := b.inactivityScores
-	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.InactivityScores]].Refs() > 1 {
+	if b.sharedFieldReferences[v0types.InactivityScores].Refs() > 1 {
 		scores = b.inactivityScoresVal()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.InactivityScores]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.InactivityScores]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.InactivityScores].MinusRef()
+		b.sharedFieldReferences[v0types.InactivityScores] = stateutil.NewRef(1)
 	}
 
 	b.inactivityScores = append(scores, s)
@@ -224,8 +224,8 @@ func (b *BeaconState) SetInactivityScores(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.InactivityScores]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.InactivityScores]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.InactivityScores].MinusRef()
+	b.sharedFieldReferences[v0types.InactivityScores] = stateutil.NewRef(1)
 
 	b.inactivityScores = val
 	b.markFieldAsDirty(v0types.InactivityScores)

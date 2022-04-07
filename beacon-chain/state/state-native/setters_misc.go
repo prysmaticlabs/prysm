@@ -94,8 +94,8 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]].MinusRef()
-	b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]] = stateutil.NewRef(1)
+	b.sharedFieldReferences[v0types.HistoricalRoots].MinusRef()
+	b.sharedFieldReferences[v0types.HistoricalRoots] = stateutil.NewRef(1)
 
 	roots := make([][32]byte, len(val))
 	for i, r := range val {
@@ -113,11 +113,11 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	defer b.lock.Unlock()
 
 	roots := b.historicalRoots
-	if b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]].Refs() > 1 {
+	if b.sharedFieldReferences[v0types.HistoricalRoots].Refs() > 1 {
 		roots = make([][32]byte, len(b.historicalRoots))
 		copy(roots, b.historicalRoots)
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]].MinusRef()
-		b.sharedFieldReferences[b.fieldIndexesRev[v0types.HistoricalRoots]] = stateutil.NewRef(1)
+		b.sharedFieldReferences[v0types.HistoricalRoots].MinusRef()
+		b.sharedFieldReferences[v0types.HistoricalRoots] = stateutil.NewRef(1)
 	}
 
 	b.historicalRoots = append(roots, root)
@@ -161,24 +161,24 @@ func (b *BeaconState) recomputeRoot(idx int) {
 }
 
 func (b *BeaconState) markFieldAsDirty(field v0types.FieldIndex) {
-	b.dirtyFields[b.fieldIndexesRev[field]] = true
+	b.dirtyFields[field] = true
 }
 
 // addDirtyIndices adds the relevant dirty field indices, so that they
 // can be recomputed.
 func (b *BeaconState) addDirtyIndices(index v0types.FieldIndex, indices []uint64) {
-	if b.rebuildTrie[b.fieldIndexesRev[index]] {
+	if b.rebuildTrie[index] {
 		return
 	}
 	// Exit early if balance trie computation isn't enabled.
 	if !features.Get().EnableBalanceTrieComputation && index == v0types.Balances {
 		return
 	}
-	totalIndicesLen := len(b.dirtyIndices[b.fieldIndexesRev[index]]) + len(indices)
+	totalIndicesLen := len(b.dirtyIndices[index]) + len(indices)
 	if totalIndicesLen > indicesLimit {
-		b.rebuildTrie[b.fieldIndexesRev[index]] = true
-		b.dirtyIndices[b.fieldIndexesRev[index]] = []uint64{}
+		b.rebuildTrie[index] = true
+		b.dirtyIndices[index] = []uint64{}
 	} else {
-		b.dirtyIndices[b.fieldIndexesRev[index]] = append(b.dirtyIndices[b.fieldIndexesRev[index]], indices...)
+		b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
 	}
 }
