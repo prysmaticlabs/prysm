@@ -559,6 +559,7 @@ func (s *Service) initPOWService() {
 			ctx := s.ctx
 			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
 			if err != nil {
+				s.retryETH1Node(ctx, err)
 				errorLogger(err, "Unable to retrieve latest execution client header")
 				continue
 			}
@@ -568,11 +569,13 @@ func (s *Service) initPOWService() {
 			s.latestEth1Data.BlockTime = header.Time
 
 			if err := s.processPastLogs(ctx); err != nil {
+				s.retryETH1Node(ctx, err)
 				errorLogger(err, "Unable to process past deposit contract logs")
 				continue
 			}
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
+				s.retryETH1Node(ctx, err)
 				errorLogger(err, "Unable to cache headers for execution client votes")
 				continue
 			}
@@ -586,6 +589,7 @@ func (s *Service) initPOWService() {
 				if genHash != [32]byte{} {
 					genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, genHash)
 					if err != nil {
+						s.retryETH1Node(ctx, err)
 						errorLogger(err, "Unable to retrieve proof-of-stake genesis block data")
 						continue
 					}
@@ -625,6 +629,7 @@ func (s *Service) run(done <-chan struct{}) {
 				continue
 			}
 			if eth1HeadIsBehind(head.Time) {
+				s.retryETH1Node(s.ctx, err)
 				log.WithError(errFarBehind).Debug("Could not get an up to date eth1 header")
 				continue
 			}

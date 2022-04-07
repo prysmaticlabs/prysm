@@ -76,6 +76,19 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 	}
 }
 
+func (s *Service) retryETH1Node(ctx context.Context, err error) {
+	s.runError = err
+	s.updateConnectedETH1(false)
+	// Back off for a while before redialing.
+	time.Sleep(backOffPeriod)
+	if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
+		s.runError = err
+		return
+	}
+	// Reset run error in the event of a successful connection.
+	s.runError = nil
+}
+
 // This performs a health check on our primary endpoint, and if it
 // is ready to serve we connect to it again. This method is only
 // relevant if we are on our backup endpoint.
