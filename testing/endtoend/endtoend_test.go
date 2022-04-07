@@ -329,7 +329,9 @@ func (r *testRunner) run() {
 		if config.TestSync {
 			httpEndpoints := helpers.BeaconAPIHostnames(e2e.TestParams.BeaconNodeCount)
 			index := e2e.TestParams.BeaconNodeCount
-			if err := r.testCheckpointSync(index+1, conns, httpEndpoints[0], bootNode.ENR()); err != nil {
+			menr := eth1Miner.ENR()
+			benr := bootNode.ENR()
+			if err := r.testCheckpointSync(index+1, conns, httpEndpoints[0], benr, menr); err != nil {
 				return errors.Wrap(err, "checkpoint sync test failed")
 			}
 		}
@@ -470,7 +472,15 @@ func (r *testRunner) waitForSentinelBlock(ctx context.Context, conn *grpc.Client
 	}
 }
 
-func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, bnAPI, enr string) error {
+func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, bnAPI, enr, minerEnr string) error {
+	ethNode := eth1.NewNode(i, minerEnr)
+	r.group.Go(func() error {
+		return ethNode.Start(r.ctx)
+	})
+	if err := helpers.ComponentsStarted(r.ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
+
 	client, err := beacon.NewClient(bnAPI)
 	if err != nil {
 		return err

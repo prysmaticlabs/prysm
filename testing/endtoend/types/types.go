@@ -5,11 +5,11 @@ package types
 import (
 	"context"
 	"fmt"
+	"path"
+
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	"path"
-
 	types "github.com/prysmaticlabs/eth2-types"
 	"google.golang.org/grpc"
 )

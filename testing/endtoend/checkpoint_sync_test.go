@@ -13,8 +13,13 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestCheckpointSync_MainnetConfig(t *testing.T) {
+// This test customizes the minimal config in order to artificially shorten the weak subjectivity period
+// so that the state used will not be genesis despite there only being 10 epochs of history.
+func TestCheckpointSync_CustomConfig(t *testing.T) {
 	cfg := params.E2ETestConfig()
+	// setting this to 1 should change the weak subjectivity computation,
+	// so the computed weak subjectivity checkpoint will be epoch 9 rather than 0
+	cfg.MinValidatorWithdrawabilityDelay = 1
 	params.OverrideBeaconConfig(cfg)
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
