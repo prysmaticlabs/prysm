@@ -457,12 +457,12 @@ func (s *Store) applyWeightChanges(
 			if n.weight < d {
 				s.proposerBoostLock.RLock()
 				log.WithFields(logrus.Fields{
-					"NodeDelta":                  d,
-					"NodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(n.root[:])),
-					"NodeWeight":                 n.weight,
-					"ProposerBoostRoot":          s.proposerBoostRoot,
-					"PreviousProposerBoostRoot":  s.previousProposerBoostRoot,
-					"PreviousProposerBoostScore": s.previousProposerBoostScore,
+					"nodeDelta":                  d,
+					"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(n.root[:])),
+					"nodeWeight":                 n.weight,
+					"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(s.proposerBoostRoot[:])),
+					"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(s.previousProposerBoostRoot[:])),
+					"previousProposerBoostScore": s.previousProposerBoostScore,
 				}).Debug("node with invalid weight, setting it to zero")
 				s.proposerBoostLock.RUnlock()
 				n.weight = 0

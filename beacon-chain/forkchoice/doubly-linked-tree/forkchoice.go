@@ -254,13 +254,13 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 				if currentNode.balance < oldBalance {
 					f.store.proposerBoostLock.RLock()
 					log.WithFields(logrus.Fields{
-						"NodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
-						"OldBalance":                 oldBalance,
-						"NodeBalance":                currentNode.balance,
-						"NodeWeight":                 currentNode.weight,
-						"ProposerBoostRoot":          f.store.proposerBoostRoot,
-						"PreviousProposerBoostRoot":  f.store.previousProposerBoostRoot,
-						"PreviousProposerBoostScore": f.store.previousProposerBoostScore,
+						"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
+						"oldBalance":                 oldBalance,
+						"nodeBalance":                currentNode.balance,
+						"nodeWeight":                 currentNode.weight,
+						"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(f.store.proposerBoostRoot[:])),
+						"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.previousProposerBoostRoot[:])),
+						"previousProposerBoostScore": f.store.previousProposerBoostScore,
 					}).Debug("node with invalid balance, setting it to zero")
 					f.store.proposerBoostLock.RUnlock()
 					currentNode.balance = 0
