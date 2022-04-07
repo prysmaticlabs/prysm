@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +49,12 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Allow for spoofing requests as well.
+	// We optionally spoof the request as desired.
+	modifiedReq, err := spoofRequest(requestBytes)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 
 	// Create a new proxy request to the execution client.
 	url := r.URL
@@ -58,6 +64,10 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 		log.WithError(err).Error("Could create new request")
 		return
 	}
+
+	// Set the modified request as the proxy request body.
+	proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(modifiedReq))
+
 	// Required proxy headers for forwarding JSON-RPC requests to the execution client.
 	proxyReq.Header.Set("Host", r.Host)
 	proxyReq.Header.Set("X-Forwarded-For", r.RemoteAddr)
@@ -102,6 +112,38 @@ func parseRequestBytes(req *http.Request) ([]byte, error) {
 	}
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBytes))
 	return requestBytes, nil
+}
+
+// Parses the request from thec consensus client and checks if user desires
+// to spoof it based on the JSON-RPC method. If so, it returns the modified
+// request bytes which will be proxied to the execution client.
+func spoofRequest(requestBytes []byte) ([]byte, error) {
+	// If the JSON request is not a JSON-RPC object, return the response as-is.
+	jsonRequest, err := unmarshalRPCObject(requestBytes)
+	if err != nil {
+		switch {
+		case strings.Contains(err.Error(), "cannot unmarshal array"):
+			return requestBytes, nil
+		default:
+			return nil, err
+		}
+	}
+	// TODO: Allow configurable spoofing via YAML file inputs.
+	switch jsonRequest.Method {
+	case powchain.NewPayloadMethod:
+		newPayloadReq := &enginev1.ExecutionPayload{}
+		if err := extractObjectFromJSONRPC(jsonRequest, newPayloadReq); err != nil {
+			return nil, err
+		}
+		// Modify the fork choice updated response to point
+		// to the zero hash as the latest valid hash.
+		newPayloadReq.ParentHash = make([]byte, 32)
+
+		log.WithField("method", jsonRequest.Method).Infof("Modified request %v", newPayloadReq)
+		return json.Marshal(jsonRequest)
+	default:
+		return requestBytes, nil
+	}
 }
 
 // Parses the response body from the execution client and checks if user desires
