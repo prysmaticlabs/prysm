@@ -465,9 +465,22 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 			indexToHash(uint64(1)): 1,
 			indexToHash(uint64(2)): 2,
 		},
+		canonicalNodes: map[[32]byte]bool{
+			indexToHash(uint64(0)): true,
+			indexToHash(uint64(1)): true,
+			indexToHash(uint64(2)): true,
+		},
+		payloadIndices: map[[32]byte]uint64{
+			indexToHash(uint64(0)): 0,
+			indexToHash(uint64(1)): 1,
+			indexToHash(uint64(2)): 2,
+		},
 	}
 	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
 	require.Equal(t, len(s.nodes), 1)
+	require.Equal(t, len(s.nodesIndices), 1)
+	require.Equal(t, len(s.canonicalNodes), 1)
+	require.Equal(t, len(s.payloadIndices), 1)
 }
 
 // This test starts with the following branching diagram

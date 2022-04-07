@@ -607,11 +607,15 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 			node.parent = parentIdx
 			canonicalNodes = append(canonicalNodes, node)
 		} else {
-			// Remove node and synced tip that is not part of finalized branch.
+			// Remove node that is not part of finalized branch.
 			delete(s.nodesIndices, node.root)
+			delete(s.canonicalNodes, node.root)
+			delete(s.payloadIndices, node.root)
 		}
 	}
 	s.nodesIndices[finalizedRoot] = uint64(0)
+	s.canonicalNodes[finalizedRoot] = true
+	s.payloadIndices[finalizedRoot] = uint64(0)
 
 	// Recompute the best child and descendant for each canonical nodes.
 	for _, node := range canonicalNodes {
