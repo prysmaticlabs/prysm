@@ -212,10 +212,14 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
-	if _, err := s.notifyForkchoiceUpdate(ctx, headBlock.Block(), headRoot, bytesutil.ToBytes32(finalized.Root)); err != nil {
+	headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
+	if err != nil {
 		return err
 	}
-	if err := s.saveHead(ctx, headRoot, headBlock); err != nil {
+	if _, err := s.notifyForkchoiceUpdate(ctx, headState, headBlock.Block(), headRoot, bytesutil.ToBytes32(finalized.Root)); err != nil {
+		return err
+	}
+	if err := s.saveHead(ctx, headRoot, headBlock, headState); err != nil {
 		return errors.Wrap(err, "could not save head")
 	}
 
@@ -428,7 +432,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 			}
 		}
 
-		if _, err := s.notifyForkchoiceUpdate(ctx, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
+		if _, err := s.notifyForkchoiceUpdate(ctx, preState, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
 			return nil, nil, err
 		}
 	}
