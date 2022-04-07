@@ -9,6 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -24,9 +26,31 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	// payloadIDCacheMiss tracks the number of payload ID requests that aren't present in the cache.
+	payloadIDCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "payload_id_cache_miss",
+		Help: "The number of payload id get requests that aren't present in the cache.",
+	})
+	// payloadIDCacheHit tracks the number of payload ID requests that are present in the cache.
+	payloadIDCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "payload_id_cache_hit",
+		Help: "The number of payload id get requests that are present in the cache.",
+	})
+)
+
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
 func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex) (*enginev1.ExecutionPayload, error) {
+	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
+	if ok && proposerID == vIdx && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
+		var pid [8]byte
+		copy(pid[:], payloadId[:])
+		payloadIDCacheHit.Inc()
+		return vs.ExecutionEngineCaller.GetPayload(ctx, pid)
+	}
+	payloadIDCacheMiss.Inc()
+
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err

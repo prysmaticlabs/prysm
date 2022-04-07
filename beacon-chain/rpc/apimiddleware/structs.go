@@ -443,7 +443,7 @@ type executionPayloadHeaderJson struct {
 	ParentHash       string `json:"parent_hash" hex:"true"`
 	FeeRecipient     string `json:"fee_recipient" hex:"true"`
 	StateRoot        string `json:"state_root" hex:"true"`
-	ReceiptsRoot     string `json:"receipt_root" hex:"true"`
+	ReceiptsRoot     string `json:"receipts_root" hex:"true"`
 	LogsBloom        string `json:"logs_bloom" hex:"true"`
 	PrevRandao       string `json:"prev_randao" hex:"true"`
 	BlockNumber      string `json:"block_number"`

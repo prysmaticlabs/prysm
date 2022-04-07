@@ -191,6 +191,16 @@ func TestStore_DeleteBlock(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
 	blks := makeBlocks(t, 0, slotsPerEpoch*4, genesisBlockRoot)
 	require.NoError(t, db.SaveBlocks(ctx, blks))
+	ss := make([]*ethpb.StateSummary, len(blks))
+	for i, blk := range blks {
+		r, err := blk.Block().HashTreeRoot()
+		require.NoError(t, err)
+		ss[i] = &ethpb.StateSummary{
+			Slot: blk.Block().Slot(),
+			Root: r[:],
+		}
+	}
+	require.NoError(t, db.SaveStateSummaries(ctx, ss))
 
 	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -216,11 +226,50 @@ func TestStore_DeleteBlock(t *testing.T) {
 	b, err = db.Block(ctx, root2)
 	require.NoError(t, err)
 	require.Equal(t, b, nil)
+	require.Equal(t, false, db.HasStateSummary(ctx, root2))
 
-	require.ErrorIs(t, db.DeleteBlock(ctx, root), errDeleteFinalized)
-
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
 }
 
+func TestStore_DeleteJustifiedBlock(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 1
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Root: root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+}
+
+func TestStore_DeleteFinalizedBlock(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	b := util.NewBeaconBlock()
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Root: root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+}
 func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
