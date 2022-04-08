@@ -9,8 +9,8 @@ jobs:
   Horusec_Scan:
     name: horusec-Scan
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
     steps:
-
     - name: Check out code
       uses: actions/checkout@v2
       with: # Required when commit authors is enabled
