@@ -39,6 +39,7 @@ type StateManager interface {
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	EnableSaveHotStateToDB(_ context.Context)
 	DisableSaveHotStateToDB(ctx context.Context) error
+	DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error
 }
 
 // State is a concrete implementation of StateManager.

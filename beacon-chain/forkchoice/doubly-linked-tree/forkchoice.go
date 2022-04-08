@@ -2,12 +2,15 @@ package doublylinkedtree
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -18,6 +21,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 		finalizedEpoch:    finalizedEpoch,
 		proposerBoostRoot: [32]byte{},
 		nodeByRoot:        make(map[[fieldparams.RootLength]byte]*Node),
+		nodeByPayload:     make(map[[fieldparams.RootLength]byte]*Node),
 		pruneThreshold:    defaultPruneThreshold,
 	}
 
@@ -168,7 +172,7 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 }
 
 // IsOptimistic returns true if the given root has been optimistically synced.
-func (f *ForkChoice) IsOptimistic(_ context.Context, root [32]byte) (bool, error) {
+func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
@@ -249,9 +253,21 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 					return ErrNilNode
 				}
 				if currentNode.balance < oldBalance {
-					return errInvalidBalance
+					f.store.proposerBoostLock.RLock()
+					log.WithFields(logrus.Fields{
+						"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
+						"oldBalance":                 oldBalance,
+						"nodeBalance":                currentNode.balance,
+						"nodeWeight":                 currentNode.weight,
+						"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(f.store.proposerBoostRoot[:])),
+						"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.previousProposerBoostRoot[:])),
+						"previousProposerBoostScore": f.store.previousProposerBoostScore,
+					}).Warning("node with invalid balance, setting it to zero")
+					f.store.proposerBoostLock.RUnlock()
+					currentNode.balance = 0
+				} else {
+					currentNode.balance -= oldBalance
 				}
-				currentNode.balance -= oldBalance
 			}
 		}
 
@@ -302,6 +318,6 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 }
 
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [fieldparams.RootLength]byte) ([][32]byte, error) {
-	return f.store.removeNode(ctx, root)
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
+	return f.store.setOptimisticToInvalid(ctx, root, payloadHash)
 }
