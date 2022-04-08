@@ -344,7 +344,7 @@ func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteR
 		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
 	}
 	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready. Please try again once validator is ready.")
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
