@@ -43,6 +43,8 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	return nil
 }
 
+// Every N seconds, defined as a backoffPeriod, attempts to re-establish an execution client
+// connection and if this does not work, we fallback to the next endpoint if defined.
 func (s *Service) pollConnectionStatus(ctx context.Context) {
 	// Use a custom logger to only log errors
 	logCounter := 0
@@ -71,7 +73,8 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 	}
 }
 
-func (s *Service) retryETH1Node(ctx context.Context, err error) {
+// Forces to retry an execution client connection.
+func (s *Service) retryExecutionClientConnection(ctx context.Context, err error) {
 	s.runError = err
 	s.updateConnectedETH1(false)
 	// Back off for a while before redialing.
@@ -102,8 +105,8 @@ func (s *Service) checkDefaultEndpoint(ctx context.Context) {
 	s.updateCurrHttpEndpoint(primaryEndpoint)
 }
 
-// This is an inefficient way to search for the next endpoint, but given N is expected to be
-// small ( < 25), it is fine to search this way.
+// This is an inefficient way to search for the next endpoint, but given N is
+// expected to be small, it is fine to search this way.
 func (s *Service) fallbackToNextEndpoint() {
 	currEndpoint := s.cfg.currHttpEndpoint
 	currIndex := 0
@@ -125,6 +128,7 @@ func (s *Service) fallbackToNextEndpoint() {
 	}
 }
 
+// Initializes an RPC connection with authentication headers.
 func newRPCClientWithAuth(endpoint network.Endpoint) (*gethRPC.Client, error) {
 	client, err := gethRPC.Dial(endpoint.Url)
 	if err != nil {
@@ -140,6 +144,8 @@ func newRPCClientWithAuth(endpoint network.Endpoint) (*gethRPC.Client, error) {
 	return client, nil
 }
 
+// Checks the chain ID and network ID of the execution client to ensure
+// it matches local parameters of what Prysm expects.
 func ensureCorrectExecutionChain(ctx context.Context, client *ethclient.Client) error {
 	cID, err := client.ChainID(ctx)
 	if err != nil {
