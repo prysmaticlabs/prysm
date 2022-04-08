@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
+	"github.com/golang/gddo/log"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
@@ -299,8 +300,9 @@ func (km *Keymanager) AddPublicKeys(ctx context.Context, pubKeys [][fieldparams.
 			Status:  ethpbservice.ImportedRemoteKeysStatus_IMPORTED,
 			Message: fmt.Sprintf("Successfully added pubkey: %v", hexutil.Encode(pubKey[:])),
 		}
-		km.accountsChangedFeed.Send(pubKey)
+		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", hexutil.Encode(pubKey[:]))
 	}
+	km.accountsChangedFeed.Send(km.providedPublicKeys)
 	return importedRemoteKeysStatuses, nil
 }
 
@@ -327,6 +329,7 @@ func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldpara
 					Status:  ethpbservice.DeletedRemoteKeysStatus_DELETED,
 					Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(pubkey[:])),
 				}
+				log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", hexutil.Encode(pubkey[:]))
 				break
 			}
 		}
@@ -337,5 +340,6 @@ func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldpara
 			}
 		}
 	}
+	km.accountsChangedFeed.Send(km.providedPublicKeys)
 	return deletedRemoteKeysStatuses, nil
 }
