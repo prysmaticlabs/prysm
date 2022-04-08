@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/network"
 	"github.com/prysmaticlabs/prysm/network/authorization"
-	"github.com/sirupsen/logrus"
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpoint network.Endpoint) error {
@@ -41,10 +40,6 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	}
 	s.updateConnectedETH1(true)
 	s.runError = nil
-
-	log.WithFields(logrus.Fields{
-		"endpoint": logs.MaskCredentialsLogging(currEndpoint.Url),
-	}).Info("Connected to Ethereum execution client RPC")
 	return nil
 }
 
