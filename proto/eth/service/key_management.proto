@@ -187,9 +187,10 @@ message DeleteRemoteKeysResponse {
 
 message ImportedRemoteKeysStatus {
   enum Status {
-    IMPORTED = 0;
-    DUPLICATE = 1;
-    ERROR = 2;
+    UNKNOWN = 0;
+    IMPORTED = 1;
+    DUPLICATE = 2;
+    ERROR = 3;
   }
   Status status = 1;
   string message = 2;
@@ -197,8 +198,8 @@ message ImportedRemoteKeysStatus {
 
 message DeletedRemoteKeysStatus {
   enum Status {
-    DELETED = 0;
-    NOT_FOUND = 1;
+    NOT_FOUND = 0;
+    DELETED = 1;
     ERROR = 3; // skips 2 to match Delete KeyStore status which has error = 3.
   }
   Status status = 1;
