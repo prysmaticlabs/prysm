@@ -348,7 +348,7 @@ func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteR
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due beacon node unavailable): %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due to beacon node unavailable): %v", err)
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
 		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
