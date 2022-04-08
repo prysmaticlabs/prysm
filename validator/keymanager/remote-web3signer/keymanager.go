@@ -273,7 +273,7 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 	return nil
 }
 
-// AddPublicKeys imports a list of public keys into the keymanager for web3signer use. will return status with message.
+// AddPublicKeys imports a list of public keys into the keymanager for web3signer use. Returns status with message.
 func (km *Keymanager) AddPublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
 	if ctx == nil {
 		return nil, errors.New("context is nil")
