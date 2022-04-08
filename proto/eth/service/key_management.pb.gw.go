@@ -12,7 +12,7 @@ import (
 	"context"
 	"io"
 	"net/http"
-	
+
 	"github.com/golang/protobuf/ptypes/empty"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -24,7 +24,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	
 )
 
 // Suppress "imported and not used" errors
