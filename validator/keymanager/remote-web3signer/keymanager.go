@@ -310,14 +310,16 @@ func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldpara
 		return nil, errors.New("context is nil")
 	}
 	deletedRemoteKeysStatuses := make([]*ethpbservice.DeletedRemoteKeysStatus, len(pubKeys))
-	for i, pubkey := range pubKeys {
-		if len(km.providedPublicKeys) == 0 {
+	if len(km.providedPublicKeys) == 0 {
+		for i := range deletedRemoteKeysStatuses {
 			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
 				Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
 				Message: "No pubkeys are set in validator",
 			}
-			continue
 		}
+		return deletedRemoteKeysStatuses, nil
+	}
+	for i, pubkey := range pubKeys {
 		for in, key := range km.providedPublicKeys {
 			if bytes.Equal(key[:], pubkey[:]) {
 				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
