@@ -144,6 +144,8 @@ type RPCClient struct {
 	Backend *backends.SimulatedBackend
 }
 
+func (_ *RPCClient) Close() {}
+
 func (*RPCClient) CallContext(_ context.Context, _ interface{}, _ string, _ ...interface{}) error {
 	return nil
 }

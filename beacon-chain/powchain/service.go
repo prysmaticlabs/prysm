@@ -261,8 +261,12 @@ func (s *Service) Stop() error {
 	if s.cancel != nil {
 		defer s.cancel()
 	}
-	s.rpcClient.Close()
-	s.eth1DataFetcher.Close()
+	if s.rpcClient != nil {
+		s.rpcClient.Close()
+	}
+	if s.eth1DataFetcher != nil {
+		s.eth1DataFetcher.Close()
+	}
 	return nil
 }
 
