@@ -102,3 +102,7 @@ func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash) (
 		Hash:            b.BlockHash,
 	}, nil
 }
+
+func (m *engineMock) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
+	return nil, false, nil
+}
