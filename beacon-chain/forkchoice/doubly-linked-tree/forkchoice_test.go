@@ -58,6 +58,30 @@ func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
 	assert.Equal(t, uint64(30), s.nodeByRoot[indexToHash(3)].balance)
 }
 
+func TestForkChoice_UpdateBalancesUnderflow(t *testing.T) {
+	f := setup(0, 0)
+	ctx := context.Background()
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0))
+	s := f.store
+	s.nodeByRoot[indexToHash(1)].balance = 100
+	s.nodeByRoot[indexToHash(2)].balance = 100
+	s.nodeByRoot[indexToHash(3)].balance = 100
+
+	f.balances = []uint64{125, 125, 125}
+	f.votes = []Vote{
+		{indexToHash(1), indexToHash(1), 0},
+		{indexToHash(2), indexToHash(2), 0},
+		{indexToHash(3), indexToHash(3), 0},
+	}
+
+	require.NoError(t, f.updateBalances([]uint64{10, 20, 30}))
+	assert.Equal(t, uint64(0), s.nodeByRoot[indexToHash(1)].balance)
+	assert.Equal(t, uint64(0), s.nodeByRoot[indexToHash(2)].balance)
+	assert.Equal(t, uint64(5), s.nodeByRoot[indexToHash(3)].balance)
+}
+
 func TestForkChoice_IsCanonical(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
