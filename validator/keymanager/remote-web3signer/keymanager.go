@@ -304,7 +304,7 @@ func (km *Keymanager) AddPublicKeys(ctx context.Context, pubKeys [][fieldparams.
 	return importedRemoteKeysStatuses, nil
 }
 
-// DeletePublicKeys removes a list of public keys from the keymanager for web3signer use. will return status with message.
+// DeletePublicKeys removes a list of public keys from the keymanager for web3signer use. Returns status with message.
 func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.DeletedRemoteKeysStatus, error) {
 	if ctx == nil {
 		return nil, errors.New("context is nil")
