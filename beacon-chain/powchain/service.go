@@ -355,7 +355,7 @@ func (s *Service) ETH1Endpoints() []string {
 func (s *Service) ETH1ConnectionErrors() []error {
 	var errs []error
 	for _, ep := range s.cfg.httpEndpoints {
-		client, err := newRPCClientWithAuth(ep)
+		client, err := s.newRPCClientWithAuth(s.ctx, ep)
 		if err != nil {
 			errs = append(errs, err)
 			continue

@@ -3,6 +3,8 @@ package powchain
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -16,7 +18,7 @@ import (
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpoint network.Endpoint) error {
-	client, err := newRPCClientWithAuth(currEndpoint)
+	client, err := s.newRPCClientWithAuth(ctx, currEndpoint)
 	if err != nil {
 		return errors.Wrap(err, "could not dial execution node")
 	}
@@ -129,10 +131,30 @@ func (s *Service) fallbackToNextEndpoint() {
 }
 
 // Initializes an RPC connection with authentication headers.
-func newRPCClientWithAuth(endpoint network.Endpoint) (*gethRPC.Client, error) {
-	client, err := gethRPC.Dial(endpoint.Url)
+func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.Endpoint) (*gethRPC.Client, error) {
+	// Need to handle ipc and http
+	var client *gethRPC.Client
+	u, err := url.Parse(endpoint.Url)
 	if err != nil {
 		return nil, err
+	}
+	switch u.Scheme {
+	case "http", "https":
+		httpClient := s.cfg.httpRPCClient
+		if httpClient == nil {
+			httpClient = http.DefaultClient
+		}
+		client, err = gethRPC.DialHTTPWithClient(endpoint.Url, httpClient)
+		if err != nil {
+			return nil, err
+		}
+	case "":
+		client, err = gethRPC.DialIPC(ctx, endpoint.Url)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("no known transport for URL scheme %q", u.Scheme)
 	}
 	if endpoint.Auth.Method != authorization.None {
 		header, err := endpoint.Auth.ToHeaderValue()
@@ -144,24 +166,16 @@ func newRPCClientWithAuth(endpoint network.Endpoint) (*gethRPC.Client, error) {
 	return client, nil
 }
 
-// Checks the chain ID and network ID of the execution client to ensure
+// Checks the chain ID of the execution client to ensure
 // it matches local parameters of what Prysm expects.
 func ensureCorrectExecutionChain(ctx context.Context, client *ethclient.Client) error {
 	cID, err := client.ChainID(ctx)
 	if err != nil {
 		return err
 	}
-	nID, err := client.NetworkID(ctx)
-	if err != nil {
-		return err
-	}
 	wantChainID := params.BeaconConfig().DepositChainID
-	wantNetworkID := params.BeaconConfig().DepositNetworkID
 	if cID.Uint64() != wantChainID {
 		return fmt.Errorf("wanted chain ID %d, got %d", wantChainID, cID.Uint64())
-	}
-	if nID.Uint64() != wantNetworkID {
-		return fmt.Errorf("wanted network ID %d, got %d", wantNetworkID, nID.Uint64())
 	}
 	return nil
 }
