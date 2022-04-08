@@ -7,6 +7,7 @@ package endtoend
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"os"
 	"path"
 	"strings"
@@ -23,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/proto/eth/service"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -440,32 +440,36 @@ func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, ke
 	})
 }
 
-func (r *testRunner) waitForSentinelBlock(ctx context.Context, conn *grpc.ClientConn, root [32]byte) error {
+func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.ClientConn) error {
 	// sleep hack copied from testBeaconChainSync
 	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(r.config.EpochsToRun))
 	ctx, cancel := context.WithDeadline(r.ctx, time.Now().Add(time.Second*time.Duration(extraSecondsToSync)))
+	pause := time.After(time.Second * 1)
+	checkClient := service.NewBeaconChainClient(check)
+	refClient := service.NewBeaconChainClient(ref)
 	defer cancel()
 	for {
 		select {
 		case <-ctx.Done():
 			// deadline ensures that the test eventually exits when beacon node fails to sync in a resonable timeframe
 			return fmt.Errorf("deadline exceeded waiting for known good block to appear in checkpoint-synced node")
-		case <-time.After(time.Second * 1):
-			v1Client := service.NewBeaconChainClient(conn)
-			bResp, err := v1Client.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+		case <-pause:
+			cResp, err := checkClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
 			if err != nil {
 				errStatus, ok := status.FromError(err)
 				// in the happy path we expect NotFound results until the node has synced
 				if ok && errStatus.Code() == codes.NotFound {
 					continue
 				}
-
-				return fmt.Errorf("error requesting block w/ root '%x' = %s", root, err)
+				return fmt.Errorf("error requesting head from 'check' beacon node")
 			}
-			// we have a match, sentinel block found
-			if bytesutil.ToBytes32(bResp.Data.Root) == root {
+			rResp, err := refClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+			if err != nil {
+				return errors.Wrap(err, "unexpected error requesting head block root from 'ref' beacon node")
+			}
+			if bytesutil.ToBytes32(cResp.Data.Root) == bytesutil.ToBytes32(rResp.Data.Root) {
 				return nil
 			}
 		}
@@ -485,6 +489,7 @@ func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, bnAPI, 
 	if err != nil {
 		return err
 	}
+
 	od, err := beacon.DownloadOriginData(r.ctx, client)
 	if err != nil {
 		return err
@@ -506,16 +511,16 @@ func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, bnAPI, 
 	if err != nil {
 		return err
 	}
-	hr, err := client.GetBlockRoot(r.ctx, beacon.IdHead)
-	if err != nil {
-		return err
-	}
 
 	flags := append([]string{}, r.config.BeaconFlags...)
 	flags = append(flags, fmt.Sprintf("--weak-subjectivity-checkpoint=%s", od.CheckpointString()))
 	flags = append(flags, fmt.Sprintf("--checkpoint-state=%s", statePath))
 	flags = append(flags, fmt.Sprintf("--checkpoint-block=%s", blockPath))
 	flags = append(flags, fmt.Sprintf("--genesis-state=%s", genPath))
+
+	//flags = append(flags, fmt.Sprintf("--checkpoint-sync-url=%s", bnAPI))
+	//flags = append(flags, fmt.Sprintf("--genesis-beacon-api-url=%s", bnAPI))
+
 	// zero-indexed, so next value would be len of list
 	cpsyncer := components.NewBeaconNode(i, enr, flags, r.config)
 	r.group.Go(func() error {
@@ -529,19 +534,9 @@ func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, bnAPI, 
 
 	// this is so that the syncEvaluators checks can run on the checkpoint sync'd node
 	conns = append(conns, c)
-	err = r.waitForSentinelBlock(r.ctx, conns[0], hr)
+	err = r.waitForMatchingHead(r.ctx, c, conns[0])
 	if err != nil {
 		return err
-	}
-
-	syncLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, i)))
-	require.NoError(r.t, err)
-	defer helpers.LogErrorOutput(r.t, syncLogFile, "beacon chain node", i)
-	r.t.Run("sync completed", func(t *testing.T) {
-		assert.NoError(t, helpers.WaitForTextInFile(syncLogFile, "Synced up to"), "Failed to sync")
-	})
-	if r.t.Failed() {
-		return errors.New("cannot sync beacon node")
 	}
 
 	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}

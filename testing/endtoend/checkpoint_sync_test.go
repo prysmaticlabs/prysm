@@ -11,18 +11,12 @@ import (
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	e2types "github.com/prysmaticlabs/eth2-types"
 )
 
 // This test customizes the minimal config in order to artificially shorten the weak subjectivity period
 // so that the state used will not be genesis despite there only being 10 epochs of history.
 func TestCheckpointSync_CustomConfig(t *testing.T) {
-	cfg := params.E2ETestConfig()
-	// setting this to 1 should change the weak subjectivity computation,
-	// so the computed weak subjectivity checkpoint will be epoch 9 rather than 0
-	cfg.MinValidatorWithdrawabilityDelay = 1
-	params.OverrideBeaconConfig(cfg)
-	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
-
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
 	epochsToRun := 10
@@ -31,6 +25,16 @@ func TestCheckpointSync_CustomConfig(t *testing.T) {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
+
+	cfg := params.E2ETestConfig()
+	// setting this to 1 should change the weak subjectivity computation,
+	// so the computed weak subjectivity checkpoint will just be a few epochs before head
+	cfg.MinValidatorWithdrawabilityDelay = e2types.Epoch(epochsToRun/2)
+	cfg.SlotsPerEpoch = 6
+	cfg.SecondsPerSlot = 6
+	params.OverrideBeaconConfig(cfg)
+	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
 	if isValid {

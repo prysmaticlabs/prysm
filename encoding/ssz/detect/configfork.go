@@ -81,40 +81,40 @@ func FromForkVersion(cv [fieldparams.VersionLength]byte) (*VersionedUnmarshaler,
 // UnmarshalBeaconState uses internal knowledge in the VersionedUnmarshaler to pick the right concrete BeaconState type,
 // then Unmarshal()s the type and returns an instance of state.BeaconState if successful.
 func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.BeaconState, err error) {
-	forkName := version.String(cf.Fork)
+	info := fmt.Sprintf("fork=%s, config=%s", version.String(cf.Fork), cf.Config.ConfigName)
 	switch fork := cf.Fork; fork {
 	case version.Phase0:
 		st := &ethpb.BeaconState{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected info=%s", info)
 		}
 		s, err = v1.InitializeFromProtoUnsafe(st)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected info=%s", info)
 		}
 	case version.Altair:
 		st := &ethpb.BeaconStateAltair{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected info=%s", info)
 		}
 		s, err = v2.InitializeFromProtoUnsafe(st)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected info=%s", info)
 		}
 	case version.Bellatrix:
 		st := &ethpb.BeaconStateBellatrix{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected info=%s", info)
 		}
 		s, err = v3.InitializeFromProtoUnsafe(st)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected info=%s", info)
 		}
 	default:
-		return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", forkName)
+		return nil, fmt.Errorf("unable to initialize BeaconState for info=%s", info)
 	}
 
 	return s, nil

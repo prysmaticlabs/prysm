@@ -48,7 +48,7 @@ func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
 		t.Run(fmt.Sprintf("valCount: %d, avgBalance: %d", tt.valCount, tt.avgBalance), func(t *testing.T) {
 			// Reset committee cache - as we need to recalculate active validator set for each test.
 			helpers.ClearCache()
-			got, err := helpers.CurrentWeakSubjectivityPeriod(context.Background(), genState(t, tt.valCount, tt.avgBalance), params.BeaconConfig())
+			got, err := helpers.ComputeWeakSubjectivityPeriod(context.Background(), genState(t, tt.valCount, tt.avgBalance), params.BeaconConfig())
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got, "valCount: %v, avgBalance: %v", tt.valCount, tt.avgBalance)
 		})
@@ -64,7 +64,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 		genWsState      func() state.ReadOnlyBeaconState
 		genWsCheckpoint mockWsCheckpoint
 		want            bool
-		wantedErr       error
+		wantedErr       string
 	}{
 		{
 			name: "nil weak subjectivity state",
@@ -74,7 +74,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 			genWsCheckpoint: func() ([32]byte, [32]byte, types.Epoch) {
 				return [32]byte{}, [32]byte{}, 42
 			},
-			wantedErr: helpers.ErrInvalidWeakSubjectivityState,
+			wantedErr: "invalid weak subjectivity state or checkpoint",
 		},
 		{
 			name: "state and checkpoint roots do not match",
@@ -93,7 +93,8 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				copy(sr[:], bytesutil.PadTo([]byte("stateroot2"), 32))
 				return sr, [32]byte{}, 42
 			},
-			wantedErr: helpers.ErrWeakSubjectivityMismatchedRoot,
+			wantedErr: fmt.Sprintf("state (%#x) and checkpoint (%#x) roots do not match",
+				bytesutil.PadTo([]byte("stateroot1"), 32), bytesutil.PadTo([]byte("stateroot2"), 32)),
 		},
 		{
 			name: "state and checkpoint epochs do not match",
@@ -112,7 +113,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				copy(sr[:], bytesutil.PadTo([]byte("stateroot"), 32))
 				return sr, [32]byte{}, 43
 			},
-			wantedErr: helpers.ErrWeakSubjectivityMismatchedEpoch,
+			wantedErr: "state (42) and checkpoint (43) epochs do not match",
 		},
 		{
 			name: "no active validators",
@@ -131,7 +132,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				copy(sr[:], bytesutil.PadTo([]byte("stateroot"), 32))
 				return sr, [32]byte{}, 42
 			},
-			wantedErr: helpers.ErrWeakSubjectivityZeroValidators,
+			wantedErr: "cannot compute weak subjectivity period: no active validators found",
 		},
 		{
 			name:  "outside weak subjectivity period",
@@ -178,9 +179,9 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sr, _, e := tt.genWsCheckpoint()
 			got, err := helpers.IsWithinWeakSubjectivityPeriod(context.Background(), tt.epoch, tt.genWsState(), sr, e, params.BeaconConfig())
-			if tt.wantedErr != nil {
+			if tt.wantedErr != "" {
 				assert.Equal(t, false, got)
-				require.ErrorIs(t, err, tt.wantedErr)
+				assert.ErrorContains(t, tt.wantedErr, err)
 				return
 			}
 			require.NoError(t, err)
