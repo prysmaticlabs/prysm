@@ -1,7 +1,6 @@
 package powchain
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -11,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/network"
+	"github.com/prysmaticlabs/prysm/network/authorization"
 )
 
 // DefaultRPCHTTPTimeout for HTTP requests via an RPC connection to an execution node.
@@ -38,20 +38,29 @@ func WithHttpEndpoints(endpointStrings []string) Option {
 	}
 }
 
-// WithJWTSecret for authenticating the execution node JSON-RPC endpoint.
-func WithJWTSecret(secret []byte) Option {
-	return func(c *Service) error {
+// WithHttpEndpointsAndJWTSecret for authenticating the execution node JSON-RPC endpoint.
+func WithHttpEndpointsAndJWTSecret(endpointStrings []string, secret []byte) Option {
+	return func(s *Service) error {
 		if len(secret) == 0 {
 			return nil
 		}
-		authTransport := &jwtTransport{
-			underlyingTransport: http.DefaultTransport,
-			jwtSecret:           secret,
+		stringEndpoints := dedupEndpoints(endpointStrings)
+		endpoints := make([]network.Endpoint, len(stringEndpoints))
+		// Overwrite authorization type for all endpoints to be of a bearer
+		// type.
+		for i, e := range stringEndpoints {
+			hEndpoint := HttpEndpoint(e)
+			hEndpoint.Auth.Method = authorization.Bearer
+			hEndpoint.Auth.Value = string(secret)
+			endpoints[i] = hEndpoint
 		}
-		c.cfg.httpRPCClient = &http.Client{
-			Timeout:   DefaultRPCHTTPTimeout,
-			Transport: authTransport,
+		// Select first http endpoint in the provided list.
+		var currEndpoint network.Endpoint
+		if len(endpointStrings) > 0 {
+			currEndpoint = endpoints[0]
 		}
+		s.cfg.httpEndpoints = endpoints
+		s.cfg.currHttpEndpoint = currEndpoint
 		return nil
 	}
 }
