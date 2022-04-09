@@ -7,8 +7,10 @@ package endtoend
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -27,6 +29,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -79,7 +82,10 @@ func (r *testRunner) run() {
 	g.Go(func() error {
 		return tracingSink.Start(ctx)
 	})
-
+	proxyNode := components.NewProxyNode(e2e.TestParams.Ports.Eth1ProxyPort, "127.0.0.1:"+strconv.Itoa(e2e.TestParams.Ports.Eth1RPCPort))
+	g.Go(func() error {
+		return proxyNode.Start(ctx)
+	})
 	if multiClientActive {
 		keyGen = components.NewKeystoreGenerator()
 
@@ -253,6 +259,17 @@ func (r *testRunner) run() {
 		genesis, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
 		require.NoError(t, err)
 		tickingStartTime := helpers.EpochTickerStartTime(genesis)
+
+		proxyNode.AddInterceptor(func(reqBytes []byte, w http.ResponseWriter, r *http.Request) bool {
+			currSlot := slots.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
+			if currSlot < params.BeaconConfig().SlotsPerEpoch.Mul(uint64(9)) {
+				return false
+			}
+			if currSlot > params.BeaconConfig().SlotsPerEpoch.Mul(uint64(10)) {
+				return false
+			}
+			return proxyNode.SyncingInterceptor()(reqBytes, w, r)
+		})
 
 		// Run assigned evaluators.
 		if err := r.runEvaluators(conns, tickingStartTime); err != nil {
