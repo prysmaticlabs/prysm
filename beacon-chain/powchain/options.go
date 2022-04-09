@@ -1,8 +1,6 @@
 package powchain
 
 import (
-	"time"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -12,9 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/network"
 	"github.com/prysmaticlabs/prysm/network/authorization"
 )
-
-// DefaultRPCHTTPTimeout for HTTP requests via an RPC connection to an execution node.
-const DefaultRPCHTTPTimeout = time.Second * 6
 
 type Option func(s *Service) error
 
