@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -20,7 +19,7 @@ func TestJWTAuthTransport(t *testing.T) {
 		jwtSecret:           secret,
 	}
 	client := &http.Client{
-		Timeout:   powchain.DefaultRPCHTTPTimeout,
+		Timeout:   DefaultRPCHTTPTimeout,
 		Transport: authTransport,
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
