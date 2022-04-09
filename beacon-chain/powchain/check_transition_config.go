@@ -120,10 +120,10 @@ func (s *Service) handleExchangeConfigurationError(err error) {
 func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, error) {
 	latest, err := s.LatestExecutionBlock(ctx)
 	switch {
-	case err != nil:
-		return false, err
 	case errors.Is(err, hexutil.ErrEmptyString):
 		return false, nil
+	case err != nil:
+		return false, err
 	default:
 	}
 	if latest == nil {
