@@ -140,11 +140,7 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 	}
 	switch u.Scheme {
 	case "http", "https":
-		httpClient := s.cfg.httpRPCClient
-		if httpClient == nil {
-			httpClient = http.DefaultClient
-		}
-		client, err = gethRPC.DialHTTPWithClient(endpoint.Url, httpClient)
+		client, err = gethRPC.DialHTTPWithClient(endpoint.Url, http.DefaultClient)
 		if err != nil {
 			return nil, err
 		}
