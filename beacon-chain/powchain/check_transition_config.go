@@ -121,10 +121,10 @@ func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, err
 	latest, err := s.LatestExecutionBlock(ctx)
 	switch {
 	case err != nil:
+		return false, err
 	case errors.Is(err, hexutil.ErrEmptyString):
 		return false, nil
 	default:
-		return false, err
 	}
 	if latest == nil {
 		return false, errors.New("latest block is nil")
