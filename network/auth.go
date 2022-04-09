@@ -1,4 +1,4 @@
-package powchain
+package network
 
 import (
 	"net/http"
@@ -7,6 +7,9 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
 )
+
+// DefaultRPCHTTPTimeout for HTTP requests via an RPC connection to an execution node.
+const DefaultRPCHTTPTimeout = time.Second * 6
 
 // This creates a custom HTTP transport which we can attach to our HTTP client
 // in order to inject JWT auth strings into our HTTP request headers. Authentication

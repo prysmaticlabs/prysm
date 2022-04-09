@@ -33,7 +33,7 @@ func (e Endpoint) HttpClient() *http.Client {
 	}
 	authTransport := &jwtTransport{
 		underlyingTransport: http.DefaultTransport,
-		jwtSecret:           e.Auth.Value,
+		jwtSecret:           []byte(e.Auth.Value),
 	}
 	return &http.Client{
 		Timeout:   DefaultRPCHTTPTimeout,

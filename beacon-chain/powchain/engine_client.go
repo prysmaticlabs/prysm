@@ -16,9 +16,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// DefaultRPCHTTPTimeout for HTTP requests via an RPC connection to an execution node.
-const DefaultRPCHTTPTimeout = time.Second * 6
-
 const (
 	// NewPayloadMethod v1 request string for JSON-RPC.
 	NewPayloadMethod = "engine_newPayloadV1"
