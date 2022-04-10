@@ -51,10 +51,4 @@ var (
 			Help: "The number of times pruning happened.",
 		},
 	)
-	validatedNodesCount = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "proto_array_validated_nodes_count",
-			Help: "The number of nodes that have been fully validated.",
-		},
-	)
 )

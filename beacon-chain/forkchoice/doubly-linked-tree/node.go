@@ -120,7 +120,6 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 	}
 
 	n.optimistic = false
-	validatedCount.Inc()
 	return n.parent.setNodeAndParentValidated(ctx)
 }
 

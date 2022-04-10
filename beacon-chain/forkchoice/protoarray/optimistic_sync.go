@@ -43,7 +43,6 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 		if index == NonExistentNode {
 			break
 		}
-		validatedNodesCount.Inc()
 	}
 	return nil
 }
