@@ -62,12 +62,13 @@ type forkchoiceUpdatedResponse struct {
 type InterceptorFunc func(reqBytes []byte, w http.ResponseWriter, r *http.Request) bool
 
 type ProxyNode struct {
-	address     string
-	srv         *http.Server
-	destAddress string
-	logger      *logrus.Logger
-	logEntry    *logrus.Entry
-	interceptor InterceptorFunc
+	address          string
+	srv              *http.Server
+	destAddress      string
+	logger           *logrus.Logger
+	logEntry         *logrus.Entry
+	interceptor      InterceptorFunc
+	backedUpRequests []*http.Request
 }
 
 func NewProxyNode(proxyPort int, destAddress string) *ProxyNode {
@@ -119,7 +120,7 @@ func (pn *ProxyNode) SyncingInterceptor() InterceptorFunc {
 		if !pn.checkIfValid(reqBytes) {
 			return false
 		}
-		pn.returnSyncingResponse(reqBytes, w)
+		pn.returnSyncingResponse(reqBytes, w, r)
 		return true
 	}
 }
@@ -136,6 +137,51 @@ func (pn *ProxyNode) proxyHandler() func(w http.ResponseWriter, r *http.Request)
 		if pn.interceptor != nil && pn.interceptor(requestBytes, w, r) {
 			return
 		}
+
+		for _, rq := range pn.backedUpRequests {
+			requestB, err := pn.parseRequestBytes(rq)
+			if err != nil {
+				pn.logEntry.WithError(err).Error("Could not parse request")
+				return
+			}
+			destAddr := "http://" + pn.destAddress
+
+			// Create a new proxy request to the execution client.
+			url := rq.URL
+			url.Host = destAddr
+			proxyReq, err := http.NewRequest(rq.Method, destAddr, rq.Body)
+			if err != nil {
+				pn.logEntry.WithError(err).Error("Could create new request")
+				return
+			}
+
+			// Set the modified request as the proxy request body.
+			proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(requestB))
+
+			// Required proxy headers for forwarding JSON-RPC requests to the execution client.
+			proxyReq.Header.Set("Host", rq.Host)
+			proxyReq.Header.Set("X-Forwarded-For", rq.RemoteAddr)
+			proxyReq.Header.Set("Content-Type", "application/json")
+
+			client := &http.Client{}
+			proxyRes, err := client.Do(proxyReq)
+			if err != nil {
+				pn.logEntry.WithError(err).Error("Could not do client proxy")
+				return
+			}
+			buf := bytes.NewBuffer([]byte{})
+			// Pipe the proxy response to the original caller.
+			if _, err = io.Copy(buf, proxyRes.Body); err != nil {
+				pn.logEntry.WithError(err).Error("Could not copy proxy request body")
+				return
+			}
+			if err = proxyRes.Body.Close(); err != nil {
+				pn.logEntry.WithError(err).Error("Could not do client proxy")
+				return
+			}
+			pn.logEntry.Infof("Queued Request Response: %s", buf.String())
+		}
+		pn.backedUpRequests = []*http.Request{}
 
 		/*
 			var modifiedReq []byte
@@ -333,7 +379,7 @@ func (pn *ProxyNode) checkIfValid(reqBytes []byte) bool {
 	return false
 }
 
-func (pn *ProxyNode) returnSyncingResponse(reqBytes []byte, w http.ResponseWriter) {
+func (pn *ProxyNode) returnSyncingResponse(reqBytes []byte, w http.ResponseWriter, r *http.Request) {
 	jsonRequest, err := unmarshalRPCObject(reqBytes)
 	if err != nil {
 		return
@@ -373,6 +419,7 @@ func (pn *ProxyNode) returnSyncingResponse(reqBytes []byte, w http.ResponseWrite
 		}
 		_, err = w.Write(rawResp)
 		_ = err
+		pn.backedUpRequests = append(pn.backedUpRequests, r)
 		return
 	}
 	return

@@ -265,7 +265,7 @@ func (r *testRunner) run() {
 			if currSlot < params.BeaconConfig().SlotsPerEpoch.Mul(uint64(9)) {
 				return false
 			}
-			if currSlot > params.BeaconConfig().SlotsPerEpoch.Mul(uint64(10)) {
+			if currSlot >= params.BeaconConfig().SlotsPerEpoch.Mul(uint64(10)) {
 				return false
 			}
 			return proxyNode.SyncingInterceptor()(reqBytes, w, r)
@@ -316,6 +316,9 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
+		if currentEpoch == 9 || currentEpoch == 10 {
+			continue
+		}
 		wg := new(sync.WaitGroup)
 		for _, eval := range config.Evaluators {
 			// Fix reference to evaluator as it will be running
