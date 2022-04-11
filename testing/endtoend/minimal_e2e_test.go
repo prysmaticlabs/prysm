@@ -31,7 +31,6 @@ func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 		usePrysmSh:          false,
 		useWeb3RemoteSigner: true,
 	})
-
 }
 
 // Run minimal e2e config with the current release validator against latest beacon node.
