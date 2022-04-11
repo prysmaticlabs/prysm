@@ -84,6 +84,27 @@ service KeyManagement {
       body: "*"
     };
   }
+
+
+  rpc ListRemoteKeys(google.protobuf.Empty) returns (ListRemoteKeysResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/remotekeys"
+    };
+  }
+
+  rpc ImportRemoteKeys(ImportRemoteKeysRequest) returns (ImportRemoteKeysResponse) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/remotekeys",
+      body: "*"
+    };
+  }
+
+  rpc DeleteRemoteKeys(DeleteRemoteKeysRequest) returns (DeleteRemoteKeysResponse) {
+    option (google.api.http) = {
+      delete: "/internal/eth/v1/remotekeys",
+      body: "*"
+    };
+  }
 }
 
 message ListKeystoresResponse {
@@ -133,3 +154,55 @@ message DeletedKeystoreStatus {
   Status status = 1;
   string message = 2;
 }
+
+
+message ListRemoteKeysResponse {
+  message Keystore {
+    bytes pubkey = 1;
+    string url = 2;
+    bool readonly = 3;
+  }
+  repeated Keystore data = 1;
+}
+
+message ImportRemoteKeysRequest {
+  message Keystore {
+    bytes pubkey = 1;
+    string url = 2;
+  }
+  repeated Keystore remote_keys = 1;
+}
+
+message ImportRemoteKeysResponse {
+  repeated ImportedRemoteKeysStatus data = 1;
+}
+
+message DeleteRemoteKeysRequest {
+  repeated bytes pubkeys = 1;
+}
+
+message DeleteRemoteKeysResponse {
+  repeated DeletedRemoteKeysStatus data = 1;
+}
+
+message ImportedRemoteKeysStatus {
+  enum Status {
+    UNKNOWN = 0;
+    IMPORTED = 1;
+    DUPLICATE = 2;
+    ERROR = 3;
+  }
+  Status status = 1;
+  string message = 2;
+}
+
+message DeletedRemoteKeysStatus {
+  enum Status {
+    NOT_FOUND = 0;
+    DELETED = 1;
+    ERROR = 3; // skips 2 to match Delete KeyStore status which has error = 3.
+  }
+  Status status = 1;
+  string message = 2;
+}
+
