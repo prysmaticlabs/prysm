@@ -28,7 +28,7 @@ var (
 	_ = keymanager.Deleter(&derived.Keymanager{})
 
 	_ = keymanager.PublicKeyAdder(&remote_web3signer.Keymanager{})
-	_ = keymanager.PublicKeyAdder(&remote_web3signer.Keymanager{})
+	_ = keymanager.PublicKeyDeleter(&remote_web3signer.Keymanager{})
 )
 
 func TestKeystoreContainsPath(t *testing.T) {
