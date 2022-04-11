@@ -30,7 +30,7 @@ func (s *Server) ListKeystores(
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due beacon node unavailable): %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due to beacon node unavailable): %v", err)
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Derived && s.wallet.KeymanagerKind() != keymanager.Local {
 		return nil, status.Errorf(codes.FailedPrecondition, "Prysm validator keys are not stored locally with this keymanager type.")
