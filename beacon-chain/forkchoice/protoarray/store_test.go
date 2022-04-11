@@ -375,7 +375,7 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 		parent:         uint64(numOfNodes - 2),
 	})
 	indices[indexToHash(uint64(numOfNodes-1))] = uint64(numOfNodes - 1)
-	s := &Store{nodes: nodes, nodesIndices: indices}
+	s := &Store{nodes: nodes, nodesIndices: indices, canonicalNodes: map[[32]byte]bool{}, payloadIndices: map[[32]byte]uint64{}}
 
 	// Finalized root is at index 99 so everything before 99 should be pruned.
 	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
@@ -413,7 +413,7 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 		parent:         uint64(numOfNodes - 2),
 	})
 
-	s := &Store{nodes: nodes, nodesIndices: indices}
+	s := &Store{nodes: nodes, nodesIndices: indices, canonicalNodes: map[[32]byte]bool{}, payloadIndices: map[[32]byte]uint64{}}
 
 	// Finalized root is at index 11 so everything before 11 should be pruned.
 	require.NoError(t, s.prune(context.Background(), indexToHash(10)))
@@ -441,6 +441,7 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 			bestDescendant: 1,
 			root:           indexToHash(uint64(0)),
 			parent:         NonExistentNode,
+			payloadHash:    [32]byte{'A'},
 		},
 		{
 			slot:           101,
@@ -448,6 +449,7 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 			bestChild:      NonExistentNode,
 			bestDescendant: NonExistentNode,
 			parent:         0,
+			payloadHash:    [32]byte{'B'},
 		},
 		{
 			slot:           101,
@@ -455,6 +457,7 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 			parent:         0,
 			bestChild:      NonExistentNode,
 			bestDescendant: NonExistentNode,
+			payloadHash:    [32]byte{'C'},
 		},
 	}
 	s := &Store{
@@ -465,9 +468,22 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 			indexToHash(uint64(1)): 1,
 			indexToHash(uint64(2)): 2,
 		},
+		canonicalNodes: map[[32]byte]bool{
+			indexToHash(uint64(0)): true,
+			indexToHash(uint64(1)): true,
+			indexToHash(uint64(2)): true,
+		},
+		payloadIndices: map[[32]byte]uint64{
+			[32]byte{'A'}: 0,
+			[32]byte{'B'}: 1,
+			[32]byte{'C'}: 2,
+		},
 	}
 	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
-	require.Equal(t, len(s.nodes), 1)
+	require.Equal(t, 1, len(s.nodes))
+	require.Equal(t, 1, len(s.nodesIndices))
+	require.Equal(t, 1, len(s.canonicalNodes))
+	require.Equal(t, 1, len(s.payloadIndices))
 }
 
 // This test starts with the following branching diagram
@@ -482,25 +498,74 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 //         J        -- K -- L
 //
 //
-func TestStore_PruneSyncedTips(t *testing.T) {
+func TestStore_PruneBranched(t *testing.T) {
 	ctx := context.Background()
-	f := setup(1, 1)
 
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, params.BeaconConfig().ZeroHash, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, params.BeaconConfig().ZeroHash, 1, 1))
-	f.store.pruneThreshold = 0
-	require.NoError(t, f.Prune(ctx, [32]byte{'f'}))
-	require.Equal(t, 1, f.NodeCount())
+	tests := []struct {
+		finalizedRoot      [32]byte
+		wantedCanonical    [32]byte
+		wantedNonCanonical [32]byte
+		canonicalCount     int
+		payloadHash        [32]byte
+		payloadIndex       uint64
+		nonExistentPayload [32]byte
+	}{
+		{
+			[32]byte{'f'},
+			[32]byte{'f'},
+			[32]byte{'a'},
+			1,
+			[32]byte{'F'},
+			0,
+			[32]byte{'H'},
+		},
+		{
+			[32]byte{'d'},
+			[32]byte{'e'},
+			[32]byte{'i'},
+			3,
+			[32]byte{'E'},
+			1,
+			[32]byte{'C'},
+		},
+		{
+			[32]byte{'b'},
+			[32]byte{'f'},
+			[32]byte{'h'},
+			5,
+			[32]byte{'D'},
+			3,
+			[32]byte{'A'},
+		},
+	}
+
+	for _, tc := range tests {
+		f := setup(1, 1)
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{'J'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{'E'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{'G'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{'F'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{'K'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{'I'}, 1, 1))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'L'}, 1, 1))
+		f.store.pruneThreshold = 0
+		require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'f'}))
+		require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
+		require.Equal(t, true, f.IsCanonical([32]byte{'f'}))
+
+		require.NoError(t, f.Prune(ctx, tc.finalizedRoot))
+		require.Equal(t, tc.canonicalCount, len(f.store.canonicalNodes))
+		require.Equal(t, true, f.IsCanonical(tc.wantedCanonical))
+		require.Equal(t, false, f.IsCanonical(tc.wantedNonCanonical))
+		require.Equal(t, tc.payloadIndex, f.store.payloadIndices[tc.payloadHash])
+		_, ok := f.store.payloadIndices[tc.nonExistentPayload]
+		require.Equal(t, false, ok)
+	}
 }
 
 func TestStore_LeadsToViableHead(t *testing.T) {
