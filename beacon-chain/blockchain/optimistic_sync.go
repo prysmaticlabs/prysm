@@ -79,7 +79,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		return nil, errors.Wrap(err, "could not get payload attribute")
 	}
 
-	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
+	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
@@ -89,6 +89,20 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
+		case powchain.ErrInvalidPayloadStatus:
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(lastValidHash))
+			if err != nil {
+				return nil, err
+			}
+			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+				return nil, err
+			}
+			log.WithFields(logrus.Fields{
+				"slot":         headBlk.Slot(),
+				"blockRoot":    fmt.Sprintf("%#x", headRoot),
+				"invalidCount": len(invalidRoots),
+			}).Warn("Pruned invalid blocks")
+			return nil, errors.New("could not call forkchoice update with an INVALID payload from execution engine")
 		default:
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
@@ -152,6 +166,11 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
 				return false, err
 			}
+			log.WithFields(logrus.Fields{
+				"slot":         blk.Block().Slot(),
+				"blockRoot":    fmt.Sprintf("%#x", root),
+				"invalidCount": len(invalidRoots),
+			}).Warn("Pruned invalid blocks")
 			return false, errors.New("could not validate an INVALID payload from execution engine")
 		default:
 			return false, errors.Wrap(err, "could not validate execution payload from execution engine")
