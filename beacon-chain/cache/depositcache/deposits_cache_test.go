@@ -554,7 +554,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 		})
 	dc.InsertFinalizedDeposits(context.Background(), 1)
 
-	deps := dc.NonFinalizedDeposits(context.Background(), nil)
+	deps := dc.NonFinalizedDeposits(context.Background(), 1, nil)
 	assert.Equal(t, 2, len(deps))
 }
 
@@ -611,7 +611,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 		})
 	dc.InsertFinalizedDeposits(context.Background(), 1)
 
-	deps := dc.NonFinalizedDeposits(context.Background(), big.NewInt(10))
+	deps := dc.NonFinalizedDeposits(context.Background(), 1, big.NewInt(10))
 	assert.Equal(t, 1, len(deps))
 }
 
