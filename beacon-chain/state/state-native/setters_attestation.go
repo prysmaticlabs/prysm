@@ -34,7 +34,7 @@ func (b *BeaconState) setCurrentEpochAttestations(val []*ethpb.PendingAttestatio
 	b.sharedFieldReferences[nativetypes.CurrentEpochAttestations] = stateutil.NewRef(1)
 
 	b.currentEpochAttestations = val
-	b.markFieldAsDirty(nativetypes.PreviousEpochAttestations)
+	b.markFieldAsDirty(nativetypes.CurrentEpochAttestations)
 	b.rebuildTrie[nativetypes.CurrentEpochAttestations] = true
 }
 
