@@ -2,7 +2,6 @@ package evaluators
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	coreHelper "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -45,9 +44,7 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	if ctx.Err() == context.Canceled {
 		return errors.New("context canceled prematurely")
 	}
-	fmt.Println("Before altair receive")
 	res, err := stream.Recv()
-	fmt.Println("After altair receive")
 	if err != nil {
 		return err
 	}
