@@ -40,10 +40,10 @@ func processField(s interface{}, processors []fieldProcessor) error {
 			// Process each string in string slices.
 			if kind == reflect.String {
 				for _, proc := range processors {
-					_, hasTag := t.Field(i).Tag.Lookup(proc.tag)
+					tag, hasTag := t.Field(i).Tag.Lookup(proc.tag)
 					if hasTag {
 						for j := 0; j < v.Field(i).Len(); j++ {
-							if err := proc.f(v.Field(i).Index(j)); err != nil {
+							if err := proc.f(tag, v.Field(i).Index(j)); err != nil {
 								return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 							}
 						}
@@ -61,8 +61,8 @@ func processField(s interface{}, processors []fieldProcessor) error {
 		default:
 			field := t.Field(i)
 			for _, proc := range processors {
-				if _, hasTag := field.Tag.Lookup(proc.tag); hasTag {
-					if err := proc.f(v.Field(i)); err != nil {
+				if tag, hasTag := field.Tag.Lookup(proc.tag); hasTag {
+					if err := proc.f(tag, v.Field(i)); err != nil {
 						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 					}
 				}
@@ -72,7 +72,11 @@ func processField(s interface{}, processors []fieldProcessor) error {
 	return nil
 }
 
-func hexToBase64Processor(v reflect.Value) error {
+func hexToBase64Processor(tag string, v reflect.Value) error {
+	if v.String() == "0x" {
+		v.SetString("")
+		return nil
+	}
 	b, err := bytesutil.FromHexString(v.String())
 	if err != nil {
 		return err
@@ -81,8 +85,19 @@ func hexToBase64Processor(v reflect.Value) error {
 	return nil
 }
 
-func base64ToHexProcessor(v reflect.Value) error {
+func base64ToHexProcessor(tag string, v reflect.Value) error {
+	var alwaysPrefix bool
+	for _, option := range strings.Split(tag, ",") {
+		switch option {
+		case "alwaysprefix":
+			alwaysPrefix = true
+		}
+	}
+
 	if v.String() == "" {
+		if alwaysPrefix {
+			v.SetString("0x")
+		}
 		return nil
 	}
 	b, err := base64.StdEncoding.DecodeString(v.String())
@@ -93,12 +108,12 @@ func base64ToHexProcessor(v reflect.Value) error {
 	return nil
 }
 
-func enumToLowercaseProcessor(v reflect.Value) error {
+func enumToLowercaseProcessor(tag string, v reflect.Value) error {
 	v.SetString(strings.ToLower(v.String()))
 	return nil
 }
 
-func timeToUnixProcessor(v reflect.Value) error {
+func timeToUnixProcessor(tag string, v reflect.Value) error {
 	t, err := time.Parse(time.RFC3339, v.String())
 	if err != nil {
 		return err

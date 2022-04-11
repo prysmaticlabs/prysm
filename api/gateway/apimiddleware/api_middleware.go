@@ -73,7 +73,7 @@ type HookCollection struct {
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
 type fieldProcessor struct {
 	tag string
-	f   func(value reflect.Value) error
+	f   func(tag string, value reflect.Value) error
 }
 
 // Run starts the proxy, registering all proxy endpoints.
