@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -62,6 +63,14 @@ func WithExecutionEngineCaller(c powchain.EngineCaller) Option {
 func WithDepositCache(c *depositcache.DepositCache) Option {
 	return func(s *Service) error {
 		s.cfg.DepositCache = c
+		return nil
+	}
+}
+
+// WithProposerIdsCache for proposer id cache.
+func WithProposerIdsCache(c *cache.ProposerPayloadIDsCache) Option {
+	return func(s *Service) error {
+		s.cfg.ProposerSlotIndexCache = c
 		return nil
 	}
 }

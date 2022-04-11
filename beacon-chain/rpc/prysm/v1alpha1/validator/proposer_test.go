@@ -10,6 +10,7 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -2344,7 +2345,8 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 			PayloadIDBytes:   &enginev1.PayloadIDBytes{1},
 			ExecutionPayload: payload,
 		},
-		BeaconDB: db,
+		BeaconDB:               db,
+		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)

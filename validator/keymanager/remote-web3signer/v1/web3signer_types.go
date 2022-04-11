@@ -239,7 +239,7 @@ type VoluntaryExit struct {
 // BeaconBlockAltairBlockV2 a sub property of BlockV2AltairSignRequest.
 type BeaconBlockAltairBlockV2 struct {
 	Version string             `json:"version"`
-	Block   *BeaconBlockAltair `json:"beacon_block"`
+	Block   *BeaconBlockAltair `json:"block"`
 }
 
 // BeaconBlockAltair a sub property of BeaconBlockAltairBlockV2.
