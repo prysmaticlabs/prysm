@@ -150,7 +150,7 @@ func (s *Server) DeleteKeystores(
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get keymanager (possibly due beacon node unavailable): %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager (possibly due to beacon node unavailable): %v", err)
 	}
 	if len(req.Pubkeys) == 0 {
 		return &ethpbservice.DeleteKeystoresResponse{Data: make([]*ethpbservice.DeletedKeystoreStatus, 0)}, nil
