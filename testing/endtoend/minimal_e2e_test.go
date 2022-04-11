@@ -83,12 +83,14 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ev.ValidatorHasExited,
 		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
-		ev.ForkTransition,
+		ev.AltairForkTransition,
+		ev.BellatrixForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
+		ev.TransactionsPresent,
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
