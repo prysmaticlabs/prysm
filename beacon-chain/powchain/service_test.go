@@ -42,6 +42,8 @@ type goodLogger struct {
 	backend *backends.SimulatedBackend
 }
 
+func (_ *goodLogger) Close() {}
+
 func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
 	if g.backend == nil {
 		return new(event.Feed).Subscribe(ch), nil
@@ -79,6 +81,8 @@ func (g *goodNotifier) StateFeed() *event.Feed {
 type goodFetcher struct {
 	backend *backends.SimulatedBackend
 }
+
+func (_ *goodFetcher) Close() {}
 
 func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTypes.Header, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
@@ -225,10 +229,6 @@ func TestService_Eth1Synced(t *testing.T) {
 	now := time.Now()
 	assert.NoError(t, testAcc.Backend.AdjustTime(now.Sub(time.Unix(int64(currTime), 0))))
 	testAcc.Backend.Commit()
-
-	synced, err := web3Service.isEth1NodeSynced()
-	require.NoError(t, err)
-	assert.Equal(t, true, synced, "Expected eth1 nodes to be synced")
 }
 
 func TestFollowBlock_OK(t *testing.T) {

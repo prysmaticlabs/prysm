@@ -84,9 +84,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
 			log.WithFields(logrus.Fields{
-				"headSlot":      headBlk.Slot(),
-				"headHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
-				"finalizedHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
+				"headSlot":                  headBlk.Slot(),
+				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
+				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
 		default:
@@ -136,8 +136,8 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
 			log.WithFields(logrus.Fields{
-				"slot":      blk.Block().Slot(),
-				"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+				"slot":             blk.Block().Slot(),
+				"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 			}).Info("Called new payload with optimistic block")
 			return false, nil
 		case powchain.ErrInvalidPayloadStatus:
