@@ -36,7 +36,7 @@ type DepositFetcher interface {
 	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
 	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
 	FinalizedDeposits(ctx context.Context) *FinalizedDeposits
-	NonFinalizedDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
+	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
 }
 
 // FinalizedDeposits stores the trie of deposits that have been included
@@ -246,7 +246,7 @@ func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposit
 
 // NonFinalizedDeposits returns the list of non-finalized deposits until the given block number (inclusive).
 // If no block is specified then this method returns all non-finalized deposits.
-func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
+func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.NonFinalizedDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
@@ -256,10 +256,9 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, untilBlk *big.
 		return dc.allDeposits(untilBlk)
 	}
 
-	lastFinalizedDepositIndex := dc.finalizedDeposits.MerkleTrieIndex
 	var deposits []*ethpb.Deposit
 	for _, d := range dc.deposits {
-		if (d.Index > lastFinalizedDepositIndex) && (untilBlk == nil || untilBlk.Uint64() >= d.Eth1BlockHeight) {
+		if (d.Index > lastFinalizedIndex) && (untilBlk == nil || untilBlk.Uint64() >= d.Eth1BlockHeight) {
 			deposits = append(deposits, d.Deposit)
 		}
 	}
