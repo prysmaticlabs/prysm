@@ -125,10 +125,11 @@ func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, err
 		return false, nil
 	case err != nil:
 		return false, err
-	default:
-	}
-	if latest == nil {
+	case latest == nil:
 		return false, errors.New("latest block is nil")
+	case latest.TotalDifficulty == "":
+		return false, nil
+	default:
 	}
 	latestTtd, err := hexutil.DecodeBig(latest.TotalDifficulty)
 	if err != nil {
