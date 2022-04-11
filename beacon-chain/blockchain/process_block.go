@@ -127,8 +127,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}
 	}
 
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
-		return err
+	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
+		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
@@ -148,6 +148,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
+		return err
+	}
 	// If slasher is configured, forward the attestations in the block via
 	// an event feed for processing.
 	if features.Get().EnableSlasher {
@@ -608,9 +611,6 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	}
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 		return errors.Wrap(err, "could not save state")
-	}
-	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
-		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
 	}
 	return nil
 }
