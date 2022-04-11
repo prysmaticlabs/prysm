@@ -90,7 +90,6 @@ func (r *testRunner) run() {
 		})
 	}
 
-	// Web3 remote signer.
 	var web3RemoteSigner *components.Web3RemoteSigner
 	if config.UseWeb3RemoteSigner {
 		cfg, err := bazel.Runfile("config/params/testdata/e2e_config.yaml")
